@@ -30,10 +30,11 @@
 //!
 //! What is **absent by design**: the `base`/`null` *providers* -- `forensics/atlas/provider-algorithms.json`'s
 //! `projection` block gives their 319 rows `owning_phase` 10 (318) and 9 (1), so no Phase 8 ledger
-//! claims them; the `AES-*-GCM` three
-//! (`defltprov.c:202-204`), deferred to Phase 9 on `RAND_bytes_ex` (D234, D237); and the multiblock
-//! *encrypt* parameter of the four published `AES-*-CBC-HMAC-*` rows, which is this module's one
-//! recorded narrowing (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1). Everything
+//! claims them; and the `AES-*-GCM` three (`defltprov.c:202-204`), deferred to Phase 9 on
+//! `RAND_bytes_ex` (D234, D237). The four published `AES-*-CBC-HMAC-*` rows' multiblock *encrypt*
+//! parameter is **landed**: `tls1_multiblock_encrypt` is written from the authority's
+//! `tls1_multi_block_encrypt` and draws its per-record explicit IVs through the crate's own
+//! `RAND_bytes_ex`, so `D-CBCHMAC-MULTIBLOCK-ENC-1` is closed. Everything
 //! else in `deflt_ciphers[]` that this profile compiles is here: the thirteen CBC-HMAC rows (the
 //! four the AES-NI bit publishes with their whole record construction, and the nine ETM rows as the
 //! capability filter's rows with empty dispatch tables, which is what this profile's
@@ -113,6 +114,8 @@ use crate::params::{
 use crate::provider::activate::{
     ossl_prov_cache_exported_algorithms, AlgorithmCapability, OsslAlgorithm, OsslAlgorithmCapable,
 };
+use crate::provider::cipher_gcm;
+use crate::provider::cipher_tdes_wrap;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{
     CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_memcmp, CRYPTO_memdup, CRYPTO_zalloc,
@@ -153,7 +156,7 @@ const FILE_AES: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes.c".as_ptr();
 const FILE_CAMELLIA: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_camellia.c".as_ptr();
-const FILE_TDES: *const c_char =
+pub(crate) const FILE_TDES: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_tdes_common.c".as_ptr();
 const FILE_AES_WRAP: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_aes_wrp.c".as_ptr();
@@ -164,7 +167,7 @@ const FILE_AES_OCB: *const c_char =
 const FILE_NULL: *const c_char =
     c"../../src/openssl-3.6.4/providers/implementations/ciphers/cipher_null.c".as_ptr();
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
-const LINE: c_int = 0;
+pub(crate) const LINE: c_int = 0;
 
 /// `OSSL_OP_CIPHER` — `include/openssl/core_dispatch.h`.
 pub(crate) const OSSL_OP_CIPHER: c_int = 2;
@@ -177,13 +180,13 @@ type Ecb128F = unsafe extern "C" fn(*const u8, *mut u8, usize, *const c_void, c_
 // ---------------------------------------------------------------------------------------------
 
 /// `PROV_CIPHER_FLAG_CUSTOM_IV`.
-const PROV_CIPHER_FLAG_CUSTOM_IV: u64 = 0x0002;
+pub(crate) const PROV_CIPHER_FLAG_CUSTOM_IV: u64 = 0x0002;
 /// `PROV_CIPHER_FLAG_CTS`.
 const PROV_CIPHER_FLAG_CTS: u64 = 0x0004;
 /// `PROV_CIPHER_FLAG_TLS1_MULTIBLOCK`.
 const PROV_CIPHER_FLAG_TLS1_MULTIBLOCK: u64 = 0x0008;
 /// `PROV_CIPHER_FLAG_RAND_KEY`.
-const PROV_CIPHER_FLAG_RAND_KEY: u64 = 0x0010;
+pub(crate) const PROV_CIPHER_FLAG_RAND_KEY: u64 = 0x0010;
 /// `PROV_CIPHER_FLAG_VARIABLE_LENGTH`.
 const PROV_CIPHER_FLAG_VARIABLE_LENGTH: u64 = 0x0100;
 /// `PROV_CIPHER_FLAG_INVERSE_CIPHER`.
@@ -200,7 +203,7 @@ const EVP_CIPH_ECB_MODE: c_uint = 0x1;
 /// `EVP_CIPH_CBC_MODE` — `include/openssl/evp.h:312`.
 const EVP_CIPH_CBC_MODE: c_uint = 0x2;
 /// `EVP_CIPH_WRAP_MODE` — `include/openssl/evp.h:319`.
-const EVP_CIPH_WRAP_MODE: c_uint = 0x10002;
+pub(crate) const EVP_CIPH_WRAP_MODE: c_uint = 0x10002;
 /// `EVP_CIPH_CFB_MODE` — `include/openssl/evp.h:313`.
 const EVP_CIPH_CFB_MODE: c_uint = 0x3;
 /// `EVP_CIPH_OFB_MODE` — `include/openssl/evp.h:314`.
@@ -257,8 +260,8 @@ const OSSL_CIPHER_PARAM_RANDOM_KEY: *const c_char = c"randkey".as_ptr();
 const OSSL_CIPHER_PARAM_DECRYPT_ONLY: *const c_char = c"decrypt-only".as_ptr();
 
 // The `PROV_CIPHER_CTX` bitfield order, `prov/ciphercommon.h:69-76`.
-const CTX_PAD: c_uint = 1 << 0;
-const CTX_ENC: c_uint = 1 << 1;
+pub(crate) const CTX_PAD: c_uint = 1 << 0;
+pub(crate) const CTX_ENC: c_uint = 1 << 1;
 const CTX_IV_SET: c_uint = 1 << 2;
 const CTX_KEY_SET: c_uint = 1 << 3;
 const CTX_UPDATED: c_uint = 1 << 4;
@@ -1279,7 +1282,7 @@ unsafe fn ossl_cipher_generic_initiv(
 /// other readers are the provider rows that sub-fetch (`cmac_prov.c`'s `ossl_prov_cipher_load`,
 /// `cipher_aes_siv_hw.c`'s two fetches) through their own `PROV_LIBCTX_OF`.
 #[allow(clippy::too_many_arguments)]
-unsafe fn ossl_cipher_generic_initkey(
+pub(crate) unsafe fn ossl_cipher_generic_initkey(
     vctx: *mut c_void,
     kbits: usize,
     blkbits: usize,
@@ -2374,7 +2377,7 @@ unsafe extern "C" fn cipher_hw_camellia_copyctx(
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW::init` contract; an EDE3 row's key is twenty-four bytes.
-unsafe extern "C" fn cipher_hw_tdes_ede3_initkey(
+pub(crate) unsafe extern "C" fn cipher_hw_tdes_ede3_initkey(
     ctx: *mut ProvCipherCtx,
     key: *const c_uchar,
     _keylen: usize,
@@ -2416,7 +2419,10 @@ unsafe extern "C" fn cipher_hw_tdes_ede2_initkey(
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW::copyctx` contract.
-unsafe extern "C" fn cipher_hw_tdes_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
+pub(crate) unsafe extern "C" fn cipher_hw_tdes_copyctx(
+    dst: *mut ProvCipherCtx,
+    src: *const ProvCipherCtx,
+) {
     // SAFETY: the caller's contract; both are `PROV_TDES_CTX`.
     unsafe {
         ptr::copy_nonoverlapping(src.cast::<ProvTdesCtx>(), dst.cast::<ProvTdesCtx>(), 1);
@@ -2463,7 +2469,7 @@ unsafe extern "C" fn ossl_cipher_hw_tdes_ecb(
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW_FN` contract.
-unsafe extern "C" fn ossl_cipher_hw_tdes_cbc(
+pub(crate) unsafe extern "C" fn ossl_cipher_hw_tdes_cbc(
     ctx: *mut ProvCipherCtx,
     out: *mut c_uchar,
     in_: *const c_uchar,
@@ -2800,7 +2806,7 @@ unsafe extern "C" fn camellia_dupctx(ctx: *mut c_void) -> *mut c_void {
 ///
 /// # Safety
 /// The dispatch contract.
-unsafe extern "C" fn tdes_freectx(vctx: *mut c_void) {
+pub(crate) unsafe extern "C" fn tdes_freectx(vctx: *mut c_void) {
     // SAFETY: the caller's contract.
     unsafe {
         ossl_cipher_generic_reset_ctx(vctx.cast());
@@ -2881,7 +2887,7 @@ static TDES_GETTABLE_CTX_PARAMS: [OsslParam; 8] = [
 ///
 /// # Safety
 /// The dispatch contract.
-unsafe extern "C" fn ossl_tdes_gettable_ctx_params(
+pub(crate) unsafe extern "C" fn ossl_tdes_gettable_ctx_params(
     _cctx: *mut c_void,
     _provctx: *mut c_void,
 ) -> *const OsslParam {
@@ -2911,7 +2917,10 @@ unsafe extern "C" fn ossl_tdes_settable_ctx_params(
 ///
 /// # Safety
 /// The dispatch contract.
-unsafe extern "C" fn ossl_tdes_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+pub(crate) unsafe extern "C" fn ossl_tdes_get_ctx_params(
+    vctx: *mut c_void,
+    params: *mut OsslParam,
+) -> c_int {
     // SAFETY: the caller's contract.
     unsafe { ossl_cipher_generic_get_ctx_params(vctx, params) }
 }
@@ -10487,6 +10496,7 @@ use crate::params::{
     OSSL_PARAM_get_size_t, OSSL_PARAM_get_uint, OSSL_PARAM_locate, OSSL_PARAM_locate_const,
     OSSL_PARAM_set_octet_string_or_ptr, OSSL_PARAM_set_size_t, OSSL_PARAM_set_uint,
 };
+use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::constant_time::{constant_time_ge_s, constant_time_select};
 
 /// `NO_PAYLOAD_LENGTH` — `cipher_aes_cbc_hmac_sha.h:63`: `((size_t)-1)`.
@@ -11002,27 +11012,177 @@ unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_aad(
     }
 }
 
+/// The SHA-1 body of `tls1_multi_block_encrypt` — `cipher_aes_cbc_hmac_sha1_hw.c:121-369`.
+///
+/// **This is the construction `D-CBCHMAC-MULTIBLOCK-ENC-1` withheld, and Phase 9's RAND is what
+/// lands it.** The authority draws its per-record explicit IVs in bulk
+/// (`RAND_bytes_ex(ctx->base.libctx, blocks[0].c, 16 * x4, 0)`, `:146`); the crate draws the same
+/// `16 * x4` bytes through its own `RAND_bytes_ex` in the same library context the row carries
+/// (`ctx->base.libctx`, the acquisition D240/D241 measured), so the *bytes* differ between the two
+/// sides -- as every random draw does -- while their length, placement and use are the authority's.
+///
+/// **The perlasm collapses to byte-identical ordinary operations.** `sha1_multi_block` runs four or
+/// eight independent SHA-1 chains over the per-lane descriptors and `aesni_multi_cbc_encrypt` the
+/// same number of independent CBC chains; each lane's digest is the state the single-block path
+/// would reach, and `head`/`tail`/`md` are ordinary `SHA_CTX`s. So the lane MAC is
+/// `HMAC-SHA1(mac_key, header_lane || payload_lane)` computed with `SHA1_Update`/`SHA1_Final` from
+/// `head` and `tail`, and the lane ciphertext is one `AES_cbc_encrypt` under the lane's drawn IV.
+/// The `MAXCHUNKSIZE` interleaving and the explicit padding-block construction are speed, not
+/// bytes: both sides hash the same `ipad || header || payload` and pad the same records.
+///
+/// The layout, per lane: `[5-byte header][16-byte explicit IV][ciphertext]`, where the header is
+/// `md.data[8..11]` (the AAD's type and version) followed by the 16-bit length of
+/// `payload || mac || padding || iv`, and the MAC covers `header_lane || payload_lane` with the
+/// header's length field set to the *payload* length, exactly as `set_tls1_aad` defines.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `out` is writable for the returned number of bytes;
+/// `inp` is readable for `inp_len` bytes.
+unsafe fn tls1_multi_block_encrypt_sha1(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    inp: *const c_uchar,
+    inp_len: usize,
+    n4x: c_int,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha1Ctx>();
+
+        // `x4 = 4 * n4x`, and the authority's `/* n4x is 1 or 2 */` contract is what sizes its IV
+        // scratch (`blocks[0].c`, 128 bytes). An argument outside that range indexes past the
+        // scratch there; answering 0 here is the safe side of an out-of-contract call rather than
+        // a claim about it.
+        let x4 = (n4x as u32).wrapping_mul(4);
+        if x4 == 0 || x4 > 8 {
+            return 0;
+        }
+        let x4 = x4 as usize;
+
+        let mut ivs = [0u8; 128];
+        // SAFETY: `ivs` is writable for `16 * x4 <= 128` bytes and `libctx` is the row's own.
+        if RAND_bytes_ex((*ctx).base.libctx, ivs.as_mut_ptr(), 16 * x4, 0) <= 0 {
+            return 0;
+        }
+
+        let shift = 1 + n4x as u32;
+        let mut frag = (inp_len as u32) >> shift;
+        let mut last = (inp_len as u32)
+            .wrapping_add(frag)
+            .wrapping_sub(frag << shift);
+        if last > frag && (last.wrapping_add(13).wrapping_add(9) % 64) < (x4 as u32 - 1) {
+            frag += 1;
+            last -= x4 as u32 - 1;
+        }
+        let packlen = 5 + 16 + ((frag.wrapping_add(20).wrapping_add(16)) & (u32::MAX - 15));
+
+        let md_data = (*sctx).md.data.as_ptr().cast::<u8>();
+        let mut ret: usize = 0;
+        let mut seq_off: usize = 0;
+        for i in 0..x4 {
+            let lane_len = if i == x4 - 1 { last } else { frag } as usize;
+            let ciph = out.add(5 + 16 + i * packlen as usize);
+            let rec = out.add(seq_off);
+
+            // The thirteen-byte MAC header: `md.data`'s sequence number incremented by the lane
+            // index, its type and version, and this lane's payload length.
+            let mut hdr = [0u8; 13];
+            ptr::copy_nonoverlapping(md_data, hdr.as_mut_ptr(), 8);
+            let mut carry = i as u32;
+            let mut j = 8usize;
+            while j != 0 {
+                j -= 1;
+                let v = hdr[j] as u32 + carry;
+                hdr[j] = v as u8;
+                carry = (hdr[j] as u32).wrapping_sub(carry) >> 31;
+            }
+            hdr[8] = *md_data.add(8);
+            hdr[9] = *md_data.add(9);
+            hdr[10] = *md_data.add(10);
+            hdr[11] = (lane_len >> 8) as u8;
+            hdr[12] = lane_len as u8;
+
+            // `H(ipad || hm)`, then `HMAC = H(opad || H(ipad || hm))`.
+            let lane_in = inp.add(i * frag as usize);
+            let mut mac = [0u8; SHA_DIGEST_LENGTH];
+            let mut st: ShaCtx = core::mem::zeroed();
+            copy_state(ptr::addr_of_mut!(st), ptr::addr_of!((*sctx).head));
+            SHA1_Update(ptr::addr_of_mut!(st), hdr.as_ptr().cast(), 13);
+            SHA1_Update(ptr::addr_of_mut!(st), lane_in.cast(), lane_len);
+            SHA1_Final(mac.as_mut_ptr(), ptr::addr_of_mut!(st));
+            copy_state(ptr::addr_of_mut!(st), ptr::addr_of!((*sctx).tail));
+            SHA1_Update(
+                ptr::addr_of_mut!(st),
+                mac.as_ptr().cast(),
+                SHA_DIGEST_LENGTH,
+            );
+            SHA1_Final(mac.as_mut_ptr(), ptr::addr_of_mut!(st));
+
+            // `memcpy(ciph_d[i].out, ciph_d[i].inp, len)`: the payload goes to the encryption
+            // start, `out + 5 + 16 + i*packlen`.
+            ptr::copy_nonoverlapping(lane_in, ciph, lane_len);
+
+            // The MAC and the padding go at the *sequential* `out` position, as the authority's
+            // own `out` pointer writes them; `seq_off` tracks that pointer.
+            let macp = rec.add(5 + 16 + lane_len);
+            ptr::copy_nonoverlapping(mac.as_ptr(), macp, SHA_DIGEST_LENGTH);
+            let mut plen = lane_len + SHA_DIGEST_LENGTH;
+            let pad = (15 - (plen % 16)) as u8;
+            for j in 0..=(pad as usize) {
+                *macp.add(SHA_DIGEST_LENGTH + j) = pad;
+            }
+            plen += pad as usize + 1;
+            let wire_len = plen + AES_BLOCK_SIZE;
+
+            // Arrange the header. Bytes 8..11 of `md.data` are the AAD's type and version.
+            *rec.add(0) = *md_data.add(8);
+            *rec.add(1) = *md_data.add(9);
+            *rec.add(2) = *md_data.add(10);
+            *rec.add(3) = (wire_len >> 8) as u8;
+            *rec.add(4) = wire_len as u8;
+
+            // The explicit IV is stored at `ciph - 16` and used as the CBC IV through a copy, so
+            // `AES_cbc_encrypt`'s write-back does not overwrite the stored value.
+            ptr::copy_nonoverlapping(ivs.as_ptr().add(i * 16), ciph.sub(16), 16);
+            let mut ivec = [0u8; AES_BLOCK_SIZE];
+            ptr::copy_nonoverlapping(ivs.as_ptr().add(i * 16), ivec.as_mut_ptr(), AES_BLOCK_SIZE);
+            AES_cbc_encrypt(
+                ciph,
+                ciph,
+                plen,
+                ptr::addr_of_mut!((*ctx).ks.ks),
+                ivec.as_mut_ptr(),
+                1,
+            );
+
+            ret += wire_len + 5;
+            seq_off += wire_len + 5;
+        }
+
+        (*ctx).multiblock_encrypt_len = ret;
+        ret
+    }
+}
+
 /// `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt` — `cipher_aes_cbc_hmac_sha1_hw.c:760-766`.
-///
-/// **This is the family's one recorded narrowing, and it is a Phase 9 hand-off.** The authority's
-/// body is `tls1_multi_block_encrypt`, whose first act is
-/// `RAND_bytes_ex(ctx->base.libctx, blocks[0].c, 16 * x4, 0)` (`:146`) *and* whose every subsequent
-/// byte depends on those random values: they become each interleaved record's explicit IV. No
-/// version of this arm answers correctly without the random layer, so it answers the value the
-/// authority itself answers when that call fails -- `0`, with no error queued -- and the divergence
-/// is recorded rather than hidden. `crypto/rand/` is Phase 9's, the same blocker `DES3-WRAP`,
-/// `SM4-GCM` and the `ARIA-*-GCM` rows carry (D237, D240).
-///
-/// `tls1_multiblock_aad` and `tls1_multiblock_max_bufsize` above are **not** narrowed: neither
-/// touches the random layer, and both are courted.
 ///
 /// # Safety
 /// As `aesni_cbc_hmac_sha1_tls1_multiblock_aad`.
 unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_encrypt(
-    _vctx: *mut c_void,
-    _param: *mut EvpCtrlTls11MultiblockParam,
+    vctx: *mut c_void,
+    param: *mut EvpCtrlTls11MultiblockParam,
 ) -> c_int {
-    0
+    // SAFETY: the caller's contract; `param` is a live parameter block.
+    unsafe {
+        tls1_multi_block_encrypt_sha1(
+            vctx,
+            (*param).out,
+            (*param).inp,
+            (*param).len,
+            ((*param).interleave / 4) as c_int,
+        ) as c_int
+    }
 }
 
 /// `aesni_cbc_hmac_sha1_cipher` — `cipher_aes_cbc_hmac_sha1_hw.c:372-625`.
@@ -11482,16 +11642,150 @@ unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_aad(
     }
 }
 
-/// `aesni_cbc_hmac_sha256_tls1_multiblock_encrypt` — the same Phase 9 narrowing as its SHA-1
-/// sibling; see `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt`.
+/// The SHA-256 body of `tls1_multi_block_encrypt` — `cipher_aes_cbc_hmac_sha256_hw.c:125-392`.
+///
+/// The same construction as [`tls1_multi_block_encrypt_sha1`], differing only where the authority's
+/// SHA-256 sibling differs: a 32-byte tag, `SHA256_Update`/`SHA256_Final` over a `SHA256_CTX`, and a
+/// `frag + 32 + 16` pack length. The two bodies are kept apart rather than shared for the same
+/// reason the two cipher bodies above are: the digest length and the state type are compile-time
+/// facts in the authority's two translation units, and a shared generic would hide exactly the
+/// per-row difference a shared assumption erases.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `out` is writable for the returned number of bytes;
+/// `inp` is readable for `inp_len` bytes.
+unsafe fn tls1_multi_block_encrypt_sha256(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    inp: *const c_uchar,
+    inp_len: usize,
+    n4x: c_int,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha256Ctx>();
+
+        // As the SHA-1 body's guard: `x4 = 4 * n4x` with the authority's `n4x` 1-or-2 contract.
+        let x4 = (n4x as u32).wrapping_mul(4);
+        if x4 == 0 || x4 > 8 {
+            return 0;
+        }
+        let x4 = x4 as usize;
+
+        let mut ivs = [0u8; 128];
+        // SAFETY: `ivs` is writable for `16 * x4 <= 128` bytes and `libctx` is the row's own.
+        if RAND_bytes_ex((*ctx).base.libctx, ivs.as_mut_ptr(), 16 * x4, 0) <= 0 {
+            return 0;
+        }
+
+        let shift = 1 + n4x as u32;
+        let mut frag = (inp_len as u32) >> shift;
+        let mut last = (inp_len as u32)
+            .wrapping_add(frag)
+            .wrapping_sub(frag << shift);
+        if last > frag && (last.wrapping_add(13).wrapping_add(9) % 64) < (x4 as u32 - 1) {
+            frag += 1;
+            last -= x4 as u32 - 1;
+        }
+        let packlen = 5 + 16 + ((frag.wrapping_add(32).wrapping_add(16)) & (u32::MAX - 15));
+
+        let md_data = (*sctx).md.data.as_ptr().cast::<u8>();
+        let mut ret: usize = 0;
+        let mut seq_off: usize = 0;
+        for i in 0..x4 {
+            let lane_len = if i == x4 - 1 { last } else { frag } as usize;
+            let ciph = out.add(5 + 16 + i * packlen as usize);
+            let rec = out.add(seq_off);
+
+            let mut hdr = [0u8; 13];
+            ptr::copy_nonoverlapping(md_data, hdr.as_mut_ptr(), 8);
+            let mut carry = i as u32;
+            let mut j = 8usize;
+            while j != 0 {
+                j -= 1;
+                let v = hdr[j] as u32 + carry;
+                hdr[j] = v as u8;
+                carry = (hdr[j] as u32).wrapping_sub(carry) >> 31;
+            }
+            hdr[8] = *md_data.add(8);
+            hdr[9] = *md_data.add(9);
+            hdr[10] = *md_data.add(10);
+            hdr[11] = (lane_len >> 8) as u8;
+            hdr[12] = lane_len as u8;
+
+            let lane_in = inp.add(i * frag as usize);
+            let mut mac = [0u8; SHA256_DIGEST_LENGTH];
+            let mut st: Sha256Ctx = core::mem::zeroed();
+            copy_state(ptr::addr_of_mut!(st), ptr::addr_of!((*sctx).head));
+            SHA256_Update(ptr::addr_of_mut!(st), hdr.as_ptr().cast(), 13);
+            SHA256_Update(ptr::addr_of_mut!(st), lane_in.cast(), lane_len);
+            SHA256_Final(mac.as_mut_ptr(), ptr::addr_of_mut!(st));
+            copy_state(ptr::addr_of_mut!(st), ptr::addr_of!((*sctx).tail));
+            SHA256_Update(
+                ptr::addr_of_mut!(st),
+                mac.as_ptr().cast(),
+                SHA256_DIGEST_LENGTH,
+            );
+            SHA256_Final(mac.as_mut_ptr(), ptr::addr_of_mut!(st));
+
+            ptr::copy_nonoverlapping(lane_in, ciph, lane_len);
+
+            let macp = rec.add(5 + 16 + lane_len);
+            ptr::copy_nonoverlapping(mac.as_ptr(), macp, SHA256_DIGEST_LENGTH);
+            let mut plen = lane_len + SHA256_DIGEST_LENGTH;
+            let pad = (15 - (plen % 16)) as u8;
+            for j in 0..=(pad as usize) {
+                *macp.add(SHA256_DIGEST_LENGTH + j) = pad;
+            }
+            plen += pad as usize + 1;
+            let wire_len = plen + AES_BLOCK_SIZE;
+
+            *rec.add(0) = *md_data.add(8);
+            *rec.add(1) = *md_data.add(9);
+            *rec.add(2) = *md_data.add(10);
+            *rec.add(3) = (wire_len >> 8) as u8;
+            *rec.add(4) = wire_len as u8;
+
+            ptr::copy_nonoverlapping(ivs.as_ptr().add(i * 16), ciph.sub(16), 16);
+            let mut ivec = [0u8; AES_BLOCK_SIZE];
+            ptr::copy_nonoverlapping(ivs.as_ptr().add(i * 16), ivec.as_mut_ptr(), AES_BLOCK_SIZE);
+            AES_cbc_encrypt(
+                ciph,
+                ciph,
+                plen,
+                ptr::addr_of_mut!((*ctx).ks.ks),
+                ivec.as_mut_ptr(),
+                1,
+            );
+
+            ret += wire_len + 5;
+            seq_off += wire_len + 5;
+        }
+
+        (*ctx).multiblock_encrypt_len = ret;
+        ret
+    }
+}
+
+/// `aesni_cbc_hmac_sha256_tls1_multiblock_encrypt` — `cipher_aes_cbc_hmac_sha256_hw.c:811-817`.
 ///
 /// # Safety
 /// As `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt`.
 unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_encrypt(
-    _vctx: *mut c_void,
-    _param: *mut EvpCtrlTls11MultiblockParam,
+    vctx: *mut c_void,
+    param: *mut EvpCtrlTls11MultiblockParam,
 ) -> c_int {
-    0
+    // SAFETY: the caller's contract; `param` is a live parameter block.
+    unsafe {
+        tls1_multi_block_encrypt_sha256(
+            vctx,
+            (*param).out,
+            (*param).inp,
+            (*param).len,
+            ((*param).interleave / 4) as c_int,
+        ) as c_int
+    }
 }
 
 /// `aesni_cbc_hmac_sha256_cipher` — `cipher_aes_cbc_hmac_sha256_hw.c:395-...`.
@@ -13722,6 +14016,14 @@ alias!(N_ARIA_128_CFB8, "ARIA-128-CFB8");
 alias!(N_ARIA_256_CTR, "ARIA-256-CTR:1.2.410.200046.1.1.15");
 alias!(N_ARIA_192_CTR, "ARIA-192-CTR:1.2.410.200046.1.1.10");
 alias!(N_ARIA_128_CTR, "ARIA-128-CTR:1.2.410.200046.1.1.5");
+// The ARIA and SM4 GCM rows' sequences -- `prov/names.h:108-110` and `:173`. All three carry an OID
+// and no short alias, unlike their CBC rows, and all four sit immediately before the CCM rows in
+// `names.h` exactly as they do in `defltprov.c`.
+alias!(N_ARIA_256_GCM, "ARIA-256-GCM:1.2.410.200046.1.1.36");
+alias!(N_ARIA_192_GCM, "ARIA-192-GCM:1.2.410.200046.1.1.35");
+alias!(N_ARIA_128_GCM, "ARIA-128-GCM:1.2.410.200046.1.1.34");
+alias!(N_SM4_GCM, "SM4-GCM:1.2.156.10197.1.104.8");
+
 // The ARIA and SM4 CCM rows' sequences -- `prov/names.h:111-113` and `:174`. Neither carries a
 // short alias, unlike their CBC rows.
 alias!(N_ARIA_256_CCM, "ARIA-256-CCM:1.2.410.200046.1.1.39");
@@ -13797,6 +14099,13 @@ alias!(N_DES_EDE3_OFB, "DES-EDE3-OFB");
 alias!(N_DES_EDE3_CFB, "DES-EDE3-CFB");
 alias!(N_DES_EDE3_CFB8, "DES-EDE3-CFB8");
 alias!(N_DES_EDE3_CFB1, "DES-EDE3-CFB1");
+// `PROV_NAMES_DES3_WRAP` — `prov/names.h:163`. It carries the S/MIME CMS 3DES wrap OID and no
+// short `id-` spelling, and it sits between `DES-EDE3-CFB1` and `DES-EDE-ECB` in both `names.h`
+// and `defltprov.c:308`.
+alias!(
+    N_DES3_WRAP,
+    "DES3-WRAP:id-smime-alg-CMS3DESwrap:1.2.840.113549.1.9.16.3.6"
+);
 alias!(N_DES_EDE_ECB, "DES-EDE-ECB:DES-EDE:1.3.14.3.2.17");
 alias!(N_DES_EDE_CBC, "DES-EDE-CBC");
 alias!(N_DES_EDE_OFB, "DES-EDE-OFB");
@@ -13804,6 +14113,21 @@ alias!(N_DES_EDE_CFB, "DES-EDE-CFB");
 alias!(N_AES_128_SIV, "AES-128-SIV");
 alias!(N_AES_192_SIV, "AES-192-SIV");
 alias!(N_AES_256_SIV, "AES-256-SIV");
+// The AES GCM rows' sequences -- `prov/names.h:74-76`, which sit immediately before the CCM three
+// exactly as they do in `defltprov.c`. Each carries both a short OID alias and the long `id-`
+// spelling, unlike the CCM three below.
+alias!(
+    N_AES_256_GCM,
+    "AES-256-GCM:id-aes256-GCM:2.16.840.1.101.3.4.1.46"
+);
+alias!(
+    N_AES_192_GCM,
+    "AES-192-GCM:id-aes192-GCM:2.16.840.1.101.3.4.1.26"
+);
+alias!(
+    N_AES_128_GCM,
+    "AES-128-GCM:id-aes128-GCM:2.16.840.1.101.3.4.1.6"
+);
 alias!(
     N_AES_256_CCM,
     "AES-256-CCM:id-aes256-CCM:2.16.840.1.101.3.4.1.47"
@@ -13923,7 +14247,7 @@ const fn capable_row(
 
 /// `static const OSSL_ALGORITHM_CAPABLE deflt_ciphers[]` — `providers/defltprov.c:161-330`,
 /// restricted to the rows this half implements, in the authority's order.
-pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
+pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 140] = [
     row(N_NULL, NULL_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_ECB, AES256ECB_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_ECB, AES192ECB_FUNCTIONS.as_ptr().cast()),
@@ -13960,6 +14284,18 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
     row(N_AES_128_GCM_SIV, AES128GCM_SIV_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_GCM_SIV, AES192GCM_SIV_FUNCTIONS.as_ptr().cast()),
     row(N_AES_256_GCM_SIV, AES256GCM_SIV_FUNCTIONS.as_ptr().cast()),
+    row(
+        N_AES_256_GCM,
+        cipher_gcm::AES256GCM_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_AES_192_GCM,
+        cipher_gcm::AES192GCM_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_AES_128_GCM,
+        cipher_gcm::AES128GCM_FUNCTIONS.as_ptr().cast(),
+    ),
     row(N_AES_256_CCM, AES256CCM_FUNCTIONS.as_ptr().cast()),
     row(N_AES_192_CCM, AES192CCM_FUNCTIONS.as_ptr().cast()),
     row(N_AES_128_CCM, AES128CCM_FUNCTIONS.as_ptr().cast()),
@@ -14068,6 +14404,18 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
     // `CAMELLIA`. The six GCM and CCM rows precede these in the authority; the GCM three are
     // Phase 9's on `RAND_bytes_ex` and the CCM three are landed below, ahead of the mode rows
     // because that is where the authority puts them.
+    row(
+        N_ARIA_256_GCM,
+        cipher_gcm::ARIA256GCM_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_ARIA_192_GCM,
+        cipher_gcm::ARIA192GCM_FUNCTIONS.as_ptr().cast(),
+    ),
+    row(
+        N_ARIA_128_GCM,
+        cipher_gcm::ARIA128GCM_FUNCTIONS.as_ptr().cast(),
+    ),
     row(N_ARIA_256_CCM, ARIA256CCM_FUNCTIONS.as_ptr().cast()),
     row(N_ARIA_192_CCM, ARIA192CCM_FUNCTIONS.as_ptr().cast()),
     row(N_ARIA_128_CCM, ARIA128CCM_FUNCTIONS.as_ptr().cast()),
@@ -14149,10 +14497,15 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
     row(N_DES_EDE3_CFB, TDES_EDE3_CFB_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE3_CFB8, TDES_EDE3_CFB8_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE3_CFB1, TDES_EDE3_CFB1_FUNCTIONS.as_ptr().cast()),
+    row(
+        N_DES3_WRAP,
+        cipher_tdes_wrap::TDES_WRAP_CBC_FUNCTIONS.as_ptr().cast(),
+    ),
     row(N_DES_EDE_ECB, TDES_EDE2_ECB_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_CBC, TDES_EDE2_CBC_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_OFB, TDES_EDE2_OFB_FUNCTIONS.as_ptr().cast()),
     row(N_DES_EDE_CFB, TDES_EDE2_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_SM4_GCM, cipher_gcm::SM4128GCM_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_CCM, SM4128CCM_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_ECB, SM4128ECB_FUNCTIONS.as_ptr().cast()),
     row(N_SM4_CBC, SM4128CBC_FUNCTIONS.as_ptr().cast()),
@@ -14163,7 +14516,7 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
     row(N_CHACHA20, CHACHA20_FUNCTIONS.as_ptr().cast()),
     row(
         N_CHACHA20_POLY1305,
-        CHACHA20_POLY1305_FUNCTIONS.as_ptr().cast(),
+        ossl_chacha20_ossl_poly1305_functions.as_ptr().cast(),
     ),
     OsslAlgorithmCapable {
         alg: OsslAlgorithm {
@@ -14185,13 +14538,13 @@ pub(crate) static DEFLT_CIPHERS: [OsslAlgorithmCapable; 132] = [
 /// against the write. This crate keeps the same discipline: the only writer is
 /// `crate::provider::cipher::cache_exported_ciphers`, called from provider init, and every reader
 /// goes through [`exported_ciphers`].
-static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 132]> = SyncCell(UnsafeCell::new(
+static EXPORTED_CIPHERS: SyncCell<[OsslAlgorithm; 140]> = SyncCell(UnsafeCell::new(
     [OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
         algorithm_description: ptr::null(),
-    }; 132],
+    }; 140],
 ));
 
 /// A `static` the crate mutates once at provider init and shares afterwards, exactly as the
@@ -16369,7 +16722,13 @@ unsafe extern "C" fn chacha20_poly1305_final(
 /// **`update` and `cipher` are different functions here**, where every block-mode row shares one
 /// generic pair. The order is the authority's, and `GETTABLE_PARAMS` is
 /// `ossl_cipher_generic_gettable_params` directly because the row does not override it.
-pub(crate) static CHACHA20_POLY1305_FUNCTIONS: [OsslDispatch; 15] = [
+///
+/// The table keeps the authority's own name because the authority defines it non-`static` and
+/// declares it in the uninstalled `prov/implementations.h:250`, so the plan can promise it and
+/// `plan_reconciliation.py` has to be able to see it built (D420). The doubled `ossl` is the
+/// authority's, not a transcription slip.
+#[allow(non_upper_case_globals)]
+pub(crate) static ossl_chacha20_ossl_poly1305_functions: [OsslDispatch; 15] = [
     OsslDispatch {
         function_id: OSSL_FUNC_CIPHER_NEWCTX,
         function: chacha20_poly1305_newctx as *mut c_void,
@@ -17535,9 +17894,9 @@ mod tests {
 
     #[test]
     fn the_cipher_table_terminates_and_names_the_rows() {
-        assert_eq!(DEFLT_CIPHERS.len(), 132);
+        assert_eq!(DEFLT_CIPHERS.len(), 140);
         // SAFETY: every entry up to the terminator is initialised.
-        let last = DEFLT_CIPHERS[131].alg.algorithm_names;
+        let last = DEFLT_CIPHERS[139].alg.algorithm_names;
         assert!(last.is_null(), "the table is NULL-name terminated");
         // SAFETY: the first row's name is a `'static` C string.
         let first = unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[0].alg.algorithm_names) };
@@ -17545,13 +17904,13 @@ mod tests {
         // SAFETY: the last *named* row's name is a `'static` C string, and it is the authority's
         // last cipher row (`defltprov.c:327`).
         let penultimate =
-            unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[130].alg.algorithm_names) };
+            unsafe { core::ffi::CStr::from_ptr(DEFLT_CIPHERS[138].alg.algorithm_names) };
         assert_eq!(penultimate.to_bytes(), b"ChaCha20-Poly1305");
         // The filtered copy the `OSSL_OP_CIPHER` arm answers is the same length, so the two
         // cannot drift apart silently.
         // SAFETY: the cell is a `'static` array of `OsslAlgorithm`; only its length is read.
         let filtered = unsafe { &*EXPORTED_CIPHERS.0.get() };
-        assert_eq!(filtered.len(), 132);
+        assert_eq!(filtered.len(), 140);
     }
 
     #[test]

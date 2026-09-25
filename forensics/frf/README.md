@@ -157,16 +157,17 @@ requires each mutation to be seen on its targeted axis **and on no other**.
 | `openssl-cli-dgst` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-inventory` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-version` | refused | refused | observations only |
-| `openssl-rs-rt-*` (all 77 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
+| `openssl-rs-rt-*` (all 81 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
 
-The runtime count is 77 as of this revision: ten Phase 3 courts, seventeen Phase 4, nine
-Phase 5, seven Phase 6, nineteen Phase 7, and fifteen Phase 8. The Phase 7 nineteen arrived with
-D200 and the Phase 8 fifteen with D413. The number is not asserted from
+The runtime count is 81 as of this revision: ten Phase 3 courts, seventeen Phase 4, nine
+Phase 5, seven Phase 6, nineteen Phase 7, fifteen Phase 8, and four Phase 9. The Phase 7 nineteen
+arrived with D200, the Phase 8 fifteen with D413, and the Phase 9 four with the FRF chain entry this
+revision adds. The number is not asserted from
 memory — it is the count of manifests `forensics/frf/courts/openssl-rs-rt-*` holds, which is also
 what `forensics/frf/run_courts.sh` derives its court list from — so the *runner* cannot fall
 behind a new court. This line can: it is prose rather than a projection, and it was wrong
 before this revision (it said 25 while the store held 37, then 40 while it held 43, then 62
-while it held 77). The
+while it held 77, then 77 while it held 81). The
 authoritative counts are `frf --root .frf evidence status` and `forensics/STATUS.md`; a
 discrepancy here is a stale sentence, not a missing court.
 

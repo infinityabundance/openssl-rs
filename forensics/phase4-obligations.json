@@ -45,7 +45,7 @@
       },
       {
         "declaring_header": "bio.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/bio/",
         "owning_phase": 9,
         "reason": "its read and write call RAND_priv_bytes; RAND is Phase 9",
@@ -553,7 +553,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "92ee13e7deb57de7c790ee9a88776a3405b400e841b586421dbfed27c108b8b5"
+      "sha256": "45cf04e6fc30928b4fa6a43b8a83a8f993f1a374177be67ed96c351ab2318f86"
     }
   ],
   "kind": "phase4-obligations",

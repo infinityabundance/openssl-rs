@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 25,
       "deferred_to_later_phase": 0,
-      "implemented": 66,
-      "open_in_this_stratum": 3,
+      "implemented": 69,
+      "open_in_this_stratum": 0,
       "owned": 69,
       "received_by_handoff": 44
     },
@@ -68,7 +68,7 @@
       "4": [
         {
           "declaring_header": "bio.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/bio/",
           "owning_phase": 9,
           "reason": "its read and write call RAND_priv_bytes; RAND is Phase 9",
@@ -363,6 +363,7 @@
       ]
     },
     "implemented": [
+      "BIO_f_nbio_test",
       "BIO_f_reliable",
       "BN_BLINDING_convert",
       "BN_BLINDING_convert_ex",
@@ -377,6 +378,7 @@
       "BN_X931_generate_prime_ex",
       "BN_bntest_rand",
       "BN_check_prime",
+      "BN_generate_dsa_nonce",
       "BN_generate_prime",
       "BN_generate_prime_ex",
       "BN_generate_prime_ex2",
@@ -396,6 +398,7 @@
       "BN_rand_range_ex",
       "EVP_CIPHER_CTX_rand_key",
       "EVP_SealInit",
+      "OSSL_HPKE_get_grease_value",
       "PEM_ASN1_read",
       "PEM_ASN1_read_bio",
       "PEM_ASN1_write",
@@ -512,6 +515,18 @@
         ]
       },
       {
+        "module": "src/runtime/bio/",
+        "prefixes": [
+          "BIO_f_nbio_test"
+        ]
+      },
+      {
+        "module": "src/evp/bio_ok.rs",
+        "prefixes": [
+          "BIO_f_reliable"
+        ]
+      },
+      {
         "module": "src/evp/bio_enc.rs",
         "prefixes": [
           "BIO_"
@@ -525,26 +540,7 @@
       }
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum, and it starts at the whole working set, which is the honest starting state. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-9-SUBPHASES.md section 4 decides when the stratum may be called complete.",
-    "open": [
-      {
-        "declaring_header": "bio.h",
-        "module": "src/evp/bio_enc.rs",
-        "received_from_phase": 4,
-        "symbol": "BIO_f_nbio_test"
-      },
-      {
-        "declaring_header": "bn.h",
-        "module": "src/bn/rand.rs",
-        "received_from_phase": 5,
-        "symbol": "BN_generate_dsa_nonce"
-      },
-      {
-        "declaring_header": "hpke.h",
-        "module": "src/hpke/mod.rs",
-        "received_from_phase": 7,
-        "symbol": "OSSL_HPKE_get_grease_value"
-      }
-    ],
+    "open": [],
     "owned_by_header": {
       "bio.h": 1,
       "bn.h": 31,
@@ -559,10 +555,11 @@
       "src/bn/primes.rs": 11,
       "src/bn/rand.rs": 12,
       "src/evp/": 2,
-      "src/evp/bio_enc.rs": 2,
+      "src/evp/bio_ok.rs": 1,
       "src/hpke/mod.rs": 1,
       "src/pem/pem_lib.rs": 8,
-      "src/rand/mod.rs": 25
+      "src/rand/mod.rs": 25,
+      "src/runtime/bio/": 1
     },
     "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 9, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
   },
@@ -586,22 +583,22 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "92ee13e7deb57de7c790ee9a88776a3405b400e841b586421dbfed27c108b8b5"
+      "sha256": "45cf04e6fc30928b4fa6a43b8a83a8f993f1a374177be67ed96c351ab2318f86"
     },
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "3fdef722750cf6b92694531f317a56313206c855276f786b3bafca76bda968ec"
+      "sha256": "5c697da61eeb1578dd5735f21583d85c7dc98464345680caed94add1d6dec76a"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "e5fba1a288288c00f4200a53812a478e0c1d6dd2cd345ad7a763587064f13971"
+      "sha256": "5b312434e3e802ec4c764395a740cad0c9b5669d331276124e21a8071ecff158"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "ad30393779ff9d4c69fd45f07c71d4e15de0cdb47d27e50fafd9af13da72e9a9"
+      "sha256": "671b504e7e52453cbc523b2bcf208a7e17abeafbf573c053c7ca09cd4dfba09c"
     }
   ],
   "kind": "phase9-obligations",

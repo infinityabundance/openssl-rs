@@ -33,7 +33,12 @@
 
 // The authority's own spellings survive transcription (`ctr_XOR`, `ctr_BCC_*`, `V_tmp`), because a
 // name the tooling cannot join to a C identifier is indistinguishable from a name that is absent.
+// That includes the three dispatch tables' own names: the authority defines
+// `ossl_drbg_ctr_functions`, `ossl_drbg_hash_functions` and `ossl_drbg_ossl_hmac_functions`
+// non-`static` and declares them in the uninstalled `prov/implementations.h`, so they are names
+// the plan can promise and `plan_reconciliation.py` has to be able to see (D420).
 #![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ushort, c_void};
 use core::ptr;
@@ -108,7 +113,7 @@ use crate::runtime::time::TimeT;
 // rather than pathed inline because the provider census's reader joins a row's alias sequence to
 // its dispatch expression on **one line**, and a fully-qualified path makes rustfmt break the
 // chain across three lines -- the reader then cannot see rows it must not skip.
-use crate::provider::seed_src::{SEED_SRC_FUNCTIONS, TEST_RNG_FUNCTIONS};
+use crate::provider::seed_src::{ossl_seed_src_functions, ossl_test_rng_functions};
 
 // D307: the three helpers this module reaches that landed in D304/D305, plus the platform clock.
 use crate::context::lib_ctx_get_data as ossl_lib_ctx_get_data;
@@ -2952,7 +2957,7 @@ unsafe extern "C" fn drbg_ctr_settable_ctx_params(
 }
 
 /// `const OSSL_DISPATCH ossl_drbg_ctr_functions[]` — `drbg_ctr.c:856-879`, sixteen entries.
-pub(crate) static DRBG_CTR_FUNCTIONS: [OsslDispatch; 17] = [
+pub(crate) static ossl_drbg_ctr_functions: [OsslDispatch; 17] = [
     OsslDispatch {
         function_id: OSSL_FUNC_RAND_NEWCTX,
         function: drbg_ctr_new_wrapper as *mut c_void,
@@ -4023,7 +4028,7 @@ unsafe extern "C" fn drbg_hash_settable_ctx_params(
 }
 
 /// `const OSSL_DISPATCH ossl_drbg_hash_functions[]` — `drbg_hash.c:671-694`, sixteen entries.
-pub(crate) static DRBG_HASH_FUNCTIONS: [OsslDispatch; 17] = [
+pub(crate) static ossl_drbg_hash_functions: [OsslDispatch; 17] = [
     OsslDispatch {
         function_id: OSSL_FUNC_RAND_NEWCTX,
         function: drbg_hash_new_wrapper as *mut c_void,
@@ -5027,7 +5032,7 @@ unsafe extern "C" fn drbg_hmac_settable_ctx_params(
 }
 
 /// `const OSSL_DISPATCH ossl_drbg_ossl_hmac_functions[]` — `drbg_hmac.c:602-625`, sixteen entries.
-pub(crate) static DRBG_HMAC_FUNCTIONS: [OsslDispatch; 17] = [
+pub(crate) static ossl_drbg_ossl_hmac_functions: [OsslDispatch; 17] = [
     OsslDispatch {
         function_id: OSSL_FUNC_RAND_NEWCTX,
         function: drbg_hmac_new_wrapper as *mut c_void,
@@ -5133,21 +5138,21 @@ pub(crate) static DEFLT_RANDS: [OsslAlgorithm; 6] = [
         // `PROV_NAMES_CTR_DRBG` — `prov/names.h:330`. No alias and no OID.
         algorithm_names: c"CTR-DRBG".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
-        implementation: DRBG_CTR_FUNCTIONS.as_ptr().cast(),
+        implementation: ossl_drbg_ctr_functions.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
         // `PROV_NAMES_HASH_DRBG` — `prov/names.h:331`.
         algorithm_names: c"HASH-DRBG".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
-        implementation: DRBG_HASH_FUNCTIONS.as_ptr().cast(),
+        implementation: ossl_drbg_hash_functions.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
         // `PROV_NAMES_HMAC_DRBG` — `prov/names.h:332`.
         algorithm_names: c"HMAC-DRBG".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
-        implementation: DRBG_HMAC_FUNCTIONS.as_ptr().cast(),
+        implementation: ossl_drbg_ossl_hmac_functions.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -5156,7 +5161,7 @@ pub(crate) static DEFLT_RANDS: [OsslAlgorithm; 6] = [
         // which is why the census has two rows for one algorithm.
         algorithm_names: c"SEED-SRC".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
-        implementation: SEED_SRC_FUNCTIONS.as_ptr().cast(),
+        implementation: ossl_seed_src_functions.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -5166,7 +5171,7 @@ pub(crate) static DEFLT_RANDS: [OsslAlgorithm; 6] = [
         // an observable rather than a comparison of two pools.
         algorithm_names: c"TEST-RAND".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
-        implementation: TEST_RNG_FUNCTIONS.as_ptr().cast(),
+        implementation: ossl_test_rng_functions.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {

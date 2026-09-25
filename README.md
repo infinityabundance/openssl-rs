@@ -42,9 +42,10 @@ later strata stand on is real code rather than scaffolding: `OSSL_LIB_CTX` and i
 parameter descriptor, the property grammar, the method stores, the provider registry and its
 message-format table, the core dispatch table a third-party provider is handed, RCU, sparse arrays
 and per-context thread-local state. The EVP framework that reaches the algorithms is complete and
-sealed, and the algorithm stratum is the one in progress: the symmetric ciphers, the digests, the
-AEAD modes and the MACs have landed, and the asymmetric families, RAND, the key formats, X.509, the
-protocol families and the CLI are ahead of them.
+sealed, and so are the algorithm stratum and the RAND / DRBG stratum that follows it: the symmetric
+ciphers, the digests, the AEAD modes, the MACs and the asymmetric families have landed, and the key
+formats, X.509, the protocol families, the CLI, the downstream consumers, hardening and performance
+are ahead.
 
 **That list is the shape of the stratum, not its state.** It names families rather than symbols, so
 it survives a cipher landing and only changes when the *plan* does — which is the only kind of prose
@@ -154,7 +155,7 @@ FRF claims and Gemel memory:
 
 ```
 .frf/                     FRF store: authorities, captures, residuals, receipts, claims
-forensics/frf/courts/     the CLI trajectory courts and the 77 generated runtime courts (phases 3-8)
+forensics/frf/courts/     the CLI trajectory courts and the 81 generated runtime courts (phases 3-9)
 forensics/frf/refs/       authority/candidate reference wrappers
 ```
 

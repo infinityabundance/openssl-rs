@@ -96,12 +96,13 @@ SPDX-License-Identifier: Apache-2.0"""
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import correctness_vectors as cv  # noqa: E402
 
 from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
@@ -117,6 +118,14 @@ from atlas_common import (  # noqa: E402
 OUT = REPO_ROOT / "artifacts" / "phase9" / "COURTS.json"
 GENERATOR = "forensics/tools/phase9_courts.py"
 PROBE_DIR = REPO_ROOT / "courts" / "phase9"
+
+# The construction courts, beside the differential four. They are candidate-only and driven by
+# `correctness_vectors.py`, which owns their record shape (docs/DECISIONS.md D201): a `CT-*` court
+# answers "does it satisfy the underlying construction?", which the differential plane cannot, and
+# the differential four answer "does it behave like the admitted authority?", which a vector set
+# cannot. Neither implies the other. `CT-BN-RAND` was named by the plan's row 9.1 and carried by
+# neither of this runner's sets until D423 registered it pending; both land here.
+CORRECTNESS_COURTS: list[str] = ["CT-BN-RAND", "CT-DRBG"]
 PHASE2 = REPO_ROOT / "artifacts" / "phase2"
 STAGED = REPO_ROOT / "artifacts" / "phase9" / "probes"
 RUN_TIMEOUT_S = "60"
@@ -134,13 +143,12 @@ COURTS: list[tuple[str, str]] = [
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
 # can pass, and each is printed with the subphase that brings it so that "not run yet" cannot be
 # read as "passed".
-PENDING_COURTS: dict[str, str] = {
-    "CT-DRBG": "9.4 -- the DRBGs' construction vectors, which the pinned tree already carries: "
-               "`test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP "
-               "`drbgtestvectors.zip` sets, with the URL written in the file, and "
-               "`evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases. No network fetch is "
-               "needed and none is permitted (docs/AUTHORITY_POLICY.md).",
-}
+#
+# **Empty, and that is a measurement rather than an omission.** The two names it carried are both
+# registered courts now: `CT-BN-RAND` was named by the plan's row 9.1 and carried by neither set
+# until D423 added it here, and `CT-DRBG` was the plan's row 9.4 court. Both are driven by
+# `CORRECTNESS_COURTS` above, so leaving either name here would print a landed court as pending.
+PENDING_COURTS: dict[str, str] = {}
 
 
 def extra_defs(name: str, libdir: Path) -> list[str]:
@@ -293,6 +301,14 @@ def main(argv: list[str]) -> int:
             continue
         records.append(court(name, src, auth, work))
 
+    for name in CORRECTNESS_COURTS:
+        if name == "CT-BN-RAND":
+            records.append(cv.run_bn_rand_court(name, work_dir=work, authority_id=auth.id))
+        elif name == "CT-DRBG":
+            records.append(cv.run_drbg_court(name, work_dir=work, authority_id=auth.id))
+        else:
+            raise SystemExit(f"[{GENERATOR}] no driver for correctness court {name}")
+
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
         "all_pass": passed == len(records),
@@ -305,7 +321,10 @@ def main(argv: list[str]) -> int:
             "A passing RT-* court means the candidate produced the same observable "
             "transcript as the authority for the behaviours that probe exercises "
             "-- differential compatibility, NOT that its output is unpredictable "
-            "(docs/PARITY_MODEL.md, docs/PHASE-9-SUBPHASES.md section 3.3). "
+            "(docs/PARITY_MODEL.md, docs/PHASE-9-SUBPHASES.md section 3.3). A passing "
+            "CT-* court is the other plane: candidate-only construction verification "
+            "against committed vectors, which is neither parity nor validation "
+            "(docs/DECISIONS.md D201). "
             "`pending_courts` names the courts the plan gives this stratum that have "
             "not landed; each is printed on every run so that 'not run yet' cannot be "
             "read as 'passed'."
@@ -318,11 +337,35 @@ def main(argv: list[str]) -> int:
     ]
     for _name, filename in COURTS:
         inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))
+    inputs.append(InputRef(name="bn-rand-correctness-probe", path=cv.BN_RAND_PROBE))
+    inputs.append(InputRef(name="bn-rand-correctness-vectors", path=cv.BN_RAND_VECTORS))
+    inputs.append(InputRef(name="bn-rand-vector-inputs",
+                           path=PROBE_DIR / "ct_bn_rand_vectors.h"))
+    inputs.append(InputRef(name="drbg-correctness-probe", path=cv.DRBG_PROBE))
+    inputs.append(InputRef(name="drbg-correctness-vectors", path=cv.DRBG_VECTORS))
+    inputs.append(InputRef(name="drbg-corpus",
+                           path=resolve_authority(PRODUCTION_AUTHORITY).source
+                           / "test/recipes/30-test_evp_data/evprand.txt"))
     doc = envelope(kind="phase9-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
     for r in records:
+        if r.get("plane") == "correctness":
+            if r["verdict"] == "pass":
+                print(f"  {r['court']:<14} pass   "
+                      f"({r['vectors_passed']}/{r['vectors_checked']} vectors)")
+            else:
+                print(f"  {r['court']:<14} FAIL   "
+                      f"stage={r.get('stage', 'vector-mismatch')} "
+                      f"({r.get('vectors_failed', '?')} vector(s) failed)")
+                detail = r.get("detail")
+                if isinstance(detail, dict):
+                    print(f"      exit_code={detail.get('exit_code')}")
+                elif isinstance(detail, list):
+                    for line in detail:
+                        print(f"      {line}")
+            continue
         if r["verdict"] == "pass":
             print(f"  {r['court']:<14} pass   "
                   f"({r['authority_observations']} observations)")

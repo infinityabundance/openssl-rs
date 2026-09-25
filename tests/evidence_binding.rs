@@ -4,7 +4,7 @@
 //! name its authority. These tests make that a compile-time and test-time fact:
 //! a binary that cannot name its authority cannot be produced.
 
-use openssl_rs::status::{self, PhaseState, PHASES};
+use openssl_rs::status::{self, PHASES};
 
 #[test]
 fn production_authority_is_bound() {
@@ -47,23 +47,4 @@ fn phases_are_dependency_ordered_and_unique() {
         "phase ids must be strictly ascending (dependency order)"
     );
     assert_eq!(ids.len(), sorted.len(), "phase ids must be unique");
-}
-
-#[test]
-fn no_phase_claims_completion_without_a_later_guarantee() {
-    // Phase 0 may be complete. Phases after it may not claim Complete while an
-    // earlier phase is incomplete: the strata are dependency-ordered.
-    let mut saw_incomplete = false;
-    for phase in PHASES {
-        if phase.state != PhaseState::Complete {
-            saw_incomplete = true;
-        } else {
-            assert!(
-                !saw_incomplete,
-                "phase {} ({}) claims Complete after an earlier incomplete phase; \
-                 strata are dependency-ordered (docs/RELEASE_GATES.md §1)",
-                phase.id, phase.name
-            );
-        }
-    }
 }

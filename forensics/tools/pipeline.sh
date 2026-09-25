@@ -189,6 +189,17 @@ python3 forensics/tools/dispatch_court.py
 echo "== probe hygiene =="
 python3 forensics/tools/probe_hygiene.py
 
+echo "== divergence obligations =="
+# The security-divergence register (`docs/SECURITY_DIVERGENCE_POLICY.md`) made
+# machine-readable. `phase_state.py` reads the JSON this writes and holds a stratum open when
+# a row it owns has `trigger_satisfied` and is still `open`, so this must run **before** it --
+# run after, and the state would be derived from the previous generation's register; run
+# nowhere, and the check could be skipped silently, which is exactly the hole it closes. The
+# `--check` immediately after the write is what makes a hand-edit to the committed JSON a
+# failure rather than a silent divergence (the register is prose; the table is in the tool).
+python3 forensics/tools/divergence_obligations.py
+python3 forensics/tools/divergence_obligations.py --check
+
 echo "== phase state =="
 python3 forensics/tools/phase_state.py
 

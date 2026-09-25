@@ -29961,3 +29961,665 @@ version (`forensics/atlas/implemented-surface.json`, `court-coverage.json`, `own
 the ledgers that hash them). No crate source moves and no court moves: `PIPELINE OK` is exit 0 over
 101 courts / 39,635 observations **with the version already moved**, and `cargo publish` follows once
 the release lands on `main` green.
+
+## D417 -- the default provider's GCM engine lands seven rows, and the census reader is found to drop them in silence
+
+Phase 9's first discharge of a Phase 8 hand-off. The seven `AES`/`ARIA`/`SM4` GCM rows were withheld
+by D234's class -- their engine's three arms draw from the random layer -- and `RAND_bytes_ex` now
+exists, so the blocker is gone and the engine can be written.
+
+### The engine
+
+`src/provider/cipher_gcm.rs` (2,281 lines) is `ciphercommon_gcm.c.in`'s `ossl_gcm_*` engine and
+`ciphercommon_gcm_hw.c`'s five hardware methods, shared by all seven rows exactly as the CCM rows
+share D238's engine: one `gcm_row!` macro is the honest expansion of
+`prov/ciphercommon_aead.h:18-67`'s `IMPLEMENT_aead_cipher`, and the seven rows differ only in key
+size and their per-algorithm `hw` table. The two assembly `initkey`/`cipher_update` selections
+(`cipher_aes_gcm_hw.c:126-133`, `cipher_sm4_gcm_hw.c:277-284`) are declined as D266 and D269
+declined the other AES and SM4 assembly arms; ARIA has no assembly arm. The consequence for `ctr`
+is measured rather than assumed: `AES_CTR_ASM` is defined only for `s390x` and `c64xplus`
+(`crypto/aes/build.info:30,55`), so on this host the C `initkey` installs `ctx->ctr = NULL` and the
+`_ctr32` branch is never taken -- it is transcribed anyway, because it is part of the C body.
+
+The seven rows enter `DEFLT_CIPHERS`/`EXPORTED_CIPHERS` at their authority positions
+(`defltprov.c:202-204`, `:247-249`, `:315`): the arrays move 132 to 139 and the terminator with
+them.
+
+### The layout defect the landing exposed, and why it was invisible
+
+`GcmCtx` carried its `H` and `Xi` field elements as `u128`. A `u128` field forces **sixteen**-byte
+alignment where the authority's `GCM128_CONTEXT` has eight, which pushed the embedded `gcm` member
+from offset 248 to 256 and rounded `PROV_ARIA_GCM_CTX` up to 992. The allocation size a caller's
+`CRYPTO_set_mem_functions` receives is contract, so this was a real divergence, and nothing saw it
+before now because no test asserted the size and the GCM rows were not published. `H` and `Xi` are
+now carried as `[u64; 2]` (high half first) behind `h_val`/`set_h`/`xi_val`/`set_xi`; the same 128
+bits are stored at the same integer value, so no value moves. Every measured number now agrees:
+`PROV_GCM_CTX` 704, `PROV_AES_GCM_CTX` 960, `PROV_SM4_GCM_CTX` 832, `PROV_ARIA_GCM_CTX` 984, and
+`gcm` at 248 with a named 296-byte reserve to `ctr` at 696. The precedent is `PROV_AES_GCM_SIV_CTX`'s
+`[u64; 32]` htable, which models the same kind of C layout and chose the integer pair for the same
+reason.
+
+### The finding: the census reader dropped the rows in silence
+
+Landing the seven rows moved `provider-algorithms.json` by **zero** rows. `gen_provider_algorithms.py`
+reads a crate cipher table by matching `row(NAME, IMPL.as_ptr())`, and its pattern accepted only a
+**bare identifier** for `IMPL`. The GCM rows' dispatch expression is a qualified path
+(`cipher_gcm::AES128GCM_FUNCTIONS.as_ptr()`), so all seven failed to match and the reader went on
+reporting them `unimplemented` while the crate had published them. The inline `capable_row` branch
+had carried a count guard since it was written; the aliased branch had none, which is why a silent
+drop was possible there and not here. The pattern now accepts `[A-Za-z0-9_:]+` **and** the aliased
+branch gets the same guard: a row invocation the reader cannot parse is a `CensusError`, not a table
+with one fewer row. This is the same class D396 and D412 measured -- a check that is never run, or a
+reader that answers a smaller question than it was asked, and nothing objects.
+
+### The observation the rows gained, and the join that proves it
+
+`rt_cipher_probe.c`'s `rt_deflt_row_census` arm names the fetched rows and had listed the seven as
+"Phase 9's ... absent from this list rather than listed-and-skipped". They are entries now, and the
+arm's existing per-row work (fetch, keylen/ivlen/blocksize/mode, the `gp`/`cgp`/`csp` parameter
+lists, `ctxinit`) drives each of them: **RT-CIPHER moves 6,946 observations to 7,198**, +252, exactly
+36 per row. `provider_court_coverage.py` -- which fails closed on a published row with no probe
+naming it -- went from 2 findings to none: 318 implemented rows, 318 directly courted, 0 unmatched.
+Phase 9's `provider_rows` is now **12 implemented of 15 owned, 3 unimplemented** (`DES3-WRAP`,
+`GMAC`, the `base` provider's `SEED-SRC`).
+
+### Movement
+
+`src/provider/cipher_gcm.rs` (new), `src/provider/cipher.rs` (7 rows, 10 aliases, two arrays
+132 to 139), `src/provider/mod.rs`, `src/modes/gcm.rs` (the alignment repair),
+`courts/phase8/rt_cipher_probe.c`, `forensics/tools/gen_provider_algorithms.py` (the reader guard),
+the regenerated atlases and the two probe transcripts. `PIPELINE OK` exit 0 after the two-step fixed
+point, `RT-CIPHER pass (7,198 observations)`, `provider-court-coverage` 0 findings.
+
+## D418 -- Phase 9's three open exports and eight provider rows land in one pass, and the TDES init pair turns out to be substituted crate-wide
+
+The stratum's ledger had three open exports and the provider census two open rows. All five close here,
+together with the seven GCM rows D417 published, and the one court defect the new arms found.
+
+### The three exports
+
+* **`BIO_f_nbio_test`** (`crypto/bio/bf_nbio.c`, 189 lines) lands in `src/runtime/bio/bf_nbio.rs`,
+  beside `bf_lbuf`/`bf_null`/`bf_readbuff`. It is the one `crypto/bio/` filter whose body draws from
+  the random layer: `nbiof_read` and `nbiof_write` each call `RAND_priv_bytes` and pass through only
+  the low three bits of the one byte they get, and a zero draw answers `-1` with the retry flag for
+  the direction it was called in. That draw is exactly why the row is Phase 9's and not Phase 4's,
+  which landed every other filter beside it.
+* **`BN_generate_dsa_nonce`** (`crypto/bn/bn_rand.c:397-412`) lands in `src/bn/rand.rs`. Its whole
+  body was already present as D333's `ossl_bn_gen_dsa_nonce_fixed_top`; the export is that function
+  plus `bn_correct_top`, which the crate documents as a no-op in its always-normalised
+  representation (the same reduction `bn_mod_exp_mont_fixed_top` already makes). The three error
+  sites D314 had generated and left unused (`BN_RAND_332`/`_338`/`_385`) become reachable through it.
+* **`OSSL_HPKE_get_grease_value`** (`crypto/hpke/hpke.c:1377`) lands in `src/hpke/mod.rs` with the
+  three `ossl_HPKE_*_INFO_find_random` helpers (`hpke_util.c:192`/`:214`/`:236`) and
+  `hpke_random_suite` (`hpke.c:351`). D316 transcribed and withheld all of it because its success
+  path calls `OSSL_HPKE_keygen`, which fetches a keymgmt **by name from the library context**, and
+  the default provider's `OSSL_OP_KEYMGMT X25519` row was Phase 8's. Phase 8 landed that row, so the
+  blocker is gone; the `RAND_bytes_ex` and `ossl_rand_uniform_uint32` dependencies the header named
+  are Phase 9's own and landed in D311. The module's header, which said these helpers were "omitted"
+  and this export "withheld", is corrected rather than left stale.
+
+### The `DES3-WRAP` row
+
+`src/provider/cipher_tdes_wrap.rs` (547 lines) is `cipher_tdes_wrap.c` (209 lines) whole and
+`cipher_tdes_wrap_hw.c`'s one hardware table: `PROV_CIPHER_HW_tdes_mode(wrap, cbc)` with the file's
+`#define` applied is `{ ossl_cipher_hw_tdes_ede3_initkey, ossl_cipher_hw_tdes_cbc,
+ossl_cipher_hw_tdes_copyctx }`, which is **exactly** the crate's `TDES_EDE3_CBC_HW`, so the wrap row's
+hardware table is that measurement and not a new one. The row enters `DEFLT_CIPHERS`/`EXPORTED_CIPHERS`
+at its authority position (`defltprov.c:308`, between `DES-EDE3-CFB1` and `DES-EDE-ECB`); the arrays
+move 139 to 140. Its blocker was the wrap IV: `des_ede3_wrap` generates it with
+`RAND_bytes_ex(ctx->libctx, ctx->iv, ivlen, 0)` (`:101`), the only draw in the unit.
+
+### The two defects the new court arms found
+
+**Both are `RT-BIO-FILTER`'s, and both are the same class: an observation that is a function of a
+draw.** The `nbio` arm first printed `BIO_ctrl(BIO_CTRL_INFO)` on the downstream memory BIO, which is
+`written - read` where **both** are draws -- the authority answered 7 and the candidate 8. That was a
+differential-court residual. The second was worse, because the differential court could not see it:
+`BIO_should_read`/`_write` on their own are the draw's outcome, so the transcript varied between
+`-O0` and `-O1` of the *same* source. `probe_hygiene` caught it (`candidate: -O0 differs from -O1`,
+`nbio.read.should_read: -O1='0' -O0='1'`). Both are now printed as *relations* to whether the call
+answered `-1`, which is what the filter's contract actually is. D320 named this shape for
+`blocker_liveness`; this is the same failure mode one layer down, in a probe rather than a checker,
+and it is the first time `probe_hygiene` has caught a defect the differential court passed clean.
+
+### A finding, recorded rather than described as equivalent: the TDES init pair
+
+Landing the wrap row surfaced that the crate has **no** `ossl_tdes_newctx`, `ossl_tdes_dupctx`,
+`tdes_init`, `ossl_tdes_einit` or `ossl_tdes_dinit`. `cipher_tdes_common.c`'s five functions are
+declared in the uninstalled `providers/implementations/include/prov/implementations.h`, so they are
+in no ledger and no atlas -- the same class D396 measured for `ossl_crypto_thread_*`. All eleven TDES
+rows (the six EDE3, four EDE2 and this wrap row) publish `ossl_cipher_generic_einit`/
+`ossl_cipher_generic_dinit` in their place, and the two init bodies are **not** equivalent. The
+measured deltas are three, and the third is not observable:
+
+1. `tdes_init` has no `EVP_CIPH_ECB_MODE` guard on its `iv != NULL` branch
+   (`cipher_tdes_common.c:83-88`); `cipher_generic_init_internal` has one (`ciphercommon.c.in:214`).
+2. `tdes_init` does not reset `ctx->updated`; `cipher_generic_init_internal` does
+   (`ciphercommon.c.in:208`).
+3. The wrong-key-length raise is at a different coordinate only; both raise
+   `PROV_R_INVALID_KEY_LENGTH`, and coordinates are not part of the parity model.
+
+Deltas 1 and 2 sit behind arms no court drives, which is why eleven rows have carried them in
+silence. The new module's header names all three; the fix is a separate pass and is not claimed here.
+
+### Movement
+
+`open_obligations[phase9]` **3 to 0**; `implemented[libcrypto]` 2960 to 2963;
+`provider_rows[implemented]` 311 to 319 and `[unimplemented]` 685 to 677, with
+`open_by_phase[9]` 10 to 2 (leaving `GMAC` and the `base` provider's `SEED-SRC`).
+Against the merge base: `RT-CIPHER` 6946 to **7232** observations, `RT-BN-RAND` 467 to **487**,
+`RT-RAND-USERS` 61 to **111**, `RT-BIO-FILTER` 114 to **140**, and `probe_hygiene` `all_clean` true.
+`PIPELINE OK` exit 0. `forensics/tools/phase9_obligations.py`'s label table names
+`src/runtime/bio/` and `src/evp/bio_ok.rs` ahead of its `BIO_` catch-all, because the two `BIO_`
+hand-offs' crate homes are already filed under those modules and the label should say where the code
+is rather than where the header's stratum is.
+
+## D419 -- the `GMAC` row is registered, and its court arm drives the tag rather than only the fetch
+
+D243 held GMAC's registration while its blocker was real: `gmac_set_ctx_params` resolves a `cipher`
+name and then refuses every mode but `EVP_CIPH_GCM_MODE` (`gmac_prov.c.in:236-239`), and this
+profile's only GCM ciphers were `AES-{128,192,256}-GCM`, themselves Phase 9's on `RAND_bytes_ex`.
+Registering it then would have made `EVP_MAC_fetch(NULL, "GMAC", NULL)` answer 1 on **both** sides and
+then made every `EVP_MAC_init` fail where the authority succeeds -- the `DES3-WRAP` class of invisible
+incompleteness one operation over, and worse than not publishing the row, because a fetch-only
+observation cannot see it. D417 landed the GCM ciphers, so the blocker is gone and the row enters
+`DEFLT_MACS` at `defltprov.c:342`'s position, between `CMAC` and `HMAC`; the array moves 9 to 10. The
+row's alias sequence is `GMAC:1.0.9797.3.4` (`prov/names.h:319`).
+
+**The arm drives the tag, not only the name.** The provider census asks that a published row be
+*named* by a probe of a court that covers it, and `rt_deflt_properties` already names every MAC row
+through three property queries. That is not enough for this row, because the failure the withheld
+registration would have produced is an init that answers 1 and a tag that differs. `RT-CIPHER`'s new
+`rt_deflt_gmac` arm therefore fetches, reads the name and the 16-byte tag size, initialises with a
+committed key and IV over `AES-128-GCM`, updates, finalises, and prints the tag -- which the two sides
+must agree on byte for byte (`ffb400e7fd5ad8583f1e10c809074607`). It also drives the three refusals a
+caller can reach: a cipher whose mode is not GCM (`PROV_R_INVALID_MODE`), a cipher name that resolves
+to nothing, and no cipher at all.
+
+**What the tag is, stated rather than implied.** GMAC feeds `update`'s bytes in as **AAD** with an
+empty ciphertext (`gmac_update` calls `EVP_EncryptUpdate(ctx, NULL, &outlen, data, datalen)`), so the
+key, IV and message are the GCM-128 test case's but the tag is not the published vector's. The
+constant is there so the value is reproducible, not because it is a known answer; what this arm
+establishes is agreement, and the row it closes is a registration row, which is what agreement is for.
+
+### Movement
+
+`provider_rows[implemented]` 319 to 320, `[open_by_phase][9]` 2 to 1 (the `base` provider's
+`SEED-SRC` is the last), `RT-CIPHER` 7232 to **7255** observations, `PIPELINE OK` exit 0.
+
+## D420 -- phase 9's plan turns out to claim four units and three symbols nothing could see, and the reader is what was wrong
+
+Making phase 9 `complete`-eligible turned on `plan_reconciliation.py`'s checks for a complete stratum
+-- which phase 8 had passed and phase 9 had never been asked. It reported **16 findings**. Three were
+real and thirteen were the machinery's.
+
+### What the sixteen were
+
+* **three symbols** -- `ossl_drbg_ctr_functions`, `ossl_drbg_hash_functions`,
+  `ossl_drbg_ossl_hmac_functions` (`docs/PHASE-9-SUBPHASES.md` row 9.4). Real: the crate built the
+  three tables as `DRBG_CTR_FUNCTIONS`/`DRBG_HASH_FUNCTIONS`/`DRBG_HMAC_FUNCTIONS`, and the
+  authority's names are non-`static` and declared in the uninstalled `prov/implementations.h`, so the
+  plan can promise them and nothing could join the promise to a definition. Renamed, with the
+  authority's spellings kept and `non_upper_case_globals` allowed, which is the same treatment
+  `ec_kem`'s and `ecx_kmem`'s non-`static` definitions already get.
+* **one stale deferral** -- `crypto/evp/bio_ok.c` carried
+  `deferred_to_later_stratum: owner_phase 9`, and `BIO_f_reliable` landed in D317. With phase 9 no
+  longer `in-progress` the row became a stale deferral whose owner had sealed. Retired; the unit is
+  reached through its own transcription edge.
+* **five units** -- `providers/common/provider_seeding.c`, `providers/common/provider_util.c`,
+  `providers/implementations/rands/drbg.c`, `providers/implementations/rands/seeding/rand_unix.c` and
+  `providers/fips/fipsprov.c`. The first four are **the machinery's**: see below.
+* **seven file names** -- `drbg_ctr.c`, `drbg_hash.c`, `drbg_hmac.c`, `seed_src.c`, `test_rng.c` and
+  `fips_crng_test.c` (twice). The authority has all six as `.c.in`, so a plan row naming the bare
+  `.c` names a file the manifest does not have -- and the row was invisible anyway, because `_UNIT`'s
+  trailing boundary rejects a dot in order to keep `openssl.cnf` from matching as `openssl.c`.
+
+### The machinery defect, which is the one worth recording
+
+**`internal-symbols.json` keys a translation unit by the object name the authority's build gives it,
+and a plan names the source path.** `providers/implementations/rands/drbg.c` compiles to
+`providers/implementations/rands/libdefault-lib-drbg.c`, and a `.c.in` compiles to
+`.../libdefault-lib-drbg_ctr.c`; that is the `__FILE__` the raises in those units carry, which is why
+the atlas files them there. `plan_reconciliation.py` looked a plan-named path up in that map and found
+nothing, so a unit the crate demonstrably reaches was reported unreached -- and **only for the units
+a named build goal compiles**, which is a subset no other tool could see either. The reader was
+answering a smaller question than it was asked, which is D396's and D417's class for the third time
+this stratum.
+
+Two changes fix it at the root rather than unit by unit:
+
+1. `source_of_build()` derives a build object's manifest source path (`lib<goal>-lib-<stem>` to
+   `.../<stem>` or `.../<stem>.in`, checked against the committed manifest, and left alone when it
+   does not resolve), and `unit_symbols` is indexed under both keys.
+2. `_UNIT_IN` names a `.c.in` as its own pattern, so a plan row can promise one without weakening
+   `_UNIT`'s `openssl.cnf` guard.
+
+With those, the four units are reached mechanically and need no record. The remaining two --
+`fipsprov.c` and `fips_crng_test.c.in` -- get `not_in_this_profile` records, because both live in
+`libfips.a` alone (`providers/fips/build.info:3`, `providers/implementations/rands/build.info:7`) and
+this profile builds no FIPS module: the plan names them in order to say so, the same shape
+`crypto/rcu.c` has, and the guard is the configure line rather than a prose claim.
+
+**The widening found two more, in phase 8.** `cipher_chacha20_poly1305.c.in` and `cmac_prov.c.in`
+were promised by `docs/PHASE-8-SUBPHASES.md` row 8.3 and invisible to the old regex; both are reached
+now, by the same rename treatment (`ossl_chacha20_ossl_poly1305_functions`, `ossl_cmac_functions`).
+That is a check that had never fired being turned on, which is what the widening was for.
+
+### The one row that stays open, and why it is recorded rather than moved
+
+`base`'s `SEED-SRC` row is the last unlanded row phase 9 owns. Its *implementation* landed in D311;
+what it lacks is a provider to publish it in, because `baseprov.c`'s `base_query` answers one table
+per operation and this crate has no base provider module at all. Moving the row to phase 10 would
+clear phase 9 and is forbidden by `regression_guard.py`'s `PROVIDER_UP_IS_BAD` rule -- an
+`open_by_phase` increase is refused because pushing an obligation forward is how a stratum would
+complete by moving its work. So the row keeps phase 9, its `blocked_by` names the real prerequisite
+(the base provider module, whose other three operation ids are 318 Phase-10 rows), and D287's
+misreading of it -- "the base provider's single RAND row is the test RNG" -- is corrected in the plan
+row itself, where a reader following D287 arrives. `docs/PHASE-9-SUBPHASES.md` §4.2 already carried
+the correction as prose; it is now in the machine-readable plan as well.
+
+`PIPELINE OK` exit 0, `plan_reconciliation.py` clean over 266 named units and 107 named symbols,
+phase 9 still `in-progress` with exactly one named blocker.
+
+## D421 -- the base provider lands, phase 9's last row publishes, and the census turns out to have been reading one provider
+
+D420 left `base`'s `SEED-SRC` row open with a named prerequisite: `baseprov.c`'s `base_query`
+answers one table per operation and this crate had no base provider module at all. The row's
+implementation had landed in D311 and the plan's 9.5 row owns "the two `SEED-SRC` rows", so the
+module is phase 9's to land -- and it is the *smaller* side of the dependency, which is what makes
+landing it the way to break the ordering rather than moving the row forward.
+
+### The module
+
+`src/provider/base.rs` (342 lines) is `providers/baseprov.c` (183 lines): `base_param_types[]`,
+`base_gettable_params`, `base_get_params`, `base_query`, `base_teardown`, `base_dispatch_table[]` and
+`ossl_base_provider_init`. `PREDEFINED_PROVIDERS`'s base row gains its `init`, so
+`OSSL_PROVIDER_load(NULL, "base")` now activates the compiled-in provider instead of falling to the
+`DSO` branch -- part of the residual D117 recorded.
+
+`base_encoder[]`, `base_decoder[]` and `base_store[]` are **deliberately not transcribed**. They come
+from `#include "encoders.inc"`/`"decoders.inc"`/`"stores.inc"` and reference dispatch tables this
+crate does not carry: 318 rows that are `owning_phase: 10` and `unimplemented` in
+`forensics/atlas/provider-algorithms.json`. `base_query` therefore answers `NULL` for
+`OSSL_OP_ENCODER`, `OSSL_OP_DECODER` and `OSSL_OP_STORE` -- which is the authority's own answer for an
+operation a provider does not handle, so the crate's provider answers *today's* census exactly. The
+module's header says all of that rather than leaving a reader to infer it.
+
+**The arms are `if operation_id == …` rather than a `match`**, and the header says why: the census
+reads a crate query function's arms, which is why `deflt_query` is written the same way. The
+semantics are identical; the shape is the reader's contract.
+
+### The census defect this exposed, which is the important part
+
+`gen_provider_algorithms.py` carried a **single** `CRATE_QUERY_UNIT`/`CRATE_QUERY_PROVIDER` pair --
+`deflt_query` in `src/provider/digest.rs`, provider `default`. So a row the *base* provider publishes
+could never be read as `implemented` **however the crate was shaped**: `base/OSSL_OP_RAND/SEED-SRC`
+was `unimplemented` by construction. The same reader that D417 caught dropping rows silently was, here,
+reading the wrong provider silently.
+
+`CRATE_QUERY_READERS` is now a list of `(provider, module, query function)` and each is walked. Two
+more defects surfaced while wiring it, both of the same class:
+
+1. **`CRATE_QUERY_ARM` could not see past a `//` comment** between the brace and the `return`, and
+   `src/provider/base.rs` documents every arm that way. Base's four arms went unread and the reader
+   returned an empty result for it without complaint. The pattern now allows a comment, and a reader
+   that recognises **no** arm is a fatal error rather than an empty table -- which is the guard that
+   should have existed from the start.
+2. **`read_crate_table` could not read a row that spells `algorithm_names` through a module const.**
+   `DEFLT_RANDS` writes `c"SEED-SRC".as_ptr()`; `BASE_RANDS` writes `PROV_NAMES_SEED_SRC`, which is the
+   same contract in a better spelling because the literal then appears once. The reader resolves a
+   same-module `const … : *const c_char = c"…"` and fails loudly on a name it cannot resolve. Its
+   field-count guard counts rows that *spell a name*, so a terminator's
+   `algorithm_names: ptr::null()` is not counted as one.
+
+### Movement
+
+`provider_rows[implemented]` 320 to 321, `[open_by_phase][9]` 1 to 0, phase 9 to **`complete`** with
+15/15 owned rows and 69/69 ledger exports; `RT-RAND` 129 to **145** observations, with the new arm
+answering identically on both sides first time. `ossl_base_provider_init` is a `#[no_mangle]`
+definition, so `implemented-surface.json`'s `internal_symbols.c_style` moves 456 to 457 and
+`docs/CI.md`'s assertion moves with it. `PIPELINE OK` exit 0.
+
+**What is still owed, named rather than implied.** Phase 9's `complete` carries
+`seal_sha256: null`: the stratum has reached the state a seal *records*, and the seal document itself
+is the plan's own last artifact and has not been written. `CT-DRBG` is still a pending court, and
+`CT-BN-RAND` -- named by `docs/PHASE-9-SUBPHASES.md` row 9.1 -- is in neither `phase9_courts.py`'s
+registered set nor its pending set, which is a gap in the runner rather than a court nobody ran.
+
+## D422 -- Phase 9 seals, and the seal's own section 6 is where its two gaps live
+
+`docs/PHASE-9-RAND-DRBG-SEAL.md` (500 lines) exists, is registered in `atlas_common.SEAL_DOCS` and in
+`phase_state.PHASE9_MODULES`, and is the plan's own row 9.7 -- `docs/PHASE-9-SUBPHASES.md` §2 gains
+that row in this commit. `forensics/phase-state.json`'s phase 9 now carries
+`seal_sha256: a0a9c851f42b0fd7c27a5390da4656a9e41dcf5fbaaa9b5d2bc6ec80b908f9c0`.
+
+**Registering it is what makes the machinery's own rule true.** `phase_state.py`'s phase 6, 7 and 8
+entries each carry the comment *"a stratum may only report `complete` with its seal in place"*, and
+that rule is enforced by the seal doc being in the stratum's evidence list: an absent required
+evidence file makes the state `in-progress` with a blocking reason. Phase 9 had no such line, so it
+reached `complete` at D421 with `seal_sha256: null` -- the rule was false for exactly one stratum, and
+the stratum that had just landed. The line is added in the commit that writes the document, which is
+the order phases 6, 7 and 8 all used.
+
+### What the seal says, including what it does not
+
+Its §7 checks all ten of `docs/RELEASE_GATES.md` §2's items. Seven are met from the generated
+artifacts; three are the **FRF-chain** items (captures, residuals, challenges, receipts) and the Gemel
+checkpoint, which Phase 8 entered and Phase 9 has not. Its §6 names six things that are explicitly
+not claimed: the entropy pool's source is environmental and nothing here is a parity claim about
+entropy; `CT-DRBG` is a pending court; **`CT-BN-RAND` is named by the plan's row 9.1 and is in neither
+`forensics/tools/phase9_courts.py`'s registered set nor its pending set**, which is a gap in the
+runner rather than a court nobody ran; `BIO_f_reliable`'s write path is owed to Phase 13; the TDES
+init pair substitution D418 records, with its three measured deltas; and the base provider's three
+unlanded operation ids.
+
+So phase 9 is `complete` on its ledger, its provider rows and its four courts, and its seal says in
+its own words where that is weaker than Phase 8's. The three remaining artifacts are named rather
+than implied: the FRF chain entry, `CT-DRBG`, and `CT-BN-RAND`.
+
+`PIPELINE OK` exit 0.
+
+## D423 -- `CT-BN-RAND` is registered pending, because a court the plan names and the runner omits is an omission of the instrument
+
+D421 and D422 both name the gap: `docs/PHASE-9-SUBPHASES.md` row 9.1 lists `CT-BN-RAND` beside
+`RT-BN-RAND` as that slice's courts, and `phase9_courts.py` carried the name in **neither** its
+registered `COURTS` nor its `PENDING_COURTS`. A court the plan promises and no instrument carries is
+invisible rather than owed, which is the same class as the plan-named units D420 found -- and the
+runner's own contract says the opposite: a court the plan names and this stratum cannot run yet is
+printed on every run, so "not run yet" cannot be read as "passed".
+
+The name and its corpus are now in `PENDING_COURTS`, and the corpus is measured rather than guessed.
+`crypto/bn/bn_rand.c`'s exports are draws, so a construction court needs a **fixed seed**, and the
+path exists: `test_rng.c.in`'s `test_rng_set_ctx_params` accepts an `entropy` octet string
+(`test_rng.c.in:88-94`) and, with `generate` unset, `test_rng_generate` copies exactly those bytes out
+in order (`:88-105`). What is owed is the driver -- `RAND_set_seed_source_type` and the seed-source
+context -- not the vector source, and the pending row says so instead of leaving a reader to work out
+whether the court is possible.
+
+`CT-DRBG` is unchanged and was already pending with its own corpus named.
+
+### Movement
+
+`artifacts/phase9/COURTS.json`'s `pending_courts` gains the row; `docs/PHASE-9-RAND-DRBG-SEAL.md`'s
+four mentions of the gap are corrected from "exists in neither of the runner's sets" to the
+registration and what it names, so the seal and the runner agree. Phase 9's `seal_sha256` moves with
+the document, to `a0ae7d96f12a013b…`. `PIPELINE OK` exit 0.
+
+## D424 -- Phase 9's correctness plane and its FRF chain entry land, and the one thing left unproven is named rather than smoothed
+
+The seal (D422) was written while three artifacts were open and named all three: the FRF chain entry,
+`CT-DRBG` and `CT-BN-RAND`. D423 registered `CT-BN-RAND` pending. This change lands them -- the two
+correctness courts, the chain entry, and the Gemel checkpoint the chain produces -- so no artifact the
+seal named is left owed. `docs/PHASE-9-RAND-DRBG-SEAL.md` moves from 500 to 586 lines and its
+`seal_sha256` with it, `a0ae7d96f12a013b…` to `085e6521740dea94…`.
+
+### The correctness plane: two courts, both candidate-only
+
+`CT-BN-RAND` reproduces the five committed DSA nonces. `BN_generate_dsa_nonce` produced each one, and
+each was **re-derived independently in Python** from `crypto/bn/bn_rand.c`'s own construction --
+SHA-512 over the counter, the 96-byte private key, the message and the injected random block, then the
+mask and the rejection loop -- with the random stream committed and installed on `TEST-RAND`, so no
+transcription of the implementation can move the expected bytes. The vectors are
+`forensics/vectors/bn_rand_nonce.json` (5 vectors, sha256 `5e316077…`), the driver is
+`courts/phase9/ct_bn_rand.c` over the generated header `courts/phase9/ct_bn_rand_vectors.h`, and the
+generator is `forensics/tools/gen_bn_rand_nonce_vectors.py`. `CT-DRBG` reproduces every `output.N` the
+pinned authority's own `test/recipes/30-test_evp_data/evprand.txt` records -- corpus sha256
+`61fd2ca1…`, 79987 lines -- whose stanzas mirror the NIST CAVP `drbgtestvectors.zip` sets; 14401 of
+14401. Its vectors are `forensics/vectors/drbg.json` (961 stanzas, 14401 values, file sha256
+`8d83cf11…`). Both are **candidate-only** (D201): `correctness_vectors.py` compiles each probe once
+against the candidate alone and compares its bytes with the committed expected bytes, so a `CT-*` pass
+is construction verification and **not** parity -- the authority's observable behaviour is `RT-*`'s
+question. `phase9_courts.py`'s `CORRECTNESS_COURTS` now names both (`:128`) and `PENDING_COURTS` is
+empty (`:151`), which retires D423's pending row.
+
+### Two inputs declined with a reason, rather than quietly unread
+
+`evpkdf_hmac_drbg.txt` (sha256 `481036e1…`) is recorded as a **declined** input rather than mirrored:
+its stanzas are `KDF = HMAC-DRBG-KDF`, i.e. `providers/implementations/kdfs/hmacdrbg_kdf.c.in`'s
+`EVP_KDF` row, not the `OSSL_OP_RAND` HMAC-DRBG row this court covers, so copying it here would
+verify a different row under this court's name. Six `evprand.txt` stanzas are excluded because they
+are gated on `Availablein = fips` (`evprand.txt:79925`, `:79932`, `:79941`, `:79953`, `:79965`,
+`:79977`) -- the "truncated digests are not allowed" and FIPS-indicator tests -- which are not
+reachable on the non-FIPS profile this crate builds. Both omissions are named in
+`gen_drbg_vectors.py`'s own `inputs[]`, so a later reader can audit them instead of rediscovering why
+the count is 14401 and not the corpus's full total.
+
+### The chain entry: four courts declared, the store added to rather than recreated
+
+`forensics/tools/gen_frf_courts.py`'s `COURTS` table gains four rows at phase 9 -- `rt-drbg`,
+`rt-rand`, `rt-bn-rand` and `rt-rand-users` (`:448-456`), one per **differential** court -- and
+`--check` moves from `ok: 154 file(s) match the table (77 courts)` to `ok: 162 file(s) match the table
+(81 courts)`. The store was **added to**, not recreated, because `.frf` is committed evidence (D200,
+D413): four receipts, eight challenges (both declared axes on every court, every one adjudicated with
+`saw_defect` true and `specificity_clean` true), twelve captures, and one compiled
+`sensitivity-backed` claim `9c05b8c9ddf98c3e129cfa542fbcea7b57a711e7d08aae58c5301354ca826bdd`, binding
+authority `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.12` (`e4f60d8b`) with `blockers: []` and
+`excluded_evidence: []`. The store moved captures 246 -> 258, challenges 164 -> 172, receipts
+82 -> 86, claims 8 -> 9 and residual identities 168 -> 176. The two `CT-*` courts carry **no** row,
+for D413's reason: a vector-driven court has no authority transcript to diff and no fixture a
+challenge could locate, so a manifest naming execution-context artifacts that do not exist would fail
+at admission.
+
+### The checkpoint, one rather than three
+
+`forensics/GEMEL_TRAJECTORY.md`'s head change is `C94`, and its `current:` is
+`checkpoint.79bf9b1418be4e8fcafc3889e99f49358fb0120dae2e0545416f698486a96f3b`, listed as `K48`
+(`:153,160`). It is **one** checkpoint rather than the three Phase 8 needed (`C74`/`C75`/`C76`),
+because this stratum's chain contains no finding, fix or disposition for the trajectory to carry in
+order: the four courts' real runs raise no residual on a claimed surface, the claim compiles with zero
+blockers and no narrowed cell on the first pass, and the only residuals the chain produces are the
+eight mutant residuals of the challenge records, which are open by design because a mutant's
+divergence is the challenge's evidence.
+
+### The parallel test run found a race in this project's own test
+
+`context::thread_data::tests::the_pool_starts_joins_and_cleans_workers` failed under the full parallel
+test run with `assertion left == right failed, left: 1, right: 0` at `src/context/thread_data.rs:454`.
+That line is `assert_eq!(ossl_crypto_thread_clean(*h), 0)` on a started, unjoined worker -- not the
+`ossl_get_avail_threads` assertion an earlier reading of the failure named -- so `1` means the worker
+was already cleanable. The cause is the authority's mask test, which the crate transcribes correctly:
+`ossl_crypto_thread_native_clean` (`crypto/thread/arch.c:113-144`) answers through
+`CRYPTO_THREAD_GET_STATE` (`include/internal/thread_arch.h:67`) and refuses a thread whose state has
+**neither** `FINISHED` nor `JOINED`, so a thread that has merely finished is cleanable whether or not
+anything joined it. The test asserted the stronger property -- that only a join makes a thread
+cleanable -- and raced a worker that finished before the joiner looked. The workers are now held at a
+`Work::release` gate, so the refusal is observed in a state the test controls rather than one it races
+for, and the four are released only after every refusal has been seen. The transcription did not
+change; the test's premise did.
+
+### What `complete` now means, and what it does not
+
+Phase 9 is `complete` on its own evidence: 69 exports (25 owned, 44 received) all implemented, 15 of
+15 provider rows, six courts `pass` 6 of `total` 6 with `pending_courts` empty, the FRF chain entry
+landed and the `K48` checkpoint landed. What `complete` does **not** mean is stated in the seal's §6:
+a `CT-*` pass is construction verification and not parity (D201); nothing here is a parity claim
+about entropy, because the pool's source is environmental; and the parallel-run failure above was a
+defect in this project's test rather than in the library, which the fix states plainly.
+
+### Movement
+
+`artifacts/phase9/COURTS.json` gains the two correctness records and `pending_courts` empties;
+`forensics/tools/correctness_vectors.py` gains the two court drivers and `phase9_courts.py` names both
+in `CORRECTNESS_COURTS` with `PENDING_COURTS` empty; `forensics/vectors/bn_rand_nonce.json`,
+`forensics/vectors/drbg.json` and their generators `gen_bn_rand_nonce_vectors.py` and
+`gen_drbg_vectors.py` are added; `forensics/tools/gen_frf_courts.py` gains the four Phase 9 rows and
+`forensics/frf/courts/` and the `.frf` store gain the objects they derive;
+`forensics/phase9-obligations.json`, the atlases and `docs/SEAL-CENSUS.md` are regenerated;
+`docs/PHASE-9-RAND-DRBG-SEAL.md` is corrected at §1, §3, §6, §7, §8, §9 and §10 so its Gemel
+statements describe the checkpoint that landed rather than the head an earlier pass found; and Phase
+9's `seal_sha256` moves to `085e6521740dea94…`. `PIPELINE OK` exit 0.
+
+## D425 -- the parallel-run failure was a race in this project's own test, and the authority's mask test is what names it
+
+D424 recorded one failure and could not explain it: under the full parallel test run,
+`context::thread_data::tests::the_pool_starts_joins_and_cleans_workers` failed with `assertion left ==
+right failed, left: 1, right: 0`. This change establishes the mechanism, and the mechanism is not a
+library defect.
+
+**The record named the wrong line, and correcting that is where the cause is.** The failure is at
+`src/context/thread_data.rs:454`, which is `assert_eq!(ossl_crypto_thread_clean(*h), 0)` on a
+started, unjoined worker -- not the `assert_eq!(ossl_get_avail_threads(ctx), 8)` the seal's §5 and
+D424 both named, and not the line that assertion sits on (`:467`). Read at the right line, `left: 1`
+says the worker was already **cleanable** when the test asked `clean` to refuse it.
+
+**The authority admits a finished thread, and the crate transcribes that faithfully.**
+`ossl_crypto_thread_native_clean` (`crypto/thread/arch.c:113-144`) builds `req_state_mask` from
+`FINISHED` and `JOINED`, then answers through `CRYPTO_THREAD_GET_STATE`
+(`include/internal/thread_arch.h:67`, `(state & (FLAG))`): it returns 0 only when `state &
+(FINISHED | JOINED) == 0`, and frees and returns 1 as soon as **either** flag is set. So a thread that
+has merely **finished** is cleanable whether or not anything joined it. `src/runtime/thread_arch.rs`'s
+`ossl_crypto_thread_native_clean` performs the same mask test, and its doc comment said the opposite
+-- "refuses a thread that is not both `FINISHED` and `JOINED`" -- which was the transcriber's own
+summary and not the authority's code. The comment is corrected to state the mask test.
+
+**So the test asserted a stronger property than the authority provides, and raced the scheduler.**
+The test's own comment claimed "`native_clean` requires both `FINISHED` and `JOINED`, and only a join
+sets the second", and its workers incremented a counter and returned immediately. A worker that
+reached `FINISHED` before the joiner called `clean` therefore made `clean` answer 1, and the refusal
+assertion failed -- a race whose window is the whole start loop, which is why it needed the full
+parallel run's scheduling pressure to fire and why it passed under `--test-threads=1`.
+
+**The fix removes the race and keeps the assertion.** The test's `Work` gains a
+`release: AtomicBool`; `worker` spins (`core::hint::spin_loop()`) until it is set, so every worker the
+start loop holds has neither `FINISHED` nor `JOINED` and the refusal is deterministic. The test sets
+`work.release.store(true, Ordering::Release)` after the four refusals, and each join then waits for
+`FINISHED` and sets `JOINED`, which is what makes the later `clean` answer 1. The library is
+unchanged: this is a defect in the instrument, the same class D410 and D413 found in a probe, and it
+is repaired in the instrument.
+
+### Verification
+
+The repaired test passes under the parallel harness that exposed the race: twenty consecutive runs of
+`cargo test --lib context::thread_data::tests::the_pool_starts_joins_and_cleans_workers --
+--test-threads=8` all report `1 passed; 0 failed`, and the full library suite is green under
+`--test-threads=1`. `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` are
+clean. **The full library suite under the default parallel harness still fails one test, and it is a
+second, independent race**: `ffc::params_validate`'s `assert_ne!(res, 0)` at
+`src/ffc/params_validate.rs:583` reads an out-parameter the failure path left at 0. That failure is
+pre-existing, reproduces in three of three parallel runs, and passes in isolation and
+single-threaded; it is named here because this change found it, and it is the next instrument defect
+to repair rather than a regression this change introduced.
+
+### Movement
+
+`src/context/thread_data.rs` gains the gate and `src/runtime/thread_arch.rs`'s `native_clean` comment
+is corrected; `docs/PHASE-9-RAND-DRBG-SEAL.md`'s §5 states the mechanism and its §10 gains item 9;
+D424's finding section is corrected in place, because the branch is not yet merged and a record that
+has not travelled should be true, not annotated; and Phase 9's `seal_sha256` moves to
+`640a676aa959d28c1abad1abfe641668f644c95eea86420d761d13893aa9356b`, the value D424's record of the
+stratum now carries. `PIPELINE OK` exit 0.
+
+## D426 -- the crate types no phase state of its own, because two typed copies had drifted from the derived one
+
+Two places in the crate hand-typed current project state, and both contradicted
+`forensics/phase-state.json`, which derives Phases 0-9 `complete`:
+
+1. **`src/lib.rs`'s `## Current state`.** It said "Phases 0 (constitution), 1 (archaeology / atlas), 2
+   (distribution and ABI shell) and 3 (core runtime) are **complete**" and that "BIO, CONF, BN,
+   ASN.1, the provider and EVP layers, the algorithms, X.509 and libssl are not started". Six strata
+   and the whole algorithm surface were wrong.
+2. **`src/status.rs`'s `PHASES`.** The `Phase` struct carried a hand-typed `state: PhaseState`, and
+   phase 1 read `PhaseState::InProgress` while the derived state reads `complete`. `docs/STATUS.md`
+   and `forensics/phase-state.json` therefore had a second, disagreeing source inside the crate
+   itself -- the class of defect the reviewer named as the project's greatest risk as it scales:
+   two individually reasonable generators encoding different truths.
+
+The fix removes the typed state instead of retyping it, because a number written into prose has no
+generator to correct it (the argument `README.md`'s Status section already makes).
+
+**What each file becomes.** `src/lib.rs` types no phase count at all: it keeps the durable non-claim
+that no symbol is `PARITY_VERIFIED`, and points at `openssl_rs::status`, `forensics/STATUS.md` and
+`forensics/phase-state.json` as the authoritative state. `src/status.rs` keeps the **static**
+contract that cannot drift -- the dependency-ordered stratum list (`id`, `name`, `stratum`) from
+`docs/RELEASE_GATES.md` §1 -- and drops the `PhaseState` enum and the `state` field entirely, so the
+derived state lives only in the JSON, derived by `forensics/tools/phase_state.py`. The
+`PhaseState::Unknown` rationale it carried was `docs/PARITY_MODEL.md`'s and stays there. Its module
+docs also cited `tests/phase_order.rs`, which does not exist; the reference now names
+`tests/evidence_binding.rs`.
+
+**The crate-level completion guard goes with the state it guarded.** `tests/evidence_binding.rs`'s
+`no_phase_claims_completion_without_a_later_guarantee` asserted that no later phase claims `Complete`
+after an earlier incomplete one -- the crate's own copy of the dependency-order invariant, and the
+copy that had gone stale. `phase_state.py` enforces that invariant over the derived state ("a phase
+may be complete only if every earlier phase is complete", `forensics/phase-state.json`'s own `rule`),
+so the crate-level duplicate is removed rather than repaired. `phases_are_dependency_ordered_and_unique`
+and the three authority/FIPS tests are unchanged.
+
+### Movement
+
+`src/lib.rs`, `src/status.rs` and `tests/evidence_binding.rs` change; no generator reads them, so no
+artefact moves and no `seal_sha256` moves. `cargo fmt --all -- --check`, `cargo clippy --all-targets --
+-D warnings`, `cargo test --lib -- --test-threads=1` (1046 passed) and `cargo test --test
+evidence_binding` (4 passed) are green.
+
+## D427 -- the divergence register gains a machine-readable form, and its two Phase-9 obligations are discharged
+
+The register `docs/SECURITY_DIVERGENCE_POLICY.md` is prose. An entry that defers a closure carries a
+`**Trigger:**` -- the condition under which the divergence must be revisited or removed -- and
+nothing machine-checked a trigger. So a stratum could derive `complete` while an obligation it owned
+had fired and was still owed, and two did: **`D-GF2M-1`** (Phase 5's, whose close-obligation is
+Phase 9's and whose reason "`BN_priv_rand_ex` is Phase 9 and does not exist" had gone historical) and
+**`D-CBCHMAC-MULTIBLOCK-ENC-1`** (whose `Trigger` names "Phase 9's first commit that lands
+`crypto/rand/`", which landed at D313). The export ledger, the provider ledger and the court coverage
+are all fail-closed; a triggered divergence obligation was the one class that could fall through a
+prose crack.
+
+**The machinery.** `forensics/tools/divergence_obligations.py` holds one table and renders
+`forensics/divergence-obligations.json` from it, with `atlas_common.envelope`/`write_json`; `--check`
+re-renders and fails byte-for-byte on drift. Each row carries `id`, `originating_phase`,
+`trigger_phase`, `current_owner`, `trigger_condition`, `trigger_satisfied`, `disposition`, `evidence`
+and `note`, and `blocking` is **derived** -- `current_owner` owns it, the trigger has fired, and the
+disposition is `open`. The tool refuses to run on a bad row: a duplicate id, an unknown disposition,
+an out-of-range phase, a `fixed` row with no evidence, or an `explicitly_deferred` row with no reason.
+`forensics/tools/phase_state.py` reads the JSON and appends a blocking reason when an obligation this
+stratum owns has fired and is still `open`, **before** the state is computed, so the stratum is
+`in-progress` with that reason; and it now **fails closed** when the JSON is absent rather than
+deriving states the rule could not check. `evidence_determinism.py`'s ordered generator list gains
+the tool immediately before `phase_state.py`, and the JSON joins its `COMPARED` set, so a stale
+committed copy is a failure in CI (`evidence_determinism.py` runs in the `static` job) and not only
+in the pipeline.
+
+**Every trigger-bearing entry is enumerated, and the classification is stated rather than assumed.**
+There are nine `**Trigger:**` occurrences in the register; the table carries those nine plus
+`D-GF2M-1`, whose closure condition is prose. The dispositions are **four `fixed`** -- `D-GF2M-1`,
+`D-CBCHMAC-MULTIBLOCK-ENC-1`, and `D-PKEY-AMETH-1`/`D-PKEY-AMETH-3`, which the register itself marks
+superseded by the Phase 8 landing that carried the eleven `standard_methods[]` rows and the four
+`ecx_meth.c` rows -- **three `accepted_permanent_divergence`** (`D-EC-1`, superseded by `D-EC-2`;
+`D-EC-2` itself, "neither transcribable nor inventable" for the one perlasm `nistz256` method and
+carried machine-readably by `prerequisites.json` as `modelled_differently`; and
+`D-CBCHMAC-MAXBUFSZ-ASSERT-1`, whose own trigger says "none planned: this is a permanent, deliberate
+safety divergence") -- and **three `open`**, all owned by strata that are not yet complete:
+`D-PBE-PKCS12-KEYGEN-1` (Phase 10), `D-EVP-CIPHER-LEGACY-NID-1` (Phase 13) and `D-DECODER-ABSENT-1`
+(Phase 10). **No phase 0-8 row is `open`**, so none of the published strata is left blocking, and the
+JSON reads `0 blocking`.
+
+**The two discharges.** `D-GF2M-1` closes by adding the authority's blinding to `BN_GF2m_mod_inv`
+(`src/bn/gf2m.rs:643-712`): the random field element drawn with `BN_priv_rand_ex(b, numbits - 1, …)`,
+the retry while `b` is zero, then `(a*b) * (a*b)^-1 * b` through the vartime inverse, exactly as
+`crypto/bn/bn_gf2m.c:720-759` orders it. The value is unchanged -- a field inverse is unique -- so
+`RT-BN` reads 1510 observations before and after, and the unit test
+`the_blinded_inverse_is_still_the_inverse` holds `a * a^-1 == 1` across the blinding.
+`D-CBCHMAC-MULTIBLOCK-ENC-1` closes by writing the encrypt path: `tls1_multi_block_encrypt_sha1` and
+`_sha256` (`src/provider/cipher.rs:11041`, `:11657`) transcribe the authority's two
+`tls1_multi_block_encrypt` bodies, draw their interleaved IVs through `RAND_bytes_ex` on the row's own
+library context, and the four `aesni_cbc_hmac_sha{1,256}_tls1_multiblock_encrypt` wrappers return the
+packed length instead of 0; `RT-CIPHER` gained the `cbchmac.*.mbenc` arm
+(`courts/phase8/rt_cipher_probe.c:4120-4264`) and moved **7255 -> 7291** observations. The arm's
+`mbenc.rt=1` is a decrypt-path round trip of every record rather than a ciphertext comparison,
+because the IVs are random by construction. Both register headings now read `— **CLOSED**`.
+
+**The rule is shown to fire rather than asserted.** With the JSON edited by hand to add one row of
+`current_owner: 9`, `trigger_satisfied: true`, `disposition: open`, `phase_state.py` moved phase 9 to
+`in-progress` with the reason naming that row, left phases 0-8 `complete`, and returned to `complete`
+once the row was removed. Deleting the JSON makes `phase_state.py` exit 1 with a message naming the
+generator to run.
+
+### Movement
+
+`forensics/tools/divergence_obligations.py` and `forensics/divergence-obligations.json` are added;
+`forensics/tools/phase_state.py`, `forensics/tools/evidence_determinism.py` and
+`forensics/tools/pipeline.sh` gain the check; `src/bn/gf2m.rs`, `src/provider/cipher.rs`,
+`src/bn/exp.rs`, `courts/phase8/rt_cipher_probe.c` and the `D-GF2M-1` /
+`D-CBCHMAC-MULTIBLOCK-ENC-1` register entries change; `docs/PHASE-9-RAND-DRBG-SEAL.md`'s §5, §9 and
+§10 record the closures and the machinery; and Phase 9's `seal_sha256` moves to
+`dfc61b8e2e5d201ba1b5390507faf312ffa63b3fdb20272a1b53c05bc69805b5`. `PIPELINE OK` exit 0.

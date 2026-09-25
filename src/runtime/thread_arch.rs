@@ -447,8 +447,11 @@ pub(crate) unsafe fn ossl_crypto_thread_native_join(
 /// `int ossl_crypto_thread_native_clean(CRYPTO_THREAD *handle)` —
 /// `crypto/thread/arch.c:113-144`.
 ///
-/// Refuses a thread that is not both `FINISHED` and `JOINED`, so a caller cannot free an
-/// object a `pthread_join` is still about to use. Returns 1 only when it actually freed.
+/// Refuses a thread whose state has **neither** `FINISHED` nor `JOINED` set -- the guard
+/// against freeing an object a *running* routine still owns. A thread that has finished is
+/// cleanable whether or not anything joined it, because the authority's test is
+/// `state & (FINISHED | JOINED) == 0` and not an equality against both flags. Returns 1
+/// only when it actually freed.
 ///
 /// # Safety
 /// `handle` must be NULL or a live value returned by
