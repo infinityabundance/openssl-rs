@@ -23,21 +23,18 @@
 //!
 //! ## Current state
 //!
-//! Phases 0 (constitution), 1 (archaeology / atlas), 2 (distribution and ABI
-//! shell) and 3 (core runtime) are **complete** in the derived phase state. The
-//! core runtime — allocation, the thread-local error queue, stacks, `ex_data`,
-//! the hash table, the secure heap, threads and atomics, initialisation and the
-//! object/NID database — is implemented and differentially courted against the
-//! authority; BIO, CONF, BN, ASN.1, the provider and EVP layers, the algorithms,
-//! X.509 and libssl are not started.
+//! The crate types no current-state counts. A count written into prose has no
+//! generator to correct it, and the one that stood here drifted: it named a
+//! phase set and a subsystem set the evidence had long since overtaken. The
+//! authoritative state is machine-readable instead. `openssl_rs::status` types
+//! only the static, dependency-ordered stratum list; `forensics/STATUS.md`
+//! renders the derived states; and `forensics/phase-state.json` is that derived
+//! truth, produced from artefact existence by `forensics/tools/phase_state.py`.
 //!
-//! **No symbol is `PARITY_VERIFIED`.** "Implemented" means the crate's compiled
-//! output defines a symbol with that name; parity is promoted only by courts,
-//! dimension by dimension (`docs/PARITY_MODEL.md`). Everything outside the Phase
-//! 3 families is `SCAFFOLDED` and aborts rather than returning a plausible value.
-//!
-//! The authoritative state is machine-readable, not prose: see [`status`] and
-//! `forensics/phase-state.json`.
+//! **No symbol is `PARITY_VERIFIED`.** This is a durable non-claim, not a count:
+//! "implemented" means the compiled output defines a symbol with that name, and
+//! parity is promoted only by courts, dimension by dimension
+//! (`docs/PARITY_MODEL.md`). No such promotion has happened.
 //!
 //! ## Evidence binding
 //!

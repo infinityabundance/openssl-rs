@@ -30508,3 +30508,118 @@ D424's finding section is corrected in place, because the branch is not yet merg
 has not travelled should be true, not annotated; and Phase 9's `seal_sha256` moves to
 `640a676aa959d28c1abad1abfe641668f644c95eea86420d761d13893aa9356b`, the value D424's record of the
 stratum now carries. `PIPELINE OK` exit 0.
+
+## D426 -- the crate types no phase state of its own, because two typed copies had drifted from the derived one
+
+Two places in the crate hand-typed current project state, and both contradicted
+`forensics/phase-state.json`, which derives Phases 0-9 `complete`:
+
+1. **`src/lib.rs`'s `## Current state`.** It said "Phases 0 (constitution), 1 (archaeology / atlas), 2
+   (distribution and ABI shell) and 3 (core runtime) are **complete**" and that "BIO, CONF, BN,
+   ASN.1, the provider and EVP layers, the algorithms, X.509 and libssl are not started". Six strata
+   and the whole algorithm surface were wrong.
+2. **`src/status.rs`'s `PHASES`.** The `Phase` struct carried a hand-typed `state: PhaseState`, and
+   phase 1 read `PhaseState::InProgress` while the derived state reads `complete`. `docs/STATUS.md`
+   and `forensics/phase-state.json` therefore had a second, disagreeing source inside the crate
+   itself -- the class of defect the reviewer named as the project's greatest risk as it scales:
+   two individually reasonable generators encoding different truths.
+
+The fix removes the typed state instead of retyping it, because a number written into prose has no
+generator to correct it (the argument `README.md`'s Status section already makes).
+
+**What each file becomes.** `src/lib.rs` types no phase count at all: it keeps the durable non-claim
+that no symbol is `PARITY_VERIFIED`, and points at `openssl_rs::status`, `forensics/STATUS.md` and
+`forensics/phase-state.json` as the authoritative state. `src/status.rs` keeps the **static**
+contract that cannot drift -- the dependency-ordered stratum list (`id`, `name`, `stratum`) from
+`docs/RELEASE_GATES.md` §1 -- and drops the `PhaseState` enum and the `state` field entirely, so the
+derived state lives only in the JSON, derived by `forensics/tools/phase_state.py`. The
+`PhaseState::Unknown` rationale it carried was `docs/PARITY_MODEL.md`'s and stays there. Its module
+docs also cited `tests/phase_order.rs`, which does not exist; the reference now names
+`tests/evidence_binding.rs`.
+
+**The crate-level completion guard goes with the state it guarded.** `tests/evidence_binding.rs`'s
+`no_phase_claims_completion_without_a_later_guarantee` asserted that no later phase claims `Complete`
+after an earlier incomplete one -- the crate's own copy of the dependency-order invariant, and the
+copy that had gone stale. `phase_state.py` enforces that invariant over the derived state ("a phase
+may be complete only if every earlier phase is complete", `forensics/phase-state.json`'s own `rule`),
+so the crate-level duplicate is removed rather than repaired. `phases_are_dependency_ordered_and_unique`
+and the three authority/FIPS tests are unchanged.
+
+### Movement
+
+`src/lib.rs`, `src/status.rs` and `tests/evidence_binding.rs` change; no generator reads them, so no
+artefact moves and no `seal_sha256` moves. `cargo fmt --all -- --check`, `cargo clippy --all-targets --
+-D warnings`, `cargo test --lib -- --test-threads=1` (1046 passed) and `cargo test --test
+evidence_binding` (4 passed) are green.
+
+## D427 -- the divergence register gains a machine-readable form, and its two Phase-9 obligations are discharged
+
+The register `docs/SECURITY_DIVERGENCE_POLICY.md` is prose. An entry that defers a closure carries a
+`**Trigger:**` -- the condition under which the divergence must be revisited or removed -- and
+nothing machine-checked a trigger. So a stratum could derive `complete` while an obligation it owned
+had fired and was still owed, and two did: **`D-GF2M-1`** (Phase 5's, whose close-obligation is
+Phase 9's and whose reason "`BN_priv_rand_ex` is Phase 9 and does not exist" had gone historical) and
+**`D-CBCHMAC-MULTIBLOCK-ENC-1`** (whose `Trigger` names "Phase 9's first commit that lands
+`crypto/rand/`", which landed at D313). The export ledger, the provider ledger and the court coverage
+are all fail-closed; a triggered divergence obligation was the one class that could fall through a
+prose crack.
+
+**The machinery.** `forensics/tools/divergence_obligations.py` holds one table and renders
+`forensics/divergence-obligations.json` from it, with `atlas_common.envelope`/`write_json`; `--check`
+re-renders and fails byte-for-byte on drift. Each row carries `id`, `originating_phase`,
+`trigger_phase`, `current_owner`, `trigger_condition`, `trigger_satisfied`, `disposition`, `evidence`
+and `note`, and `blocking` is **derived** -- `current_owner` owns it, the trigger has fired, and the
+disposition is `open`. The tool refuses to run on a bad row: a duplicate id, an unknown disposition,
+an out-of-range phase, a `fixed` row with no evidence, or an `explicitly_deferred` row with no reason.
+`forensics/tools/phase_state.py` reads the JSON and appends a blocking reason when an obligation this
+stratum owns has fired and is still `open`, **before** the state is computed, so the stratum is
+`in-progress` with that reason; and it now **fails closed** when the JSON is absent rather than
+deriving states the rule could not check. `evidence_determinism.py`'s ordered generator list gains
+the tool immediately before `phase_state.py`, and the JSON joins its `COMPARED` set, so a stale
+committed copy is a failure in CI (`evidence_determinism.py` runs in the `static` job) and not only
+in the pipeline.
+
+**Every trigger-bearing entry is enumerated, and the classification is stated rather than assumed.**
+There are nine `**Trigger:**` occurrences in the register; the table carries those nine plus
+`D-GF2M-1`, whose closure condition is prose. The dispositions are **four `fixed`** -- `D-GF2M-1`,
+`D-CBCHMAC-MULTIBLOCK-ENC-1`, and `D-PKEY-AMETH-1`/`D-PKEY-AMETH-3`, which the register itself marks
+superseded by the Phase 8 landing that carried the eleven `standard_methods[]` rows and the four
+`ecx_meth.c` rows -- **three `accepted_permanent_divergence`** (`D-EC-1`, superseded by `D-EC-2`;
+`D-EC-2` itself, "neither transcribable nor inventable" for the one perlasm `nistz256` method and
+carried machine-readably by `prerequisites.json` as `modelled_differently`; and
+`D-CBCHMAC-MAXBUFSZ-ASSERT-1`, whose own trigger says "none planned: this is a permanent, deliberate
+safety divergence") -- and **three `open`**, all owned by strata that are not yet complete:
+`D-PBE-PKCS12-KEYGEN-1` (Phase 10), `D-EVP-CIPHER-LEGACY-NID-1` (Phase 13) and `D-DECODER-ABSENT-1`
+(Phase 10). **No phase 0-8 row is `open`**, so none of the published strata is left blocking, and the
+JSON reads `0 blocking`.
+
+**The two discharges.** `D-GF2M-1` closes by adding the authority's blinding to `BN_GF2m_mod_inv`
+(`src/bn/gf2m.rs:643-712`): the random field element drawn with `BN_priv_rand_ex(b, numbits - 1, …)`,
+the retry while `b` is zero, then `(a*b) * (a*b)^-1 * b` through the vartime inverse, exactly as
+`crypto/bn/bn_gf2m.c:720-759` orders it. The value is unchanged -- a field inverse is unique -- so
+`RT-BN` reads 1510 observations before and after, and the unit test
+`the_blinded_inverse_is_still_the_inverse` holds `a * a^-1 == 1` across the blinding.
+`D-CBCHMAC-MULTIBLOCK-ENC-1` closes by writing the encrypt path: `tls1_multi_block_encrypt_sha1` and
+`_sha256` (`src/provider/cipher.rs:11041`, `:11657`) transcribe the authority's two
+`tls1_multi_block_encrypt` bodies, draw their interleaved IVs through `RAND_bytes_ex` on the row's own
+library context, and the four `aesni_cbc_hmac_sha{1,256}_tls1_multiblock_encrypt` wrappers return the
+packed length instead of 0; `RT-CIPHER` gained the `cbchmac.*.mbenc` arm
+(`courts/phase8/rt_cipher_probe.c:4120-4264`) and moved **7255 -> 7291** observations. The arm's
+`mbenc.rt=1` is a decrypt-path round trip of every record rather than a ciphertext comparison,
+because the IVs are random by construction. Both register headings now read `— **CLOSED**`.
+
+**The rule is shown to fire rather than asserted.** With the JSON edited by hand to add one row of
+`current_owner: 9`, `trigger_satisfied: true`, `disposition: open`, `phase_state.py` moved phase 9 to
+`in-progress` with the reason naming that row, left phases 0-8 `complete`, and returned to `complete`
+once the row was removed. Deleting the JSON makes `phase_state.py` exit 1 with a message naming the
+generator to run.
+
+### Movement
+
+`forensics/tools/divergence_obligations.py` and `forensics/divergence-obligations.json` are added;
+`forensics/tools/phase_state.py`, `forensics/tools/evidence_determinism.py` and
+`forensics/tools/pipeline.sh` gain the check; `src/bn/gf2m.rs`, `src/provider/cipher.rs`,
+`src/bn/exp.rs`, `courts/phase8/rt_cipher_probe.c` and the `D-GF2M-1` /
+`D-CBCHMAC-MULTIBLOCK-ENC-1` register entries change; `docs/PHASE-9-RAND-DRBG-SEAL.md`'s §5, §9 and
+§10 record the closures and the machinery; and Phase 9's `seal_sha256` moves to
+`dfc61b8e2e5d201ba1b5390507faf312ffa63b3fdb20272a1b53c05bc69805b5`. `PIPELINE OK` exit 0.

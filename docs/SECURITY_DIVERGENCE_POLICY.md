@@ -77,6 +77,15 @@ each case the probe prints a `NOT_MEASURED_AUTHORITY_FAULTS` marker: the boundar
 is visible in the transcript rather than silently absent from it. The
 observations that *can* be made around each boundary are compared normally.
 
+**Entries that defer a closure carry a `Trigger`, and their machine-readable form is
+`forensics/divergence-obligations.json`.** The prose below is the record; the JSON is the form the
+evidence machinery reads. `forensics/tools/divergence_obligations.py` renders it from a table that
+names, for every trigger-bearing entry, the phase that owns the closure, the trigger condition,
+whether the trigger has fired, and the disposition (`open`, `fixed`, `explicitly_deferred` or
+`accepted_permanent_divergence`). `forensics/tools/phase_state.py` refuses to derive a stratum's
+state while an obligation it owns has fired and is still `open`, so a triggered obligation cannot be
+outrun by a derived `complete`. `--check` fails on any drift between the table and the JSON.
+
 ### D-CIPHERCTX-NOALG-1 — `EVP_CIPHER_CTX_gettable_params` dereferences a NULL cipher
 
 - **Obligation:** `EVP_CIPHER_CTX_gettable_params` and its `_settable_` twin, on a context created by
@@ -382,7 +391,12 @@ observations that *can* be made around each boundary are compared normally.
   `defaultcfg.unset=RECORDED_DIVERGENCE_OBL_CONF_DEFAULT_CONFIG_FILE` rather than as
   a value. The open obligation is `OBL-CONF-DEFAULT-CONFIG-FILE`, owned by Phase 16.
 
-### D-GF2M-1 — `BN_GF2m_mod_inv` returns the right value without the authority's blinding
+### D-GF2M-1 — `BN_GF2m_mod_inv` returns the right value without the authority's blinding — **CLOSED**
+
+> **Closed by the Phase 9 landing of RAND.** `BN_priv_rand_ex` now exists, so the
+> construction the entry below records as absent is written. Nothing below is erased: the
+> paragraphs are the entry as it stood while the divergence was real, and the closure
+> paragraph at its end records what changed.
 
 - **Obligation:** `BN_GF2m_mod_inv(r, a, p, ctx)` and, through it,
   `BN_GF2m_mod_inv_arr` and the two `BN_GF2m_mod_div*` entry points.
@@ -404,6 +418,25 @@ observations that *can* be made around each boundary are compared normally.
   under the authority must not rely on it here. The obligation is
   `OBL-GF2M-INV-BLINDING`, owned by Phase 9, and it closes by adding the blinding when
   RAND exists.
+- **Closed:** `src/bn/gf2m.rs`'s `BN_GF2m_mod_inv` (`:643-712`) now performs the
+  authority's own construction from `crypto/bn/bn_gf2m.c:720-759`: it rejects a modulus of
+  degree at most one (`:731-733`), draws `b` with
+  `BN_priv_rand_ex(b, numbits - 1, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, ctx)` retrying
+  while `b` is zero (`:735-740`), computes `r := a*b` (`:742-744`), inverts that vartime
+  through the new `mod_inv_vartime` helper (`:746-748`; the authority's
+  `BN_GF2m_mod_inv_vartime`, `:548-713`) and multiplies by `b` again (`:750-752`). The
+  `numbits - 1` width, the parameters, the retry semantics and the order are the
+  authority's, and the multiplication is routed through the crate's own `BN_GF2m_mod_mul`,
+  so an invalid modulus is still refused at that function's `BN_R_INVALID_LENGTH`
+  coordinate. The returned value is unchanged — a field inverse is unique — so the value,
+  return class and error behaviour the court measures are what they were; what the
+  construction restores is the **timing** property the "Claim removed" bullet above
+  withdrew: the vartime inversion now runs on a random multiple of `a`, so its timing is
+  not a function of `a`, exactly as in the authority. `BN_GF2m_mod_inv_arr` and the two
+  `BN_GF2m_mod_div*` entry points reach the same construction by forwarding their `ctx`,
+  which is now load-bearing. The obligation `OBL-GF2M-INV-BLINDING` is discharged. The
+  unit test `the_blinded_inverse_is_still_the_inverse` pins `a * a^-1 == 1` over the
+  163-bit and AES fields, so the blinding cannot silently change the answer.
 
 ### D-GF2M-2 — the `BN_GF2m_*` arithmetic is not the authority's carry chains
 
@@ -1242,7 +1275,12 @@ between the authority and the candidate at this site.**
   `pbe.cipher_nid.legacy` marker is where the difference would be measured, and
   `pbe.alg_add.methods_nids` is the arm it holds back.
 
-### D-CBCHMAC-MULTIBLOCK-ENC-1 — the multiblock *encrypt* parameter is refused, because its IVs come from the random layer
+### D-CBCHMAC-MULTIBLOCK-ENC-1 — the multiblock *encrypt* parameter is refused, because its IVs come from the random layer — **CLOSED**
+
+> **Closed by the Phase 9 landing of RAND.** `crypto/rand/` is in (`RAND_bytes_ex`,
+> `src/rand/rand_lib.rs:926`), so the construction this entry records as absent is written and
+> `RT-CIPHER` courts it. Nothing below is erased: the paragraphs are the entry as it stood while
+> the divergence was real, and the `- **Closed:**` paragraph at its end records what changed.
 
 - **Obligation:** `EVP_CIPHER_CTX_set_params` with `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC` (and its
   `..._ENC_IN` companion) on a fetched `AES-{128,256}-CBC-HMAC-SHA{1,256}` context, and the bytes it
@@ -1269,6 +1307,24 @@ between the authority and the candidate at this site.**
 - **Trigger:** Phase 9's first commit that lands `crypto/rand/`. At that point
   `tls1_multiblock_encrypt` is written from `tls1_multi_block_encrypt` and
   `RT-CIPHER` gains the `cbchmac.*.mbenc` arm; the entry is removed with the arm's green.
+- **Closed:** `src/provider/cipher.rs`'s `tls1_multi_block_encrypt_sha1` and
+  `tls1_multi_block_encrypt_sha256` are the authority's two `tls1_multi_block_encrypt` bodies
+  (`cipher_aes_cbc_hmac_sha1_hw.c:121-369`, `cipher_aes_cbc_hmac_sha256_hw.c:125-392`), and the
+  two `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt` / `..._sha256_...` wrappers now call them
+  instead of answering 0. The IVs are drawn in bulk with
+  `RAND_bytes_ex((*ctx).base.libctx, ivs.as_mut_ptr(), 16 * x4, 0)` -- the row's own library
+  context, the acquisition D240/D241 measured -- and become each lane's explicit IV exactly as
+  the authority places them. The perlasm `sha1_multi_block`/`sha256_multi_block` and
+  `aesni_multi_cbc_encrypt` collapse to the ordinary operations that compute the same bytes:
+  `HMAC-SHA1`/`HMAC-SHA256` from `head` and `tail` over the lane's reconstructed thirteen-byte
+  header and payload, and one `AES_cbc_encrypt` per lane under its drawn IV. `RT-CIPHER`'s new
+  `cbchmac.*.mbenc` arm calls the parameter and observes `mbenc=1`, the packed length the getter
+  then reports (**5204** for the SHA-1 rows, **5268** for the SHA-256 rows at a 5000-byte
+  payload), the four five-byte record headers (`1703030510` / `1703030520`), and `mbenc.rt=1`, a
+  round trip of every produced record back through the row's own TLS decrypt path. The IV bytes
+  themselves are *not* compared -- no two machines draw the same ones, the reason
+  `rt_drbg_probe.c`'s byte arms print no bytes either. `RT-CIPHER` grows 7255 -> **7291**
+  observations for it, and the claim removed above is restored to the compatible set.
 
 ### D-CBCHMAC-MAXBUFSZ-ASSERT-1 — `tls1multi_maxbufsz` before `maxsndfrag` aborts the authority and is answered here
 

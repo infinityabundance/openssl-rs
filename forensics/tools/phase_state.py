@@ -66,6 +66,18 @@ PROVIDER_ALGORITHMS = "forensics/atlas/provider-algorithms.json"
 # and the court probes.
 PROVIDER_COVERAGE = "forensics/atlas/provider-court-coverage.json"
 
+# The generated security-divergence register (docs/SECURITY_DIVERGENCE_POLICY.md, made
+# machine-readable). `docs/SECURITY_DIVERGENCE_POLICY.md` is the one obligation register in this
+# project that was **prose**: its entries carry a `**Trigger:**` -- the condition under which the
+# divergence must be revisited or removed -- and nothing machine-checked it, so a stratum could
+# derive `complete` while an obligation it owned had had its trigger fire and was still owed.
+# `forensics/tools/divergence_obligations.py` now renders each trigger-bearing entry as a row with
+# `trigger_satisfied`, `disposition` and `current_owner`, and `divergence_blocking_reason` below is
+# the executable half. Generated before this tool by the pipeline; if the JSON is absent this tool
+# fails closed rather than skipping the rule, because a check that can be silently skipped is not a
+# check (see `divergence_blocking_reason`).
+DIVERGENCE_OBLIGATIONS = "forensics/divergence-obligations.json"
+
 # The conservation strata, in dependency order (docs/RELEASE_GATES.md §1).
 STRATA: list[tuple[int, str, str]] = [
     (0, "constitution", "Constitution, authorities, claim algebra"),
@@ -793,6 +805,51 @@ def provider_rows_for(phase: int) -> dict | None:
     }
 
 
+def divergence_blocking_reason(phase: int) -> str:
+    """The reason a triggered, still-open divergence obligation holds a stratum open.
+
+    `docs/SECURITY_DIVERGENCE_POLICY.md`'s entries carry a `**Trigger:**`: the condition under
+    which the divergence must be revisited or removed. Review named the absence of any
+    machine-check on those triggers the branch's most interesting weakness -- a stratum could
+    derive `complete` while an obligation it owned had had its trigger fire and was still owed,
+    because the register was prose and nothing read it. `divergence_obligations.py` renders the
+    trigger-bearing entries as rows, so the rule can be executable:
+
+        a row blocks its `current_owner` when `trigger_satisfied` and `disposition == "open"`
+
+    and this function applies it to one stratum. The test is the row's own `current_owner`
+    equality rather than the derived `blocking` field, so the artefact and the rule cannot
+    disagree about *which* stratum a row blocks.
+
+    **Fail-closed when the artefact is absent.** The register is what makes the rule checkable,
+    so a missing `divergence-obligations.json` is a fatal, not an empty result: returning "" would
+    let the whole rule be skipped by deleting one file, which is the hole this closes. The message
+    names the generator to run, the way the pipeline runs it.
+    """
+    doc = read_json(DIVERGENCE_OBLIGATIONS)
+    if doc is None:
+        print(
+            f"[phase-state] fatal: {DIVERGENCE_OBLIGATIONS} is absent or unreadable, so the "
+            f"divergence-trigger rule cannot run and no stratum's state can be trusted; run "
+            f"`python3 forensics/tools/divergence_obligations.py` to write it.",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    owed = [
+        row for row in doc["body"]["rows"]
+        if row["current_owner"] == phase
+        and row["trigger_satisfied"]
+        and row["disposition"] == "open"
+    ]
+    if not owed:
+        return ""
+    ids = ", ".join(row["id"] for row in owed)
+    return (
+        f"{len(owed)} triggered, open divergence obligation(s) of this stratum, whose trigger has "
+        f"fired and which are still owed ({DIVERGENCE_OBLIGATIONS}): {ids}"
+    )
+
+
 def main() -> int:
     # Every stratum that has *any* of the three artefacts a stratum's evidence is built from
     # must have a row, or it would be derived `not-started` however much of that evidence is
@@ -827,6 +884,11 @@ def main() -> int:
     earlier_incomplete: int | None = None
     for phase, name, stratum in STRATA:
         present, absent, blocking = evidence_for(phase)
+        # The divergence-trigger rule (`divergence_blocking_reason`). A triggered, still-open
+        # obligation this stratum owns is a blocking reason exactly as an open ledger row is, and
+        # it is applied here, **before** the state is computed from `blocking`, so the effect is
+        # the state rather than a reason printed beside a `complete`.
+        blocking = blocking or divergence_blocking_reason(phase)
         # **A stratum with any evidence is under way, and `absent` does not say otherwise.**
         #
         # This used to read `elif absent: state = "not-started"`, which meant a stratum whose

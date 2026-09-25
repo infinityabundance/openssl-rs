@@ -179,7 +179,7 @@
       "verdict": "pass"
     },
     "RT-CIPHER": {
-      "observations": 7255,
+      "observations": 7291,
       "verdict": "pass"
     },
     "RT-CIPHER-MEM": {
