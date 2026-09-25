@@ -1169,27 +1169,43 @@ pub extern "C" fn OPENSSL_info(t: c_int) -> *const c_char {
 mod tests {
     use super::*;
     use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
-    use std::sync::Mutex;
 
-    /// Initialisation state is process-global, so tests that touch it serialise.
-    static TEST_LOCK: Mutex<()> = Mutex::new(());
-
-    /// Serialises a test against the other init-state tests, and restores a
-    /// clean state afterwards. `reset_for_test` exists only because the
+    /// Takes the crate-wide global-state lock for the duration of `f`, then
+    /// restores a clean state afterwards.
+    ///
+    /// Initialisation state is process-global — `OPENSSL_init_crypto`'s option
+    /// flags, `OPENSSL_cleanup`'s terminal teardown, and the default
+    /// `OSSL_LIB_CTX` those install — so the exclusion is crate-wide:
+    /// [`crate::test_support::lock_global_state`] is the one lock every
+    /// global-touching test shares, not a lock local to this module.
+    /// `reset_for_test` exists only because the
     /// production `stopped` flag is terminal: without it, one cleanup test would
     /// poison every later test in the same binary (the authority has the same
     /// terminal behaviour, which is exactly why it cannot be tested in-process
     /// without a reset).
     fn with_init_lock<R>(f: impl FnOnce() -> R) -> R {
-        let guard = TEST_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let guard = crate::test_support::lock_global_state();
         let result = f();
         reset_for_test();
         drop(guard);
         result
     }
 
+    /// Restores the process-global state a `with_init_lock` test may have destroyed.
+    ///
+    /// `STOPPED`, `BASE_INITED` and `OPTSDONE` are the three flags the tests set or clear, but
+    /// they are not the whole of what `OPENSSL_cleanup` tears down: it also **deletes pthread
+    /// keys**, and a key cannot be brought back by a flag. The `base` `CRYPTO_ONCE` cannot
+    /// un-run, so `base_init` will never re-create the configuration re-entrancy key, and
+    /// `CRYPTO_THREAD_set_local` on the deleted key answers `EINVAL` -- which is why a later
+    /// `OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG)` on this process is refused. Through
+    /// `ossl_method_store_fetch`'s default-context config load that refusal surfaces as a
+    /// cache-missing `EVP_*_fetch` reporting `ERR_R_UNSUPPORTED`.
+    ///
+    /// The thread-event destructor key has the same problem and
+    /// [`crate::runtime::thread_events::rearm_for_test`] repairs it; this is that repair's other
+    /// half, and `rearm_for_test`'s own note on the leaked key applies here too. The machinery
+    /// has to be live before a key can be created, so it is re-armed first.
     fn reset_for_test() {
         STOPPED.store(false, Ordering::Release);
         // `BASE_INITED` is restored to what the **once** recorded, not to `false`:
@@ -1203,6 +1219,15 @@ mod tests {
             Ordering::Release,
         );
         OPTSDONE.store(0, Ordering::Release);
+
+        crate::runtime::thread_events::ensure_thread_machinery_for_test();
+        // SAFETY: `IN_INIT_CONFIG_LOCAL` is this module's own key storage, `base_init` created it
+        // once and `OPENSSL_cleanup` released it, and this re-creates it in place with the
+        // authority's NULL destructor. Every reader takes its address, so replacing the value is
+        // what makes the key usable again.
+        unsafe {
+            let _ = CRYPTO_THREAD_init_local(IN_INIT_CONFIG_LOCAL.as_ptr(), None);
+        }
     }
 
     fn to_bytes(p: *const c_char) -> Vec<u8> {

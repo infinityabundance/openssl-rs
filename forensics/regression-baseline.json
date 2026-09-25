@@ -1,5 +1,6 @@
 {
   "court_phases": [
+    "phase10",
     "phase2",
     "phase3",
     "phase4",
@@ -314,6 +315,10 @@
       "observations": 65,
       "verdict": "pass"
     },
+    "RT-KEYFORMAT-REF": {
+      "observations": 87,
+      "verdict": "pass"
+    },
     "RT-KEYMGMT": {
       "observations": 608,
       "verdict": "pass"
@@ -424,6 +429,7 @@
     }
   },
   "deferred": {
+    "phase10": 0,
     "phase3": 43,
     "phase4": 23,
     "phase5": 91,
@@ -437,6 +443,7 @@
     "libssl": 0
   },
   "open_obligations": {
+    "phase10": 211,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -446,6 +453,7 @@
     "phase9": 0
   },
   "owned_obligations": {
+    "phase10": 298,
     "phase3": 294,
     "phase4": 272,
     "phase5": 565,
@@ -457,7 +465,7 @@
   "phases": {
     "0": "complete",
     "1": "complete",
-    "10": "not-started",
+    "10": "in-progress",
     "11": "not-started",
     "12": "not-started",
     "13": "not-started",

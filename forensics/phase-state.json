@@ -458,10 +458,18 @@
         "stratum": "RAND / DRBG + entropy"
       },
       {
-        "blocking": "not started",
+        "blocking": "211 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4)",
         "deferred": [],
         "evidence_absent": [],
-        "evidence_present": [],
+        "evidence_present": [
+          "docs/PHASE-10-SUBPHASES.md",
+          "forensics/tools/phase10_obligations.py",
+          "forensics/phase10-obligations.json",
+          "artifacts/phase10/COURTS.json",
+          "forensics/atlas/court-coverage.json",
+          "forensics/atlas/provider-algorithms.json",
+          "forensics/atlas/provider-court-coverage.json"
+        ],
         "name": "key-formats",
         "phase": 10,
         "provider_rows": {
@@ -470,7 +478,7 @@
           "unimplemented": 636
         },
         "seal_sha256": null,
-        "state": "not-started",
+        "state": "in-progress",
         "stratum": "Key formats + PKCS + STORE"
       },
       {
@@ -613,11 +621,11 @@
     "rule": "a phase may be complete only if every earlier phase is complete",
     "summary": {
       "complete": 10,
-      "in_progress": 0,
-      "not_started": 12
+      "in_progress": 1,
+      "not_started": 11
     }
   },
-  "body_hash": "b5522c97a26e6276bf5a81b613902a7ed8f7c3c535a229fe2d31bf2c7269bdf7",
+  "body_hash": "3c7b2a9bac8d5bf9538702e7d204f43be2477f7315bf5477322a90f3e8280a63",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

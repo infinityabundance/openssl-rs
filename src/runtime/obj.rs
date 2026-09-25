@@ -2412,16 +2412,15 @@ pub unsafe extern "C" fn OBJ_create_objects(in_: *mut super::bio::Bio) -> c_int 
 mod tests {
     use super::*;
 
-    /// Serialises tests that touch the process-wide dynamic registries and the
-    /// NID counter. The static-table tests could run in parallel, but one lock
-    /// keeps the reasoning trivial.
-    static TEST_LOCK: Mutex<()> = Mutex::new(());
-
+    /// Takes the crate-wide global-state lock. These tests touch the
+    /// process-global object database (`OBJ_DB`), the object-name registries
+    /// (`OBJ_NAME_*`) and the NID counter, so the exclusion is crate-wide:
+    /// [`crate::test_support::lock_global_state`] is the one lock every
+    /// global-touching test shares, not a lock local to this module. The
+    /// static-table tests could run in parallel, but one lock keeps the
+    /// reasoning trivial.
     fn lock() -> MutexGuard<'static, ()> {
-        match TEST_LOCK.lock() {
-            Ok(g) => g,
-            Err(p) => p.into_inner(),
-        }
+        crate::test_support::lock_global_state()
     }
 
     /// Read a raw NUL-terminated name as a Rust string. Test-only convenience.

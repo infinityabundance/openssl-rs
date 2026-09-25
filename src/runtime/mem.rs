@@ -984,6 +984,19 @@ unsafe fn strnlen(s: *const c_char, max: usize) -> usize {
 mod tests {
     use super::*;
 
+    /// Takes the crate-wide global-state lock. `CRYPTO_set_mem_functions`
+    /// mutates the process-global allocator slots and clears the
+    /// `ALLOW_CUSTOMIZE` latch (a one-way write), and this test's outcome
+    /// additionally depends on whether any allocation already ran in this
+    /// process -- a `#[cfg(test)]`-visible ordering fact -- so it takes the one
+    /// crate-wide lock, [`crate::test_support::lock_global_state`], that every
+    /// global-touching test shares. The other tests in this module only allocate
+    /// and free through whatever allocator is installed, so they stay unlocked
+    /// and parallel.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
+
     /// The zero-length arms and the `CRYPTO_realloc(addr, 0)` ownership question
     /// are **not** unit-tested here.
     ///
@@ -1100,6 +1113,7 @@ mod tests {
 
     #[test]
     fn custom_allocator_is_used_and_reported() {
+        let _g = lock();
         // Install counting shims, prove they are used, then restore the default.
         static COUNT: AtomicUsize = AtomicUsize::new(0);
         // SAFETY: the shims satisfy the allocator contract.
