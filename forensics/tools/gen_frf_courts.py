@@ -426,6 +426,34 @@ COURTS: list[tuple[str, int, str, str]] = [
     ("rt-provider-cap", 8, "rt_provider_cap_probe",
      "the default provider's third dispatch-table face: `GETTABLE_PARAMS`, "
      "`GET_PARAMS` and `GET_CAPABILITIES`"),
+    # Phase 9 — RAND, the DRBGs and the entropy sources.
+    #
+    # Each description is the court's own one-line subject, the line its probe
+    # header opens with, carried here as the Phase 7 and Phase 8 rows carry
+    # theirs (D200, D413).
+    #
+    # The two `CT-*` construction courts are deliberately absent, and the reason
+    # is the instrument, exactly as it is for Phase 8's three: `CT-DRBG` and
+    # `CT-BN-RAND` are vector-driven rather than differential, so a `CT-*` court
+    # has no authority transcript to diff, no
+    # `artifacts/phase9/probes/<probe>.{authority,candidate}` pair to stage and no
+    # `{fixture}` for a challenge to locate (D13, D201). They are also *pending*
+    # rather than landed: `phase9_courts.py`'s `PENDING_COURTS` names each with the
+    # subphase and the driver it still needs -- `CT-DRBG`'s vectors already ship in
+    # the pinned tree (`test/recipes/30-test_evp_data/evprand.txt`), and
+    # `CT-BN-RAND` awaits the `test_rng.c.in` seed-source driver -- so neither is
+    # registered as passing. Their evidence, where it exists, is their row in
+    # `artifacts/phase9/COURTS.json`'s `pending_courts`; a manifest generated from
+    # this table would name execution-context artifacts that do not exist.
+    ("rt-drbg", 9, "rt_drbg_probe",
+     "the differential DRBG probe (RT-DRBG)"),
+    ("rt-rand", 9, "rt_rand_probe",
+     "the differential RAND probe (RT-RAND)"),
+    ("rt-bn-rand", 9, "rt_bn_rand_probe",
+     "the differential BN-random probe (RT-BN-RAND)"),
+    ("rt-rand-users", 9, "rt_rand_users_probe",
+     "the differential probe for the random layer's first three consumers "
+     "(RT-RAND-USERS)"),
 ]
 
 

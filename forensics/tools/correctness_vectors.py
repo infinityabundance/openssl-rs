@@ -601,6 +601,11 @@ def load_all(vector_dir: Path = VECTOR_DIR) -> list[VectorSet]:
         kind = str(json.loads(p.read_text(encoding="utf-8")).get("kind", ""))
         if kind.startswith(CIPHER_KIND_PREFIX):
             continue
+        # The string-vector courts' records are their own schema (`load_string_vector_set`
+        # reads them) and carry no digest vectors, so the digest loader must not be handed one:
+        # it would reject the kind, which is a failure about a file it was never meant to read.
+        if kind == STRING_VECTOR_KIND:
+            continue
         sets.append(load_vector_set(p))
     return sets
 
@@ -1085,6 +1090,250 @@ def _parse_probe(stdout: str) -> dict[int, tuple[str, str]]:
             continue
         results[index] = (parts[1], parts[2])
     return results
+
+
+# ---------------------------------------------------------------------------
+# The string-vector correctness courts (phase 9)
+# ---------------------------------------------------------------------------
+#
+# A fourth record shape, beside the digest, cipher and ML-DSA ones: a vector is a **label** and a
+# map of key to expected *string*, and the probe prints one `ct.<label>[.<key>]=<value>` line per
+# value. It is generic on purpose -- what the court compares is a string it was handed, so a court
+# may print hex, a decimal return code or a word, and the only requirement is that the comparison
+# is exact. Two phase-9 courts use it: `CT-BN-RAND` (one keyless value per vector -- the DSA nonce
+# re-derived in Python from the construction, so a transcription error in the crate cannot move
+# the expected bytes) and `CT-DRBG` (one value per `output.N` of a pinned-corpus stanza).
+#
+# **A vector label and a key may each contain dots**, so the probe's output is mapped by
+# `"<label>"` or `"<label>.<key>"` as a whole string and is never split. A split would make a
+# corpus of `output.0..output.14` collide with a label that ends in a number.
+
+BN_RAND_PROBE = REPO_ROOT / "courts" / "phase9" / "ct_bn_rand.c"
+BN_RAND_VECTORS = VECTOR_DIR / "bn_rand_nonce.json"
+DRBG_PROBE = REPO_ROOT / "courts" / "phase9" / "ct_drbg.c"
+DRBG_VECTORS = VECTOR_DIR / "drbg.json"
+STRING_VECTOR_KIND = "correctness-vectors"
+
+
+def load_string_vector_set(path: Path, court: str) -> dict[str, dict[str, str]]:
+    """`{label: {key: expected}}` for one string-vector court.
+
+    The keys are validated rather than trusted: a duplicate label would make one vector shadow
+    another while the transcript still looked complete, and a label the probe cannot spell is a
+    vector that can never be matched. Both are the class this project removes by failing closed.
+    """
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if doc.get("kind") != STRING_VECTOR_KIND:
+        raise VectorError(
+            f"{rel(path)}: kind is {doc.get('kind')!r}, not {STRING_VECTOR_KIND!r}"
+        )
+    body = doc.get("body") or {}
+    if body.get("court") != court:
+        raise VectorError(f"{rel(path)}: court is {body.get('court')!r}, not {court!r}")
+    vectors = body.get("vectors")
+    if not vectors:
+        raise VectorError(
+            f"{rel(path)}: no vectors, so {court} would be a court that checks nothing"
+        )
+    out: dict[str, dict[str, str]] = {}
+    for v in vectors:
+        label = str(v.get("label", ""))
+        if not re.fullmatch(r"[a-z0-9_.-]+", label):
+            raise VectorError(
+                f"{rel(path)}: vector label {label!r} is not [a-z0-9_.-]; the probe's own "
+                "line spelling depends on it"
+            )
+        if label in out:
+            raise VectorError(f"{rel(path)}: vector label {label!r} appears twice")
+        expected = v.get("expected")
+        if isinstance(expected, dict):
+            if not expected:
+                raise VectorError(
+                    f"{rel(path)}: vector {label!r} expects no key, so it asserts nothing"
+                )
+            out[label] = {str(k): str(x) for k, x in expected.items()}
+        else:
+            out[label] = {"": str(expected)}
+    return out
+
+
+def run_string_vector_court(
+    name: str,
+    *,
+    kind: str,
+    claim: str,
+    vector_path: Path,
+    probe: Path,
+    work_dir: Path,
+    authority_id: str = PRODUCTION_AUTHORITY,
+    candidate_dir: Path = CANDIDATE_DIR,
+    argv: tuple[str, ...] = (),
+    require: dict[str, str] | None = None,
+) -> dict:
+    """Compile one string-vector probe against the candidate, run it, compare every line.
+
+    A **precondition failure is its own verdict**, not a pile of mismatches: both courts depend
+    on a mechanism the rest of the run cannot work without (the DRBG type being `TEST-RAND`, its
+    `test_entropy` having been accepted), and reporting fifteen wrong nonces would hide the one
+    fact that explains all fifteen. `ct.done=1` is always required, so a truncated run fails.
+    """
+    expected = load_string_vector_set(vector_path, name)
+    base = {
+        "court": name,
+        "plane": "correctness",
+        "kind": kind,
+        "probe": rel(probe),
+        "candidate_shared_object": rel(candidate_dir / "libcrypto.so.3"),
+        "authority": authority_id,
+        "vectors": rel(vector_path),
+    }
+
+    binary = work_dir / f"{name.lower()}.candidate"
+    ok, err = compile_probe(probe, binary, candidate_dir / "include", candidate_dir)
+    if not ok:
+        return {**base, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    res = run([str(binary), *argv])
+    if res.returncode != 0:
+        return {**base, "verdict": "fail", "stage": "run-candidate",
+                "exit_code": res.returncode,
+                "detail": (res.stderr or res.stdout).splitlines()[-12:]}
+
+    observed: dict[str, str] = {}
+    for line in res.stdout.splitlines():
+        if not line.startswith("ct."):
+            continue
+        key, sep, value = line[3:].partition("=")
+        if sep:
+            observed[key] = value
+
+    wanted_pre = {"done": "1", **(require or {})}
+    bad_pre = sorted(k for k, v in wanted_pre.items() if observed.get(k) != v)
+    if bad_pre:
+        return {
+            **base, "verdict": "fail", "stage": "probe-precondition",
+            "detail": [
+                f"{k}: wanted {wanted_pre[k]!r}, probe printed {observed.get(k)!r}"
+                for k in bad_pre
+            ],
+            "observed": {k: observed.get(k) for k in sorted(wanted_pre)},
+        }
+
+    results: list[dict] = []
+    failures: list[dict] = []
+    for label, by_key in expected.items():
+        for key, want in by_key.items():
+            line_key = label if key == "" else f"{label}.{key}"
+            actual = observed.get(line_key)
+            good = actual == want
+            results.append({"arm": key or "value", "id": line_key, "passed": good,
+                            "expected": want, "actual": actual})
+            if not good:
+                failures.append({
+                    "algorithm": line_key.split(".", 1)[0],
+                    "id": line_key,
+                    "arm": key or "value",
+                    "input_hex": "",
+                    "expected_hex": want,
+                    "actual_hex": actual,
+                    "probe_status": "1",
+                    "probe_detail": "absent from the transcript" if actual is None else "",
+                })
+
+    total = len(results)
+    return {
+        **base,
+        "vectors_checked": total,
+        "vectors_passed": total - len(failures),
+        "vectors_failed": len(failures),
+        "results": results,
+        "failures": failures,
+        "stage": "vector-mismatch" if failures else "compare",
+        "verdict": "pass" if not failures else "fail",
+        "claim": claim,
+    }
+
+
+def run_bn_rand_court(
+    name: str,
+    *,
+    vector_path: Path = BN_RAND_VECTORS,
+    probe: Path = BN_RAND_PROBE,
+    work_dir: Path,
+    authority_id: str = PRODUCTION_AUTHORITY,
+    candidate_dir: Path = CANDIDATE_DIR,
+) -> dict:
+    """`CT-BN-RAND` -- the DSA nonce, re-derived in Python from the construction.
+
+    No argv: the probe carries its committed inputs in a generated header beside it, because
+    `BN_generate_dsa_nonce`'s inputs are *values* rather than a corpus stanza. The DRBG type and
+    the entropy installation are preconditions rather than vectors: if either failed, every
+    expected nonce would differ and the transcript would say nothing about which fact was wrong.
+    """
+    return run_string_vector_court(
+        name,
+        kind="bn-rand-nonce-vectors",
+        claim=(
+            "A correctness-vector PASS means candidate-only construction verification: "
+            "`BN_generate_dsa_nonce` produced the committed nonce for every vector, and every "
+            "nonce was re-derived independently in Python from `crypto/bn/bn_rand.c`'s own "
+            "construction -- SHA-512 over the counter, the 96-byte private key, the message and "
+            "the injected random block, then the mask and the rejection loop -- with the random "
+            "stream committed and installed on TEST-RAND, so no transcription of the "
+            "implementation can move the expected bytes. It is NOT OpenSSL parity: the "
+            "authority's observable behaviour is RT-BN-RAND's question. It is NOT independent "
+            "cryptographic validation and NOT formal validation; see docs/DECISIONS.md D201 "
+            "and docs/PHASE-9-SUBPHASES.md."
+        ),
+        vector_path=vector_path,
+        probe=probe,
+        work_dir=work_dir,
+        authority_id=authority_id,
+        candidate_dir=candidate_dir,
+        require={"drbg_type": "1", "entropy_set": "1"},
+    )
+
+
+def run_drbg_court(
+    name: str,
+    *,
+    vector_path: Path = DRBG_VECTORS,
+    probe: Path = DRBG_PROBE,
+    work_dir: Path,
+    authority_id: str = PRODUCTION_AUTHORITY,
+    candidate_dir: Path = CANDIDATE_DIR,
+) -> dict:
+    """`CT-DRBG` -- the three provider DRBGs against the pinned corpus's stanzas.
+
+    The probe takes the corpus path as its one argument rather than carrying the inputs in the
+    vector file: the expected bytes are mirrored there, but the *inputs* are re-read from the
+    pinned corpus so they are not typed twice and cannot drift from it.
+    """
+    corpus = resolve_authority(authority_id).source / (
+        "test/recipes/30-test_evp_data/evprand.txt"
+    )
+    return run_string_vector_court(
+        name,
+        kind="drbg-vectors",
+        claim=(
+            "A correctness-vector PASS means candidate-only construction verification: the "
+            "`CTR-DRBG`, `HASH-DRBG` and `HMAC-DRBG` rows reproduced every `output.N` the pinned "
+            "authority's own `test/recipes/30-test_evp_data/evprand.txt` records, whose stanzas "
+            "mirror the NIST CAVP `drbgtestvectors.zip` sets. The entropy, nonce and "
+            "personalisation string a stanza names are installed on a `TEST-RAND` parent and "
+            "passed to the child the way `test/evp_test.c`'s own driver does. It is NOT OpenSSL "
+            "parity: the authority's observable behaviour is RT-DRBG's question. It is NOT "
+            "independent cryptographic validation and NOT formal validation; see "
+            "docs/DECISIONS.md D201 and docs/PHASE-9-SUBPHASES.md."
+        ),
+        vector_path=vector_path,
+        probe=probe,
+        work_dir=work_dir,
+        authority_id=authority_id,
+        candidate_dir=candidate_dir,
+        argv=(str(corpus),),
+    )
 
 
 def _oracle_family(oracle: str) -> str:

@@ -30344,3 +30344,105 @@ whether the court is possible.
 four mentions of the gap are corrected from "exists in neither of the runner's sets" to the
 registration and what it names, so the seal and the runner agree. Phase 9's `seal_sha256` moves with
 the document, to `a0ae7d96f12a013b…`. `PIPELINE OK` exit 0.
+
+## D424 -- Phase 9's correctness plane and its FRF chain entry land, and the one thing left unproven is named rather than smoothed
+
+The seal (D422) was written while three artifacts were open and named all three: the FRF chain entry,
+`CT-DRBG` and `CT-BN-RAND`. D423 registered `CT-BN-RAND` pending. This change lands them -- the two
+correctness courts, the chain entry, and the Gemel checkpoint the chain produces -- so no artifact the
+seal named is left owed. `docs/PHASE-9-RAND-DRBG-SEAL.md` moves from 500 to 586 lines and its
+`seal_sha256` with it, `a0ae7d96f12a013b…` to `085e6521740dea94…`.
+
+### The correctness plane: two courts, both candidate-only
+
+`CT-BN-RAND` reproduces the five committed DSA nonces. `BN_generate_dsa_nonce` produced each one, and
+each was **re-derived independently in Python** from `crypto/bn/bn_rand.c`'s own construction --
+SHA-512 over the counter, the 96-byte private key, the message and the injected random block, then the
+mask and the rejection loop -- with the random stream committed and installed on `TEST-RAND`, so no
+transcription of the implementation can move the expected bytes. The vectors are
+`forensics/vectors/bn_rand_nonce.json` (5 vectors, sha256 `5e316077…`), the driver is
+`courts/phase9/ct_bn_rand.c` over the generated header `courts/phase9/ct_bn_rand_vectors.h`, and the
+generator is `forensics/tools/gen_bn_rand_nonce_vectors.py`. `CT-DRBG` reproduces every `output.N` the
+pinned authority's own `test/recipes/30-test_evp_data/evprand.txt` records -- corpus sha256
+`61fd2ca1…`, 79987 lines -- whose stanzas mirror the NIST CAVP `drbgtestvectors.zip` sets; 14401 of
+14401. Its vectors are `forensics/vectors/drbg.json` (961 stanzas, 14401 values, file sha256
+`8d83cf11…`). Both are **candidate-only** (D201): `correctness_vectors.py` compiles each probe once
+against the candidate alone and compares its bytes with the committed expected bytes, so a `CT-*` pass
+is construction verification and **not** parity -- the authority's observable behaviour is `RT-*`'s
+question. `phase9_courts.py`'s `CORRECTNESS_COURTS` now names both (`:128`) and `PENDING_COURTS` is
+empty (`:151`), which retires D423's pending row.
+
+### Two inputs declined with a reason, rather than quietly unread
+
+`evpkdf_hmac_drbg.txt` (sha256 `481036e1…`) is recorded as a **declined** input rather than mirrored:
+its stanzas are `KDF = HMAC-DRBG-KDF`, i.e. `providers/implementations/kdfs/hmacdrbg_kdf.c.in`'s
+`EVP_KDF` row, not the `OSSL_OP_RAND` HMAC-DRBG row this court covers, so copying it here would
+verify a different row under this court's name. Six `evprand.txt` stanzas are excluded because they
+are gated on `Availablein = fips` (`evprand.txt:79925`, `:79932`, `:79941`, `:79953`, `:79965`,
+`:79977`) -- the "truncated digests are not allowed" and FIPS-indicator tests -- which are not
+reachable on the non-FIPS profile this crate builds. Both omissions are named in
+`gen_drbg_vectors.py`'s own `inputs[]`, so a later reader can audit them instead of rediscovering why
+the count is 14401 and not the corpus's full total.
+
+### The chain entry: four courts declared, the store added to rather than recreated
+
+`forensics/tools/gen_frf_courts.py`'s `COURTS` table gains four rows at phase 9 -- `rt-drbg`,
+`rt-rand`, `rt-bn-rand` and `rt-rand-users` (`:448-456`), one per **differential** court -- and
+`--check` moves from `ok: 154 file(s) match the table (77 courts)` to `ok: 162 file(s) match the table
+(81 courts)`. The store was **added to**, not recreated, because `.frf` is committed evidence (D200,
+D413): four receipts, eight challenges (both declared axes on every court, every one adjudicated with
+`saw_defect` true and `specificity_clean` true), twelve captures, and one compiled
+`sensitivity-backed` claim `9c05b8c9ddf98c3e129cfa542fbcea7b57a711e7d08aae58c5301354ca826bdd`, binding
+authority `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.12` (`e4f60d8b`) with `blockers: []` and
+`excluded_evidence: []`. The store moved captures 246 -> 258, challenges 164 -> 172, receipts
+82 -> 86, claims 8 -> 9 and residual identities 168 -> 176. The two `CT-*` courts carry **no** row,
+for D413's reason: a vector-driven court has no authority transcript to diff and no fixture a
+challenge could locate, so a manifest naming execution-context artifacts that do not exist would fail
+at admission.
+
+### The checkpoint, one rather than three
+
+`forensics/GEMEL_TRAJECTORY.md`'s head change is `C94`, and its `current:` is
+`checkpoint.79bf9b1418be4e8fcafc3889e99f49358fb0120dae2e0545416f698486a96f3b`, listed as `K48`
+(`:153,160`). It is **one** checkpoint rather than the three Phase 8 needed (`C74`/`C75`/`C76`),
+because this stratum's chain contains no finding, fix or disposition for the trajectory to carry in
+order: the four courts' real runs raise no residual on a claimed surface, the claim compiles with zero
+blockers and no narrowed cell on the first pass, and the only residuals the chain produces are the
+eight mutant residuals of the challenge records, which are open by design because a mutant's
+divergence is the challenge's evidence.
+
+### The one open finding: recorded rather than diagnosed
+
+One finding is carried rather than closed, and it is stated so a reader cannot mistake Phase 9's
+`complete` for a statement that it was explained. `context::thread_data::tests::the_pool_starts_joins_and_cleans_workers`
+failed **once** under the full parallel test run with `assertion left == right failed, left: 1, right:
+0` at `src/context/thread_data.rs:454` -- the `assert_eq!(ossl_get_avail_threads(ctx), 8)` after four
+starts and four joins -- and passed both in isolation and on an immediate re-run of the whole pipeline
+with the same code. `avail` is `max_threads - active_threads` for that context, so a value of `1` is
+consistent with the context having read a `max_threads` of 1, the very thing
+`max_threads_is_per_context` asserts cannot happen; and it is **not** the default context's value,
+which would be `0`, so a plain context mix-up does not explain it. **The mechanism was not
+established.** It is recorded in the seal's §5 and here: what was observed, the value, that it is not
+reproducible in isolation, and that the cause is unknown.
+
+### What `complete` now means, and what it does not
+
+Phase 9 is `complete` on its own evidence: 69 exports (25 owned, 44 received) all implemented, 15 of
+15 provider rows, six courts `pass` 6 of `total` 6 with `pending_courts` empty, the FRF chain entry
+landed and the `K48` checkpoint landed. What `complete` does **not** mean is stated in the seal's §6:
+a `CT-*` pass is construction verification rather than parity (D201); nothing here is a parity claim
+about entropy, because the pool's source is environmental; and the intermittent failure above is
+recorded rather than explained.
+
+### Movement
+
+`artifacts/phase9/COURTS.json` gains the two correctness records and `pending_courts` empties;
+`forensics/tools/correctness_vectors.py` gains the two court drivers and `phase9_courts.py` names both
+in `CORRECTNESS_COURTS` with `PENDING_COURTS` empty; `forensics/vectors/bn_rand_nonce.json`,
+`forensics/vectors/drbg.json` and their generators `gen_bn_rand_nonce_vectors.py` and
+`gen_drbg_vectors.py` are added; `forensics/tools/gen_frf_courts.py` gains the four Phase 9 rows and
+`forensics/frf/courts/` and the `.frf` store gain the objects they derive;
+`forensics/phase9-obligations.json`, the atlases and `docs/SEAL-CENSUS.md` are regenerated;
+`docs/PHASE-9-RAND-DRBG-SEAL.md` is corrected at §1, §3, §6, §7, §8, §9 and §10 so its Gemel
+statements describe the checkpoint that landed rather than the head an earlier pass found; and Phase
+9's `seal_sha256` moves to `085e6521740dea94…`. `PIPELINE OK` exit 0.
