@@ -130,6 +130,13 @@ GENERATORS_AFTER_LEDGERS = [
     # being after the surface it does not consume; it is listed here so that a stale
     # committed copy is a failure rather than a silent divergence.
     "forensics/tools/dispatch_court.py",
+    # The divergence register's machine-readable form. It is listed so that a stale committed
+    # copy is a failure and not a silent divergence: `phase_state.py` refuses to derive any
+    # state without it, and the whole point of the file is that a triggered obligation cannot
+    # be outrun by a derived `complete`, so a generator nothing re-runs would reintroduce
+    # exactly that. It sits immediately before `phase_state.py` because it consumes nothing
+    # and `phase_state.py` consumes *it*.
+    "forensics/tools/divergence_obligations.py",
     "forensics/tools/phase_state.py",
     # The prerequisite gate reads the phase states to decide whether a stratum has
     # sealed, so it sits after `phase_state.py` rather than beside it. It needs no
@@ -208,6 +215,7 @@ COMPARED = [
     "forensics/atlas/prerequisite-gate.json",
     "forensics/atlas/plan-reconciliation.json",
     *[a for _g, a in LEDGERS],
+    "forensics/divergence-obligations.json",
     "forensics/phase-state.json",
     "forensics/phase-state.md",
     "docs/SEAL-CENSUS.md",

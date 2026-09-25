@@ -1,6 +1,6 @@
 //! Phase 8.3 — the default provider's MAC rows: `providers/implementations/macs/cmac_prov.c`
 //! (the `CMAC` row), `siphash_prov.c` (`SIPHASH`), `hmac_prov.c` (`HMAC`) and `gmac_prov.c`
-//! (`GMAC`, transcribed and held for Phase 9).
+//! (`GMAC`, transcribed here and registered in D419).
 //!
 //! **Why these rows land with the ciphers rather than with a MAC stratum.** CMAC is the first
 //! `OSSL_OP_MAC` row anything in this crate needs: `crypto/modes/siv128.c` implements RFC 5297's
@@ -8,14 +8,15 @@
 //! `OSSL_OP_MAC` row at all, so `EVP_MAC_fetch(NULL, "CMAC", NULL)` answered 0 where the
 //! authority answers 1. The rows are Phase 8's own obligation — `deflt_macs[]`'s nine rows are
 //! `open`/`owning_phase: 8` in `forensics/atlas/provider-algorithms.json` — so the SIV rows wait
-//! on CMAC rather than on another stratum. **GMAC's engine is transcribed in the same unit and its
-//! registration is not**, which is a measurement rather than a caution: `gmac_set_ctx_params`
-//! resolves a `cipher` name and then refuses every mode but `EVP_CIPH_GCM_MODE`, and this
-//! profile's only GCM ciphers are `AES-{128,192,256}-GCM`, themselves Phase 9's on `RAND_bytes_ex`
-//! (D234). Publishing the row would make `EVP_MAC_fetch(NULL, "GMAC", NULL)` answer 1 on both
-//! sides and then make every `EVP_MAC_init` fail where the authority succeeds — worse than not
-//! publishing it, because the difference would be invisible to a fetch-only observation. So the
-//! row is Phase 9's with its blocker named in `provider-algorithm-plans.json` (D243).
+//! on CMAC rather than on another stratum. **GMAC's engine was transcribed in the same unit while
+//! its registration was held**, and the holding was a measurement rather than a caution:
+//! `gmac_set_ctx_params` resolves a `cipher` name and then refuses every mode but
+//! `EVP_CIPH_GCM_MODE`, and this profile's only GCM ciphers are `AES-{128,192,256}-GCM`, which were
+//! themselves Phase 9's on `RAND_bytes_ex` (D234). Publishing the row then would have made
+//! `EVP_MAC_fetch(NULL, "GMAC", NULL)` answer 1 on both sides and then made every `EVP_MAC_init`
+//! fail where the authority succeeds -- worse than not publishing it, because the difference would
+//! be invisible to a fetch-only observation (D243). **The GCM ciphers landed in D417, so the row is
+//! registered in D419** and `RT-CIPHER`'s `rt_deflt_gmac` arm drives it end to end.
 //!
 //! **`HMAC` is the row with a real engine behind it.** It is the third of HMAC's three units and
 //! the reason this stratum took `ssl3_cbc_digest_record` (D251), `PROV_DIGEST` (D249) and
@@ -74,6 +75,11 @@
 //! (D253).
 //!
 //! SPDX-License-Identifier: Apache-2.0
+
+// `ossl_cmac_functions` is the authority's own name for the `CMAC` row's dispatch table --
+// non-`static` in `cmac_prov.c.in` and declared in the uninstalled `prov/implementations.h`, so
+// the plan can promise it and `plan_reconciliation.py` has to be able to see it built (D420).
+#![allow(non_upper_case_globals)]
 
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
@@ -526,7 +532,7 @@ unsafe extern "C" fn cmac_final(
 }
 
 /// `const OSSL_DISPATCH ossl_cmac_functions[]` — `cmac_prov.c:308-322`, ten entries.
-pub(crate) static CMAC_FUNCTIONS: [OsslDispatch; 11] = [
+pub(crate) static ossl_cmac_functions: [OsslDispatch; 11] = [
     OsslDispatch {
         function_id: OSSL_FUNC_MAC_NEWCTX,
         function: cmac_new as *mut c_void,
@@ -586,7 +592,7 @@ pub(crate) static CMAC_FUNCTIONS: [OsslDispatch; 11] = [
 /// expands through `ALGC(NAMES, FUNC, CHECK) { { NAMES, "provider=default", FUNC }, CHECK }`, and
 /// D247 is what a NULL there cost: a fetch whose property query is `provider=default` stopped
 /// resolving, and `provider!=default` resolved when it should not have.
-pub(crate) static DEFLT_MACS: [OsslAlgorithm; 9] = [
+pub(crate) static DEFLT_MACS: [OsslAlgorithm; 10] = [
     OsslAlgorithm {
         // `PROV_NAMES_BLAKE2BMAC` — `prov/names.h:322`. The OID is part of the row: the
         // census compares the whole alias sequence, not the primary name (D244).
@@ -605,7 +611,16 @@ pub(crate) static DEFLT_MACS: [OsslAlgorithm; 9] = [
     OsslAlgorithm {
         algorithm_names: c"CMAC".as_ptr(),
         property_definition: c"provider=default".as_ptr(),
-        implementation: CMAC_FUNCTIONS.as_ptr().cast(),
+        implementation: ossl_cmac_functions.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        // `PROV_NAMES_GMAC` — `prov/names.h:319`. It carries the `1.0.9797.3.4` OID and no `id-`
+        // spelling, and it sits between CMAC and HMAC in `defltprov.c:342`, where it was held
+        // until the GCM ciphers it resolves landed (`src/provider/cipher_gcm.rs`).
+        algorithm_names: c"GMAC:1.0.9797.3.4".as_ptr(),
+        property_definition: c"provider=default".as_ptr(),
+        implementation: GMAC_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -1068,16 +1083,16 @@ unsafe extern "C" fn gmac_set_ctx_params(vmacctx: *mut c_void, params: *const Os
 
 /// `const OSSL_DISPATCH ossl_gmac_functions[]` — `gmac_prov.c:265-278`, ten entries and the
 /// terminator. Two of them are the *provider-level* pair, `GETTABLE_PARAMS` and `GET_PARAMS`,
-/// which is the shape difference from `CMAC_FUNCTIONS`.
+/// which is the shape difference from `ossl_cmac_functions`.
 ///
-/// **Transcribed and held, not registered.** This table is deliberately absent from
-/// [`DEFLT_MACS`]: GMAC resolves a `cipher` name and then refuses every mode but GCM, and this
-/// profile's only GCM ciphers are `AES-{128,192,256}-GCM`, which are Phase 9's on `RAND_bytes_ex`
-/// (D234). Registering the row now would make `EVP_MAC_fetch(NULL, "GMAC", NULL)` answer 1 on
-/// both sides and then make every `EVP_MAC_init` fail where the authority succeeds — the
-/// `DES3-WRAP` class of invisible incompleteness, one operation over. The row is Phase 9's with
-/// the blocker named in `forensics/atlas/provider-algorithm-plans.json`, and the unit tests below
-/// are what keep the transcription honest until then (D243).
+/// **Transcribed and held until D419, then registered.** The table was deliberately absent from
+/// [`DEFLT_MACS`] while GMAC's `cipher` resolution had nothing to resolve: GMAC refuses every mode
+/// but GCM, and this profile's only GCM ciphers were `AES-{128,192,256}-GCM`, themselves Phase 9's
+/// on `RAND_bytes_ex` (D234). Registering the row then would have made `EVP_MAC_fetch(NULL,
+/// "GMAC", NULL)` answer 1 on both sides and then made every `EVP_MAC_init` fail where the
+/// authority succeeds -- the `DES3-WRAP` class of invisible incompleteness, one operation over. The
+/// ciphers landed in D417 and the row is registered in D419, at `defltprov.c:342`'s position
+/// between `CMAC` and `HMAC`.
 #[allow(dead_code)]
 // The caller that will land: the row between CMAC and HMAC in `DEFLT_MACS` (`defltprov.c:342`,
 // the authority's fourth MAC row), when the AES-GCM cipher rows land in
@@ -1499,7 +1514,7 @@ unsafe extern "C" fn siphash_set_params(vmacctx: *mut c_void, params: *const Oss
 }
 
 /// `const OSSL_DISPATCH ossl_siphash_functions[]` — `siphash_prov.c:229-243`, ten entries and the
-/// terminator. The same shape as `CMAC_FUNCTIONS`: the ctx-params pair, not the provider-level one.
+/// terminator. The same shape as `ossl_cmac_functions`: the ctx-params pair, not the provider-level one.
 pub(crate) static SIPHASH_FUNCTIONS: [OsslDispatch; 11] = [
     OsslDispatch {
         function_id: OSSL_FUNC_MAC_NEWCTX,
@@ -4068,20 +4083,20 @@ mod tests {
         // The authority's nine rows, in its order and **not** appended: `defltprov.c:334-353`
         // lists BLAKE2BMAC 1st, BLAKE2SMAC 2nd, CMAC 3rd, GMAC 4th, HMAC 5th, KMAC-128 6th,
         // KMAC-256 7th, SIPHASH 8th and POLY1305 9th, and the census requires the crate's rows to
-        // be a subsequence of it (D244). GMAC is `deferred` to Phase 9 with its blocker named
-        // (D243) and is absent here rather than in the wrong place.
+        // be a subsequence of it (D244). GMAC is fourth, between CMAC and HMAC, where `defltprov.c`
+        // puts it; it was `open` on Phase 9 until the GCM ciphers it resolves landed (D243, D419).
         //
         // This test asserted the crate's own array and not the authority's, so it stayed green
         // while SIPHASH and POLY1305 were transposed; `gen_provider_algorithms.py` caught it
         // because *its* oracle is `defltprov.c`. The expected sequence below is therefore read off
         // the authority's line numbers rather than off this file.
-        assert_eq!(DEFLT_MACS.len(), 9);
+        assert_eq!(DEFLT_MACS.len(), 10);
         // SAFETY: the terminator's name is NULL by construction, and each landed row's is a
         // `'static` C string.
         unsafe {
-            assert!(DEFLT_MACS[8].algorithm_names.is_null());
-            assert!(DEFLT_MACS[8].property_definition.is_null());
-            assert!(DEFLT_MACS[8].implementation.is_null());
+            assert!(DEFLT_MACS[9].algorithm_names.is_null());
+            assert!(DEFLT_MACS[9].property_definition.is_null());
+            assert!(DEFLT_MACS[9].implementation.is_null());
             for (row, want) in [
                 (
                     &DEFLT_MACS[0],
@@ -4089,11 +4104,12 @@ mod tests {
                 ),
                 (&DEFLT_MACS[1], b"BLAKE2SMAC:1.3.6.1.4.1.1722.12.2.2"),
                 (&DEFLT_MACS[2], b"CMAC"),
-                (&DEFLT_MACS[3], b"HMAC"),
-                (&DEFLT_MACS[4], b"KMAC-128:KMAC128:2.16.840.1.101.3.4.2.19"),
-                (&DEFLT_MACS[5], b"KMAC-256:KMAC256:2.16.840.1.101.3.4.2.20"),
-                (&DEFLT_MACS[6], b"SIPHASH"),
-                (&DEFLT_MACS[7], b"POLY1305"),
+                (&DEFLT_MACS[3], b"GMAC:1.0.9797.3.4"),
+                (&DEFLT_MACS[4], b"HMAC"),
+                (&DEFLT_MACS[5], b"KMAC-128:KMAC128:2.16.840.1.101.3.4.2.19"),
+                (&DEFLT_MACS[6], b"KMAC-256:KMAC256:2.16.840.1.101.3.4.2.20"),
+                (&DEFLT_MACS[7], b"SIPHASH"),
+                (&DEFLT_MACS[8], b"POLY1305"),
             ] {
                 let name = core::ffi::CStr::from_ptr(row.algorithm_names);
                 assert_eq!(name.to_bytes(), want);
@@ -4159,7 +4175,7 @@ mod tests {
         let ids: Vec<c_int> = SIPHASH_FUNCTIONS.iter().map(|d| d.function_id).collect();
         assert_eq!(ids.len(), 11);
         assert_eq!(ids[10], END_ID);
-        // The same shape as `CMAC_FUNCTIONS`: the ctx-params pair, not the provider-level one that
+        // The same shape as `ossl_cmac_functions`: the ctx-params pair, not the provider-level one that
         // `GMAC_FUNCTIONS` uses.
         assert_eq!(
             ids[..10],
@@ -4329,7 +4345,7 @@ mod tests {
 
     #[test]
     fn the_dispatch_table_carries_ten_entries_and_terminates() {
-        let ids: Vec<c_int> = CMAC_FUNCTIONS.iter().map(|d| d.function_id).collect();
+        let ids: Vec<c_int> = ossl_cmac_functions.iter().map(|d| d.function_id).collect();
         assert_eq!(ids.len(), 11);
         assert_eq!(ids[10], END_ID);
         // The ten the authority's table lists, in its order.
@@ -4349,7 +4365,9 @@ mod tests {
             ]
         );
         // Every entry before the terminator has a callable.
-        assert!(CMAC_FUNCTIONS[..10].iter().all(|d| !d.function.is_null()));
+        assert!(ossl_cmac_functions[..10]
+            .iter()
+            .all(|d| !d.function.is_null()));
     }
 
     #[test]
@@ -4370,7 +4388,7 @@ mod tests {
         let ids: Vec<c_int> = GMAC_FUNCTIONS.iter().map(|d| d.function_id).collect();
         assert_eq!(ids.len(), 11);
         assert_eq!(ids[10], END_ID);
-        // The one shape difference from `CMAC_FUNCTIONS`: GMAC's two getters are the
+        // The one shape difference from `ossl_cmac_functions`: GMAC's two getters are the
         // **provider-level** `GETTABLE_PARAMS`/`GET_PARAMS`, so `gmac_prov.c`'s table is not the
         // same ten ids in the same order.
         assert_eq!(

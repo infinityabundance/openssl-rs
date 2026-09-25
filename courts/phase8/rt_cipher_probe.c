@@ -3979,10 +3979,9 @@ static void rt_param_list(const char *tag, const char *noun, const char *kind,
  * **TLS 1.0 (`0x0301`) is the version chosen on purpose**: it is the one with no explicit IV, so
  * the record is a pure function of the key, the MAC key, the IV and the payload and a diff is a
  * defect rather than a random draw. The TLS 1.1+ surface is reached through the multiblock AAD
- * parameter, which is size arithmetic and therefore deterministic too. The multiblock *encrypt*
- * parameter is deliberately absent: on the authority it draws its per-record IVs from
- * `RAND_bytes_ex`, and `crypto/rand/` is Phase 9's -- the row's one recorded narrowing, named in
- * `docs/SECURITY_DIVERGENCE_POLICY.md` §4 rather than left to be discovered by its absence here.
+ * parameter, and through the multiblock *encrypt* parameter, which is deterministic in everything
+ * but its `RAND_bytes_ex` draw -- see the `mbenc` arm below, which compares the packed length, the
+ * record headers and a round trip rather than the IV-dependent ciphertext bytes.
  */
 static void rt_cbchmac_records(void)
 {
@@ -4117,6 +4116,151 @@ static void rt_cbchmac_records(void)
                 r = EVP_CIPHER_CTX_get_params(ctx, gp2);
                 printf("cbchmac.%s.mbaad.get=%d il=%u pk=%u\n", names[n], r, il2, pk2);
             }
+        }
+        /*
+         * The multiblock *encrypt* parameter: the family's one surface that draws randomness, and
+         * the arm `docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1 names as its
+         * closing measurement. `tls1_multi_block_encrypt` first asks
+         * `RAND_bytes_ex(ctx->base.libctx, blocks[0].c, 16 * x4, 0)`
+         * (`cipher_aes_cbc_hmac_sha1_hw.c:146`) and uses those `x4` sixteen-byte values as each
+         * interleaved record's explicit IV, so the ciphertext is a function of that draw and the
+         * two sides' bytes differ -- exactly as `rt_drbg_probe.c`'s byte arms and
+         * `rt_bn_rand_probe.c`'s draws record for every other `RAND_bytes_ex` caller.
+         *
+         * **What is compared here is therefore everything the draw does not touch**: the
+         * parameter's return, the packed length the getter reports, each record's five-byte header,
+         * and a round trip of every produced record back through the row's own TLS *decrypt* path.
+         * The header and the lengths are pure arithmetic; the round trip is what makes the arm
+         * load-bearing, because the MAC, the padding and the CBC chain are exactly what the decrypt
+         * code checks, and no IV choice can make a wrong one of those pass.
+         *
+         * The payload is 5000 bytes -- `>= 4096` and `< 8192` -- so `tls1_multiblock_aad` fixes
+         * `n4x` at 1 on every host (the AVX2 bit only raises it for 8192 or more), and with it the
+         * interleave, the split and every length below are host-independent.
+         */
+        {
+            unsigned char mbhdr[13];
+            unsigned char payload[5000];
+            unsigned char mbout[8192];
+            unsigned char ptbuf[1320];
+            unsigned char lanebody[1312];
+            unsigned char lanehdr[13];
+            unsigned int frag = 5000 / 4;
+            unsigned int last = 5000 + frag - (frag << 2);
+            unsigned int il = 4, ilret = 0;
+            size_t enclen = 0;
+            size_t stride;
+            unsigned int k;
+            int ok = 1;
+            OSSL_PARAM ap[3], ep[4], gp[3];
+
+            memset(mbhdr, 0, sizeof(mbhdr));
+            mbhdr[8] = 0x17; /* handshake */
+            mbhdr[9] = 0x03;
+            mbhdr[10] = 0x03; /* TLS 1.2: the version the multiblock path requires */
+            mbhdr[11] = (unsigned char)(sizeof(payload) >> 8);
+            mbhdr[12] = (unsigned char)(sizeof(payload) & 0xff);
+            rt_fill(payload, sizeof(payload), 131u + (unsigned int)n);
+
+            /*
+             * The AAD parameter first, exactly as a TLS caller drives it: it seeds `md` with the
+             * thirteen-byte header and decides `x4`. Its own getter reports the interleave the
+             * encrypt parameter then has to carry.
+             */
+            ap[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD, mbhdr,
+                                                      sizeof(mbhdr));
+            ap[1] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE, &il);
+            ap[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_set_params(ctx, ap);
+            printf("cbchmac.%s.mbenc.aad=%d\n", names[n], r);
+            {
+                OSSL_PARAM q[2];
+                unsigned int ilget = 0;
+
+                q[0] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE,
+                                                 &ilget);
+                q[1] = OSSL_PARAM_construct_end();
+                ERR_clear_error();
+                r = EVP_CIPHER_CTX_get_params(ctx, q);
+                ilret = ilget;
+                printf("cbchmac.%s.mbenc.il=%d il=%u\n", names[n], r, ilget);
+            }
+
+            memset(mbout, 0xee, sizeof(mbout));
+            ep[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC, mbout,
+                                                      sizeof(mbout));
+            ep[1] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_IN,
+                                                      payload, sizeof(payload));
+            ep[2] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE, &ilret);
+            ep[3] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_set_params(ctx, ep);
+            printf("cbchmac.%s.mbenc=%d\n", names[n], r);
+
+            gp[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_LEN, &enclen);
+            gp[1] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE, &ilret);
+            gp[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_get_params(ctx, gp);
+            printf("cbchmac.%s.mbenc.get=%d enclen=%zu\n", names[n], r, enclen);
+
+            /* The four five-byte record headers, at the per-record stride `enclen / x4` implies. */
+            stride = enclen / 4;
+            for (k = 0; k < 4; k++)
+                rt_hexf("cbchmac.mbenc.hdr", (int)(n * 4 + k), mbout + k * stride, 5);
+
+            /*
+             * Round-trip every record through the row's own decrypt path. The MAC header is the
+             * AAD's own: sequence number `k` (the base is zero), the same type and version, and the
+             * *payload* length -- not the wire length, which is what the record's own header
+             * carries. The record body is `[explicit IV][ciphertext]`; the row's TLS decrypt path
+             * skips the IV, so the recovered payload starts at `ptbuf + 16` and the EVP layer
+             * reports the whole input length in `outl`, neither of which is compared.
+             */
+            if (enclen == 0 || stride < 21 || stride - 5 > sizeof(lanebody)) {
+                ok = 0;
+            } else {
+                unsigned int body_len = (unsigned int)(stride - 5);
+
+                for (k = 0; k < 4 && ok; k++) {
+                    OSSL_PARAM dp[3];
+                    EVP_CIPHER_CTX *dctx;
+                    int outl = 0;
+                    unsigned int lane_len = (k == 3) ? last : frag;
+
+                    memset(lanehdr, 0, sizeof(lanehdr));
+                    lanehdr[7] = (unsigned char)k;
+                    lanehdr[8] = mbhdr[8];
+                    lanehdr[9] = mbhdr[9];
+                    lanehdr[10] = mbhdr[10];
+                    lanehdr[11] = (unsigned char)(lane_len >> 8);
+                    lanehdr[12] = (unsigned char)lane_len;
+
+                    memcpy(lanebody, mbout + k * stride + 5, body_len);
+
+                    dctx = EVP_CIPHER_CTX_new();
+                    if (dctx == NULL) {
+                        ok = 0;
+                        break;
+                    }
+                    r = EVP_CipherInit_ex2(dctx, c, key, iv, 0, NULL);
+                    dp[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_MAC_KEY, mackey,
+                                                              16);
+                    dp[1] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD,
+                                                              lanehdr, sizeof(lanehdr));
+                    dp[2] = OSSL_PARAM_construct_end();
+                    ERR_clear_error();
+                    r = EVP_CIPHER_CTX_set_params(dctx, dp);
+                    memset(ptbuf, 0xee, sizeof(ptbuf));
+                    ERR_clear_error();
+                    r = EVP_CipherUpdate(dctx, ptbuf, &outl, lanebody, (int)body_len);
+                    if (r != 1 || memcmp(ptbuf + 16, payload + k * frag, lane_len) != 0)
+                        ok = 0;
+                    EVP_CIPHER_CTX_free(dctx);
+                }
+            }
+            printf("cbchmac.%s.mbenc.rt=%d\n", names[n], ok);
         }
         EVP_CIPHER_CTX_free(ctx);
 
@@ -4533,9 +4677,10 @@ static void rt_deflt_row_census(void)
         "AES-192-OCB", "AES-128-OCB", "AES-128-SIV", "AES-192-SIV",
         "AES-256-SIV",
         /* The `AES-*-GCM-SIV` trio, `defltprov.c:198-200`, between the `AES-*-SIV` three and the
-         * `AES-*-GCM` three -- which are Phase 9's on `RAND_bytes_ex` and are therefore absent from
-         * this list rather than listed-and-skipped (D278). */
+         * `AES-*-GCM` three. The three below it were Phase 9's on `RAND_bytes_ex` and listed-and-
+         * skipped until the GCM engine landed (D278); they are entries now that the rows are. */
         "AES-128-GCM-SIV", "AES-192-GCM-SIV", "AES-256-GCM-SIV",
+        "AES-256-GCM", "AES-192-GCM", "AES-128-GCM",
         "AES-256-CCM", "AES-192-CCM", "AES-128-CCM",
         "AES-256-WRAP", "AES-192-WRAP", "AES-128-WRAP", "AES-256-WRAP-PAD",
         "AES-192-WRAP-PAD", "AES-128-WRAP-PAD", "AES-256-WRAP-INV", "AES-192-WRAP-INV",
@@ -4552,8 +4697,10 @@ static void rt_deflt_row_census(void)
         "AES-128-CBC-HMAC-SHA512-ETM", "AES-192-CBC-HMAC-SHA512-ETM",
         "AES-256-CBC-HMAC-SHA512-ETM",
         /* The authority's `deflt_ciphers[]` order again: the `ARIA-*` rows land between the
-         * AES-CBC-HMAC `ALGC` rows and `CAMELLIA`. The three GCM rows precede the CCM
-         * three in `defltprov.c` and are Phase 9's on `RAND_bytes_ex` (D270). */
+         * AES-CBC-HMAC `ALGC` rows and `CAMELLIA`. The three GCM rows, `defltprov.c:247-249`,
+         * precede the CCM three; they were Phase 9's on `RAND_bytes_ex` and are listed here now
+         * that their engine has landed (D270). */
+        "ARIA-256-GCM", "ARIA-192-GCM", "ARIA-128-GCM",
         "ARIA-256-CCM", "ARIA-192-CCM", "ARIA-128-CCM",
         "ARIA-256-ECB", "ARIA-192-ECB", "ARIA-128-ECB",
         "ARIA-256-CBC", "ARIA-192-CBC", "ARIA-128-CBC",
@@ -4569,11 +4716,17 @@ static void rt_deflt_row_census(void)
         "CAMELLIA-192-CFB1", "CAMELLIA-128-CFB1", "CAMELLIA-256-CFB8", "CAMELLIA-192-CFB8",
         "CAMELLIA-128-CFB8", "CAMELLIA-256-CTR", "CAMELLIA-192-CTR", "CAMELLIA-128-CTR",
         "DES-EDE3-ECB", "DES-EDE3-CBC", "DES-EDE3-OFB", "DES-EDE3-CFB",
-        "DES-EDE3-CFB8", "DES-EDE3-CFB1", "DES-EDE-ECB", "DES-EDE-CBC",
+        "DES-EDE3-CFB8", "DES-EDE3-CFB1",
+        /* `defltprov.c:308`: the `DES3-WRAP` row lands between the EDE3 six and the EDE four. It was
+         * Phase 8's obligation on `RAND_bytes_ex` (`cipher_tdes_wrap.c`'s `des_ede3_wrap` fills the
+         * wrap IV from it) and its engine is Phase 9's, `src/provider/cipher_tdes_wrap.rs`. */
+        "DES3-WRAP",
+        "DES-EDE-ECB", "DES-EDE-CBC",
         "DES-EDE-OFB", "DES-EDE-CFB",
-        /* `SM4-GCM` precedes `SM4-CCM` in `defltprov.c` and is Phase 9's on `RAND_bytes_ex`; the
-         * `SM4-XTS` row follows `SM4-CFB` and has not landed. */
-        "SM4-CCM",
+        /* `SM4-GCM` (`defltprov.c:315`) precedes `SM4-CCM`; it was Phase 9's on `RAND_bytes_ex`
+         * and is listed here now that its engine has landed. The `SM4-XTS` row follows
+         * `SM4-CFB` and has not landed. */
+        "SM4-GCM", "SM4-CCM",
         /* The authority's `deflt_ciphers[]` order, which is the order this list is compared in:
          * the `SM4-*` rows land between the ARIA family and `ChaCha20`. */
         "SM4-ECB", "SM4-CBC", "SM4-CTR", "SM4-OFB", "SM4-CFB", "SM4-XTS",
@@ -4644,6 +4797,7 @@ static void rt_deflt_properties(void)
         { "cipher", "AES-128-CBC" },
         { "digest", "SHA256" },
         { "mac",    "CMAC" },
+        { "mac",    "GMAC" },
         { "mac",    "HMAC" },
         { "mac",    "BLAKE2BMAC" },
         { "mac",    "BLAKE2SMAC" },
@@ -7960,6 +8114,125 @@ static void rt_deflt_hmac(void)
     EVP_MAC_free(mac);
 }
 
+/*
+ * The `GMAC` row -- the last `OSSL_OP_MAC` row the census called open. It was withheld while this
+ * profile's only GCM ciphers were Phase 9's, and for a reason that is worth restating because it is
+ * the `DES3-WRAP` class one operation over: `gmac_set_ctx_params` resolves a `cipher` name and then
+ * refuses every mode but `EVP_CIPH_GCM_MODE` (`gmac_prov.c.in:236-239`), so a registered GMAC would
+ * have answered `EVP_MAC_fetch` 1 on **both** sides and then failed every init where the authority
+ * succeeded (D243). The `AES-{128,192,256}-GCM` rows landed, so the row is publishable and this arm
+ * drives it.
+ *
+ * The tag is deterministic -- GMAC is GHASH under a fixed key and IV with no nonce reuse -- so the
+ * successful arm prints it and the two sides must agree byte for byte. That is stronger than the
+ * naming the provider census asks for, and it is what a row that resolves a *cipher by name* needs:
+ * the failure this arm would have found, had the row been published early, is an init that answers
+ * 1 and a tag that differs.
+ *
+ * The refusals are the three a caller can reach: a cipher whose mode is not GCM
+ * (`PROV_R_INVALID_MODE`), a cipher name that resolves to nothing, and no cipher at all, which
+ * makes `gmac_setkey`'s `EVP_EncryptInit_ex(ctx, NULL, NULL, key, NULL)` fail on an unset cipher.
+ */
+static void rt_deflt_gmac(void)
+{
+    /*
+     * The GCM-128 case's own key, IV and plaintext, reused as GMAC's inputs. The tag is **not**
+     * the published vector's: GMAC feeds `update`'s bytes in as *AAD* with an empty ciphertext
+     * (`gmac_update` calls `EVP_EncryptUpdate(ctx, NULL, &outlen, data, datalen)`), where the
+     * published case authenticates a non-empty ciphertext too. The two sides must still agree on
+     * it exactly, which is what this arm compares -- the constant is here so the value is
+     * reproducible rather than incidental, not because it is a known answer.
+     */
+    static const unsigned char key[16] = {
+        0xfe, 0xff, 0xe9, 0x92, 0x86, 0x65, 0x73, 0x1c,
+        0x6d, 0x6a, 0x8f, 0x94, 0x67, 0x30, 0x83, 0x08
+    };
+    static const unsigned char iv[12] = {
+        0xca, 0xfe, 0xba, 0xbe, 0xfa, 0xce, 0xdb, 0xad,
+        0xde, 0xca, 0xf8, 0x88
+    };
+    static const unsigned char msg[60] = {
+        0xd9, 0x31, 0x32, 0x25, 0xf8, 0x84, 0x06, 0xe5,
+        0xa5, 0x59, 0x09, 0xc5, 0xaf, 0xf5, 0x26, 0x9a,
+        0x86, 0xa7, 0xa9, 0x53, 0x15, 0x34, 0xf7, 0xda,
+        0x2e, 0x4c, 0x30, 0x3d, 0x8a, 0x31, 0x8a, 0x72,
+        0x1c, 0x3c, 0x0c, 0x95, 0x95, 0x68, 0x09, 0x53,
+        0x2f, 0xcf, 0x0e, 0x24, 0x49, 0xa6, 0xb5, 0x25,
+        0xb1, 0x6a, 0xed, 0xf5, 0xaa, 0x0d, 0xe6, 0x57,
+        0xba, 0x63, 0x7b, 0x39
+    };
+    unsigned char tag[32];
+    size_t taglen = 0;
+    EVP_MAC *mac = EVP_MAC_fetch(NULL, "GMAC", NULL);
+    EVP_MAC_CTX *ctx = NULL;
+
+    printf("defltgmac.fetched=%d\n", mac != NULL);
+    if (mac == NULL)
+        return;
+    printf("defltgmac.name=%s\n", EVP_MAC_get0_name(mac));
+    ctx = EVP_MAC_CTX_new(mac);
+    printf("defltgmac.ctx=%d\n", ctx != NULL);
+    if (ctx == NULL) {
+        EVP_MAC_free(mac);
+        return;
+    }
+    printf("defltgmac.size=%zu\n", EVP_MAC_CTX_get_mac_size(ctx));
+
+    {
+        OSSL_PARAM params[3];
+
+        params[0] = OSSL_PARAM_construct_utf8_string("cipher", (char *)"AES-128-GCM", 0);
+        params[1] = OSSL_PARAM_construct_octet_string("iv", (void *)iv, sizeof(iv));
+        params[2] = OSSL_PARAM_construct_end();
+
+        ERR_clear_error();
+        printf("defltgmac.init=%d\n", EVP_MAC_init(ctx, key, sizeof(key), params));
+        rt_errq("gmac_init");
+        printf("defltgmac.update=%d\n", EVP_MAC_update(ctx, msg, sizeof(msg)));
+        ERR_clear_error();
+        printf("defltgmac.final=%d\n", EVP_MAC_final(ctx, tag, &taglen, sizeof(tag)));
+        rt_errq("gmac_final");
+        printf("defltgmac.taglen=%zu\n", taglen);
+        rt_hex("defltgmac.tag", tag, taglen);
+    }
+    EVP_MAC_CTX_free(ctx);
+
+    /* A cipher whose mode is not GCM: `gmac_set_ctx_params` names the mode it refused. */
+    ctx = EVP_MAC_CTX_new(mac);
+    {
+        OSSL_PARAM params[2];
+
+        params[0] = OSSL_PARAM_construct_utf8_string("cipher", (char *)"AES-128-CBC", 0);
+        params[1] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("defltgmac.badmode.init=%d\n", EVP_MAC_init(ctx, key, sizeof(key), params));
+        rt_errq("gmac_badmode");
+    }
+    EVP_MAC_CTX_free(ctx);
+
+    /* A cipher name that resolves to nothing. */
+    ctx = EVP_MAC_CTX_new(mac);
+    {
+        OSSL_PARAM params[2];
+
+        params[0] = OSSL_PARAM_construct_utf8_string("cipher", (char *)"NO-SUCH-GCM-CIPHER", 0);
+        params[1] = OSSL_PARAM_construct_end();
+        ERR_clear_error();
+        printf("defltgmac.nocipher.init=%d\n", EVP_MAC_init(ctx, key, sizeof(key), params));
+        rt_errq("gmac_nocipher");
+    }
+    EVP_MAC_CTX_free(ctx);
+
+    /* No cipher at all: the key's `EVP_EncryptInit_ex` has nothing to initialise. */
+    ctx = EVP_MAC_CTX_new(mac);
+    ERR_clear_error();
+    printf("defltgmac.unset.init=%d\n", EVP_MAC_init(ctx, key, sizeof(key), NULL));
+    rt_errq("gmac_unset");
+    EVP_MAC_CTX_free(ctx);
+
+    EVP_MAC_free(mac);
+}
+
 /* The same refusals reached the way an application reaches them, through `EVP_*`. Four of the
  * six named paths are reachable here (the invalid key length and the too-small output buffer are
  * not, because EVP chooses those arguments), and what this arm adds is the EVP layer's own
@@ -8513,6 +8786,7 @@ int main(void)
     rt_deflt_properties();
     rt_deflt_siphash();
     rt_deflt_hmac();
+    rt_deflt_gmac();
     rt_deflt_blake2_mac();
     rt_deflt_poly1305();
     rt_deflt_kmac();

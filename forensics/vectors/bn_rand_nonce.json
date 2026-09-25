@@ -1,0 +1,94 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "bn-rand-nonce",
+    "court": "CT-BN-RAND",
+    "entropy_hex": "e9be0990148f23609e5961a7addc476aa784d546043c3e5f1e99663ecfc4669daf2de9349878f6ad06154eb5b5387f5b829e2cdf7d1ca0ee06257ae2503b5ebe0b7c32d0d4eca5b7b0c3d000f41275a00b21f8e7a6d7d6bd6ac0a4d3aaf0b80fc95e220d90ac786cec647b6abaeda4c7167b8ec360322afa050b0770cad2f681ef28018e456f7a0baac03a4f229ce2c56a36c81752b07e534a2f2cab88d95a2e1105ba930b589dd96f2b01780cfd8f3e372e84808eac0b22848b81cc00a5059200d5b35526e473408f7515468f08f80109a6d1c35fea57f885d7bb45a7bc50613439b18c21bd6d8773c5cef473f68e1fb77bcf1a3ddd1b96b8491d8b75fdf3be06cf4aacfbed7196f46738c4709315b776ebfcb8a97a5eacdfe566532df4649daf4c7b586f60a65a57fc0212996c625b4d02ba857a9076f74d54407eae9ab898f3d46c71989bd85d923140573829d32f54a82706e3e3776f6e1deb91a5a06f1184d03b8200c3ad9b2579e94edec0d7f988f8b4b5597508d202dfe29dfeb8b5e6b7607330ffe918adc2887c9eae523de9851d1ecaebee65254fd239dab1d41e9021cd687e2a5e322ffa8addeaf90d184db50f3bf37938661b4d0686d1ba4916ae952ef8cc237b5fc74c543d305423b0e9957e2c1376922c7ddb32e6bcffdbb373d58185074a1269abb9ddeba01f3ec06e8bbb9d24f705e1e75001f8667780fbc6a07b9a4d725681c6df51da32073ddddb0a89052648635035d4f2c6c44bd437a19113b8eca1161b0e80ba8b74d9311c3a210fe4f7a990430d0800dc08ddb95094b652e567d4a29140bd28da67f0cfc3a113e35613b318bf2c11ce7fae13ac4ddc4ec6da419d93a52de8a981a88f8450da9d5318bab36dbda7fa2f944992e807942538885cdac6242740b1f78aca5d63269fcafe7b2d0f4db5b582f0921802f498126ea2136c50756654b2597fe50d2c519613ece587565b085f860c33ec573563f69dbda165343221ec46a7cfc14966d5d1b1494626c62b4a6f6997af6ed43ab7b8cd99943b9908e80f96bf1e4d76db97d0d4219d4f9c591755dcb3f4aaf7d5c96faa75219f6610e182ed6bd8b9b85f9712e9fef32c6b9b39c39e1022d6df6e07f94cdd23272618c6c7eeea96f9eb0657779b886565e31a7a0ca1b074dfed353c7fd3c2c93e836df98a04d4c005a45e55ffd7bd5f18a86cbf5572b5e3765bb71fc0e7dc43097d23aea78f38e37b5a4622c6d0f53f1648784ed1bffd5f3078dc6a9ef833f40c3ef1ddafcfb0530d071b6f761d3e92842b084c72662cd94459491c566b278fa8973ce548859446309ecead6990045a17fae0f5bd087c89c754541ab3a07a65243d156e0082917892a42d00fdc7f3f3d9066fc6a6457e1e588d479554a7ae8398ea231941c3d3ee65f1f47a17b611cf0c252b34e10d8ed30deddd63d40892c76f33e768c420cd40aba89993dba6fadf5765add5f4bb3c5f18d97cdd5bec363bf36ebee99e922beafd7210f9aefa8a970e731ec9182c5d3c117ade9c3cc06970004f98174cd5aa5a93757f9570b7cd09a16004560b0a2ee19b592c3493b34b90f83d2f2914cde2df73102e6c6ee6fcddf402008f53237451760518d4ff58fcb4ea95ad4292163d55e5e02cc4b92dff7a0d74735b0c42a674a1b5a19aa7b5b0cf2e5bc9d30e4669bd196ce44e8967725fd872ec661d3a27df0137b1b5ad7c641309fb8d7035ddae6e25d8136ec398e57a4fc514cb1d529867aa3fdac9688302281f9ca17edd76aac9199d27b393699ab72e491d643a62d944856f2996d142d45192599dc8006362cbda399cf7e80c88f995401d71acecafbcef0b13d2135295b49b5b2b0e09a26e3b1bb64c9e99c5a712545e3e09b74408f75a3482d2e5499897eb07081276eef42d3117968896412b52e6a71a798ad39657ce725283be2aa06419eb4e7bfff06002880b31f78508562db552ca3d4b370304f271c956d3f10b3c4eac7286f25dffb9ef451ca46a3e3f6f084c8402fd63e05ce8924cbeba60b281eeca55b2fcf2bb56dd26c5b6c543e0e58b667ea20e9831f26fde0fff19548be2fae9f18d4369007335afb9d66390c6b1b5307675e289476b09496bfbbb6c6f33c691f6821d74f4033b89c2c8a54728cfb7f1fa9a7ef949eadf444cf3f2535992af9bb2a7fa20036193e96aed75cfdc7a6cca1536a5b44c132bb86435e86404fb1ea470f8b1c5a71e1f344ad5424be4f7b7f45ff4b471e9f17f0e9a9148f51caaaf827ea1cd02b86cce9969eec8016380a061adbef23d40e859848447a2c1f566307c59777ad2196f9e5db7463ed7a47b8ac52c3eb3d236c98b1abc65b05583fa5ef170ad0bd8c9c6fe30fa46598fdfe9f01c6eb8a9ffaef846c42b173efa6adfae95fcb4b4770bf70954b01366a75551ced4cf23291ba8a41b2cd299151b8828ce3645643c78d4eede5b49a3e46bd1579fb081410977aa082443fc7762d72e7b503e114b0ebc370dbf0903af664ac519dd8598bd477cedb6aa12a28090fbe750f79b898075b3dab5d763e6e47f35879604e71d23cc2f6279cda2803ee9951504d9b313f10ab875f8dde88fb82e33240e271e2340afc2effb40104a5095c926d5fec1891d625c8d66b932f9a8dfdb5116bd351a52293f65ee6bac58484ba83ca4f4c903e4fb744d93d13dd8b85df4536883d50cf09fb495f951c66a66bc79df4fdc3ab0217e936f6b70f02775997a253714956fa6aa30669425246328d327e9be053846291ff1f8dc10dcaa588ec79c375412863f992bc53b1e5c907edb976193bb00e5ee45df48fa3f0d00466ffae3f0c105f8d48b5a0456827afb48ab31418e1b209c30d8d2ad58ac7c4f6c32a2c44c4110ee8cf941539d1fe04b42b950f20171563bddf7b8fdbb80ed1b390d2a864681b0123e0915e809c35c3d94bf884a32652f7bae085857d3187b9a2d92f07873800df40fee2dfebb28556aa6f1ae0c92696841ed2b907567166eb5a3baa540202cf2771e633ddc79aa3825e7f4e7127fd8e05662786e7939151bb880afeaccee2a9469f9b30f3cd03762e6a06fb93d75dc2ea5cf1f356aaa22e338f6eaf8afa7a80f3ed6cf156c210e6cf0480a2d4dd9fbd2e90435819710040edf9de6bee17f37cd2c3d33541430bed6ba1a58e1f99b259ffc2c2499e377fdf96c22bbb5aeccd66cef53850c5a6e4e8d0149937eea0663914557857ed66ed77eebb63dbfbbe03504034d6eb96d39e1099d03a20793fb89e60c887a818fdd63d0ef68e60371900ef0bb54866fd289b9fc34a3aba03a9a72034ebc6668421a686b13e76706ad5e28875abd7950a1495f7923fb4c0969f7aeeea64b8070dc25b42161f1dc22e046b77d3482c4f9d634ceba23043e7c929c3b319611a21c7f8dde5aa18913747b7a9f7415319704ce6872c23cf88d93e9b747e47285a4cabe513e9d464be2a09e854ec5c894ab6cf677d0f0623fe97df098a8f138ac12b18f101e1c3beaa7cd14ed54f228124aeff09fb75aab86ea699e2999c9b6be32fcff2abd2b6b419d09606c46f185cc1e3649474987b03d18d49647dca3aebacef069ebd0bccd6514f656b4fa3135a5771cc8c255c4c867f1c1541ffc846b55d0c1f49fa2e811eca809fee17daa6b732e8ac0317f8e4530551443b192e0bae0ed213ac8ff0f3d135bace607134ded2c21dd6bba54c1fde7efb833ffd32c8a45bad808b0b834612e9798b258262c79627087877c7a20ca5aa5fe4fb0171f6342904e9a63d864d36bfc378a9ffa3f5e435eaec34774282dc1fbe7efd72df21d940d5a4c7b4b75acb8d7ae8cef83299c653e44c18051807b74eef8f015e2ccb38a22e62228f7229a6190dd096793afed3edf6022fb16aa5eff8e8855f6153217da79a5399e0a5163345bfc4489f63f7340d92e4745f39fc37864af49e76c31d7916a10b0f5ad1292807cbf4e6e8a3676eb1bc60f9e3fee59eaf9bfe87075ecff2200f8f021588bece267d9ce8e9de4f94795d8c74330dbffc0adf6f74d7c4697a5f6dbf08d5dcfd969b17f93e24fba3354fd7b19bafa24c8eefcc99b652f5610c1a1beaada1a628945be62285e15dddad3f437192d5c393ef31b9293a53300d30a36a64c6f2a684558f199331387c8c67266b01334c632df007404ec7fdf0ecab0e87130e0c3c5994b7c012296ab16cad5a405cd70279de26eeef650cf0b09ad66be8a55518b707e8bf0cc2e134a7a193fe437348d2cb3d60a51c1e57877d12cb90ab9ed7673787394cae61d60c700f6cb969c5f271e76259c3a2b75ac6ba122b3704e2ef95e5f4f0fbd88ac97877f258fef15b426c8d928712208b39b68da969a8d142b358b4652e630e0934a3546dbf594e17b6cda7980205d2d5a9bbb5a030726e7e1e9f66deabf8e240191644e2faad7b2c3b4f57eeedb095bd388f4ab55eaf71eece2475ea198fa6298426cca1a3cb0f8dce479afb253272d9db72b7817688f11b74fa22fcc78ca81cd58119ad5178f98c8e573f58f4d3aae2db44c5cd9c06a510a8357f28a6a10d4bf06ee2d4bcee59fdaa71baac351c3bfe7a8d368e540a39ea0e986a63c5252718b4c3354e754e4ba9f42ed9adb5992bebbb45040e428fcad298479f943fa1f897dad34c0d152ea7819edeed04d9e8835e3410839e050378dd0154fdb2a3b4ef84683678240ceb2e4692c02b627d77c7ec644c3ab9b3ecfc1f4cf1e8a63ecf96604335df40dc9ba160041a254787e6349619be7f42d7ee2d7c5bb794feb4507c214231b924bc4cd2bfcf73a97d176ad48ce6f74a9692ba6b46790a532b905305198d39d7dc119f08652d4b6e0cfd255a93893ec7ab8ca43b752596e7e6b18d411f6bf0d6bbdb40d72bafacfae2198cf841d43acca2b4d602d7fd282bcfc4981f346fffb68203bb0672feebd32501484fbe32cc5dd21cc8dabd22d68baf9e1561dcac8f27ced92d09814198065c32a99e9cba9ab3ce4fcb93118066bdee207d9a9589490b86a781baf0c65416ad52a371d31080920bb591750d2554f354a83645296b5302782fb8b98f1be5a2033bd29c62a4300a04df73a608fb86d396b3717449a96994e91c8e901be73711df88119c2465980c82db20ea7822c54bbde21a93a5be05124594575c65168033da77d52ec5552b9b95c994803e9e1252f7aa38724b6abfa5ff0e5f8dd326a9d197532e1778f04ca7f8d417eb029a8e9e5a2b237bea957f9d533f6f5071d952619275a9b2254a48c344650af8d74e113bf0ea833b2ff48983029872a649881f7f9b13e1d3361460e243cd7c13ed27c84008957ec70731b4f84c3a39ecd58f33e0b2eae453b29d4682be52a6c543cd0d770bc2ed15d462338ddfbafb8da8773477436b50c5794258fb4ea9f2ed75641a6b9d21c92538927344ad523c24768daad8331e6679aa2a6c71248134faa35c892dcc898d231373fa3eb2a9f4772269045ead25ee51fd6ec88f4ef9f774943988a823b50eb6845eec4efee1af10054ad5d90b6061f789771a58bd1e8666dadbc94f9496c7f6e011c9dd20dce1123867429a7d151bf7f0daa7a88dce677c2db5241bfe96cff43f375570cc7529f1fc606bb60d3ab02e11670af4a5dbf191b5ebadddd24e6c86beea5f5594958493811ae1eb1ba81dfef9ebdfc0c02bc93e92effb1412913d73999ccd64b600ff8ac5b24c59d63f2e41fe34b6c84f8f582d84dc19fafe284c11779e831c8feb3a7f87ff1bf1593f5e19eea638b9523bce4354942f0bd4dbb30a97bb182b0b71984d77f8d9230e19c",
+    "entropy_len": 4096,
+    "entropy_mechanism": "TEST-RAND installed as the private DRBG by RAND_set_DRBG_type(NULL, \"TEST-RAND\", NULL, NULL, NULL) before the first draw, then EVP_RAND_CTX_set_params(privctx, OSSL_RAND_PARAM_TEST_ENTROPY). The probe prints ct.drbg_type and ct.entropy_set so a failure of this mechanism is a named line rather than a cascade of wrong values.",
+    "inputs_header": "courts/phase9/ct_bn_rand_vectors.h",
+    "primary_source": "crypto/bn/bn_rand.c:293-395 (ossl_bn_gen_dsa_nonce_fixed_top) and :397-412 (BN_generate_dsa_nonce); the mask is crypto/bn/bn_lib.c:863-880 (ossl_bn_mask_bits_fixed_top); the injectable draw is TEST-RAND, providers/implementations/rands/test_rng.c.in:88-105 / :234-281",
+    "provenance": {
+      "derivation": "independent",
+      "note": "Candidate-only construction verification. The expected bytes are re-derived from the construction in Python (independent Python re-derivation from the construction in forensics/tools/gen_bn_rand_nonce_vectors.py: SHA-512 over (i || BN_bn2binpad(priv,96) || message || 64 entropy bytes) chained into BN_num_bytes(range)+1 bytes (k_bytes[0]=0xff) and masked to BN_num_bits(range), rejected until < range. Neither the crate nor the pinned authority build is run to obtain these bytes.). This is the `derivation: independent` class: the values are independent of the implementation *code*, so a transcription error in the crate cannot move them. It is NOT OpenSSL parity (that is RT-BN-RAND's question) and it is NOT formal validation. See docs/DECISIONS.md D201/D208.",
+      "oracle": "independent Python re-derivation from the construction in forensics/tools/gen_bn_rand_nonce_vectors.py: SHA-512 over (i || BN_bn2binpad(priv,96) || message || 64 entropy bytes) chained into BN_num_bytes(range)+1 bytes (k_bytes[0]=0xff) and masked to BN_num_bits(range), rejected until < range. Neither the crate nor the pinned authority build is run to obtain these bytes."
+    },
+    "vectors": [
+      {
+        "expected": "e13e79bcbf4d8c48dd54d70e3c79d92f87d05f3e0d5c661f52c874854d0d3e1b713fad977be1904b544615e7ac12d70dd3f3e571e39f651bfdd4175dfd69087f30520830b344033eecee8c77bd813f",
+        "label": "wide_range_two_digest",
+        "message_hex": "6f70656e73736c2d72732043542d424e2d52414e44",
+        "note": "80-byte range: num_k_bytes=81, so one outer attempt makes two SHA-512 calls (the brief's 'two iterations' arm, at the source's real threshold)",
+        "priv_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "range_hex": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f50"
+      },
+      {
+        "expected": "2a87f7ebb7ce8e2ac3f7348114cbaca5",
+        "label": "reject_once",
+        "message_hex": "72656a6563742d746869732d63616e646964617465",
+        "note": "16-byte range chosen so the first candidate is rejected and the second is accepted: the outer loop's second iteration is exercised on purpose",
+        "priv_hex": "2122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f40",
+        "range_hex": "80000000000000000000000000000001"
+      },
+      {
+        "expected": "06331f",
+        "label": "tiny_range",
+        "message_hex": "74696e79",
+        "note": "3-byte range: the mask to 20 bits is the whole reduction, and the top byte of k_bytes (0xff) is entirely above the mask",
+        "priv_hex": "4142434445464748494a4b4c4d4e4f5051525354",
+        "range_hex": "0f4240"
+      },
+      {
+        "expected": "379d45d556e4196e5b1319b4a25ea1ca5af1c84b7c52448c52c5ceb9bc917852",
+        "label": "empty_message",
+        "message_hex": "",
+        "note": "zero-length message: EVP_DigestUpdate over (i || priv ||  || random)",
+        "priv_hex": "606162636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f",
+        "range_hex": "808182838485868788898a8b8c8d8e8f909192939495969798999a9b9c9d9e9f"
+      },
+      {
+        "expected": "084ccc052d2069b57e03e1a8e7e4e757b7155d55",
+        "label": "plain_message",
+        "message_hex": "6e6f6e6365",
+        "note": "an ordinary non-empty message and a 20-byte range",
+        "priv_hex": "a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+        "range_hex": "202122232425262728292a2b2c2d2e2f30313233"
+      }
+    ]
+  },
+  "generator": "forensics/tools/gen_bn_rand_nonce_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-source-bn-rand",
+      "note": "ossl_bn_gen_dsa_nonce_fixed_top (:293-395) and BN_generate_dsa_nonce (:397-412) — the construction these vectors re-derive",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/bn/bn_rand.c",
+      "sha256": "cb28bd36f1c9ec65f97b62378b70bcca4008dacc4b79975d0897e31f36f0348c"
+    },
+    {
+      "name": "authority-source-bn-lib",
+      "note": "ossl_bn_mask_bits_fixed_top (:863-880) — the mask",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/bn/bn_lib.c",
+      "sha256": "f82f814498476c80ac905ce4c8bfe29ee4c553b5417422e4c2b2437e9132be35"
+    },
+    {
+      "name": "authority-source-test-rng",
+      "note": "test_rng_set_ctx_params (:234-281) and test_rng_generate (:88-105) — the fixed-seed mechanism",
+      "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/rands/test_rng.c.in",
+      "sha256": "73d79e0ea62bbc9a55a9d368354d0204b084540af57fc399310513b83c69751f"
+    },
+    {
+      "name": "authority-source-rand-test",
+      "note": "test_rand (:20-50) — the RAND_set_DRBG_type / RAND_get0_private / test_entropy pattern the probe follows",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/rand_test.c",
+      "sha256": "ee2afcc075ee869e36e4c56ed871ec1f47b935dee6abd5c9116377519490daa8"
+    },
+    {
+      "name": "authority-declaration-bn",
+      "note": "the declaration of BN_generate_dsa_nonce and the BIGNUM API the probe uses",
+      "path": "forensics/authorities/src/openssl-3.6.4/include/openssl/bn.h",
+      "sha256": "da179e5d98e8351e3e29f148bd88b42cba84fe60c7927a584f213bf2d09c38ed"
+    }
+  ],
+  "kind": "correctness-vectors",
+  "schema": "openssl-rs/correctness-vectors/v1"
+}

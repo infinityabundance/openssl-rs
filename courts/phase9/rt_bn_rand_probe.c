@@ -1196,6 +1196,123 @@ static void gf2m_arms(BN_CTX *ctx)
     BN_free(a);
 }
 
+/*
+ * Section 8 — `BN_generate_dsa_nonce`, the tail of `crypto/bn/bn_rand.c` itself.
+ *
+ * It is the one export the file holds that is not a draw from `bnrand`: it hashes
+ * `priv || message || random` with SHA-512, masks the digest to `BN_num_bits(range)` bits, and
+ * rejects until the result is below `range`. The draw is therefore unobservable exactly as
+ * `BN_rand`'s is, and what is printed is the contract around it:
+ *
+ *   - the return code and the error queue;
+ *   - `BN_cmp(out, range) < 0`, which is the rejection loop's whole postcondition;
+ *   - `BN_num_bits(out) <= BN_num_bits(range)`, the mask's;
+ *   - that the result is not negative;
+ *   - the two deterministic refusal arms: a private key over the 96-byte buffer
+ *     (`bn_rand.c:334`'s `BN_bn2binpad` answers `-1`, raising `BN_R_PRIVATE_KEY_TOO_LARGE`), and
+ *     a zero `range`, whose mask leaves every candidate at zero so `BN_ucmp` never drops below it
+ *     and all `max_n` rounds fail with `ERR_R_INTERNAL_ERROR`;
+ *   - the same success arm with a NULL `BN_CTX`, which is the `ossl_bn_get_libctx(NULL)` path --
+ *     the default library context rather than the `BN_CTX`'s own.
+ *
+ * The private key and the order are committed hex constants: the authority's own comment says the
+ * point of the construction is that the *message* and the private key are what the nonce must not
+ * repeat, so both are inputs and neither is a draw.
+ */
+static void dsa_nonce_arms(BN_CTX *ctx)
+{
+    /* The P-256 group order, `FIPS 186-4` D.1.2.3. */
+    static const char *q_hex =
+        "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551";
+    static const char *priv_hex =
+        "1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF";
+    static const unsigned char msg[] = "openssl-rs dsa nonce input";
+    BIGNUM *out = BN_new();
+    BIGNUM *q = NULL;
+    BIGNUM *priv = NULL;
+    BIGNUM *zero = BN_new();
+    BIGNUM *privbig = NULL;
+    unsigned char big[100];
+
+    if (out == NULL || zero == NULL) {
+        printf("dsa_nonce.alloc=0\n");
+        BN_free(out);
+        BN_free(zero);
+        return;
+    }
+    if (BN_hex2bn(&q, q_hex) == 0 || BN_hex2bn(&priv, priv_hex) == 0) {
+        printf("dsa_nonce.alloc=0\n");
+        goto done;
+    }
+
+    /* A committed success: the postconditions are deterministic even though the value is not. */
+    ERR_clear_error();
+    printf("dsa_nonce.ok.ret=%d\n",
+        BN_generate_dsa_nonce(out, q, priv, msg, sizeof(msg) - 1, ctx));
+    errs("dsa_nonce.ok.err");
+    printf("dsa_nonce.ok.negative=%d\n", BN_is_negative(out));
+    printf("dsa_nonce.ok.in_range=%d\n", BN_cmp(out, q) < 0);
+    printf("dsa_nonce.ok.bits_le=%d\n", BN_num_bits(out) <= BN_num_bits(q));
+
+    /* The same arm with no `BN_CTX`: `ossl_bn_get_libctx(NULL)` answers the default libctx. */
+    ERR_clear_error();
+    printf("dsa_nonce.noctx.ret=%d\n",
+        BN_generate_dsa_nonce(out, q, priv, msg, sizeof(msg) - 1, NULL));
+    errs("dsa_nonce.noctx.err");
+    printf("dsa_nonce.noctx.in_range=%d\n", BN_cmp(out, q) < 0);
+
+    /* An empty message is legal: the digest chain just skips the message update. */
+    ERR_clear_error();
+    printf("dsa_nonce.empty_msg.ret=%d\n",
+        BN_generate_dsa_nonce(out, q, priv, msg, 0, ctx));
+    errs("dsa_nonce.empty_msg.err");
+    printf("dsa_nonce.empty_msg.in_range=%d\n", BN_cmp(out, q) < 0);
+
+    /* A one-bit order is the smallest `range` the loop can still satisfy. */
+    {
+        BIGNUM *two = BN_new();
+
+        if (two != NULL && BN_set_word(two, 2) == 1) {
+            ERR_clear_error();
+            printf("dsa_nonce.small_range.ret=%d\n",
+                BN_generate_dsa_nonce(out, two, priv, msg, sizeof(msg) - 1, ctx));
+            errs("dsa_nonce.small_range.err");
+            printf("dsa_nonce.small_range.in_range=%d\n", BN_cmp(out, two) < 0);
+        }
+        BN_free(two);
+    }
+
+    /*
+     * A zero `range`: `BN_num_bytes(range) + 1` is one byte, but `BN_num_bits(range)` is zero, so
+     * the mask zeroes every candidate and `BN_ucmp(out, range) < 0` is never true -- all `max_n`
+     * rounds are spent and the arm answers 0 with `ERR_R_INTERNAL_ERROR`.
+     */
+    ERR_clear_error();
+    printf("dsa_nonce.zero_range.ret=%d\n",
+        BN_generate_dsa_nonce(out, zero, priv, msg, sizeof(msg) - 1, ctx));
+    errs("dsa_nonce.zero_range.err");
+
+    /*
+     * A private key over the 96-byte buffer `bn_rand.c:334` pins: `BN_bn2binpad` answers -1 and
+     * the arm raises `BN_R_PRIVATE_KEY_TOO_LARGE` rather than leaking the key's length.
+     */
+    memset(big, 0x01, sizeof(big));
+    privbig = BN_bin2bn(big, sizeof(big), NULL);
+    if (privbig != NULL) {
+        ERR_clear_error();
+        printf("dsa_nonce.priv_too_large.ret=%d\n",
+            BN_generate_dsa_nonce(out, q, privbig, msg, sizeof(msg) - 1, ctx));
+        errs("dsa_nonce.priv_too_large.err");
+    }
+
+done:
+    BN_free(privbig);
+    BN_free(zero);
+    BN_free(priv);
+    BN_free(q);
+    BN_free(out);
+}
+
 int main(void)
 {
     BIGNUM *rnd, *range, *zero, *negative;
@@ -1348,6 +1465,10 @@ int main(void)
     /* ---- 7. The GF(2^m) square root and quadratic solve ------------------------------ */
 
     gf2m_arms(ctx);
+
+    /* ---- 8. `BN_generate_dsa_nonce` --------------------------------------------------- */
+
+    dsa_nonce_arms(ctx);
 
     BN_free(rnd);
     BN_free(range);

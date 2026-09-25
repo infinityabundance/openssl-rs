@@ -44,12 +44,13 @@
 //! transcriptions: the first needs `ossl_bn_mask_bits_fixed_top` and the fixed-top
 //! representation in `bn_lib.c`, and the second is the same plus the EVP digest front and
 //! `SHA512`, which Phase 6/7 landed. Both sites say which half is written and which is named.
-//! **`BN_generate_dsa_nonce` is still not transcribed**: it is an *export* of `bn.h`, its own
-//! obligation in `forensics/phase9-obligations.json`, and its whole body is the second function
-//! plus `bn_correct_top` — so landing it here would move another stratum's ledger for the sake
-//! of one line, which is the boundary D327's rule draws. Its error
-//! sites (`BN_RAND_332`, `_338`, `_385`) are generated and unused, exactly as they were when
-//! D314 arranged them.
+//! **`BN_generate_dsa_nonce` landed with D418.** It is an *export* of `bn.h` and its whole body is
+//! the second function above plus `bn_correct_top`, so until Phase 9 activated it was the one
+//! name in `crypto/bn/bn_rand.c` that belonged to this file and was withheld: writing it earlier
+//! would have moved another stratum's ledger for the sake of one line, which is the boundary
+//! D327's rule draws. The three error sites it had already arranged (`BN_RAND_332`, `_338`,
+//! `_385`) are its own `BN_R_PRIVATE_KEY_TOO_LARGE`, `BN_R_NO_SUITABLE_DIGEST` and
+//! `ERR_R_INTERNAL_ERROR`, so they are now reachable through it rather than generated-and-unused.
 //!
 //! ## Macro spellings, checked rather than assumed
 //!
@@ -1042,6 +1043,10 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
         // SAFETY: `out` and `range` are live.
         if unsafe { BN_ucmp(out, range) } < 0 {
             ret = 1;
+            // The authority's `#ifdef BN_DEBUG` arm calls `bn_correct_top(out)` here ("With
+            // BN_DEBUG on a fixed top number cannot be returned"); BN_DEBUG is not defined for
+            // this profile, so the non-debug behaviour — the `goto end` this `break` stands for —
+            // is kept, exactly as the same arm is kept at `ossl_bn_priv_rand_range_fixed_top`.
             break;
         }
     }
@@ -1064,6 +1069,43 @@ pub(crate) unsafe fn ossl_bn_gen_dsa_nonce_fixed_top(
         )
     };
     ret
+}
+
+/// `int BN_generate_dsa_nonce(BIGNUM *out, const BIGNUM *range, const BIGNUM *priv,`
+/// `const unsigned char *message, size_t message_len, BN_CTX *ctx)` —
+/// `crypto/bn/bn_rand.c:397-412`, declared in `include/openssl/bn.h:556-558`.
+///
+/// The public spelling of the draw [`ossl_bn_gen_dsa_nonce_fixed_top`] makes: it is that call
+/// followed by `bn_correct_top(out)`, so a fixed-top value — which a caller of the public API
+/// cannot be handed — is normalised before it returns. The authority's own comment says this
+/// `bn_correct_top` is what makes the public entry point non-constant-time, which is why its
+/// internal DSA and ECDSA callers reach the fixed-top function directly.
+///
+/// `bn_correct_top(out)` is representation-only here: this crate's `BigNum` corrects its top on
+/// every store, so a fixed-top value cannot escape in the first place and the call has no
+/// statement to transcribe. That is the same reduction `crate::bn::exp::bn_mod_exp_mont_fixed_top`
+/// records for its own authority wrapper, and it is stated at
+/// [`crate::bn::bignum::ossl_bn_mask_bits_fixed_top`].
+///
+/// # Safety
+///
+/// `out` must be live and writable; `range` and `priv` must be live; `message` must be readable
+/// for `message_len` bytes; `ctx` must be null or live.
+#[no_mangle]
+pub unsafe extern "C" fn BN_generate_dsa_nonce(
+    out: *mut BigNum,
+    range: *const BigNum,
+    priv_: *const BigNum,
+    message: *const c_uchar,
+    message_len: usize,
+    ctx: *mut BnCtx,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the caller's contract is this function's `# Safety` section, which is exactly
+        // `ossl_bn_gen_dsa_nonce_fixed_top`'s contract for `out`, `range`, `priv_`, `message`,
+        // `message_len` and `ctx`.
+        unsafe { ossl_bn_gen_dsa_nonce_fixed_top(out, range, priv_, message, message_len, ctx) }
+    })
 }
 
 // =============================================================================================

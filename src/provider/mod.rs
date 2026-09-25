@@ -82,8 +82,11 @@
 pub(crate) mod activate;
 // 6.8d: `crypto/provider_conf.c`, the `providers` configuration module.
 pub(crate) mod asymcipher;
+pub(crate) mod base;
 pub(crate) mod capabilities;
 pub(crate) mod cipher;
+pub(crate) mod cipher_gcm;
+pub(crate) mod cipher_tdes_wrap;
 pub(crate) mod conf;
 pub(crate) mod ctx;
 pub(crate) mod der_dsa_sig;
@@ -1260,7 +1263,7 @@ pub(crate) static PREDEFINED_PROVIDERS: [PredefinedProvider; 4] = [
     PredefinedProvider {
         name: c"base",
         is_fallback: 0,
-        init: None,
+        init: Some(crate::provider::base::ossl_base_provider_init),
     },
     PredefinedProvider {
         name: c"null",

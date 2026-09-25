@@ -1,0 +1,178 @@
+{
+  "body": {
+    "counts": {
+      "blocking": 0,
+      "by_disposition": {
+        "accepted_permanent_divergence": 3,
+        "fixed": 4,
+        "open": 3
+      },
+      "rows": 10
+    },
+    "dispositions": [
+      "open",
+      "fixed",
+      "explicitly_deferred",
+      "accepted_permanent_divergence"
+    ],
+    "rows": [
+      {
+        "blocking": false,
+        "current_owner": 9,
+        "disposition": "fixed",
+        "evidence": "src/bn/gf2m.rs (BN_GF2m_mod_inv, the blinding at :643-712, and the `mod_inv_vartime` helper); the unit test `the_blinded_inverse_is_still_the_inverse`; RT-BN",
+        "id": "D-GF2M-1",
+        "note": "The heading reads `-- **CLOSED**` and the entry's own `- **Closed:**` paragraph records the construction: `BN_priv_rand_ex(b, numbits - 1, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, ctx)` retrying while `b` is zero, `r := a*b`, a vartime inversion and a multiply by `b`, routed through `BN_GF2m_mod_mul`. The value, return class and error behaviour are unchanged (a field inverse is unique) and `OBL-GF2M-INV-BLINDING` is discharged; the unit test pins `a * a^-1 == 1`.",
+        "originating_phase": 5,
+        "trigger_condition": "the Phase 9 RAND landing that makes the authority's blinding constructible: `BN_priv_rand_ex` exists, so `BN_GF2m_mod_inv` can draw `b`",
+        "trigger_phase": 9,
+        "trigger_satisfied": true
+      },
+      {
+        "blocking": false,
+        "current_owner": 9,
+        "disposition": "fixed",
+        "evidence": "src/provider/cipher.rs (tls1_multi_block_encrypt_sha1/_sha256, drawing the IVs through `RAND_bytes_ex`); courts/phase8/rt_cipher_probe.c (the `cbchmac.*.mbenc` arm); RT-CIPHER",
+        "id": "D-CBCHMAC-MULTIBLOCK-ENC-1",
+        "note": "The heading reads `-- **CLOSED**`; the entry's `- **Closed:**` paragraph records the authority's two `tls1_multi_block_encrypt` bodies in `src/provider/cipher.rs` and the new `RT-CIPHER` arm, which observes `mbenc=1`, the packed length (5204 SHA-1 / 5268 SHA-256 at 5000 bytes), the four record headers and a round trip. The IV bytes are not compared -- no two machines draw the same ones.",
+        "originating_phase": 8,
+        "trigger_condition": "Phase 9's first commit that lands `crypto/rand/`, which supplies the IVs the multiblock encrypt parameter draws through `RAND_bytes_ex`",
+        "trigger_phase": 9,
+        "trigger_satisfied": true
+      },
+      {
+        "blocking": false,
+        "current_owner": 8,
+        "disposition": "fixed",
+        "evidence": "src/evp/pkey_asn1.rs (STANDARD_METHODS, the authority's fifteen rows); src/evp/pkey.rs; docs/DECISIONS.md D353",
+        "id": "D-PKEY-AMETH-1",
+        "note": "Superseded by D-PKEY-AMETH-3: the 8.8 landing D353 populated `standard_methods[]`, so `pkey_set_type`'s legacy lookup finds the method and a provider key named `\"RSA\"`/`\"EC\"`/... takes the legacy NID exactly as the authority does. D372 then landed the four ECX rows, so the entry's remaining subject is closed too. The Phase 8 seal §5 records it under `D-PKEY-AMETH-1, -2, superseded by -3, which D372 supersedes in turn ... Every one is closed`.",
+        "originating_phase": 8,
+        "trigger_condition": "Phase 8's first commit that lands an `EVP_PKEY_ASN1_METHOD` object, making `pkey_set_type`'s `if (ameth != NULL)` arm reachable",
+        "trigger_phase": 8,
+        "trigger_satisfied": true
+      },
+      {
+        "blocking": false,
+        "current_owner": 8,
+        "disposition": "fixed",
+        "evidence": "src/ec/ecx_meth.rs; src/evp/pkey_asn1.rs (STANDARD_METHODS, 15 rows); src/evp/pkey_ctx.rs (PMETH_STANDARD_METHODS, 10 rows); docs/DECISIONS.md D372",
+        "id": "D-PKEY-AMETH-3",
+        "note": "Superseded by D372 (the entry's own quote says so), which landed the ECX chain; `EVP_PKEY_asn1_get_count` now answers 15 and `EVP_PKEY_meth_get_count` 10, `EVP_PKEY_asn1_find`/`_find_str` answer the four ECX objects and `EVP_PKEY_type` their four NIDs. The Phase 8 seal §5: `D372 landed the ECX chain and the register's third entry retires with it. Every one is closed`.",
+        "originating_phase": 8,
+        "trigger_condition": "the slice that lands `crypto/ec/ecx_meth.c` and the ~9,000 lines its callbacks name, at which point the four rows are appended to both standard_methods[] tables",
+        "trigger_phase": 8,
+        "trigger_satisfied": true
+      },
+      {
+        "blocking": false,
+        "current_owner": 8,
+        "disposition": "accepted_permanent_divergence",
+        "evidence": "docs/SECURITY_DIVERGENCE_POLICY.md D-EC-2 (which supersedes it); forensics/prerequisites.json (src/ec/curve.rs, class `modelled_differently`)",
+        "id": "D-EC-1",
+        "note": "Superseded by D-EC-2, and the entry records the shape of the supersession itself: `That slice landed in D340 and the trigger fired the other way: the column is written, its one non-NULL row is resolved to EC_GFp_simple_method, and the divergence is recorded rather than removed`. The divergence therefore persists as D-EC-2, which is why this row is not `fixed`; keeping it as its own row records that the trigger fired and the answer changed shape rather than disappeared.",
+        "originating_phase": 8,
+        "trigger_condition": "the slice that lands `ec_key.c`, `ecdh_ossl.c` and `ecdsa_ossl.c`, at which point the method column is written",
+        "trigger_phase": 8,
+        "trigger_satisfied": true
+      },
+      {
+        "blocking": false,
+        "current_owner": 8,
+        "disposition": "accepted_permanent_divergence",
+        "evidence": "src/ec/curve.rs (curve_list_method); forensics/prerequisites.json (crypto/ec/ecp_nistz256.c, class `modelled_differently`, `covers` empty); docs/PHASE-8-CRYPTO-SEAL.md §5-§6",
+        "id": "D-EC-2",
+        "note": "The trigger names no future stratum; the register records the divergence as `neither transcribable nor inventable` because every field operation is `ecp_nistz256-x86_64.s` with no `#else` arm, and D274's perlasm rule does not reach it either -- a Montgomery representation is observable through every subsequent multiplication. The Phase 8 seal §6 states it as `the standing consequence: where this authority's implementation is perlasm, this crate's is a portable reconstruction`. That is a deliberate permanent narrowing, and `prerequisites.json` carries it machine-readably as `modelled_differently` with empty `covers`, so it is recorded rather than left `open` for a stratum that does not exist.",
+        "originating_phase": 8,
+        "trigger_condition": "the slice that supplies a construction for the perlasm unit (`crypto/ec/ecp_nistz256.c`), at which point `curve_list_method` answers `EC_GFp_nistz256_method`",
+        "trigger_phase": 8,
+        "trigger_satisfied": false
+      },
+      {
+        "blocking": false,
+        "current_owner": 8,
+        "disposition": "accepted_permanent_divergence",
+        "evidence": "courts/phase8/rt_cipher_probe.c (the `cbchmac.*.g.maxbufsz` arm); docs/PHASE-8-CRYPTO-SEAL.md §5",
+        "id": "D-CBCHMAC-MAXBUFSZ-ASSERT-1",
+        "note": "The register's trigger is `none planned ... If a caller needs parity with the abort, that is docs/DECISIONS.md D276's to revisit, not an arm's`. The authority aborts (`cipher_aes_cbc_hmac_sha1_hw.c:701`, exit 134) before `maxsndfrag` is set; the crate computes 53. Reproducing a deliberate `abort()` would turn a caller's diagnostic into a denial of service, and the Phase 8 seal §5 agrees: `This one is permanent and deliberate: it is a safety divergence, not a gap`.",
+        "originating_phase": 8,
+        "trigger_condition": "none planned: this is a permanent, deliberate safety divergence",
+        "trigger_phase": 8,
+        "trigger_satisfied": false
+      },
+      {
+        "blocking": false,
+        "current_owner": 10,
+        "disposition": "open",
+        "evidence": "RT-EVP-PBE (the `pbe.find.04`..`pbe.find.09` arms)",
+        "id": "D-PBE-PKCS12-KEYGEN-1",
+        "note": "The trigger phrase names Phase 10, which is not yet `complete`, so this row may be `open`: the six `builtin_pbe[]` rows carry no keygen until Phase 10 lands `p12_crpt.c`, and `EVP_PBE_find`/`_ex` answer 1 with both keygen pointers NULL until then. The reader functions themselves are landed; what is owed is the contents of two columns.",
+        "originating_phase": 7,
+        "trigger_condition": "Phase 10's first commit that lands `crypto/pkcs12/p12_crpt.c`, which supplies the two `PKCS12_PBE_keyivgen` function addresses the six rows lack",
+        "trigger_phase": 10,
+        "trigger_satisfied": false
+      },
+      {
+        "blocking": false,
+        "current_owner": 13,
+        "disposition": "open",
+        "evidence": "RT-EVP-PBE (the `pbe.cipher_nid.legacy` marker)",
+        "id": "D-EVP-CIPHER-LEGACY-NID-1",
+        "note": "The trigger phrase names Phase 13, which is not yet `complete`, so this row may be `open`. `evp_cipher_from_algorithm` calls `set_legacy_nid`, whose code landed in 7.3b; what it searches is the legacy wrappers' table, which is Phase 13's and empty, so `EVP_CIPHER_get_nid` answers `NID_undef` (0) where the authority answers 31 (`NID_des_cbc`).",
+        "originating_phase": 7,
+        "trigger_condition": "Phase 13's first legacy cipher wrapper, which populates the `OBJ_NAME` table `set_legacy_nid` searches -- so a fetched provider cipher's legacy NID becomes real",
+        "trigger_phase": 13,
+        "trigger_satisfied": false
+      },
+      {
+        "blocking": false,
+        "current_owner": 10,
+        "disposition": "open",
+        "evidence": "courts/phase8/rt_pubkey_probe.c (RT-PUBKEY)",
+        "id": "D-DECODER-ABSENT-1",
+        "note": "Recorded by D369, and the trigger phrase names Phase 10, which is not yet `complete`, so this row may be `open`. The crate's decoder context carries no instances, so `d2i_PUBKEY` answers NULL for a decodable input and `pem_read_bio_key_decoder` returns NULL after its first failed walk; the only observable inside the shared path is the queue record. The entry retires with the provider decoder that lands the rows.",
+        "originating_phase": 8,
+        "trigger_condition": "the slice that supplies a provider decoder -- the DER/PEM decoder rows and the keymgmt rows they construct into",
+        "trigger_phase": 10,
+        "trigger_satisfied": false
+      }
+    ],
+    "rule": "an obligation blocks its `current_owner` when its trigger has fired (`trigger_satisfied`) and its `disposition` is still `open`; `phase_state.py` applies that test to each stratum"
+  },
+  "body_hash": "76f83da717f2f6b67f3ae275d9d4bdf8761dc1f19aaf4bb3cbf74f58d6083679",
+  "generator": "forensics/tools/divergence_obligations.py",
+  "inputs": [
+    {
+      "name": "divergence-register",
+      "note": "the prose register this table transcribes",
+      "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
+      "sha256": "6b12e83a71e73b479dda0806bc66aed5d3e2ee93b6d67709fa33db07a975d419"
+    },
+    {
+      "name": "phase-8-seal",
+      "note": "says which of §5's entries are Phase 8's and how D-EC-2 and D372 read",
+      "path": "docs/PHASE-8-CRYPTO-SEAL.md",
+      "sha256": "f74d262edfb4e2e8be37ae06b6e1f6f81e33c584979a24e114b95bd818345cfb"
+    },
+    {
+      "name": "phase-9-seal",
+      "note": "says which trigger-bearing entries Phase 9 owns and what closed them",
+      "path": "docs/PHASE-9-RAND-DRBG-SEAL.md",
+      "sha256": "dfc61b8e2e5d201ba1b5390507faf312ffa63b3fdb20272a1b53c05bc69805b5"
+    },
+    {
+      "name": "phase-8-obligations",
+      "note": "the Phase 8 ledger, whose open_in_this_stratum is what a freeing row would move",
+      "path": "forensics/phase8-obligations.json",
+      "sha256": "96fb250b1df3dda1638eb102d38678ebf30206e82f305f78b8fe47b45f08e53d"
+    },
+    {
+      "name": "phase-9-obligations",
+      "note": "the Phase 9 ledger, whose open_in_this_stratum is what a freeing row would move",
+      "path": "forensics/phase9-obligations.json",
+      "sha256": "d4cee22978f302ae984d1622b3fa8053930d938c654275970d64fb1f973fe0f2"
+    }
+  ],
+  "kind": "divergence-obligations",
+  "schema": "openssl-rs/atlas/divergence-obligations/v1"
+}

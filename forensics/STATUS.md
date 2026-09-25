@@ -29,7 +29,7 @@ renderer does not know any phase status.
 | 6 | OSSL_LIB_CTX + provider core | `complete` |  |
 | 7 | EVP framework | `complete` |  |
 | 8 | Native cryptographic primitives | `complete` |  |
-| 9 | RAND / DRBG + entropy | `in-progress` | 3 open obligation(s) of this stratum recorded in forensics/phase9-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Its working set is ninety-three exports, and only twenty-five are its own header's: the other sixty-eight arrive as recorded hand-offs from phases 4, 5, 7 and 8, so the stratum's work lives in ten earlier strata's modules (docs/DECISIONS.md D294). The court file records `courts: []` and is not evidence that anything works: no Phase 9 court has landed yet (docs/PHASE-9-SUBPHASES.md section 1) |
+| 9 | RAND / DRBG + entropy | `complete` |  |
 
 Not started: strata 10-21 (12 total).
 
@@ -84,9 +84,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2960 | 2936 |
+| libcrypto | 5896 | 2963 | 2933 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2960** | **3539** |
+| **total** | **6499** | **2963** | **3536** |
 
 ### Phase 3 obligation ledger
 
@@ -131,6 +131,8 @@ Deferred to phase 6: `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_fl
 Of those, 18 have since been implemented by phase 6, which is where the obligation sits, so phase 4 does not count them as its own work: `BIO_new_from_core_bio`, `BIO_s_core`, `CONF_imodule_get_flags`, `CONF_imodule_get_module`, `CONF_imodule_get_name`, `CONF_imodule_get_usr_data`, `CONF_imodule_get_value`, `CONF_imodule_set_flags`, `CONF_imodule_set_usr_data`, `CONF_module_add`, `CONF_module_get_usr_data`, `CONF_module_set_usr_data`, `CONF_modules_finish`, `CONF_modules_load`, `CONF_modules_load_file`, `CONF_modules_load_file_ex`, `CONF_modules_unload`, `OPENSSL_load_builtin_modules`
 
 Deferred to phase 9: `BIO_f_nbio_test`
+
+Of those, 1 have since been implemented by phase 9, which is where the obligation sits, so phase 4 does not count them as its own work: `BIO_f_nbio_test`
 
 Hand-offs from phase 3 discharged by this stratum: `ERR_add_error_mem_bio`, `ERR_print_errors`, `ERR_print_errors_cb`, `ERR_print_errors_fp`, `OBJ_create_objects`, `OPENSSL_INIT_free`, `OPENSSL_INIT_new`, `OPENSSL_INIT_set_config_appname`, `OPENSSL_INIT_set_config_file_flags`, `OPENSSL_INIT_set_config_filename`, `OPENSSL_LH_node_stats`, `OPENSSL_LH_node_stats_bio`, `OPENSSL_LH_node_usage_stats`, `OPENSSL_LH_node_usage_stats_bio`, `OPENSSL_LH_stats`, `OPENSSL_LH_stats_bio`
 
@@ -224,9 +226,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 9 working set: 69
-* implemented: 66
+* implemented: 69
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 3
+* open in this stratum: 0
 
 Hand-offs from phase 4 discharged by this stratum: `BIO_f_nbio_test`
 

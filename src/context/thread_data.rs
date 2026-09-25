@@ -356,18 +356,32 @@ pub(crate) unsafe fn ossl_crypto_thread_clean(vhandle: *mut c_void) -> c_int {
 mod tests {
     use super::*;
     use crate::context::{OSSL_LIB_CTX_free, OSSL_LIB_CTX_new, OSSL_LIB_CTX_set0_default};
-    use core::sync::atomic::{AtomicU32, Ordering};
+    use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
-    /// The shared counter the pool tests' workers raise. A `struct` rather than a
+    /// The shared state the pool tests' workers take. A `struct` rather than a
     /// bare atomic so the routine has a `void *` to take, as a real caller does.
     struct Work {
         counter: AtomicU32,
+        /// Set by `the_pool_starts_joins_and_cleans_workers` to let its workers
+        /// return. They wait on it because `native_clean` admits a thread that has
+        /// reached `FINISHED` even when nothing joined it, so a worker released the
+        /// moment it starts could finish before the joiner calls `clean` and answer
+        /// 1 where that test asks for 0. The gate makes "started and unfinished" a
+        /// state the test stands in rather than races for.
+        release: AtomicBool,
     }
 
     /// Returns its own ordinal plus one, so the joiner's `retval` is checkable.
+    ///
+    /// Waits on `release` first, so a caller that starts this routine and has not
+    /// released it is holding a thread that is running and unjoined -- which is the
+    /// state `the_pool_starts_joins_and_cleans_workers` needs to observe.
     unsafe extern "C" fn worker(data: *mut c_void) -> CryptoThreadRetval {
         // SAFETY: `data` is the `Work` the caller passed and outlives every join.
         let work = unsafe { &*data.cast::<Work>() };
+        while !work.release.load(Ordering::Acquire) {
+            core::hint::spin_loop();
+        }
         work.counter.fetch_add(1, Ordering::AcqRel) + 1
     }
 
@@ -430,12 +444,19 @@ mod tests {
     /// D396 closed: with it, a worker that finished before its joiner reached the
     /// wait left the joiner blocked for ever and this test would hang rather than
     /// fail.
+    ///
+    /// The workers are held at `Work::release` until every `clean` that expects a
+    /// refusal has run. `native_clean` admits a thread that has reached `FINISHED`
+    /// whether or not anything joined it, so a worker released at once could finish
+    /// first and make the refusal assertion race the scheduler; the gate removes
+    /// that race instead of loosening the assertion.
     #[test]
     fn the_pool_starts_joins_and_cleans_workers() {
         let ctx = OSSL_LIB_CTX_new();
         assert!(!ctx.is_null());
         let work = Work {
             counter: AtomicU32::new(0),
+            release: AtomicBool::new(false),
         };
         let wid = core::ptr::addr_of!(work).cast_mut().cast::<c_void>();
 
@@ -449,11 +470,17 @@ mod tests {
             for h in handles.iter_mut() {
                 *h = ossl_crypto_thread_start(ctx, Some(worker), wid);
                 assert!(!h.is_null());
-                // Not joined yet, so not cleanable: `native_clean` requires both
-                // `FINISHED` and `JOINED`, and only a join sets the second.
+                // Running and unjoined, so not cleanable: `native_clean` refuses a
+                // state with neither `FINISHED` nor `JOINED`, and `Work::release`
+                // holds each worker before it returns, so neither is set.
                 assert_eq!(ossl_crypto_thread_clean(*h), 0);
             }
             assert_eq!(ossl_get_avail_threads(ctx), 4);
+
+            // Every refusal has been observed; let the four workers return. Each
+            // join then waits for `FINISHED` and sets `JOINED`, which is what makes
+            // the `clean` below answer 1.
+            work.release.store(true, Ordering::Release);
 
             for h in handles.iter() {
                 let mut retval: CryptoThreadRetval = 0;
@@ -478,6 +505,7 @@ mod tests {
         assert!(!ctx.is_null());
         let work = Work {
             counter: AtomicU32::new(0),
+            release: AtomicBool::new(false),
         };
         let wid = core::ptr::addr_of!(work).cast_mut().cast::<c_void>();
 
