@@ -30886,3 +30886,29 @@ generated sources` with only the Phase 7 claim exemption left active. `PIPELINE 
 
 `README.md` is rewritten and `forensics/tools/docs_consistency.py` loses the two checks, their
 helper and their exemption. No generated artefact moves, so no `seal_sha256` moves.
+
+## D433 -- 0.0.14: the version moves and the 81 declarations move with it, for a README and a stratum
+
+`main` is released as **0.0.14**, by the sequence `docs/RELEASE_GATES.md` §8 fixes and D428 applied
+for `Key formats + PKCS + STORE`: `Cargo.toml`'s `version` and `Cargo.lock`'s `[[package]] version`
+both move to `0.0.14`, `python3 forensics/tools/gen_frf_courts.py` rewrites the declaration table so
+all 81 courts' `version_or_commit` name the version the crate is, and `--check` reads
+`ok: 162 file(s) match the table (81 courts)`.
+
+**What this release contains, and what it deliberately does not.** It carries Phase 10's activation
+(D431) and the README rewrite (D432), and it carries no Phase 10 implementation: Phase 10 derives
+`in-progress` with 211 open obligations, and none of them is claimed here. The FRF receipts and the
+Phase 9 `sensitivity-backed` claim stay bound to `openssl-rs 0.0.12 (e4f60d8b)` -- the artifact the
+chain actually ran against -- for D428's reason. The staged shell and the atlases that hash it
+regenerate, because the version string is part of the binary.
+
+**Why a patch release for documentation.** The README is what crates.io shows on the crate's page, and
+it was the one artifact in this project that a newcomer reads before anything else; a version that
+still carried the old front door would be the wrong thing to hand a reader. The crate's own
+`readme = "README.md"` is the link between the two.
+
+### Movement
+
+`Cargo.toml` and `Cargo.lock` move to `0.0.14`; 81 `forensics/frf/courts/*/manifest.yaml` files move
+with them; the staged shell and the atlases that hash it regenerate; `docs/DECISIONS.md` gains this
+entry. `PIPELINE OK` exit 0, twice, and `gen_frf_courts.py --check` clean.
