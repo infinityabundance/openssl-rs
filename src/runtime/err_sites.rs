@@ -39762,6 +39762,486 @@ pub(crate) const DECODER_PKEY_946: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `dh_to_text` at `providers/implementations/encode_decode/encode_key2text.c:52` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROV_ENCODE_KEY2TEXT_52: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 52,
+    func: c"dh_to_text",
+    lib: 57,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `dh_to_text` at `providers/implementations/encode_decode/encode_key2text.c:66` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_66: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 66,
+    func: c"dh_to_text",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `dh_to_text` at `providers/implementations/encode_decode/encode_key2text.c:73` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_73: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 73,
+    func: c"dh_to_text",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `dh_to_text` at `providers/implementations/encode_decode/encode_key2text.c:80` (PROV_R_NOT_PARAMETERS).
+pub(crate) const PROV_ENCODE_KEY2TEXT_80: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 80,
+    func: c"dh_to_text",
+    lib: 57,
+    reason: 226,
+    dynamic_reason: false,
+};
+
+/// `dh_to_text` at `providers/implementations/encode_decode/encode_key2text.c:87` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_87: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 87,
+    func: c"dh_to_text",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `dsa_to_text` at `providers/implementations/encode_decode/encode_key2text.c:125` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROV_ENCODE_KEY2TEXT_125: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 125,
+    func: c"dsa_to_text",
+    lib: 57,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `dsa_to_text` at `providers/implementations/encode_decode/encode_key2text.c:139` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_139: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 139,
+    func: c"dsa_to_text",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `dsa_to_text` at `providers/implementations/encode_decode/encode_key2text.c:146` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_146: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 146,
+    func: c"dsa_to_text",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `dsa_to_text` at `providers/implementations/encode_decode/encode_key2text.c:153` (PROV_R_NOT_PARAMETERS).
+pub(crate) const PROV_ENCODE_KEY2TEXT_153: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 153,
+    func: c"dsa_to_text",
+    lib: 57,
+    reason: 226,
+    dynamic_reason: false,
+};
+
+/// `dsa_to_text` at `providers/implementations/encode_decode/encode_key2text.c:160` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 160,
+    func: c"dsa_to_text",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ec_to_text` at `providers/implementations/encode_decode/encode_key2text.c:323` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROV_ENCODE_KEY2TEXT_323: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 323,
+    func: c"ec_to_text",
+    lib: 57,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ec_to_text` at `providers/implementations/encode_decode/encode_key2text.c:328` (PROV_R_INVALID_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_328: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 328,
+    func: c"ec_to_text",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ec_to_text` at `providers/implementations/encode_decode/encode_key2text.c:344` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_344: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 344,
+    func: c"ec_to_text",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `ec_to_text` at `providers/implementations/encode_decode/encode_key2text.c:355` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_355: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 355,
+    func: c"ec_to_text",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ecx_to_text` at `providers/implementations/encode_decode/encode_key2text.c:393` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROV_ENCODE_KEY2TEXT_393: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 393,
+    func: c"ecx_to_text",
+    lib: 57,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ecx_to_text` at `providers/implementations/encode_decode/encode_key2text.c:414` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_414: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 414,
+    func: c"ecx_to_text",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `ecx_to_text` at `providers/implementations/encode_decode/encode_key2text.c:425` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const PROV_ENCODE_KEY2TEXT_425: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 425,
+    func: c"ecx_to_text",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `rsa_to_text` at `providers/implementations/encode_decode/encode_key2text.c:473` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const PROV_ENCODE_KEY2TEXT_473: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 473,
+    func: c"rsa_to_text",
+    lib: 57,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `rsa_to_text` at `providers/implementations/encode_decode/encode_key2text.c:482` (ERR_R_CRYPTO_LIB).
+pub(crate) const PROV_ENCODE_KEY2TEXT_482: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 482,
+    func: c"rsa_to_text",
+    lib: 57,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:699` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_699: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 699,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:700` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_700: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 700,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:703` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_703: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 703,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:706` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_706: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 706,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:708` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_708: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 708,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:711` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_711: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 711,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:712` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_712: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 712,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:713` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_713: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 713,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:714` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_714: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 714,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:718` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_718: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 718,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:719` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_719: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 719,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:720` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_720: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 720,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:722` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_722: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 722,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:723` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_723: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 723,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:726` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_726: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 726,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:727` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_727: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 727,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:728` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_728: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 728,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:732` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_732: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 732,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:733` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_733: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 733,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:734` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_734: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 734,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:735` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_735: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 735,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:736` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_736: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 736,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:737` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_737: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 737,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:738` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_738: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 738,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:739` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_739: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 739,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:740` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_740: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 740,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:741` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_741: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 741,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:742` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_742: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 742,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2text_encode` at `providers/implementations/encode_decode/encode_key2text.c:743` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2TEXT_743: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
+    line: 743,
+    func: c"key2text_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
 /// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:32` (ERR_R_EVP_LIB).
 pub(crate) const PKCS12_32: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
@@ -44876,6 +45356,54 @@ pub(crate) static ALL: &[ErrSite] = &[
     DECODER_PKEY_901,
     DECODER_PKEY_937,
     DECODER_PKEY_946,
+    PROV_ENCODE_KEY2TEXT_52,
+    PROV_ENCODE_KEY2TEXT_66,
+    PROV_ENCODE_KEY2TEXT_73,
+    PROV_ENCODE_KEY2TEXT_80,
+    PROV_ENCODE_KEY2TEXT_87,
+    PROV_ENCODE_KEY2TEXT_125,
+    PROV_ENCODE_KEY2TEXT_139,
+    PROV_ENCODE_KEY2TEXT_146,
+    PROV_ENCODE_KEY2TEXT_153,
+    PROV_ENCODE_KEY2TEXT_160,
+    PROV_ENCODE_KEY2TEXT_323,
+    PROV_ENCODE_KEY2TEXT_328,
+    PROV_ENCODE_KEY2TEXT_344,
+    PROV_ENCODE_KEY2TEXT_355,
+    PROV_ENCODE_KEY2TEXT_393,
+    PROV_ENCODE_KEY2TEXT_414,
+    PROV_ENCODE_KEY2TEXT_425,
+    PROV_ENCODE_KEY2TEXT_473,
+    PROV_ENCODE_KEY2TEXT_482,
+    PROV_ENCODE_KEY2TEXT_699,
+    PROV_ENCODE_KEY2TEXT_700,
+    PROV_ENCODE_KEY2TEXT_703,
+    PROV_ENCODE_KEY2TEXT_706,
+    PROV_ENCODE_KEY2TEXT_708,
+    PROV_ENCODE_KEY2TEXT_711,
+    PROV_ENCODE_KEY2TEXT_712,
+    PROV_ENCODE_KEY2TEXT_713,
+    PROV_ENCODE_KEY2TEXT_714,
+    PROV_ENCODE_KEY2TEXT_718,
+    PROV_ENCODE_KEY2TEXT_719,
+    PROV_ENCODE_KEY2TEXT_720,
+    PROV_ENCODE_KEY2TEXT_722,
+    PROV_ENCODE_KEY2TEXT_723,
+    PROV_ENCODE_KEY2TEXT_726,
+    PROV_ENCODE_KEY2TEXT_727,
+    PROV_ENCODE_KEY2TEXT_728,
+    PROV_ENCODE_KEY2TEXT_732,
+    PROV_ENCODE_KEY2TEXT_733,
+    PROV_ENCODE_KEY2TEXT_734,
+    PROV_ENCODE_KEY2TEXT_735,
+    PROV_ENCODE_KEY2TEXT_736,
+    PROV_ENCODE_KEY2TEXT_737,
+    PROV_ENCODE_KEY2TEXT_738,
+    PROV_ENCODE_KEY2TEXT_739,
+    PROV_ENCODE_KEY2TEXT_740,
+    PROV_ENCODE_KEY2TEXT_741,
+    PROV_ENCODE_KEY2TEXT_742,
+    PROV_ENCODE_KEY2TEXT_743,
     PKCS12_32,
     PKCS12_50,
     PKCS12_60,

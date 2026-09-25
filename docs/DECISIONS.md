@@ -30912,3 +30912,66 @@ still carried the old front door would be the wrong thing to hand a reader. The 
 `Cargo.toml` and `Cargo.lock` move to `0.0.14`; 81 `forensics/frf/courts/*/manifest.yaml` files move
 with them; the staged shell and the atlases that hash it regenerate; `docs/DECISIONS.md` gains this
 entry. `PIPELINE OK` exit 0, twice, and `gen_frf_courts.py --check` clean.
+
+## D434 -- 10.1 lands the decomposition before the code, and the 636 rows turn out to be eleven units
+
+Phase 10's first work subphase. The instruction was explicit that the stratum must not read 636
+provider rows as 636 implementations, and the measurement says it should not: the rows are **318
+dispatch-table symbols published by both the `default` and the `base` provider** -- both `#include` the
+same `encoders.inc`/`decoders.inc` with a different `ENCODER_PROVIDER` (`defltprov.c:675-687`,
+`baseprov.c:67-85`) -- and those 318 symbols come from **eleven translation units** under
+`providers/implementations/encode_decode/`, measured by `nm --defined-only` over the authority's build
+objects and joined to `provider-algorithms.json`'s `dispatch_table_symbol`:
+`encode_key2any.c` 206 tables/412 rows, `decode_der2key.c` 69/138, `encode_key2text.c` 29/58,
+`encode_key2ms.c` 4/8, and seven units of 2, 2, 2, 1, 1, 1 and 1 tables (4, 4, 4, 2, 2, 2 and 2 rows).
+The decomposition is written into `docs/PHASE-10-SUBPHASES.md` as §1a with its coordinates.
+
+**Two things the measurement settled that the plan had wrong.** First, **none of the eleven was already
+transcribed**: what Phase 8 landed at 8.8/8.9 (D362-D367) is the *framework* under `crypto/encode_decode/`
+(`src/encoder_*.rs`, `decoder_*.rs`), which dispatches to a codec without implementing one, so §2's 10.1
+row naming `encoder_pkey.c`/`decoder_pkey.c`/`*_meth.c`/`*_lib.c` as the units to write was wrong and now
+says so. Second, **no unit is pure registration**: every row-publishing unit carries its own engine.
+`D-DECODER-ABSENT-1` is therefore **not** retired by this subphase, because it needs a decoder and the
+remaining units wait on 10.6's `d2i`/`i2b` hand-offs.
+
+**The first slice is `encode_key2text.c`**, chosen as the biggest mover with a landed closure rather
+than the biggest outright: it is one 745-line unit for 58 rows, where `encode_key2any.c`'s 412 and
+`decode_der2key.c`'s 138 both wait on 10.6's serialization backends. `src/provider/encode_key2text.rs`
+transcribes the engine, the six printers and the eleven tables; `src/provider/endecoder_common.rs` adds
+`ossl_prov_import_key`/`free_key`/`pillfers`/`ossl_read_der`; the three withheld `ossl_bio_print_*`
+helpers land in `src/encoder_lib.rs` (their `prerequisites.json` divergence row is removed, because they
+landed with the caller it named); `ossl_bio_new_from_core_bio` lands in `core_bio.rs`; and
+`deflt_query`/`base_query` gain their `OSSL_OP_ENCODER` arms. **Twenty-two rows are published** -- eleven
+tables across both providers, for `RSA`, `RSA-PSS`, `DH`, `DHX`, `DSA`, `EC`, `ED25519`, `ED448`,
+`X25519`, `X448` and `SM2`. The eighteen `ML-KEM`/`ML-DSA`/`SLH-DSA` tables are **withheld as
+`pending`**, because their `*_to_text` helpers live in `ml_kem_codecs.c`/`ml_dsa_codecs.c`/`slh_dsa_key.c`,
+none of which is landed -- §3.5's case, named rather than counted as passing.
+
+**`RT-CODEC` is no longer pending.** `courts/phase10/rt_codec_probe.c` is a real differential court,
+compiled against the authority and the candidate, with **152 observations**: the row identity for all
+22 published rows, ten behaviour arms and one refusal arm carrying the error queue.
+`provider_court_coverage.py` reports 22 phase-10 rows directly courted and 0 unmatched, and `run_courts.py`
+reads phase 10 as two courts and 239 observations.
+
+**Rows are not exports, and the ledger proves it.** `forensics/phase10-obligations.json` reads
+`owned=298 implemented=87 open=211` **before and after** this subphase, because a provider row is not an
+export and 10.1 adds rows rather than symbols. The provider census is where the movement shows:
+`provider-algorithms.json` reads phase 10 as `implemented 22 / unimplemented 614`, where it read 636
+unimplemented, and `phase-state.json`'s phase 10 row carries `owned 636, implemented 22, unimplemented
+614, handed_on 39`. Phase 9 stays `complete`; Phase 10 stays `in-progress`.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count is **1049 passed, 0 failed** (two tests more than the 1047 the stratum opened
+with, both for the new engine). `run_courts.py`, `court_coverage.py` and `provider_court_coverage.py`
+clean; `PIPELINE OK` exit 0, twice.
+
+### Movement
+
+`src/provider/encode_key2text.rs` and `src/provider/endecoder_common.rs` are added;
+`src/encoder_lib.rs`, `src/provider/{base,digest,mod}.rs`, `src/runtime/bio/core_bio.rs`,
+`src/runtime/err_sites.rs` and `courts/phase10/rt_codec_probe.c` change or are added;
+`forensics/tools/{gen_provider_algorithms,gen_err_raise_sites,phase10_courts,provider_court_coverage}.py`
+change; `docs/PHASE-10-SUBPHASES.md` gains §1a and a corrected 10.1 row; and the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.

@@ -541,8 +541,8 @@ def structure_string(kind: str, token: str, provider: str) -> str:
 # --- the crate's landed rows ------------------------------------------------------------------
 
 
-def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
-    """`(alias string, Rust dispatch expression)` for every row of one crate algorithm table.
+def read_crate_table(path: Path, ident: str) -> list[tuple[str, str, str | None]]:
+    """`(alias string, Rust dispatch expression, property or None)` for one crate algorithm table.
 
     Two row forms exist in this crate and both are the authority's own: a table may carry the alias
     sequence inline (`DEFLT_DIGESTS`'s `algorithm_names: c"…"`, which is what `PROV_NAMES_*` expands
@@ -550,6 +550,16 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
     `defltprov.c`'s `ALG(PROV_NAMES_AES_128_CBC, …)` expands to). Reading both is what makes this a
     *reader* rather than three readers; the inline form is checked against the number of
     `algorithm_names:` fields so a row the regex missed cannot pass as a table with fewer rows.
+
+    **The property is the third coordinate, and an encoder table is why it is needed.** For every
+    operation before the encoders, the alias sequence identifies a row: no two cipher, digest or
+    MAC rows share one. The encoders do not: the authority publishes **fifteen** `default`
+    `OSSL_OP_ENCODER` rows whose alias sequence is `RSA`, one per output type and structure, and
+    they are told apart only by `property_definition` (and by their dispatch symbol). The inline
+    reader therefore returns the row's `property_definition` too, so the join can disambiguate an
+    alias that several rows share; the `alias!`/`row(...)` form computes its property in the
+    `row()` constructor and reports `None`, which keeps the pre-encoder behaviour unchanged (see
+    the join in `main`).
     """
     text = read(path)
     start = text.index(f"static {ident}")
@@ -574,17 +584,24 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
             re.S,
         )
     }
-    spellings = [
-        (m.start(), m.group(1) or consts.get(m.group(2)), m.group(3), m.group(2))
-        for m in re.finditer(
-            r'algorithm_names:\s*(?:c"([^"]*)"|([A-Za-z_][A-Za-z0-9_]*))\s*'
-            r'(?:\.as_ptr\(\))?\s*,'
-            r'.*?implementation:\s*([A-Za-z0-9_:]+)\.as_ptr\(\)',
-            body,
-            re.S,
+    spellings = []
+    for m in re.finditer(
+        r'algorithm_names:\s*(?:c"([^"]*)"|([A-Za-z_][A-Za-z0-9_]*))\s*'
+        r'(?:\.as_ptr\(\))?\s*,'
+        r'(?P<mid>.*?)implementation:\s*([A-Za-z0-9_:]+)\.as_ptr\(\)',
+        body,
+        re.S,
+    ):
+        name = m.group(1) or consts.get(m.group(2))
+        pm = re.search(
+            r'property_definition:\s*(?:c"([^"]*)"|([A-Za-z_][A-Za-z0-9_]*))',
+            m.group("mid"),
         )
-    ]
-    unresolved = sorted({ident for _p, name, _d, ident in spellings if name is None})
+        prop = None
+        if pm is not None:
+            prop = pm.group(1) or consts.get(pm.group(2))
+        spellings.append((m.start(), name, m.group(4), prop))
+    unresolved = sorted({ident for _p, name, _d, _pr in spellings if name is None})
     if unresolved:
         raise CensusError(
             f"[provider-algorithms] fatal: {rel(path)}'s {ident} names the algorithm_names "
@@ -607,13 +624,13 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
                 f"aliased row(s) and the reader found {len(spellings)}; a row it cannot read is a "
                 f"row it must not skip"
             )
-        return [(name, dispatch) for _p, name, dispatch, _ident in sorted(spellings)]
+        return [(name, dispatch, prop) for _p, name, dispatch, prop in sorted(spellings)]
 
     aliases = {
         m.group(1): m.group(2)
         for m in re.finditer(r'alias!\(\s*([A-Za-z0-9_]+)\s*,\s*"([^"]*)"\s*\)', text, re.S)
     }
-    rows: list[tuple[str, str]] = []
+    rows: list[tuple[str, str, str | None]] = []
     for m in re.finditer(r"row\(\s*([A-Za-z0-9_]+)\s*,\s*([A-Za-z0-9_:]+)\.as_ptr\(", body):
         name = aliases.get(m.group(1))
         if name is None:
@@ -621,7 +638,7 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str]]:
                 f"[provider-algorithms] fatal: {rel(path)}'s {ident} names the unknown alias "
                 f"{m.group(1)}, so its alias sequence cannot be read"
             )
-        rows.append((name, m.group(2)))
+        rows.append((name, m.group(2), None))
     # **The aliased form gets the same guard the inline form has above, and it did not have one.**
     # Its absence is D417: seven `AES`/`ARIA`/`SM4` GCM rows whose dispatch expression is a
     # *qualified path* (`cipher_gcm::AES128GCM_FUNCTIONS.as_ptr()`) were dropped in silence, because
@@ -685,8 +702,11 @@ CRATE_QUERY_ARM_SOURCE = {
 }
 
 
-def crate_query_tables(ops: dict[str, int]) -> dict[tuple[str, str], list[tuple[str, str]]]:
-    """`(provider, operation)` -> `[(alias string, dispatch expression)]`, from the crate itself.
+def crate_query_tables(
+    ops: dict[str, int],
+) -> dict[tuple[str, str], list[tuple[str, str, str | None]]]:
+    """`(provider, operation)` -> `[(alias string, dispatch expression, property or None)]`, from the
+    crate itself.
 
     Each arm names an `OSSL_OP_*` constant and the table it returns. The constant's final path
     segment is looked up in the authority's own operation ids, so an arm naming a constant the
@@ -1547,7 +1567,7 @@ def main(argv: list[str]) -> int:
 
     matched: dict[tuple[str, str], list[tuple[dict, str]]] = {}
     for (provider, operation), names_ in landed.items():
-        for alias, dispatch in names_:
+        for alias, dispatch, prop in names_:
             hits = by_alias.get((provider, operation, alias), [])
             if not hits:
                 near = [
@@ -1569,10 +1589,27 @@ def main(argv: list[str]) -> int:
                     f"different row: the alias sequence is the observable contract.{detail}"
                 )
             if len(hits) > 1:
-                raise CensusError(
-                    f"[provider-algorithms] fatal: {provider}/{operation}/{alias} matches "
-                    f"{len(hits)} authority rows, so the crate row is ambiguous"
-                )
+                # **An alias several rows share is disambiguated by the property, and the
+                # encoders are why.** Fifteen `default`/`OSSL_OP_ENCODER` rows carry the alias
+                # sequence `RSA` -- one per output type and structure -- and only
+                # `property_definition` (with the dispatch symbol) tells them apart. A crate row
+                # that spells a property narrows the candidates to the one whose
+                # `property_definition` is equal; a crate row that does not (the `alias!`/`row()`
+                # form, whose property the `row()` constructor computes) stays ambiguous, which is
+                # the behaviour every pre-encoder operation keeps.
+                if prop is None:
+                    raise CensusError(
+                        f"[provider-algorithms] fatal: {provider}/{operation}/{alias} matches "
+                        f"{len(hits)} authority rows, so the crate row is ambiguous"
+                    )
+                narrowed = [r for r in hits if r["property_definition"] == prop]
+                if len(narrowed) != 1:
+                    raise CensusError(
+                        f"[provider-algorithms] fatal: {provider}/{operation}/{alias} matches "
+                        f"{len(hits)} authority rows and the crate property {prop!r} selects "
+                        f"{len(narrowed)} of them; the row's identity is not pinned"
+                    )
+                hits = narrowed
             hits[0]["implementation_state"] = "implemented"
             hits[0]["crate_dispatch"] = dispatch
             matched.setdefault((provider, operation), []).append((hits[0], dispatch))

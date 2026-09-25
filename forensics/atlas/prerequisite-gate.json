@@ -11,7 +11,7 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 77,
+      "covered_by_a_divergence": 73,
       "language_surface_not_modelled_by_name": 5036,
       "planned_prerequisites": 5
     },
@@ -26,9 +26,6 @@
         "inlen": 1,
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
-        "ossl_bio_print_ffc_params": 1,
-        "ossl_bio_print_labeled_bignum": 1,
-        "ossl_bio_print_labeled_buf": 2,
         "ossl_lib_ctx_default_deinit": 1,
         "ossl_lib_ctx_get_concrete": 6,
         "ossl_lib_ctx_get_data": 17,
@@ -406,10 +403,6 @@
         "inlen",
         "libctx",
         "openssl_init_fork_handlers",
-        "ossl_bio_print_ffc_params",
-        "ossl_bio_print_labeled_bignum",
-        "ossl_bio_print_labeled_buf",
-        "ossl_bio_print_labeled_buf",
         "ossl_lib_ctx_default_deinit",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
@@ -435,7 +428,11 @@
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_descriptor",
-        "ossl_lib_ctx_get_descriptor"
+        "ossl_lib_ctx_get_descriptor",
+        "ossl_lib_ctx_get_descriptor",
+        "ossl_lib_ctx_get_descriptor",
+        "ossl_lib_ctx_get_ex_data_global",
+        "ossl_lib_ctx_get_ex_data_global"
       ],
       "language_surface_not_modelled_by_name": [
         "crypto/aria/aria.c:X",
@@ -489,11 +486,11 @@
     },
     "checked": {
       "authority_units": 326,
-      "crate_modules": 467,
+      "crate_modules": 469,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 7,
-      "divergence_names_covered": 43,
-      "divergence_rows": 13,
+      "divergence_names_covered": 40,
+      "divergence_rows": 12,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -598,13 +595,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "12200420dcdb6a266c9da6cab743c99e9ac173fc8c74a6ae3cc912b5c216a4a1",
+  "body_hash": "6457677a549f0ce58a20e771b05c0d670198b946c218324a9e987167fd74468a",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "9efd32cc11a63889416315eb89741c9f12d6defe467f979eb0a3dcc7ccb363dd"
+      "sha256": "31526775a6de946904902d905b319cf036d43174c6754bd21db83ba010241edf"
     },
     {
       "name": "macro-owners",
@@ -619,7 +616,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "63601a7ce516076b4d3d2913b11bcf1406fe20893f3e38db754307d1d7cf56c2"
+      "sha256": "a954aa8553d9ba216e4a3e2d94874a7d01a6881a647b8adceddfa9d410214f8e"
     },
     {
       "name": "symbol-ownership",
@@ -634,17 +631,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "19e1bab399bf6bdc7d6b25ba454b36814a3713f46990c760806043c8ad967a3c"
+      "sha256": "154d4a9bdd0070839ced394c65424ef7ddd7061df182fab9d953bf3bc43a70db"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "98c1170519c46b44cfef30fe19250059f86409dcd36412ff8874bf63c8687419"
+      "sha256": "37e2b9123a229482adf95ed0623653209d2780e739355c9411fb14423bed8ce7"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "dc20cc52dab0e2aa85cb19c56fbeac02edd99028a16de3e5197ddb798b857a58"
+      "sha256": "c64e74025a1e06288b0344522dd2a30455b121f81b27e4cf876f7a03a8265d3f"
     },
     {
       "name": "crate-source-tree",

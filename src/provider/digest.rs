@@ -2159,6 +2159,11 @@ unsafe extern "C" fn deflt_query(
     if operation_id == crate::evp::kem::OSSL_OP_KEM {
         return crate::provider::kem::DEFLT_ASYM_KEM.as_ptr();
     }
+    if operation_id == crate::provider::encode_key2text::OSSL_OP_ENCODER {
+        // `defltprov.c:723` returns `deflt_encoder`, restricted to the eleven text rows this crate
+        // publishes (10.1); the other 230 encoder rows are still unimplemented and absent.
+        return crate::provider::encode_key2text::DEFLT_ENCODERS.as_ptr();
+    }
     ptr::null()
 }
 

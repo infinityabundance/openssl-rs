@@ -191,6 +191,10 @@
       "observations": 26,
       "verdict": "pass"
     },
+    "RT-CODEC": {
+      "observations": 152,
+      "verdict": "pass"
+    },
     "RT-COMP": {
       "observations": 27,
       "verdict": "pass"
@@ -488,12 +492,23 @@
   },
   "prerequisites": {
     "blocking_dependencies": 7,
-    "divergence_names_covered": 43,
+    "divergence_names_covered": 40,
     "findings": 0,
     "language_census": 5036,
     "sealed_census": 50
   },
   "provider_implemented": [
+    "base/OSSL_OP_ENCODER/DH",
+    "base/OSSL_OP_ENCODER/DHX",
+    "base/OSSL_OP_ENCODER/DSA",
+    "base/OSSL_OP_ENCODER/EC",
+    "base/OSSL_OP_ENCODER/ED25519",
+    "base/OSSL_OP_ENCODER/ED448",
+    "base/OSSL_OP_ENCODER/RSA",
+    "base/OSSL_OP_ENCODER/RSA-PSS",
+    "base/OSSL_OP_ENCODER/SM2",
+    "base/OSSL_OP_ENCODER/X25519",
+    "base/OSSL_OP_ENCODER/X448",
     "base/OSSL_OP_RAND/SEED-SRC",
     "default/OSSL_OP_ASYM_CIPHER/RSA",
     "default/OSSL_OP_ASYM_CIPHER/SM2",
@@ -663,6 +678,17 @@
     "default/OSSL_OP_DIGEST/SHAKE-128",
     "default/OSSL_OP_DIGEST/SHAKE-256",
     "default/OSSL_OP_DIGEST/SM3",
+    "default/OSSL_OP_ENCODER/DH",
+    "default/OSSL_OP_ENCODER/DHX",
+    "default/OSSL_OP_ENCODER/DSA",
+    "default/OSSL_OP_ENCODER/EC",
+    "default/OSSL_OP_ENCODER/ED25519",
+    "default/OSSL_OP_ENCODER/ED448",
+    "default/OSSL_OP_ENCODER/RSA",
+    "default/OSSL_OP_ENCODER/RSA-PSS",
+    "default/OSSL_OP_ENCODER/SM2",
+    "default/OSSL_OP_ENCODER/X25519",
+    "default/OSSL_OP_ENCODER/X448",
     "default/OSSL_OP_KDF/ARGON2D",
     "default/OSSL_OP_KDF/ARGON2I",
     "default/OSSL_OP_KDF/ARGON2ID",
@@ -820,17 +846,17 @@
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 675,
-      "9": 675
+      "8": 653,
+      "9": 653
     },
-    "implemented": 321,
+    "implemented": 343,
     "open_by_phase": {
-      "10": 636,
+      "10": 614,
       "13": 39,
       "8": 0,
       "9": 0
     },
     "total": 996,
-    "unimplemented": 675
+    "unimplemented": 653
   }
 }

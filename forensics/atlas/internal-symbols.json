@@ -34306,6 +34306,7 @@
       "src/provider/digest_to_nid.rs: providers/common/libdefault-lib-digest_to_nid.c",
       "src/provider/ec_kem.rs: providers/implementations/kem/libdefault-lib-ec_kem.c",
       "src/provider/ecx_kem.rs: providers/implementations/kem/libdefault-lib-ecx_kem.c",
+      "src/provider/endecoder_common.rs: providers/implementations/encode_decode/libdefault-lib-endecoder_common.c",
       "src/provider/kem_util.rs: providers/implementations/kem/libdefault-lib-kem_util.c",
       "src/provider/keymgmt.rs: providers/implementations/keymgmt/libdefault-lib-kdf_legacy_kmgmt.c",
       "src/provider/mac.rs: crypto/poly1305/poly1305-x86_64.c",

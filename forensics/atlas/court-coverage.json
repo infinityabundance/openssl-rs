@@ -1003,6 +1003,7 @@
               "RT-BIO-RESOLVE",
               "RT-BIO-SOCK",
               "RT-BN",
+              "RT-CODEC",
               "RT-CONF",
               "RT-DH",
               "RT-DSA",
@@ -1310,6 +1311,7 @@
               "RT-CIPHER",
               "RT-CIPHER-MEM",
               "RT-CMAC",
+              "RT-CODEC",
               "RT-COMP",
               "RT-CONF-MOD",
               "RT-DH",
@@ -1399,6 +1401,7 @@
               "RT-ASN1-TIME",
               "RT-BIO-FILTER",
               "RT-BN-RAND",
+              "RT-CODEC",
               "RT-DRBG",
               "RT-EC",
               "RT-ERR",
@@ -9027,6 +9030,7 @@
             "courts": [
               "RT-ASYM-CIPHER",
               "RT-CIPHER",
+              "RT-CODEC",
               "RT-DIGEST",
               "RT-DRBG",
               "RT-EVP-PKEY",
@@ -9089,6 +9093,7 @@
             "courts": [
               "RT-ASYM-CIPHER",
               "RT-CIPHER",
+              "RT-CODEC",
               "RT-DIGEST",
               "RT-DRBG",
               "RT-EVP-KDF",
@@ -9171,6 +9176,7 @@
             "courts": [
               "RT-ASYM-CIPHER",
               "RT-CIPHER",
+              "RT-CODEC",
               "RT-DIGEST",
               "RT-DRBG",
               "RT-EVP-PKEY-OPS",
@@ -9696,6 +9702,7 @@
             "courts": [
               "RT-CIPHER",
               "RT-CMAC",
+              "RT-CODEC",
               "RT-DH",
               "RT-DIGEST",
               "RT-DRBG",
@@ -9775,6 +9782,7 @@
             "courts": [
               "RT-CIPHER",
               "RT-CMAC",
+              "RT-CODEC",
               "RT-DH",
               "RT-DIGEST",
               "RT-DSA",
@@ -12504,6 +12512,7 @@
             "basis": "called",
             "courts": [
               "RT-ASYM-CIPHER",
+              "RT-CODEC",
               "RT-DH",
               "RT-DSA",
               "RT-EC",
@@ -12693,6 +12702,7 @@
             "basis": "called",
             "courts": [
               "RT-ASYM-CIPHER",
+              "RT-CODEC",
               "RT-DH",
               "RT-DSA",
               "RT-EC",
@@ -13358,6 +13368,7 @@
             "courts": [
               "RT-AMETH",
               "RT-ASYM-CIPHER",
+              "RT-CODEC",
               "RT-ECX",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
@@ -13373,6 +13384,7 @@
             "basis": "called",
             "courts": [
               "RT-ASYM-CIPHER",
+              "RT-CODEC",
               "RT-EVP-PKEY",
               "RT-KEYMGMT",
               "RT-SIGNATURE"
@@ -13383,6 +13395,7 @@
             "basis": "called",
             "courts": [
               "RT-ASYM-CIPHER",
+              "RT-CODEC",
               "RT-EVP-PKEY",
               "RT-KEYMGMT",
               "RT-SIGNATURE"
@@ -21666,8 +21679,8 @@
         "completed": false,
         "counts": {
           "directly_courted": 87,
-          "directly_courted_called": 0,
-          "directly_courted_referenced": 87,
+          "directly_courted_called": 8,
+          "directly_courted_referenced": 79,
           "implemented": 87,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -21976,8 +21989,9 @@
             "symbol": "OSSL_ENCODER_CTX_add_extra"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_CTX_free"
@@ -21997,8 +22011,9 @@
             "symbol": "OSSL_ENCODER_CTX_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_CTX_new_for_pkey"
@@ -22123,15 +22138,17 @@
             "symbol": "OSSL_ENCODER_do_all_provided"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_fetch"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_free"
@@ -22144,15 +22161,17 @@
             "symbol": "OSSL_ENCODER_get0_description"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_get0_name"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_get0_properties"
@@ -22179,8 +22198,9 @@
             "symbol": "OSSL_ENCODER_gettable_params"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_is_a"
@@ -22207,8 +22227,9 @@
             "symbol": "OSSL_ENCODER_to_bio"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_to_data"
@@ -22287,13 +22308,13 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 10,
-        "staged_candidate_probes": 1
+        "staged_candidate_probes": 2
       }
     ],
     "totals": {
       "directly_courted": 2802,
-      "directly_courted_called": 2449,
-      "directly_courted_referenced": 353,
+      "directly_courted_called": 2457,
+      "directly_courted_referenced": 345,
       "implemented": 2810,
       "indirectly_courted": 8,
       "non_observable": 0
@@ -22305,7 +22326,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "19e1bab399bf6bdc7d6b25ba454b36814a3713f46990c760806043c8ad967a3c"
+      "sha256": "154d4a9bdd0070839ced394c65424ef7ddd7061df182fab9d953bf3bc43a70db"
     },
     {
       "name": "symbol-ownership",
@@ -22360,7 +22381,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "0f58c0feca46c929bc939b918c3e079d577b3102596f91e5612d1cf9e8af37c8"
+      "sha256": "9b00bec361b315204c345eddf0578e374c3f6041f9b1979ee736c4693b3b4a4c"
     },
     {
       "name": "phase7-courts",
@@ -22370,7 +22391,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "b94385092fb7283044e25fd94b5d3f36b85177f3ed6354fd6c5ac6ed7758c009"
+      "sha256": "0c850a6a1f3aa3249b502a11188217b971c42dc7863b1f4b1c534f596c8f95cd"
     },
     {
       "name": "phase8-courts",
@@ -22380,7 +22401,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "c009b987d217d3e7ed4dcd86c35ed2fed59be6f2d7a97cab773d62b80bf1f1c2"
+      "sha256": "1d1c6cbcd368d9d107ab42084a3eb39d3e44c41d695d39f18467e282c7138306"
     },
     {
       "name": "phase9-courts",
@@ -22390,12 +22411,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "ad421c4482cfe5d0f6050a67f958e45a3c64a4d1efbbb6eda424f45d8a5337a5"
+      "sha256": "e94bcc612309ba7501f7dc45384ff1e614b19e3544bd94dcdd132553781c3ecd"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "a6501dd5797f1fb95d312a5de49fa34996d21b441139e13e1221465f8c264ad9"
+      "sha256": "fc2b612c7eda591ae48bad3b145c95767b29e28b874a46981340533d83715b5d"
     }
   ],
   "kind": "court-coverage",

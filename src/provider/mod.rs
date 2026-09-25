@@ -98,6 +98,14 @@ pub(crate) mod der_slh_dsa_key;
 // Phase 8's `providers/common/der/der_sm2_sig.c` (D406): the SM2 `WITH MD` AlgorithmIdentifier
 // writer the signature unit's setup builds.
 pub(crate) mod der_sm2_sig;
+// Phase 10's `providers/implementations/encode_decode/endecoder_common.c`: the keymgmt pilfers and
+// the import/free/read-DER helpers every provider codec unit stands on. It lands with the first of
+// them (`encode_key2text.rs`), because all of them call it.
+pub(crate) mod endecoder_common;
+// Phase 10.1's first provider codec unit: `providers/implementations/encode_decode/
+// encode_key2text.c`, the eleven text-encoder tables and their five printers. It is the caller
+// the three `ossl_bio_print_*` helpers in `src/encoder_lib.rs` were withheld for.
+pub(crate) mod encode_key2text;
 // Phase 8's `providers/implementations/asymciphers/sm2_enc.c` (D406): the `SM2` asym-cipher row,
 // the encryption face of the `SM2` key object.
 pub(crate) mod digest_to_nid;
