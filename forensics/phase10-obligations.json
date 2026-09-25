@@ -1,0 +1,1721 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "complete": false,
+    "counts": {
+      "atlas_owned": 272,
+      "deferred_to_later_phase": 0,
+      "implemented": 87,
+      "open_in_this_stratum": 211,
+      "owned": 298,
+      "received_by_handoff": 26
+    },
+    "deferred": [],
+    "deferred_by_phase": {},
+    "handoffs_discharged": {
+      "5": [
+        "b2i_PVK_bio",
+        "b2i_PVK_bio_ex",
+        "b2i_PrivateKey",
+        "b2i_PrivateKey_bio",
+        "b2i_PublicKey",
+        "b2i_PublicKey_bio",
+        "d2i_PKCS8PrivateKey_bio",
+        "d2i_PKCS8PrivateKey_fp",
+        "i2b_PVK_bio",
+        "i2b_PVK_bio_ex",
+        "i2b_PrivateKey_bio",
+        "i2b_PublicKey_bio",
+        "i2d_PKCS8PrivateKey_bio",
+        "i2d_PKCS8PrivateKey_fp",
+        "i2d_PKCS8PrivateKey_nid_bio",
+        "i2d_PKCS8PrivateKey_nid_fp"
+      ],
+      "7": [
+        "PEM_write_bio_PrivateKey_traditional",
+        "d2i_AutoPrivateKey",
+        "d2i_AutoPrivateKey_ex",
+        "d2i_PrivateKey",
+        "d2i_PrivateKey_ex",
+        "i2d_KeyParams",
+        "i2d_KeyParams_bio",
+        "i2d_PKCS8PrivateKey",
+        "i2d_PrivateKey",
+        "i2d_PublicKey"
+      ]
+    },
+    "handoffs_discharged_with_reasons": {
+      "5": [
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "b2i_PVK_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "b2i_PVK_bio_ex"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "b2i_PrivateKey"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "b2i_PrivateKey_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "b2i_PublicKey"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "b2i_PublicKey_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "d2i_PKCS8PrivateKey_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "d2i_PKCS8PrivateKey_fp"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "i2b_PVK_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "i2b_PVK_bio_ex"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "i2b_PrivateKey_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "i2b_PublicKey_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "i2d_PKCS8PrivateKey_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "i2d_PKCS8PrivateKey_fp"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "i2d_PKCS8PrivateKey_nid_bio"
+        },
+        {
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "reads and writes the PKCS#8 container, which is Phase 10",
+          "symbol": "i2d_PKCS8PrivateKey_nid_fp"
+        }
+      ],
+      "7": [
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 10,
+          "reason": "`crypto/pem/pem_pkey.c:342` needs `evp_pkey_copy_downgraded` (`:356`, Phase 8), `x->ameth->old_priv_encode`/`x->ameth->pem_str` (`:359`, `:364`, Phase 8's ameth contents), the `i2d_PrivateKey` function pointer (`:365`, Phase 10) and `PEM_ASN1_write_bio` (`:365`, Phase 13 behind `EVP_md5` and Phase 9 behind `RAND_bytes`). **D362 landed the encoder blocker** (`OSSL_ENCODER_CTX_new_for_pkey`) and D353 retired the `evp_pkey_copy_downgraded` one, so the two names the old `blocked_by` carried are both built and the row moves here from `BLOCKED_HANDOFFS` rather than retiring. The remaining dependency is `PEM_ASN1_write_bio`, which is this stratum's to write behind the Phase 13 `UI` and the Phase 9 `RAND_*` front -- neither a file:line in `pem_pkey.c`, so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "PEM_write_bio_PrivateKey_traditional"
+        },
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 10,
+          "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed `OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single `blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the four exports are still Phase 10's to write in the ledger's arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "d2i_AutoPrivateKey"
+        },
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 10,
+          "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed `OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single `blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the four exports are still Phase 10's to write in the ledger's arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "d2i_AutoPrivateKey_ex"
+        },
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 10,
+          "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed `OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single `blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the four exports are still Phase 10's to write in the ledger's arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "d2i_PrivateKey"
+        },
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 10,
+          "reason": "all four are `d2i_PrivateKey_decoder` then, if it answered NULL, `ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-`:250`). The decoder builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`), which is `decoder.h`'s and Phase 10's and is called **first**; the fallback reads `ret->ameth->old_priv_decode`/`priv_decode`/`priv_decode_ex` (`:130`, `:132`) and calls `evp_pkcs82pkey_legacy` (`crypto/evp/evp_pkey.c:52`-`:59`), which is Phase 8's. **D367 landed `OSSL_DECODER_CTX_new_for_pkey`** -- the decoder chain's four units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so the row's single `blocked_by` name is now a landed callee and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the four exports are still Phase 10's to write in the ledger's arithmetic. The legacy leg is still Phase 8's, so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "d2i_PrivateKey_ex"
+        },
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 10,
+          "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "i2d_KeyParams"
+        },
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 10,
+          "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "i2d_KeyParams_bio"
+        },
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 10,
+          "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "i2d_PKCS8PrivateKey"
+        },
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 10,
+          "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "i2d_PrivateKey"
+        },
+        {
+          "binding_phase": 10,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 10,
+          "reason": "all five reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`) whenever the key is provided, and that function is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`) + `OSSL_ENCODER_CTX_free` (`:64`). **D362 landed all three of those names** -- the encoder framework's three units (`crypto/encode_decode/encoder_meth.c`, `encoder_lib.c`, `encoder_pkey.c`) are now transcribed in `src/encoder_meth.rs`, `src/encoder_lib.rs` and `src/encoder_pkey.rs` -- so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the five exports are still Phase 10's to write in the ledger's arithmetic, and only the authority *blocker* has landed. The non-provided arms remain Phase 8's (`i2d_PublicKey`'s `i2d_RSAPublicKey`/`i2d_DSAPublicKey`/`i2o_ECPublicKey`, `i2d_PrivateKey_impl`'s `ameth->old_priv_encode`/`EVP_PKEY2PKCS8`), so a `Blocker` row would be stale on the day it was written.",
+          "symbol": "i2d_PublicKey"
+        }
+      ]
+    },
+    "implemented": [
+      "OSSL_DECODER_CTX_add_decoder",
+      "OSSL_DECODER_CTX_add_extra",
+      "OSSL_DECODER_CTX_free",
+      "OSSL_DECODER_CTX_get_cleanup",
+      "OSSL_DECODER_CTX_get_construct",
+      "OSSL_DECODER_CTX_get_construct_data",
+      "OSSL_DECODER_CTX_get_num_decoders",
+      "OSSL_DECODER_CTX_new",
+      "OSSL_DECODER_CTX_new_for_pkey",
+      "OSSL_DECODER_CTX_set_cleanup",
+      "OSSL_DECODER_CTX_set_construct",
+      "OSSL_DECODER_CTX_set_construct_data",
+      "OSSL_DECODER_CTX_set_input_structure",
+      "OSSL_DECODER_CTX_set_input_type",
+      "OSSL_DECODER_CTX_set_params",
+      "OSSL_DECODER_CTX_set_passphrase",
+      "OSSL_DECODER_CTX_set_passphrase_cb",
+      "OSSL_DECODER_CTX_set_passphrase_ui",
+      "OSSL_DECODER_CTX_set_pem_password_cb",
+      "OSSL_DECODER_CTX_set_selection",
+      "OSSL_DECODER_INSTANCE_get_decoder",
+      "OSSL_DECODER_INSTANCE_get_decoder_ctx",
+      "OSSL_DECODER_INSTANCE_get_input_structure",
+      "OSSL_DECODER_INSTANCE_get_input_type",
+      "OSSL_DECODER_do_all_provided",
+      "OSSL_DECODER_export",
+      "OSSL_DECODER_fetch",
+      "OSSL_DECODER_free",
+      "OSSL_DECODER_from_bio",
+      "OSSL_DECODER_from_data",
+      "OSSL_DECODER_from_fp",
+      "OSSL_DECODER_get0_description",
+      "OSSL_DECODER_get0_name",
+      "OSSL_DECODER_get0_properties",
+      "OSSL_DECODER_get0_provider",
+      "OSSL_DECODER_get_params",
+      "OSSL_DECODER_gettable_params",
+      "OSSL_DECODER_is_a",
+      "OSSL_DECODER_names_do_all",
+      "OSSL_DECODER_settable_ctx_params",
+      "OSSL_DECODER_up_ref",
+      "OSSL_ENCODER_CTX_add_encoder",
+      "OSSL_ENCODER_CTX_add_extra",
+      "OSSL_ENCODER_CTX_free",
+      "OSSL_ENCODER_CTX_get_num_encoders",
+      "OSSL_ENCODER_CTX_new",
+      "OSSL_ENCODER_CTX_new_for_pkey",
+      "OSSL_ENCODER_CTX_set_cipher",
+      "OSSL_ENCODER_CTX_set_cleanup",
+      "OSSL_ENCODER_CTX_set_construct",
+      "OSSL_ENCODER_CTX_set_construct_data",
+      "OSSL_ENCODER_CTX_set_output_structure",
+      "OSSL_ENCODER_CTX_set_output_type",
+      "OSSL_ENCODER_CTX_set_params",
+      "OSSL_ENCODER_CTX_set_passphrase",
+      "OSSL_ENCODER_CTX_set_passphrase_cb",
+      "OSSL_ENCODER_CTX_set_passphrase_ui",
+      "OSSL_ENCODER_CTX_set_pem_password_cb",
+      "OSSL_ENCODER_CTX_set_selection",
+      "OSSL_ENCODER_INSTANCE_get_encoder",
+      "OSSL_ENCODER_INSTANCE_get_encoder_ctx",
+      "OSSL_ENCODER_INSTANCE_get_output_structure",
+      "OSSL_ENCODER_INSTANCE_get_output_type",
+      "OSSL_ENCODER_do_all_provided",
+      "OSSL_ENCODER_fetch",
+      "OSSL_ENCODER_free",
+      "OSSL_ENCODER_get0_description",
+      "OSSL_ENCODER_get0_name",
+      "OSSL_ENCODER_get0_properties",
+      "OSSL_ENCODER_get0_provider",
+      "OSSL_ENCODER_get_params",
+      "OSSL_ENCODER_gettable_params",
+      "OSSL_ENCODER_is_a",
+      "OSSL_ENCODER_names_do_all",
+      "OSSL_ENCODER_settable_ctx_params",
+      "OSSL_ENCODER_to_bio",
+      "OSSL_ENCODER_to_data",
+      "OSSL_ENCODER_to_fp",
+      "OSSL_ENCODER_up_ref",
+      "PKCS12_item_decrypt_d2i",
+      "PKCS12_item_decrypt_d2i_ex",
+      "PKCS12_item_i2d_encrypt",
+      "PKCS12_item_i2d_encrypt_ex",
+      "PKCS12_pbe_crypt",
+      "PKCS12_pbe_crypt_ex",
+      "PKCS8_decrypt",
+      "PKCS8_decrypt_ex"
+    ],
+    "module_prefixes": [
+      {
+        "module": "src/pkcs12/mod.rs",
+        "prefixes": [
+          "OPENSSL_asc2uni",
+          "OPENSSL_uni2asc",
+          "OPENSSL_uni2utf8",
+          "OPENSSL_utf82uni"
+        ]
+      },
+      {
+        "module": "src/pkcs12/mod.rs",
+        "prefixes": [
+          "PKCS12_",
+          "PKCS8_"
+        ]
+      },
+      {
+        "module": "src/pkcs12/mod.rs",
+        "prefixes": [
+          "d2i_PKCS12",
+          "i2d_PKCS12"
+        ]
+      },
+      {
+        "module": "src/store/mod.rs",
+        "prefixes": [
+          "OSSL_STORE_"
+        ]
+      },
+      {
+        "module": "src/decoder_lib.rs",
+        "prefixes": [
+          "OSSL_DECODER_"
+        ]
+      },
+      {
+        "module": "src/encoder_lib.rs",
+        "prefixes": [
+          "OSSL_ENCODER_"
+        ]
+      },
+      {
+        "module": "src/pem/pvkfmt.rs",
+        "prefixes": [
+          "b2i_",
+          "i2b_"
+        ]
+      },
+      {
+        "module": "src/pem/pem_pk8.rs",
+        "prefixes": [
+          "d2i_PKCS8PrivateKey",
+          "i2d_PKCS8PrivateKey"
+        ]
+      },
+      {
+        "module": "src/pem/pem_pkey.rs",
+        "prefixes": [
+          "PEM_"
+        ]
+      },
+      {
+        "module": "src/asn1/d2i_pr.rs",
+        "prefixes": [
+          "d2i_AutoPrivateKey",
+          "d2i_PrivateKey"
+        ]
+      },
+      {
+        "module": "src/asn1/i2d_evp.rs",
+        "prefixes": [
+          "i2d_KeyParams",
+          "i2d_PublicKey",
+          "i2d_PrivateKey"
+        ]
+      }
+    ],
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation this ledger does not start with the whole working set open: eighty-seven of the atlas-owned exports were landed by Phase 8's 8.8 chain before this stratum was activated, and the ledger reports them as `implemented` because `implemented-surface.json` does -- docs/PHASE-10-SUBPHASES.md section 4 is the measurement. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-10-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "open": [
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OPENSSL_asc2uni"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OPENSSL_uni2asc"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OPENSSL_uni2utf8"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OPENSSL_utf82uni"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_free"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get0_CERT"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get0_CRL"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get0_NAME"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get0_NAME_description"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get0_PARAMS"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get0_PKEY"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get0_PUBKEY"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get0_data"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get1_CERT"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get1_CRL"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get1_NAME"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get1_NAME_description"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get1_PARAMS"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get1_PKEY"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get1_PUBKEY"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_get_type"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_new"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_new_CERT"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_new_CRL"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_new_NAME"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_new_PARAMS"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_new_PKEY"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_new_PUBKEY"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_set0_NAME_description"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_INFO_type_string"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_do_all_provided"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_fetch"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_free"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_get0_description"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_get0_engine"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_get0_properties"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_get0_provider"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_get0_scheme"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_is_a"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_names_do_all"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_new"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_attach"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_close"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_ctrl"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_eof"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_error"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_expect"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_find"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_load"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_open"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_set_open_ex"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_settable_ctx_params"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_LOADER_up_ref"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_by_alias"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_by_issuer_serial"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_by_key_fingerprint"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_by_name"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_free"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_get0_bytes"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_get0_digest"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_get0_name"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_get0_serial"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_get0_string"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_SEARCH_get_type"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_attach"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_close"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_ctrl"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_delete"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_do_all_loaders"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_eof"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_error"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_expect"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_find"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_load"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_open"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_open_ex"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_register_loader"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_supports_search"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_unregister_loader"
+      },
+      {
+        "declaring_header": "store.h",
+        "module": "src/store/mod.rs",
+        "received_from_phase": null,
+        "symbol": "OSSL_STORE_vctrl"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pkey.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_bio_PrivateKey_traditional"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_AUTHSAFES_it"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_BAGS_free"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_BAGS_it"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_BAGS_new"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_MAC_DATA_free"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_MAC_DATA_it"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_MAC_DATA_new"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_PBE_add"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_PBE_keyivgen"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_PBE_keyivgen_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAGS_it"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_create0_p8inf"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_create0_pkcs8"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_create_cert"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_create_crl"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_create_pkcs8_encrypt"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_create_pkcs8_encrypt_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_create_secret"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_free"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get0_attr"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get0_attrs"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get0_bag_obj"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get0_bag_type"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get0_p8inf"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get0_pkcs8"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get0_safes"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get0_type"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get1_cert"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get1_cert_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get1_crl"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get1_crl_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get_bag_nid"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_get_nid"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_it"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_new"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_SAFEBAG_set0_attrs"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add1_attr_by_NID"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add1_attr_by_txt"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_CSPName_asc"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_cert"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_friendlyname_asc"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_friendlyname_uni"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_friendlyname_utf8"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_key"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_key_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_localkeyid"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_safe"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_safe_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_safes"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_safes_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_add_secret"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_create"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_create_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_create_ex2"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_decrypt_skey"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_decrypt_skey_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_free"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_gen_mac"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_get0_mac"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_get_attr"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_get_attr_gen"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_get_friendlyname"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_init"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_init_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_it"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_item_pack_safebag"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_key_gen_asc"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_key_gen_asc_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_key_gen_uni"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_key_gen_uni_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_key_gen_utf8"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_key_gen_utf8_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_mac_present"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_new"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_newpass"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_pack_authsafes"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_pack_p7data"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_pack_p7encdata"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_pack_p7encdata_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_parse"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_set_mac"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_set_pbmac1_pbkdf2"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_setup_mac"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_unpack_authsafes"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_unpack_p7data"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_unpack_p7encdata"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS12_verify_mac"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS8_add_keyusage"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS8_encrypt"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS8_encrypt_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS8_get_attr"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS8_set0_pbe"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "PKCS8_set0_pbe_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "b2i_PVK_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "b2i_PVK_bio_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "b2i_PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "b2i_PrivateKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "b2i_PublicKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "b2i_PublicKey_bio"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/d2i_pr.rs",
+        "received_from_phase": 7,
+        "symbol": "d2i_AutoPrivateKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/d2i_pr.rs",
+        "received_from_phase": 7,
+        "symbol": "d2i_AutoPrivateKey_ex"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_PKCS12"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_PKCS12_BAGS"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_PKCS12_MAC_DATA"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_PKCS12_SAFEBAG"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_PKCS12_bio"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "d2i_PKCS12_fp"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 5,
+        "symbol": "d2i_PKCS8PrivateKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 5,
+        "symbol": "d2i_PKCS8PrivateKey_fp"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/d2i_pr.rs",
+        "received_from_phase": 7,
+        "symbol": "d2i_PrivateKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/d2i_pr.rs",
+        "received_from_phase": 7,
+        "symbol": "d2i_PrivateKey_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "i2b_PVK_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "i2b_PVK_bio_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "i2b_PrivateKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pvkfmt.rs",
+        "received_from_phase": 5,
+        "symbol": "i2b_PublicKey_bio"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/i2d_evp.rs",
+        "received_from_phase": 7,
+        "symbol": "i2d_KeyParams"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/i2d_evp.rs",
+        "received_from_phase": 7,
+        "symbol": "i2d_KeyParams_bio"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_PKCS12"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_PKCS12_BAGS"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_PKCS12_MAC_DATA"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_PKCS12_SAFEBAG"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_PKCS12_bio"
+      },
+      {
+        "declaring_header": "pkcs12.h",
+        "module": "src/pkcs12/mod.rs",
+        "received_from_phase": null,
+        "symbol": "i2d_PKCS12_fp"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 7,
+        "symbol": "i2d_PKCS8PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 5,
+        "symbol": "i2d_PKCS8PrivateKey_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 5,
+        "symbol": "i2d_PKCS8PrivateKey_fp"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 5,
+        "symbol": "i2d_PKCS8PrivateKey_nid_bio"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 5,
+        "symbol": "i2d_PKCS8PrivateKey_nid_fp"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/i2d_evp.rs",
+        "received_from_phase": 7,
+        "symbol": "i2d_PrivateKey"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/asn1/i2d_evp.rs",
+        "received_from_phase": 7,
+        "symbol": "i2d_PublicKey"
+      }
+    ],
+    "owned_by_header": {
+      "decoder.h": 41,
+      "encoder.h": 38,
+      "evp.h": 9,
+      "pem.h": 17,
+      "pkcs12.h": 117,
+      "store.h": 76
+    },
+    "owned_by_module": {
+      "src/asn1/d2i_pr.rs": 4,
+      "src/asn1/i2d_evp.rs": 4,
+      "src/decoder_lib.rs": 41,
+      "src/encoder_lib.rs": 38,
+      "src/pem/pem_pk8.rs": 7,
+      "src/pem/pem_pkey.rs": 1,
+      "src/pem/pvkfmt.rs": 10,
+      "src/pkcs12/mod.rs": 117,
+      "src/store/mod.rs": 76
+    },
+    "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 10, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
+  },
+  "generator": "forensics/tools/phase10_obligations.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "implemented-surface",
+      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
+      "sha256": "45cf04e6fc30928b4fa6a43b8a83a8f993f1a374177be67ed96c351ab2318f86"
+    },
+    {
+      "name": "phase5-obligations",
+      "path": "forensics/phase5-obligations.json",
+      "sha256": "5b312434e3e802ec4c764395a740cad0c9b5669d331276124e21a8071ecff158"
+    },
+    {
+      "name": "phase7-obligations",
+      "path": "forensics/phase7-obligations.json",
+      "sha256": "0f58c0feca46c929bc939b918c3e079d577b3102596f91e5612d1cf9e8af37c8"
+    }
+  ],
+  "kind": "phase10-obligations",
+  "schema": "openssl-rs/atlas/phase10-obligations/v1"
+}

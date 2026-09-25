@@ -727,6 +727,29 @@ PHASE9_MODULES = [
     "docs/PHASE-9-RAND-DRBG-SEAL.md",
 ]
 
+# Phase 10's evidence: the key-format layer -- the `OSSL_ENCODER`/`OSSL_DECODER` codec
+# framework and the provider rows that publish its codecs, PKCS#12, and `OSSL_STORE` -- plus the
+# PKCS#8/PVK and `d2i_*`/`i2d_*` helpers earlier strata handed forward. Its plan is
+# `docs/PHASE-10-SUBPHASES.md`, which 10.0 lands with the ledger. The modules are added by the
+# subphase that lands them, in the same commit, so that this list is a statement about the tree
+# rather than about the plan -- which is why it names no `src/store/` module and no PKCS#12
+# submodule: the stratum has landed none of them.
+#
+# **Unlike every earlier activation, this stratum does not start with a whole working set open.**
+# `forensics/phase10-obligations.json` reports eighty-seven of its atlas-owned exports already
+# `implemented` -- all seventy-nine `encoder.h`/`decoder.h` exports and eight `pkcs12.h` ones,
+# landed by Phase 8's 8.8 chain (D362-D367) -- so `phase-state.json` reports the stratum
+# `in-progress` rather than `not-started` because its ledger has an open count, not because it
+# has a plan alone. `docs/PHASE-10-SUBPHASES.md` section 4 records the measurement and the
+# precondition it places on the coverage join.
+PHASE10_COURTS = "artifacts/phase10/COURTS.json"
+PHASE10_OBLIGATIONS = "forensics/phase10-obligations.json"
+PHASE10_MODULES = [
+    "docs/PHASE-10-SUBPHASES.md",
+    "forensics/tools/phase10_obligations.py",
+]
+
+
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
                        ledger_note=(
@@ -749,6 +772,16 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                            "`artifacts/phase9/COURTS.json` and the ledger's own `courts` block, "
                            "and this note defers to them rather than restating counts that move."
                        )),
+    10: StratumEvidence(PHASE10_MODULES, PHASE10_OBLIGATIONS, PHASE10_COURTS,
+                        ledger_note=(
+                            "Two hundred and seventy-two of the exports it owns are its own "
+                            "four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and "
+                            "the twenty-six remainder arrive as recorded hand-offs from phases "
+                            "5 and 7. Eighty-seven of the working set are already implemented, "
+                            "landed by Phase 8's 8.8 chain rather than by this stratum, so the "
+                            "ledger's `open` count is not the whole working set "
+                            "(docs/PHASE-10-SUBPHASES.md section 4)"
+                        )),
 }
 
 
