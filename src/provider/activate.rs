@@ -1534,6 +1534,21 @@ mod tests {
     use core::ffi::c_uint;
     use core::sync::atomic::AtomicI32;
 
+    /// Takes the crate-wide global-state lock. The tests that build a provider
+    /// register it in the **default context's** provider store
+    /// (`ossl_provider_add_builtin(NULL, ..)`, `ossl_provider_add_to_store`),
+    /// which is process-global, and they share the module's `SEEN`/`PROVCTX`
+    /// statics -- so the exclusion is crate-wide:
+    /// [`crate::test_support::lock_global_state`] is the one lock every
+    /// global-touching test shares, not a lock local to this module. Without it,
+    /// two tests here clobber each other's `SEEN` record.
+    ///
+    /// `null_is_reported_and_never_dereferenced` is deliberately **not** locked:
+    /// every call it makes returns before touching global state.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
+
     /// The `provctx` the test provider publishes, and the marker every callback checks its
     /// argument against. It is a `static` so its address is stable and can be compared.
     static PROVCTX: u8 = 0x5A;
@@ -1818,6 +1833,7 @@ mod tests {
     /// and the life-cycle rule that the teardown waits for the last *reference*.
     #[test]
     fn a_declared_provider_surface_round_trips() {
+        let _g = lock();
         for slot in SEEN.iter() {
             slot.store(0, Ordering::SeqCst);
         }
@@ -1949,6 +1965,7 @@ mod tests {
     /// algorithm behind.
     #[test]
     fn a_failing_self_test_removes_the_store_methods() {
+        let _g = lock();
         // SAFETY: the helper's contract is this test's. The provider must be *initialised*,
         // because that is what makes its `self_test` entry point reachable at all: an
         // uninitialised provider has a NULL field there and `ossl_provider_self_test` answers
@@ -1982,6 +1999,7 @@ mod tests {
     /// place the teardown happens.
     #[test]
     fn the_teardown_runs_on_the_last_reference() {
+        let _g = lock();
         // SAFETY: the helper's contract is this test's.
         let prov = unsafe { registered_test_provider(c"rs-td") };
         assert!(!prov.is_null());
@@ -2030,6 +2048,7 @@ mod tests {
     /// the first as a status would be reading a constant.
     #[test]
     fn the_refcount_pair_answers_differently_in_each_arm() {
+        let _g = lock();
         // SAFETY: the helper's contract is this test's.
         let prov = unsafe { activated_test_provider(c"rs-intern") };
         // The activation arm is `ossl_provider_activate`, so it counts up the activation
@@ -2068,6 +2087,7 @@ mod tests {
     /// predefined table's fallback count is what the fallback walk's arithmetic depends on.
     #[test]
     fn no_provider_child_callback_exists() {
+        let _g = lock();
         // SAFETY: a NULL context is the default one; the slot read is sound either way.
         let store = unsafe { get_provider_store(ptr::null_mut()) };
         assert!(!store.is_null(), "6.8b-slot fills the provider store");

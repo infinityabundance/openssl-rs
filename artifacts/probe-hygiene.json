@@ -12,6 +12,68 @@
     "method": "Each probe is compiled against each side at -O0, -O1, -O2 and run 2 times per level; the transcripts are compared between levels (frame dependence) and within a level (nondeterminism).",
     "probes": [
       {
+        "probe": "courts/phase10/rt_coverage_ref_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 87,
+              "-O1": 87,
+              "-O2": 87
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 87,
+              "-O1": 87,
+              "-O2": 87
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase3/rt_coverage_ref_probe.c",
         "sides": {
           "authority": {
@@ -5408,13 +5470,18 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 87,
-      "total": 87,
+      "clean": 88,
+      "total": 88,
       "unstable": 0
     }
   },
   "generator": "forensics/tools/probe_hygiene.py",
   "inputs": [
+    {
+      "name": "probe",
+      "path": "courts/phase10/rt_coverage_ref_probe.c",
+      "sha256": "1f896779f5c029eb5fbe7249c3048f87b5595e07686eb9f4411cb1b51bc39096"
+    },
     {
       "name": "probe",
       "path": "courts/phase3/rt_coverage_ref_probe.c",

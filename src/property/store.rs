@@ -1551,6 +1551,18 @@ unsafe extern "C" fn unused_free(_method: *mut c_void) {
 mod tests {
     use super::*;
     use core::sync::atomic::{AtomicI32, Ordering};
+    use std::sync::MutexGuard;
+
+    /// Takes the crate-wide global-state lock. These tests share the
+    /// process-global method-store state they exercise (the `SAW`/`VISITS`/`NIDS` counters and
+    /// the `METHOD` marker, which are process statics, plus the store's own global side effects),
+    /// so the exclusion is crate-wide: [`crate::test_support::lock_global_state`] is the one lock
+    /// every global-touching test shares, not a lock local to this module. Without it two tests
+    /// here interleave their `reset()` and their callbacks, and a count is observed from the wrong
+    /// test: a defect in the instrument, not in the store.
+    fn lock() -> MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
 
     /// The method object the tests store, and a marker the two callbacks check it against. A
     /// `static` so its address is stable and comparable.
@@ -1613,6 +1625,7 @@ mod tests {
     /// caller free the method while the store still held it.
     #[test]
     fn add_takes_a_reference_and_refuses_the_unusable_arguments() {
+        let _guard = lock();
         reset();
         let s = store();
         // SAFETY: `s` is live; the provider is a non-NULL marker this test only compares by
@@ -1679,6 +1692,7 @@ mod tests {
     /// scan compares pointers and finds them equal.
     #[test]
     fn a_duplicate_implementation_is_not_added_twice() {
+        let _guard = lock();
         reset();
         let s = store();
         let prov = 0x1000usize as *const OsslProvider;
@@ -1721,6 +1735,7 @@ mod tests {
     /// something depends on.
     #[test]
     fn remove_finds_the_method_and_answers_zero_for_one_that_is_absent() {
+        let _guard = lock();
         reset();
         let s = store();
         let prov = 0x1000usize as *const OsslProvider;
@@ -1751,6 +1766,7 @@ mod tests {
     /// absent-*slot* answer of 1 that the provider bridges document: those test the slot first.
     #[test]
     fn remove_all_provided_releases_one_provider_and_refuses_a_null_store() {
+        let _guard = lock();
         reset();
         let s = store();
         let mine = 0x1000usize as *const OsslProvider;
@@ -1784,6 +1800,7 @@ mod tests {
     /// that was never used releases cleanly.
     #[test]
     fn freeing_the_store_drops_every_reference_it_held() {
+        let _guard = lock();
         reset();
         let s = store();
         let prov = 0x1000usize as *const OsslProvider;
@@ -1814,6 +1831,7 @@ mod tests {
     /// than the same object.
     #[test]
     fn the_two_locks_are_independent() {
+        let _guard = lock();
         reset();
         let s = store();
         // SAFETY: `s` is live and both helpers accept it.
@@ -1845,6 +1863,7 @@ mod tests {
     /// that path.
     #[test]
     fn the_cache_round_trips_a_result_and_a_null_method_deletes_it() {
+        let _guard = lock();
         reset();
         let s = store();
         let prov = 0x1000usize as *mut OsslProvider;
@@ -1927,6 +1946,7 @@ mod tests {
     /// preference is expressed by the order of the implementation stack rather than by a score.
     #[test]
     fn the_fetch_takes_the_first_implementation_when_there_is_no_query() {
+        let _guard = lock();
         reset();
         let s = store();
         let first = 0x1000usize as *const OsslProvider;
@@ -1979,6 +1999,7 @@ mod tests {
     /// it got was not the one it asked for.
     #[test]
     fn the_fetch_scores_against_a_query_and_reports_the_answering_provider() {
+        let _guard = lock();
         reset();
         let s = store();
         let default_prov = 0x1000usize as *const OsslProvider;
@@ -2039,6 +2060,7 @@ mod tests {
     /// an answer, which is what makes it the one that catches a snapshot built wrongly.
     #[test]
     fn do_all_visits_every_method_once() {
+        let _guard = lock();
         reset();
         let s = store();
         let prov = 0x1000usize as *const OsslProvider;
@@ -2071,6 +2093,7 @@ mod tests {
     /// stochastic flush and `RT-FETCH`'s header.
     #[test]
     fn the_threshold_requests_a_flush() {
+        let _guard = lock();
         reset();
         let s = store();
         let prov = 0x1000usize as *mut OsslProvider;

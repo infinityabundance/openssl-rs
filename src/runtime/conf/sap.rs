@@ -195,8 +195,19 @@ mod tests {
     use super::*;
     use crate::runtime::conf::init_settings::{OPENSSL_INIT_free, OPENSSL_INIT_new};
 
+    /// Takes the crate-wide global-state lock. `OPENSSL_config` is
+    /// `OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ..)`, which loads
+    /// configuration into the **default context** and mutates process-global init
+    /// state, so the exclusion is crate-wide:
+    /// [`crate::test_support::lock_global_state`] is the one lock every
+    /// global-touching test shares, not a lock local to this module.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
+
     #[test]
     fn a_null_appname_is_accepted_and_the_crate_survives_it() {
+        let _g = lock();
         // The behaviour a caller observes is that this returns, and that the
         // settings it built internally were the same shape `OPENSSL_INIT_new`
         // produces. The second half is checkable without re-running the loader,
@@ -214,6 +225,7 @@ mod tests {
 
     #[test]
     fn a_named_appname_is_duplicated_with_libc_semantics() {
+        let _g = lock();
         let name = c"openssl-rs-test-app";
         // SAFETY: `name` is a static NUL-terminated literal.
         unsafe { OPENSSL_config(name.as_ptr()) };

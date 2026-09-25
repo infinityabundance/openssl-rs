@@ -422,6 +422,18 @@ mod tests {
     use super::*;
     use crate::runtime::obj::{OBJ_NAME_get, OBJ_create};
 
+    /// Takes the crate-wide global-state lock. The four tests below write the
+    /// process-global object database (`OBJ_create`'s NID counter) and the
+    /// object-name registries (`OBJ_NAME_add`, reached through `EVP_add_cipher`
+    /// and `EVP_add_digest`), so the exclusion is crate-wide:
+    /// [`crate::test_support::lock_global_state`] is the one lock every
+    /// global-touching test shares, not a lock local to this module. Without it a
+    /// concurrent `runtime::obj` test would advance the same NID counter and see
+    /// this module's objects.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
+
     /// `OBJ_create` is how a test gets a NID that really has a short and a long name without
     /// depending on the object table's own contents.
     ///
@@ -466,6 +478,7 @@ mod tests {
     /// The observable effect: after an add, the legacy table answers the method under both names.
     #[test]
     fn a_cipher_adder_registers_both_names() {
+        let _g = lock();
         let nid = a_fresh_nid(
             c"1.3.6.1.4.1.57264.9.1.1",
             c"openssl-rs test cipher sn",
@@ -496,6 +509,7 @@ mod tests {
     /// an insert-if-absent, and the answer is the last `OBJ_NAME_add`'s rather than a conjunction.
     #[test]
     fn a_repeated_add_replaces_and_still_answers_one() {
+        let _g = lock();
         let nid = a_fresh_nid(
             c"1.3.6.1.4.1.57264.9.1.2",
             c"openssl-rs test repeat sn",
@@ -525,6 +539,7 @@ mod tests {
     /// **alias whose data is the digest's short name**, not a second copy of the method.
     #[test]
     fn a_digest_adder_registers_the_pkey_alias_by_name() {
+        let _g = lock();
         let type_ = a_fresh_nid(
             c"1.3.6.1.4.1.57264.9.1.3",
             c"openssl-rs test md sn",
@@ -563,6 +578,7 @@ mod tests {
     /// A digest whose `pkey_type` is zero gets the two plain registrations and no alias.
     #[test]
     fn a_digest_with_no_pkey_type_registers_no_alias() {
+        let _g = lock();
         let type_ = a_fresh_nid(
             c"1.3.6.1.4.1.57264.9.1.5",
             c"openssl-rs test md nopkey sn",

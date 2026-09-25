@@ -30657,3 +30657,232 @@ must not imply a compatibility claim it does not carry (`docs/PARITY_MODEL.md`, 
 `Cargo.toml` and `Cargo.lock` move to `0.0.13`; 81 `forensics/frf/courts/*/manifest.yaml` files move
 with them; the staged shell and the atlases that hash it regenerate; `docs/DECISIONS.md` gains this
 entry. `PIPELINE OK` exit 0, twice, and `gen_frf_courts.py --check` clean.
+
+## D429 -- the parallel-suite flake is an incomplete test reset, and the library is innocent
+
+D425 named `ffc::params_validate`'s `assert_ne!(res, 0)` (`src/ffc/params_validate.rs:583`) as the
+next instrument defect. This is its diagnosis. The first hypothesis was wrong and is recorded as
+wrong: the failure is **not** a RAND or Miller-Rabin witness draw failing under concurrency.
+
+**The traced path.** Instrumentation on a failing run showed the call takes the `md.is_null()` exit at
+`src/ffc/params_generate.rs:1043-1048`, which returns `FFC_PARAM_RET_STATUS_FAILED` **without writing
+`*res`** -- so the assertion sees the `0` the function wrote at entry (`:1017`). Nothing reached
+Miller-Rabin, so no random draw was involved. The digest fetch returns NULL because the method store
+refuses the fetch when `OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG)` fails on the default context
+(`src/property/store.rs:1287-1294`), and the config load fails because `CRYPTO_THREAD_set_local`
+answers `EINVAL` (`src/runtime/thread.rs:497`): the re-entrancy pthread key `IN_INIT_CONFIG_LOCAL` has
+been **deleted**.
+
+**Who deletes it, and why the library is not at fault.**
+`runtime::init::tests::cleanup_is_idempotent_and_terminal` calls the process-global, terminal
+`OPENSSL_cleanup()`, which does `CRYPTO_THREAD_cleanup_local(&in_init_config_local)`
+(`src/runtime/init.rs:954`, authority `crypto/init.c:412`). The test's `reset_for_test()` restored
+`STOPPED`, `BASE_INITED` and `OPTSDONE` but **not** the key, and `BASE_ONCE` cannot run again, so
+`base_init` never recreates it. The library matches the authority exactly: the authority's own
+`stopped` guard (`crypto/init.c:497-502`) is why the real product never reaches a second
+`OPENSSL_init_crypto` after cleanup. The defect is in the instrument, and the instrument's reset was
+incomplete.
+
+**The repair.** `reset_for_test()` now re-arms the thread machinery and recreates
+`IN_INIT_CONFIG_LOCAL` after restoring the flags. The project already re-armed the thread-event
+destructor key in the same reset (`rearm_for_test`); the config key was its missing half.
+
+**Three more instrument races of the same class were found while verifying**, each a shared test
+static with no lock: `src/property/store.rs` (`SAW`/`VISITS`/`NIDS`, failing roughly five of eleven
+isolated runs at `--test-threads=8`), `src/runtime/rcu.rs` (`CB_CALLS`/`CB_SAW` plus a global
+machinery reset, about three of six) and `src/runtime/thread_events.rs` (`CALLS`/`LAST_ARG`). Each now
+uses the project's existing `TEST_LOCK` pattern (`runtime::obj`, `runtime::secure`).
+`evp::algorithm::tests` and `evp::method_store::tests` have the same shape but are empirically
+stable, so they are left alone rather than changed on a theory.
+
+**The shell and atlas movement is not rebuild nondeterminism.** The staged shell's sha256 is
+**stable across consecutive pipeline runs** (measured: `33d8a877…` twice). The `+16` bytes against the
+committed binary is debug-info line-table drift from inserting 93 lines into four source files, which
+is why the atlases that hash the shell move with it.
+
+**Verification.** `cargo test --lib` under the **default parallel** harness: twenty consecutive runs,
+`1047 passed; 0 failed` each. `--test-threads=4`: four runs green. `--test-threads=1`: green. The
+isolated races that motivated the three extra fixes are now 10/10 green at `--test-threads=8` where
+they previously failed most runs. `PIPELINE OK` exit 0.
+
+### Movement
+
+`src/runtime/init.rs`, `src/property/store.rs`, `src/runtime/rcu.rs` and `src/runtime/thread_events.rs`
+change, all inside `#[cfg(test)]` and insertions only, so no production behaviour moves; the staged
+shell and the atlases that hash it regenerate; `docs/DECISIONS.md` gains this entry. Phase 10's
+staging branch is where this lands.
+
+## D430 -- test isolation is one process-wide lock and a parallel gate, and two Cargo.toml comments stop describing a tree that moved
+
+D429 repaired the races it found, but it left the *mechanism* weaker than it looked: the exclusion
+primitive was a `static TEST_LOCK: Mutex<()>` inside each test module, and there were six of them
+(`src/runtime/secure.rs`, `src/runtime/init.rs`, `src/runtime/rcu.rs`, `src/runtime/obj.rs`,
+`src/runtime/thread_events.rs`, `src/property/store.rs`). A per-module mutex cannot exclude a test
+in `init.rs` from a test in `secure.rs`, so two tests that both mutate process-global state could
+still run concurrently, and the classification said otherwise. CI's single `--test-threads=1` run
+then hid the consequence rather than catching it: the serialisation that legitimately protects the
+global-state tests also masks an accidental cross-module coupling.
+
+**One lock, and the gate that makes it matter.** `src/test_support.rs` (a `#[cfg(test)]` module)
+now holds a single `GLOBAL_STATE_LOCK` and `lock_global_state()`, and all six per-module locks are
+that one mutex. The classification is the **call**: a test that touches process-global state takes
+the lock; a test that only reads immutable data does not, so the parallel-safe subset stays
+parallel. Alongside the change, the suite gained the audit D429's four fixes implied -- 25 further
+tests whose subject is a process global now take it, each naming the global it mutates in its own
+comment: the nine `runtime/err.rs` tests (the error registry and the shared `ERR_error_string`
+buffer), the `CRYPTO_set_mem_functions` test in `runtime/mem.rs`, the four `OBJ_create`/`EVP_add_*`
+tests in `evp/legacy_evp.rs`, the `EVP_add_cipher` test in `evp/pem_bridge.rs`, the five
+`provider/activate.rs` tests that register in the **default** context's store, the two
+`OPENSSL_config` tests in `runtime/conf/sap.rs`, and the `OSSL_LIB_CTX_set0_default` tests in
+`selftest/mod.rs`, `selftest/indicator.rs` and `context/thread_data.rs`. `src/ffi/mod.rs`'s
+`COUNTER_LOCK`, which guards the global `PANICS_CAUGHT`, is unified too -- it had the same
+defect. The parallel-safe subset is named rather than implied: the version and info tests, the
+static-table tests, `runtime/thread.rs` (per-test statics), and the modules that build a fresh
+context per test (`context/namemap`, `provider/stores`, `provider/mod`, `rand/*`,
+`runtime/conf/def`, `context/mod`, `evp/fetch`) do not take the lock.
+
+**Both runs are required.** `cargo test --lib -- --test-threads=1` remains authoritative, and
+`cargo test --lib` at the **default thread count** is added as the parallel-safety gate in
+`forensics/tools/pipeline.sh` and in `.github/workflows/ci.yml`'s `static` job. The policy is
+written down in `docs/CONCURRENCY_MODEL.md` §7, which also names the surfaces that make it
+necessary. The gate is the part that keeps the classification from decaying: a new test that
+mutates a global without taking the lock fails the parallel run, and the fix is to take the lock,
+not to serialise the suite again.
+
+**Two `Cargo.toml` comments described a tree that had moved.** One said the distribution artifacts
+"are deliberately NOT claimed yet: crate-type is `rlib` only until the export/link machinery and its
+ABI courts exist", while `crate-type` is `["rlib", "staticlib"]` and the Phase 2 shell is landed and
+sealed; it now says what is true -- the artifacts are emitted by that machinery and ABI
+compatibility is proved by the ABI courts rather than claimed. The other, a section header, read
+"Phase 0/1 skeleton: library only. Distribution artifacts arrive in Phase 2"; it now describes what
+the section actually sets. These are the same class D426 removed from `src/lib.rs` and
+`src/status.rs`, and they are fixed for the same reason: a sentence about the present with no
+generator to correct it.
+
+### Verification
+
+`cargo test --lib` at the default thread count ran **ten** consecutive times, `1047 passed; 0 failed`
+each; `--test-threads=4` twice and `--test-threads=1` once, both green; the total is still 1047, so
+no test was removed to make the gate pass. `cargo fmt --all -- --check` and
+`cargo clippy --all-targets -- -D warnings` are clean. `PIPELINE OK` exit 0.
+
+### Movement
+
+`src/test_support.rs` is added and declared in `src/lib.rs`; sixteen `src/**` modules take the one
+lock; `src/ffi/mod.rs`'s counter lock is unified; `forensics/tools/pipeline.sh` and
+`.github/workflows/ci.yml` gain the parallel-safety gate; `docs/CONCURRENCY_MODEL.md` gains §7;
+`Cargo.toml`'s two stale comments are corrected; and the staged shell and the atlases that hash it
+regenerate. All `src/**` changes are inside `#[cfg(test)]` or comments, so no production behaviour
+moves.
+
+## D431 -- Phase 10 is activated: 298 exports, 87 of them already landed, and the codec framework turns out not to be this stratum's to build
+
+Phase 10 (`Key formats + PKCS + STORE`) is activated the way Phase 9 was at D296: `docs/PHASE-10-SUBPHASES.md`,
+`forensics/tools/phase10_obligations.py` and its ledger `forensics/phase10-obligations.json`, the runner
+`forensics/tools/phase10_courts.py`, the reference-basis probe `courts/phase10/rt_coverage_ref_probe.c`,
+and Phase 10's evidence entry in `forensics/tools/phase_state.py`. Phase 10 derives **`in-progress`**
+with `blocking` naming its open obligations; phases 0-9 are unchanged.
+
+**The measurement, and the two places earlier prose was wrong.** `forensics/atlas/symbol-ownership.json`
+gives the stratum **272 atlas-owned exports**, all `libcrypto`, over four headers -- 117 `pkcs12.h`, 76
+`store.h`, 41 `decoder.h`, 38 `encoder.h` -- plus **26 hand-offs** from phases 5 (16, `pem.h`) and 7
+(10). That is a working set of 298, and this is where the plan departs from every earlier activation:
+**87 of them are already implemented.** Phase 8's 8.8 and 8.9 rows landed the `crypto/encode_decode/`
+framework and the `pem.h` readers as their own work (D362-D367), so all 79 `encoder.h`/`decoder.h`
+exports and 8 `pkcs12.h` ones are in, and `open_in_this_stratum` is **211**, not 298. The ledger prints
+that identity -- `owned=298 implemented=87 deferred=0 open=211` -- and enforces it rather than asserting
+it. The 272 are defined by **25 authority translation units** (`forensics/atlas/export-defining-units.json`'s
+`units_by_owner_phase["10"]`: six under `crypto/encode_decode/`, fifteen under `crypto/pkcs12/`, four
+under `crypto/store/`), and the stratum owns **636 provider registration rows**, every one
+`unimplemented`: the `base` and `default` providers' copies of the same 318 (241 `OSSL_OP_ENCODER`,
+76 `OSSL_OP_DECODER`, 1 `OSSL_OP_STORE`).
+
+Two corrections the plan's §4 records rather than smoothing over. **§4.1:** `docs/PHASE-8-SUBPHASES.md:16-18`
+says the `OSSL_ENCODER_*`/`OSSL_DECODER_*` framework is Phase 10's, and it is right about *ownership* --
+the atlas does assign all 79 exports here -- and wrong about *landing*, because Phase 8 transcribed
+`encoder_*.rs`/`decoder_*.rs` to make `print_pkey` (`crypto/evp/p_lib.c:1196`) and the `pem.h` readers
+work (D362-D367). A plan that opened with "the whole working set is open, as every earlier activation
+did" would have been wrong. **§4.2:** D175 and D177 gate two units "on Phase 10, by a *type*", reading
+`PBEPARAM`'s declaration in `include/openssl/x509.h.in:261` and concluding the stratum owning `x509.h`
+is Phase 10; measured, `x509.h` is **Phase 11's** (all 548 exports) and the type join says Phase 11 too.
+
+**Why the activation is also a runner and a probe.** Activating a stratum flips it out of
+`not-started`, and `run_courts.py` refuses an `in-progress` stratum with no runner, so
+`forensics/tools/phase10_courts.py` lands with the ledger and registers the five courts the plan names
+-- `RT-CODEC`, `RT-PKCS12`, `CT-PKCS12`, `RT-STORE`, `RT-KEYFORMAT` -- as **pending**, printed on every
+run so "not run yet" cannot read as "passed". `court_coverage.py` then refuses the 87 inherited
+`implemented` exports, because a stratum claiming to be under way must have every implemented export
+observed by a court; that is what `RT-KEYFORMAT-REF` and `courts/phase10/rt_coverage_ref_probe.c` are
+for, following the precedent `RT-RUNTIME-REF` and `RT-EVP-REF` set for phases 3 and 7 -- a probe of 87
+`extern` declarations whose only observation is that the address is non-NULL, registered in
+`forensics/atlas/court-coverage-rows.json`'s `reference_probes` so the 87 are recorded at basis
+**`referenced`** and never `called`. Nothing is marked `non_observable` or `indirect`, and no coverage
+row is fabricated: the probe's link is real evidence that the candidate distribution defines all 87,
+which was checked independently, and it claims nothing behavioural.
+
+### Verification
+
+Every number in the plan's §1 was reproduced against the artefact it cites, and three drifted
+documents were corrected in place: the count of Phase 7's open deferrals (seven to **ten**), the header
+cell for Phase 7's ten hand-offs (`evp.h` covers 9; `PEM_write_bio_PrivateKey_traditional` is `pem.h`),
+and a D64 citation (the quoted text is at `docs/DECISIONS.md:2354-2355`, not `:2330`).
+`python3 forensics/tools/phase10_obligations.py` prints `298 = 87 + 0 + 211`;
+`run_courts.py` and `court_coverage.py` are clean with the pending courts printed; the regression guard
+returns no regression (a new ledger is `UNCERTIFIED` rather than a regression, which is how D296's
+activation read too); and `PIPELINE OK` exit 0 twice.
+
+### Movement
+
+`docs/PHASE-10-SUBPHASES.md`, `forensics/tools/phase10_obligations.py`,
+`forensics/phase10-obligations.json`, `forensics/tools/phase10_courts.py`, `courts/phase10/` and
+`artifacts/phase10/` are added; `forensics/tools/phase_state.py` gains Phase 10's evidence entry;
+`forensics/atlas/court-coverage-rows.json` gains the reference probe; and the atlases, the census,
+`forensics/STATUS.md` and `forensics/regression-baseline.json` are regenerated. Phase 10's seal is
+`docs/PHASE-10-KEYFORMATS-SEAL.md`, which does not exist yet and is 10.7's artifact.
+
+## D432 -- the README is rewritten as a front door, and two consistency checks go with the prose they covered
+
+`README.md` is the entry point for both GitHub and crates.io, and it had become an argument addressed
+to a sceptical reviewer rather than a description of the software. It is rewritten around six questions
+a visitor actually has -- what is it, what does it target, how far along is it, what is verified, how
+do I build it, and what does it not claim -- and it moves from about 12.2 KB to about 7.7 KB.
+
+**What the rewrite changes, and why each cut is a cut.** The opening states what the thing is
+("a native Rust reimplementation of OpenSSL 3.6.4 targeting source, ABI, and observable behavioural
+compatibility") and collapses four consecutive "this is not" sentences into one boundary sentence. The
+meta-commentary about the README's own past -- "This section types no count. It used to: it said 'Phase
+1 -- in progress' ...", and "Where this prose and those disagree, they are right" -- is deleted; the
+second becomes a neutral invariant, "Generated evidence is authoritative over descriptive prose". The
+stratum-grouping table and the Phase-1 evidence directory tree are removed, because
+`docs/RELEASE_GATES.md` and `docs/REPRODUCIBILITY.md` are where a reader who wants the architecture
+goes; the constitution table is cut from thirteen documents to six entry points with one sentence
+pointing at the rest; FRF and Gemel become one sentence under Verification rather than prime real
+estate; and "Running things" becomes "Build and test". Bold is now reserved for the maturity warning,
+the generated-state links and the parity distinction.
+
+**One of the cuts is a correction rather than an edit.** The README said "Everything executes inside
+the court container; nothing runs on the host", and `docs/CUSTODIAN_CONTRACT.md` §11 records that this
+blanket wording "was not true of continuous integration and could not be made true without forbidding
+cheap, useful checks". The README now states the distinction §11 draws -- authority-bearing execution
+runs only in the court; unit tests and static derivation may run outside it -- and cites §11.
+
+**Two consistency checks covered phrases the rewrite deleted, and both are retired.** The exemption
+mechanism `docs_consistency.py` uses has a rule that makes this automatic rather than optional: "an
+exemption that has become unnecessary, or that names a claim that is no longer present", fails the
+gate. So `readme_status_narrative_strata` (whose `EXEMPTIONS` entry existed only because the deleted
+narrative spelled a stale stratum count) and `readme_runtime_courts` (which matched the deleted "81
+generated runtime courts" line) are removed, with the exemption and the now-unused `readme_status_narrative`
+helper and `STRATA_COMPLETE` constant that fed it. The audited claim count goes from 15 to 13, and the
+comment above `EXEMPTIONS` records why one of its two entries is gone rather than leaving a reader to
+wonder. **Nothing else about the gate changes**: `forensics/frf/README.md`'s three runtime-court
+quantities are still checked, and every quantity the README still states is still checked.
+
+### Verification
+
+`python3 forensics/tools/docs_consistency.py` reads `ok: 13 hand-written claim(s) agree with their
+generated sources` with only the Phase 7 claim exemption left active. `PIPELINE OK` exit 0, twice.
+
+### Movement
+
+`README.md` is rewritten and `forensics/tools/docs_consistency.py` loses the two checks, their
+helper and their exemption. No generated artefact moves, so no `seal_sha256` moves.

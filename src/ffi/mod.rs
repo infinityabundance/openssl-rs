@@ -120,8 +120,15 @@ where
 mod tests {
     use super::*;
 
-    /// Serialises the tests that read or reset the process-wide counter.
-    static COUNTER_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    /// Takes the crate-wide global-state lock. `PANICS_CAUGHT` is a
+    /// process-global counter that *any* `guard_ffi` call in any test can
+    /// increment, so two tests asserting on it here must not run concurrently
+    /// with each other or with any other panicking path:
+    /// [`crate::test_support::lock_global_state`] is the one lock every
+    /// global-touching test shares, not a lock local to this module.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
 
     #[test]
     fn returns_value_when_no_panic() {
@@ -131,7 +138,7 @@ mod tests {
     #[test]
     #[allow(clippy::panic)] // deliberately provoking a panic on the FFI path
     fn boundary_catches_and_returns_the_documented_failure_value() {
-        let _guard = COUNTER_LOCK.lock().unwrap();
+        let _guard = lock();
         let before = panics_caught();
         // The critical assertion: this call RETURNS. If the boundary resumed,
         // this line would unwind and the test would fail.
@@ -147,7 +154,7 @@ mod tests {
     #[test]
     #[allow(clippy::panic)]
     fn boundary_neutralises_the_panic_in_every_configuration() {
-        let _guard = COUNTER_LOCK.lock().unwrap();
+        let _guard = lock();
         // Directly encode the invariant: catching happens, and the panic does
         // NOT escape this call, regardless of build configuration.
         let outer = std::panic::catch_unwind(|| guard_ffi(0, || panic!("boom")));

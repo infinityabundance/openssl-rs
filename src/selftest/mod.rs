@@ -432,6 +432,15 @@ mod tests {
     use super::*;
     use crate::context::{OSSL_LIB_CTX_free, OSSL_LIB_CTX_new, OSSL_LIB_CTX_set0_default};
 
+    /// Takes the crate-wide global-state lock. The one test that calls it
+    /// installs a thread default and then resolves a **NULL** context through it;
+    /// the NULL-context arm reads the process-global default object, so the test
+    /// takes [`crate::test_support::lock_global_state`], the one lock every
+    /// global-touching test shares, rather than a lock local to this module.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
+
     /// What a callback invocation saw. The array is probed through
     /// `OSSL_PARAM_locate`, so the assertion is about the keys and values the
     /// authority would pass rather than merely that a call happened.
@@ -597,6 +606,7 @@ mod tests {
 
     #[test]
     fn the_callback_pair_is_per_context() {
+        let _g = lock();
         let a = OSSL_LIB_CTX_new();
         let b = OSSL_LIB_CTX_new();
         assert!(!a.is_null() && !b.is_null());

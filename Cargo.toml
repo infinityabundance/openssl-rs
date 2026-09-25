@@ -9,9 +9,11 @@
 #   * The distribution artifacts OpenSSL consumers expect
 #     (libcrypto.so.3, libssl.so.3, static archives, provider modules, the
 #     `openssl` executable, public headers, pkg-config metadata) are emitted from
-#     this single implementation via custom link/export machinery in Phase 2.
-#     They are deliberately NOT claimed yet: crate-type is `rlib` only until the
-#     export/link machinery and its ABI courts exist. See docs/ABI_POLICY.md.
+#     this single implementation by the Phase 2 link/export machinery, which is
+#     landed and sealed. `crate-type` below is `["rlib", "staticlib"]`, and the
+#     static archive is what that machinery links into the DSOs. ABI
+#     compatibility is proved by the ABI courts rather than claimed. See
+#     docs/ABI_POLICY.md.
 #
 #   * No forbidden implementation backend may ever appear in [dependencies].
 #     The list is enforced by forensics/tools/check_forbidden_dependencies.py and
@@ -88,13 +90,14 @@ exclude = [
     ".github/**",
 ]
 
-# Phase 0/1 skeleton: library only. Distribution artifacts arrive in Phase 2
-# together with the export/version-script machinery that makes them honest.
-# The crate emits BOTH an rlib (for Rust consumers and tests) and a staticlib.
-# The static archive is what forensics/tools/build_phase2.sh links, together with
-# the generated scaffolds, into libcrypto.so.3 / libssl.so.3. The IMPLEMENTED set
-# is derived from this crate's own source, so the shell generator never keeps a
-# second list of what is implemented that could drift.
+# `crate-type` is what this section sets. The distribution artifacts themselves --
+# the DSOs, the static archives, the provider modules and the `openssl` executable --
+# come from the Phase 2 link/export machinery, which is landed and sealed. The crate
+# emits BOTH an rlib (for Rust consumers and tests) and a staticlib. The static
+# archive is what forensics/tools/build_phase2.sh links, together with the generated
+# scaffolds, into libcrypto.so.3 / libssl.so.3. The IMPLEMENTED set is derived from
+# this crate's own source, so the shell generator never keeps a second list of what
+# is implemented that could drift.
 [lib]
 name = "openssl_rs"
 path = "src/lib.rs"

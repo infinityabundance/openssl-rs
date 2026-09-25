@@ -6,7 +6,8 @@
     "RT-BIO-CONF-REF",
     "RT-BN-ASN1-REF",
     "RT-PROVIDER-REF",
-    "RT-EVP-REF"
+    "RT-EVP-REF",
+    "RT-KEYFORMAT-REF"
   ],
   "indirect": [
     {

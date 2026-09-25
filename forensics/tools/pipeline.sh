@@ -103,6 +103,17 @@ cargo build --release
 echo "== unit tests =="
 cargo test --lib -- --test-threads=1
 
+# The serial run above is the **authoritative** one: this crate reconstructs a C library with
+# process-global state -- initialisation and the terminal cleanup, the default `OSSL_LIB_CTX`,
+# the memory functions, the error queue, the object database, RCU and the property/method store --
+# so a test that mutates such state is defined to run alone. Running the suite a second time at
+# the **default thread count** is the guard on the other half of that policy: a test that touches a
+# global is supposed to take `test_support::lock_global_state`, and one that does not surfaces here
+# rather than hiding behind the serialisation that protects the legitimate cases. Both runs are
+# required, which is why `--test-threads=1` green on its own is not this gate.
+echo "== unit tests (parallel-safety gate) =="
+cargo test --lib
+
 echo "== clippy =="
 cargo clippy --all-targets -- -D warnings
 
