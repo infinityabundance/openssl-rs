@@ -358,6 +358,17 @@ mod tests {
     use crate::context::{OSSL_LIB_CTX_free, OSSL_LIB_CTX_new, OSSL_LIB_CTX_set0_default};
     use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
+    /// Takes the crate-wide global-state lock. The one test that calls it
+    /// installs a thread default and then resolves a **NULL** context through it;
+    /// the NULL-context arm reads the process-global default object, so the test
+    /// takes [`crate::test_support::lock_global_state`], the one lock every
+    /// global-touching test shares, rather than a lock local to this module.
+    /// The other tests here use only fresh, non-default contexts and stay
+    /// unlocked.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
+
     /// The shared state the pool tests' workers take. A `struct` rather than a
     /// bare atomic so the routine has a `void *` to take, as a real caller does.
     struct Work {
@@ -418,6 +429,7 @@ mod tests {
     /// default changes the answer.
     #[test]
     fn a_null_context_follows_the_thread_default() {
+        let _g = lock();
         let a = OSSL_LIB_CTX_new();
         assert!(!a.is_null());
         // SAFETY: `a` is live; the default chain is the subject of the test.

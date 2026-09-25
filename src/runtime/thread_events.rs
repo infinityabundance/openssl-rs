@@ -867,6 +867,17 @@ pub extern "C" fn OPENSSL_thread_stop() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::MutexGuard;
+
+    /// Takes the crate-wide global-state lock. These tests share the
+    /// process-global thread-event handler register, the `CALLS`/`LAST_ARG`/`FIRST_SAW`
+    /// counters and the `ARG_A`/`ARG_B` markers, and `reset` tears the machinery down and re-arms
+    /// it -- so the exclusion is crate-wide: [`crate::test_support::lock_global_state`] is the one
+    /// lock every global-touching test shares, not a lock local to this module. Without it two
+    /// tests interleave `reset` and a handler invocation and observe each other's counts.
+    fn lock() -> MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
 
     /// A handler that counts its calls and records the argument it saw.
     static CALLS: core::sync::atomic::AtomicI32 = core::sync::atomic::AtomicI32::new(0);
@@ -924,6 +935,7 @@ mod tests {
     /// of them runs exactly once with the argument it was registered with.
     #[test]
     fn handlers_run_once_each_in_reverse_registration_order() {
+        let _guard = lock();
         reset();
         // SAFETY: the handler and its argument are this module's own.
         unsafe {
@@ -947,6 +959,7 @@ mod tests {
     /// was unlinked and the head released by the first.
     #[test]
     fn a_second_stop_is_a_no_op() {
+        let _guard = lock();
         reset();
         // SAFETY: as above.
         unsafe { ossl_init_thread_start(ptr::null(), arg_a(), Some(count_handler)) };
@@ -974,6 +987,7 @@ mod tests {
     /// `docs/SECURITY_DIVERGENCE_POLICY.md` under the same identifier.
     #[test]
     fn the_context_stop_filters_on_the_argument() {
+        let _guard = lock();
         reset();
         // SAFETY: the handlers and arguments are this module's own.
         unsafe {
@@ -1005,6 +1019,7 @@ mod tests {
     /// what the previous test observes from the other side.
     #[test]
     fn a_second_context_stop_for_the_same_argument_runs_nothing() {
+        let _guard = lock();
         reset();
         // SAFETY: the handlers and arguments are this module's own.
         unsafe {
@@ -1030,6 +1045,7 @@ mod tests {
     /// handler registered with NULL `index` is not matched by a non-NULL one.
     #[test]
     fn deregistration_matches_on_the_index() {
+        let _guard = lock();
         reset();
         let key: u8 = 7;
         let other: u8 = 9;
@@ -1084,6 +1100,7 @@ mod tests {
             let r = unsafe { ossl_init_thread_start(ptr::null(), arg_b(), Some(count_handler)) };
             NESTED_RESULT.store(r, Ordering::SeqCst);
         }
+        let _guard = lock();
         reset();
         NESTED_RESULT.store(-1, Ordering::SeqCst);
         // SAFETY: as above.
@@ -1123,6 +1140,7 @@ mod tests {
             CRYPTO_THREAD_get_local_ex, CRYPTO_THREAD_set_local_ex,
             CRYPTO_THREAD_LOCAL_ASYNC_CTX_KEY,
         };
+        let _guard = lock();
         reset();
         // SAFETY: the table calls below take a live context pointer and a marker that is this
         // test's own static, never dereferenced.

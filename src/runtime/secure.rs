@@ -787,19 +787,20 @@ fn test_offset_of(ptr: *const c_void) -> Option<usize> {
 mod tests {
     use super::*;
 
-    /// Serialises tests, which share one process-wide heap.
-    static TEST_LOCK: Mutex<()> = Mutex::new(());
+    /// Takes the crate-wide global-state lock for the duration of a test: the
+    /// secure heap these tests initialise, fill and tear down
+    /// (`CRYPTO_secure_malloc_init`/`CRYPTO_secure_malloc_done`) is
+    /// process-global, so a test here must not run concurrently with any other
+    /// test that touches a global. [`crate::test_support::lock_global_state`] is
+    /// the one lock every such test shares, not a lock local to this module.
+    fn lock() -> std::sync::MutexGuard<'static, ()> {
+        crate::test_support::lock_global_state()
+    }
 
     /// A non-NULL file argument, so error paths are exercised (the authority
     /// suppresses errors only for `file == NULL && line == 0`).
     fn file() -> *const c_char {
         c"secure-test".as_ptr().cast()
-    }
-
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
-        TEST_LOCK
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     /// Bring the process to the uninitialised state. Safe when nothing is live;

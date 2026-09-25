@@ -30657,3 +30657,120 @@ must not imply a compatibility claim it does not carry (`docs/PARITY_MODEL.md`, 
 `Cargo.toml` and `Cargo.lock` move to `0.0.13`; 81 `forensics/frf/courts/*/manifest.yaml` files move
 with them; the staged shell and the atlases that hash it regenerate; `docs/DECISIONS.md` gains this
 entry. `PIPELINE OK` exit 0, twice, and `gen_frf_courts.py --check` clean.
+
+## D429 -- the parallel-suite flake is an incomplete test reset, and the library is innocent
+
+D425 named `ffc::params_validate`'s `assert_ne!(res, 0)` (`src/ffc/params_validate.rs:583`) as the
+next instrument defect. This is its diagnosis. The first hypothesis was wrong and is recorded as
+wrong: the failure is **not** a RAND or Miller-Rabin witness draw failing under concurrency.
+
+**The traced path.** Instrumentation on a failing run showed the call takes the `md.is_null()` exit at
+`src/ffc/params_generate.rs:1043-1048`, which returns `FFC_PARAM_RET_STATUS_FAILED` **without writing
+`*res`** -- so the assertion sees the `0` the function wrote at entry (`:1017`). Nothing reached
+Miller-Rabin, so no random draw was involved. The digest fetch returns NULL because the method store
+refuses the fetch when `OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG)` fails on the default context
+(`src/property/store.rs:1287-1294`), and the config load fails because `CRYPTO_THREAD_set_local`
+answers `EINVAL` (`src/runtime/thread.rs:497`): the re-entrancy pthread key `IN_INIT_CONFIG_LOCAL` has
+been **deleted**.
+
+**Who deletes it, and why the library is not at fault.**
+`runtime::init::tests::cleanup_is_idempotent_and_terminal` calls the process-global, terminal
+`OPENSSL_cleanup()`, which does `CRYPTO_THREAD_cleanup_local(&in_init_config_local)`
+(`src/runtime/init.rs:954`, authority `crypto/init.c:412`). The test's `reset_for_test()` restored
+`STOPPED`, `BASE_INITED` and `OPTSDONE` but **not** the key, and `BASE_ONCE` cannot run again, so
+`base_init` never recreates it. The library matches the authority exactly: the authority's own
+`stopped` guard (`crypto/init.c:497-502`) is why the real product never reaches a second
+`OPENSSL_init_crypto` after cleanup. The defect is in the instrument, and the instrument's reset was
+incomplete.
+
+**The repair.** `reset_for_test()` now re-arms the thread machinery and recreates
+`IN_INIT_CONFIG_LOCAL` after restoring the flags. The project already re-armed the thread-event
+destructor key in the same reset (`rearm_for_test`); the config key was its missing half.
+
+**Three more instrument races of the same class were found while verifying**, each a shared test
+static with no lock: `src/property/store.rs` (`SAW`/`VISITS`/`NIDS`, failing roughly five of eleven
+isolated runs at `--test-threads=8`), `src/runtime/rcu.rs` (`CB_CALLS`/`CB_SAW` plus a global
+machinery reset, about three of six) and `src/runtime/thread_events.rs` (`CALLS`/`LAST_ARG`). Each now
+uses the project's existing `TEST_LOCK` pattern (`runtime::obj`, `runtime::secure`).
+`evp::algorithm::tests` and `evp::method_store::tests` have the same shape but are empirically
+stable, so they are left alone rather than changed on a theory.
+
+**The shell and atlas movement is not rebuild nondeterminism.** The staged shell's sha256 is
+**stable across consecutive pipeline runs** (measured: `33d8a877…` twice). The `+16` bytes against the
+committed binary is debug-info line-table drift from inserting 93 lines into four source files, which
+is why the atlases that hash the shell move with it.
+
+**Verification.** `cargo test --lib` under the **default parallel** harness: twenty consecutive runs,
+`1047 passed; 0 failed` each. `--test-threads=4`: four runs green. `--test-threads=1`: green. The
+isolated races that motivated the three extra fixes are now 10/10 green at `--test-threads=8` where
+they previously failed most runs. `PIPELINE OK` exit 0.
+
+### Movement
+
+`src/runtime/init.rs`, `src/property/store.rs`, `src/runtime/rcu.rs` and `src/runtime/thread_events.rs`
+change, all inside `#[cfg(test)]` and insertions only, so no production behaviour moves; the staged
+shell and the atlases that hash it regenerate; `docs/DECISIONS.md` gains this entry. Phase 10's
+staging branch is where this lands.
+
+## D430 -- test isolation is one process-wide lock and a parallel gate, and two Cargo.toml comments stop describing a tree that moved
+
+D429 repaired the races it found, but it left the *mechanism* weaker than it looked: the exclusion
+primitive was a `static TEST_LOCK: Mutex<()>` inside each test module, and there were six of them
+(`src/runtime/secure.rs`, `src/runtime/init.rs`, `src/runtime/rcu.rs`, `src/runtime/obj.rs`,
+`src/runtime/thread_events.rs`, `src/property/store.rs`). A per-module mutex cannot exclude a test
+in `init.rs` from a test in `secure.rs`, so two tests that both mutate process-global state could
+still run concurrently, and the classification said otherwise. CI's single `--test-threads=1` run
+then hid the consequence rather than catching it: the serialisation that legitimately protects the
+global-state tests also masks an accidental cross-module coupling.
+
+**One lock, and the gate that makes it matter.** `src/test_support.rs` (a `#[cfg(test)]` module)
+now holds a single `GLOBAL_STATE_LOCK` and `lock_global_state()`, and all six per-module locks are
+that one mutex. The classification is the **call**: a test that touches process-global state takes
+the lock; a test that only reads immutable data does not, so the parallel-safe subset stays
+parallel. Alongside the change, the suite gained the audit D429's four fixes implied -- 25 further
+tests whose subject is a process global now take it, each naming the global it mutates in its own
+comment: the nine `runtime/err.rs` tests (the error registry and the shared `ERR_error_string`
+buffer), the `CRYPTO_set_mem_functions` test in `runtime/mem.rs`, the four `OBJ_create`/`EVP_add_*`
+tests in `evp/legacy_evp.rs`, the `EVP_add_cipher` test in `evp/pem_bridge.rs`, the five
+`provider/activate.rs` tests that register in the **default** context's store, the two
+`OPENSSL_config` tests in `runtime/conf/sap.rs`, and the `OSSL_LIB_CTX_set0_default` tests in
+`selftest/mod.rs`, `selftest/indicator.rs` and `context/thread_data.rs`. `src/ffi/mod.rs`'s
+`COUNTER_LOCK`, which guards the global `PANICS_CAUGHT`, is unified too -- it had the same
+defect. The parallel-safe subset is named rather than implied: the version and info tests, the
+static-table tests, `runtime/thread.rs` (per-test statics), and the modules that build a fresh
+context per test (`context/namemap`, `provider/stores`, `provider/mod`, `rand/*`,
+`runtime/conf/def`, `context/mod`, `evp/fetch`) do not take the lock.
+
+**Both runs are required.** `cargo test --lib -- --test-threads=1` remains authoritative, and
+`cargo test --lib` at the **default thread count** is added as the parallel-safety gate in
+`forensics/tools/pipeline.sh` and in `.github/workflows/ci.yml`'s `static` job. The policy is
+written down in `docs/CONCURRENCY_MODEL.md` §7, which also names the surfaces that make it
+necessary. The gate is the part that keeps the classification from decaying: a new test that
+mutates a global without taking the lock fails the parallel run, and the fix is to take the lock,
+not to serialise the suite again.
+
+**Two `Cargo.toml` comments described a tree that had moved.** One said the distribution artifacts
+"are deliberately NOT claimed yet: crate-type is `rlib` only until the export/link machinery and its
+ABI courts exist", while `crate-type` is `["rlib", "staticlib"]` and the Phase 2 shell is landed and
+sealed; it now says what is true -- the artifacts are emitted by that machinery and ABI
+compatibility is proved by the ABI courts rather than claimed. The other, a section header, read
+"Phase 0/1 skeleton: library only. Distribution artifacts arrive in Phase 2"; it now describes what
+the section actually sets. These are the same class D426 removed from `src/lib.rs` and
+`src/status.rs`, and they are fixed for the same reason: a sentence about the present with no
+generator to correct it.
+
+### Verification
+
+`cargo test --lib` at the default thread count ran **ten** consecutive times, `1047 passed; 0 failed`
+each; `--test-threads=4` twice and `--test-threads=1` once, both green; the total is still 1047, so
+no test was removed to make the gate pass. `cargo fmt --all -- --check` and
+`cargo clippy --all-targets -- -D warnings` are clean. `PIPELINE OK` exit 0.
+
+### Movement
+
+`src/test_support.rs` is added and declared in `src/lib.rs`; sixteen `src/**` modules take the one
+lock; `src/ffi/mod.rs`'s counter lock is unified; `forensics/tools/pipeline.sh` and
+`.github/workflows/ci.yml` gain the parallel-safety gate; `docs/CONCURRENCY_MODEL.md` gains §7;
+`Cargo.toml`'s two stale comments are corrected; and the staged shell and the atlases that hash it
+regenerate. All `src/**` changes are inside `#[cfg(test)]` or comments, so no production behaviour
+moves.

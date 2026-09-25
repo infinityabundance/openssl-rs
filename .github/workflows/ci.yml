@@ -122,6 +122,13 @@ jobs:
       - name: Unit tests
         run: cargo test --lib -- --test-threads=1
 
+      # The serial run above is the authoritative one. This second run at the default thread count
+      # is the parallel-safety gate: a test that mutates process-global state is supposed to take
+      # `test_support::lock_global_state`, and one that does not surfaces here rather than hiding
+      # behind the serialisation that protects the legitimate cases. Both runs must be green.
+      - name: Unit tests (parallel-safety gate)
+        run: cargo test --lib
+
       - name: Stand the authority back down
         run: rm -rf forensics/authorities/src forensics/authorities/downloads
 
