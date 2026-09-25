@@ -114,6 +114,19 @@ pub(crate) mod encode_key2blob;
 // decode_epki2pki.c`, the `EncryptedPrivateKeyInfo`-to-`PrivateKeyInfo` DER engine, and the crate's
 // `deflt_decoder[]`/`base_decoder[]` home.
 pub(crate) mod decode_epki2pki;
+// Phase 10.1's first PQC codec *closure* unit: `providers/implementations/encode_decode/
+// ml_common_codecs.c`, the shared ASN.1 SPKI/PKCS#8 format tables and the one
+// `ossl_ml_common_pkcs8_fmt_order` helper the two PQC codec units stand on. It publishes no row;
+// `ml_kem_codecs.c` and `ml_dsa_codecs.c` are its callers.
+pub(crate) mod ml_common_codecs;
+// Phase 10.1's second PQC codec closure unit: `providers/implementations/encode_decode/
+// ml_kem_codecs.c`, the ML-KEM d2i/i2d PKCS#8 and PUBKEY codecs and the `ossl_ml_kem_key_to_text`
+// printer. The primitives it drives landed with Phase 8's `crypto/ml_kem/`.
+pub(crate) mod ml_kem_codecs;
+// Phase 10.1's third PQC codec closure unit: `providers/implementations/encode_decode/
+// ml_dsa_codecs.c`, the ML-DSA d2i/i2d PKCS#8 and PUBKEY codecs and the `ossl_ml_dsa_key_to_text`
+// printer. The primitives it drives landed with Phase 8's `crypto/ml_dsa/`.
+pub(crate) mod ml_dsa_codecs;
 // Phase 8's `providers/implementations/asymciphers/sm2_enc.c` (D406): the `SM2` asym-cipher row,
 // the encryption face of the `SM2` key object.
 pub(crate) mod digest_to_nid;

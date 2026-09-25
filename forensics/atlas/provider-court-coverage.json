@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "10": {
-        "implemented": 28,
+        "implemented": 64,
         "unmatched": 0
       },
       "8": {
@@ -69,8 +69,8 @@
         ]
       }
     ],
-    "directly_courted": 349,
-    "implemented_rows": 349,
+    "directly_courted": 385,
+    "implemented_rows": 385,
     "rows": [
       {
         "algorithm_names": "DER",
@@ -189,6 +189,93 @@
         "provider": "base"
       },
       {
+        "algorithm_names": "ML-DSA-44",
+        "aliases": [
+          "ML-DSA-44"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "ML-DSA-65",
+        "aliases": [
+          "ML-DSA-65"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "ML-DSA-87",
+        "aliases": [
+          "ML-DSA-87"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "ML-KEM-1024",
+        "aliases": [
+          "ML-KEM-1024"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "ML-KEM-512",
+        "aliases": [
+          "ML-KEM-512"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "ML-KEM-768",
+        "aliases": [
+          "ML-KEM-768"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
         "algorithm_names": "RSA",
         "aliases": [
           "RSA"
@@ -212,6 +299,186 @@
         ],
         "courts": [
           "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-128f",
+        "aliases": [
+          "SLH-DSA-SHA2-128f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-128s",
+        "aliases": [
+          "SLH-DSA-SHA2-128s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-192f",
+        "aliases": [
+          "SLH-DSA-SHA2-192f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-192s",
+        "aliases": [
+          "SLH-DSA-SHA2-192s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-256f",
+        "aliases": [
+          "SLH-DSA-SHA2-256f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-256s",
+        "aliases": [
+          "SLH-DSA-SHA2-256s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-128f",
+        "aliases": [
+          "SLH-DSA-SHAKE-128f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-128s",
+        "aliases": [
+          "SLH-DSA-SHAKE-128s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-192f",
+        "aliases": [
+          "SLH-DSA-SHAKE-192f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-192s",
+        "aliases": [
+          "SLH-DSA-SHAKE-192s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-256f",
+        "aliases": [
+          "SLH-DSA-SHAKE-256f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-256s",
+        "aliases": [
+          "SLH-DSA-SHAKE-256s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
           "RT-CODEC"
         ],
         "coverage": "direct",
@@ -2775,6 +3042,93 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "ML-DSA-44",
+        "aliases": [
+          "ML-DSA-44"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-DSA-65",
+        "aliases": [
+          "ML-DSA-65"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-DSA-87",
+        "aliases": [
+          "ML-DSA-87"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-KEM-1024",
+        "aliases": [
+          "ML-KEM-1024"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-KEM-512",
+        "aliases": [
+          "ML-KEM-512"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "ML-KEM-768",
+        "aliases": [
+          "ML-KEM-768"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "RSA",
         "aliases": [
           "RSA"
@@ -2798,6 +3152,186 @@
         ],
         "courts": [
           "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-128f",
+        "aliases": [
+          "SLH-DSA-SHA2-128f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-128s",
+        "aliases": [
+          "SLH-DSA-SHA2-128s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-192f",
+        "aliases": [
+          "SLH-DSA-SHA2-192f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-192s",
+        "aliases": [
+          "SLH-DSA-SHA2-192s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-256f",
+        "aliases": [
+          "SLH-DSA-SHA2-256f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHA2-256s",
+        "aliases": [
+          "SLH-DSA-SHA2-256s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-128f",
+        "aliases": [
+          "SLH-DSA-SHAKE-128f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-128s",
+        "aliases": [
+          "SLH-DSA-SHAKE-128s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-192f",
+        "aliases": [
+          "SLH-DSA-SHAKE-192f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-192s",
+        "aliases": [
+          "SLH-DSA-SHAKE-192s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-256f",
+        "aliases": [
+          "SLH-DSA-SHAKE-256f"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SLH-DSA-SHAKE-256s",
+        "aliases": [
+          "SLH-DSA-SHAKE-256s"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
           "RT-CODEC"
         ],
         "coverage": "direct",
@@ -3152,7 +3686,8 @@
           "2.16.840.1.101.3.4.4.3"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEM",
@@ -3168,7 +3703,8 @@
           "2.16.840.1.101.3.4.4.1"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEM",
@@ -3184,7 +3720,8 @@
           "2.16.840.1.101.3.4.4.2"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEM",
@@ -3550,7 +4087,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3567,7 +4105,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3584,7 +4123,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3600,7 +4140,8 @@
           "2.16.840.1.101.3.4.4.3"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3616,7 +4157,8 @@
           "2.16.840.1.101.3.4.4.1"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3632,7 +4174,8 @@
           "2.16.840.1.101.3.4.4.2"
         ],
         "courts": [
-          "RT-KEYMGMT"
+          "RT-KEYMGMT",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3731,7 +4274,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3747,7 +4291,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3763,7 +4308,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3779,7 +4325,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3795,7 +4342,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3811,7 +4359,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3827,7 +4376,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3843,7 +4393,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3859,7 +4410,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3875,7 +4427,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3891,7 +4444,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -3907,7 +4461,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_KEYMGMT",
@@ -4660,7 +5215,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -4677,7 +5233,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -4694,7 +5251,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -4962,7 +5520,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -4978,7 +5537,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -4994,7 +5554,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5010,7 +5571,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5026,7 +5588,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5042,7 +5605,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5058,7 +5622,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5074,7 +5639,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5090,7 +5656,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5106,7 +5673,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5122,7 +5690,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5138,7 +5707,8 @@
         ],
         "courts": [
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SIGNATURE",
@@ -5197,7 +5767,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "f6df8e58004e23a54805b0433a286e7bc0de6730f977ede2ea7654db98c3d85f"
+      "sha256": "37e5291b98ca6b4d68fa8d800c6e0548a722cbdf8f319383ee0515d2c4a0f74e"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -5242,7 +5812,7 @@
     {
       "name": "court:RT-CODEC:rt_codec_probe.c",
       "path": "courts/phase10/rt_codec_probe.c",
-      "sha256": "bf59e86add635792d4321575937d56e10cf00b064e2bf3fd4bf290294c475cb5"
+      "sha256": "67b3ecc2e8d72ae9ebb8886dd92dcbb1fa917cb3dafcfb525a0a68e01195ad35"
     }
   ],
   "kind": "provider-court-coverage",

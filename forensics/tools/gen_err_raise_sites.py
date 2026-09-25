@@ -782,6 +782,12 @@ COVERED_FILES = [
     # destination-size guard, the `PROV_R_MISSING_KEY` "no private key" and "no public key"
     # guards, and the named field of the oversize-message refusal.
     ("crypto/slh_dsa/slh_dsa.c", "SLH_DSA"),
+    # Phase 10.1's SLH-DSA key unit. `crypto/slh_dsa/slh_dsa_key.c` is a plain `.c`, so its
+    # `__FILE__` carries the source-tree prefix. The unit's whole body raises nothing but the three
+    # `#ifndef FIPS_MODULE` arms of `ossl_slh_dsa_key_to_text` (`:494` `ERR_R_PASSED_NULL_PARAMETER`,
+    # `:500`/`:507` the `PROV_R_MISSING_KEY` "no %s key material available" guards), which land with
+    # the text-encoder caller the printer's own divergence row named (D398).
+    ("crypto/slh_dsa/slh_dsa_key.c", "SLH_DSA_KEY"),
     # This pass's ML-KEM core. `crypto/ml_kem/ml_kem.c` is a plain `.c`, so its `__FILE__` carries
     # the source-tree prefix. It raises nine times, each with the algorithm name interpolated: the
     # three `PROV_R_INVALID_KEY` refusals of `parse_pubkey`/`parse_prvkey` (the `t` vector, the `s`
@@ -1135,6 +1141,24 @@ COVERED_FILES = [
     # the machine-generated `set_ctx_params` parser's `PROV_R_REPEATED_PARAMETER` (`:87`) and the
     # passphrase refusal's `PROV_R_UNABLE_TO_GET_PASSPHRASE` (`:179`).
     ("providers/implementations/encode_decode/decode_epki2pki.c", "PROV_DECODE_EPKI2PKI"),
+    # Phase 10.1's PQC codec closure units (D435). The first is
+    # `providers/implementations/encode_decode/ml_common_codecs.c`, the shared SPKI/PKCS#8 format
+    # tables and `ossl_ml_common_pkcs8_fmt_order`: its one raise is the `PROV_R_ML_DSA_NO_FORMAT`
+    # "no %s private key %s formats are enabled" refusal (`:83`). It is a plain `.c`, so its
+    # `__FILE__` carries the source-tree prefix.
+    ("providers/implementations/encode_decode/ml_common_codecs.c", "ML_COMMON_CODECS"),
+    # The second is `providers/implementations/encode_decode/ml_kem_codecs.c`, the ML-KEM d2i/i2d
+    # PKCS#8 and PUBKEY codecs and the text printer. It is a plain `.c`. Its raises are the
+    # `PROV_R_BAD_ENCODING`/`PROV_R_UNEXPECTED_KEY_PARAMETERS`/`PROV_R_ML_KEM_NO_FORMAT`/
+    # `PROV_R_INVALID_KEY`/`PROV_R_NOT_A_PUBLIC_KEY`/`PROV_R_NOT_A_PRIVATE_KEY` decoders, the
+    # `ERR_LIB_OSSL_DECODER`/`ERR_LIB_OSSL_ENCODER` `ERR_R_INTERNAL_ERROR` encode paths, the
+    # `ERR_LIB_PROV` `ERR_R_INTERNAL_ERROR` output-format arms, the `ERR_R_PASSED_NULL_PARAMETER`
+    # null guard of the printer and its `PROV_R_MISSING_KEY` "no %s key material available" arm.
+    ("providers/implementations/encode_decode/ml_kem_codecs.c", "ML_KEM_CODECS"),
+    # The third is `providers/implementations/encode_decode/ml_dsa_codecs.c`, the ML-DSA sibling:
+    # the same decoder and encoder raises, `PROV_R_ML_DSA_NO_FORMAT` in place of ML-KEM's, and the
+    # printer's `ERR_LIB_PROV` `ERR_R_PASSED_NULL_PARAMETER` guard and two `PROV_R_MISSING_KEY` arms.
+    ("providers/implementations/encode_decode/ml_dsa_codecs.c", "ML_DSA_CODECS"),
     # Phase 10 staging: `crypto/pkcs12/p12_decr.c`, the PBE buffer crypt and the ASN.1 decrypt/
     # encrypt pair `PKCS8_decrypt` reads an `EncryptedPrivateKeyInfo` through (D368). Its
     # thirteen sites are `ERR_LIB_PKCS12` with `ERR_R_EVP_LIB`, `ERR_R_PASSED_NULL_PARAMETER`,

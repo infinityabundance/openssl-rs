@@ -175,15 +175,6 @@
         "evidence": "docs/DECISIONS.md D368; crypto/x509/x_attrib.c:76-249 (the printer) against :29-59 (the landed template and `X509_ATTRIBUTE_create`); crypto/x509/x_attrib.c:229 (`ossl_bio_print_hex`), :242 (`d2i_X509_NAME`) and :246 (`X509_NAME_print_ex`) as the unwired reaches; src/x509/x_attrib.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/x_attrib.c` edge"
       },
       {
-        "owner_module": "src/slh_dsa/key.rs",
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_slh_dsa_key_to_text"
-        ],
-        "note": "**Withheld rather than written, and this row is what the prerequisite gate's `unwired_function_in_the_current_stratum` finding becomes once the omission is a decision rather than an oversight.** `src/slh_dsa/key.rs` transcribes `crypto/slh_dsa/slh_dsa_key.c` whole (D398), which makes the unit's unwired internals countable (D327's rule). This is the one definition of the unit this pass does not carry: `ossl_slh_dsa_key_to_text` (`:488-526`, the `#ifndef FIPS_MODULE` tail). Its two helpers are `BIO_printf` and `ossl_bio_print_labeled_buf`, and the latter is `crypto/encode_decode/encoder_lib.c:785`'s, which `src/encoder_lib.rs` already withholds in the row above (`owned_by_a_later_stratum`, because the default provider publishes no encoder that reaches it). `ossl_slh_dsa_key_to_text`'s own only caller is `providers/implementations/encode_decode/encode_key2text.c:454`, the provider text-encoder unit, which is likewise unlanded and is Phase 8's. A transcription here would be a printer joined to a withheld helper and reached by nothing; it lands with the text encoder it serves. The row fail-closes in both directions: if the name is ever built the gate reports it `stale` until the row is removed, and if `src/slh_dsa/key.rs` stopped owning the unit the record would stop matching.",
-        "evidence": "docs/DECISIONS.md D398; crypto/slh_dsa/slh_dsa_key.c:488-526 (the printer) against :21-486 (the whole rest of the unit, all transcribed); crypto/slh_dsa/slh_dsa_key.c:511 (`BIO_printf`) and :513/:521 (`ossl_bio_print_labeled_buf`) as the unwired reaches; providers/implementations/encode_decode/encode_key2text.c:454 as the only caller; src/slh_dsa/key.rs's module documentation; this file's own `ossl_bio_print_labeled_buf` row"
-      },
-      {
         "owner_module": "src/ec/curve.rs",
         "class": "modelled_differently",
         "covers": [],

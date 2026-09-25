@@ -27372,6 +27372,36 @@ pub(crate) const SLH_DSA_177: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_slh_dsa_key_to_text` at `crypto/slh_dsa/slh_dsa_key.c:494` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const SLH_DSA_KEY_494: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa_key.c",
+    line: 494,
+    func: c"ossl_slh_dsa_key_to_text",
+    lib: 57,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_slh_dsa_key_to_text` at `crypto/slh_dsa/slh_dsa_key.c:500` (PROV_R_MISSING_KEY).
+pub(crate) const SLH_DSA_KEY_500: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa_key.c",
+    line: 500,
+    func: c"ossl_slh_dsa_key_to_text",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ossl_slh_dsa_key_to_text` at `crypto/slh_dsa/slh_dsa_key.c:507` (PROV_R_MISSING_KEY).
+pub(crate) const SLH_DSA_KEY_507: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/slh_dsa/slh_dsa_key.c",
+    line: 507,
+    func: c"ossl_slh_dsa_key_to_text",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
 /// `parse_pubkey` at `crypto/ml_kem/ml_kem.c:1642` (PROV_R_INVALID_KEY).
 pub(crate) const ML_KEM_1642: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/ml_kem/ml_kem.c",
@@ -40282,6 +40312,296 @@ pub(crate) const PROV_DECODE_EPKI2PKI_179: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_ml_common_pkcs8_fmt_order` at `providers/implementations/encode_decode/ml_common_codecs.c:83` (PROV_R_ML_DSA_NO_FORMAT).
+pub(crate) const ML_COMMON_CODECS_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_common_codecs.c",
+    line: 83,
+    func: c"ossl_ml_common_pkcs8_fmt_order",
+    lib: 57,
+    reason: 245,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_d2i_PUBKEY` at `providers/implementations/encode_decode/ml_kem_codecs.c:258` (PROV_R_BAD_ENCODING).
+pub(crate) const ML_KEM_CODECS_258: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 258,
+    func: c"ossl_ml_kem_d2i_PUBKEY",
+    lib: 57,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_d2i_PKCS8` at `providers/implementations/encode_decode/ml_kem_codecs.c:312` (PROV_R_UNEXPECTED_KEY_PARAMETERS).
+pub(crate) const ML_KEM_CODECS_312: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 312,
+    func: c"ossl_ml_kem_d2i_PKCS8",
+    lib: 57,
+    reason: 249,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_d2i_PKCS8` at `providers/implementations/encode_decode/ml_kem_codecs.c:335` (PROV_R_ML_KEM_NO_FORMAT).
+pub(crate) const ML_KEM_CODECS_335: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 335,
+    func: c"ossl_ml_kem_d2i_PKCS8",
+    lib: 57,
+    reason: 246,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_d2i_PKCS8` at `providers/implementations/encode_decode/ml_kem_codecs.c:381` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_CODECS_381: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 381,
+    func: c"ossl_ml_kem_d2i_PKCS8",
+    lib: 60,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_d2i_PKCS8` at `providers/implementations/encode_decode/ml_kem_codecs.c:389` (PROV_R_INVALID_KEY).
+pub(crate) const ML_KEM_CODECS_389: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 389,
+    func: c"ossl_ml_kem_d2i_PKCS8",
+    lib: 57,
+    reason: 158,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_i2d_pubkey` at `providers/implementations/encode_decode/ml_kem_codecs.c:413` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const ML_KEM_CODECS_413: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 413,
+    func: c"ossl_ml_kem_i2d_pubkey",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_i2d_pubkey` at `providers/implementations/encode_decode/ml_kem_codecs.c:424` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_CODECS_424: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 424,
+    func: c"ossl_ml_kem_i2d_pubkey",
+    lib: 59,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_i2d_prvkey` at `providers/implementations/encode_decode/ml_kem_codecs.c:452` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const ML_KEM_CODECS_452: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 452,
+    func: c"ossl_ml_kem_i2d_prvkey",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_i2d_prvkey` at `providers/implementations/encode_decode/ml_kem_codecs.c:474` (PROV_R_ML_KEM_NO_FORMAT).
+pub(crate) const ML_KEM_CODECS_474: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 474,
+    func: c"ossl_ml_kem_i2d_prvkey",
+    lib: 57,
+    reason: 246,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_i2d_prvkey` at `providers/implementations/encode_decode/ml_kem_codecs.c:499` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_CODECS_499: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 499,
+    func: c"ossl_ml_kem_i2d_prvkey",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_i2d_prvkey` at `providers/implementations/encode_decode/ml_kem_codecs.c:514` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_CODECS_514: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 514,
+    func: c"ossl_ml_kem_i2d_prvkey",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_i2d_prvkey` at `providers/implementations/encode_decode/ml_kem_codecs.c:526` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_CODECS_526: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 526,
+    func: c"ossl_ml_kem_i2d_prvkey",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_i2d_prvkey` at `providers/implementations/encode_decode/ml_kem_codecs.c:538` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_KEM_CODECS_538: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 538,
+    func: c"ossl_ml_kem_i2d_prvkey",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_key_to_text` at `providers/implementations/encode_decode/ml_kem_codecs.c:566` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ML_KEM_CODECS_566: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 566,
+    func: c"ossl_ml_kem_key_to_text",
+    lib: 59,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_kem_key_to_text` at `providers/implementations/encode_decode/ml_kem_codecs.c:611` (PROV_R_MISSING_KEY).
+pub(crate) const ML_KEM_CODECS_611: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_kem_codecs.c",
+    line: 611,
+    func: c"ossl_ml_kem_key_to_text",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_d2i_PUBKEY` at `providers/implementations/encode_decode/ml_dsa_codecs.c:131` (PROV_R_BAD_ENCODING).
+pub(crate) const ML_DSA_CODECS_131: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 131,
+    func: c"ossl_ml_dsa_d2i_PUBKEY",
+    lib: 57,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_d2i_PKCS8` at `providers/implementations/encode_decode/ml_dsa_codecs.c:187` (PROV_R_UNEXPECTED_KEY_PARAMETERS).
+pub(crate) const ML_DSA_CODECS_187: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 187,
+    func: c"ossl_ml_dsa_d2i_PKCS8",
+    lib: 57,
+    reason: 249,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_d2i_PKCS8` at `providers/implementations/encode_decode/ml_dsa_codecs.c:210` (PROV_R_ML_DSA_NO_FORMAT).
+pub(crate) const ML_DSA_CODECS_210: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 210,
+    func: c"ossl_ml_dsa_d2i_PKCS8",
+    lib: 57,
+    reason: 245,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_i2d_pubkey` at `providers/implementations/encode_decode/ml_dsa_codecs.c:277` (PROV_R_NOT_A_PUBLIC_KEY).
+pub(crate) const ML_DSA_CODECS_277: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 277,
+    func: c"ossl_ml_dsa_i2d_pubkey",
+    lib: 57,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_i2d_prvkey` at `providers/implementations/encode_decode/ml_dsa_codecs.c:307` (PROV_R_NOT_A_PRIVATE_KEY).
+pub(crate) const ML_DSA_CODECS_307: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 307,
+    func: c"ossl_ml_dsa_i2d_prvkey",
+    lib: 57,
+    reason: 221,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_i2d_prvkey` at `providers/implementations/encode_decode/ml_dsa_codecs.c:329` (PROV_R_ML_DSA_NO_FORMAT).
+pub(crate) const ML_DSA_CODECS_329: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 329,
+    func: c"ossl_ml_dsa_i2d_prvkey",
+    lib: 57,
+    reason: 245,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_i2d_prvkey` at `providers/implementations/encode_decode/ml_dsa_codecs.c:354` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_DSA_CODECS_354: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 354,
+    func: c"ossl_ml_dsa_i2d_prvkey",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_i2d_prvkey` at `providers/implementations/encode_decode/ml_dsa_codecs.c:367` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_DSA_CODECS_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 367,
+    func: c"ossl_ml_dsa_i2d_prvkey",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_i2d_prvkey` at `providers/implementations/encode_decode/ml_dsa_codecs.c:378` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_DSA_CODECS_378: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 378,
+    func: c"ossl_ml_dsa_i2d_prvkey",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_i2d_prvkey` at `providers/implementations/encode_decode/ml_dsa_codecs.c:389` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ML_DSA_CODECS_389: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 389,
+    func: c"ossl_ml_dsa_i2d_prvkey",
+    lib: 57,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_key_to_text` at `providers/implementations/encode_decode/ml_dsa_codecs.c:415` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ML_DSA_CODECS_415: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 415,
+    func: c"ossl_ml_dsa_key_to_text",
+    lib: 57,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_key_to_text` at `providers/implementations/encode_decode/ml_dsa_codecs.c:425` (PROV_R_MISSING_KEY).
+pub(crate) const ML_DSA_CODECS_425: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 425,
+    func: c"ossl_ml_dsa_key_to_text",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ossl_ml_dsa_key_to_text` at `providers/implementations/encode_decode/ml_dsa_codecs.c:432` (PROV_R_MISSING_KEY).
+pub(crate) const ML_DSA_CODECS_432: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_dsa_codecs.c",
+    line: 432,
+    func: c"ossl_ml_dsa_key_to_text",
+    lib: 57,
+    reason: 128,
+    dynamic_reason: false,
+};
+
 /// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:32` (ERR_R_EVP_LIB).
 pub(crate) const PKCS12_32: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
@@ -44157,6 +44477,9 @@ pub(crate) static ALL: &[ErrSite] = &[
     SLH_DSA_74,
     SLH_DSA_80,
     SLH_DSA_177,
+    SLH_DSA_KEY_494,
+    SLH_DSA_KEY_500,
+    SLH_DSA_KEY_507,
     ML_KEM_1642,
     ML_KEM_1655,
     ML_KEM_1675,
@@ -45448,6 +45771,35 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_ENCODE_KEY2BLOB_177,
     PROV_DECODE_EPKI2PKI_88,
     PROV_DECODE_EPKI2PKI_179,
+    ML_COMMON_CODECS_83,
+    ML_KEM_CODECS_258,
+    ML_KEM_CODECS_312,
+    ML_KEM_CODECS_335,
+    ML_KEM_CODECS_381,
+    ML_KEM_CODECS_389,
+    ML_KEM_CODECS_413,
+    ML_KEM_CODECS_424,
+    ML_KEM_CODECS_452,
+    ML_KEM_CODECS_474,
+    ML_KEM_CODECS_499,
+    ML_KEM_CODECS_514,
+    ML_KEM_CODECS_526,
+    ML_KEM_CODECS_538,
+    ML_KEM_CODECS_566,
+    ML_KEM_CODECS_611,
+    ML_DSA_CODECS_131,
+    ML_DSA_CODECS_187,
+    ML_DSA_CODECS_210,
+    ML_DSA_CODECS_277,
+    ML_DSA_CODECS_307,
+    ML_DSA_CODECS_329,
+    ML_DSA_CODECS_354,
+    ML_DSA_CODECS_367,
+    ML_DSA_CODECS_378,
+    ML_DSA_CODECS_389,
+    ML_DSA_CODECS_415,
+    ML_DSA_CODECS_425,
+    ML_DSA_CODECS_432,
     PKCS12_32,
     PKCS12_50,
     PKCS12_60,

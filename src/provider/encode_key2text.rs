@@ -25,16 +25,16 @@
 //! printers. So the "eleven implementations" are one engine and eleven table rows, which is the
 //! measurement this stratum is for (`docs/PHASE-10-SUBPHASES.md` §1a).
 //!
-//! ## Why only eleven of the twenty-nine tables
+//! ## Why the table set grows as the PQC helpers land
 //!
-//! The authority's `MAKE_TEXT_ENCODER` list (`:698-744`) is twenty-nine tables. Eighteen of them are
-//! `ML-KEM`/`ML-DSA`/`SLH-DSA`, whose `*_to_text` is not in this file at all: `ml_kem_to_text` calls
-//! `ossl_ml_kem_key_to_text` (`providers/implementations/encode_decode/ml_kem_codecs.c`),
-//! `ml_dsa_to_text` calls `ossl_ml_dsa_key_to_text` (`ml_dsa_codecs.c`) and `slh_dsa_to_text` calls
-//! `ossl_slh_dsa_key_to_text` (`crypto/slh_dsa/slh_dsa_key.c:488-526`), and none of those three
-//! units is landed. A table with no printable body would answer the wrong bytes for every key, so
-//! the eighteen are **not published** rather than published empty; they are the `pending` rows
-//! `docs/PHASE-10-SUBPHASES.md` §3.5 names, and the census leaves them `unimplemented`.
+//! The authority's `MAKE_TEXT_ENCODER` list (`:698-744`) is twenty-nine tables. Eleven have a
+//! printer in this file (`dh`/`dsa`/`ec`/`ecx`/`rsa`); the other eighteen are `ML-KEM`/`ML-DSA`/
+//! `SLH-DSA`, whose `*_to_text` lives in three other units: `ml_kem_to_text` calls
+//! `ossl_ml_kem_key_to_text` (`ml_kem_codecs.c`), `ml_dsa_to_text` calls `ossl_ml_dsa_key_to_text`
+//! (`ml_dsa_codecs.c`) and `slh_dsa_to_text` calls `ossl_slh_dsa_key_to_text`
+//! (`crypto/slh_dsa/slh_dsa_key.c:488-526`). D434 left those eighteen **withheld** because none of
+//! the three units was landed (docs/PHASE-10-SUBPHASES.md §3.5). This slice lands all three, so all
+//! twenty-nine tables are published and the withheld set is empty.
 //!
 //! ## The bytes are the contract
 //!
@@ -1003,7 +1003,42 @@ unsafe fn free_stacks(
 }
 
 // ---------------------------------------------------------------------------
-// The eleven tables — the authority's `MAKE_TEXT_ENCODER` expansions `:698-744`
+// The three PQC printers, each a thin `const void *` cast over its codec unit's own printer —
+// `encode_key2text.c:443-456`
+// ---------------------------------------------------------------------------
+
+/// `static int ml_kem_to_text(BIO *out, const void *vkey, int selection)` —
+/// `encode_key2text.c:443-446`.
+///
+/// # Safety
+/// `out` NULL or live; `vkey` NULL or a `ML_KEM_KEY *` the provider's `ML-KEM-*` keymgmt built.
+unsafe extern "C" fn ml_kem_to_text(out: *mut Bio, vkey: *const c_void, selection: c_int) -> c_int {
+    // SAFETY: `vkey` is the `ML_KEM_KEY *` per the contract; the printer is the codec unit's own.
+    unsafe { crate::provider::ml_kem_codecs::ossl_ml_kem_key_to_text(out, vkey.cast(), selection) }
+}
+
+/// `static int slh_dsa_to_text(BIO *out, const void *key, int selection)` —
+/// `encode_key2text.c:452-455`.
+///
+/// # Safety
+/// `out` NULL or live; `key` NULL or a `SLH_DSA_KEY *` the provider's `SLH-DSA-*` keymgmt built.
+unsafe extern "C" fn slh_dsa_to_text(out: *mut Bio, key: *const c_void, selection: c_int) -> c_int {
+    // SAFETY: `key` is the `SLH_DSA_KEY *` per the contract; the printer is `src/slh_dsa`'s own.
+    unsafe { crate::slh_dsa::key::ossl_slh_dsa_key_to_text(out, key.cast(), selection) }
+}
+
+/// `static int ml_dsa_to_text(BIO *out, const void *key, int selection)` —
+/// `encode_key2text.c:618-621`.
+///
+/// # Safety
+/// `out` NULL or live; `key` NULL or a `ML_DSA_KEY *` the provider's `ML-DSA-*` keymgmt built.
+unsafe extern "C" fn ml_dsa_to_text(out: *mut Bio, key: *const c_void, selection: c_int) -> c_int {
+    // SAFETY: `key` is the `ML_DSA_KEY *` per the contract; the printer is the codec unit's own.
+    unsafe { crate::provider::ml_dsa_codecs::ossl_ml_dsa_key_to_text(out, key.cast(), selection) }
+}
+
+// ---------------------------------------------------------------------------
+// The twenty-nine tables — the authority's `MAKE_TEXT_ENCODER` expansions `:698-744`
 // ---------------------------------------------------------------------------
 
 /// One `MAKE_TEXT_ENCODER(impl, type)` expansion (`encode_key2text.c:652-696`), for the key types
@@ -1090,8 +1125,7 @@ macro_rules! make_text_encoder {
     };
 }
 
-// The eleven expansions, in the authority's order (`:698-744`). The eighteen PQC tables are not
-// published: their `*_to_text` helpers live in unlanded units (module doc).
+// The twenty-nine expansions, in the authority's order (`:698-744`).
 make_text_encoder!(
     dh2text_encode,
     dh2text_import_object,
@@ -1174,6 +1208,33 @@ make_text_encoder!(
     err_sites::PROV_ENCODE_KEY2TEXT_714
 );
 make_text_encoder!(
+    ml_kem_5122text_encode,
+    ml_kem_5122text_import_object,
+    ml_kem_5122text_free_object,
+    ML_KEM_512_TO_TEXT_FUNCTIONS,
+    ml_kem_to_text,
+    crate::provider::ml_kem_kmgmt::ML_KEM_512_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_718
+);
+make_text_encoder!(
+    ml_kem_7682text_encode,
+    ml_kem_7682text_import_object,
+    ml_kem_7682text_free_object,
+    ML_KEM_768_TO_TEXT_FUNCTIONS,
+    ml_kem_to_text,
+    crate::provider::ml_kem_kmgmt::ML_KEM_768_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_719
+);
+make_text_encoder!(
+    ml_kem_10242text_encode,
+    ml_kem_10242text_import_object,
+    ml_kem_10242text_free_object,
+    ML_KEM_1024_TO_TEXT_FUNCTIONS,
+    ml_kem_to_text,
+    crate::provider::ml_kem_kmgmt::ML_KEM_1024_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_720
+);
+make_text_encoder!(
     rsa2text_encode,
     rsa2text_import_object,
     rsa2text_free_object,
@@ -1191,10 +1252,146 @@ make_text_encoder!(
     crate::provider::rsa_kmgmt::RSA_PSS_KEYMGMT_FUNCTIONS,
     err_sites::PROV_ENCODE_KEY2TEXT_723
 );
+make_text_encoder!(
+    ml_dsa_442text_encode,
+    ml_dsa_442text_import_object,
+    ml_dsa_442text_free_object,
+    ML_DSA_44_TO_TEXT_FUNCTIONS,
+    ml_dsa_to_text,
+    crate::provider::ml_dsa_kmgmt::ML_DSA_44_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_726
+);
+make_text_encoder!(
+    ml_dsa_652text_encode,
+    ml_dsa_652text_import_object,
+    ml_dsa_652text_free_object,
+    ML_DSA_65_TO_TEXT_FUNCTIONS,
+    ml_dsa_to_text,
+    crate::provider::ml_dsa_kmgmt::ML_DSA_65_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_727
+);
+make_text_encoder!(
+    ml_dsa_872text_encode,
+    ml_dsa_872text_import_object,
+    ml_dsa_872text_free_object,
+    ML_DSA_87_TO_TEXT_FUNCTIONS,
+    ml_dsa_to_text,
+    crate::provider::ml_dsa_kmgmt::ML_DSA_87_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_728
+);
+make_text_encoder!(
+    slh_dsa_sha2_128s2text_encode,
+    slh_dsa_sha2_128s2text_import_object,
+    slh_dsa_sha2_128s2text_free_object,
+    SLH_DSA_SHA2_128S_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHA2_128S_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_732
+);
+make_text_encoder!(
+    slh_dsa_sha2_128f2text_encode,
+    slh_dsa_sha2_128f2text_import_object,
+    slh_dsa_sha2_128f2text_free_object,
+    SLH_DSA_SHA2_128F_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHA2_128F_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_733
+);
+make_text_encoder!(
+    slh_dsa_sha2_192s2text_encode,
+    slh_dsa_sha2_192s2text_import_object,
+    slh_dsa_sha2_192s2text_free_object,
+    SLH_DSA_SHA2_192S_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHA2_192S_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_734
+);
+make_text_encoder!(
+    slh_dsa_sha2_192f2text_encode,
+    slh_dsa_sha2_192f2text_import_object,
+    slh_dsa_sha2_192f2text_free_object,
+    SLH_DSA_SHA2_192F_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHA2_192F_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_735
+);
+make_text_encoder!(
+    slh_dsa_sha2_256s2text_encode,
+    slh_dsa_sha2_256s2text_import_object,
+    slh_dsa_sha2_256s2text_free_object,
+    SLH_DSA_SHA2_256S_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHA2_256S_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_736
+);
+make_text_encoder!(
+    slh_dsa_sha2_256f2text_encode,
+    slh_dsa_sha2_256f2text_import_object,
+    slh_dsa_sha2_256f2text_free_object,
+    SLH_DSA_SHA2_256F_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHA2_256F_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_737
+);
+make_text_encoder!(
+    slh_dsa_shake_128s2text_encode,
+    slh_dsa_shake_128s2text_import_object,
+    slh_dsa_shake_128s2text_free_object,
+    SLH_DSA_SHAKE_128S_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHAKE_128S_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_738
+);
+make_text_encoder!(
+    slh_dsa_shake_128f2text_encode,
+    slh_dsa_shake_128f2text_import_object,
+    slh_dsa_shake_128f2text_free_object,
+    SLH_DSA_SHAKE_128F_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHAKE_128F_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_739
+);
+make_text_encoder!(
+    slh_dsa_shake_192s2text_encode,
+    slh_dsa_shake_192s2text_import_object,
+    slh_dsa_shake_192s2text_free_object,
+    SLH_DSA_SHAKE_192S_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHAKE_192S_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_740
+);
+make_text_encoder!(
+    slh_dsa_shake_192f2text_encode,
+    slh_dsa_shake_192f2text_import_object,
+    slh_dsa_shake_192f2text_free_object,
+    SLH_DSA_SHAKE_192F_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHAKE_192F_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_741
+);
+make_text_encoder!(
+    slh_dsa_shake_256s2text_encode,
+    slh_dsa_shake_256s2text_import_object,
+    slh_dsa_shake_256s2text_free_object,
+    SLH_DSA_SHAKE_256S_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHAKE_256S_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_742
+);
+make_text_encoder!(
+    slh_dsa_shake_256f2text_encode,
+    slh_dsa_shake_256f2text_import_object,
+    slh_dsa_shake_256f2text_free_object,
+    SLH_DSA_SHAKE_256F_TO_TEXT_FUNCTIONS,
+    slh_dsa_to_text,
+    crate::provider::slh_dsa_kmgmt::SLH_DSA_SHAKE_256F_KEYMGMT_FUNCTIONS,
+    err_sites::PROV_ENCODE_KEY2TEXT_743
+);
 
 // ---------------------------------------------------------------------------
 // The provider tables — `providers/defltprov.c`'s `deflt_encoder[]` and `providers/baseprov.c`'s
-// `base_encoder[]`, restricted to the eleven rows this unit publishes, in the authority's order.
+// `base_encoder[]`, restricted to the rows this unit and `encode_key2blob.rs` publish, in the
+// authority's order.
 // ---------------------------------------------------------------------------
 
 /// `OSSL_OP_ENCODER` — `include/openssl/core_dispatch.h:295`. The provider queries name it, and
@@ -1223,14 +1420,14 @@ const BASE_BLOB_PROPERTY: *const c_char = c"provider=base,fips=yes,output=blob".
 const BASE_SM2_BLOB_PROPERTY: *const c_char = c"provider=base,fips=no,output=blob".as_ptr();
 
 /// `deflt_encoder[]`'s rows the crate publishes — `providers/defltprov.c:675-680` over
-/// `providers/encoders.inc`, restricted to the thirteen rows landed so far, in the authority's
-/// order: the eleven `ENCODER_TEXT` rows, then the two `ENCODER(…, blob)` rows of
+/// `providers/encoders.inc`, restricted to the thirty-one rows landed so far, in the authority's
+/// order: the twenty-nine `ENCODER_TEXT` rows, then the two `ENCODER(…, blob)` rows of
 /// `src/provider/encode_key2blob.rs` (`encoders.inc`'s EC type-specific section).
 ///
 /// Each row is the authority's `ENCODER_TEXT`/`ENCODER` expansion, and each is written as
 /// the same struct literal the census's reader parses (`algorithm_names` then `implementation`) so
 /// that a row and its dispatch symbol cannot drift apart.
-pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 14] = [
+pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 32] = [
     OsslAlgorithm {
         algorithm_names: c"RSA".as_ptr(),
         property_definition: DEFAULT_TEXT_PROPERTY,
@@ -1297,6 +1494,116 @@ pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 14] = [
         implementation: SM2_TO_TEXT_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
+    // The eighteen PQC text rows (all `fips=yes`, so the default text property), in
+    // `encoders.inc`'s order: the three ML-KEM, three ML-DSA and twelve SLH-DSA tables.
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: ML_KEM_512_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: ML_KEM_768_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: ML_KEM_1024_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: ML_DSA_44_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: ML_DSA_65_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: ML_DSA_87_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_128S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_128F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_192S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_192F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_256S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_256F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_128S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_128F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_192S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_192F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_256S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: DEFAULT_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_256F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
     // The blob rows, from `encode_key2blob.rs` (`encoders.inc`'s EC type-specific section). They
     // follow the text rows in `deflt_encoder[]`, so appending them keeps the crate's table a
     // subsequence of the authority's order (the census's `main` check).
@@ -1320,9 +1627,9 @@ pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 14] = [
     },
 ];
 
-/// `base_encoder[]`'s rows the crate publishes — `providers/baseprov.c:67-72`, the same thirteen
-/// rows with the base provider's property.
-pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 14] = [
+/// `base_encoder[]`'s rows the crate publishes — `providers/baseprov.c:67-72`, the same
+/// thirty-one rows with the base provider's property.
+pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 32] = [
     OsslAlgorithm {
         algorithm_names: c"RSA".as_ptr(),
         property_definition: BASE_TEXT_PROPERTY,
@@ -1387,6 +1694,115 @@ pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 14] = [
         algorithm_names: c"SM2".as_ptr(),
         property_definition: BASE_SM2_TEXT_PROPERTY,
         implementation: SM2_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    // The eighteen PQC text rows, with the base provider's `fips=yes` property.
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: ML_KEM_512_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: ML_KEM_768_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: ML_KEM_1024_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: ML_DSA_44_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: ML_DSA_65_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: ML_DSA_87_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_128S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_128F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_192S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_192F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_256S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHA2_256F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_128S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_128F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_192S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_192F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_256S_TO_TEXT_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: BASE_TEXT_PROPERTY,
+        implementation: SLH_DSA_SHAKE_256F_TO_TEXT_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     // The blob rows, with the base provider's property (see `DEFLT_ENCODERS`).

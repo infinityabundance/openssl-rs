@@ -192,7 +192,7 @@
       "verdict": "pass"
     },
     "RT-CODEC": {
-      "observations": 207,
+      "observations": 486,
       "verdict": "pass"
     },
     "RT-COMP": {
@@ -492,7 +492,7 @@
   },
   "prerequisites": {
     "blocking_dependencies": 7,
-    "divergence_names_covered": 40,
+    "divergence_names_covered": 39,
     "findings": 0,
     "language_census": 5036,
     "sealed_census": 50
@@ -506,8 +506,26 @@
     "base/OSSL_OP_ENCODER/EC",
     "base/OSSL_OP_ENCODER/ED25519",
     "base/OSSL_OP_ENCODER/ED448",
+    "base/OSSL_OP_ENCODER/ML-DSA-44",
+    "base/OSSL_OP_ENCODER/ML-DSA-65",
+    "base/OSSL_OP_ENCODER/ML-DSA-87",
+    "base/OSSL_OP_ENCODER/ML-KEM-1024",
+    "base/OSSL_OP_ENCODER/ML-KEM-512",
+    "base/OSSL_OP_ENCODER/ML-KEM-768",
     "base/OSSL_OP_ENCODER/RSA",
     "base/OSSL_OP_ENCODER/RSA-PSS",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHA2-128f",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHA2-128s",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHA2-192f",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHA2-192s",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHA2-256f",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHA2-256s",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHAKE-128f",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHAKE-128s",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHAKE-192f",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHAKE-192s",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHAKE-256f",
+    "base/OSSL_OP_ENCODER/SLH-DSA-SHAKE-256s",
     "base/OSSL_OP_ENCODER/SM2",
     "base/OSSL_OP_ENCODER/SM2",
     "base/OSSL_OP_ENCODER/X25519",
@@ -689,8 +707,26 @@
     "default/OSSL_OP_ENCODER/EC",
     "default/OSSL_OP_ENCODER/ED25519",
     "default/OSSL_OP_ENCODER/ED448",
+    "default/OSSL_OP_ENCODER/ML-DSA-44",
+    "default/OSSL_OP_ENCODER/ML-DSA-65",
+    "default/OSSL_OP_ENCODER/ML-DSA-87",
+    "default/OSSL_OP_ENCODER/ML-KEM-1024",
+    "default/OSSL_OP_ENCODER/ML-KEM-512",
+    "default/OSSL_OP_ENCODER/ML-KEM-768",
     "default/OSSL_OP_ENCODER/RSA",
     "default/OSSL_OP_ENCODER/RSA-PSS",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHA2-128f",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHA2-128s",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHA2-192f",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHA2-192s",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHA2-256f",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHA2-256s",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHAKE-128f",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHAKE-128s",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHAKE-192f",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHAKE-192s",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHAKE-256f",
+    "default/OSSL_OP_ENCODER/SLH-DSA-SHAKE-256s",
     "default/OSSL_OP_ENCODER/SM2",
     "default/OSSL_OP_ENCODER/SM2",
     "default/OSSL_OP_ENCODER/X25519",
@@ -852,17 +888,17 @@
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 647,
-      "9": 647
+      "8": 611,
+      "9": 611
     },
-    "implemented": 349,
+    "implemented": 385,
     "open_by_phase": {
-      "10": 608,
+      "10": 572,
       "13": 39,
       "8": 0,
       "9": 0
     },
     "total": 996,
-    "unimplemented": 647
+    "unimplemented": 611
   }
 }
