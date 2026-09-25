@@ -28,16 +28,15 @@
 //! `priv + n * 2`. The crate's [`SlhDsaKey::pub_region`] is that address, so "has a public key"
 //! is `pub != NULL` and the comparison reads `pk_len = 2n` bytes from it.
 //!
-//! ## What is withheld, with its coordinate
+//! ## `ossl_slh_dsa_key_to_text` lands with the text encoder that is its only caller
 //!
-//! `ossl_slh_dsa_key_to_text` (`:488-526`, the `#ifndef FIPS_MODULE` tail) is **not** transcribed.
-//! Its three helpers are `BIO_printf` and `ossl_bio_print_labeled_buf`, and the latter is
-//! `crypto/encode_decode/encoder_lib.c`'s function that `src/encoder_lib.rs` deliberately
-//! withholds (`encoder_lib.c:785`, recorded there because the default provider publishes no
-//! encoder that reaches it). `ossl_slh_dsa_key_to_text`'s own only caller is
-//! `encode_key2text.c` (`:454`), the text-encoder unit which is likewise unlanded, so there is no
-//! landed caller and no path that could observe it. It lands with the text encoder, the same way
-//! the authority's own three `ossl_bio_print_*` helpers do.
+//! `ossl_slh_dsa_key_to_text` (`:488-526`, the `#ifndef FIPS_MODULE` tail) was **withheld** until
+//! Phase 10.1: its three helpers are `BIO_printf` and `ossl_bio_print_labeled_buf`, and the latter
+//! is `crypto/encode_decode/encoder_lib.c`'s function `src/encoder_lib.rs` withheld (`encoder_lib.c`
+//! `:785`) because the default provider published no encoder that reached it. Its own only caller is
+//! `encode_key2text.c:454`, the text-encoder unit. That unit now lands (10.1's PQC helper slice), so
+//! this printer lands with it, the same way the authority's own three `ossl_bio_print_*` helpers did
+//! with `encode_key2text.c`'s first rows (D434).
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -46,11 +45,15 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
+use crate::encoder_lib::ossl_bio_print_labeled_buf;
 use crate::evp::digest::{EVP_MD_free, EVP_MD_up_ref};
 use crate::evp::mac::{EVP_MAC_free, EVP_MAC_up_ref};
 use crate::evp::pkey::{OSSL_KEYMGMT_SELECT_PRIVATE_KEY, OSSL_KEYMGMT_SELECT_PUBLIC_KEY};
 use crate::params::OSSL_PARAM_get_octet_string;
 use crate::rand::rand_lib::{RAND_bytes_ex, RAND_priv_bytes_ex};
+use crate::runtime::bio::print::BIO_printf;
+use crate::runtime::bio::Bio;
+use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{
     CRYPTO_free, CRYPTO_memcmp, CRYPTO_strdup, CRYPTO_zalloc, OPENSSL_cleanse,
 };
@@ -696,4 +699,87 @@ pub(crate) unsafe fn ossl_slh_dsa_set_pub(
         (*key).has_priv = 0;
     }
     1
+}
+
+/// `int ossl_slh_dsa_key_to_text(BIO *out, const SLH_DSA_KEY *key, int selection)` —
+/// `slh_dsa_key.c:488-526`.
+///
+/// The `#ifndef FIPS_MODULE` tail: a public key is required regardless of `selection`, the private
+/// half is printed only when the private-key bit is set, and the public key is always printed last.
+///
+/// # Safety
+/// `out` is NULL or live; `key` is NULL or live.
+pub(crate) unsafe fn ossl_slh_dsa_key_to_text(
+    out: *mut Bio,
+    key: *const SlhDsaKey,
+    selection: c_int,
+) -> c_int {
+    if out.is_null() || key.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::SLH_DSA_KEY_494) };
+        return 0;
+    }
+    // SAFETY: `key` is live past the guard.
+    let name = unsafe { ossl_slh_dsa_key_get_name(key) };
+    // SAFETY: `key` is live.
+    if unsafe { ossl_slh_dsa_key_get_pub(key) }.is_null() {
+        // Regardless of the |selection|, there must be a public key.
+        // SAFETY: `name` is a static literal from the key's params.
+        unsafe { raise_missing_key(&err_sites::SLH_DSA_KEY_500, name) };
+        return 0;
+    }
+
+    // SAFETY: `key` is live; the accessors answer borrowed interior pointers.
+    unsafe {
+        if (selection & OSSL_KEYMGMT_SELECT_PRIVATE_KEY) != 0 {
+            if ossl_slh_dsa_key_get_priv(key).is_null() {
+                raise_missing_key(&err_sites::SLH_DSA_KEY_507, name);
+                return 0;
+            }
+            if BIO_printf(out, c"%s Private-Key:\n".as_ptr(), name) <= 0 {
+                return 0;
+            }
+            if ossl_bio_print_labeled_buf(
+                out,
+                c"priv:".as_ptr(),
+                ossl_slh_dsa_key_get_priv(key),
+                ossl_slh_dsa_key_get_priv_len(key),
+            ) == 0
+            {
+                return 0;
+            }
+        } else if (selection & OSSL_KEYMGMT_SELECT_PUBLIC_KEY) != 0
+            && BIO_printf(out, c"%s Public-Key:\n".as_ptr(), name) <= 0
+        {
+            return 0;
+        }
+
+        if ossl_bio_print_labeled_buf(
+            out,
+            c"pub:".as_ptr(),
+            ossl_slh_dsa_key_get_pub(key),
+            ossl_slh_dsa_key_get_pub_len(key),
+        ) == 0
+        {
+            return 0;
+        }
+    }
+
+    1
+}
+
+/// Raise the `PROV_R_MISSING_KEY` `"no %s key material available"` refusal with `name`.
+///
+/// # Safety
+/// `name` must be NUL-terminated.
+unsafe fn raise_missing_key(site: &err_sites::ErrSite, name: *const c_char) {
+    // SAFETY: `name` is NUL-terminated per the contract.
+    let bytes = unsafe { core::ffi::CStr::from_ptr(name) }.to_bytes();
+    let mut msg = Vec::with_capacity(bytes.len() + 27);
+    msg.extend_from_slice(b"no ");
+    msg.extend_from_slice(bytes);
+    msg.extend_from_slice(b" key material available");
+    msg.push(0);
+    // SAFETY: `msg` is NUL-terminated just above.
+    unsafe { raise_site_data(site, msg.as_ptr().cast()) };
 }

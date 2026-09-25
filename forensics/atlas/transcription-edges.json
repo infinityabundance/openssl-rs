@@ -1818,11 +1818,32 @@
         "translation_unit": "providers/implementations/keymgmt/libdefault-lib-mac_legacy_kmgmt.c"
       },
       {
+        "module": "src/provider/ml_common_codecs.rs",
+        "phase": 10,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/implementations/encode_decode/libdefault-lib-ml_common_codecs.c"
+      },
+      {
+        "module": "src/provider/ml_dsa_codecs.rs",
+        "phase": 10,
+        "phase_source": "module-declaration",
+        "share": "5/5",
+        "translation_unit": "providers/implementations/encode_decode/libdefault-lib-ml_dsa_codecs.c"
+      },
+      {
         "module": "src/provider/ml_dsa_kmgmt.rs",
         "phase": 8,
         "phase_source": "module-declaration",
         "share": "1/1",
         "translation_unit": "providers/implementations/keymgmt/libdefault-lib-ml_dsa_kmgmt.c"
+      },
+      {
+        "module": "src/provider/ml_kem_codecs.rs",
+        "phase": 10,
+        "phase_source": "module-declaration",
+        "share": "5/5",
+        "translation_unit": "providers/implementations/encode_decode/libdefault-lib-ml_kem_codecs.c"
       },
       {
         "module": "src/provider/ml_kem_kmgmt.rs",
@@ -2584,7 +2605,7 @@
         "module": "src/slh_dsa/key.rs",
         "phase": 8,
         "phase_source": "module-declaration",
-        "share": "22/22",
+        "share": "23/23",
         "translation_unit": "crypto/slh_dsa/slh_dsa_key.c"
       },
       {

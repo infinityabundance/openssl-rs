@@ -101,8 +101,9 @@ COURT_PROBES: list[tuple[str, list[str], int]] = [
     # operation. It is registered here in the same commit as those rows.
     ("RT-ASYM-CIPHER", ["courts/phase8/rt_asymcipher_probe.c"], 8),
     # Phase 10.1's first provider codec court. It is registered here in the same commit as the
-    # eleven `OSSL_OP_ENCODER` text rows `src/provider/encode_key2text.rs` publishes in the
-    # `default` and `base` providers, which is what keeps this join preventive one stratum on.
+    # twenty-nine `OSSL_OP_ENCODER` text and blob rows `src/provider/encode_key2text.rs` and
+    # `src/provider/encode_key2blob.rs` publish in the `default` and `base` providers, which is what
+    # keeps this join preventive one stratum on.
     ("RT-CODEC", ["courts/phase10/rt_codec_probe.c"], 10),
 ]
 

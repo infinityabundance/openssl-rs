@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-KEYFORMAT-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's eighty-seven inherited `implemented` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-CODEC` is this stratum's first **behavioural** court (10.1): it drives the thirteen encoder rows `encode_key2text.c` and `encode_key2blob.c` publish through the public `OSSL_ENCODER_*` surface and the one `EncryptedPrivateKeyInfo` decoder `decode_epki2pki.c` publishes through `OSSL_DECODER_*`, observing each row's identity (`OSSL_ENCODER_fetch`/`OSSL_DECODER_fetch`'s name and properties), its exact bytes (`OSSL_ENCODER_to_data`/`OSSL_DECODER_from_data` with a construct callback), and a refusal arm for each unit with the error queue. It is a differential compatibility claim about those rows, NOT that the other 608 rows or the remaining decoders are implemented. `pending_courts` names the courts the plan gives this stratum and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3).",
+    "claim": "`RT-KEYFORMAT-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's eighty-seven inherited `implemented` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-CODEC` is this stratum's first **behavioural** court (10.1): it drives the twenty-nine text and blob encoder rows `encode_key2text.c` and `encode_key2blob.c` publish through the public `OSSL_ENCODER_*` surface and the one `EncryptedPrivateKeyInfo` decoder `decode_epki2pki.c` publishes through `OSSL_DECODER_*`, observing each row's identity (`OSSL_ENCODER_fetch`/`OSSL_DECODER_fetch`'s name and properties), its exact bytes (`OSSL_ENCODER_to_data`/`OSSL_DECODER_from_data` with a construct callback), and a refusal arm for each unit with the error queue. It is a differential compatibility claim about those rows, NOT that the other 572 rows or the remaining decoders are implemented. `pending_courts` names the courts the plan gives this stratum and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3).",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 207,
+        "authority_observations": 486,
         "candidate_exit_code": 0,
-        "candidate_observations": 207,
+        "candidate_observations": 486,
         "candidate_stderr_tail": [],
         "court": "RT-CODEC",
         "crashed": false,
@@ -67,7 +67,7 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_codec_probe.c",
-      "sha256": "bf59e86add635792d4321575937d56e10cf00b064e2bf3fd4bf290294c475cb5"
+      "sha256": "67b3ecc2e8d72ae9ebb8886dd92dcbb1fa917cb3dafcfb525a0a68e01195ad35"
     }
   ],
   "kind": "phase10-courts",

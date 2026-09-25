@@ -11,7 +11,7 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 73,
+      "covered_by_a_divergence": 72,
       "language_surface_not_modelled_by_name": 5036,
       "planned_prerequisites": 5
     },
@@ -40,7 +40,6 @@
         "ossl_print_attribute_value": 1,
         "ossl_release_default_drbg_ctx": 2,
         "ossl_serial_number_print": 1,
-        "ossl_slh_dsa_key_to_text": 1,
         "ossl_x509_algor_is_sm2": 1,
         "ossl_x509_init_sig_info": 1,
         "ossl_x509_print_ex_brief": 1,
@@ -486,11 +485,11 @@
     },
     "checked": {
       "authority_units": 326,
-      "crate_modules": 471,
+      "crate_modules": 474,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 7,
-      "divergence_names_covered": 40,
-      "divergence_rows": 12,
+      "divergence_names_covered": 39,
+      "divergence_rows": 11,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -595,13 +594,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "5c31935d6657ab8486e4400642e7bcda91d544db57439a52ef1bcc6e045aeb1b",
+  "body_hash": "28b4c08bdb38d60cf0e9508ab89089803bd40e2a6df11f85a6868ca8530452f0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "2a66c1b8601cb6ad7f1dd1cc9881f035e3773f2c6fb4221364d18bce79753650"
+      "sha256": "5ee3e0eaccea1e26f80d38309f96c54beffa96a61043983b9f282dcf0e12fcf1"
     },
     {
       "name": "macro-owners",
@@ -616,7 +615,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "63599ca078fbbf89595c89204fca7a8539ae10a8086347ee4a318ad03bb7f31e"
+      "sha256": "4dcc13e43b3560a396c87ed1a933b76ba85c1b1b40cfc431ebf5c32cc998e133"
     },
     {
       "name": "symbol-ownership",
@@ -631,17 +630,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9a5791e2c177c86109e37b20c4bb422b3a1fd14e6457f745c12844513d81f815"
+      "sha256": "f91ae8779ae9a38a5b632fd3a3827e5ed64e32bed0871863e0edb4bc1b1b6582"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "a32afefc281d8acb5fad3046ccc1155bece0691e031ad8e72979bd7305de82a6"
+      "sha256": "4d7647c658133aeb5d93d1859e0e11ca51b9e89bc1b25d47874ec7009509f408"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "c64e74025a1e06288b0344522dd2a30455b121f81b27e4cf876f7a03a8265d3f"
+      "sha256": "3b66fd0d19b52ce3f0127dd8762cb47c03b20fe3499c8440ecec901d102f43ad"
     },
     {
       "name": "crate-source-tree",

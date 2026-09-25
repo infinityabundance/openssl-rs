@@ -48,9 +48,11 @@
  *
  * The four `RSA`/`RSA-PSS`/`DSA`/`DHX` rows are observed at join 1 only. `RSA` and `DSA` need a
  * full private key or a modulus the probe would have to carry, and `DHX`'s named groups are a
- * different set from `DH`'s. The eighteen PQC text rows the authority publishes are **not**
- * published by this crate: their `*_to_text` helpers live in unlanded units, so no arm may fetch
- * them without the candidate answering differently (docs/PHASE-10-SUBPHASES.md section 3.5).
+ * different set from `DH`'s. The eighteen PQC text rows are published and driven: ML-KEM and
+ * ML-DSA from the fixed keygen seeds Phase 8's probes carry, and SLH-DSA from the twelve ACVP
+ * private keys (`../phase8/ml_kem_probe.h`, `ml_dsa_probe.h`, `slh_dsa_probe.h`). The three codec
+ * units' `d2i`/`i2d` half is not reachable from a provider row at all -- only `decode_der2key.c`
+ * and `encode_key2any.c` call it, and neither is landed -- so it is named and not driven.
  */
 
 #include <stdio.h>
@@ -63,6 +65,14 @@
 #include <openssl/encoder.h>
 #include <openssl/decoder.h>
 #include <openssl/core_names.h>
+
+/* The fixed PQC key inputs Phase 8's probes already carry: an ML-KEM `(d, z)` seed and
+ * encapsulation key per variant, an ML-DSA keygen seed, and the twelve SLH-DSA ACVP private
+ * keys. They are the same published/differential inputs those courts use, so the bytes this
+ * court encodes are a function of its inputs alone. */
+#include "../phase8/ml_kem_probe.h"
+#include "../phase8/ml_dsa_probe.h"
+#include "../phase8/slh_dsa_probe.h"
 
 static void kv_int(const char *key, int value)
 {
@@ -96,10 +106,18 @@ static void errs(const char *key)
     printf("%s.count=%d\n", key, i);
 }
 
-/* The eleven rows this unit publishes, in the authority's deflt_encoder[] order, and the two
- * providers that publish a copy of each (defltprov.c and baseprov.c). */
+/* The twenty-nine rows this unit publishes, in the authority's deflt_encoder[] order, and the two
+ * providers that publish a copy of each (defltprov.c and baseprov.c). The eighteen PQC rows were
+ * withheld until their `*_to_text` helpers landed (docs/PHASE-10-SUBPHASES.md section 3.5); they
+ * are published now, so the whole MAKE_TEXT_ENCODER list is named here. */
 static const char *codec_rows[] = {
-    "RSA", "RSA-PSS", "DH", "DHX", "DSA", "EC", "ED25519", "ED448", "X25519", "X448", "SM2"
+    "RSA", "RSA-PSS", "DH", "DHX", "DSA", "EC", "ED25519", "ED448", "X25519", "X448", "SM2",
+    "ML-KEM-512", "ML-KEM-768", "ML-KEM-1024",
+    "ML-DSA-44", "ML-DSA-65", "ML-DSA-87",
+    "SLH-DSA-SHA2-128s", "SLH-DSA-SHA2-128f", "SLH-DSA-SHA2-192s", "SLH-DSA-SHA2-192f",
+    "SLH-DSA-SHA2-256s", "SLH-DSA-SHA2-256f",
+    "SLH-DSA-SHAKE-128s", "SLH-DSA-SHAKE-128f", "SLH-DSA-SHAKE-192s", "SLH-DSA-SHAKE-192f",
+    "SLH-DSA-SHAKE-256s", "SLH-DSA-SHAKE-256f"
 };
 static const char *providers[] = { "default", "base" };
 
@@ -624,6 +642,163 @@ static void arm_ec_refusal(void)
     EVP_PKEY_free(pkey);
 }
 
+/* ---------------------------------------------------------------------------
+ * The eighteen PQC text rows, and the printers behind them.
+ *
+ * The three codec helper units this slice lands (`ml_common_codecs.c`, `ml_kem_codecs.c`,
+ * `ml_dsa_codecs.c`) and `slh_dsa_key.c`'s tail publish no provider row of their own; they are
+ * observed here through the three text encoders that call their `*_to_text` printers. The d2i/i2d
+ * half of the two codec units is reached only by `decode_der2key.c`/`encode_key2any.c`, which are
+ * not landed, so no arm can drive it yet -- named here rather than silently skipped.
+ *
+ * Join 2: a keypair built from a fixed input, encoded as text. Nothing is generated from a random
+ * value: ML-KEM's and ML-DSA's keygen seeds and SLH-DSA's full private keys are the constants
+ * Phase 8's courts already carry.
+ * ------------------------------------------------------------------------- */
+
+/* A keypair generated deterministically from a fixed `seed` generation parameter, or NULL. */
+static EVP_PKEY *seed_key(const char *type, const char *seed_param,
+    const unsigned char *seed, size_t seedlen)
+{
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, type, NULL);
+    OSSL_PARAM params[2];
+    EVP_PKEY *pkey = NULL;
+
+    if (ctx == NULL)
+        return NULL;
+    if (EVP_PKEY_keygen_init(ctx) != 1)
+        goto out;
+    params[0] = OSSL_PARAM_construct_octet_string(seed_param, (void *)seed, seedlen);
+    params[1] = OSSL_PARAM_construct_end();
+    if (EVP_PKEY_CTX_set_params(ctx, params) != 1)
+        goto out;
+    (void)EVP_PKEY_generate(ctx, &pkey);
+out:
+    EVP_PKEY_CTX_free(ctx);
+    return pkey;
+}
+
+/* A key built by importing a fixed private key (`OSSL_PKEY_PARAM_PRIV_KEY`), or NULL. */
+static EVP_PKEY *priv_key(const char *type, const unsigned char *priv, size_t privlen)
+{
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, type, NULL);
+    OSSL_PARAM params[2];
+    EVP_PKEY *pkey = NULL;
+
+    if (ctx == NULL)
+        return NULL;
+    if (EVP_PKEY_fromdata_init(ctx) != 1)
+        goto out;
+    params[0] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_PRIV_KEY, (void *)priv, privlen);
+    params[1] = OSSL_PARAM_construct_end();
+    (void)EVP_PKEY_fromdata(ctx, &pkey, EVP_PKEY_KEYPAIR, params);
+out:
+    EVP_PKEY_CTX_free(ctx);
+    return pkey;
+}
+
+/* A public-only key built by importing fixed public bytes, or NULL. */
+static EVP_PKEY *pub_key(const char *type, const unsigned char *pub, size_t publen)
+{
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, type, NULL);
+    OSSL_PARAM params[2];
+    EVP_PKEY *pkey = NULL;
+
+    if (ctx == NULL)
+        return NULL;
+    if (EVP_PKEY_fromdata_init(ctx) != 1)
+        goto out;
+    params[0] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_PUB_KEY, (void *)pub, publen);
+    params[1] = OSSL_PARAM_construct_end();
+    (void)EVP_PKEY_fromdata(ctx, &pkey, EVP_PKEY_PUBLIC_KEY, params);
+out:
+    EVP_PKEY_CTX_free(ctx);
+    return pkey;
+}
+
+/* Join 2: every PQC text row over a fixed keypair, KEYPAIR selection. */
+static void arm_pqc_text(void)
+{
+    size_t i;
+    char key[96];
+
+    for (i = 0; i < sizeof(ml_kem_kat_rows) / sizeof(ml_kem_kat_rows[0]); i++) {
+        const struct ml_kem_probe_row *r = &ml_kem_kat_rows[i];
+        EVP_PKEY *pkey = seed_key(r->name, OSSL_PKEY_PARAM_ML_KEM_SEED, r->seed, r->seedlen);
+
+        snprintf(key, sizeof(key), "codec.pqc_mlkem.%s.keypair", r->name);
+        kv_int("codec.pqc.built", pkey != NULL);
+        if (pkey != NULL)
+            encode_and_report(key, pkey, EVP_PKEY_KEYPAIR);
+        EVP_PKEY_free(pkey);
+    }
+
+    {
+        static const char *names[] = { "ML-DSA-44", "ML-DSA-65", "ML-DSA-87" };
+
+        for (i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
+            EVP_PKEY *pkey = seed_key(names[i], OSSL_PKEY_PARAM_ML_DSA_SEED,
+                                      ml_dsa_seed, sizeof(ml_dsa_seed));
+
+            snprintf(key, sizeof(key), "codec.pqc_mldsa.%s.keypair", names[i]);
+            kv_int("codec.pqc.built", pkey != NULL);
+            if (pkey != NULL)
+                encode_and_report(key, pkey, EVP_PKEY_KEYPAIR);
+            EVP_PKEY_free(pkey);
+        }
+    }
+
+    for (i = 0; i < sizeof(slh_dsa_rows) / sizeof(slh_dsa_rows[0]); i++) {
+        EVP_PKEY *pkey = priv_key(slh_dsa_rows[i].name, slh_dsa_rows[i].key, slh_dsa_rows[i].len);
+
+        snprintf(key, sizeof(key), "codec.pqc_slhdsa.%s.keypair", slh_dsa_rows[i].name);
+        kv_int("codec.pqc.built", pkey != NULL);
+        if (pkey != NULL)
+            encode_and_report(key, pkey, EVP_PKEY_KEYPAIR);
+        EVP_PKEY_free(pkey);
+    }
+}
+
+/* Join 3: the two printers' selection refusals, both `PROV_R_MISSING_KEY`.
+ *
+ * ML-DSA's printer raises when the private-key bit is set and there is no private key (`:432`);
+ * SLH-DSA's does the same (`:507`). Both are driven by a public-only key asked for a keypair. */
+static void arm_pqc_refusals(void)
+{
+    EVP_PKEY *pkey = seed_key("ML-DSA-44", OSSL_PKEY_PARAM_ML_DSA_SEED,
+                              ml_dsa_seed, sizeof(ml_dsa_seed));
+
+    /* ML-DSA-44: derive a keypair from the seed, extract its public key, then import it alone. */
+    if (pkey != NULL) {
+        unsigned char pub[1600];
+        size_t publen = 0;
+
+        kv_int("codec.pqc.refusal.pub",
+               EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, pub, sizeof(pub),
+                                               &publen));
+        EVP_PKEY_free(pkey);
+        if (publen > 0) {
+            EVP_PKEY *pubonly = pub_key("ML-DSA-44", pub, publen);
+
+            kv_int("codec.pqc.refusal.pubonly", pubonly != NULL);
+            if (pubonly != NULL)
+                encode_and_report("codec.pqc_mldsa.refuse_private", pubonly, EVP_PKEY_KEYPAIR);
+            EVP_PKEY_free(pubonly);
+        }
+    }
+
+    /* SLH-DSA-SHA2-128s: the last 2n bytes of the vector are `PK_SEED || PK_ROOT`. */
+    {
+        size_t n = slh_dsa_rows[0].len / 4;
+        EVP_PKEY *pubonly = pub_key(slh_dsa_rows[0].name, slh_dsa_rows[0].key + 2 * n, 2 * n);
+
+        kv_int("codec.pqc.refusal.slh_pubonly", pubonly != NULL);
+        if (pubonly != NULL)
+            encode_and_report("codec.pqc_slhdsa.refuse_private", pubonly, EVP_PKEY_KEYPAIR);
+        EVP_PKEY_free(pubonly);
+    }
+}
+
 int main(void)
 {
     OSSL_PROVIDER *deflt = OSSL_PROVIDER_load(NULL, "default");
@@ -636,6 +811,9 @@ int main(void)
     arm_ecx_public();
     arm_named_params();
     arm_ec_refusal();
+
+    arm_pqc_text();
+    arm_pqc_refusals();
 
     arm_blob_identity();
     arm_blob_public();

@@ -2162,7 +2162,7 @@ unsafe extern "C" fn deflt_query(
     }
     if operation_id == crate::provider::encode_key2text::OSSL_OP_ENCODER {
         // `defltprov.c:723` returns `deflt_encoder`, the crate's own `DEFLT_ENCODERS` -- the
-        // thirteen text and blob rows 10.1 has published; the other 228 encoder rows are still
+        // twenty-nine text and blob rows 10.1 has published; the other encoder rows are still
         // unimplemented and absent.
         return crate::provider::encode_key2text::DEFLT_ENCODERS.as_ptr();
     }

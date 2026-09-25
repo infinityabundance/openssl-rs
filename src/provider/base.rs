@@ -232,8 +232,8 @@ unsafe extern "C" fn base_query(
     // SAFETY: `no_cache` is writable per the contract. `baseprov.c:101`.
     unsafe { *no_cache = 0 };
     if operation_id == OSSL_OP_ENCODER {
-        // `baseprov.c:104` returns `base_encoder`, the crate's own `BASE_ENCODERS` -- the thirteen
-        // text and blob rows 10.1 has published.
+        // `baseprov.c:104` returns `base_encoder`, the crate's own `BASE_ENCODERS` -- the
+        // twenty-nine text and blob rows 10.1 has published.
         return crate::provider::encode_key2text::BASE_ENCODERS.as_ptr();
     }
     if operation_id == OSSL_OP_DECODER {

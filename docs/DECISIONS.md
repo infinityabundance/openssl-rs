@@ -31026,3 +31026,57 @@ Phase 10 stays `in-progress`; `PIPELINE OK` exit 0, twice.
 `src/runtime/err_sites.rs` and `courts/phase10/rt_codec_probe.c` change; `gen_err_raise_sites.py` and
 `phase10_courts.py` change; `docs/PHASE-10-SUBPHASES.md`'s §2 gains the measured ordering correction;
 and the atlases, the census and `forensics/regression-baseline.json` are regenerated.
+
+## D436 -- 10.1 lands the PQC codec helpers and the eighteen withheld tables, and reaches 64 of 636 rows
+
+D435's measurement said the two big units are gated first on the PQC codec helper units, so this slice
+lands them. Three new modules -- `src/provider/ml_common_codecs.rs`, `src/provider/ml_kem_codecs.rs`,
+`src/provider/ml_dsa_codecs.rs` -- carry the ML-KEM/ML-DSA `d2i`/`i2d` PKCS#8 and PUBKEY codecs, the
+SPKI prefixes, the PKCS#8 format tables and the `ML_COMMON` preference ordering with its
+`PROV_R_ML_DSA_NO_FORMAT` refusal; the SLH-DSA text printer D398 withheld lands in `src/slh_dsa/key.rs`
+as `ossl_slh_dsa_key_to_text`. **The eighteen `ML-KEM`/`ML-DSA`/`SLH-DSA` text tables D434 held `pending`
+are now published**, which is **36 new rows** (18 tables across both providers): all 29
+`MAKE_TEXT_ENCODER` tables are in, and `DEFLT_ENCODERS`/`BASE_ENCODERS` grow from 13 rows to 31 each.
+Phase 10's provider rows move from `implemented 28` to **`implemented 64 / unimplemented 572`** of 636,
+and nothing this slice touched is left `pending`. The four units join `gen_err_raise_sites.py`'s
+coverage (4138 to **4170** sites), and `ossl_slh_dsa_key_to_text`'s withheld-divergence row leaves
+`forensics/prerequisites.json`, as D434's `ossl_bio_print_*` row did.
+
+**`RT-CODEC` grows from 207 to 486 observations**, and the growth is the point: identity for all 29 rows
+across both providers, behaviour for **every** PQC text row over fixed inputs -- ML-KEM and ML-DSA
+texts printed from Phase 8's landed keygen seeds, SLH-DSA from the twelve ACVP private keys Phase 8
+already carries -- and two refusal arms with their error coordinates, the `ml_dsa`/`slh_dsa` printers'
+`PROV_R_MISSING_KEY`. `provider_court_coverage.py` reads 64 phase-10 rows directly courted with 0
+unmatched.
+
+**The helper units publish no rows, and the court says so.** Their `d2i`/`i2d` half is observable only
+through the two units that call it, so landing these three modules unlocks the eighteen text tables
+(36 rows) but leaves the four helpers themselves uncourtable until `decode_der2key.c` and
+`encode_key2any.c` land. `RT-CODEC` names that rather than implying the helpers are covered, and
+`ossl_ml_common_pkcs8_fmt_order`'s `PROV_R_ML_DSA_NO_FORMAT` refusal is driven by the provider
+*config*'s `input-formats`/`output-formats` rather than by an `OSSL_ENCODER_CTX`, so it is unit-tested
+(five tests) rather than court-driven -- stated because a refusal that is not court-driven is weaker
+evidence than one that is.
+
+**`decode_der2key.c` is now unblocked and is deliberately not half-landed.** Its four-helper closure is
+complete, so the 138-row unit is genuinely landable; it is a 1,315-line, 69-table unit plus the largest
+court extension in the stratum, and it is the next slice rather than a partial one here.
+`encode_key2any.c` remains blocked exactly as D435 measured -- 10.6's six container writers and 10.4's
+`PKCS8_encrypt_ex` are both unlanded.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+at the default thread count is **1061 passed, 0 failed** (eight more than D435's 1053, all taking
+`lock_global_state`). `run_courts.py`, `court_coverage.py` and `provider_court_coverage.py` clean, phase
+10 at two courts and 573 observations. `forensics/phase10-obligations.json` still reads
+`owned=298 implemented=87 open=211`, because a provider row is not an export. Phase 9 `complete`, Phase
+10 `in-progress`, `PIPELINE OK` exit 0 twice.
+
+### Movement
+
+`src/provider/ml_common_codecs.rs`, `ml_kem_codecs.rs` and `ml_dsa_codecs.rs` are added;
+`src/provider/{base,digest,mod,encode_key2text}.rs`, `src/slh_dsa/key.rs`, `src/runtime/err_sites.rs` and
+`courts/phase10/rt_codec_probe.c` change; `gen_err_raise_sites.py`, `phase10_courts.py` and
+`provider_court_coverage.py` change; `forensics/prerequisites.json` loses the SLH-DSA divergence row;
+and the atlases, the census and `forensics/regression-baseline.json` are regenerated.
