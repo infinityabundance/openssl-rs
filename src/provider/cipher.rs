@@ -30,10 +30,11 @@
 //!
 //! What is **absent by design**: the `base`/`null` *providers* -- `forensics/atlas/provider-algorithms.json`'s
 //! `projection` block gives their 319 rows `owning_phase` 10 (318) and 9 (1), so no Phase 8 ledger
-//! claims them; the `AES-*-GCM` three
-//! (`defltprov.c:202-204`), deferred to Phase 9 on `RAND_bytes_ex` (D234, D237); and the multiblock
-//! *encrypt* parameter of the four published `AES-*-CBC-HMAC-*` rows, which is this module's one
-//! recorded narrowing (`docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1). Everything
+//! claims them; and the `AES-*-GCM` three (`defltprov.c:202-204`), deferred to Phase 9 on
+//! `RAND_bytes_ex` (D234, D237). The four published `AES-*-CBC-HMAC-*` rows' multiblock *encrypt*
+//! parameter is **landed**: `tls1_multiblock_encrypt` is written from the authority's
+//! `tls1_multi_block_encrypt` and draws its per-record explicit IVs through the crate's own
+//! `RAND_bytes_ex`, so `D-CBCHMAC-MULTIBLOCK-ENC-1` is closed. Everything
 //! else in `deflt_ciphers[]` that this profile compiles is here: the thirteen CBC-HMAC rows (the
 //! four the AES-NI bit publishes with their whole record construction, and the nine ETM rows as the
 //! capability filter's rows with empty dispatch tables, which is what this profile's
@@ -10495,6 +10496,7 @@ use crate::params::{
     OSSL_PARAM_get_size_t, OSSL_PARAM_get_uint, OSSL_PARAM_locate, OSSL_PARAM_locate_const,
     OSSL_PARAM_set_octet_string_or_ptr, OSSL_PARAM_set_size_t, OSSL_PARAM_set_uint,
 };
+use crate::rand::rand_lib::RAND_bytes_ex;
 use crate::runtime::constant_time::{constant_time_ge_s, constant_time_select};
 
 /// `NO_PAYLOAD_LENGTH` — `cipher_aes_cbc_hmac_sha.h:63`: `((size_t)-1)`.
@@ -11010,27 +11012,177 @@ unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_aad(
     }
 }
 
+/// The SHA-1 body of `tls1_multi_block_encrypt` — `cipher_aes_cbc_hmac_sha1_hw.c:121-369`.
+///
+/// **This is the construction `D-CBCHMAC-MULTIBLOCK-ENC-1` withheld, and Phase 9's RAND is what
+/// lands it.** The authority draws its per-record explicit IVs in bulk
+/// (`RAND_bytes_ex(ctx->base.libctx, blocks[0].c, 16 * x4, 0)`, `:146`); the crate draws the same
+/// `16 * x4` bytes through its own `RAND_bytes_ex` in the same library context the row carries
+/// (`ctx->base.libctx`, the acquisition D240/D241 measured), so the *bytes* differ between the two
+/// sides -- as every random draw does -- while their length, placement and use are the authority's.
+///
+/// **The perlasm collapses to byte-identical ordinary operations.** `sha1_multi_block` runs four or
+/// eight independent SHA-1 chains over the per-lane descriptors and `aesni_multi_cbc_encrypt` the
+/// same number of independent CBC chains; each lane's digest is the state the single-block path
+/// would reach, and `head`/`tail`/`md` are ordinary `SHA_CTX`s. So the lane MAC is
+/// `HMAC-SHA1(mac_key, header_lane || payload_lane)` computed with `SHA1_Update`/`SHA1_Final` from
+/// `head` and `tail`, and the lane ciphertext is one `AES_cbc_encrypt` under the lane's drawn IV.
+/// The `MAXCHUNKSIZE` interleaving and the explicit padding-block construction are speed, not
+/// bytes: both sides hash the same `ipad || header || payload` and pad the same records.
+///
+/// The layout, per lane: `[5-byte header][16-byte explicit IV][ciphertext]`, where the header is
+/// `md.data[8..11]` (the AAD's type and version) followed by the 16-bit length of
+/// `payload || mac || padding || iv`, and the MAC covers `header_lane || payload_lane` with the
+/// header's length field set to the *payload* length, exactly as `set_tls1_aad` defines.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `out` is writable for the returned number of bytes;
+/// `inp` is readable for `inp_len` bytes.
+unsafe fn tls1_multi_block_encrypt_sha1(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    inp: *const c_uchar,
+    inp_len: usize,
+    n4x: c_int,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha1Ctx>();
+
+        // `x4 = 4 * n4x`, and the authority's `/* n4x is 1 or 2 */` contract is what sizes its IV
+        // scratch (`blocks[0].c`, 128 bytes). An argument outside that range indexes past the
+        // scratch there; answering 0 here is the safe side of an out-of-contract call rather than
+        // a claim about it.
+        let x4 = (n4x as u32).wrapping_mul(4);
+        if x4 == 0 || x4 > 8 {
+            return 0;
+        }
+        let x4 = x4 as usize;
+
+        let mut ivs = [0u8; 128];
+        // SAFETY: `ivs` is writable for `16 * x4 <= 128` bytes and `libctx` is the row's own.
+        if RAND_bytes_ex((*ctx).base.libctx, ivs.as_mut_ptr(), 16 * x4, 0) <= 0 {
+            return 0;
+        }
+
+        let shift = 1 + n4x as u32;
+        let mut frag = (inp_len as u32) >> shift;
+        let mut last = (inp_len as u32)
+            .wrapping_add(frag)
+            .wrapping_sub(frag << shift);
+        if last > frag && (last.wrapping_add(13).wrapping_add(9) % 64) < (x4 as u32 - 1) {
+            frag += 1;
+            last -= x4 as u32 - 1;
+        }
+        let packlen = 5 + 16 + ((frag.wrapping_add(20).wrapping_add(16)) & (u32::MAX - 15));
+
+        let md_data = (*sctx).md.data.as_ptr().cast::<u8>();
+        let mut ret: usize = 0;
+        let mut seq_off: usize = 0;
+        for i in 0..x4 {
+            let lane_len = if i == x4 - 1 { last } else { frag } as usize;
+            let ciph = out.add(5 + 16 + i * packlen as usize);
+            let rec = out.add(seq_off);
+
+            // The thirteen-byte MAC header: `md.data`'s sequence number incremented by the lane
+            // index, its type and version, and this lane's payload length.
+            let mut hdr = [0u8; 13];
+            ptr::copy_nonoverlapping(md_data, hdr.as_mut_ptr(), 8);
+            let mut carry = i as u32;
+            let mut j = 8usize;
+            while j != 0 {
+                j -= 1;
+                let v = hdr[j] as u32 + carry;
+                hdr[j] = v as u8;
+                carry = (hdr[j] as u32).wrapping_sub(carry) >> 31;
+            }
+            hdr[8] = *md_data.add(8);
+            hdr[9] = *md_data.add(9);
+            hdr[10] = *md_data.add(10);
+            hdr[11] = (lane_len >> 8) as u8;
+            hdr[12] = lane_len as u8;
+
+            // `H(ipad || hm)`, then `HMAC = H(opad || H(ipad || hm))`.
+            let lane_in = inp.add(i * frag as usize);
+            let mut mac = [0u8; SHA_DIGEST_LENGTH];
+            let mut st: ShaCtx = core::mem::zeroed();
+            copy_state(ptr::addr_of_mut!(st), ptr::addr_of!((*sctx).head));
+            SHA1_Update(ptr::addr_of_mut!(st), hdr.as_ptr().cast(), 13);
+            SHA1_Update(ptr::addr_of_mut!(st), lane_in.cast(), lane_len);
+            SHA1_Final(mac.as_mut_ptr(), ptr::addr_of_mut!(st));
+            copy_state(ptr::addr_of_mut!(st), ptr::addr_of!((*sctx).tail));
+            SHA1_Update(
+                ptr::addr_of_mut!(st),
+                mac.as_ptr().cast(),
+                SHA_DIGEST_LENGTH,
+            );
+            SHA1_Final(mac.as_mut_ptr(), ptr::addr_of_mut!(st));
+
+            // `memcpy(ciph_d[i].out, ciph_d[i].inp, len)`: the payload goes to the encryption
+            // start, `out + 5 + 16 + i*packlen`.
+            ptr::copy_nonoverlapping(lane_in, ciph, lane_len);
+
+            // The MAC and the padding go at the *sequential* `out` position, as the authority's
+            // own `out` pointer writes them; `seq_off` tracks that pointer.
+            let macp = rec.add(5 + 16 + lane_len);
+            ptr::copy_nonoverlapping(mac.as_ptr(), macp, SHA_DIGEST_LENGTH);
+            let mut plen = lane_len + SHA_DIGEST_LENGTH;
+            let pad = (15 - (plen % 16)) as u8;
+            for j in 0..=(pad as usize) {
+                *macp.add(SHA_DIGEST_LENGTH + j) = pad;
+            }
+            plen += pad as usize + 1;
+            let wire_len = plen + AES_BLOCK_SIZE;
+
+            // Arrange the header. Bytes 8..11 of `md.data` are the AAD's type and version.
+            *rec.add(0) = *md_data.add(8);
+            *rec.add(1) = *md_data.add(9);
+            *rec.add(2) = *md_data.add(10);
+            *rec.add(3) = (wire_len >> 8) as u8;
+            *rec.add(4) = wire_len as u8;
+
+            // The explicit IV is stored at `ciph - 16` and used as the CBC IV through a copy, so
+            // `AES_cbc_encrypt`'s write-back does not overwrite the stored value.
+            ptr::copy_nonoverlapping(ivs.as_ptr().add(i * 16), ciph.sub(16), 16);
+            let mut ivec = [0u8; AES_BLOCK_SIZE];
+            ptr::copy_nonoverlapping(ivs.as_ptr().add(i * 16), ivec.as_mut_ptr(), AES_BLOCK_SIZE);
+            AES_cbc_encrypt(
+                ciph,
+                ciph,
+                plen,
+                ptr::addr_of_mut!((*ctx).ks.ks),
+                ivec.as_mut_ptr(),
+                1,
+            );
+
+            ret += wire_len + 5;
+            seq_off += wire_len + 5;
+        }
+
+        (*ctx).multiblock_encrypt_len = ret;
+        ret
+    }
+}
+
 /// `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt` — `cipher_aes_cbc_hmac_sha1_hw.c:760-766`.
-///
-/// **This is the family's one recorded narrowing, and it is a Phase 9 hand-off.** The authority's
-/// body is `tls1_multi_block_encrypt`, whose first act is
-/// `RAND_bytes_ex(ctx->base.libctx, blocks[0].c, 16 * x4, 0)` (`:146`) *and* whose every subsequent
-/// byte depends on those random values: they become each interleaved record's explicit IV. No
-/// version of this arm answers correctly without the random layer, so it answers the value the
-/// authority itself answers when that call fails -- `0`, with no error queued -- and the divergence
-/// is recorded rather than hidden. `crypto/rand/` is Phase 9's, the same blocker `DES3-WRAP`,
-/// `SM4-GCM` and the `ARIA-*-GCM` rows carry (D237, D240).
-///
-/// `tls1_multiblock_aad` and `tls1_multiblock_max_bufsize` above are **not** narrowed: neither
-/// touches the random layer, and both are courted.
 ///
 /// # Safety
 /// As `aesni_cbc_hmac_sha1_tls1_multiblock_aad`.
 unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_encrypt(
-    _vctx: *mut c_void,
-    _param: *mut EvpCtrlTls11MultiblockParam,
+    vctx: *mut c_void,
+    param: *mut EvpCtrlTls11MultiblockParam,
 ) -> c_int {
-    0
+    // SAFETY: the caller's contract; `param` is a live parameter block.
+    unsafe {
+        tls1_multi_block_encrypt_sha1(
+            vctx,
+            (*param).out,
+            (*param).inp,
+            (*param).len,
+            ((*param).interleave / 4) as c_int,
+        ) as c_int
+    }
 }
 
 /// `aesni_cbc_hmac_sha1_cipher` — `cipher_aes_cbc_hmac_sha1_hw.c:372-625`.
@@ -11490,16 +11642,150 @@ unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_aad(
     }
 }
 
-/// `aesni_cbc_hmac_sha256_tls1_multiblock_encrypt` — the same Phase 9 narrowing as its SHA-1
-/// sibling; see `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt`.
+/// The SHA-256 body of `tls1_multi_block_encrypt` — `cipher_aes_cbc_hmac_sha256_hw.c:125-392`.
+///
+/// The same construction as [`tls1_multi_block_encrypt_sha1`], differing only where the authority's
+/// SHA-256 sibling differs: a 32-byte tag, `SHA256_Update`/`SHA256_Final` over a `SHA256_CTX`, and a
+/// `frag + 32 + 16` pack length. The two bodies are kept apart rather than shared for the same
+/// reason the two cipher bodies above are: the digest length and the state type are compile-time
+/// facts in the authority's two translation units, and a shared generic would hide exactly the
+/// per-row difference a shared assumption erases.
+///
+/// # Safety
+/// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `out` is writable for the returned number of bytes;
+/// `inp` is readable for `inp_len` bytes.
+unsafe fn tls1_multi_block_encrypt_sha256(
+    vctx: *mut c_void,
+    out: *mut c_uchar,
+    inp: *const c_uchar,
+    inp_len: usize,
+    n4x: c_int,
+) -> usize {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let ctx = vctx.cast::<ProvAesHmacShaCtx>();
+        let sctx = vctx.cast::<ProvAesHmacSha256Ctx>();
+
+        // As the SHA-1 body's guard: `x4 = 4 * n4x` with the authority's `n4x` 1-or-2 contract.
+        let x4 = (n4x as u32).wrapping_mul(4);
+        if x4 == 0 || x4 > 8 {
+            return 0;
+        }
+        let x4 = x4 as usize;
+
+        let mut ivs = [0u8; 128];
+        // SAFETY: `ivs` is writable for `16 * x4 <= 128` bytes and `libctx` is the row's own.
+        if RAND_bytes_ex((*ctx).base.libctx, ivs.as_mut_ptr(), 16 * x4, 0) <= 0 {
+            return 0;
+        }
+
+        let shift = 1 + n4x as u32;
+        let mut frag = (inp_len as u32) >> shift;
+        let mut last = (inp_len as u32)
+            .wrapping_add(frag)
+            .wrapping_sub(frag << shift);
+        if last > frag && (last.wrapping_add(13).wrapping_add(9) % 64) < (x4 as u32 - 1) {
+            frag += 1;
+            last -= x4 as u32 - 1;
+        }
+        let packlen = 5 + 16 + ((frag.wrapping_add(32).wrapping_add(16)) & (u32::MAX - 15));
+
+        let md_data = (*sctx).md.data.as_ptr().cast::<u8>();
+        let mut ret: usize = 0;
+        let mut seq_off: usize = 0;
+        for i in 0..x4 {
+            let lane_len = if i == x4 - 1 { last } else { frag } as usize;
+            let ciph = out.add(5 + 16 + i * packlen as usize);
+            let rec = out.add(seq_off);
+
+            let mut hdr = [0u8; 13];
+            ptr::copy_nonoverlapping(md_data, hdr.as_mut_ptr(), 8);
+            let mut carry = i as u32;
+            let mut j = 8usize;
+            while j != 0 {
+                j -= 1;
+                let v = hdr[j] as u32 + carry;
+                hdr[j] = v as u8;
+                carry = (hdr[j] as u32).wrapping_sub(carry) >> 31;
+            }
+            hdr[8] = *md_data.add(8);
+            hdr[9] = *md_data.add(9);
+            hdr[10] = *md_data.add(10);
+            hdr[11] = (lane_len >> 8) as u8;
+            hdr[12] = lane_len as u8;
+
+            let lane_in = inp.add(i * frag as usize);
+            let mut mac = [0u8; SHA256_DIGEST_LENGTH];
+            let mut st: Sha256Ctx = core::mem::zeroed();
+            copy_state(ptr::addr_of_mut!(st), ptr::addr_of!((*sctx).head));
+            SHA256_Update(ptr::addr_of_mut!(st), hdr.as_ptr().cast(), 13);
+            SHA256_Update(ptr::addr_of_mut!(st), lane_in.cast(), lane_len);
+            SHA256_Final(mac.as_mut_ptr(), ptr::addr_of_mut!(st));
+            copy_state(ptr::addr_of_mut!(st), ptr::addr_of!((*sctx).tail));
+            SHA256_Update(
+                ptr::addr_of_mut!(st),
+                mac.as_ptr().cast(),
+                SHA256_DIGEST_LENGTH,
+            );
+            SHA256_Final(mac.as_mut_ptr(), ptr::addr_of_mut!(st));
+
+            ptr::copy_nonoverlapping(lane_in, ciph, lane_len);
+
+            let macp = rec.add(5 + 16 + lane_len);
+            ptr::copy_nonoverlapping(mac.as_ptr(), macp, SHA256_DIGEST_LENGTH);
+            let mut plen = lane_len + SHA256_DIGEST_LENGTH;
+            let pad = (15 - (plen % 16)) as u8;
+            for j in 0..=(pad as usize) {
+                *macp.add(SHA256_DIGEST_LENGTH + j) = pad;
+            }
+            plen += pad as usize + 1;
+            let wire_len = plen + AES_BLOCK_SIZE;
+
+            *rec.add(0) = *md_data.add(8);
+            *rec.add(1) = *md_data.add(9);
+            *rec.add(2) = *md_data.add(10);
+            *rec.add(3) = (wire_len >> 8) as u8;
+            *rec.add(4) = wire_len as u8;
+
+            ptr::copy_nonoverlapping(ivs.as_ptr().add(i * 16), ciph.sub(16), 16);
+            let mut ivec = [0u8; AES_BLOCK_SIZE];
+            ptr::copy_nonoverlapping(ivs.as_ptr().add(i * 16), ivec.as_mut_ptr(), AES_BLOCK_SIZE);
+            AES_cbc_encrypt(
+                ciph,
+                ciph,
+                plen,
+                ptr::addr_of_mut!((*ctx).ks.ks),
+                ivec.as_mut_ptr(),
+                1,
+            );
+
+            ret += wire_len + 5;
+            seq_off += wire_len + 5;
+        }
+
+        (*ctx).multiblock_encrypt_len = ret;
+        ret
+    }
+}
+
+/// `aesni_cbc_hmac_sha256_tls1_multiblock_encrypt` — `cipher_aes_cbc_hmac_sha256_hw.c:811-817`.
 ///
 /// # Safety
 /// As `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt`.
 unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_encrypt(
-    _vctx: *mut c_void,
-    _param: *mut EvpCtrlTls11MultiblockParam,
+    vctx: *mut c_void,
+    param: *mut EvpCtrlTls11MultiblockParam,
 ) -> c_int {
-    0
+    // SAFETY: the caller's contract; `param` is a live parameter block.
+    unsafe {
+        tls1_multi_block_encrypt_sha256(
+            vctx,
+            (*param).out,
+            (*param).inp,
+            (*param).len,
+            ((*param).interleave / 4) as c_int,
+        ) as c_int
+    }
 }
 
 /// `aesni_cbc_hmac_sha256_cipher` — `cipher_aes_cbc_hmac_sha256_hw.c:395-...`.

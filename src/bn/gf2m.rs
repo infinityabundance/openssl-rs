@@ -19,15 +19,16 @@
 //! one canonical representative and both routes reach it. The probe checks the values
 //! against the authority rather than against a definition.
 //!
-//! ## The one place the value is not the whole story
+//! ## The one place the construction is not just the value
 //!
 //! `BN_GF2m_mod_inv` in the authority **blinds** the inversion: it draws a random
 //! factor with `BN_priv_rand_ex`, multiplies, inverts vartime and multiplies back, so
 //! that the timing of the vartime inversion is not a function of the secret. This
-//! implementation computes the same inverse without the blinding, because RAND is
-//! Phase 9. The returned value is identical; the timing profile is not, and that is
-//! recorded as a security divergence in `docs/SECURITY_DIVERGENCE_POLICY.md` rather
-//! than left for a reader to notice.
+//! implementation performs that construction as the authority orders it — the draw, the
+//! retry while the factor is zero, `r := a*b`, the vartime inversion and `r := r*b` —
+//! now that RAND landed in Phase 9. The returned value is unchanged either way (a field
+//! inverse is unique); the timing property is what the construction restores, and
+//! `docs/SECURITY_DIVERGENCE_POLICY.md` D-GF2M-1 records the closing.
 
 use core::ffi::c_int;
 
@@ -38,7 +39,7 @@ use crate::bn::bignum::{
 };
 use crate::bn::ctx::{BN_CTX_end, BN_CTX_get, BN_CTX_start, BnCtx};
 use crate::bn::limbs::{self, Limb};
-use crate::bn::rand::{BN_priv_rand_ex, BN_RAND_BOTTOM_ANY, BN_RAND_TOP_ONE};
+use crate::bn::rand::{BN_priv_rand_ex, BN_RAND_BOTTOM_ANY, BN_RAND_TOP_ANY, BN_RAND_TOP_ONE};
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{
     BN_GF2M_1065, BN_GF2M_1075, BN_GF2M_1111, BN_GF2M_389, BN_GF2M_472, BN_GF2M_532, BN_GF2M_915,
@@ -594,47 +595,119 @@ pub unsafe extern "C" fn BN_GF2m_mod_exp(
     })
 }
 
-/// `int BN_GF2m_mod_inv(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)`
+/// `static int BN_GF2m_mod_inv_vartime(BIGNUM *r, const BIGNUM *a,`
+/// `const BIGNUM *p, BN_CTX *ctx)` — `crypto/bn/bn_gf2m.c:548-713`.
 ///
-/// The authority blinds this inversion; see this module's header for why the value is
-/// the same without the blinding and the timing profile is not.
+/// The authority's unblinded extended-Euclid inversion, which `BN_GF2m_mod_inv` calls
+/// exactly once per inversion on the blinded product. Its first act is
+/// `BN_GF2m_mod(u, a, p)` (`:566`), the reduction `poly_inv` performs internally as its
+/// `r1`; a zero `u` is the authority's refusal at `:568-569`, which `poly_inv` reports
+/// as `None` together with the non-unit-gcd case (`:660-665`).
 ///
 /// # Safety
 ///
 /// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null
-/// or live; `ctx` is unused.
+/// or live.
+unsafe fn mod_inv_vartime(r: *mut BigNum, a: *const BigNum, p: *const BigNum) -> c_int {
+    // SAFETY: `p` is null or live per this function's `# Safety` section.
+    let arr = match unsafe { to_array(p, 0) } {
+        Ok(arr) => arr,
+        Err(()) => return 0,
+    };
+    // SAFETY: `a` is null or live per this function's `# Safety` section.
+    let (ad, _) = parts(unsafe { as_ref(a) });
+    match poly_inv(&ad, &arr) {
+        // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+        Some(v) => c_int::from(store_keeping_sign(unsafe { as_mut(r) }, v)),
+        None => 0,
+    }
+}
+
+/// `int BN_GF2m_mod_inv(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx)`
+/// — `crypto/bn/bn_gf2m.c:715-759`.
+///
+/// The authority's blinding wrapper, in the authority's order: fail on a modulus of
+/// degree at most one before drawing anything (`:730-733`); draw `b` with `numbits - 1`
+/// bits, `BN_RAND_TOP_ANY`/`BN_RAND_BOTTOM_ANY` and strength `0`, retrying while it is
+/// zero (`:735-740`); then `r := a*b` (`:742-744`), `r := (a*b)^-1` through
+/// `mod_inv_vartime` (`:746-748`) and `r := b/(a*b) = a^-1` (`:750-752`). The blinding
+/// exists so the timing of the vartime inversion is not a function of `a`; the value is
+/// unchanged because the multiplicative inverse in a field is unique.
+///
+/// # Safety
+///
+/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a` and `p` must each be null
+/// or live; `ctx` must be null or a live, uniquely-owned `BN_CTX` — the authority's own
+/// `BN_CTX_start`/`BN_CTX_get` need it, so a null context fails the draw.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_inv(
     r: *mut BigNum,
     a: *const BigNum,
     p: *const BigNum,
-    _ctx: *mut BnCtx,
+    ctx: *mut BnCtx,
 ) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: null-or-live per this function's `# Safety` section.
-        let (dst, x, y) = unsafe { (as_mut(r), as_ref(a), as_ref(p)) };
-        let (ad, _) = parts(x);
-        let (pd, _) = parts(y);
-        // A modulus of degree at most one has no field to invert in, and the
-        // authority fails on it before drawing anything.
-        if limbs::bit_len(&pd) <= 1 {
+        // SAFETY: `p` is null or live per this function's `# Safety` section.
+        let (pd, _) = parts(unsafe { as_ref(p) });
+        // A modulus of degree at most one has no field to invert in, and the authority
+        // fails on it before drawing anything (`bn_gf2m.c:730-733`).
+        let numbits = limbs::bit_len(&pd);
+        if numbits <= 1 {
             return 0;
         }
-        // SAFETY: `p` is null or live per this function's `# Safety` section.
-        let arr = match unsafe { to_array(p, 0) } {
-            Ok(arr) => arr,
-            Err(()) => {
-                // The authority reaches an invalid modulus through
-                // `BN_GF2m_mod_mul`, so the coordinate is that function's.
-                // SAFETY: the site is a compile-time constant.
-                unsafe { raise_site(&BN_GF2M_472) };
-                return 0;
+        // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+        unsafe { BN_CTX_start(ctx) };
+        let mut ret = 0;
+        'body: {
+            // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+            let b = unsafe { BN_CTX_get(ctx) };
+            if b.is_null() {
+                break 'body;
             }
-        };
-        match poly_inv(&ad, &arr) {
-            Some(v) => c_int::from(store_keeping_sign(dst, v)),
-            None => 0,
+            // generate blinding value (`bn_gf2m.c:735-740`); `numbits > 1` makes the
+            // request at least one bit, which `bnrand` accepts.
+            loop {
+                // SAFETY: `b` is live, `ctx` is null-or-live per this function's
+                // `# Safety` section, and the strength is the authority's zero.
+                if unsafe {
+                    BN_priv_rand_ex(
+                        b,
+                        numbits as c_int - 1,
+                        BN_RAND_TOP_ANY,
+                        BN_RAND_BOTTOM_ANY,
+                        0,
+                        ctx,
+                    )
+                } == 0
+                {
+                    break 'body;
+                }
+                // SAFETY: `b` is live.
+                if unsafe { BN_is_zero(b) } == 0 {
+                    break;
+                }
+            }
+            // r := a * b (`bn_gf2m.c:742-744`). An invalid modulus is refused here,
+            // through `BN_GF2m_mod_mul`'s own `BN_R_INVALID_LENGTH` site.
+            // SAFETY: every pointer is null-or-live per this function's `# Safety` section.
+            if unsafe { BN_GF2m_mod_mul(r, a, b, p, ctx) } == 0 {
+                break 'body;
+            }
+            // r := 1/(a * b) (`bn_gf2m.c:746-748`).
+            // SAFETY: `r` and `p` are null-or-live per this function's `# Safety` section.
+            if unsafe { mod_inv_vartime(r, r, p) } == 0 {
+                break 'body;
+            }
+            // r := b/(a * b) = 1/a (`bn_gf2m.c:750-752`).
+            // SAFETY: every pointer is null-or-live per this function's `# Safety` section.
+            if unsafe { BN_GF2m_mod_mul(r, r, b, p, ctx) } == 0 {
+                break 'body;
+            }
+            ret = 1;
         }
+        // SAFETY: `ctx` is null-or-live per this function's `# Safety` section.
+        unsafe { BN_CTX_end(ctx) };
+        ret
     })
 }
 
@@ -643,7 +716,8 @@ pub unsafe extern "C" fn BN_GF2m_mod_inv(
 /// # Safety
 ///
 /// `r` must be null or a live, uniquely-owned `BIGNUM`; `xx` must be null or live; `p`
-/// must be a `0`-terminated exponent array; `ctx` is unused.
+/// must be a `0`-terminated exponent array; `ctx` must be null or a live `BN_CTX`,
+/// which the blinding inside `BN_GF2m_mod_inv` draws from.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_inv_arr(
     r: *mut BigNum,
@@ -691,7 +765,8 @@ unsafe fn array_to_bignum(p: *const c_int) -> Option<*mut BigNum> {
 /// # Safety
 ///
 /// `r` must be null or a live, uniquely-owned `BIGNUM`; `y`, `x` and `p` must each be
-/// null or live; `ctx` is unused.
+/// null or live; `ctx` must be null or a live `BN_CTX`, which the blinding inside
+/// `BN_GF2m_mod_inv` draws from.
 #[no_mangle]
 pub unsafe extern "C" fn BN_GF2m_mod_div(
     r: *mut BigNum,
@@ -1297,6 +1372,43 @@ mod tests {
             // SAFETY: `out` is live.
             assert_eq!(unsafe { BN_is_zero(out) }, 1, "solve_quad={solve_quad}");
             assert_eq!(ERR_peek_error(), 0);
+        }
+    }
+
+    /// The blinding `BN_GF2m_mod_inv` now performs must not change the answer: the
+    /// authority draws a random factor, inverts `a*b` vartime and multiplies back, and a
+    /// field inverse is unique, so `a * a^-1` is one for every input the field admits.
+    /// This drives the new path (a live `ctx` is now load-bearing for the draw) and pins
+    /// the relation the blinding could silently break.
+    #[test]
+    fn the_blinded_inverse_is_still_the_inverse() {
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        // SAFETY: `BN_new` takes no pointers.
+        let one = unsafe { BN_new() };
+        // SAFETY: `one` is live.
+        unsafe { BN_set_word(one, 1) };
+        let p163 = field(&F163);
+        let p8 = field(&F8);
+        for (a, p) in [
+            (hex("1ABCDEF0123456789ABCDEF0123456789ABCDEF"), p163),
+            (word(3), p163),
+            (hex("57"), p8),
+            (word(0x21), p8),
+        ] {
+            // SAFETY: `BN_new` takes no pointers.
+            let inv = unsafe { BN_new() };
+            ERR_clear_error();
+            // SAFETY: every argument is live and `ctx` is a live `BN_CTX`, which the
+            // blinding's `BN_priv_rand_ex` draw needs.
+            assert_eq!(unsafe { BN_GF2m_mod_inv(inv, a, p, ctx) }, 1);
+            assert_eq!(ERR_peek_error(), 0, "the blinded inversion raised nothing");
+            // SAFETY: `BN_new` takes no pointers.
+            let prod = unsafe { BN_new() };
+            // SAFETY: every pointer is live.
+            assert_eq!(unsafe { BN_GF2m_mod_mul(prod, a, inv, p, ctx) }, 1);
+            // SAFETY: every pointer is live.
+            assert_eq!(unsafe { BN_ucmp(prod, one) }, 0, "a * a^-1 == 1");
         }
     }
 }

@@ -295,29 +295,40 @@ Where the authority dereferences a NULL, relies on an uninitialised field, or **
 does not call it and `docs/SECURITY_DIVERGENCE_POLICY.md` records the divergence with the phase or
 condition that would make the behaviour reachable, so the record retires with that phase rather than
 with a re-reading of this document. **The register carries no entry whose subject code is a
-`crypto/rand/` unit**; the two entries that touch this stratum are these, and both are stated as the
-register currently reads rather than as this seal would prefer them to read:
+`crypto/rand/` unit**; the two entries that touch this stratum are these, and **both are now
+discharged**:
 
-- **`D-GF2M-1`** (`docs/SECURITY_DIVERGENCE_POLICY.md:385-406`) — `BN_GF2m_mod_inv` returns the right
-  value without the authority's blinding, and it is a Phase 5 divergence whose **close-obligation is
-  this stratum's**: `OBL-GF2M-INV-BLINDING`, "owned by Phase 9, and it closes by adding the blinding
-  when RAND exists" (`docs/SECURITY_DIVERGENCE_POLICY.md:405-406`). The registered reason is that
-  "`BN_priv_rand_ex` is Phase 9 and does not exist" (`docs/SECURITY_DIVERGENCE_POLICY.md:398`), and
-  that callee **now exists** — D314 landed `BN_priv_rand_ex` — but the blinding is **not** added:
-  `src/bn/gf2m.rs:25-28` still reads "RAND is Phase 9", and `BN_GF2m_mod_inv` (`src/bn/gf2m.rs:607-639`)
-  computes the inverse by extended Euclid with no blinding factor. The value is identical, the timing
-  claim is removed, and the boundary therefore **stands**. This seal records it rather than claiming
-  its retirement: the register's reason is now historical, and the obligation is prose rather than a
-  machine-checked row.
-- **`D-CBCHMAC-MULTIBLOCK-ENC-1`** (`docs/SECURITY_DIVERGENCE_POLICY.md:1245-1271`) — the
-  `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC` parameter is answered 0, because its IVs come from the
-  random layer. Its **trigger is this stratum**: "Phase 9's first commit that lands `crypto/rand/`. At
-  that point `tls1_multiblock_encrypt` is written … and the entry is removed with the arm's green"
-  (`docs/SECURITY_DIVERGENCE_POLICY.md:1269-1271`). The first commit landed at D313, and the register
-  still carries the entry; `courts/phase8/rt_cipher_probe.c`'s `rt_cbchmac_records` drives
-  `..._ENC_LEN` and the AAD and max-buffer-size parameters (`courts/phase8/rt_cipher_probe.c:4062`)
-  but **not** the multiblock encrypt parameter, so the arm the trigger names has not been added. The
-  boundary stands and the trigger is unexecuted.
+- **`D-GF2M-1`** (`docs/SECURITY_DIVERGENCE_POLICY.md:385`) — `BN_GF2m_mod_inv` returned the right
+  value without the authority's blinding. It is a Phase 5 divergence whose **close-obligation is this
+  stratum's**: `OBL-GF2M-INV-BLINDING`, "owned by Phase 9, and it closes by adding the blinding when
+  RAND exists". The registered reason was that "`BN_priv_rand_ex` is Phase 9 and does not exist", and
+  **it now exists** (D314), so the obligation is met: `BN_GF2m_mod_inv` (`src/bn/gf2m.rs:643-712`)
+  performs the authority's own construction — the random field element drawn with `BN_priv_rand_ex(b,
+  numbits - 1, …)`, the retry while `b` is zero, then `(a*b) * (a*b)^-1 * b` through the vartime
+  inverse (`crypto/bn/bn_gf2m.c:720-759`) — and the timing property the entry withdrew is restored.
+  The unit test `the_blinded_inverse_is_still_the_inverse` holds the value (`a * a^-1 == 1`) across
+  the blinding. `RT-BN` reads 1510 observations before and after, which is the expected result rather
+  than a null one: a field inverse is unique, so the court's subject is unchanged by the construction
+  that produces it.
+- **`D-CBCHMAC-MULTIBLOCK-ENC-1`** (`docs/SECURITY_DIVERGENCE_POLICY.md:1269`) — the
+  `OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC` parameter was answered 0, because its IVs come from the
+  random layer. Its **trigger is this stratum** — "Phase 9's first commit that lands `crypto/rand/`.
+  At that point `tls1_multiblock_encrypt` is written … and the entry is removed with the arm's green"
+  — and it fired at D313. **It is discharged.** `tls1_multi_block_encrypt_sha1`/`_sha256`
+  (`src/provider/cipher.rs:11041`, `:11657`) transcribe the authority's two bodies, drawing their
+  interleaved IVs through `RAND_bytes_ex` on the row's own library context; the four wrappers return
+  the packed length instead of 0; and `RT-CIPHER` gained the `cbchmac.*.mbenc` arm
+  (`courts/phase8/rt_cipher_probe.c:4120-4264`), which drives the parameter, its `..._ENC_IN`
+  companion, `tls1multi_enclen`, the four record headers and a decrypt-path round trip of every
+  record. `RT-CIPHER` reads **7291** observations against **7255**, and the arm's `mbenc.rt=1` is a
+  real round trip rather than a bytes comparison, because the IVs are random by construction.
+
+**The machine-readable form is what makes those closures checkable rather than narrated.**
+`forensics/tools/divergence_obligations.py` renders `forensics/divergence-obligations.json` from a
+table, and `forensics/tools/phase_state.py` refuses to derive any state while an obligation whose
+`current_owner` is the stratum has `trigger_satisfied` true and `disposition` `open` — so a triggered
+obligation can no longer be outrun by a derived `complete`, which is the hole the two entries above
+sat in. Both are `disposition: fixed`, and the evidence above is the row's `evidence` field.
 
 **Observation counts quoted inside older decision and divergence entries are the values current when
 those entries were written** and are not this document's counts. `docs/SEAL-CENSUS.md` and
@@ -513,9 +524,9 @@ from `owning_phase` rather than storing it (D295).
   atlas because they are declared in the uninstalled `prov/implementations.h` (§6.6).
 - **The `base` provider's 318 encoder, decoder and store rows** become real when Phase 10 lands them
   (§6.7).
-- **`D-GF2M-1`'s obligation** stands with the register's reason now historical: `BN_priv_rand_ex`
-  exists, so the blinding could be added, and the boundary would retire with it (§5).
-- **`D-CBCHMAC-MULTIBLOCK-ENC-1`'s trigger** fired at D313 and its entry and arm are still owed (§5).
+- **`D-GF2M-1` and `D-CBCHMAC-MULTIBLOCK-ENC-1` are discharged**, and `forensics/divergence-obligations.json`
+  records both as `disposition: fixed` with their evidence. The machine-binding that keeps the next
+  one from being outrun is in `phase_state.py` (§5).
 - **This stratum's FRF chain entry** is §8's subject: four declarations, the four receipts, eight
   challenges and twelve captures they produced, the compiled claim, and the `K48` checkpoint the chain
   leaves. No object of the entry is still owed.
@@ -602,3 +613,13 @@ replaced.
    landed it. The earlier revision of §5 called the failure "observed once and not reproduced" and
    named the `ossl_get_avail_threads` assertion; both were wrong, and the correction is stated here
    rather than left in §5's new prose alone.
+
+10. **This stratum's two divergence obligations are discharged and machine-bound, which an earlier
+   revision of §5 recorded as standing.** §5 said `D-GF2M-1`'s close-obligation "is prose rather than
+   a machine-checked row" and that `D-CBCHMAC-MULTIBLOCK-ENC-1`'s "boundary stands". Both are now
+   closed: the blinding is added (`src/bn/gf2m.rs:643-712`), the multiblock encrypt path is written
+   (`src/provider/cipher.rs:11041`, `:11657`) with the `RT-CIPHER` arm (`RT-CIPHER` 7255 -> 7291), and
+   the register's headings read `— **CLOSED**`. The prose that let them sit there unenforced is gone:
+   `forensics/tools/divergence_obligations.py` renders `forensics/divergence-obligations.json`, and
+   `forensics/tools/phase_state.py` refuses a state while an obligation this stratum owns has fired
+   and is still `open`. **D427** records the machinery and the discharges.

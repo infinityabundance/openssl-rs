@@ -3979,10 +3979,9 @@ static void rt_param_list(const char *tag, const char *noun, const char *kind,
  * **TLS 1.0 (`0x0301`) is the version chosen on purpose**: it is the one with no explicit IV, so
  * the record is a pure function of the key, the MAC key, the IV and the payload and a diff is a
  * defect rather than a random draw. The TLS 1.1+ surface is reached through the multiblock AAD
- * parameter, which is size arithmetic and therefore deterministic too. The multiblock *encrypt*
- * parameter is deliberately absent: on the authority it draws its per-record IVs from
- * `RAND_bytes_ex`, and `crypto/rand/` is Phase 9's -- the row's one recorded narrowing, named in
- * `docs/SECURITY_DIVERGENCE_POLICY.md` §4 rather than left to be discovered by its absence here.
+ * parameter, and through the multiblock *encrypt* parameter, which is deterministic in everything
+ * but its `RAND_bytes_ex` draw -- see the `mbenc` arm below, which compares the packed length, the
+ * record headers and a round trip rather than the IV-dependent ciphertext bytes.
  */
 static void rt_cbchmac_records(void)
 {
@@ -4117,6 +4116,151 @@ static void rt_cbchmac_records(void)
                 r = EVP_CIPHER_CTX_get_params(ctx, gp2);
                 printf("cbchmac.%s.mbaad.get=%d il=%u pk=%u\n", names[n], r, il2, pk2);
             }
+        }
+        /*
+         * The multiblock *encrypt* parameter: the family's one surface that draws randomness, and
+         * the arm `docs/SECURITY_DIVERGENCE_POLICY.md` D-CBCHMAC-MULTIBLOCK-ENC-1 names as its
+         * closing measurement. `tls1_multi_block_encrypt` first asks
+         * `RAND_bytes_ex(ctx->base.libctx, blocks[0].c, 16 * x4, 0)`
+         * (`cipher_aes_cbc_hmac_sha1_hw.c:146`) and uses those `x4` sixteen-byte values as each
+         * interleaved record's explicit IV, so the ciphertext is a function of that draw and the
+         * two sides' bytes differ -- exactly as `rt_drbg_probe.c`'s byte arms and
+         * `rt_bn_rand_probe.c`'s draws record for every other `RAND_bytes_ex` caller.
+         *
+         * **What is compared here is therefore everything the draw does not touch**: the
+         * parameter's return, the packed length the getter reports, each record's five-byte header,
+         * and a round trip of every produced record back through the row's own TLS *decrypt* path.
+         * The header and the lengths are pure arithmetic; the round trip is what makes the arm
+         * load-bearing, because the MAC, the padding and the CBC chain are exactly what the decrypt
+         * code checks, and no IV choice can make a wrong one of those pass.
+         *
+         * The payload is 5000 bytes -- `>= 4096` and `< 8192` -- so `tls1_multiblock_aad` fixes
+         * `n4x` at 1 on every host (the AVX2 bit only raises it for 8192 or more), and with it the
+         * interleave, the split and every length below are host-independent.
+         */
+        {
+            unsigned char mbhdr[13];
+            unsigned char payload[5000];
+            unsigned char mbout[8192];
+            unsigned char ptbuf[1320];
+            unsigned char lanebody[1312];
+            unsigned char lanehdr[13];
+            unsigned int frag = 5000 / 4;
+            unsigned int last = 5000 + frag - (frag << 2);
+            unsigned int il = 4, ilret = 0;
+            size_t enclen = 0;
+            size_t stride;
+            unsigned int k;
+            int ok = 1;
+            OSSL_PARAM ap[3], ep[4], gp[3];
+
+            memset(mbhdr, 0, sizeof(mbhdr));
+            mbhdr[8] = 0x17; /* handshake */
+            mbhdr[9] = 0x03;
+            mbhdr[10] = 0x03; /* TLS 1.2: the version the multiblock path requires */
+            mbhdr[11] = (unsigned char)(sizeof(payload) >> 8);
+            mbhdr[12] = (unsigned char)(sizeof(payload) & 0xff);
+            rt_fill(payload, sizeof(payload), 131u + (unsigned int)n);
+
+            /*
+             * The AAD parameter first, exactly as a TLS caller drives it: it seeds `md` with the
+             * thirteen-byte header and decides `x4`. Its own getter reports the interleave the
+             * encrypt parameter then has to carry.
+             */
+            ap[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_AAD, mbhdr,
+                                                      sizeof(mbhdr));
+            ap[1] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE, &il);
+            ap[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_set_params(ctx, ap);
+            printf("cbchmac.%s.mbenc.aad=%d\n", names[n], r);
+            {
+                OSSL_PARAM q[2];
+                unsigned int ilget = 0;
+
+                q[0] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE,
+                                                 &ilget);
+                q[1] = OSSL_PARAM_construct_end();
+                ERR_clear_error();
+                r = EVP_CIPHER_CTX_get_params(ctx, q);
+                ilret = ilget;
+                printf("cbchmac.%s.mbenc.il=%d il=%u\n", names[n], r, ilget);
+            }
+
+            memset(mbout, 0xee, sizeof(mbout));
+            ep[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC, mbout,
+                                                      sizeof(mbout));
+            ep[1] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_IN,
+                                                      payload, sizeof(payload));
+            ep[2] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE, &ilret);
+            ep[3] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_set_params(ctx, ep);
+            printf("cbchmac.%s.mbenc=%d\n", names[n], r);
+
+            gp[0] = OSSL_PARAM_construct_size_t(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_ENC_LEN, &enclen);
+            gp[1] = OSSL_PARAM_construct_uint(OSSL_CIPHER_PARAM_TLS1_MULTIBLOCK_INTERLEAVE, &ilret);
+            gp[2] = OSSL_PARAM_construct_end();
+            ERR_clear_error();
+            r = EVP_CIPHER_CTX_get_params(ctx, gp);
+            printf("cbchmac.%s.mbenc.get=%d enclen=%zu\n", names[n], r, enclen);
+
+            /* The four five-byte record headers, at the per-record stride `enclen / x4` implies. */
+            stride = enclen / 4;
+            for (k = 0; k < 4; k++)
+                rt_hexf("cbchmac.mbenc.hdr", (int)(n * 4 + k), mbout + k * stride, 5);
+
+            /*
+             * Round-trip every record through the row's own decrypt path. The MAC header is the
+             * AAD's own: sequence number `k` (the base is zero), the same type and version, and the
+             * *payload* length -- not the wire length, which is what the record's own header
+             * carries. The record body is `[explicit IV][ciphertext]`; the row's TLS decrypt path
+             * skips the IV, so the recovered payload starts at `ptbuf + 16` and the EVP layer
+             * reports the whole input length in `outl`, neither of which is compared.
+             */
+            if (enclen == 0 || stride < 21 || stride - 5 > sizeof(lanebody)) {
+                ok = 0;
+            } else {
+                unsigned int body_len = (unsigned int)(stride - 5);
+
+                for (k = 0; k < 4 && ok; k++) {
+                    OSSL_PARAM dp[3];
+                    EVP_CIPHER_CTX *dctx;
+                    int outl = 0;
+                    unsigned int lane_len = (k == 3) ? last : frag;
+
+                    memset(lanehdr, 0, sizeof(lanehdr));
+                    lanehdr[7] = (unsigned char)k;
+                    lanehdr[8] = mbhdr[8];
+                    lanehdr[9] = mbhdr[9];
+                    lanehdr[10] = mbhdr[10];
+                    lanehdr[11] = (unsigned char)(lane_len >> 8);
+                    lanehdr[12] = (unsigned char)lane_len;
+
+                    memcpy(lanebody, mbout + k * stride + 5, body_len);
+
+                    dctx = EVP_CIPHER_CTX_new();
+                    if (dctx == NULL) {
+                        ok = 0;
+                        break;
+                    }
+                    r = EVP_CipherInit_ex2(dctx, c, key, iv, 0, NULL);
+                    dp[0] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_MAC_KEY, mackey,
+                                                              16);
+                    dp[1] = OSSL_PARAM_construct_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD,
+                                                              lanehdr, sizeof(lanehdr));
+                    dp[2] = OSSL_PARAM_construct_end();
+                    ERR_clear_error();
+                    r = EVP_CIPHER_CTX_set_params(dctx, dp);
+                    memset(ptbuf, 0xee, sizeof(ptbuf));
+                    ERR_clear_error();
+                    r = EVP_CipherUpdate(dctx, ptbuf, &outl, lanebody, (int)body_len);
+                    if (r != 1 || memcmp(ptbuf + 16, payload + k * frag, lane_len) != 0)
+                        ok = 0;
+                    EVP_CIPHER_CTX_free(dctx);
+                }
+            }
+            printf("cbchmac.%s.mbenc.rt=%d\n", names[n], ok);
         }
         EVP_CIPHER_CTX_free(ctx);
 

@@ -56,7 +56,7 @@
 //!   exponentiation's table scans do not depend on the exponent's length. A normalised
 //!   `Vec<Limb>` cannot carry a wider top, so the *value* is the authority's and the *timing
 //!   profile* is this implementation's — the class of divergence `src/bn/gf2m.rs` records for
-//!   `BN_GF2m_mod_inv`'s missing blinding, recorded there rather than here because it is not
+//!   the `BN_GF2m_*` arithmetic (D-GF2M-2), recorded there rather than here because it is not
 //!   new.
 //!
 //! Nothing is stubbed and nothing is invented: the refusal is the authority's own site, the
