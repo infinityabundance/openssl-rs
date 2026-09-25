@@ -30411,28 +30411,30 @@ blockers and no narrowed cell on the first pass, and the only residuals the chai
 eight mutant residuals of the challenge records, which are open by design because a mutant's
 divergence is the challenge's evidence.
 
-### The one open finding: recorded rather than diagnosed
+### The parallel test run found a race in this project's own test
 
-One finding is carried rather than closed, and it is stated so a reader cannot mistake Phase 9's
-`complete` for a statement that it was explained. `context::thread_data::tests::the_pool_starts_joins_and_cleans_workers`
-failed **once** under the full parallel test run with `assertion left == right failed, left: 1, right:
-0` at `src/context/thread_data.rs:454` -- the `assert_eq!(ossl_get_avail_threads(ctx), 8)` after four
-starts and four joins -- and passed both in isolation and on an immediate re-run of the whole pipeline
-with the same code. `avail` is `max_threads - active_threads` for that context, so a value of `1` is
-consistent with the context having read a `max_threads` of 1, the very thing
-`max_threads_is_per_context` asserts cannot happen; and it is **not** the default context's value,
-which would be `0`, so a plain context mix-up does not explain it. **The mechanism was not
-established.** It is recorded in the seal's §5 and here: what was observed, the value, that it is not
-reproducible in isolation, and that the cause is unknown.
+`context::thread_data::tests::the_pool_starts_joins_and_cleans_workers` failed under the full parallel
+test run with `assertion left == right failed, left: 1, right: 0` at `src/context/thread_data.rs:454`.
+That line is `assert_eq!(ossl_crypto_thread_clean(*h), 0)` on a started, unjoined worker -- not the
+`ossl_get_avail_threads` assertion an earlier reading of the failure named -- so `1` means the worker
+was already cleanable. The cause is the authority's mask test, which the crate transcribes correctly:
+`ossl_crypto_thread_native_clean` (`crypto/thread/arch.c:113-144`) answers through
+`CRYPTO_THREAD_GET_STATE` (`include/internal/thread_arch.h:67`) and refuses a thread whose state has
+**neither** `FINISHED` nor `JOINED`, so a thread that has merely finished is cleanable whether or not
+anything joined it. The test asserted the stronger property -- that only a join makes a thread
+cleanable -- and raced a worker that finished before the joiner looked. The workers are now held at a
+`Work::release` gate, so the refusal is observed in a state the test controls rather than one it races
+for, and the four are released only after every refusal has been seen. The transcription did not
+change; the test's premise did.
 
 ### What `complete` now means, and what it does not
 
 Phase 9 is `complete` on its own evidence: 69 exports (25 owned, 44 received) all implemented, 15 of
 15 provider rows, six courts `pass` 6 of `total` 6 with `pending_courts` empty, the FRF chain entry
 landed and the `K48` checkpoint landed. What `complete` does **not** mean is stated in the seal's §6:
-a `CT-*` pass is construction verification rather than parity (D201); nothing here is a parity claim
-about entropy, because the pool's source is environmental; and the intermittent failure above is
-recorded rather than explained.
+a `CT-*` pass is construction verification and not parity (D201); nothing here is a parity claim
+about entropy, because the pool's source is environmental; and the parallel-run failure above was a
+defect in this project's test rather than in the library, which the fix states plainly.
 
 ### Movement
 
@@ -30446,3 +30448,63 @@ in `CORRECTNESS_COURTS` with `PENDING_COURTS` empty; `forensics/vectors/bn_rand_
 `docs/PHASE-9-RAND-DRBG-SEAL.md` is corrected at §1, §3, §6, §7, §8, §9 and §10 so its Gemel
 statements describe the checkpoint that landed rather than the head an earlier pass found; and Phase
 9's `seal_sha256` moves to `085e6521740dea94…`. `PIPELINE OK` exit 0.
+
+## D425 -- the parallel-run failure was a race in this project's own test, and the authority's mask test is what names it
+
+D424 recorded one failure and could not explain it: under the full parallel test run,
+`context::thread_data::tests::the_pool_starts_joins_and_cleans_workers` failed with `assertion left ==
+right failed, left: 1, right: 0`. This change establishes the mechanism, and the mechanism is not a
+library defect.
+
+**The record named the wrong line, and correcting that is where the cause is.** The failure is at
+`src/context/thread_data.rs:454`, which is `assert_eq!(ossl_crypto_thread_clean(*h), 0)` on a
+started, unjoined worker -- not the `assert_eq!(ossl_get_avail_threads(ctx), 8)` the seal's §5 and
+D424 both named, and not the line that assertion sits on (`:467`). Read at the right line, `left: 1`
+says the worker was already **cleanable** when the test asked `clean` to refuse it.
+
+**The authority admits a finished thread, and the crate transcribes that faithfully.**
+`ossl_crypto_thread_native_clean` (`crypto/thread/arch.c:113-144`) builds `req_state_mask` from
+`FINISHED` and `JOINED`, then answers through `CRYPTO_THREAD_GET_STATE`
+(`include/internal/thread_arch.h:67`, `(state & (FLAG))`): it returns 0 only when `state &
+(FINISHED | JOINED) == 0`, and frees and returns 1 as soon as **either** flag is set. So a thread that
+has merely **finished** is cleanable whether or not anything joined it. `src/runtime/thread_arch.rs`'s
+`ossl_crypto_thread_native_clean` performs the same mask test, and its doc comment said the opposite
+-- "refuses a thread that is not both `FINISHED` and `JOINED`" -- which was the transcriber's own
+summary and not the authority's code. The comment is corrected to state the mask test.
+
+**So the test asserted a stronger property than the authority provides, and raced the scheduler.**
+The test's own comment claimed "`native_clean` requires both `FINISHED` and `JOINED`, and only a join
+sets the second", and its workers incremented a counter and returned immediately. A worker that
+reached `FINISHED` before the joiner called `clean` therefore made `clean` answer 1, and the refusal
+assertion failed -- a race whose window is the whole start loop, which is why it needed the full
+parallel run's scheduling pressure to fire and why it passed under `--test-threads=1`.
+
+**The fix removes the race and keeps the assertion.** The test's `Work` gains a
+`release: AtomicBool`; `worker` spins (`core::hint::spin_loop()`) until it is set, so every worker the
+start loop holds has neither `FINISHED` nor `JOINED` and the refusal is deterministic. The test sets
+`work.release.store(true, Ordering::Release)` after the four refusals, and each join then waits for
+`FINISHED` and sets `JOINED`, which is what makes the later `clean` answer 1. The library is
+unchanged: this is a defect in the instrument, the same class D410 and D413 found in a probe, and it
+is repaired in the instrument.
+
+### Verification
+
+The repaired test passes under the parallel harness that exposed the race: twenty consecutive runs of
+`cargo test --lib context::thread_data::tests::the_pool_starts_joins_and_cleans_workers --
+--test-threads=8` all report `1 passed; 0 failed`, and the full library suite is green under
+`--test-threads=1`. `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` are
+clean. **The full library suite under the default parallel harness still fails one test, and it is a
+second, independent race**: `ffc::params_validate`'s `assert_ne!(res, 0)` at
+`src/ffc/params_validate.rs:583` reads an out-parameter the failure path left at 0. That failure is
+pre-existing, reproduces in three of three parallel runs, and passes in isolation and
+single-threaded; it is named here because this change found it, and it is the next instrument defect
+to repair rather than a regression this change introduced.
+
+### Movement
+
+`src/context/thread_data.rs` gains the gate and `src/runtime/thread_arch.rs`'s `native_clean` comment
+is corrected; `docs/PHASE-9-RAND-DRBG-SEAL.md`'s §5 states the mechanism and its §10 gains item 9;
+D424's finding section is corrected in place, because the branch is not yet merged and a record that
+has not travelled should be true, not annotated; and Phase 9's `seal_sha256` moves to
+`640a676aa959d28c1abad1abfe641668f644c95eea86420d761d13893aa9356b`, the value D424's record of the
+stratum now carries. `PIPELINE OK` exit 0.

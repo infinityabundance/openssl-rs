@@ -325,15 +325,23 @@ those entries were written** and are not this document's counts. `docs/SEAL-CENS
 sentence, not a missing court. (`docs/DECISIONS.md:30110-30111` cites `RT-BN-RAND` at "467" and
 `RT-RAND-USERS` at "61"; neither matches §3, and neither is meant to.)
 
-**One open finding, observed once and not reproduced, recorded rather than diagnosed.** Under the
-full parallel test run, `context::thread_data::tests::the_pool_starts_joins_and_cleans_workers` failed
-with `assertion left == right failed, left: 1, right: 0` at `src/context/thread_data.rs:454` — the
-`assert_eq!(ossl_get_avail_threads(ctx), 8)` after four starts and four joins. It passed both in
-isolation and on an immediate re-run of the whole pipeline with the same code. `avail` is
-`max_threads - active_threads` for that context, so a value of `1` is consistent with the context
-having read a `max_threads` of 1 — the very thing `max_threads_is_per_context` asserts cannot happen —
-but **the mechanism was not established**, and this seal records it rather than diagnosing it: what
-was observed, the value, that it is not reproducible in isolation, and that the cause is unknown.
+**The parallel test run found a race in this project's own test, and it is repaired rather than
+recorded.** Under the full parallel run,
+`context::thread_data::tests::the_pool_starts_joins_and_cleans_workers` failed with `assertion left
+== right failed, left: 1, right: 0` at `src/context/thread_data.rs:454` --
+`assert_eq!(ossl_crypto_thread_clean(*h), 0)` on a just-started, unjoined worker. That line is the
+`clean` refusal, not the `ossl_get_avail_threads` assertion an earlier reading of the failure named,
+and `1` means the worker's state already carried `FINISHED` when the test asked `clean` to refuse.
+The cause is the authority's own mask test, which the crate transcribes faithfully:
+`ossl_crypto_thread_native_clean` (`crypto/thread/arch.c:113-144`) answers through `arch.h`'s
+`CRYPTO_THREAD_GET_STATE` and refuses a thread whose state has **neither** `FINISHED` nor `JOINED`, so
+a thread that has merely **finished** is cleanable whether or not anything joined it. The test
+asserted the stronger property -- that only a join makes a thread cleanable -- and so raced the
+scheduler: a worker that incremented and returned before the joiner reached `clean` made it answer
+1. The test now holds its workers at a `Work::release` gate that spins them before they return, so
+"started and unfinished" is the state the refusal is observed in rather than one it races for, and
+the four are released only after every refusal has been seen. The transcription did not change; the
+test's premise did, and the seal says which was which.
 
 ## 6. What is explicitly NOT claimed
 
@@ -581,8 +589,16 @@ replaced.
    `forensics/vectors/bn_rand_nonce.json` (5) and `forensics/vectors/drbg.json` (961 stanzas, 14401
    values); the chain objects are the four descriptions in `forensics/tools/gen_frf_courts.py`'s table
    (`:448-456`) and the declarations, receipts, challenges, captures and claim under `forensics/frf/`
-   An earlier revision of this item said the Gemel checkpoint was the one item still not
+   and `.frf/`. An earlier revision of this item said the Gemel checkpoint was the one item still not
    landed, because it was written before the chain ran; the checkpoint has since landed as `K48`, and
    §6's item 9, §7's item 10 and §8 state the head change and the state it carries. This pass and its
    corrections are recorded in **D424**, which carries the two correctness courts, the chain entry and
-   the one open finding.
+   the parallel-test race it found and repaired.
+
+9. **The parallel-run failure an earlier revision of §5 recorded as unexplained is diagnosed and
+   repaired.** §5 now states the mechanism -- the authority admits a thread whose state carries
+   `FINISHED`, so the test's refusal assertion raced a worker that had finished -- and names the fix,
+   a `Work::release` gate that holds the workers before they return. **D425** is the decision that
+   landed it. The earlier revision of §5 called the failure "observed once and not reproduced" and
+   named the `ossl_get_avail_threads` assertion; both were wrong, and the correction is stated here
+   rather than left in §5's new prose alone.
