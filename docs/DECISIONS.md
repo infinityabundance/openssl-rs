@@ -30839,3 +30839,50 @@ activation read too); and `PIPELINE OK` exit 0 twice.
 `forensics/atlas/court-coverage-rows.json` gains the reference probe; and the atlases, the census,
 `forensics/STATUS.md` and `forensics/regression-baseline.json` are regenerated. Phase 10's seal is
 `docs/PHASE-10-KEYFORMATS-SEAL.md`, which does not exist yet and is 10.7's artifact.
+
+## D432 -- the README is rewritten as a front door, and two consistency checks go with the prose they covered
+
+`README.md` is the entry point for both GitHub and crates.io, and it had become an argument addressed
+to a sceptical reviewer rather than a description of the software. It is rewritten around six questions
+a visitor actually has -- what is it, what does it target, how far along is it, what is verified, how
+do I build it, and what does it not claim -- and it moves from about 12.2 KB to about 7.7 KB.
+
+**What the rewrite changes, and why each cut is a cut.** The opening states what the thing is
+("a native Rust reimplementation of OpenSSL 3.6.4 targeting source, ABI, and observable behavioural
+compatibility") and collapses four consecutive "this is not" sentences into one boundary sentence. The
+meta-commentary about the README's own past -- "This section types no count. It used to: it said 'Phase
+1 -- in progress' ...", and "Where this prose and those disagree, they are right" -- is deleted; the
+second becomes a neutral invariant, "Generated evidence is authoritative over descriptive prose". The
+stratum-grouping table and the Phase-1 evidence directory tree are removed, because
+`docs/RELEASE_GATES.md` and `docs/REPRODUCIBILITY.md` are where a reader who wants the architecture
+goes; the constitution table is cut from thirteen documents to six entry points with one sentence
+pointing at the rest; FRF and Gemel become one sentence under Verification rather than prime real
+estate; and "Running things" becomes "Build and test". Bold is now reserved for the maturity warning,
+the generated-state links and the parity distinction.
+
+**One of the cuts is a correction rather than an edit.** The README said "Everything executes inside
+the court container; nothing runs on the host", and `docs/CUSTODIAN_CONTRACT.md` §11 records that this
+blanket wording "was not true of continuous integration and could not be made true without forbidding
+cheap, useful checks". The README now states the distinction §11 draws -- authority-bearing execution
+runs only in the court; unit tests and static derivation may run outside it -- and cites §11.
+
+**Two consistency checks covered phrases the rewrite deleted, and both are retired.** The exemption
+mechanism `docs_consistency.py` uses has a rule that makes this automatic rather than optional: "an
+exemption that has become unnecessary, or that names a claim that is no longer present", fails the
+gate. So `readme_status_narrative_strata` (whose `EXEMPTIONS` entry existed only because the deleted
+narrative spelled a stale stratum count) and `readme_runtime_courts` (which matched the deleted "81
+generated runtime courts" line) are removed, with the exemption and the now-unused `readme_status_narrative`
+helper and `STRATA_COMPLETE` constant that fed it. The audited claim count goes from 15 to 13, and the
+comment above `EXEMPTIONS` records why one of its two entries is gone rather than leaving a reader to
+wonder. **Nothing else about the gate changes**: `forensics/frf/README.md`'s three runtime-court
+quantities are still checked, and every quantity the README still states is still checked.
+
+### Verification
+
+`python3 forensics/tools/docs_consistency.py` reads `ok: 13 hand-written claim(s) agree with their
+generated sources` with only the Phase 7 claim exemption left active. `PIPELINE OK` exit 0, twice.
+
+### Movement
+
+`README.md` is rewritten and `forensics/tools/docs_consistency.py` loses the two checks, their
+helper and their exemption. No generated artefact moves, so no `seal_sha256` moves.
