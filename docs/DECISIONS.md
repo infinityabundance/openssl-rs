@@ -30623,3 +30623,37 @@ generator to run.
 `D-CBCHMAC-MULTIBLOCK-ENC-1` register entries change; `docs/PHASE-9-RAND-DRBG-SEAL.md`'s §5, §9 and
 §10 record the closures and the machinery; and Phase 9's `seal_sha256` moves to
 `dfc61b8e2e5d201ba1b5390507faf312ffa63b3fdb20272a1b53c05bc69805b5`. `PIPELINE OK` exit 0.
+
+## D428 -- 0.0.13: the version moves, the 81 declarations move with it, and the receipts stay where they are
+
+Phase 9 lands on `main` (PR #9, `fae5d01a`) and the crate is released as **0.0.13**, by the sequence
+`docs/RELEASE_GATES.md` §8 fixes. The version is an input to generated evidence, and one step of the
+sequence is not optional: `gen_frf_courts.py` renders every court's `version_or_commit` from
+`Cargo.toml`, so a version bump that skips it makes 81 declarations name a version the crate no
+longer is.
+
+**What moved, and in what order.** `Cargo.toml`'s `version` and `Cargo.lock`'s `[[package]]
+version` both move to `0.0.13` -- `cargo publish --dry-run` refuses a dirty tree, which is how 0.0.10
+found that the lock records the crate's own version. `python3 forensics/tools/gen_frf_courts.py` then
+rewrites the declaration table, and `--check` moves from the 81-name drift list to `ok: 162 file(s)
+match the table (81 courts)`. The staged shell changes with it, because the crate's version string is
+part of the binary, so `artifacts/phase2/install/lib/libcrypto.{a,so,so.3}` and the atlases that hash
+them regenerate.
+
+**The receipts and the claim stay where they are.** The Phase 9 `sensitivity-backed` claim
+`9c05b8c9ddf98c3e129cfa542fbcea7b57a711e7d08aae58c5301354ca826bdd` binds candidate `openssl-rs 0.0.12
+(e4f60d8b)`, and it keeps binding it: it is the artifact the chain measured, and re-pointing it at
+0.0.13 would be a claim about a build nothing observed. The declarations name the version the crate
+*is*; the receipts name the version the chain *ran against*; D416 is where that split was established
+for 0.0.12, and this is the same move.
+
+**The `Cargo.toml` comment beside the version was fossilised and is corrected.** It read "0.0.x is
+used deliberately: no product subsystem is implemented yet", which was true at 0.0.1 and false by
+Phase 4. The reason 0.0.x survives is the durable one: no symbol is `PARITY_VERIFIED`, so the version
+must not imply a compatibility claim it does not carry (`docs/PARITY_MODEL.md`, `docs/NON_CLAIMS.md`).
+
+### Movement
+
+`Cargo.toml` and `Cargo.lock` move to `0.0.13`; 81 `forensics/frf/courts/*/manifest.yaml` files move
+with them; the staged shell and the atlases that hash it regenerate; `docs/DECISIONS.md` gains this
+entry. `PIPELINE OK` exit 0, twice, and `gen_frf_courts.py --check` clean.
