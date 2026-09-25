@@ -1,15 +1,16 @@
 # Phase 9 — RAND, DRBG and entropy: seal
 
 **STATUS: derived.** This status is not typed; it is the state `forensics/tools/phase_state.py`
-derives from artefact existence. `forensics/phase-state.json:456` reads `complete` for phase 9,
+derives from artefact existence. `forensics/phase-state.json:457` reads `complete` for phase 9,
 `docs/SEAL-CENSUS.md:305` reads `complete`, `forensics/phase9-obligations.json:9` reads
-`open_in_this_stratum: 0`, and every earlier stratum is `complete`, which is the rule
-`forensics/phase-state.json:612` states. The one field that is *not* yet derived is
-`seal_sha256`, which `forensics/phase-state.json:455` reads as `null`, and whose census line is
-`seal: none written yet (unnamed)` (`docs/SEAL-CENSUS.md:306`): this document is the plan's own last
-artefact and the thing the missing hash will be computed over. Reaching `complete` means the stratum
-has reached the state a seal *records* (D421, `docs/DECISIONS.md:30283-30287`); it is **not** a
-parity claim, and this document is where what the derivation does and does not cover is written down.
+`open_in_this_stratum: 0`, and every earlier stratum is `complete`, which the rule
+`forensics/phase-state.json:612` states. `seal_sha256` is derived too: `forensics/phase-state.json:456`
+now carries this document's hash and `docs/SEAL-CENSUS.md:306` names the seal, so the line is
+recomputed whenever this document changes and is not restated here (D421 recorded it as `null` and the
+census's line as `seal: none written yet (unnamed)`, which is the state before the seal was written).
+Reaching `complete` means the stratum has reached the state a seal *records* (D421,
+`docs/DECISIONS.md:30283-30287`); it is **not** a parity claim, and this document is where what the
+derivation does and does not cover is written down.
 
 **For every count in this document, read `docs/SEAL-CENSUS.md`**, which `forensics/tools/render_seal_census.py`
 generates from the ledgers and the court results. This seal cites that document rather than restating
@@ -26,10 +27,13 @@ when called.
 
 - Authority: `openssl-3.6.4-production` (`forensics/authorities/AUTHORITIES.json`, the second entry),
   named as the authority by `artifacts/phase9/COURTS.json:5`
-- Court results: `artifacts/phase9/COURTS.json` — four courts, `all_pass` true
-  (`artifacts/phase9/COURTS.json:4`), zero residuals; the totals are `docs/SEAL-CENSUS.md`'s and the
-  per-court table is §3. **One pending court, `CT-DRBG`**, is recorded at
-  `artifacts/phase9/COURTS.json:77-79` and is not counted among the four
+- Court results: `artifacts/phase9/COURTS.json` — six courts, `all_pass` true
+  (`artifacts/phase9/COURTS.json:4`), zero residuals; the totals are `docs/SEAL-CENSUS.md`'s
+  (`docs/SEAL-CENSUS.md:320-331`) and the per-court table is §3. The four differential courts pass, and
+  so do the two **correctness** courts: `CT-BN-RAND` records `vectors_passed` 5 of `vectors_checked` 5
+  (`artifacts/phase9/COURTS.json:124-126`) and `CT-DRBG` 14401 of 14401
+  (`artifacts/phase9/COURTS.json:100949-100951`), with `pending_courts` empty
+  (`artifacts/phase9/COURTS.json:100955`)
 - Obligation ledger: `forensics/phase9-obligations.json` — `open_in_this_stratum` 0
   (`forensics/phase9-obligations.json:9`), `deferred_to_later_phase` 0
   (`forensics/phase9-obligations.json:7`)
@@ -41,14 +45,20 @@ when called.
   (`forensics/atlas/provider-algorithms.json:75-88`) and the `provider_rows` block of
   `forensics/phase-state.json` (`forensics/phase-state.json:450-453`) — every registration row the
   plan gives this stratum is implemented
-- FRF receipts and claim: **none** — `.frf/` carries no Phase 9 declaration. §8 states this as the
-  state of the instrument rather than of the courts
-- Gemel checkpoint: **none** — `forensics/GEMEL_TRAJECTORY.md`'s head is Phase 8's `C76`/`K47`
-  (`forensics/GEMEL_TRAJECTORY.md:13,157`). §8 states this
+- FRF receipts and claim: **four receipts, eight challenges, twelve captures and one compiled
+  `sensitivity-backed` claim** — claim `9c05b8c9ddf98c3e129cfa542fbcea7b57a711e7d08aae58c5301354ca826bdd`
+  over candidate `openssl-rs 0.0.12`, authority `openssl-rt-3.6.4-r2` and the four differential courts,
+  with `blockers: []` and `excluded_evidence: []` (`.frf/claims/9c05b8c9….json`). §8 states what the
+  entry is
+- Gemel checkpoint: **`K48`** —
+  `checkpoint.79bf9b1418be4e8fcafc3889e99f49358fb0120dae2e0545416f698486a96f3b`, the state Phase 9's
+  head change `C94` leaves (`forensics/GEMEL_TRAJECTORY.md:13,153,160`). One checkpoint, not the three
+  Phase 8 needed, because this stratum's chain carries no finding, fix or disposition. §8 states what
+  the entry is
 - Deciding record: `docs/DECISIONS.md` — **D287** (the scope this stratum's plan rests on), the
   census and activation series **D294–D298**, the landing series **D310–D318** and **D323–D324**,
   **D346** and **D350** (two names this stratum owed itself), **D413** (the chain Phase 8 joined,
-  which fixes what a chain entry requires), and this stratum's own **D417–D421**; with
+  which fixes what a chain entry requires), and this stratum's own **D417–D424**; with
   `docs/PHASE-9-SUBPHASES.md` for the subphase plan this seal closes
 
 ## 1. What this phase owns, and how that was decided
@@ -99,10 +109,13 @@ open when the plan was written rather than retyped.
 
 **The two planes, and which one this stratum's evidence is.** D201's commitment — every
 primitive-bearing subphase carries a differential `RT-*` court *and* a correctness `CT-*` court — is
-inherited here, but Phase 9's correctness plane is **not populated**: `CT-DRBG` is a pending court and
-`CT-BN-RAND` was absent from both of `forensics/tools/phase9_courts.py`'s sets until **D423**
-registered it there as pending, which is the gap that registration closes. §6 names both, and §8
-explains why the differential four are the whole of this stratum's chain-relevant evidence.
+inherited here, and **both planes are now populated**. The differential four are §3's first four rows;
+the correctness plane is `CT-BN-RAND` and `CT-DRBG`, registered in `forensics/tools/phase9_courts.py`'s
+`CORRECTNESS_COURTS` (`forensics/tools/phase9_courts.py:128`) and driven by
+`forensics/tools/correctness_vectors.py`'s `run_bn_rand_court` (`:1258`) and `run_drbg_court`
+(`:1298`), with the runner's `PENDING_COURTS` now empty as a measurement rather than an omission
+(`forensics/tools/phase9_courts.py:143-151`). §6 names what the plane does *not* claim, and §8
+explains why the differential four are still the whole of this stratum's chain-relevant evidence.
 
 ## 2. What has been built
 
@@ -159,7 +172,8 @@ Phase 8's arc, which is why phase 8's seal records no edge into phase 9
 
 Copied from `artifacts/phase9/COURTS.json`. Observation counts are the court's own
 `authority_observations`, which `forensics/tools/atlas_common.py` requires to equal the candidate's
-before a row may be called true.
+before a row may be called true. A correctness row has no authority transcript, so it carries its
+`vectors_checked` instead, and the census counts it as structural.
 
 | court | plane | observations | probe |
 |---|---|---|---|
@@ -167,20 +181,49 @@ before a row may be called true.
 | `RT-RAND` | differential | 145 | `courts/phase9/rt_rand_probe.c` |
 | `RT-BN-RAND` | differential | 487 | `courts/phase9/rt_bn_rand_probe.c` |
 | `RT-RAND-USERS` | differential | 111 | `courts/phase9/rt_rand_users_probe.c` |
+| `CT-BN-RAND` | correctness | 5 vectors | `courts/phase9/ct_bn_rand.c` |
+| `CT-DRBG` | correctness | 14401 vectors | `courts/phase9/ct_drbg.c` |
 
-All four rows carry `residual_count: 0` and `verdict: "pass"`
-(`artifacts/phase9/COURTS.json:7-75`), and the summary reads `pass` 4 of `total` 4
-(`artifacts/phase9/COURTS.json:80-84`). The totals over the four transcript courts are
-`docs/SEAL-CENSUS.md`'s (`docs/SEAL-CENSUS.md:320`), and the per-court rows there
-(`docs/SEAL-CENSUS.md:322-327`) are the same computation.
+All four differential rows carry `residual_count: 0` and `verdict: "pass"`
+(`artifacts/phase9/COURTS.json:7-75`), and the summary reads `pass` 6 of `total` 6 with
+`pending_courts` empty (`artifacts/phase9/COURTS.json:100955-100960`). The totals over the four
+transcript courts are `docs/SEAL-CENSUS.md`'s (`docs/SEAL-CENSUS.md:320`), and the per-court rows
+there, the two correctness rows included (`docs/SEAL-CENSUS.md:324-331`), are the same computation.
 
-**There is no `CT-*` row here, and the distinction is the two-plane one.** Every court this stratum
-ran is differential: a probe compiled twice, against the authority and the candidate, with the two
-transcripts diffed line by line (`forensics/tools/phase9_courts.py:4-10`). `forensics/tools/phase9_courts.py`'s
-`extra_defs` returns nothing for this stratum, because every observation is a return code, a state, a
-name, a parameter key/type pair or an `ERR_GET_LIB`/`ERR_GET_REASON` pair, so a difference in a
-transcript can only be a difference in behaviour (`forensics/tools/phase9_courts.py:146-156`). The
-correctness plane that Phase 8's §3 also carries is §6's not-claimed list.
+**The two correctness rows, and why their evidence is a different shape.** The first four rows are
+differential: a probe compiled twice, against the authority and the candidate, with the two
+transcripts diffed line by line (`forensics/tools/phase9_courts.py:4-10`). The last two are not.
+A `CT-*` court is **candidate-only**: the probe is compiled against the candidate alone and its output
+is compared with committed expected bytes, so there is no authority transcript to diff and no
+`authority_observations` count (`forensics/tools/correctness_vectors.py:1-73`). `CT-BN-RAND`
+(`courts/phase9/ct_bn_rand.c`, 142 lines) drives `BN_generate_dsa_nonce` for five committed
+`(range, priv, message)` cases over a committed `TEST-RAND` entropy stream; each expected nonce is
+re-derived independently in Python from `crypto/bn/bn_rand.c:293-395`'s construction by
+`forensics/tools/gen_bn_rand_nonce_vectors.py`, which also generates the probe's
+`courts/phase9/ct_bn_rand_vectors.h`, and the five arms are `wide_range_two_digest`, `reject_once`,
+`tiny_range`, `empty_message` and `plain_message` (`forensics/vectors/bn_rand_nonce.json`,
+`artifacts/phase9/COURTS.json:85-121`). The mechanism is the authority's own —
+`RAND_set_DRBG_type(NULL, "TEST-RAND", …)`, `RAND_get0_private(NULL)` and `test_entropy` set through
+`EVP_RAND_CTX_set_params` — and the probe prints `ct.drbg_type` and `ct.entropy_set` first, which the
+runner makes **preconditions** rather than vectors, so a broken seeding path is one named failure
+instead of five wrong nonces (`forensics/tools/correctness_vectors.py:1269-1294`). `CT-DRBG`
+(`courts/phase9/ct_drbg.c`, 533 lines) replays the pinned corpus's stanzas — CTR-DRBG 289, HASH-DRBG
+336, HMAC-DRBG 336, 961 in all, 14401 `output.N` values — through a `TEST-RAND` **parent** carrying
+`test_entropy`/`test_nonce`, the DRBG as the child, comparing each `output.N` against the **second**
+`EVP_RAND_generate` the way `test/evp_test.c:3892-3908` does (`forensics/vectors/drbg.json`,
+`forensics/tools/gen_drbg_vectors.py`). The corpus **does** mirror NIST CAVP `drbgtestvectors.zip`,
+with the URL in the file, and its stanzas are the modern `EVP_RAND` fetch/instantiate/generate shape
+rather than the older KAT shape; the generator pins its sha256 as
+`61fd2ca1fd40e020115ccc073e868e76263ee81fea315146cec99f29a086e116` (`forensics/vectors/drbg.json`'s
+`inputs[]`). Two clauses are named rather than silently dropped: six `Availablein = fips` stanzas
+(`evprand.txt:79925`, `:79932`, `:79941`, `:79953`, `:79965`, `:79977`) are **excluded** — this profile
+builds no FIPS module, four of them assert a *refusal* rather than an output, and two set the
+`digest-check` FIPS-indicator control (`forensics/tools/gen_drbg_vectors.py:62-70`) — and
+`evpkdf_hmac_drbg.txt` is **declined**, because its stanzas are `KDF = HMAC-DRBG-KDF`, i.e.
+`providers/implementations/kdfs/hmacdrbg_kdf.c.in`'s `EVP_KDF` row rather than the `OSSL_OP_RAND`
+`HMAC-DRBG` row this court courts, and the decline is recorded as a *declined* input
+(`forensics/tools/gen_drbg_vectors.py:37-48`). Both results are in the head matter: 5 of 5 and 14401
+of 14401.
 
 **The court coverage join is clean, and its meaning is the weaker one.** `docs/SEAL-CENSUS.md:348`
 reads phase 9 as 69 implemented, 69 `directly_courted`, 0 indirect, 0 non-observable, 0 unmatched.
@@ -190,8 +233,8 @@ driven — the same reading Phase 8's seal adopts (`docs/PHASE-8-CRYPTO-SEAL.md:
 
 ## 4. What the courts found
 
-A court whose results never surprised anyone is a court that is not looking, and this stratum's two
-planes found real defects, including two in the evidence machinery.
+A court whose results never surprised anyone is a court that is not looking, and this stratum's
+evidence found real defects, including two in the evidence machinery.
 
 **`RT-DRBG`'s first run produced 180 residual lines, and every one was the same defect.** The
 candidate refused every instantiation with `PROV_R_ERROR_RETRIEVING_NONCE` while the authority
@@ -282,6 +325,16 @@ those entries were written** and are not this document's counts. `docs/SEAL-CENS
 sentence, not a missing court. (`docs/DECISIONS.md:30110-30111` cites `RT-BN-RAND` at "467" and
 `RT-RAND-USERS` at "61"; neither matches §3, and neither is meant to.)
 
+**One open finding, observed once and not reproduced, recorded rather than diagnosed.** Under the
+full parallel test run, `context::thread_data::tests::the_pool_starts_joins_and_cleans_workers` failed
+with `assertion left == right failed, left: 1, right: 0` at `src/context/thread_data.rs:454` — the
+`assert_eq!(ossl_get_avail_threads(ctx), 8)` after four starts and four joins. It passed both in
+isolation and on an immediate re-run of the whole pipeline with the same code. `avail` is
+`max_threads - active_threads` for that context, so a value of `1` is consistent with the context
+having read a `max_threads` of 1 — the very thing `max_threads_is_per_context` asserts cannot happen —
+but **the mechanism was not established**, and this seal records it rather than diagnosing it: what
+was observed, the value, that it is not reproducible in isolation, and that the cause is unknown.
+
 ## 6. What is explicitly NOT claimed
 
 1. **Not parity, and not a usable OpenSSL.** `implemented` in the ledgers means a symbol with that
@@ -293,25 +346,17 @@ sentence, not a missing court. (`docs/DECISIONS.md:30110-30111` cites `RT-BN-RAN
    here establishes differential compatibility for the behaviours its probe exercises and **not** that
    either side's output is unpredictable, which is a property of the seeding pool rather than of a
    transcript (`docs/PHASE-9-SUBPHASES.md:88-97`, `artifacts/phase9/COURTS.json:6`).
-3. **`CT-DRBG` is a pending court, not a passing one.** It is recorded with its corpus and the
-   subphase that brings it: "9.4 — the DRBGs' construction vectors, which the pinned tree already
-   carries: `test/recipes/30-test_evp_data/evprand.txt` mirror the NIST CAVP `drbgtestvectors.zip`
-   sets … and `evpkdf_hmac_drbg.txt` carries the HMAC-DRBG KDF cases"
-   (`artifacts/phase9/COURTS.json:77-79`, `forensics/tools/phase9_courts.py:137-143`). It is printed on
-   every run so that "not run yet" cannot be read as "passed".
-4. **`CT-BN-RAND` is a court the runner did not carry, and D423 registers it as pending.**
-   `docs/PHASE-9-SUBPHASES.md:62` lists `CT-BN-RAND` beside `RT-BN-RAND` as row 9.1's courts, and
-   `forensics/tools/phase9_courts.py`'s registered `COURTS`
-   (`forensics/tools/phase9_courts.py:127-132`) and its `PENDING_COURTS` (`:137-143`) each omitted it
-   — a gap in the instrument rather than a court nobody ran, which D421 named and D423 closes by
-   adding the name and its corpus to `PENDING_COURTS`, so it is now printed on every run and "not
-   run yet" cannot be read as "passed". **The corpus is identifiable and named there**:
-   `crypto/bn/bn_rand.c`'s exports are draws, so a construction court needs a *fixed* seed, and the
-   path is `test_rng.c.in`'s — `test_rng_set_ctx_params` accepts an `entropy` octet string and, with
-   `generate` unset, `test_rng_generate` returns exactly those bytes in order (`test_rng.c.in:88-105`)
-   — but driving it means `RAND_set_seed_source_type` and the seed-source context, and that driver is
-   owed rather than written. What the court would close is `BN_rand`'s exact output under a committed
-   seed; what it would not is anything `RT-BN-RAND`'s postconditions already cover.
+3. **The correctness plane is not parity, and a `CT-*` pass is not a differential result.** A
+   correctness pass says a construction satisfied its committed vectors; it says **not** that the
+   candidate behaves like the admitted authority, which is the `RT-*` plane's question and a different
+   defect class (`forensics/tools/correctness_vectors.py:14-25`). `CT-DRBG` reproduces every `output.N`
+   the pinned corpus records and `CT-BN-RAND` every committed DSA nonce, but neither establishes that
+   either library's behaviour on an arm the vector set does not contain matches the other's.
+4. **The vector corpora are informal verification, not validation.** NIST publishes the CAVP vectors
+   for informal verification and warns that using them is not itself validation, and the corpora here
+   are mirrored out of the pinned authority's own tree, so they are independent of the implementation
+   *code* but **not** independent of the pinned tree (`forensics/tools/correctness_vectors.py:26-57`).
+   Nothing here is `PARITY_VERIFIED`, and nothing here is a certificate.
 5. **`BIO_f_reliable`'s write path is owed to Phase 13.** `sig_out` fills the record's digest half with
    `RAND_bytes`, and with a provider digest the authority reaches `memcpy(buf, NULL, 32)` on the first
    `BIO_write` — its own live `FIXME` (`docs/DECISIONS.md:20609-20630`). The filter needs a **legacy**
@@ -334,10 +379,14 @@ sentence, not a missing court. (`docs/DECISIONS.md:30110-30111` cites `RT-BN-RAN
 8. **Nothing about a build profile or platform other than the admitted one.** Linux x86-64 only; the
    front's `struct stat`, `__NR_getrandom` and `fd_set` are ABI facts a wrong layout would make a
    memory-safety defect rather than a wrong answer (D301, D302).
-9. **Nothing covered by an FRF receipt, challenge, claim or Gemel checkpoint, because there are none
-   for this stratum.** §8 states this with the file that makes it a convention.
-10. **Every count is `docs/SEAL-CENSUS.md`'s.** This document types none, except §3's per-court table,
-    which names the file it was read from.
+9. **Nothing beyond what §8 states covered by an FRF receipt, challenge, claim or Gemel
+   checkpoint.** The four receipts, their `sensitivity-backed` claim and `K48` — the checkpoint that
+   state carries — cover the four differential courts' stdout-first-line and exit-class surfaces and
+   the chain entry that produces them; they say nothing about the correctness plane and nothing else.
+   §8 states both.
+10. **Every ledger and coverage count is `docs/SEAL-CENSUS.md`'s.** This document types none of those
+    itself; the exceptions are §3's per-court table and the head matter's court and chain figures, each
+    of which names the artefact it was read from.
 
 ## 7. Exit criteria
 
@@ -354,6 +403,7 @@ asserted.
 |---|---|
 | every export is implemented or handed on with the dependency named | `forensics/phase9-obligations.json`: `open_in_this_stratum` 0 and `deferred_to_later_phase` 0; the generator `forensics/tools/phase9_obligations.py` fails closed, so `implemented + deferred + open == owned` |
 | every implemented export is observed by a differential court | `forensics/atlas/court-coverage.json` phase-9 block; `unmatched` 0, enforced for `complete` by `forensics/tools/phase_state.py` |
+| both of D201's planes are populated | `artifacts/phase9/COURTS.json`: the differential four and the correctness two are all `pass`, `summary` 6 of 6 and `pending_courts` empty (`:100955-100960`) |
 | every provider row the plan gives this stratum is implemented | `forensics/phase-state.json:450-453` reads `implemented` 15 of `owned` 15; `forensics/atlas/provider-algorithms.json:86` reads `open["9"]` 0 |
 | no authority fault is reproduced | §5, and `docs/SECURITY_DIVERGENCE_POLICY.md`'s register |
 | `ABI-PROTOTYPE`, `ABI-SYMBOL` and `ABI-DYNAMIC` stay clean | `forensics/atlas/ownership-audit.json`: `problems` empty (`:1181`), `implemented_by_two_strata` empty (`:998`) |
@@ -374,20 +424,20 @@ for it is, and, where an item is **not met**, says so plainly rather than leavin
 | 1 | authority identity | `forensics/authorities/AUTHORITIES.json` pins `openssl-3.6.4-production`; `artifacts/phase9/COURTS.json:5` names it |
 | 2 | obligation inventory | `forensics/phase9-obligations.json` (`:5-12`), and, for the provider rows, `forensics/atlas/provider-algorithms.json` |
 | 3 | court manifests | `artifacts/phase9/COURTS.json` |
-| 4 | raw captures | **met in the court venue, not in the FRF venue.** The four staged `artifacts/phase9/probes/<probe>.{authority,candidate}` pairs are the captures the court venue diffs (`artifacts/phase9/COURTS.json:19-22`). `.frf/captures/` carries **no** Phase 9 capture, because the stratum has no FRF declaration (§8) |
-| 5 | residual set | **met in the court venue, not in the FRF venue.** Every court's `residual_count` is 0 and every `residuals` list is empty (`artifacts/phase9/COURTS.json:7-75`). `.frf/residuals/` carries **no** Phase 9 record, for the same reason as item 4 |
-| 6 | mutation / sensitivity evidence | **not met.** There is no `.frf/challenges/` record for this stratum, because no Phase 9 court is declared (§8) |
-| 7 | resolution runs | **not applicable, and therefore not met.** No `fixed` disposition attaches to this stratum: the FRF venue has no residual to dispose, and §5's two register boundaries are Phase 5's and Phase 8's records rather than this stratum's chain residuals. `--resolution-run` is required only for `fixed`, and `fixed` requires a *changed* candidate artifact |
-| 8 | FRF receipts | **not met.** No `.frf/receipts/` record names a Phase 9 court (§8); every receipt on disk belongs to an earlier stratum |
+| 4 | raw captures | **met in both venues.** The four staged `artifacts/phase9/probes/<probe>.{authority,candidate}` pairs are the captures the court venue diffs (`artifacts/phase9/COURTS.json:19-22`), and `.frf/captures/` carries twelve Phase 9 runs — the real run and the two challenged runs of each differential court (§8) |
+| 5 | residual set | **met.** Every differential court's `residual_count` is 0 (`artifacts/phase9/COURTS.json:7-75`) and every Phase 9 receipt's `residuals` list is empty; the claim carries `blockers: []`. The eight Phase 9 records in `.frf/residuals/` are the challenges' seeded-defect observations — two axes on each court, on the mutated candidate hashes rather than the real one — which is what a challenge is for (§8) |
+| 6 | mutation / sensitivity evidence | **met.** Eight challenge records — both declared axes on each of the four differential courts — every one adjudicated, and the claim is `sensitivity-backed` (§8) |
+| 7 | resolution runs | **not applicable, and therefore not met.** No `fixed` disposition attaches to this stratum: the eight Phase 9 residuals the challenges produced are all `open` by design, and §5's two register boundaries are Phase 5's and Phase 8's records rather than this stratum's chain residuals. `--resolution-run` is required only for `fixed`, and `fixed` requires a *changed* candidate artifact |
+| 8 | FRF receipts | **met.** Four `.frf/receipts/` records — one per differential court — each with an empty `residuals` list (`receipt-run-openssl-rs-rt-{drbg,rand,bn-rand,rand-users}-…`; §8) |
 | 9 | generated parity projection | `forensics/STATUS.md` (`:221-238`), rendered by `forensics/tools/render_status.py`; the seal-facing arithmetic is `docs/SEAL-CENSUS.md` |
-| 10 | Gemel checkpoint | **not met.** `forensics/GEMEL_TRAJECTORY.md`'s `current:` is Phase 8's `C76` (`:157`); no Phase 9 checkpoint exists (§8) |
+| 10 | Gemel checkpoint | **met.** `forensics/GEMEL_TRAJECTORY.md`'s head change is Phase 9's `C94` (`:13`) and its `current:` is `K48` — `checkpoint.79bf9b1418…` (`:153,160`), the state `C94` leaves; one checkpoint, because this stratum's chain carries no finding, fix or disposition (§8) |
 
-**What "not met" here means, precisely.** Items 4, 6, 7, 8 and 10 are the **FRF chain** items, and
-this stratum has not entered the chain. That is the one place this `complete` is weaker than Phase 8's,
-and it is not a weakness of the four courts: those courts ran, passed, and are re-derived by the
-pipeline. It is the state a stratum is in **between** reaching `complete` and joining the chain, and
-D413 records it is a state this project does not seal in: "this entry does not seal first and declare
-later" (`docs/DECISIONS.md:29716-29720`).
+**Every FRF-chain item is met.** The stratum entered the chain and produced the declarations,
+captures, receipts, challenges, claim and checkpoint §8 describes, with `blockers: []` and
+`excluded_evidence: []`. Item 7 is *not applicable* rather than wanting — `--resolution-run` is
+required only for a `fixed` disposition, and none attaches to Phase 9, so its column says "not
+applicable, and therefore not met" rather than leaving the row blank. Item 10's checkpoint, `K48`, is
+the object D413 named as the chain's product and it has landed (§8).
 
 ## 8. FRF and Gemel
 
@@ -399,28 +449,40 @@ recreated, producing one receipt and two challenge records per court, a compiled
 claim, and a Gemel checkpoint (`docs/DECISIONS.md:29722-29732`, `29744-29755`, `29810-29818`). D413 is
 also explicit that the vector-driven `CT-*` courts **cannot** be declared, because such a court has no
 authority transcript to diff and no fixture a challenge could locate (`docs/DECISIONS.md:29734-29742`).
+That is why the entry below covers the four differential courts and neither correctness court: the CT
+courts are §3's other plane, not a chain subject.
 
-**Phase 9's chain entry does not exist yet, and the honest statement of that is that nothing here was
-found, because nothing here was looked for.** The evidence for each clause:
+**Phase 9's chain entry now exists, and every object it produces is on disk.**
 
-- **No declarations.** `forensics/frf/courts/` contains no `openssl-rs-rt-rand`,
-  `openssl-rs-rt-drbg`, `openssl-rs-rt-bn-rand` or `openssl-rs-rt-rand-users`; the only RAND-shaped
-  directory is `openssl-rs-rt-evp-rand`, which is **Phase 7's** `EVP_RAND` framework court. A grep of
-  `forensics/frf/` for `phase9`, `rt-rand`, `rt-drbg`, `rt-bn-rand` and `rand-drbg` returns nothing.
-- **No Phase 9 objects in `.frf/`.** A grep of the whole store for those names returns three
-  `sha256`-addressed objects, and all three are **Phase 7's**: `.frf/objects/sha256/8622403b…` is the
-  `RT-EVP-RAND` probe source, and the other two are its compiled binaries. `.frf/`'s receipts (82),
-  challenges (164), captures (246) and residuals carry no Phase 9 run.
-- **No Gemel checkpoint.** `forensics/GEMEL_TRAJECTORY.md`'s head is `C76`/`K47`, which is Phase 8's
-  disposition and corrected claim (`forensics/GEMEL_TRAJECTORY.md:13`), and its `current:` is the same
-  change's state (`forensics/GEMEL_TRAJECTORY.md:157`). There is no `C77`/`K48`.
+- **Four declarations.** `forensics/tools/gen_frf_courts.py`'s table gained a Phase 9 block —
+  `("rt-drbg", 9, …)`, `("rt-rand", 9, …)`, `("rt-bn-rand", 9, …)` and `("rt-rand-users", 9, …)`
+  (`forensics/tools/gen_frf_courts.py:448-456`) — and the generated declarations are under
+  `forensics/frf/courts/openssl-rs-rt-{rand,drbg,bn-rand,rand-users}`. The `CT-*` courts carry no row,
+  for the D413 reason above.
+- **Four receipts, eight challenges, twelve captures.** One receipt per court, each with an empty
+  `residuals` list; both declared axes challenged and adjudicated on each court; and three runs
+  captured per court — the real run and the two challenged runs. They are in `.frf/receipts/`,
+  `.frf/challenges/` and `.frf/captures/` under the `openssl-rs-rt-{rand,drbg,bn-rand,rand-users}`
+  names; the store's `openssl-rs-rt-evp-rand` objects are **Phase 7's**, not this stratum's.
+- **One `sensitivity-backed` claim.**
+  `9c05b8c9ddf98c3e129cfa542fbcea7b57a711e7d08aae58c5301354ca826bdd` binds authority
+  `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.12` (`identity_hash e4f60d8b…`) over the four
+  differential courts, with `blockers: []` and `excluded_evidence: []` (`.frf/claims/9c05b8c9….json`).
+- **One Gemel checkpoint, `K48`.** `forensics/GEMEL_TRAJECTORY.md`'s head change is `C94` — "Phase 9
+  joins the FRF chain, and all four courts' premises are clean on both axes"
+  (`forensics/GEMEL_TRAJECTORY.md:13`) — and its `current:` is the state that change leaves,
+  `checkpoint.79bf9b1418be4e8fcafc3889e99f49358fb0120dae2e0545416f698486a96f3b`, listed as `K48`
+  (`forensics/GEMEL_TRAJECTORY.md:153,160`). **One checkpoint rather than the three Phase 8 needed**,
+  because this stratum's chain contains no finding, fix or disposition for the trajectory to carry in
+  order: the four courts' real runs raise no residual on a claimed surface, the claim compiles with
+  zero blockers and no narrowed cell on the first pass, and the only residuals the chain produces are
+  the eight mutant residuals of the challenge records, which are open by design because a mutant's
+  divergence is the challenge's evidence.
 
-**What the seal does *not* do is invent the entry.** The declarations, the receipts, the challenges,
-the claim and the checkpoint are produced by running the chain in the FRF tooling container, never on
-the host, and none of them exists to cite. §6's items and §7's items 4, 6, 7, 8 and 10 are the
-coordinates of the gap, and the two "not met" readings that matter — `CT-DRBG` (a court the plan gives
-this stratum that has not landed) and `CT-BN-RAND` (a court the runner did not carry, registered
-pending by D423) — travel with them.
+**What the seal does *not* do is invent any of these objects.** The declarations, the receipts, the
+challenges, the captures, the claim and the checkpoint are produced by running the chain in the FRF
+tooling container, never on the host, and all six are cited above from disk — `forensics/GEMEL_TRAJECTORY.md`
+is the generated projection of a store Gemel keeps untracked (D17).
 
 ## 9. What happens next
 
@@ -435,9 +497,9 @@ from `owning_phase` rather than storing it (D295).
 
 **The immediate next actions this seal's own findings point at**, recorded so they are not lost:
 
-- **`CT-DRBG` and `CT-BN-RAND`.** Both are pending courts now: the first's corpus already ships in
-  the pinned tree (§6.3), and the second's is `test_rng.c.in`'s committed `entropy` path (§6.4), which
-  D423 registers and names. Each needs its driver written.
+- **`CT-DRBG` and `CT-BN-RAND`.** Both are passing correctness courts now (§3): `CT-DRBG` reproduces
+  the pinned corpus's 14401 `output.N` values and `CT-BN-RAND` the five committed DSA nonces. No driver
+  is owed for either.
 - **`BIO_f_reliable`'s write path** retires when Phase 13 lands `EVP_sha256()`'s family (§6.5).
 - **The TDES init pair** needs the five `cipher_tdes_common.c` bodies, which are in no ledger and no
   atlas because they are declared in the uninstalled `prov/implementations.h` (§6.6).
@@ -446,10 +508,12 @@ from `owning_phase` rather than storing it (D295).
 - **`D-GF2M-1`'s obligation** stands with the register's reason now historical: `BN_priv_rand_ex`
   exists, so the blinding could be added, and the boundary would retire with it (§5).
 - **`D-CBCHMAC-MULTIBLOCK-ENC-1`'s trigger** fired at D313 and its entry and arm are still owed (§5).
-- **This stratum's FRF chain entry** is §8's subject: four declarations, and the receipts, challenges,
-  claim and checkpoint they produce.
+- **This stratum's FRF chain entry** is §8's subject: four declarations, the four receipts, eight
+  challenges and twelve captures they produced, the compiled claim, and the `K48` checkpoint the chain
+  leaves. No object of the entry is still owed.
 - **`forensics/phase9-obligations.json` is the place a reader should look before believing any figure
-  in this document**, because this document deliberately types none outside §3.
+  in this document**, because this document types no census figure of its own: §3's table and the head
+  matter's court and chain figures each name the artefact they were read from.
 
 ## 10. Corrections this seal records
 
@@ -497,10 +561,28 @@ replaced.
    other tool could see (`docs/DECISIONS.md:30177-30206`). The `.in` spelling is load-bearing here
    rather than cosmetic (`docs/PHASE-9-SUBPHASES.md:66`).
 
-6. **`CT-BN-RAND` was absent from the runner's sets, and D423 registers it as pending.** Named by
-   `docs/PHASE-9-SUBPHASES.md:62`, omitted from both `forensics/tools/phase9_courts.py:127-132` and
-   `:137-143` until D423; D421 is the decision that named it as a runner gap rather than a court nobody
-   ran (`docs/DECISIONS.md:30285-30287`). §6.4 and §9 record it.
+6. **`CT-BN-RAND` was absent from the runner's sets, and D423 registered it; both correctness courts
+   have since landed.** Named by `docs/PHASE-9-SUBPHASES.md:62`, omitted from both
+   `forensics/tools/phase9_courts.py`'s registered set and its `PENDING_COURTS` until D423; D421 is the
+   decision that named it as a runner gap rather than a court nobody ran
+   (`docs/DECISIONS.md:30285-30287`). D423's pending entry is itself retired: the two names are
+   `CORRECTNESS_COURTS` (`forensics/tools/phase9_courts.py:128`), the dict is empty (`:151`), and §3 and
+   §9 record the landed courts.
 
 7. **Observation counts inside older decision entries are historical.** §5's closing note. They are
    not restated, they are not corrected in place, and they are not this document's counts.
+
+8. **This pass makes the seal true of the landed correctness plane and the entered FRF chain.** The
+   seal was written when `CT-DRBG` and `CT-BN-RAND` were pending and before the stratum joined the
+   chain, so §1, §3, §6, §7, §8 and §9 described a state the tree no longer held. They are corrected
+   against the artefacts rather than re-argued: `artifacts/phase9/COURTS.json` reads six courts, `pass`
+   6 of `total` 6 with `pending_courts` empty (`:100955-100960`), and the two correctness records at
+   `:76-128` and `:129-100953` read 5 of 5 and 14401 of 14401; the vectors are
+   `forensics/vectors/bn_rand_nonce.json` (5) and `forensics/vectors/drbg.json` (961 stanzas, 14401
+   values); the chain objects are the four descriptions in `forensics/tools/gen_frf_courts.py`'s table
+   (`:448-456`) and the declarations, receipts, challenges, captures and claim under `forensics/frf/`
+   An earlier revision of this item said the Gemel checkpoint was the one item still not
+   landed, because it was written before the chain ran; the checkpoint has since landed as `K48`, and
+   §6's item 9, §7's item 10 and §8 state the head change and the state it carries. This pass and its
+   corrections are recorded in **D424**, which carries the two correctness courts, the chain entry and
+   the one open finding.
