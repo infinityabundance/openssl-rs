@@ -92,7 +92,6 @@ LIBCRYPTO = SURFACE["libraries"]["libcrypto"]
 P1 = load_json("forensics/atlas/phase1-completeness.json")["body"]
 P7 = load_json("forensics/phase7-obligations.json")["body"]
 STATE = load_json("forensics/phase-state.json")["body"]
-STRATA_COMPLETE = int(STATE["summary"]["complete"])
 
 SRC_FRF = "forensics/tools/gen_frf_courts.py's COURTS table"
 SRC_SURFACE = "forensics/atlas/implemented-surface.json"
@@ -224,19 +223,6 @@ def phase7_headers(text: str) -> list[tuple[str, str, str]]:
     return []
 
 
-def readme_status_narrative(text: str) -> list[tuple[str, str, str]]:
-    m = re.search(r"(?P<w>[A-Za-z]+) strata had sealed", text)
-    if m is None:
-        raise ClaimMissing("the status-section narrative about six strata")
-    word = m.group("w").lower()
-    if word not in NUMBER_WORDS:
-        raise ClaimMissing(f"a spelled numeral this tool does not know ({word!r})")
-    found = NUMBER_WORDS[word]
-    if found != STRATA_COMPLETE:
-        return [(m.group(0), str(found), str(STRATA_COMPLETE))]
-    return []
-
-
 def defers_to_census(text: str) -> list[tuple[str, str, str]]:
     """A seal whose own preamble sends the reader to the census must not type a count.
 
@@ -326,8 +312,6 @@ def active_status_check(phase: int, path: str) -> Check:
 
 
 CHECKS: list[Check] = [
-    regex_check("readme_runtime_courts", "README.md", SRC_FRF,
-                r"(?P<n>\d+) generated runtime courts", FRF_RUNTIME_COURTS),
     regex_check("frf_readme_runtime_total_all", "forensics/frf/README.md", SRC_FRF,
                 r"\(all (?P<n>\d+) runtime courts\)", FRF_RUNTIME_COURTS),
     regex_check("frf_readme_runtime_total", "forensics/frf/README.md", SRC_FRF,
@@ -359,8 +343,6 @@ CHECKS: list[Check] = [
     Check("phase5_defers_to_census", "docs/PHASE-5-BN-ASN1-PEM-SEAL.md", SRC_SURFACE,
           defers_to_census),
     Check("phase7_headers", "docs/PHASE-7-SUBPHASES.md", SRC_P7, phase7_headers),
-    Check("readme_status_narrative_strata", "README.md", SRC_STATE,
-          readme_status_narrative),
     regex_check("phase7_claim_candidate_version", "docs/PHASE-7-EVP-SEAL.md", SRC_CARGO,
                 r"candidate `openssl-rs (?P<n>\d+\.\d+\.\d+)",
                 CANDIDATE_VERSION, transform=str),
@@ -375,16 +357,13 @@ for _phase in active_phases():
         CHECKS.append(active_status_check(_phase, _plan))
 
 # A `(check id, document)` pair here is exempt from the numeric comparison, and the
-# reason is printed with every run. The two entries are both quantities a document
-# legitimately binds to a *past* moment rather than to the present state, and both name
-# the moment. An entry that stops contradicting the evidence -- or whose claim is gone --
-# fails, so this is not a place to park a check that is inconvenient.
+# reason is printed with every run. The entry below is a quantity a document legitimately
+# binds to a *past* moment rather than to the present state, and it names the moment. An
+# entry that stops contradicting the evidence -- or whose claim is gone -- fails, so this
+# is not a place to park a check that is inconvenient. README.md's status narrative used to
+# carry one of these; D432 removed the narrative, so the entry went with it rather than
+# staying as an exemption that no longer does any work.
 EXEMPTIONS: dict[tuple[str, str], str] = {
-    ("readme_status_narrative_strata", "README.md"): (
-        "past-tense narrative: the sentence says how stale the old Status section had "
-        "become ('well past the point where six strata had sealed'), not how many strata "
-        "are complete now"
-    ),
     ("phase7_claim_candidate_version", "docs/PHASE-7-EVP-SEAL.md"): (
         "the FRF claim named there is a stored object compiled under 0.0.10; the seal "
         "records the claim's version, not the crate's current version"
