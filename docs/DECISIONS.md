@@ -30774,3 +30774,68 @@ lock; `src/ffi/mod.rs`'s counter lock is unified; `forensics/tools/pipeline.sh` 
 `Cargo.toml`'s two stale comments are corrected; and the staged shell and the atlases that hash it
 regenerate. All `src/**` changes are inside `#[cfg(test)]` or comments, so no production behaviour
 moves.
+
+## D431 -- Phase 10 is activated: 298 exports, 87 of them already landed, and the codec framework turns out not to be this stratum's to build
+
+Phase 10 (`Key formats + PKCS + STORE`) is activated the way Phase 9 was at D296: `docs/PHASE-10-SUBPHASES.md`,
+`forensics/tools/phase10_obligations.py` and its ledger `forensics/phase10-obligations.json`, the runner
+`forensics/tools/phase10_courts.py`, the reference-basis probe `courts/phase10/rt_coverage_ref_probe.c`,
+and Phase 10's evidence entry in `forensics/tools/phase_state.py`. Phase 10 derives **`in-progress`**
+with `blocking` naming its open obligations; phases 0-9 are unchanged.
+
+**The measurement, and the two places earlier prose was wrong.** `forensics/atlas/symbol-ownership.json`
+gives the stratum **272 atlas-owned exports**, all `libcrypto`, over four headers -- 117 `pkcs12.h`, 76
+`store.h`, 41 `decoder.h`, 38 `encoder.h` -- plus **26 hand-offs** from phases 5 (16, `pem.h`) and 7
+(10). That is a working set of 298, and this is where the plan departs from every earlier activation:
+**87 of them are already implemented.** Phase 8's 8.8 and 8.9 rows landed the `crypto/encode_decode/`
+framework and the `pem.h` readers as their own work (D362-D367), so all 79 `encoder.h`/`decoder.h`
+exports and 8 `pkcs12.h` ones are in, and `open_in_this_stratum` is **211**, not 298. The ledger prints
+that identity -- `owned=298 implemented=87 deferred=0 open=211` -- and enforces it rather than asserting
+it. The 272 are defined by **25 authority translation units** (`forensics/atlas/export-defining-units.json`'s
+`units_by_owner_phase["10"]`: six under `crypto/encode_decode/`, fifteen under `crypto/pkcs12/`, four
+under `crypto/store/`), and the stratum owns **636 provider registration rows**, every one
+`unimplemented`: the `base` and `default` providers' copies of the same 318 (241 `OSSL_OP_ENCODER`,
+76 `OSSL_OP_DECODER`, 1 `OSSL_OP_STORE`).
+
+Two corrections the plan's §4 records rather than smoothing over. **§4.1:** `docs/PHASE-8-SUBPHASES.md:16-18`
+says the `OSSL_ENCODER_*`/`OSSL_DECODER_*` framework is Phase 10's, and it is right about *ownership* --
+the atlas does assign all 79 exports here -- and wrong about *landing*, because Phase 8 transcribed
+`encoder_*.rs`/`decoder_*.rs` to make `print_pkey` (`crypto/evp/p_lib.c:1196`) and the `pem.h` readers
+work (D362-D367). A plan that opened with "the whole working set is open, as every earlier activation
+did" would have been wrong. **§4.2:** D175 and D177 gate two units "on Phase 10, by a *type*", reading
+`PBEPARAM`'s declaration in `include/openssl/x509.h.in:261` and concluding the stratum owning `x509.h`
+is Phase 10; measured, `x509.h` is **Phase 11's** (all 548 exports) and the type join says Phase 11 too.
+
+**Why the activation is also a runner and a probe.** Activating a stratum flips it out of
+`not-started`, and `run_courts.py` refuses an `in-progress` stratum with no runner, so
+`forensics/tools/phase10_courts.py` lands with the ledger and registers the five courts the plan names
+-- `RT-CODEC`, `RT-PKCS12`, `CT-PKCS12`, `RT-STORE`, `RT-KEYFORMAT` -- as **pending**, printed on every
+run so "not run yet" cannot read as "passed". `court_coverage.py` then refuses the 87 inherited
+`implemented` exports, because a stratum claiming to be under way must have every implemented export
+observed by a court; that is what `RT-KEYFORMAT-REF` and `courts/phase10/rt_coverage_ref_probe.c` are
+for, following the precedent `RT-RUNTIME-REF` and `RT-EVP-REF` set for phases 3 and 7 -- a probe of 87
+`extern` declarations whose only observation is that the address is non-NULL, registered in
+`forensics/atlas/court-coverage-rows.json`'s `reference_probes` so the 87 are recorded at basis
+**`referenced`** and never `called`. Nothing is marked `non_observable` or `indirect`, and no coverage
+row is fabricated: the probe's link is real evidence that the candidate distribution defines all 87,
+which was checked independently, and it claims nothing behavioural.
+
+### Verification
+
+Every number in the plan's §1 was reproduced against the artefact it cites, and three drifted
+documents were corrected in place: the count of Phase 7's open deferrals (seven to **ten**), the header
+cell for Phase 7's ten hand-offs (`evp.h` covers 9; `PEM_write_bio_PrivateKey_traditional` is `pem.h`),
+and a D64 citation (the quoted text is at `docs/DECISIONS.md:2354-2355`, not `:2330`).
+`python3 forensics/tools/phase10_obligations.py` prints `298 = 87 + 0 + 211`;
+`run_courts.py` and `court_coverage.py` are clean with the pending courts printed; the regression guard
+returns no regression (a new ledger is `UNCERTIFIED` rather than a regression, which is how D296's
+activation read too); and `PIPELINE OK` exit 0 twice.
+
+### Movement
+
+`docs/PHASE-10-SUBPHASES.md`, `forensics/tools/phase10_obligations.py`,
+`forensics/phase10-obligations.json`, `forensics/tools/phase10_courts.py`, `courts/phase10/` and
+`artifacts/phase10/` are added; `forensics/tools/phase_state.py` gains Phase 10's evidence entry;
+`forensics/atlas/court-coverage-rows.json` gains the reference probe; and the atlases, the census,
+`forensics/STATUS.md` and `forensics/regression-baseline.json` are regenerated. Phase 10's seal is
+`docs/PHASE-10-KEYFORMATS-SEAL.md`, which does not exist yet and is 10.7's artifact.

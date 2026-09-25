@@ -13,403 +13,10 @@
       9
     ],
     "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
-    "in_progress": [],
+    "in_progress": [
+      10
+    ],
     "not_yet_begun": [
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_add_decoder"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_add_extra"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_free"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_get_cleanup"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_get_construct"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_get_construct_data"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_get_num_decoders"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_new"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_new_for_pkey"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_cleanup"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_construct"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_construct_data"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_input_structure"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_input_type"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_params"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_passphrase"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_passphrase_cb"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_passphrase_ui"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_pem_password_cb"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_CTX_set_selection"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_INSTANCE_get_decoder"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_INSTANCE_get_decoder_ctx"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_INSTANCE_get_input_structure"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_INSTANCE_get_input_type"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_do_all_provided"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_export"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_fetch"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_free"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_from_bio"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_from_data"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_from_fp"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_get0_description"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_get0_name"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_get0_properties"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_get0_provider"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_get_params"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_gettable_params"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_is_a"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_names_do_all"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_settable_ctx_params"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_DECODER_up_ref"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_add_encoder"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_add_extra"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_free"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_get_num_encoders"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_new"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_new_for_pkey"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_cipher"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_cleanup"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_construct"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_construct_data"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_output_structure"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_output_type"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_params"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_passphrase"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_passphrase_cb"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_passphrase_ui"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_pem_password_cb"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_CTX_set_selection"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_INSTANCE_get_encoder"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_INSTANCE_get_encoder_ctx"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_INSTANCE_get_output_structure"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_INSTANCE_get_output_type"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_do_all_provided"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_fetch"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_free"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_get0_description"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_get0_name"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_get0_properties"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_get0_provider"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_get_params"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_gettable_params"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_is_a"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_names_do_all"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_settable_ctx_params"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_to_bio"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_to_data"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_to_fp"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "OSSL_ENCODER_up_ref"
-      },
       {
         "owing_phase": 11,
         "owner_phase": 11,
@@ -451,36 +58,6 @@
         "symbol": "PEM_read_bio_PrivateKey_ex"
       },
       {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "PKCS12_item_decrypt_d2i"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "PKCS12_item_decrypt_d2i_ex"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "PKCS12_item_i2d_encrypt"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "PKCS12_item_i2d_encrypt_ex"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "PKCS12_pbe_crypt"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "PKCS12_pbe_crypt_ex"
-      },
-      {
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_PRIV_KEY_INFO_free"
@@ -494,16 +71,6 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PKCS8_PRIV_KEY_INFO_new"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "PKCS8_decrypt"
-      },
-      {
-        "owing_phase": 10,
-        "owner_phase": 10,
-        "symbol": "PKCS8_decrypt_ex"
       },
       {
         "owing_phase": 11,
@@ -22094,13 +21661,640 @@
         "non_observable": [],
         "phase": 9,
         "staged_candidate_probes": 4
+      },
+      {
+        "completed": false,
+        "counts": {
+          "directly_courted": 87,
+          "directly_courted_called": 0,
+          "directly_courted_referenced": 87,
+          "implemented": 87,
+          "indirectly_courted": 0,
+          "non_observable": 0,
+          "unmatched": 0
+        },
+        "directly_courted": [
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_add_decoder"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_add_extra"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_get_cleanup"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_get_construct"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_get_construct_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_get_num_decoders"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_new_for_pkey"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_cleanup"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_construct"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_construct_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_input_structure"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_input_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_params"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_passphrase"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_passphrase_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_passphrase_ui"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_pem_password_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_CTX_set_selection"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_INSTANCE_get_decoder"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_INSTANCE_get_decoder_ctx"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_INSTANCE_get_input_structure"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_INSTANCE_get_input_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_do_all_provided"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_export"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_fetch"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_from_bio"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_from_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_from_fp"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_get0_description"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_get0_name"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_get0_properties"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_get0_provider"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_get_params"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_gettable_params"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_is_a"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_names_do_all"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_settable_ctx_params"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_DECODER_up_ref"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_add_encoder"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_add_extra"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_get_num_encoders"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_new_for_pkey"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_cipher"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_cleanup"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_construct"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_construct_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_output_structure"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_output_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_params"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_passphrase"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_passphrase_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_passphrase_ui"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_pem_password_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_CTX_set_selection"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_INSTANCE_get_encoder"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_INSTANCE_get_encoder_ctx"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_INSTANCE_get_output_structure"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_INSTANCE_get_output_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_do_all_provided"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_fetch"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_get0_description"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_get0_name"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_get0_properties"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_get0_provider"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_get_params"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_gettable_params"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_is_a"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_names_do_all"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_settable_ctx_params"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_to_bio"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_to_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_to_fp"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "OSSL_ENCODER_up_ref"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "PKCS12_item_decrypt_d2i"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "PKCS12_item_decrypt_d2i_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "PKCS12_item_i2d_encrypt"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "PKCS12_item_i2d_encrypt_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "PKCS12_pbe_crypt"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "PKCS12_pbe_crypt_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "PKCS8_decrypt"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-KEYFORMAT-REF"
+            ],
+            "symbol": "PKCS8_decrypt_ex"
+          }
+        ],
+        "indirectly_courted": [],
+        "non_observable": [],
+        "phase": 10,
+        "staged_candidate_probes": 1
       }
     ],
     "totals": {
-      "directly_courted": 2715,
+      "directly_courted": 2802,
       "directly_courted_called": 2449,
-      "directly_courted_referenced": 266,
-      "implemented": 2723,
+      "directly_courted_referenced": 353,
+      "implemented": 2810,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -22121,7 +22315,7 @@
     {
       "name": "coverage-rows",
       "path": "forensics/atlas/court-coverage-rows.json",
-      "sha256": "785c4ff1ffb4c32143e659e5a05443896a65236188079ff25944f3c1ba7b0115"
+      "sha256": "12ffd67cce312100e385208d125f4f04e070abec7d0f666787446571c29bb031"
     },
     {
       "name": "phase3-obligations",
@@ -22166,7 +22360,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "0650deb4a59d51df3aef0a2469f6c1e37b11d139bc623ea2df53194d348adc69"
+      "sha256": "0f58c0feca46c929bc939b918c3e079d577b3102596f91e5612d1cf9e8af37c8"
     },
     {
       "name": "phase7-courts",
@@ -22176,7 +22370,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "bbbd6f608d288f6e8e29bc94f79b9a1ac2a26c8ae579ee3f556efea71ed84cbc"
+      "sha256": "b94385092fb7283044e25fd94b5d3f36b85177f3ed6354fd6c5ac6ed7758c009"
     },
     {
       "name": "phase8-courts",
@@ -22186,12 +22380,22 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "bcdd5782afbfbb1058a90c12d63cab765908db0474b6e1f3409457de1eb548d2"
+      "sha256": "c009b987d217d3e7ed4dcd86c35ed2fed59be6f2d7a97cab773d62b80bf1f1c2"
     },
     {
       "name": "phase9-courts",
       "path": "artifacts/phase9/COURTS.json",
       "sha256": "b06b21f9487e23a2a31cff8ee46141c4240d531e4637327f48520126d2526b3f"
+    },
+    {
+      "name": "phase10-obligations",
+      "path": "forensics/phase10-obligations.json",
+      "sha256": "ad421c4482cfe5d0f6050a67f958e45a3c64a4d1efbbb6eda424f45d8a5337a5"
+    },
+    {
+      "name": "phase10-courts",
+      "path": "artifacts/phase10/COURTS.json",
+      "sha256": "a6501dd5797f1fb95d312a5de49fa34996d21b441139e13e1221465f8c264ad9"
     }
   ],
   "kind": "court-coverage",
