@@ -1293,8 +1293,9 @@ unsafe extern "C" fn do_one(_id: c_int, method: *mut c_void, arg: *mut c_void) {
 ///
 /// The **fetch runs first**, which is what fills the temporary store, and only then are both the
 /// temporary store's methods and the permanent store's walked. The temporary store is released
-/// last. In this crate the walk finds nothing -- all `OSSL_OP_DECODER` provider rows are
-/// `unimplemented` -- so no callback is invoked, but the code path is the authority's.
+/// last. In this crate the walk finds the rows 10.1 has published -- the `DER`
+/// `EncryptedPrivateKeyInfo` decoder in the default (and base) provider -- and no others, because
+/// every other `OSSL_OP_DECODER` provider row is still `unimplemented`.
 ///
 /// # Safety
 /// `libctx` NULL or live; `user_fn` a valid callback; `user_arg` opaque to this file.
@@ -1422,12 +1423,13 @@ mod tests {
         }
     }
 
-    /// The fetch block's two entry points, on a crate that publishes no provider decoder: the fetch
-    /// of an unknown name answers NULL and **raises** (the walk found no constructor, so the reason
-    /// is the unsupported one), and the do-all walk invokes the caller's callback **zero** times
-    /// while still walking both stores. A callback that counted its invocations is the observation.
+    /// The fetch block's two entry points: the fetch of an unknown name answers NULL and
+    /// **raises** (the walk found no constructor, so the reason is the unsupported one), and the
+    /// do-all walk finds the one provider decoder row this crate publishes -- the `DER`
+    /// `EncryptedPrivateKeyInfo` decoder 10.1 landed -- naming it `DER`. A callback that records
+    /// the name of each decoder it is handed is the observation.
     #[test]
-    fn a_fetch_of_an_unknown_name_refuses_and_the_walk_finds_nothing() {
+    fn a_fetch_of_an_unknown_name_refuses_and_the_walk_finds_the_one_der_row() {
         // SAFETY: the argument is a NUL-terminated literal and NULL is the default context.
         let got = unsafe {
             OSSL_DECODER_fetch(
@@ -1436,7 +1438,7 @@ mod tests {
                 ptr::null(),
             )
         };
-        assert!(got.is_null(), "no provider decoder is registered");
+        assert!(got.is_null(), "no provider decoder answers that name");
         assert_ne!(
             crate::runtime::err::ERR_peek_error(),
             0,
@@ -1444,12 +1446,29 @@ mod tests {
         );
         crate::runtime::err::ERR_clear_error();
 
-        // SAFETY: the callback is a plain counter over a live `c_int`.
-        unsafe extern "C" fn count(_decoder: *mut OsslDecoder, arg: *mut c_void) {
-            // SAFETY: `arg` is the `c_int` the caller passed.
-            unsafe { *arg.cast::<c_int>() += 1 };
+        /// `(count, all_named_der)`.
+        #[repr(C)]
+        struct Seen {
+            count: c_int,
+            all_named_der: c_int,
         }
-        let mut seen: c_int = 0;
+
+        // SAFETY: the callback reads a live `OsslDecoder` and a live `Seen`.
+        unsafe extern "C" fn count(decoder: *mut OsslDecoder, arg: *mut c_void) {
+            let seen = arg.cast::<Seen>();
+            // SAFETY: `decoder` is live per the walk's contract and `seen` is the caller's.
+            unsafe {
+                (*seen).count += 1;
+                let name = OSSL_DECODER_get0_name(decoder);
+                if name.is_null() || core::ffi::CStr::from_ptr(name).to_bytes() != b"DER" {
+                    (*seen).all_named_der = 0;
+                }
+            }
+        }
+        let mut seen = Seen {
+            count: 0,
+            all_named_der: 1,
+        };
         // SAFETY: `seen` is this frame's own and outlives the call.
         unsafe {
             OSSL_DECODER_do_all_provided(
@@ -1458,7 +1477,11 @@ mod tests {
                 ptr::addr_of_mut!(seen).cast::<c_void>(),
             );
         }
-        assert_eq!(seen, 0, "every OSSL_OP_DECODER row is unimplemented here");
+        assert!(
+            seen.count >= 1,
+            "the walk finds the DER decoder row 10.1 landed"
+        );
+        assert_eq!(seen.all_named_der, 1, "every yielded decoder names DER");
         crate::runtime::err::ERR_clear_error();
     }
 

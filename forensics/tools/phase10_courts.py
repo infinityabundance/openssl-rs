@@ -80,8 +80,10 @@ RUN_TIMEOUT_S = "60"
 # since none of its own rows is implemented. See the module doc.
 COURTS: list[tuple[str, str]] = [
     ("RT-KEYFORMAT-REF", "rt_coverage_ref_probe.c"),
-    # 10.1's behavioural court: the eleven `OSSL_OP_ENCODER` text rows the first provider codec
-    # unit lands, driven through `OSSL_ENCODER_fetch` and `OSSL_ENCODER_CTX_new_for_pkey`.
+    # 10.1's behavioural court: the `OSSL_OP_ENCODER` text and blob rows the first provider codec
+    # units land (`encode_key2text.c`, `encode_key2blob.c`), driven through `OSSL_ENCODER_fetch`
+    # and `OSSL_ENCODER_CTX_new_for_pkey`, and the one `OSSL_OP_DECODER` row `decode_epki2pki.c`
+    # lands, driven through `OSSL_DECODER_fetch` and `OSSL_DECODER_from_data`.
     ("RT-CODEC", "rt_codec_probe.c"),
 ]
 
@@ -288,11 +290,14 @@ def main(argv: list[str]) -> int:
             "it was driven; the court coverage atlas records those at basis `referenced`, never "
             "`called` (docs/DECISIONS.md D199). "
             "`RT-CODEC` is this stratum's first **behavioural** court (10.1): it drives the "
-            "eleven text-encoder rows `encode_key2text.c` publishes through the public "
-            "`OSSL_ENCODER_*` surface, observing each row's identity (`OSSL_ENCODER_fetch`'s "
-            "name and properties), its exact bytes (`OSSL_ENCODER_to_data`) and one refusal "
-            "arm with the error queue. It is a differential compatibility claim about those "
-            "rows, NOT that the other 625 rows or the decoders are implemented. "
+            "thirteen encoder rows `encode_key2text.c` and `encode_key2blob.c` publish through the "
+            "public `OSSL_ENCODER_*` surface and the one `EncryptedPrivateKeyInfo` decoder "
+            "`decode_epki2pki.c` publishes through `OSSL_DECODER_*`, observing each row's identity "
+            "(`OSSL_ENCODER_fetch`/`OSSL_DECODER_fetch`'s name and properties), its exact bytes "
+            "(`OSSL_ENCODER_to_data`/`OSSL_DECODER_from_data` with a construct callback), and a "
+            "refusal arm for each unit with the error queue. It is a differential compatibility "
+            "claim about those rows, NOT that the other 608 rows or the remaining decoders are "
+            "implemented. "
             "`pending_courts` names the courts the plan gives this stratum and the "
             "subphase that brings each, and every name is printed on each run so that 'not run "
             "yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3)."

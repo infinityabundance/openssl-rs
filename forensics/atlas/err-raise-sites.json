@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4134,
+      "sites": 4138,
       "unattributed": 0
     },
     "covered_files": [
@@ -342,6 +342,8 @@
       "crypto/encode_decode/decoder_lib.c",
       "crypto/encode_decode/decoder_pkey.c",
       "providers/implementations/encode_decode/encode_key2text.c",
+      "providers/implementations/encode_decode/encode_key2blob.c",
+      "providers/implementations/encode_decode/decode_epki2pki.c",
       "crypto/pkcs12/p12_decr.c",
       "crypto/x509/x509_att.c",
       "crypto/x509/x_pubkey.c",
@@ -60796,6 +60798,68 @@
         "via_macro": "MAKE_TEXT_ENCODER"
       },
       {
+        "const_name": "PROV_ENCODE_KEY2BLOB_175",
+        "data_format": null,
+        "dynamic_reason": true,
+        "file": "../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2blob.c",
+        "function": "key2blob_encode",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 175,
+        "macro": "ERR_raise",
+        "reason": 0,
+        "reason_symbol": null,
+        "rel_source": "providers/implementations/encode_decode/encode_key2blob.c",
+        "via_macro": "MAKE_BLOB_ENCODER"
+      },
+      {
+        "const_name": "PROV_ENCODE_KEY2BLOB_177",
+        "data_format": null,
+        "dynamic_reason": true,
+        "file": "../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2blob.c",
+        "function": "key2blob_encode",
+        "generated": false,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 177,
+        "macro": "ERR_raise",
+        "reason": 0,
+        "reason_symbol": null,
+        "rel_source": "providers/implementations/encode_decode/encode_key2blob.c",
+        "via_macro": "MAKE_BLOB_ENCODER"
+      },
+      {
+        "const_name": "PROV_DECODE_EPKI2PKI_88",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/encode_decode/decode_epki2pki.c",
+        "function": "epki2pki_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 88,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/encode_decode/decode_epki2pki.c"
+      },
+      {
+        "const_name": "PROV_DECODE_EPKI2PKI_179",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "providers/implementations/encode_decode/decode_epki2pki.c",
+        "function": "ossl_epki2pki_der_decode",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 179,
+        "macro": "ERR_raise",
+        "reason": 159,
+        "reason_symbol": "PROV_R_UNABLE_TO_GET_PASSPHRASE",
+        "rel_source": "providers/implementations/encode_decode/decode_epki2pki.c"
+      },
+      {
         "const_name": "PKCS12_32",
         "data_format": null,
         "dynamic_reason": false,
@@ -64175,6 +64239,16 @@
       "name": "authority:providers/implementations/encode_decode/encode_key2text.c",
       "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2text.c",
       "sha256": "af712248c244b8a8b25ecedc30b00ecb5b2219d1af961f75180b1793bacc95fb"
+    },
+    {
+      "name": "authority:providers/implementations/encode_decode/encode_key2blob.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2blob.c",
+      "sha256": "b382db08d705e605d87f8e4ee29501649ae12bbad247dda6bd431b3eacfc861d"
+    },
+    {
+      "name": "authority:providers/implementations/encode_decode/decode_epki2pki.c",
+      "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/encode_decode/decode_epki2pki.c",
+      "sha256": "78987e59e19870c9921e028665229151efc1fc7157a27ff481c75aca1a5e62a0"
     },
     {
       "name": "authority:crypto/pkcs12/p12_decr.c",

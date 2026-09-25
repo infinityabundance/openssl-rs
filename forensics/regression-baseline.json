@@ -192,7 +192,7 @@
       "verdict": "pass"
     },
     "RT-CODEC": {
-      "observations": 152,
+      "observations": 207,
       "verdict": "pass"
     },
     "RT-COMP": {
@@ -498,14 +498,17 @@
     "sealed_census": 50
   },
   "provider_implemented": [
+    "base/OSSL_OP_DECODER/DER",
     "base/OSSL_OP_ENCODER/DH",
     "base/OSSL_OP_ENCODER/DHX",
     "base/OSSL_OP_ENCODER/DSA",
+    "base/OSSL_OP_ENCODER/EC",
     "base/OSSL_OP_ENCODER/EC",
     "base/OSSL_OP_ENCODER/ED25519",
     "base/OSSL_OP_ENCODER/ED448",
     "base/OSSL_OP_ENCODER/RSA",
     "base/OSSL_OP_ENCODER/RSA-PSS",
+    "base/OSSL_OP_ENCODER/SM2",
     "base/OSSL_OP_ENCODER/SM2",
     "base/OSSL_OP_ENCODER/X25519",
     "base/OSSL_OP_ENCODER/X448",
@@ -651,6 +654,7 @@
     "default/OSSL_OP_CIPHER/SM4-GCM",
     "default/OSSL_OP_CIPHER/SM4-OFB",
     "default/OSSL_OP_CIPHER/SM4-XTS",
+    "default/OSSL_OP_DECODER/DER",
     "default/OSSL_OP_DIGEST/BLAKE2B-512",
     "default/OSSL_OP_DIGEST/BLAKE2S-256",
     "default/OSSL_OP_DIGEST/KECCAK-224",
@@ -682,10 +686,12 @@
     "default/OSSL_OP_ENCODER/DHX",
     "default/OSSL_OP_ENCODER/DSA",
     "default/OSSL_OP_ENCODER/EC",
+    "default/OSSL_OP_ENCODER/EC",
     "default/OSSL_OP_ENCODER/ED25519",
     "default/OSSL_OP_ENCODER/ED448",
     "default/OSSL_OP_ENCODER/RSA",
     "default/OSSL_OP_ENCODER/RSA-PSS",
+    "default/OSSL_OP_ENCODER/SM2",
     "default/OSSL_OP_ENCODER/SM2",
     "default/OSSL_OP_ENCODER/X25519",
     "default/OSSL_OP_ENCODER/X448",
@@ -846,17 +852,17 @@
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 653,
-      "9": 653
+      "8": 647,
+      "9": 647
     },
-    "implemented": 343,
+    "implemented": 349,
     "open_by_phase": {
-      "10": 614,
+      "10": 608,
       "13": 39,
       "8": 0,
       "9": 0
     },
     "total": 996,
-    "unimplemented": 653
+    "unimplemented": 647
   }
 }

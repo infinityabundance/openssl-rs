@@ -106,6 +106,14 @@ pub(crate) mod endecoder_common;
 // encode_key2text.c`, the eleven text-encoder tables and their five printers. It is the caller
 // the three `ossl_bio_print_*` helpers in `src/encoder_lib.rs` were withheld for.
 pub(crate) mod encode_key2text;
+// Phase 10.1's second provider codec unit: `providers/implementations/encode_decode/
+// encode_key2blob.c`, the `EC`/`SM2` public-point blob encoder tables. Its only closure is
+// `i2o_ECPublicKey`, landed with Phase 8.7.
+pub(crate) mod encode_key2blob;
+// Phase 10.1's first provider codec *decoder* unit: `providers/implementations/encode_decode/
+// decode_epki2pki.c`, the `EncryptedPrivateKeyInfo`-to-`PrivateKeyInfo` DER engine, and the crate's
+// `deflt_decoder[]`/`base_decoder[]` home.
+pub(crate) mod decode_epki2pki;
 // Phase 8's `providers/implementations/asymciphers/sm2_enc.c` (D406): the `SM2` asym-cipher row,
 // the encryption face of the `SM2` key object.
 pub(crate) mod digest_to_nid;

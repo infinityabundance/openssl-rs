@@ -184,6 +184,23 @@ than first overall. 10.5's `file` loader decodes what 10.4's PKCS#8 half produce
 and `pem_pk8.c` readers 10.6 carries are what a `OSSL_STORE` file load actually reaches — so the
 store's decoder arm lands after the decryption pair it calls.
 
+**The dependency order inside 10.1 was measured rather than assumed, and the measurement moved it.**
+`nm --undefined-only` over the authority's own build objects, joined to the crate's landed surface,
+shows that §1a's account of *which* unit waits on what was wrong in two places. **`decode_der2key.c`
+(138 rows) does not wait on 10.6 at all**: its closure is landed except for four PQC codec helpers,
+`ossl_ml_kem_d2i_PKCS8`/`_PUBKEY` and `ossl_ml_dsa_d2i_PKCS8`/`_PUBKEY`, which live in
+`ml_kem_codecs.c`/`ml_dsa_codecs.c` and are in neither 10.6 nor §1a's eleven publishers. **`encode_key2any.c`
+(412 rows) waits on more than 10.6**: the same four PQC helpers, plus 10.6's six container writers
+(`PEM_write_bio_PKCS8`, `PEM_write_bio_PKCS8_PRIV_KEY_INFO`, `PEM_write_bio_X509_PUBKEY`,
+`i2d_PKCS8_bio`, `i2d_PKCS8_PRIV_KEY_INFO_bio`, `i2d_X509_PUBKEY_bio`), plus 10.4's `PKCS8_encrypt_ex`,
+which is open. So the two big units are gated first on the **PQC codec helper units**, not on 10.6, and
+pulling 10.6 forward would unblock neither — it would unblock only the three small PVK/MSBLOB units,
+which is a reason to leave 10.6 where it is. The order to work in is therefore the small unblocked
+units, then the PQC codec helpers, then `decode_der2key.c`, then `encode_key2any.c` once 10.6 and 10.4
+have landed. **The eleven publishers are not the whole closure**: a row-publishing unit's engine may
+call a helper unit that publishes no rows of its own, and §1a's table is a census of publishers rather
+than of closure.
+
 ## 3. What each subphase must honour
 
 **3.1 A codec's identity is the authority's bytes, not round-trip closure.** A transcription whose

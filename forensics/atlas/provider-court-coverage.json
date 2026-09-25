@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "10": {
-        "implemented": 22,
+        "implemented": 28,
         "unmatched": 0
       },
       "8": {
@@ -69,9 +69,22 @@
         ]
       }
     ],
-    "directly_courted": 343,
-    "implemented_rows": 343,
+    "directly_courted": 349,
+    "implemented_rows": 349,
     "rows": [
+      {
+        "algorithm_names": "DER",
+        "aliases": [
+          "DER"
+        ],
+        "courts": [
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
       {
         "algorithm_names": "DH",
         "aliases": [
@@ -104,6 +117,21 @@
         "algorithm_names": "DSA",
         "aliases": [
           "DSA"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "EC",
+        "aliases": [
+          "EC"
         ],
         "courts": [
           "RT-KEYMGMT",
@@ -184,6 +212,22 @@
         ],
         "courts": [
           "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "SM2",
+        "aliases": [
+          "SM2"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
           "RT-CODEC"
         ],
         "coverage": "direct",
@@ -2211,6 +2255,19 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "DER",
+        "aliases": [
+          "DER"
+        ],
+        "courts": [
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "BLAKE2B-512",
         "aliases": [
           "BLAKE2B-512",
@@ -2673,6 +2730,21 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "EC",
+        "aliases": [
+          "EC"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "ED25519",
         "aliases": [
           "ED25519"
@@ -2726,6 +2798,22 @@
         ],
         "courts": [
           "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "SM2",
+        "aliases": [
+          "SM2"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
           "RT-CODEC"
         ],
         "coverage": "direct",
@@ -5109,7 +5197,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "0d9f485e37a31961c24ce2c7f8a23b68c1420dc96d38ea8b09c80ca16786e655"
+      "sha256": "f6df8e58004e23a54805b0433a286e7bc0de6730f977ede2ea7654db98c3d85f"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -5154,7 +5242,7 @@
     {
       "name": "court:RT-CODEC:rt_codec_probe.c",
       "path": "courts/phase10/rt_codec_probe.c",
-      "sha256": "4e1cfc518669724234df68a84d70c4f3888c298d56f820e6b9f70686123b771c"
+      "sha256": "bf59e86add635792d4321575937d56e10cf00b064e2bf3fd4bf290294c475cb5"
     }
   ],
   "kind": "provider-court-coverage",

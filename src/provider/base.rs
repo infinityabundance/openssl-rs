@@ -18,19 +18,19 @@
 //! * `ossl_base_provider_init` — `baseprov.c:131-183` (the declaration at `:131`, the body at
 //!   `:133-183`).
 //!
-//! # The three generated tables this module deliberately does not carry
+//! # The three generated tables, their landed rows, and the `STORE` one that is not
 //!
 //! `base_encoder[]` (`baseprov.c:67-72`), `base_decoder[]` (`:74-79`) and `base_store[]`
 //! (`:81-88`) are not literal rows in the authority either: each is an `#include` of a generated
 //! `.inc` (`encoders.inc`, `decoders.inc`, `stores.inc`), and the rows those `.inc` files expand
 //! reference `ossl_*_encoder_functions`, `ossl_*_decoder_functions` and
-//! `ossl_store_*_loader_init` dispatch tables that this crate does **not** transcribe. Those 318
-//! rows are `owning_phase: 10` and are still `unimplemented` in the provider census,
-//! `forensics/atlas/provider-algorithms.json`. This module therefore does not invent them:
-//! `base_query` answers `NULL` for `OSSL_OP_ENCODER` (20), `OSSL_OP_DECODER` (21) and
-//! `OSSL_OP_STORE` (22) — the same answer the authority's own `default:` arm gives for an
-//! operation a provider does not publish — while their rows remain unlanded and recorded in the
-//! census.
+//! `ossl_store_*_loader_init` dispatch tables. Those 318 rows are `owning_phase: 10` and are
+//! still mostly `unimplemented` in the provider census, `forensics/atlas/provider-algorithms.json`.
+//! This module does not invent them: `base_query` answers the arms whose rows the crate has
+//! landed — `OSSL_OP_ENCODER` (20) with `BASE_ENCODERS` and `OSSL_OP_DECODER` (21) with
+//! `BASE_DECODERS`, both 10.1's — and answers `NULL` for `OSSL_OP_STORE` (22) until 10.5 lands it
+//! and for any operation a provider does not publish, the same answer the authority's own
+//! `default:` arm gives.
 //!
 //! # The one `OSSL_OP_RAND` row, and why there is exactly one
 //!
@@ -201,14 +201,16 @@ unsafe extern "C" fn base_get_params(_provctx: *mut c_void, params: *mut OsslPar
 }
 
 /// `static const OSSL_ALGORITHM *base_query(void *provctx, int operation_id, int *no_cache)` —
-/// `providers/baseprov.c:98-113`, with the three generated arms answered `NULL`.
+/// `providers/baseprov.c:98-113`.
 ///
 /// The authority's `switch` has four arms and a fall-through to `NULL`: `OSSL_OP_ENCODER` returns
 /// `base_encoder`, `OSSL_OP_DECODER` returns `base_decoder`, `OSSL_OP_STORE` returns `base_store`,
-/// and `OSSL_OP_RAND` returns `base_rands`. The first three tables are the authority's generated
-/// ones and this crate does not transcribe them (318 rows, `owning_phase: 10`, recorded
-/// `unimplemented` in `forensics/atlas/provider-algorithms.json` — see the module header), so the
-/// three arms answer `NULL` here, the same as the `default:` arm. The `OSSL_OP_RAND` arm returns
+/// and `OSSL_OP_RAND` returns `base_rands`. The first two now answer the rows 10.1 has published —
+/// [`crate::provider::encode_key2text::BASE_ENCODERS`] (the text and blob encoders) and
+/// [`crate::provider::decode_epki2pki::BASE_DECODERS`] (the `EncryptedPrivateKeyInfo` decoder);
+/// the rest of the authority's generated rows are still absent and recorded `unimplemented` in
+/// `forensics/atlas/provider-algorithms.json` — and `OSSL_OP_STORE` answers `NULL` until 10.5
+/// lands, the same as the `default:` arm. The `OSSL_OP_RAND` arm returns
 /// [`crate::provider::seed_src::BASE_RANDS`], the one row this profile publishes.
 ///
 /// `*no_cache` is set to 0 **before** the arms, so the operation tables are cacheable.
@@ -230,13 +232,14 @@ unsafe extern "C" fn base_query(
     // SAFETY: `no_cache` is writable per the contract. `baseprov.c:101`.
     unsafe { *no_cache = 0 };
     if operation_id == OSSL_OP_ENCODER {
-        // `baseprov.c:104` returns `base_encoder`, restricted to the eleven text rows this crate
-        // publishes (10.1); the other 230 encoder rows are still absent.
+        // `baseprov.c:104` returns `base_encoder`, the crate's own `BASE_ENCODERS` -- the thirteen
+        // text and blob rows 10.1 has published.
         return crate::provider::encode_key2text::BASE_ENCODERS.as_ptr();
     }
     if operation_id == OSSL_OP_DECODER {
-        // `baseprov.c:106` returns `base_decoder`.
-        return ptr::null();
+        // `baseprov.c:106` returns `base_decoder`, of which 10.1 publishes the one
+        // `EncryptedPrivateKeyInfo` row.
+        return crate::provider::decode_epki2pki::BASE_DECODERS.as_ptr();
     }
     if operation_id == OSSL_OP_STORE {
         // `baseprov.c:108` returns `base_store`.

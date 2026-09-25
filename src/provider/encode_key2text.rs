@@ -1,10 +1,21 @@
 //! Phase 10.1 — `providers/implementations/encode_decode/encode_key2text.c`: the provider's
-//! **text encoders**, one `OSSL_OP_ENCODER` table per key type whose object layer is landed.
+//! **text encoders**, one `OSSL_OP_ENCODER` table per key type whose object layer is landed, plus
+//! the crate's `deflt_encoder[]`/`base_encoder[]` home.
 //!
 //! This is the first unit of the encode/decode family to land (10.1). The framework that
 //! *dispatches* to it — `src/encoder_meth.rs`, `src/encoder_lib.rs`, `src/encoder_pkey.rs` — is
 //! Phase 8's 8.8 chain (D362), so this unit adds rows rather than symbols: 11 tables, one per key
 //! type, published by both the `default` and the `base` provider.
+//!
+//! ## The provider tables aggregate, because the authority's `deflt_encoder[]` does
+//!
+//! `defltprov.c`'s `deflt_encoder[]` is **one** table covering every landed encoder row of every
+//! unit (the text printers, the blob encoders and, later, `encode_key2any.c`'s DER/PEM rows), and
+//! `deflt_query`'s `OSSL_OP_ENCODER` arm returns it. D434 landed the first rows here, so the two
+//! statics below are the crate's `deflt_encoder[]`/`base_encoder[]` and grow as later units land:
+//! the `EC`/`SM2` blob rows are appended from `src/provider/encode_key2blob.rs`, in the authority's
+//! own order, exactly the way `src/provider/keymgmt.rs`'s `DEFLT_KEYMGMT` aggregates each keymgmt
+//! unit's table.
 //!
 //! ## The row is a table over one shared engine
 //!
@@ -82,6 +93,7 @@ use crate::ffc::FfcParams;
 use crate::params::OsslParam;
 use crate::passphrase::OsslPassphraseCallback;
 use crate::provider::activate::OsslAlgorithm;
+use crate::provider::encode_key2blob::{EC_TO_BLOB_FUNCTIONS, SM2_TO_BLOB_FUNCTIONS};
 use crate::provider::endecoder_common::{ossl_prov_free_key, ossl_prov_import_key};
 use crate::rsa::object::{
     ossl_rsa_get0_all_params, ossl_rsa_get0_pss_params_30, RSA_get0_key, RSA_test_flags,
@@ -1199,13 +1211,26 @@ const BASE_TEXT_PROPERTY: *const c_char = c"provider=base,fips=yes,output=text".
 /// The base provider's `SM2` property.
 const BASE_SM2_TEXT_PROPERTY: *const c_char = c"provider=base,fips=no,output=text".as_ptr();
 
-/// `deflt_encoder[]`'s rows this unit publishes — `providers/defltprov.c:675-680` over
-/// `providers/encoders.inc`, restricted to the eleven text rows, in the authority's order.
+/// The `output=blob` property `providers/encoders.inc`'s `ENCODER("EC", ec, yes, blob)` carries,
+/// for the two blob rows `src/provider/encode_key2blob.rs` contributes to this table. `SM2` is the
+/// `fips=no` copy, as its text row is.
+const DEFAULT_BLOB_PROPERTY: *const c_char = c"provider=default,fips=yes,output=blob".as_ptr();
+/// The `SM2` blob row's property.
+const DEFAULT_SM2_BLOB_PROPERTY: *const c_char = c"provider=default,fips=no,output=blob".as_ptr();
+/// The base provider's `output=blob` property.
+const BASE_BLOB_PROPERTY: *const c_char = c"provider=base,fips=yes,output=blob".as_ptr();
+/// The base provider's `SM2` blob property.
+const BASE_SM2_BLOB_PROPERTY: *const c_char = c"provider=base,fips=no,output=blob".as_ptr();
+
+/// `deflt_encoder[]`'s rows the crate publishes — `providers/defltprov.c:675-680` over
+/// `providers/encoders.inc`, restricted to the thirteen rows landed so far, in the authority's
+/// order: the eleven `ENCODER_TEXT` rows, then the two `ENCODER(…, blob)` rows of
+/// `src/provider/encode_key2blob.rs` (`encoders.inc`'s EC type-specific section).
 ///
-/// Each row is the authority's `ENCODER_TEXT(name, sym, fips)` expansion, and each is written as
+/// Each row is the authority's `ENCODER_TEXT`/`ENCODER` expansion, and each is written as
 /// the same struct literal the census's reader parses (`algorithm_names` then `implementation`) so
 /// that a row and its dispatch symbol cannot drift apart.
-pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 12] = [
+pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 14] = [
     OsslAlgorithm {
         algorithm_names: c"RSA".as_ptr(),
         property_definition: DEFAULT_TEXT_PROPERTY,
@@ -1272,6 +1297,21 @@ pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 12] = [
         implementation: SM2_TO_TEXT_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
+    // The blob rows, from `encode_key2blob.rs` (`encoders.inc`'s EC type-specific section). They
+    // follow the text rows in `deflt_encoder[]`, so appending them keeps the crate's table a
+    // subsequence of the authority's order (the census's `main` check).
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: DEFAULT_BLOB_PROPERTY,
+        implementation: EC_TO_BLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: DEFAULT_SM2_BLOB_PROPERTY,
+        implementation: SM2_TO_BLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
     OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
@@ -1280,9 +1320,9 @@ pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 12] = [
     },
 ];
 
-/// `base_encoder[]`'s rows this unit publishes — `providers/baseprov.c:67-72`, the same eleven rows
-/// with the base provider's property.
-pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 12] = [
+/// `base_encoder[]`'s rows the crate publishes — `providers/baseprov.c:67-72`, the same thirteen
+/// rows with the base provider's property.
+pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 14] = [
     OsslAlgorithm {
         algorithm_names: c"RSA".as_ptr(),
         property_definition: BASE_TEXT_PROPERTY,
@@ -1349,6 +1389,19 @@ pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 12] = [
         implementation: SM2_TO_TEXT_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
+    // The blob rows, with the base provider's property (see `DEFLT_ENCODERS`).
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: BASE_BLOB_PROPERTY,
+        implementation: EC_TO_BLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: BASE_SM2_BLOB_PROPERTY,
+        implementation: SM2_TO_BLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
     OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
@@ -1360,11 +1413,14 @@ pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 12] = [
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::encoder_meth::OSSL_FUNC_ENCODER_DOES_SELECTION;
 
-    /// Every published row's dispatch table is the authority's shape: `newctx`, `freectx`,
-    /// `import_object`, `free_object`, `encode`, terminator — five named slots and the end.
+    /// Every published row's dispatch table is one of the authority's two encoder shapes: the
+    /// `MAKE_TEXT_ENCODER` body (`newctx`, `freectx`, `import_object`, `free_object`, `encode`) or
+    /// the `MAKE_BLOB_ENCODER` body, which inserts `does_selection` after `freectx`. Both end at
+    /// the terminator, and each is five or six named slots respectively.
     #[test]
-    fn each_table_is_the_authoritys_five_slot_shape() {
+    fn each_table_is_one_of_the_authoritys_shapes() {
         for table in [&DEFLT_ENCODERS[..], &BASE_ENCODERS[..]] {
             for row in table.iter() {
                 if row.algorithm_names.is_null() {
@@ -1372,25 +1428,29 @@ mod tests {
                 }
                 let fns = row.implementation.cast::<OsslDispatch>();
                 let mut i = 0;
-                let mut seen = [false; 5];
+                let mut has_does = false;
                 let mut unexpected = 0;
                 // SAFETY: the table is terminated, and each read is within it.
                 unsafe {
                     while (*fns.add(i)).function_id != OSSL_DISPATCH_END {
                         match (*fns.add(i)).function_id {
-                            OSSL_FUNC_ENCODER_NEWCTX => seen[0] = true,
-                            OSSL_FUNC_ENCODER_FREECTX => seen[1] = true,
-                            OSSL_FUNC_ENCODER_IMPORT_OBJECT => seen[2] = true,
-                            OSSL_FUNC_ENCODER_FREE_OBJECT => seen[3] = true,
-                            OSSL_FUNC_ENCODER_ENCODE => seen[4] = true,
+                            OSSL_FUNC_ENCODER_NEWCTX
+                            | OSSL_FUNC_ENCODER_FREECTX
+                            | OSSL_FUNC_ENCODER_IMPORT_OBJECT
+                            | OSSL_FUNC_ENCODER_FREE_OBJECT
+                            | OSSL_FUNC_ENCODER_ENCODE => {}
+                            OSSL_FUNC_ENCODER_DOES_SELECTION => has_does = true,
                             _ => unexpected += 1,
                         }
                         i += 1;
                     }
                 }
-                assert_eq!(unexpected, 0, "a text table carries an unexpected slot");
-                assert!(seen.iter().all(|&s| s), "a text table is missing a slot");
-                assert_eq!(i, 5);
+                assert_eq!(unexpected, 0, "an encoder table carries an unexpected slot");
+                assert_eq!(
+                    i,
+                    if has_does { 6 } else { 5 },
+                    "an encoder table has the wrong number of slots"
+                );
             }
         }
     }

@@ -40242,6 +40242,46 @@ pub(crate) const PROV_ENCODE_KEY2TEXT_743: ErrSite = ErrSite {
     dynamic_reason: true,
 };
 
+/// `key2blob_encode` at `providers/implementations/encode_decode/encode_key2blob.c:175` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2BLOB_175: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2blob.c",
+    line: 175,
+    func: c"key2blob_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2blob_encode` at `providers/implementations/encode_decode/encode_key2blob.c:177` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2BLOB_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/encode_key2blob.c",
+    line: 177,
+    func: c"key2blob_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `epki2pki_set_ctx_params_decoder` at `providers/implementations/encode_decode/decode_epki2pki.c:88` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DECODE_EPKI2PKI_88: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_epki2pki.c",
+    line: 88,
+    func: c"epki2pki_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `ossl_epki2pki_der_decode` at `providers/implementations/encode_decode/decode_epki2pki.c:179` (PROV_R_UNABLE_TO_GET_PASSPHRASE).
+pub(crate) const PROV_DECODE_EPKI2PKI_179: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_epki2pki.c",
+    line: 179,
+    func: c"ossl_epki2pki_der_decode",
+    lib: 57,
+    reason: 159,
+    dynamic_reason: false,
+};
+
 /// `PKCS12_pbe_crypt_ex` at `crypto/pkcs12/p12_decr.c:32` (ERR_R_EVP_LIB).
 pub(crate) const PKCS12_32: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_decr.c",
@@ -45404,6 +45444,10 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_ENCODE_KEY2TEXT_741,
     PROV_ENCODE_KEY2TEXT_742,
     PROV_ENCODE_KEY2TEXT_743,
+    PROV_ENCODE_KEY2BLOB_175,
+    PROV_ENCODE_KEY2BLOB_177,
+    PROV_DECODE_EPKI2PKI_88,
+    PROV_DECODE_EPKI2PKI_179,
     PKCS12_32,
     PKCS12_50,
     PKCS12_60,

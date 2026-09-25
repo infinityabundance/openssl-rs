@@ -30975,3 +30975,54 @@ clean; `PIPELINE OK` exit 0, twice.
 `forensics/tools/{gen_provider_algorithms,gen_err_raise_sites,phase10_courts,provider_court_coverage}.py`
 change; `docs/PHASE-10-SUBPHASES.md` gains §1a and a corrected 10.1 row; and the atlases, the census and
 `forensics/regression-baseline.json` are regenerated.
+
+## D435 -- 10.1 continues: two more units land, and the dependency order inside the subphase turns out to be wrong
+
+Two more of the eleven row-publishing units land: `encode_key2blob.c` (2 tables, **4 rows** for `EC`
+and `SM2` across both providers) and `decode_epki2pki.c` (1 table, **2 rows** for `DER`), each
+implemented the way `encode_key2text.c` was -- the authority's engine, the row's identity as
+`provider-algorithms.json` records it for both providers, and the refusal arms with their coordinates
+(`PROV_ENCODE_KEY2BLOB_175`/`_177` and `PROV_DECODE_EPKI2PKI_88`/`_179`, with both units added to
+`gen_err_raise_sites.py`'s coverage, 4134 to 4138 sites). Phase 10's provider rows move from
+`implemented 22` to **`implemented 28 / unimplemented 608`**, and `RT-CODEC` grows from 152 to **207
+observations** -- identity for the six new rows, behaviour for both blob rows and the decoder (the
+authority's own pinned `test/certs/key-pass-12345.pem` PKCS#8 `EncryptedPrivateKeyInfo` through
+`OSSL_DECODER_from_data`), and three refusal arms.
+
+**Five of the seven units the plan expected to be unblocked are not, and each blocker is measured.**
+`encode_key2ms.c` needs `i2b_PVK_bio_ex`/`i2b_PrivateKey_bio`/`i2b_PublicKey_bio`; `decode_msblob2key.c`
+needs `ossl_do_blob_header`/`ossl_blob_length`/`ossl_b2i_{RSA,DSA}_after_header`; `decode_pvk2key.c`
+needs `b2i_{DSA,RSA}_PVK_bio_ex` -- all three from `crypto/pem/pvkfmt.c`, which is 10.6's.
+`decode_spki2typespki.c` needs `ossl_x509_algor_is_sm2`, a withheld divergence owned by a later
+stratum; and `decode_pem2der.c` needs `ossl_spki2typespki_der_decode`, which lives in the pending
+`decode_spki2typespki` unit. All five are held `pending` with those reasons rather than counted as
+passing, which is §3.5's rule.
+
+**The ordering lesson is the important half, and it is a correction to §1a.** `nm --undefined-only`
+over the authority's objects, joined to the crate's landed surface, says `decode_der2key.c` (138 rows)
+does **not** wait on 10.6 -- its closure is landed except for four PQC codec helpers,
+`ossl_ml_kem_d2i_PKCS8`/`_PUBKEY` and `ossl_ml_dsa_d2i_PKCS8`/`_PUBKEY`, which live in
+`ml_kem_codecs.c`/`ml_dsa_codecs.c` and are in neither 10.6 nor §1a's eleven. And `encode_key2any.c`
+(412 rows) waits on **more** than 10.6: the same four helpers, plus 10.6's six container writers, plus
+10.4's `PKCS8_encrypt_ex`. So the two big units are gated first on the **PQC codec helper units**, and
+pulling 10.6 forward would unblock neither. The plan's §2 now says so. **The general finding is that
+the eleven publishers are not the whole closure**: a row-publishing unit's engine can call a helper
+unit that publishes no rows of its own, so §1a's table is a census of publishers and not of closure,
+and the plan now says that too.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+at the default thread count is **1053 passed, 0 failed** (four more tests than D434's 1049, two per new
+unit). `run_courts.py`, `court_coverage.py` and `provider_court_coverage.py` clean with 0 unmatched
+rows; phase 10 reads two courts and 294 observations. `forensics/phase10-obligations.json` still reads
+`owned=298 implemented=87 open=211`, because a provider row is not an export. Phase 9 stays `complete`;
+Phase 10 stays `in-progress`; `PIPELINE OK` exit 0, twice.
+
+### Movement
+
+`src/provider/encode_key2blob.rs` and `src/provider/decode_epki2pki.rs` are added;
+`src/decoder_meth.rs`, `src/encoder_meth.rs`, `src/provider/{base,digest,mod,encode_key2text}.rs`,
+`src/runtime/err_sites.rs` and `courts/phase10/rt_codec_probe.c` change; `gen_err_raise_sites.py` and
+`phase10_courts.py` change; `docs/PHASE-10-SUBPHASES.md`'s §2 gains the measured ordering correction;
+and the atlases, the census and `forensics/regression-baseline.json` are regenerated.
