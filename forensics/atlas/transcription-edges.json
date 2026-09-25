@@ -981,7 +981,7 @@
         "module": "src/encoder_lib.rs",
         "phase": 10,
         "phase_source": "module-declaration",
-        "share": "17/17",
+        "share": "20/20",
         "translation_unit": "crypto/encode_decode/encoder_lib.c"
       },
       {
@@ -1769,6 +1769,13 @@
         "translation_unit": "providers/implementations/kem/libdefault-lib-ecx_kem.c"
       },
       {
+        "module": "src/provider/endecoder_common.rs",
+        "phase": 10,
+        "phase_source": "module-declaration",
+        "share": "7/7",
+        "translation_unit": "providers/implementations/encode_decode/libdefault-lib-endecoder_common.c"
+      },
+      {
         "module": "src/provider/init.rs",
         "phase": 6,
         "phase_source": "module-declaration",
@@ -2199,7 +2206,7 @@
         "module": "src/runtime/bio/core_bio.rs",
         "phase": 6,
         "phase_source": "module-declaration",
-        "share": "11/12",
+        "share": "11/13",
         "translation_unit": "crypto/bio/ossl_core_bio.c"
       },
       {

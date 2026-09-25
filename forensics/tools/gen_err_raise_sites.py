@@ -1113,6 +1113,15 @@ COVERED_FILES = [
     # Phase 10's `crypto/encode_decode/decoder_pkey.c` -- the decoder cache, the pkey half that
     # `OSSL_DECODER_CTX_new_for_pkey` builds, and the four passphrase setters.
     ("crypto/encode_decode/decoder_pkey.c", "DECODER_PKEY"),
+    # Phase 10.1's first provider codec unit: `providers/implementations/encode_decode/
+    # encode_key2text.c` -- the text-encoder tables and the six per-key-type printers behind them.
+    # It is a plain `.c`, so its `__FILE__` carries the source-tree prefix. Its raises are the
+    # null-argument guards of the six printers and the `PROV_R_NOT_A_PRIVATE_KEY`,
+    # `PROV_R_NOT_A_PUBLIC_KEY`, `PROV_R_NOT_PARAMETERS` and `PROV_R_INVALID_KEY` refusals they
+    # carry, plus `ERR_R_CRYPTO_LIB` in `rsa_to_text`; the `ERR_R_PASSED_INVALID_ARGUMENT` in the
+    # `MAKE_TEXT_ENCODER` body is a preprocessor macro's and is not attributed, the same rule
+    # `encode_key2any.c`'s `MAKE_ENCODER` is under.
+    ("providers/implementations/encode_decode/encode_key2text.c", "PROV_ENCODE_KEY2TEXT"),
     # Phase 10 staging: `crypto/pkcs12/p12_decr.c`, the PBE buffer crypt and the ASN.1 decrypt/
     # encrypt pair `PKCS8_decrypt` reads an `EncryptedPrivateKeyInfo` through (D368). Its
     # thirteen sites are `ERR_LIB_PKCS12` with `ERR_R_EVP_LIB`, `ERR_R_PASSED_NULL_PARAMETER`,

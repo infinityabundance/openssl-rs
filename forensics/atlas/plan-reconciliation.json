@@ -5,17 +5,22 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 2,
-      "units_not_reached": 17
+      "names_a_file_the_authority_does_not_have": 7,
+      "units_not_reached": 20
     },
     "census_by_stratum": {
-      "10": 19
+      "10": 27
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
       "names_a_file_the_authority_does_not_have": [
-        "docs/PHASE-10-SUBPHASES.md:10.1:_lib.c",
-        "docs/PHASE-10-SUBPHASES.md:10.1:_meth.c"
+        "docs/PHASE-10-SUBPHASES.md:10.1:decode_der2key.c",
+        "docs/PHASE-10-SUBPHASES.md:10.1:decode_epki2pki.c",
+        "docs/PHASE-10-SUBPHASES.md:10.1:decode_pem2der.c",
+        "docs/PHASE-10-SUBPHASES.md:10.1:decode_pvk2key.c",
+        "docs/PHASE-10-SUBPHASES.md:10.1:decode_spki2typespki.c",
+        "docs/PHASE-10-SUBPHASES.md:10.1:encode_key2any.c",
+        "docs/PHASE-10-SUBPHASES.md:10.1:encode_key2ms.c"
       ],
       "units_not_reached": [
         "crypto/pem/pvkfmt.c",
@@ -34,7 +39,10 @@
         "crypto/pkcs12/p12_utl.c",
         "crypto/store/store_lib.c",
         "crypto/store/store_register.c",
-        "crypto/store/store_strings.c"
+        "crypto/store/store_strings.c",
+        "providers/implementations/encode_decode/decode_msblob2key.c",
+        "providers/implementations/encode_decode/encode_key2blob.c",
+        "providers/implementations/encode_decode/encode_key2text.c"
       ]
     },
     "checked": {
@@ -51,8 +59,8 @@
       "symbols_reached": 107,
       "unit_records": 81,
       "units_named_by_a_record": 83,
-      "units_named_by_a_row": 285,
-      "units_reached": 268
+      "units_named_by_a_row": 287,
+      "units_reached": 267
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -1381,21 +1389,10 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10.1",
           "8.9"
         ],
         "transcribed_by": [
           "src/decoder_pkey.rs"
-        ]
-      },
-      "crypto/encode_decode/encoder_pkey.c": {
-        "defines": [],
-        "recorded_by": null,
-        "subphases": [
-          "10.1"
-        ],
-        "transcribed_by": [
-          "src/encoder_pkey.rs"
         ]
       },
       "crypto/err/err.c": {
@@ -3801,6 +3798,57 @@
         ],
         "transcribed_by": []
       },
+      "providers/implementations/encode_decode/decode_msblob2key.c": {
+        "defines": [
+          "ossl_msblob_to_dsa_decoder_functions",
+          "ossl_msblob_to_rsa_decoder_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10.1"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/encode_decode/encode_key2blob.c": {
+        "defines": [
+          "ossl_ec_to_blob_encoder_functions",
+          "ossl_sm2_to_blob_encoder_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10.1"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/encode_decode/encode_key2text.c": {
+        "defines": [
+          "ossl_dh_to_text_encoder_functions",
+          "ossl_dhx_to_text_encoder_functions",
+          "ossl_dsa_to_text_encoder_functions",
+          "ossl_ec_to_text_encoder_functions",
+          "ossl_ed25519_to_text_encoder_functions",
+          "ossl_ed448_to_text_encoder_functions",
+          "ossl_ml_dsa_44_to_text_encoder_functions",
+          "ossl_ml_dsa_65_to_text_encoder_functions",
+          "ossl_ml_dsa_87_to_text_encoder_functions",
+          "ossl_ml_kem_1024_to_text_encoder_functions",
+          "ossl_ml_kem_512_to_text_encoder_functions",
+          "ossl_ml_kem_768_to_text_encoder_functions",
+          "ossl_rsa_to_text_encoder_functions",
+          "ossl_rsapss_to_text_encoder_functions",
+          "ossl_slh_dsa_sha2_128f_to_text_encoder_functions",
+          "ossl_slh_dsa_sha2_128s_to_text_encoder_functions",
+          "ossl_slh_dsa_sha2_192f_to_text_encoder_functions",
+          "ossl_slh_dsa_sha2_192s_to_text_encoder_functions",
+          "ossl_slh_dsa_sha2_256f_to_text_encoder_functions",
+          "ossl_slh_dsa_sha2_256s_to_text_encoder_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10.1"
+        ],
+        "transcribed_by": []
+      },
       "providers/implementations/macs/cmac_prov.c.in": {
         "defines": [
           "ossl_cmac_functions"
@@ -4334,33 +4382,33 @@
       "transcribed_units": 326
     }
   },
-  "body_hash": "d292781d35a485221ccac473eb5357570906fe894d3cba909702de22b0bae589",
+  "body_hash": "e4f422d4580176c286a2fda99159582d409c110688686739841ab42ca9cd6f52",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "9efd32cc11a63889416315eb89741c9f12d6defe467f979eb0a3dcc7ccb363dd"
+      "sha256": "31526775a6de946904902d905b319cf036d43174c6754bd21db83ba010241edf"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "63601a7ce516076b4d3d2913b11bcf1406fe20893f3e38db754307d1d7cf56c2"
+      "sha256": "a954aa8553d9ba216e4a3e2d94874a7d01a6881a647b8adceddfa9d410214f8e"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "19e1bab399bf6bdc7d6b25ba454b36814a3713f46990c760806043c8ad967a3c"
+      "sha256": "154d4a9bdd0070839ced394c65424ef7ddd7061df182fab9d953bf3bc43a70db"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "98c1170519c46b44cfef30fe19250059f86409dcd36412ff8874bf63c8687419"
+      "sha256": "37e2b9123a229482adf95ed0623653209d2780e739355c9411fb14423bed8ce7"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "dc20cc52dab0e2aa85cb19c56fbeac02edd99028a16de3e5197ddb798b857a58"
+      "sha256": "c64e74025a1e06288b0344522dd2a30455b121f81b27e4cf876f7a03a8265d3f"
     },
     {
       "name": "source-manifest",
@@ -4370,7 +4418,7 @@
     {
       "name": "plan-PHASE-10-SUBPHASES",
       "path": "docs/PHASE-10-SUBPHASES.md",
-      "sha256": "50bfb7699296ed1d82b9a4c6437e557786d71775674f8629b1ef7a977a5b0dfc"
+      "sha256": "4d4f5e65a292bdd2a8febb26ea82329303e6686dab92aabc49269ec77974f017"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",
