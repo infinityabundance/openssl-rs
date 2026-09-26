@@ -1,5 +1,5 @@
 /*
- * openssl-rs -- Phase 10, subphase 10.2's differential court: RT-PKCS12.
+ * openssl-rs -- Phase 10, subphases 10.2 and 10.3's differential court: RT-PKCS12.
  *
  * Compiled twice -- once against the admitted authority, once against the candidate
  * distribution shell -- and run; the two transcripts are compared line for line by
@@ -14,15 +14,22 @@
  * it drives the accessor surface, the refcount/ownership behaviour and the refusal arms with their
  * error coordinates. It does **not** print a parsed structure and call that agreement.
  *
- * Everything is borrowed or literal: the DER fixtures below are hand-written constants, the
- * strings are literals, and no pointer address is ever printed (two sides allocate differently).
+ * Since 10.3 it also drives the four exports of that subphase whose closure is landed:
+ * `PKCS12_item_pack_safebag` (a fixed `PKCS8_PRIV_KEY_INFO` packed as a `certBag`, printed as
+ * DER), the two `PKCS12_decrypt_skey` spellings (a shrouded key bag with a non-PBE algorithm, so
+ * the refusal and its error coordinate are the observation), and `PKCS12_add_secret` (the `add_*`
+ * surface, including the stack the call builds and the bag's DER).
  *
  * The `PKCS12` container itself (`PKCS12_it`, `i2d_PKCS12`, the `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp`
- * spellings) is **held open**, because its `authsafes` column is a `PKCS7` and `PKCS7_it` is
- * Phase 12's. Those rows are printed as `pending.` with the blocker rather than driven, and so are
- * the four `get1_*` certificate readers (Phase 11's `X509_it`) and the three `create_*` spellings
- * that reach `p12_add.c` (10.3) and `p12_p8e.c` (10.4). They are stated, not counted as passing
- * (docs/PHASE-10-SUBPHASES.md section 3.5).
+ * spellings) and everything in 10.3 that dereferences `PKCS7` or `X509` are **held open**: the
+ * `authsafes` column is a `PKCS7` and `PKCS7_it` is Phase 12's, the four `get1_*` certificate
+ * readers and the certificate/key builders need Phase 11's `X509_it`, and the MAC setup needs
+ * 10.4's `PKCS12_key_gen_utf8_ex`. Those rows are printed as `pending.` with the blocker rather
+ * than driven, and the two 10.2 `create_cert`/`create_crl` spellings appear there with their
+ * remaining blocker after 10.3 removed the first (docs/PHASE-10-SUBPHASES.md sections 3.2, 3.5).
+ *
+ * Everything is borrowed or literal: the DER fixtures below are hand-written constants, the
+ * strings are literals, and no pointer address is ever printed (two sides allocate differently).
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -99,12 +106,49 @@ static void out_pending(void)
     printf("pending.PKCS12_SAFEBAG_get1_cert_ex=phase-11-x509\n");
     printf("pending.PKCS12_SAFEBAG_get1_crl=phase-11-x509\n");
     printf("pending.PKCS12_SAFEBAG_get1_crl_ex=phase-11-x509\n");
-    /* Held open on `PKCS12_item_pack_safebag` (p12_add.c, 10.3). */
-    printf("pending.PKCS12_SAFEBAG_create_cert=phase-10.3\n");
-    printf("pending.PKCS12_SAFEBAG_create_crl=phase-10.3\n");
+    /* 10.2's two `create_cert`/`create_crl` need this subphase's `PKCS12_item_pack_safebag`
+     * **and** Phase 11's `X509_it`; 10.3 landed the first, so the blocker that remains is the
+     * second, and the row is still `pending` rather than driven. */
+    printf("pending.PKCS12_SAFEBAG_create_cert=phase-11-x509\n");
+    printf("pending.PKCS12_SAFEBAG_create_crl=phase-11-x509\n");
     /* Held open on `PKCS8_encrypt(_ex)` (p12_p8e.c, 10.4). */
     printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt=phase-10.4\n");
     printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt_ex=phase-10.4\n");
+
+    /* ----- 10.3: p12_add.c's seven `PKCS#7` container spellings ----- */
+    printf("pending.PKCS12_pack_p7data=phase-12-pkcs7\n");
+    printf("pending.PKCS12_unpack_p7data=phase-12-pkcs7\n");
+    printf("pending.PKCS12_pack_p7encdata=phase-12-pkcs7\n");
+    printf("pending.PKCS12_pack_p7encdata_ex=phase-12-pkcs7\n");
+    printf("pending.PKCS12_unpack_p7encdata=phase-12-pkcs7\n");
+    printf("pending.PKCS12_pack_authsafes=phase-12-pkcs7\n");
+    printf("pending.PKCS12_unpack_authsafes=phase-12-pkcs7\n");
+    /* ----- 10.3: p12_crt.c's ten container builders (add_secret landed) ----- */
+    printf("pending.PKCS12_add_cert=phase-11-x509\n");
+    printf("pending.PKCS12_add_key=phase-11-pkey2pkcs8\n");
+    printf("pending.PKCS12_add_key_ex=phase-11-pkey2pkcs8\n");
+    printf("pending.PKCS12_add_safe=phase-12-pkcs7\n");
+    printf("pending.PKCS12_add_safe_ex=phase-12-pkcs7\n");
+    printf("pending.PKCS12_add_safes=phase-12-pkcs7\n");
+    printf("pending.PKCS12_add_safes_ex=phase-12-pkcs7\n");
+    printf("pending.PKCS12_create=phase-12-pkcs7\n");
+    printf("pending.PKCS12_create_ex=phase-12-pkcs7\n");
+    printf("pending.PKCS12_create_ex2=phase-12-pkcs7\n");
+    /* ----- 10.3: p12_mutl.c's MAC setup. `gen_mac`/`verify_mac`/`set_mac`/
+     * `set_pbmac1_pbkdf2` need 10.4's `PKCS12_key_gen_utf8_ex`; `setup_mac` reaches the
+     * `PKCS7` context through `authsafes`, and `mac_present`/`get0_mac` need the `PKCS12`
+     * object itself, which `PKCS12_new`/`PKCS12_it` cannot build without `PKCS7_it`. ----- */
+    printf("pending.PKCS12_mac_present=phase-12-pkcs7\n");
+    printf("pending.PKCS12_get0_mac=phase-12-pkcs7\n");
+    printf("pending.PKCS12_gen_mac=phase-10.4-kdf\n");
+    printf("pending.PKCS12_verify_mac=phase-10.4-kdf\n");
+    printf("pending.PKCS12_set_mac=phase-10.4-kdf\n");
+    printf("pending.PKCS12_setup_mac=phase-12-pkcs7\n");
+    printf("pending.PKCS12_set_pbmac1_pbkdf2=phase-10.4-kdf\n");
+    /* ----- 10.3: p12_init.c and p12_npas.c ----- */
+    printf("pending.PKCS12_init=phase-12-pkcs7\n");
+    printf("pending.PKCS12_init_ex=phase-12-pkcs7\n");
+    printf("pending.PKCS12_newpass=phase-12-pkcs7\n");
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -451,6 +495,81 @@ static void court_items_roundtrip(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * 10.3: the `SafeBag` packer, the shrouded-key reader and the `add_*` surface.
+ * --------------------------------------------------------------------------------------------- */
+
+static void court_add3(void)
+{
+    static const unsigned char secret_val[3] = { 0x01, 0x02, 0x03 };
+    const unsigned char *p;
+    PKCS8_PRIV_KEY_INFO *p8;
+    X509_SIG *sig;
+    PKCS12_SAFEBAG *packed, *shrouded, *secret;
+    STACK_OF(PKCS12_SAFEBAG) *bags = NULL;
+    unsigned char *der = NULL;
+    long len;
+
+    /* `PKCS12_item_pack_safebag`: pack a fixed PKCS#8 through `PKCS8_PRIV_KEY_INFO_it` as a
+     * `certBag` whose value type is `x509Certificate`. The item is the caller's, so the packed
+     * bytes are a function of the fixed input alone and are printed rather than parsed. */
+    p = FIX_PKCS8;
+    p8 = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, (long)sizeof(FIX_PKCS8));
+    out_ptr("pack.p8", p8);
+    if (p8 != NULL) {
+        packed = PKCS12_item_pack_safebag(p8, ASN1_ITEM_rptr(PKCS8_PRIV_KEY_INFO),
+                                          NID_x509Certificate, NID_certBag);
+        out_ptr("pack.bag", packed);
+        if (packed != NULL) {
+            out_int("pack.get_nid", PKCS12_SAFEBAG_get_nid(packed));
+            out_int("pack.bag_nid", PKCS12_SAFEBAG_get_bag_nid(packed));
+            out_ptr("pack.bag_obj", PKCS12_SAFEBAG_get0_bag_obj(packed));
+            len = i2d_PKCS12_SAFEBAG(packed, &der);
+            out_hex("pack.der", der, len);
+            OPENSSL_free(der);
+            der = NULL;
+            PKCS12_SAFEBAG_free(packed);
+        }
+        PKCS8_PRIV_KEY_INFO_free(p8);
+    }
+
+    /* `PKCS12_decrypt_skey(_ex)`: a shrouded key bag whose algorithm is not a PBE one. The reader
+     * borrows the bag's `X509_SIG` and refuses with the error queue, which is the observable arm
+     * this slice can drive without 10.4's `PKCS8_encrypt` to build a real ciphertext. The bag
+     * adopts `sig`, so it is not freed here. */
+    p = FIX_X509_SIG;
+    sig = d2i_X509_SIG(NULL, &p, (long)sizeof(FIX_X509_SIG));
+    out_ptr("skey.sig", sig);
+    if (sig != NULL) {
+        shrouded = PKCS12_SAFEBAG_create0_pkcs8(sig);
+        out_ptr("skey.bag", shrouded);
+        if (shrouded != NULL) {
+            ERR_clear_error();
+            out_ptr("skey.decrypt", PKCS12_decrypt_skey(shrouded, "password", -1));
+            out_err("skey.decrypt.err");
+            ERR_clear_error();
+            out_ptr("skey.decrypt_ex",
+                    PKCS12_decrypt_skey_ex(shrouded, "password", -1, NULL, NULL));
+            out_err("skey.decrypt_ex.err");
+            PKCS12_SAFEBAG_free(shrouded);
+        }
+    }
+
+    /* `PKCS12_add_secret`: the `add_*` surface. A NULL `*pbags` is filled by the call itself,
+     * and the appended bag is the returned pointer, so the DER is printed for fixed octets. */
+    secret = PKCS12_add_secret(&bags, NID_pkcs7_data, secret_val, 3);
+    out_ptr("add_secret.bag", secret);
+    out_int("add_secret.num", sk_PKCS12_SAFEBAG_num(bags));
+    if (secret != NULL) {
+        out_int("add_secret.get_nid", PKCS12_SAFEBAG_get_nid(secret));
+        out_int("add_secret.bag_nid", PKCS12_SAFEBAG_get_bag_nid(secret));
+        len = i2d_PKCS12_SAFEBAG(secret, &der);
+        out_hex("add_secret.der", der, len);
+        OPENSSL_free(der);
+    }
+    sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * The refusals, each with the error queue.
  * --------------------------------------------------------------------------------------------- */
 
@@ -480,6 +599,7 @@ int main(void)
     court_attr_writers();
     court_keybags();
     court_items_roundtrip();
+    court_add3();
     court_refusals();
     out_pending();
     return 0;

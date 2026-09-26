@@ -1197,6 +1197,18 @@ COVERED_FILES = [
     # coverage that does not exist. This is the same reasoning `mdc2_prov.c` and `p12_p8d.c` are
     # named under above.
     ("crypto/pkcs12/p12_sbag.c", "PKCS12"),
+    # Phase 10's 10.3: `crypto/pkcs12/p12_add.c`, the `SafeBag` packer
+    # `PKCS12_item_pack_safebag` (and the read-only halves of the unit that raise nothing of
+    # their own). Its fifteen sites are `ERR_LIB_PKCS12` with `ERR_R_ASN1_LIB` and the five
+    # container reasons (`PKCS12_R_CANT_PACK_STRUCTURE`, `_CONTENT_TYPE_NOT_DATA`, `_DECODE_ERROR`,
+    # `_ERROR_SETTING_ENCRYPTED_DATA_TYPE`, `_ENCRYPT_ERROR`). The stem is `PKCS12_ADD` rather than
+    # `PKCS12`: `p12_decr.c` and `p12_sbag.c` already carry `PKCS12` and their line numbers
+    # collide with this file's (32, 202), which would emit two different coordinates under one
+    # constant name. `p12_crt.c` is **not** covered yet: the one export this slice lands,
+    # `PKCS12_add_secret`, and its `pkcs12_add_bag` helper raise nothing, so an entry now would
+    # read as coverage that does not exist; it lands with the `create`/`add_key` arms that do
+    # raise, exactly as `p12_p8d.c` is named under above.
+    ("crypto/pkcs12/p12_add.c", "PKCS12_ADD"),
     # Phase 11 staging: `crypto/x509/x509_att.c`, the `X509at_add1_attr*` family
     # `PKCS8_pkey_add1_attr*` is one call each to (D368). Its twenty-six sites are
     # `ERR_LIB_X509`, mostly `ERR_R_PASSED_NULL_PARAMETER`, `ERR_R_CRYPTO_LIB` and
