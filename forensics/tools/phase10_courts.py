@@ -53,6 +53,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import correctness_vectors as cv  # noqa: E402
+
 from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
@@ -98,20 +100,18 @@ COURTS: list[tuple[str, str]] = [
     ("RT-PKCS12", "rt_pkcs12_probe.c"),
 ]
 
+# The construction court, beside the differential four. It is candidate-only and driven by
+# `correctness_vectors.py`, which owns the record shape (D201): a `CT-*` court answers "does it
+# satisfy the underlying construction?", which the differential plane cannot, and the differential
+# four answer "does it behave like the admitted authority?", which a vector set cannot. Neither
+# implies the other. `CT-PKCS12` is 10.4's: the PKCS#12 KDF's `Key` values are a fixed vector, and
+# the pinned corpus's `evppbe_pkcs12.txt` carries six of them.
+CORRECTNESS_COURTS: list[str] = ["CT-PKCS12"]
+
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
 # can pass, and each is printed with the subphase that brings it so that "not run yet" cannot be
 # read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "CT-PKCS12": "10.4 -- the PKCS#12 KDF and PBE construction vectors, whose corpus the pinned "
-                 "tree already carries: `test/recipes/30-test_evp_data/evppbe_pkcs12.txt` and "
-                 "its `evppbe_pbkdf2.txt` sibling, with the `80-test_pkcs12.t` recipe data. "
-                 "Candidate-only, like every `CT-*` court (docs/DECISIONS.md D201); no network "
-                 "fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md). **10.3's "
-                 "closure was checked against this court and has nothing vector-checkable**: its "
-                 "four landed exports are the ASN.1 `SafeBag` packer, a shrouded-key reader and "
-                 "`PKCS12_add_secret`, and its remaining rows are the `PKCS7`/`X509`/'EVP_PKEY' "
-                 "container builders that reach no KDF or PBE vector, so registering a corpus "
-                 "here would invent one rather than measure it.",
     "RT-STORE": "10.5 -- `OSSL_STORE_open(_ex)` and the `file` loader, the `OSSL_STORE_INFO` "
                 "type and its constructor/accessor family, the `OSSL_STORE_LOADER` object and "
                 "its registry, and the `OSSL_STORE_SEARCH` family: the `OSSL_STORE_INFO` type "
@@ -273,6 +273,12 @@ def main(argv: list[str]) -> int:
             continue
         records.append(court(name, src, auth, work))
 
+    for name in CORRECTNESS_COURTS:
+        if name == "CT-PKCS12":
+            records.append(cv.run_pkcs12_court(name, work_dir=work, authority_id=auth.id))
+        else:
+            raise SystemExit(f"[{GENERATOR}] no driver for correctness court {name}")
+
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
         "all_pass": passed == len(records),
@@ -317,20 +323,38 @@ def main(argv: list[str]) -> int:
             "attribute helpers and the `OPENSSL_{asc2uni,uni2asc,utf82uni,uni2utf8}` conversions, "
             "the ownership adoption of the `create0_*` constructors and the refusal arms with "
             "their error coordinates. Since 10.3 it also drives the four exports of that subphase "
-            "whose closure is landed -- `PKCS12_item_pack_safebag` (a fixed `PKCS8_PRIV_KEY_INFO` "
-            "packed as a `certBag`, printed as DER), the two `PKCS12_decrypt_skey` spellings (a "
+            "contains the fixed `PKCS8_PRIV_KEY_INFO` packed as a `certBag`, printed as DER), the "
+            "two `PKCS12_decrypt_skey` spellings (a "
             "shrouded key bag with a non-PBE algorithm, whose refusal and error coordinate are "
             "the observation) and `PKCS12_add_secret` (the `add_*` surface and the stack it "
-            "builds). **It does not cover the `PKCS12` container itself**: "
+            "builds). Since 10.4 it also drives that subphase's landed exports: the six "
+            "`PKCS12_key_gen_*` spellings (the fixed `smeg`/salt vector through `uni`/`asc`/`utf8` "
+            "and their `_ex` twins), `PKCS12_PBE_add`, the two `PKCS12_PBE_keyivgen` spellings "
+            "driven directly, the **six `builtin_pbe[]` rows' keygen presence** through "
+            "`EVP_PBE_find_ex` (with `EVP_PBE_CipherInit_ex` on the two TripleDES rows, which "
+            "actually reach the keygen -- D-PBE-PKCS12-KEYGEN-1's measurement), and "
+            "`PKCS8_set0_pbe(_ex)` (a fixed `PrivateKeyInfo` encrypted under a fixed TripleDES "
+            "`PBEPARAM`, printed as the `EncryptedPrivateKeyInfo` DER). **It does not cover the "
+            "`PKCS12` container itself**: "
             "`PKCS12_it`/`_new`/`_free`, `d2i_PKCS12`/`i2d_PKCS12`, `PKCS12_AUTHSAFES_it` and the "
             "four `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp` spellings are held open on Phase 12's "
             "`PKCS7_it`; the four `PKCS12_SAFEBAG_get1_*` readers and the `create_cert`/"
             "`create_crl` pair on Phase 11's `X509_it`; `PKCS12_add_key*` on Phase 11's "
-            "`EVP_PKEY2PKCS8`; the three `create_pkcs8_encrypt*` spellings on 10.4; the four MAC "
-            "setters on 10.4's `PKCS12_key_gen_utf8_ex`; and the rest of `p12_crt.c`/`p12_add.c`/"
-            "`p12_init.c`/`p12_npas.c` on Phase 12's `PKCS7`. The probe prints each as `pending.` "
+            "`EVP_PKEY2PKCS8`; `PKCS8_encrypt`/`_ex`, the three `create_pkcs8_encrypt*` spellings "
+            "and the two `p7encdata` writers on Phase 11's `PKCS5_pbe_set_ex`/"
+            "`PKCS5_pbe2_set_iv_ex`; the four MAC setters on Phase 11's `PBMAC1PARAM`/"
+            "`PKCS5_pbkdf2_set`; `PKCS12_parse` on Phase 11's `X509`; and the rest of "
+            "`p12_crt.c`/`p12_add.c`/"
+            "`p12_init.c`/`p12_npas.c` on Phase 11. The probe prints each as `pending.` "
             "with its blocker rather than driving a fabricated arm "
-            "(docs/PHASE-10-SUBPHASES.md section 3.5)."
+            "(docs/PHASE-10-SUBPHASES.md section 3.5). "
+            "`CT-PKCS12` is 10.4's second evidence plane and the other question: candidate-only "
+            "construction verification of the PKCS#12 KDF. Its probe (`courts/phase10/ct_pkcs12.c`) "
+            "re-reads the pinned `test/recipes/30-test_evp_data/evppbe_pkcs12.txt`'s six `PBE = "
+            "pkcs12` stanzas and calls `PKCS12_key_gen_uni` exactly as `test/evp_test.c`'s "
+            "`pbe_test_run` does, comparing each `Key` against the expected bytes mirrored in "
+            "`forensics/vectors/pkcs12.json`. It is NOT parity and NOT validation (D201); the "
+            "differential question is `RT-PKCS12`'s."
         ),
     }
 
@@ -340,11 +364,29 @@ def main(argv: list[str]) -> int:
     ]
     for _name, filename in COURTS:
         inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))
+    inputs.append(InputRef(name="pkcs12-correctness-probe", path=cv.PKCS12_PROBE))
+    inputs.append(InputRef(name="pkcs12-correctness-vectors", path=cv.PKCS12_VECTORS))
+    inputs.append(InputRef(name="pkcs12-corpus",
+                           path=resolve_authority(PRODUCTION_AUTHORITY).source
+                           / "test/recipes/30-test_evp_data/evppbe_pkcs12.txt"))
     doc = envelope(kind="phase10-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
     for r in records:
+        if r.get("plane") == "correctness":
+            if r["verdict"] == "pass":
+                print(f"  {r['court']:<18} pass   "
+                      f"({r['vectors_passed']}/{r['vectors_checked']} vectors)")
+            else:
+                print(f"  {r['court']:<18} FAIL   "
+                      f"stage={r.get('stage', 'vector-mismatch')} "
+                      f"({r.get('vectors_failed', '?')} vector(s) failed)")
+                detail = r.get("detail")
+                if isinstance(detail, list):
+                    for line in detail:
+                        print(f"      {line}")
+            continue
         if r["verdict"] == "pass":
             print(f"  {r['court']:<18} pass   "
                   f"({r['authority_observations']} observations)")

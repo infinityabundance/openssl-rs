@@ -31455,3 +31455,75 @@ phases; `court_coverage.py` reads phase 10 as 183 implemented and 183 direct wit
 entry**: `crypto/pkcs7/`'s `data`/`digest`/`encrypted` arms belong to 10.2/10.3's critical path, and only
 its `signed`/`enveloped`/`signedAndEnveloped` arms and the remaining 104 `pkcs7.h` exports are Phase 12's.
 
+## D443 -- 10.4 lands 11 of 14, closes `D-PBE-PKCS12-KEYGEN-1`, gives `CT-PKCS12` a corpus, and confirms the next blocker is Phase 11
+
+Subphase 10.4 is the PKCS#12 key derivation and the PBE pair, and **11 of its 14 open exports land** in
+three new modules: `src/pkcs12/p12_key.rs` (the six `PKCS12_key_gen_{asc,asc_ex,uni,uni_ex,utf8,utf8_ex}`
+spellings), `src/pkcs12/p12_crpt.rs` (`PKCS12_PBE_add` and both `PKCS12_PBE_keyivgen` forms) and
+`src/pkcs12/p12_p8e.rs` (`PKCS8_set0_pbe(_ex)`). **The KDF is a provider call rather than a hand-written
+derivation** -- it reaches `EVP_KDF_fetch("PKCS12KDF")` and the `src/provider/kdf.rs` row that already
+existed -- which matters because a hand-rolled KDF that agrees with the corpus is a different library with
+the same output. The ledger moves from `implemented=183 open=115` to **`implemented=194 open=104`**.
+
+**`D-PBE-PKCS12-KEYGEN-1` is closed, and closed with evidence.** The six `BUILTIN_PBE` rows now carry
+`PKCS12_PBE_keyivgen`/`_ex` (`src/evp/evp_pbe.rs`), its register heading reads `— **CLOSED**`, and its
+machine-readable row carries `trigger_satisfied: true`, `disposition: "fixed"`, `blocking: false` with
+`evidence` naming `src/pkcs12/p12_crpt.rs`, `src/evp/evp_pbe.rs` and `RT-PKCS12`'s `pbe.find.04..09` arms
+-- which are the measurement of the divergence itself: those six arms print each row's keygen presence,
+so the closure is observed rather than asserted. D439 had to correct a `fixed` that was not earned; this
+one is earned. `divergence_obligations.py` and `--check` are clean at 10 rows and **0 blocking**.
+
+**`CT-PKCS12` is a real correctness court, and its corpus is the authority's own.**
+`courts/phase10/ct_pkcs12.c` over a generated `forensics/vectors/pkcs12.json` (6 vectors) re-reads the
+pinned corpus's six `PBE = pkcs12` stanzas and calls `PKCS12_key_gen_uni` exactly as `test/evp_test.c`'s
+`pbe_test_run` does: **6 of 6 vectors pass**. Two corpora are **declined with reasons** rather than
+ignored -- `evppbe_pbkdf2.txt` is `PBE = pbkdf2`, which is `PKCS5_PBKDF2_HMAC` and Phase 7's, and
+`80-test_pkcs12.t` is a `PKCS7`/`X509` container test, which is Phase 12's and Phase 11's. No corpus was
+invented to make a correctness court exist.
+
+**`RT-PKCS12` grows from 184 to 216 observations, and zero of its pending rows moved to driven -- which
+is the honest result rather than a miss.** The 11 landed exports were not previously `pending` lines, so
+there is nothing to move: what grew is the evidence for what landed (the six KDF spellings,
+`PKCS12_PBE_add`, both `PKCS12_PBE_keyivgen` forms, the six `builtin_pbe[]` keygen-presence arms,
+`EVP_PBE_CipherInit_ex` on the two TripleDES rows which genuinely reach the keygen, and
+`PKCS8_set0_pbe(_ex)`), plus **three new `pending.*` lines** for the still-open exports. Six blocker texts
+were corrected as their true owner moved, and `pending` went 23 to 26 lines.
+
+**The measurement that matters most is what did *not* land, and its blocker is now pinned.**
+`nm --undefined-only` on the authority's `encode_key2any.o` shows its **only** remaining unlanded
+dependency is `PKCS8_encrypt_ex`: D438's six container writers and D436's four PQC `i2d` helpers are
+landed, and the third blocker is not closable inside 10.4, because `PKCS8_encrypt(_ex)`'s own closure is
+**Phase 11's `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex`** (both `x509.h` exports, `owner_phase: 11`,
+neither landed). Since 116 of `encode_key2any.c`'s 206 tables reference it, the unit does not compile and
+**the 412-row mover stays open: provider rows are unchanged at `218 implemented / 418 open` and
+`RT-CODEC` stays at 1,487 observations.** The plan's §2 said "then `encode_key2any.c` once 10.6 and 10.4
+have landed", and that is now measured to be **unsatisfiable**: its true prerequisite is Phase 11. The
+same holds for 10.3's remaining eight (which need `PKCS5_pbe*set*_ex`), 10.2's two
+`create_pkcs8_encrypt*` forms, and the four MAC setters (whose blocker moved from `phase-10.4-kdf` to
+`phase-11-pbe`, needing `PBMAC1PARAM`/`PKCS5_pbkdf2_set`).
+
+**So the decision the `PKCS7` pull-forward answered is now asked again, with numbers attached.** The
+stratum's two largest remaining movers -- `encode_key2any.c`'s 412 rows and 10.2/10.3's Phase 11-blocked
+exports -- need a Phase 11 `X509`/`PKCS5` subset, and on D442's precedent the subset would be measured the
+same way (`nm --undefined-only` over the objects that need it) rather than guessed. **This is flagged for
+the owner rather than decided here**, for the same reason D441 flagged the `PKCS7` one: it changes a
+stratum's dependency order, not a subphase's contents.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` is
+**1079 passed, 0 failed** (five more than D442's 1074, all taking `lock_global_state`). `run_courts.py`,
+`court_coverage.py` (phase 10: 194 implemented, 194 direct, 131 called and 63 referenced, 0
+non-observable) and `provider_court_coverage.py` (539/539, 0 unmatched) clean. `phase_state.py` reads 0-9
+`complete`, **10 `in-progress`**, 11-21 `not-started`. `PIPELINE OK` exit 0 twice, at 108 courts and
+42,224 observations.
+
+### Movement
+
+`src/pkcs12/{p12_key,p12_crpt,p12_p8e}.rs`, `courts/phase10/ct_pkcs12.c`,
+`forensics/tools/gen_pkcs12_vectors.py` and `forensics/vectors/pkcs12.json` are added;
+`src/evp/evp_pbe.rs`, `src/pkcs12/mod.rs`, `src/runtime/err_sites.rs`, `courts/phase10/rt_pkcs12_probe.c`,
+`forensics/tools/{correctness_vectors,phase10_courts}.py`, `docs/SECURITY_DIVERGENCE_POLICY.md` and
+`forensics/tools/divergence_obligations.py` change; and the ledgers, the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
+

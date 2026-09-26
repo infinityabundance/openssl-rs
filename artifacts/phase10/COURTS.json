@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-KEYFORMAT-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's eighty-seven inherited `implemented` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-CODEC` is this stratum's first **behavioural** court (10.1): it drives the twenty-nine text and blob encoder rows `encode_key2text.c` and `encode_key2blob.c` publish through the public `OSSL_ENCODER_*` surface and the one `EncryptedPrivateKeyInfo` decoder `decode_epki2pki.c` publishes through `OSSL_DECODER_*`, observing each row's identity (`OSSL_ENCODER_fetch`/`OSSL_DECODER_fetch`'s name and properties), its exact bytes (`OSSL_ENCODER_to_data`/`OSSL_DECODER_from_data` with a construct callback), and a refusal arm for each unit with the error queue. Since 10.6 it also drives the four `msblob`/`pvk` encoder rows `encode_key2ms.c` publishes and the four `msblob`/`pvk` decoder rows `decode_msblob2key.c`/`decode_pvk2key.c` publish, in both providers: identity, a fixed RSA and 160-bit-`q` DSA keypair encoded to each output at the unencrypted level and the bytes fed back through the matching decoder row, and the selection and short-header refusals. It is a differential compatibility claim about those rows, NOT that the other 572 rows or the remaining decoders are implemented. `pending_courts` names the courts the plan gives this stratum and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3). `RT-KEYFORMAT` is 10.6's behavioural court: it drives the twenty-four landed `d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names with fixed RSA, DSA and EC keys, compares the exact bytes and each malformed-input arm's error queue, and references the two `i2d_PKCS8PrivateKey_nid_*` writers held pending because `PKCS8_encrypt` (10.4) is unlanded. `RT-PKCS12` is 10.2's and 10.3's behavioural court: it builds the `PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups from fixed inputs and fixed hand-written DER fixtures, prints their bytes, and drives the `SafeBag` accessor surface, the attribute helpers and the `OPENSSL_{asc2uni,uni2asc,utf82uni,uni2utf8}` conversions, the ownership adoption of the `create0_*` constructors and the refusal arms with their error coordinates. Since 10.3 it also drives the four exports of that subphase whose closure is landed -- `PKCS12_item_pack_safebag` (a fixed `PKCS8_PRIV_KEY_INFO` packed as a `certBag`, printed as DER), the two `PKCS12_decrypt_skey` spellings (a shrouded key bag with a non-PBE algorithm, whose refusal and error coordinate are the observation) and `PKCS12_add_secret` (the `add_*` surface and the stack it builds). **It does not cover the `PKCS12` container itself**: `PKCS12_it`/`_new`/`_free`, `d2i_PKCS12`/`i2d_PKCS12`, `PKCS12_AUTHSAFES_it` and the four `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp` spellings are held open on Phase 12's `PKCS7_it`; the four `PKCS12_SAFEBAG_get1_*` readers and the `create_cert`/`create_crl` pair on Phase 11's `X509_it`; `PKCS12_add_key*` on Phase 11's `EVP_PKEY2PKCS8`; the three `create_pkcs8_encrypt*` spellings on 10.4; the four MAC setters on 10.4's `PKCS12_key_gen_utf8_ex`; and the rest of `p12_crt.c`/`p12_add.c`/`p12_init.c`/`p12_npas.c` on Phase 12's `PKCS7`. The probe prints each as `pending.` with its blocker rather than driving a fabricated arm (docs/PHASE-10-SUBPHASES.md section 3.5).",
+    "claim": "`RT-KEYFORMAT-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's eighty-seven inherited `implemented` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-CODEC` is this stratum's first **behavioural** court (10.1): it drives the twenty-nine text and blob encoder rows `encode_key2text.c` and `encode_key2blob.c` publish through the public `OSSL_ENCODER_*` surface and the one `EncryptedPrivateKeyInfo` decoder `decode_epki2pki.c` publishes through `OSSL_DECODER_*`, observing each row's identity (`OSSL_ENCODER_fetch`/`OSSL_DECODER_fetch`'s name and properties), its exact bytes (`OSSL_ENCODER_to_data`/`OSSL_DECODER_from_data` with a construct callback), and a refusal arm for each unit with the error queue. Since 10.6 it also drives the four `msblob`/`pvk` encoder rows `encode_key2ms.c` publishes and the four `msblob`/`pvk` decoder rows `decode_msblob2key.c`/`decode_pvk2key.c` publish, in both providers: identity, a fixed RSA and 160-bit-`q` DSA keypair encoded to each output at the unencrypted level and the bytes fed back through the matching decoder row, and the selection and short-header refusals. It is a differential compatibility claim about those rows, NOT that the other 572 rows or the remaining decoders are implemented. `pending_courts` names the courts the plan gives this stratum and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3). `RT-KEYFORMAT` is 10.6's behavioural court: it drives the twenty-four landed `d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names with fixed RSA, DSA and EC keys, compares the exact bytes and each malformed-input arm's error queue, and references the two `i2d_PKCS8PrivateKey_nid_*` writers held pending because `PKCS8_encrypt` (10.4) is unlanded. `RT-PKCS12` is 10.2's and 10.3's behavioural court: it builds the `PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups from fixed inputs and fixed hand-written DER fixtures, prints their bytes, and drives the `SafeBag` accessor surface, the attribute helpers and the `OPENSSL_{asc2uni,uni2asc,utf82uni,uni2utf8}` conversions, the ownership adoption of the `create0_*` constructors and the refusal arms with their error coordinates. Since 10.3 it also drives the four exports of that subphase contains the fixed `PKCS8_PRIV_KEY_INFO` packed as a `certBag`, printed as DER), the two `PKCS12_decrypt_skey` spellings (a shrouded key bag with a non-PBE algorithm, whose refusal and error coordinate are the observation) and `PKCS12_add_secret` (the `add_*` surface and the stack it builds). Since 10.4 it also drives that subphase's landed exports: the six `PKCS12_key_gen_*` spellings (the fixed `smeg`/salt vector through `uni`/`asc`/`utf8` and their `_ex` twins), `PKCS12_PBE_add`, the two `PKCS12_PBE_keyivgen` spellings driven directly, the **six `builtin_pbe[]` rows' keygen presence** through `EVP_PBE_find_ex` (with `EVP_PBE_CipherInit_ex` on the two TripleDES rows, which actually reach the keygen -- D-PBE-PKCS12-KEYGEN-1's measurement), and `PKCS8_set0_pbe(_ex)` (a fixed `PrivateKeyInfo` encrypted under a fixed TripleDES `PBEPARAM`, printed as the `EncryptedPrivateKeyInfo` DER). **It does not cover the `PKCS12` container itself**: `PKCS12_it`/`_new`/`_free`, `d2i_PKCS12`/`i2d_PKCS12`, `PKCS12_AUTHSAFES_it` and the four `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp` spellings are held open on Phase 12's `PKCS7_it`; the four `PKCS12_SAFEBAG_get1_*` readers and the `create_cert`/`create_crl` pair on Phase 11's `X509_it`; `PKCS12_add_key*` on Phase 11's `EVP_PKEY2PKCS8`; `PKCS8_encrypt`/`_ex`, the three `create_pkcs8_encrypt*` spellings and the two `p7encdata` writers on Phase 11's `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex`; the four MAC setters on Phase 11's `PBMAC1PARAM`/`PKCS5_pbkdf2_set`; `PKCS12_parse` on Phase 11's `X509`; and the rest of `p12_crt.c`/`p12_add.c`/`p12_init.c`/`p12_npas.c` on Phase 11. The probe prints each as `pending.` with its blocker rather than driving a fabricated arm (docs/PHASE-10-SUBPHASES.md section 3.5). `CT-PKCS12` is 10.4's second evidence plane and the other question: candidate-only construction verification of the PKCS#12 KDF. Its probe (`courts/phase10/ct_pkcs12.c`) re-reads the pinned `test/recipes/30-test_evp_data/evppbe_pkcs12.txt`'s six `PBE = pkcs12` stanzas and calls `PKCS12_key_gen_uni` exactly as `test/evp_test.c`'s `pbe_test_run` does, comparing each `Key` against the expected bytes mirrored in `forensics/vectors/pkcs12.json`. It is NOT parity and NOT validation (D201); the differential question is `RT-PKCS12`'s.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -58,9 +58,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 184,
+        "authority_observations": 216,
         "candidate_exit_code": 0,
-        "candidate_observations": 184,
+        "candidate_observations": 216,
         "candidate_stderr_tail": [],
         "court": "RT-PKCS12",
         "crashed": false,
@@ -72,16 +72,75 @@
           "candidate": "artifacts/phase10/probes/rt_pkcs12_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority": "openssl-3.6.4-production",
+        "candidate_shared_object": "artifacts/phase2/libcrypto.so.3",
+        "claim": "A correctness-vector PASS means candidate-only construction verification: `PKCS12_key_gen_uni` reproduced every `Key` the pinned authority's own `test/recipes/30-test_evp_data/evppbe_pkcs12.txt` records, over each stanza's own Password/Salt/id/iter/MD, which is the `PKCS12_key_gen_uni` KAT call `test/evp_test.c`'s `pbe_test_run` makes and which reaches the provider `PKCS12KDF` row (`providers/implementations/kdfs/pkcs12kdf.c`). It is NOT OpenSSL parity: the authority's observable behaviour is RT-PKCS12's question. It is NOT independent cryptographic validation and NOT formal validation; see docs/DECISIONS.md D201 and docs/PHASE-10-SUBPHASES.md.",
+        "court": "CT-PKCS12",
+        "failures": [],
+        "kind": "correctness-vectors",
+        "plane": "correctness",
+        "probe": "courts/phase10/ct_pkcs12.c",
+        "results": [
+          {
+            "actual": "8aaae6297b6cb04642ab5b077851284eb7128f1a2a7fbca3",
+            "arm": "value",
+            "expected": "8aaae6297b6cb04642ab5b077851284eb7128f1a2a7fbca3",
+            "id": "pkcs12.00",
+            "passed": true
+          },
+          {
+            "actual": "79993dfe048d3b76",
+            "arm": "value",
+            "expected": "79993dfe048d3b76",
+            "id": "pkcs12.01",
+            "passed": true
+          },
+          {
+            "actual": "8d967d88f6caa9d714800ab3d48051d63f73a312",
+            "arm": "value",
+            "expected": "8d967d88f6caa9d714800ab3d48051d63f73a312",
+            "id": "pkcs12.02",
+            "passed": true
+          },
+          {
+            "actual": "483dd6e919d7de2e8e648ba8f862f3fbfbdc2bcb2c02957f",
+            "arm": "value",
+            "expected": "483dd6e919d7de2e8e648ba8f862f3fbfbdc2bcb2c02957f",
+            "id": "pkcs12.03",
+            "passed": true
+          },
+          {
+            "actual": "9d461d1b00355c50",
+            "arm": "value",
+            "expected": "9d461d1b00355c50",
+            "id": "pkcs12.04",
+            "passed": true
+          },
+          {
+            "actual": "5ec4c7a80df652294c3925b6489a7ab857c83476",
+            "arm": "value",
+            "expected": "5ec4c7a80df652294c3925b6489a7ab857c83476",
+            "id": "pkcs12.05",
+            "passed": true
+          }
+        ],
+        "stage": "compare",
+        "vectors": "forensics/vectors/pkcs12.json",
+        "vectors_checked": 6,
+        "vectors_failed": 0,
+        "vectors_passed": 6,
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
-      "CT-PKCS12": "10.4 -- the PKCS#12 KDF and PBE construction vectors, whose corpus the pinned tree already carries: `test/recipes/30-test_evp_data/evppbe_pkcs12.txt` and its `evppbe_pbkdf2.txt` sibling, with the `80-test_pkcs12.t` recipe data. Candidate-only, like every `CT-*` court (docs/DECISIONS.md D201); no network fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md). **10.3's closure was checked against this court and has nothing vector-checkable**: its four landed exports are the ASN.1 `SafeBag` packer, a shrouded-key reader and `PKCS12_add_secret`, and its remaining rows are the `PKCS7`/`X509`/'EVP_PKEY' container builders that reach no KDF or PBE vector, so registering a corpus here would invent one rather than measure it.",
       "RT-STORE": "10.5 -- `OSSL_STORE_open(_ex)` and the `file` loader, the `OSSL_STORE_INFO` type and its constructor/accessor family, the `OSSL_STORE_LOADER` object and its registry, and the `OSSL_STORE_SEARCH` family: the `OSSL_STORE_INFO` type and refcount surface, the `eof`/`error`/`expect` state machine, and the refusal arms (an unknown scheme, a NULL URI, a loader that answers a NULL `load`) with the error queue. The loader's sub-fetches resolve in the publishing provider's library context (D240) and the decoder arm lands after 10.4's pair, so it cannot be written before then (docs/PHASE-10-SUBPHASES.md section 3.3)."
     },
     "summary": {
       "fail": 0,
-      "pass": 4,
-      "total": 4
+      "pass": 5,
+      "total": 5
     }
   },
   "generator": "forensics/tools/phase10_courts.py",
@@ -109,7 +168,22 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_pkcs12_probe.c",
-      "sha256": "e94b18a9cec95fdab795c3539774075af4a74e79471f4a848a1ac80b58a72c07"
+      "sha256": "504fe4deff080964c5c70e8293cdfa4d57d82824c4e81663512c5d44843f3838"
+    },
+    {
+      "name": "pkcs12-correctness-probe",
+      "path": "courts/phase10/ct_pkcs12.c",
+      "sha256": "61abe3daffb6457e55c52162f83008a7799e5f0e46b5140db7b29df8fa3dba59"
+    },
+    {
+      "name": "pkcs12-correctness-vectors",
+      "path": "forensics/vectors/pkcs12.json",
+      "sha256": "c6eff4b618df28c45e2908e14f3dd252701eb3fccfcadfc378da9a11e03f2a93"
+    },
+    {
+      "name": "pkcs12-corpus",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt",
+      "sha256": "cabbba1e5e9e3f172d3b1933893e016b12bcf6c8b8daf6189c02c08503614c06"
     }
   ],
   "kind": "phase10-courts",

@@ -1228,7 +1228,27 @@ between the authority and the candidate at this site.**
   and the trigger is the one above, one table over: the four accessors are appended to
   `PMETH_STANDARD_METHODS` in `pkey_id` order after `ossl_dhx_pkey_method` at 920.
 
-### D-PBE-PKCS12-KEYGEN-1 — the six `PKCS12_PBE_keyivgen` rows of `builtin_pbe[]` carry no keygen
+### D-PBE-PKCS12-KEYGEN-1 — the six `PKCS12_PBE_keyivgen` rows of `builtin_pbe[]` carry no keygen — **CLOSED**
+
+> **Re-measured, and closed.** Phase 10's 10.4 landed `crypto/pkcs12/p12_crpt.c`, which is the
+> trigger this entry named, and the six rows now carry both addresses:
+> `src/evp/evp_pbe.rs`'s `BUILTIN_PBE` has `keygen: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen)`
+> and `keygen_ex: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen_ex)` on each of the six rows
+> (`NID_pbe_WithSHA1And128BitRC4`, `_40BitRC4`, `_3_Key_TripleDES_CBC`, `_2_Key_TripleDES_CBC`,
+> `_128BitRC2_CBC`, `_40BitRC2_CBC`). `PKCS12_PBE_keyivgen` and `PKCS12_PBE_keyivgen_ex` are
+> `src/pkcs12/p12_crpt.rs`, transcribed against `crypto/pkcs12/p12_crpt.c` with its three raises
+> (`PKCS12_R_DECODE_ERROR` at `:41`, `PKCS12_R_KEY_GEN_ERROR` at `:55`, `PKCS12_R_IV_GEN_ERROR` at
+> `:64`), and the two key derivations reach the landed provider `PKCS12KDF` row. So `EVP_PBE_find`
+> and `EVP_PBE_find_ex` now answer **1** for each with both keygen pointers **non-NULL**, and
+> `EVP_PBE_CipherInit_ex` on an `ASN1_OBJECT` whose `OBJ_obj2nid` is one of the six reaches
+> `PKCS12_PBE_keyivgen_ex`, exactly as the authority does. **The measurement is `RT-PKCS12`'s new
+> arms** (`courts/phase10/rt_pkcs12_probe.c`), which drive all six NIDs through
+> `EVP_PBE_find_ex` and print each row's return code, type, NID and *both presence answers* — the
+> two answers whose difference `RT-EVP-PBE` used to hold back with a fixed marker. Nothing was
+> stubbed and nothing was omitted: the two columns are the addresses.
+> The guard below the table is unchanged and still covers the eighteen PRF rows (and any row a
+> caller adds with `EVP_PBE_alg_add_type`, which leaves `keygen_ex` empty); the six PKCS#12 rows
+> simply stop taking it, which is what this entry's `Claim removed` predicted.
 
 - **Obligation:** `EVP_PBE_find` and `EVP_PBE_find_ex` for the six NIDs `NID_pbe_WithSHA1And128BitRC4`
   (144), `NID_pbe_WithSHA1And40BitRC4` (145), `NID_pbe_WithSHA1And3_Key_TripleDES_CBC` (146),

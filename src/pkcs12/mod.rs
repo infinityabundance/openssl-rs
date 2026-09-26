@@ -22,6 +22,13 @@
 //! `PKCS5_pbe*set*_ex` or 10.4's `PKCS8_encrypt`/`PKCS12_key_gen_utf8_ex`, and are named where
 //! they live.
 //!
+//! 10.4 adds [`p12_key`] (the six `PKCS12_key_gen_*` spellings over the provider `PKCS12KDF` row),
+//! [`p12_crpt`] (the two `PKCS12_PBE_keyivgen` spellings and the empty `PKCS12_PBE_add`, which is
+//! what retires D-PBE-PKCS12-KEYGEN-1) and [`p12_p8e`] (`PKCS8_set0_pbe`/`_ex`; the
+//! `PKCS8_encrypt`/`_ex` pair stays open on Phase 11's `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex`).
+//! [`p12_kiss`] was measured and is **not** landable: `PKCS12_parse` reads cert bags through
+//! `PKCS12_SAFEBAG_get1_cert_ex` and `ossl_x509_add_cert_new`, which are Phase 11's.
+//!
 //! `PKCS8_decrypt` is the name `pem_read_bio_key_legacy` (`crypto/pem/pem_pkey.c:165`) reaches
 //! for a `PEM_STRING_PKCS8` block, and `PKCS12_item_decrypt_d2i_ex` is what it decrypts
 //! through; the `crypto/asn1/x_sig.c` module landed the `X509_SIG` these read.
@@ -31,10 +38,13 @@
 pub mod p12_add;
 pub mod p12_asn;
 pub mod p12_attr;
+pub mod p12_crpt;
 pub mod p12_crt;
 pub mod p12_decr;
 pub mod p12_init;
+pub mod p12_key;
 pub mod p12_mutl;
 pub mod p12_p8d;
+pub mod p12_p8e;
 pub mod p12_sbag;
 pub mod p12_utl;
