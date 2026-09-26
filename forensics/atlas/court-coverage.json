@@ -13490,7 +13490,8 @@
             "courts": [
               "RT-AMETH",
               "RT-ECX",
-              "RT-EVP-PKEY"
+              "RT-EVP-PKEY",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EVP_PKEY_get_base_id"
           },
@@ -13549,6 +13550,7 @@
               "RT-AMETH",
               "RT-ECX",
               "RT-EVP-PKEY",
+              "RT-KEYFORMAT",
               "RT-PUBKEY"
             ],
             "symbol": "EVP_PKEY_get_id"
@@ -22549,7 +22551,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3bc5cc7aa2fdb8c9817338a69e3ee2965e22e3dcfb0a263f2cef1cf6ba9ab413"
+      "sha256": "7b4da29de13450f8fdf8576a990b3703f47f25a222a6ca852632ef998fc162b3"
     },
     {
       "name": "symbol-ownership",
@@ -22639,7 +22641,7 @@
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "8a49bf6f49e9c00f6369cdf79cdbe55267f898455ef738d05cc85e483c811ff9"
+      "sha256": "3792fb0f89c8886201014fcb69b8de0f18fb804e910f6a0dd50362b13176ca78"
     }
   ],
   "kind": "court-coverage",

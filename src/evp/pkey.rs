@@ -677,22 +677,16 @@ unsafe fn pkey_set_type(
     1
 }
 
-/// `int evp_pkey_set_type_by_keymgmt(EVP_PKEY *pkey, EVP_KEYMGMT *keymgmt)` — the internal name the
-/// unit exports to `keymgmt_lib.c`.
-///
-/// # Safety
-/// `pkey` must be live; `keymgmt` must be live.
-pub(crate) unsafe fn evp_pkey_set_type_by_keymgmt(
-    pkey: *mut EvpPkey,
-    keymgmt: *mut EvpKeyMgmt,
-) -> c_int {
-    // SAFETY: `pkey` is live and `keymgmt` is live.
-    unsafe { pkey_set_type(pkey, EVP_PKEY_NONE, ptr::null(), -1, keymgmt) }
-}
-
 /// `int EVP_PKEY_set_type_by_keymgmt(EVP_PKEY *pkey, EVP_KEYMGMT *keymgmt)`.
 ///
-/// The public entry point. The authority first walks the method's **names** looking for one that
+/// The public entry point, and the **only** one the authority has: there is no internal
+/// `evp_pkey_set_type_by_keymgmt` in `crypto/evp/p_lib.c` or its header, and `keymgmt_lib.c`'s
+/// `evp_keymgmt_util_assign_pkey`/`evp_keymgmt_util_copy` call *this* function, name walk and all.
+/// A crate-local helper that called [`pkey_set_type`] with a NULL `str` would skip the walk and
+/// leave a provider key named `"RSA"` typed `EVP_PKEY_KEYMGMT` where the authority types it
+/// `EVP_PKEY_RSA` -- the `D-PKEY-AMETH-1` observable, measured by `RT-KEYFORMAT`.
+///
+/// The authority first walks the method's **names** looking for one that
 /// an `EVP_PKEY_ASN1_METHOD` exists for, refuses if it finds two, and passes the one it found on;
 /// the walk is what makes the *ambiguity* refusal reachable, and with the table populated it now
 /// finds a method for a provider key named `"RSA"` and types it with the legacy NID.

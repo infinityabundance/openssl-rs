@@ -1024,6 +1024,22 @@ authority and the candidate for this function, and there was never supposed to b
 > as the authority does. It is kept rather than deleted because the four `crypto/ec/ecx_meth.c`
 > names it still describes are the whole of D-PKEY-AMETH-3's subject. The paragraphs below are the
 > state before the 8.8 landing.
+>
+> **Re-measured, and repaired.** The 8.8 landing alone did **not** close this. D438 observed the
+> divergence (`src/evp/pkey.rs`'s `EVP_PKEY_get_id`), and `RT-KEYFORMAT`
+> (`courts/phase10/rt_keyformat_probe.c`) has since measured it on every provider key the decoder
+> path builds: `EVP_PKEY_get_id` answered `6`/`116`/`408` (`EVP_PKEY_RSA`/`_DSA`/`_EC`) on the
+> authority and `EVP_PKEY_KEYMGMT` (`-1`) here, with `EVP_PKEY_get_base_id` answering `6`/`116`/`408`
+> there against `NID_undef` (`0`) here. The cause was **not** the table: it was a crate-local helper
+> (`src/evp/pkey.rs`'s `evp_pkey_set_type_by_keymgmt`) that called `pkey_set_type` with a **NULL
+> `str`** and so skipped the name walk. The authority has no such helper — `crypto/evp/keymgmt_lib.c`
+> `:64` (`evp_keymgmt_util_assign_pkey`) and `:505` (`evp_keymgmt_util_copy`) call the public
+> `EVP_PKEY_set_type_by_keymgmt`, walk and all — so this was a transcription defect and not a
+> recorded narrowing. Both call sites now call the public function and the helper is removed, so a
+> provider key named `"RSA"`, `"EC"`, `"DSA"`, `"DH"`, `"RSA-PSS"`, `"DHX"`, `"SM2"` or one of the
+> four ECX names takes the legacy NID into `pkey->type` exactly as the authority does.
+> `RT-KEYFORMAT` compares **342 observations with zero residuals** over the byte arms and both reader
+> arms, and this entry's machine-readable row is `fixed` on that evidence.
 
 - **Obligation:** `EVP_PKEY_set_type_by_keymgmt` on a provider method whose **name is a legacy key
   type** -- `"RSA"`, `"EC"`, `"DSA"`, and the rest of the twelve -- and, through it,
@@ -1142,6 +1158,10 @@ between the authority and the candidate at this site.**
 > `ossl_sm2_asn1_meth`, and the two `get_count`s answer **15** and **10** where they answered 11
 > and 6. The entry is kept rather than deleted, as its two siblings are, because the paragraphs
 > below are the state before that landing and are what **`RT-ECX`** now observes the absence of.
+> (The provider-key-typing observable this entry names — a keymgmt named `"X25519"`, `"X448"`,
+> `"ED25519"` or `"ED448"` taking the legacy NID through `pkey_set_type` — also required the name
+> walk that `crypto/evp/keymgmt_lib.c`'s `evp_keymgmt_util_assign_pkey`/`_copy` reach; the crate's
+> bypassing helper was repaired alongside `D-PKEY-AMETH-1`, and `RT-KEYFORMAT` measures it.)
 
 - **Obligation:** `EVP_PKEY_asn1_find(NULL, type)`, `EVP_PKEY_asn1_find_str(NULL, name, len)`,
   `EVP_PKEY_type(type)`, `EVP_PKEY_asn1_get0(idx)` and `EVP_PKEY_asn1_get_count()` for the four
