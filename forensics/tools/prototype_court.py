@@ -1134,14 +1134,26 @@ def expand_macro_invocations(
     every remaining comma-separated group, which is asserted rather than assumed: a
     matcher with a repetition that is not last is reported, because guessing where
     one ends is how a silent mis-substitution would start.
+
+    **An invocation inside a `macro_rules!` definition is a template, not a call.** Its
+    arguments are the defining macro's own `$` parameters, so reading them as names would
+    report symbols that do not exist -- which is what a wrapper macro (`dec!`, `slh_pair!`)
+    that forwards to a symbol-declaring macro (`make_decoder!`) looks like. Only a
+    top-level invocation names anything, so every macro definition's span is skipped.
     """
     found: dict[str, tuple[tuple[str, list[str]], str]] = {}
     problems: list[str] = []
     for key, text in files:
+        # Every `macro_rules!` body's span in this file. The defining macro's own span was
+        # already skipped; this generalises it to a template argument in *any* macro.
+        macro_spans: list[tuple[int, int]] = []
+        for m in MACRO_RULES_RE.finditer(text):
+            close = _scan_delimited(text, m.end() - 1)
+            if close >= 0:
+                macro_spans.append((m.start(), close + 1))
         for name, macro in defs.items():
-            skip = macro.span if macro.file == key else None
             for m in re.finditer(rf"\b{re.escape(name)}\s*!", text):
-                if skip is not None and skip[0] <= m.start() < skip[1]:
+                if any(lo <= m.start() < hi for lo, hi in macro_spans):
                     continue
                 opener = m.end()
                 while opener < len(text) and text[opener] in " \t\r\n":

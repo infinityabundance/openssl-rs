@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 474,
+      "crate_files_read": 475,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 372,
       "signatures_checked": 265,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 192,
+      "signatures_not_a_dispatch": 193,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -4606,6 +4606,11 @@
           "alias": "OsslSm4XtsStreamFn",
           "at": "src/provider/cipher.rs",
           "why": "not a provider dispatch: `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC` macro generates it as `typedef type(*OSSL_##name##_fn) args`, so the header carries no `typedef` declaration and the atlas records none"
+        },
+        {
+          "alias": "KeyFromPkcs8Fn",
+          "at": "src/provider/decode_der2key.rs",
+          "why": "not a provider dispatch: `decode_der2key.h`'s `key_from_pkcs8_t`, a typedef local to a provider implementation header, which the atlas -- whose universe is the installed public surface -- records no typedef for"
         },
         {
           "alias": "SkCompFn",

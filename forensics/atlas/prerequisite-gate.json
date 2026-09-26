@@ -12,7 +12,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 72,
-      "language_surface_not_modelled_by_name": 5036,
+      "language_surface_not_modelled_by_name": 5032,
       "planned_prerequisites": 5
     },
     "census_by_unit": {
@@ -60,8 +60,8 @@
       "language_surface_not_modelled_by_name": {
         "crypto/aria/aria.c": 3,
         "crypto/asn1/a_bitstr.c": 6,
-        "crypto/asn1/a_d2i_fp.c": 11,
-        "crypto/asn1/a_dup.c": 14,
+        "crypto/asn1/a_d2i_fp.c": 10,
+        "crypto/asn1/a_dup.c": 13,
         "crypto/asn1/a_i2d_fp.c": 11,
         "crypto/asn1/a_int.c": 14,
         "crypto/asn1/a_mbstr.c": 9,
@@ -307,8 +307,8 @@
         "crypto/params_from_text.c": 10,
         "crypto/passphrase.c": 23,
         "crypto/pem/pem_all.c": 28,
-        "crypto/pem/pem_lib.c": 38,
-        "crypto/pem/pem_oth.c": 8,
+        "crypto/pem/pem_lib.c": 37,
+        "crypto/pem/pem_oth.c": 7,
         "crypto/pem/pem_pkey.c": 33,
         "crypto/pkcs12/p12_decr.c": 14,
         "crypto/pkcs12/p12_p8d.c": 5,
@@ -451,7 +451,6 @@
         "crypto/asn1/a_d2i_fp.c:ERR_raise",
         "crypto/asn1/a_d2i_fp.c:OSSL_LIB_CTX",
         "crypto/asn1/a_d2i_fp.c:UINT32_MAX",
-        "crypto/asn1/a_d2i_fp.c:d2i_of_void",
         "crypto/asn1/a_d2i_fp.c:in",
         "crypto/asn1/a_d2i_fp.c:void",
         "crypto/asn1/a_dup.c:ASN1_AUX",
@@ -465,7 +464,6 @@
         "crypto/asn1/a_dup.c:OPENSSL_free",
         "crypto/asn1/a_dup.c:OPENSSL_malloc",
         "crypto/asn1/a_dup.c:OSSL_LIB_CTX",
-        "crypto/asn1/a_dup.c:d2i_of_void",
         "crypto/asn1/a_dup.c:i2d_of_void",
         "crypto/asn1/a_dup.c:void",
         "crypto/asn1/a_i2d_fp.c:ASN1_ITEM",
@@ -473,7 +471,9 @@
         "crypto/asn1/a_i2d_fp.c:BIO",
         "crypto/asn1/a_i2d_fp.c:BIO_set_fp",
         "crypto/asn1/a_i2d_fp.c:ERR_LIB_ASN1",
-        "crypto/asn1/a_i2d_fp.c:ERR_R_ASN1_LIB"
+        "crypto/asn1/a_i2d_fp.c:ERR_R_ASN1_LIB",
+        "crypto/asn1/a_i2d_fp.c:ERR_raise",
+        "crypto/asn1/a_i2d_fp.c:OPENSSL_free"
       ],
       "planned_prerequisites": [
         "ossl_get_enginesdir",
@@ -485,7 +485,7 @@
     },
     "checked": {
       "authority_units": 326,
-      "crate_modules": 474,
+      "crate_modules": 475,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 7,
       "divergence_names_covered": 39,
@@ -594,7 +594,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "28b4c08bdb38d60cf0e9508ab89089803bd40e2a6df11f85a6868ca8530452f0",
+  "body_hash": "c76b33a8746dab7d5fea87f3eb592abb7b11b01fd08ebb68210d22621f017347",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -630,12 +630,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f91ae8779ae9a38a5b632fd3a3827e5ed64e32bed0871863e0edb4bc1b1b6582"
+      "sha256": "5367e5d94f08118828f3228fa5edb2965b9f12ad4d93c846bbb6d0be4b86fe1f"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "4d7647c658133aeb5d93d1859e0e11ca51b9e89bc1b25d47874ec7009509f408"
+      "sha256": "d80e380325607bd7be84fdb4403f2560fffb881d471807e9d48bd72959d674fc"
     },
     {
       "name": "prerequisites",

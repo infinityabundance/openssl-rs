@@ -1628,20 +1628,25 @@ mod tests {
         }
     }
 
-    /// `OSSL_DECODER_CTX_new_for_pkey` on a crate that publishes no provider decoder: the setup
-    /// walks both stores, finds nothing, and answers a **duplicate** whose chain is empty. The
-    /// template is inserted into slot 20's cache, so a second call exercises the cache-hit path --
-    /// and it, too, answers zero decoders, which is the measurement behind D367's "the six readers
-    /// cannot succeed yet".
+    /// `OSSL_DECODER_CTX_new_for_pkey` with a NULL keytype and selection 0 collects **every**
+    /// decoder the activated providers publish: `check_keymgmt` answers 1 for every keymgmt when
+    /// the keytype is NULL, and `does_selection` answers 1 for selection 0 (the authority's
+    /// "takes anything"), so no row is filtered out. Nothing has loaded a provider in this test,
+    /// so `ossl_method_construct` activates only the fallback -- `default` -- and the setup finds
+    /// exactly the seventy `decode_der2key.c` rows that 10.1 landed. (`base`, `is_fallback = 0`,
+    /// is not activated and its mirror table is not reached; `input_type = "PEM"` does not filter
+    /// here because `collect_decoder` gates on `does_selection` alone.) The template is inserted
+    /// into slot 20's cache, so a second call exercises the cache-hit path and answers the same
+    /// seventy.
     #[test]
-    fn new_for_pkey_answers_a_context_with_no_decoders() {
+    fn new_for_pkey_collects_the_seventy_decoder_rows() {
         use crate::decoder_lib::OSSL_DECODER_CTX_get_num_decoders;
         use crate::decoder_meth::OSSL_DECODER_CTX_free;
 
         let mut slot: *mut EvpPkey = ptr::null_mut();
         for _ in 0..2 {
-            // SAFETY: `slot` is this frame's own pointer slot, and with no provider decoder the
-            // context is built with an empty chain, so `slot` is never dereferenced.
+            // SAFETY: `slot` is this frame's own pointer slot; the collected decoders do not write
+            // it, so it is never dereferenced.
             let ctx = unsafe {
                 OSSL_DECODER_CTX_new_for_pkey(
                     ptr::addr_of_mut!(slot),
@@ -1656,7 +1661,11 @@ mod tests {
             assert!(!ctx.is_null());
             // SAFETY: `ctx` is this test's own.
             unsafe {
-                assert_eq!(OSSL_DECODER_CTX_get_num_decoders(ctx), 0);
+                assert_eq!(
+                    OSSL_DECODER_CTX_get_num_decoders(ctx),
+                    70,
+                    "the default provider's seventy decode_der2key.c rows"
+                );
                 OSSL_DECODER_CTX_free(ctx);
             }
         }

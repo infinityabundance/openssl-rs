@@ -2166,10 +2166,11 @@ unsafe extern "C" fn deflt_query(
         // unimplemented and absent.
         return crate::provider::encode_key2text::DEFLT_ENCODERS.as_ptr();
     }
-    if operation_id == crate::provider::decode_epki2pki::OSSL_OP_DECODER {
-        // `defltprov.c:725` returns `deflt_decoder`, of which 10.1 publishes the one
-        // `EncryptedPrivateKeyInfo` row; the other 74 decoder rows are still unimplemented.
-        return crate::provider::decode_epki2pki::DEFLT_DECODERS.as_ptr();
+    if operation_id == crate::provider::decode_der2key::OSSL_OP_DECODER {
+        // `defltprov.c:725` returns `deflt_decoder`, the crate's own `DEFLT_DECODERS` -- the
+        // sixty-nine `decode_der2key.c` rows and the one `EncryptedPrivateKeyInfo` row 10.1 has
+        // published; the other six decoder rows are still unimplemented and absent.
+        return crate::provider::decode_der2key::DEFLT_DECODERS.as_ptr();
     }
     ptr::null()
 }
