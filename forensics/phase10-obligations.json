@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 272,
       "deferred_to_later_phase": 0,
-      "implemented": 157,
-      "open_in_this_stratum": 141,
+      "implemented": 161,
+      "open_in_this_stratum": 137,
       "owned": 298,
       "received_by_handoff": 26
     },
@@ -342,6 +342,9 @@
       "PKCS12_add_friendlyname_uni",
       "PKCS12_add_friendlyname_utf8",
       "PKCS12_add_localkeyid",
+      "PKCS12_add_secret",
+      "PKCS12_decrypt_skey",
+      "PKCS12_decrypt_skey_ex",
       "PKCS12_get_attr",
       "PKCS12_get_attr_gen",
       "PKCS12_get_friendlyname",
@@ -349,6 +352,7 @@
       "PKCS12_item_decrypt_d2i_ex",
       "PKCS12_item_i2d_encrypt",
       "PKCS12_item_i2d_encrypt_ex",
+      "PKCS12_item_pack_safebag",
       "PKCS12_pbe_crypt",
       "PKCS12_pbe_crypt_ex",
       "PKCS8_add_keyusage",
@@ -1039,12 +1043,6 @@
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
-        "symbol": "PKCS12_add_secret"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
         "symbol": "PKCS12_create"
       },
       {
@@ -1058,18 +1056,6 @@
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
         "symbol": "PKCS12_create_ex2"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_decrypt_skey"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_decrypt_skey_ex"
       },
       {
         "declaring_header": "pkcs12.h",
@@ -1106,12 +1092,6 @@
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
         "symbol": "PKCS12_it"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_item_pack_safebag"
       },
       {
         "declaring_header": "pkcs12.h",
@@ -1353,17 +1333,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e107afe945c0c72ff8c0c6f86519cf84a31ad96153e84eca55aaf327e5b6a67f"
+      "sha256": "d01d8c922ae886c5a8243e5b70442284edcdd48a0bfacaf0ffe4e4231efac16c"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "e84afe68edeed004ddf237a431b0d8d5913fa3d7129a5506adc88935794e2692"
+      "sha256": "60b307a9e39a2496b0fe72b14643b6c4a7e31a27829f80244e8a5c23a77dcb96"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "145a30a87717416aa926cff1e916ea6f820d91b53a1676d620661c03412ddb6b"
+      "sha256": "2f36f4773e44a2d102d46efd85de2ea3a0dce741fa3fadda0e35c7658a3cea39"
     }
   ],
   "kind": "phase10-obligations",

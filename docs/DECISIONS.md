@@ -31143,6 +31143,73 @@ clean; phase 10 reads two courts and 1,462 observations. `forensics/phase10-obli
 and `forensics/tools/phase10_courts.py` change; and the atlases, the census and
 `forensics/regression-baseline.json` are regenerated.
 
+## D438 -- 10.6 lands 24 of 26 hand-offs, `RT-KEYFORMAT` becomes a court, and two pre-existing divergences surface
+
+Subphase 10.6 is the 26 symbols phases 5 and 7 handed forward, and **24 of them land**: `src/asn1/i2d_evp.rs`
+(5), `src/asn1/d2i_pr.rs` (4), `src/pem/pvkfmt.rs` (10), `src/pem/pem_pkey.rs` (1) and `src/pem/pem_pk8.rs`
+(4), each transcribed against the authority with its bytes and its error coordinates. Two are **held
+open** with a measured reason: `i2d_PKCS8PrivateKey_nid_bio`/`_fp` have no unencrypted arm at all -- every
+path calls `PKCS8_encrypt` (`crypto/pkcs12/p12_p8e.c`), which is 10.4's and open -- so they are
+`arm_reference` (address-only) in the court rather than claimed. Both `forensics/prerequisites.json`
+`units` records naming `d2i_pr.c` and `i2d_evp.c` are retired, and a **third** record the brief did not
+name had to retire with them: the `d2i_PrivateKey` deferral, which `prerequisite_gate.py` reported
+`stale_deferral` the moment the symbol was built.
+
+**This is the first slice where the ledger moves, because these are exports and not provider rows.**
+`forensics/phase10-obligations.json` goes from `owned=298 implemented=87 open=211` to **`implemented=111
+open=187`**: 24 exports discharged, and the 2 held ones are named rather than counted. The provider side
+moves too, because 10.6 unblocks three 10.1 units: `src/provider/encode_key2ms.rs` (4 tables/8 rows),
+`decode_msblob2key.rs` (2/4) and `decode_pvk2key.rs` (2/4) land, taking Phase 10's provider rows from
+`implemented 202` to **`218 / 636`** with 418 open.
+
+**`RT-KEYFORMAT` is a real court** (`courts/phase10/rt_keyformat_probe.c` plus its key header), out of
+`PENDING_COURTS` and into `phase10_courts.py`, with **256 observations**: the encoding bytes for fixed
+keys, the refusal arms with their coordinates, and **both** arms of the readers, because
+`d2i_PrivateKey`/`d2i_AutoPrivateKey` try the provider path first and fall back to the legacy one
+(`crypto/asn1/d2i_pr.c:172-175`, `:247-250`) and a probe that drove only the provider path would measure
+half the function. `RT-CODEC` grows from 1,375 to **1,487 observations** for the three new units' rows,
+and `court_coverage.py` reads phase 10 as 111 implemented, 111 direct (48 called, 63 referenced), 0
+non-observable.
+
+**Two instrument defects were found and fixed on the way, and one of them was a vacuous pass.** The
+previous slice's `RT-CODEC` extension for these three units was **not actually present**: the rows were
+being matched only by the `"RSA"`/`"DSA"` name literals, so the coverage join passed without driving
+them. That is the class this project keeps finding -- a reader answering a smaller question than it was
+asked -- and it is repaired rather than re-checked. Separately, `cargo fmt` re-wrapped the long
+`implementation: ...FUNCTIONS.as_ptr().cast()` rows, which the census reader cannot parse
+(`DEFLT_ENCODERS has 35 aliased row(s) and the reader found 31`); the tables are now imported so each row
+stays on one line.
+
+**Two pre-existing divergences surfaced, and neither is fixed by this slice.** First,
+`EVP_PKEY_get_id` returns `EVP_PKEY_KEYMGMT` for a provider key instead of the real NID
+(`src/evp/pkey.rs:770`). **That is `D-PKEY-AMETH-1`'s subject**, and D427 classified that entry `fixed` on
+the register's own "superseded by D-PKEY-AMETH-3" text; if this observation holds, that classification
+is **wrong and must be re-measured** rather than left as a machine-recorded truth -- it is the first
+case the divergence machinery's own record has been contradicted, and it is named here so it is not
+lost. Second, the Phase 8 `i2d_ECPrivateKey` emits `0x20`/`0x21` for the `[0]`/`[1]` explicit tags where
+the authority emits `0xa0`/`0xa1` (`old_ec_priv_encode`), which is why `RT-KEYFORMAT`'s EC private
+spellings are held rather than enabled: a byte comparison there would measure that Phase 8 defect, not
+this subphase's work. Transcribing `pvkfmt.c` also made two internals visible
+(`b2i_DSA_PVK_bio`/`b2i_RSA_PVK_bio`), so the gate's `sealed_census` rises 50 to 52, recorded as an
+approved `prerequisite_transitions` row the way D314 did.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count and serially are both **1064 passed, 0 failed**. `run_courts.py`,
+`court_coverage.py` and `provider_court_coverage.py` clean (539 implemented, 539 directly courted, 0
+unmatched); `gen_err_raise_sites.py` reads 4,230 sites with 0 unattributed. Phase 9 `complete`, Phase 10
+`in-progress`; `PIPELINE OK` exit 0 twice, at 106 courts and 41,922 observations.
+
+### Movement
+
+`src/asn1/i2d_evp.rs`, `src/pem/pvkfmt.rs`, `src/pem/pem_pk8.rs`,
+`src/provider/{encode_key2ms,decode_msblob2key,decode_pvk2key}.rs` and `courts/phase10/rt_keyformat_probe.c`
+(with its key header) are added; `src/asn1/{d2i_pr,mod}.rs`, `src/decoder_meth.rs`, `src/evp/evp_pkey.rs`,
+`src/pem/{mod,pem_pkey}.rs`, `src/provider/{decode_der2key,encode_key2text,mod}.rs`, `src/runtime/err_sites.rs`,
+`courts/phase10/rt_codec_probe.c` and `forensics/tools/{dispatch_court,gen_err_raise_sites,phase10_courts}.py`
+change; `forensics/{prerequisites,ownership-transitions}.json` change; and the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
 ## D439 -- the two divergences D438 surfaced are both real, both are repaired, and the register's `fixed` was contradicted before it was earned
 
 D438 named two pre-existing divergences and said neither was fixed by that slice. This slice re-measures
@@ -31261,70 +31328,57 @@ wires them; `src/runtime/err_sites.rs`, `courts/phase10/rt_pkcs12_probe.c`,
 `forensics/tools/{gen_err_raise_sites,phase10_courts}.py` change; and the ledgers, the atlases, the census
 and `forensics/regression-baseline.json` are regenerated.
 
-## D438 -- 10.6 lands 24 of 26 hand-offs, `RT-KEYFORMAT` becomes a court, and two pre-existing divergences surface
+## D441 -- 10.3 lands 4 of 31, and the reason is a stratum-ordering defect: the PKCS#12 container needs Phase 12's `PKCS7`
 
-Subphase 10.6 is the 26 symbols phases 5 and 7 handed forward, and **24 of them land**: `src/asn1/i2d_evp.rs`
-(5), `src/asn1/d2i_pr.rs` (4), `src/pem/pvkfmt.rs` (10), `src/pem/pem_pkey.rs` (1) and `src/pem/pem_pk8.rs`
-(4), each transcribed against the authority with its bytes and its error coordinates. Two are **held
-open** with a measured reason: `i2d_PKCS8PrivateKey_nid_bio`/`_fp` have no unencrypted arm at all -- every
-path calls `PKCS8_encrypt` (`crypto/pkcs12/p12_p8e.c`), which is 10.4's and open -- so they are
-`arm_reference` (address-only) in the court rather than claimed. Both `forensics/prerequisites.json`
-`units` records naming `d2i_pr.c` and `i2d_evp.c` are retired, and a **third** record the brief did not
-name had to retire with them: the `d2i_PrivateKey` deferral, which `prerequisite_gate.py` reported
-`stale_deferral` the moment the symbol was built.
+Subphase 10.3 is the PKCS#12 container construction, and **4 of its 31 exports land**:
+`PKCS12_item_pack_safebag` (the first half of 10.2's `create_cert`/`create_crl` blocker),
+`PKCS12_decrypt_skey` and its `_ex` twin, and `PKCS12_add_secret`. The ledger moves from
+`implemented=157 open=141` to **`implemented=161 open=137`**, and `gen_err_raise_sites.py` gains
+`crypto/pkcs12/p12_add.c` under a distinct `PKCS12_ADD` stem because the `PKCS12` stem's line numbers
+collide (4,238 to 4,253 sites, 0 unattributed).
 
-**This is the first slice where the ledger moves, because these are exports and not provider rows.**
-`forensics/phase10-obligations.json` goes from `owned=298 implemented=87 open=211` to **`implemented=111
-open=187`**: 24 exports discharged, and the 2 held ones are named rather than counted. The provider side
-moves too, because 10.6 unblocks three 10.1 units: `src/provider/encode_key2ms.rs` (4 tables/8 rows),
-`decode_msblob2key.rs` (2/4) and `decode_pvk2key.rs` (2/4) land, taking Phase 10's provider rows from
-`implemented 202` to **`218 / 636`** with 418 open.
+**The other twenty-seven are blocked outside the subphase, and the dominant blocker is a defect in the
+plan rather than in the work.** `PKCS12_pack_p7data`/`unpack_p7data`, `PKCS12_pack_p7encdata(_ex)`,
+`PKCS12_pack_authsafes`/`unpack_authsafes`, `PKCS12_add_safe(_ex)`, `PKCS12_add_safes(_ex)`,
+`PKCS12_create(_ex/_ex2)`, `PKCS12_mac_present`/`get0_mac`/`setup_mac`, `PKCS12_init(_ex)` and
+`PKCS12_newpass` all need **Phase 12's `PKCS7` object** (`crypto/pkcs7/pk7_asn1.c`), because the `PFX`
+structure's `authsafes` column *is* a `PKCS7` and no `PKCS12` object can be built without one. Others need
+Phase 11's `X509_it`/`X509_CRL_it`/`EVP_PKEY2PKCS8` (the `get1_cert`/`get1_crl` spellings and
+`PKCS12_add_key(_ex)`), 10.4's `PKCS8_encrypt` and `PKCS12_key_gen_utf8_ex` (the shrouded-key and MAC
+setters), and Phase 11's `PKCS5_pbe*set*_ex` (the two `p7encdata` spellings). **The structural finding:
+Phase 10's ordering above Phase 12 does not match its dependency on Phase 12.** The plan's §2 put PKCS#12
+in 10 and PKCS#7 in 12, and for the container the dependency runs the other way.
 
-**`RT-KEYFORMAT` is a real court** (`courts/phase10/rt_keyformat_probe.c` plus its key header), out of
-`PENDING_COURTS` and into `phase10_courts.py`, with **256 observations**: the encoding bytes for fixed
-keys, the refusal arms with their coordinates, and **both** arms of the readers, because
-`d2i_PrivateKey`/`d2i_AutoPrivateKey` try the provider path first and fall back to the legacy one
-(`crypto/asn1/d2i_pr.c:172-175`, `:247-250`) and a probe that drove only the provider path would measure
-half the function. `RT-CODEC` grows from 1,375 to **1,487 observations** for the three new units' rows,
-and `court_coverage.py` reads phase 10 as 111 implemented, 111 direct (48 called, 63 referenced), 0
-non-observable.
+**What that means is flagged rather than chosen.** Either Phase 10 stays `in-progress` until Phase 12
+lands `PKCS7` -- which the sequential model permits but makes "one stratum at a time" false for these
+rows -- or a `PKCS7` subset is pulled forward, which reorders the plan and is not a decision an
+implementing slice should take alone. D440's version of the same finding (the `PFX` container cannot be
+byte-comparable in 10.2) is its first symptom. Nothing was stubbed and no `PKCS7` was fabricated.
 
-**Two instrument defects were found and fixed on the way, and one of them was a vacuous pass.** The
-previous slice's `RT-CODEC` extension for these three units was **not actually present**: the rows were
-being matched only by the `"RSA"`/`"DSA"` name literals, so the coverage join passed without driving
-them. That is the class this project keeps finding -- a reader answering a smaller question than it was
-asked -- and it is repaired rather than re-checked. Separately, `cargo fmt` re-wrapped the long
-`implementation: ...FUNCTIONS.as_ptr().cast()` rows, which the census reader cannot parse
-(`DEFLT_ENCODERS has 35 aliased row(s) and the reader found 31`); the tables are now imported so each row
-stays on one line.
-
-**Two pre-existing divergences surfaced, and neither is fixed by this slice.** First,
-`EVP_PKEY_get_id` returns `EVP_PKEY_KEYMGMT` for a provider key instead of the real NID
-(`src/evp/pkey.rs:770`). **That is `D-PKEY-AMETH-1`'s subject**, and D427 classified that entry `fixed` on
-the register's own "superseded by D-PKEY-AMETH-3" text; if this observation holds, that classification
-is **wrong and must be re-measured** rather than left as a machine-recorded truth -- it is the first
-case the divergence machinery's own record has been contradicted, and it is named here so it is not
-lost. Second, the Phase 8 `i2d_ECPrivateKey` emits `0x20`/`0x21` for the `[0]`/`[1]` explicit tags where
-the authority emits `0xa0`/`0xa1` (`old_ec_priv_encode`), which is why `RT-KEYFORMAT`'s EC private
-spellings are held rather than enabled: a byte comparison there would measure that Phase 8 defect, not
-this subphase's work. Transcribing `pvkfmt.c` also made two internals visible
-(`b2i_DSA_PVK_bio`/`b2i_RSA_PVK_bio`), so the gate's `sealed_census` rises 50 to 52, recorded as an
-approved `prerequisite_transitions` row the way D314 did.
+**`RT-PKCS12` grows from 102 to 146 observations, and it grows honestly.** Four exports became real
+observations (17 lines): `item_pack_safebag` packing a fixed `PKCS8_PRIV_KEY_INFO` as a `certBag` with
+its nids and DER, the two `decrypt_skey` spellings printing the NULL return and the error coordinate for
+a non-PBE shrouded bag, and `add_secret` printing the stack count, the nids and the bag's DER. **Zero of
+the eighteen already-`pending` rows became driven**, because every one is blocked the same way;
+`create_cert`/`create_crl` changed blocker text from `phase-10.3` to `phase-11-x509` as 10.3's half
+landed, which is what a blocker field should show. **Twenty-seven new `pending.*` lines were added** for
+the open 10.3 exports so that "not driven" cannot read as "passed". `CT-PKCS12` stays pending for a
+measured reason: 10.3's closure holds nothing vector-checkable (an ASN.1 packer, a shrouded-key reader
+and an `add_*` builder), and the KDF/PBE corpus is 10.4's, so no corpus was invented to make a
+correctness court exist.
 
 ### Verification
 
-`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
-the default thread count and serially are both **1064 passed, 0 failed**. `run_courts.py`,
-`court_coverage.py` and `provider_court_coverage.py` clean (539 implemented, 539 directly courted, 0
-unmatched); `gen_err_raise_sites.py` reads 4,230 sites with 0 unattributed. Phase 9 `complete`, Phase 10
-`in-progress`; `PIPELINE OK` exit 0 twice, at 106 courts and 41,922 observations.
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` is
+**1074 passed, 0 failed** at the default thread count and serially. `run_courts.py` is `ok` over nine
+phases; `court_coverage.py` reads phase 10 as 161 implemented and 161 direct (98 called, 63 referenced)
+with 0 unmatched; `provider_court_coverage.py` reads 539/539. Phase 9 `complete`, Phase 10 `in-progress`;
+`PIPELINE OK` exit 0 twice, at 107 courts and 42,154 observations.
 
 ### Movement
 
-`src/asn1/i2d_evp.rs`, `src/pem/pvkfmt.rs`, `src/pem/pem_pk8.rs`,
-`src/provider/{encode_key2ms,decode_msblob2key,decode_pvk2key}.rs` and `courts/phase10/rt_keyformat_probe.c`
-(with its key header) are added; `src/asn1/{d2i_pr,mod}.rs`, `src/decoder_meth.rs`, `src/evp/evp_pkey.rs`,
-`src/pem/{mod,pem_pkey}.rs`, `src/provider/{decode_der2key,encode_key2text,mod}.rs`, `src/runtime/err_sites.rs`,
-`courts/phase10/rt_codec_probe.c` and `forensics/tools/{dispatch_court,gen_err_raise_sites,phase10_courts}.py`
-change; `forensics/{prerequisites,ownership-transitions}.json` change; and the atlases, the census and
-`forensics/regression-baseline.json` are regenerated.
+`src/pkcs12/p12_add.rs` and `src/pkcs12/p12_crt.rs` are added and wired in `src/pkcs12/mod.rs`;
+`src/runtime/err_sites.rs`, `courts/phase10/rt_pkcs12_probe.c`,
+`forensics/tools/{gen_err_raise_sites,phase10_courts}.py` change; and the ledgers, the atlases, the census
+and `forensics/regression-baseline.json` are regenerated.
+

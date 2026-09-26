@@ -30,7 +30,7 @@ renderer does not know any phase status.
 | 7 | EVP framework | `complete` |  |
 | 8 | Native cryptographic primitives | `complete` |  |
 | 9 | RAND / DRBG + entropy | `complete` |  |
-| 10 | Key formats + PKCS + STORE | `in-progress` | 141 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4) |
+| 10 | Key formats + PKCS + STORE | `in-progress` | 137 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4) |
 
 Not started: strata 11-21 (11 total).
 
@@ -85,9 +85,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 3033 | 2863 |
+| libcrypto | 5896 | 3037 | 2859 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **3033** | **3466** |
+| **total** | **6499** | **3037** | **3462** |
 
 ### Phase 10 obligation ledger
 
@@ -97,9 +97,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 10 working set: 298
-* implemented: 157
+* implemented: 161
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 141
+* open in this stratum: 137
 
 Hand-offs from phase 5 discharged by this stratum: `b2i_PVK_bio`, `b2i_PVK_bio_ex`, `b2i_PrivateKey`, `b2i_PrivateKey_bio`, `b2i_PublicKey`, `b2i_PublicKey_bio`, `d2i_PKCS8PrivateKey_bio`, `d2i_PKCS8PrivateKey_fp`, `i2b_PVK_bio`, `i2b_PVK_bio_ex`, `i2b_PrivateKey_bio`, `i2b_PublicKey_bio`, `i2d_PKCS8PrivateKey_bio`, `i2d_PKCS8PrivateKey_fp`, `i2d_PKCS8PrivateKey_nid_bio`, `i2d_PKCS8PrivateKey_nid_fp`
 

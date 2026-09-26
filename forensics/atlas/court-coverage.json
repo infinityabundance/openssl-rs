@@ -2546,6 +2546,7 @@
             "courts": [
               "RT-ASN1-TEMPLATE",
               "RT-CONF",
+              "RT-PKCS12",
               "RT-STACK"
             ],
             "symbol": "OPENSSL_sk_num"
@@ -2561,6 +2562,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-PKCS12",
               "RT-STACK"
             ],
             "symbol": "OPENSSL_sk_pop_free"
@@ -21723,10 +21725,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 157,
-          "directly_courted_called": 94,
+          "directly_courted": 161,
+          "directly_courted_called": 98,
           "directly_courted_referenced": 63,
-          "implemented": 157,
+          "implemented": 161,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -22566,6 +22568,27 @@
             "courts": [
               "RT-PKCS12"
             ],
+            "symbol": "PKCS12_add_secret"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_decrypt_skey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_decrypt_skey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
             "symbol": "PKCS12_get_attr"
           },
           {
@@ -22609,6 +22632,13 @@
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "PKCS12_item_i2d_encrypt_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_item_pack_safebag"
           },
           {
             "basis": "referenced",
@@ -22863,10 +22893,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2872,
-      "directly_courted_called": 2543,
+      "directly_courted": 2876,
+      "directly_courted_called": 2547,
       "directly_courted_referenced": 329,
-      "implemented": 2880,
+      "implemented": 2884,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -22877,7 +22907,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3ca4e3380d19f7b5fcda0960796aaea9e603d53874182af5f672f4869e7c4dec"
+      "sha256": "ae602a9953cec451c31cf0063c6f9a682e83445c2d4b2f1985b7f797567353b6"
     },
     {
       "name": "symbol-ownership",
@@ -22892,7 +22922,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "734d5683c042ed6de4a0e31d284a1574b0fd4981bfc80a55b710d2a2ae9a98d8"
+      "sha256": "158e3823f1536be8c455eef48811db3f3376c1c7d2683ca56a793aaa55c1115a"
     },
     {
       "name": "phase3-courts",
@@ -22902,7 +22932,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "16252998b02d6fd1b77137f8e02da13723659a6869addfca010cd4bca916a7f9"
+      "sha256": "4837e3a90cb3c5bcfc0fbc4c0c3bd505735063f14d0a8f305697c1369c6b6d12"
     },
     {
       "name": "phase4-courts",
@@ -22912,7 +22942,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "e84afe68edeed004ddf237a431b0d8d5913fa3d7129a5506adc88935794e2692"
+      "sha256": "60b307a9e39a2496b0fe72b14643b6c4a7e31a27829f80244e8a5c23a77dcb96"
     },
     {
       "name": "phase5-courts",
@@ -22922,7 +22952,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "4a4a91efd1f550318bd98321b8725db72f960daaad867ba98d9304ae0f4bd8a8"
+      "sha256": "48c7b897a467f14cc6b864752a29bf00e86dc85a806834bc3babe3e5d6d8bcfb"
     },
     {
       "name": "phase6-courts",
@@ -22932,7 +22962,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "145a30a87717416aa926cff1e916ea6f820d91b53a1676d620661c03412ddb6b"
+      "sha256": "2f36f4773e44a2d102d46efd85de2ea3a0dce741fa3fadda0e35c7658a3cea39"
     },
     {
       "name": "phase7-courts",
@@ -22942,7 +22972,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "927efd6ef5581990b12d0132597c2cdc14a09058370f32034bf4e3ea7d029db1"
+      "sha256": "a09bea22d7b6c015d3a5b1c718ea522936265cae8ef931acc3d98a19a8e4d1e3"
     },
     {
       "name": "phase8-courts",
@@ -22952,7 +22982,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "995b171d355b2d0b9e3e60c920ea693faa6ecf53cd8326dc1dcd2324e2167c08"
+      "sha256": "a9e410e1b4b133fb931a4401e5f550e68b1cbe9f09431e8c418fdf3a9ccfb645"
     },
     {
       "name": "phase9-courts",
@@ -22962,12 +22992,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "079b0777a0aa940d889664026193d2f68ab43bb7e34d17263ae5ca93d15131e5"
+      "sha256": "989a7aa1dd65d336bf6bbd14ebb0201fa7737b103014db3ad5787815e62cb171"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "19963af2788c3c47ae473a8990a7a3baf60290655b3de24a9521f7daaa9288ba"
+      "sha256": "6a07e44c1db9c467789b194a2b5af152f5515b53aebfb117ca4b92a9e969c8f4"
     }
   ],
   "kind": "court-coverage",

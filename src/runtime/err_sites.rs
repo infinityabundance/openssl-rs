@@ -41412,6 +41412,156 @@ pub(crate) const PKCS12_237: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `PKCS12_item_pack_safebag` at `crypto/pkcs12/p12_add.c:27` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_ADD_27: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 27,
+    func: c"PKCS12_item_pack_safebag",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_pack_safebag` at `crypto/pkcs12/p12_add.c:32` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_ADD_32: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 32,
+    func: c"PKCS12_item_pack_safebag",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_item_pack_safebag` at `crypto/pkcs12/p12_add.c:36` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_ADD_36: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 36,
+    func: c"PKCS12_item_pack_safebag",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pack_p7data` at `crypto/pkcs12/p12_add.c:54` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_ADD_54: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 54,
+    func: c"PKCS12_pack_p7data",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pack_p7data` at `crypto/pkcs12/p12_add.c:59` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_ADD_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 59,
+    func: c"PKCS12_pack_p7data",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pack_p7data` at `crypto/pkcs12/p12_add.c:64` (PKCS12_R_CANT_PACK_STRUCTURE).
+pub(crate) const PKCS12_ADD_64: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 64,
+    func: c"PKCS12_pack_p7data",
+    lib: 35,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_unpack_p7data` at `crypto/pkcs12/p12_add.c:78` (PKCS12_R_CONTENT_TYPE_NOT_DATA).
+pub(crate) const PKCS12_ADD_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 78,
+    func: c"PKCS12_unpack_p7data",
+    lib: 35,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_unpack_p7data` at `crypto/pkcs12/p12_add.c:83` (PKCS12_R_DECODE_ERROR).
+pub(crate) const PKCS12_ADD_83: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 83,
+    func: c"PKCS12_unpack_p7data",
+    lib: 35,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pack_p7encdata_ex` at `crypto/pkcs12/p12_add.c:105` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_ADD_105: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 105,
+    func: c"PKCS12_pack_p7encdata_ex",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pack_p7encdata_ex` at `crypto/pkcs12/p12_add.c:109` (PKCS12_R_ERROR_SETTING_ENCRYPTED_DATA_TYPE).
+pub(crate) const PKCS12_ADD_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 109,
+    func: c"PKCS12_pack_p7encdata_ex",
+    lib: 35,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pack_p7encdata_ex` at `crypto/pkcs12/p12_add.c:126` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_ADD_126: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 126,
+    func: c"PKCS12_pack_p7encdata_ex",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_pack_p7encdata_ex` at `crypto/pkcs12/p12_add.c:134` (PKCS12_R_ENCRYPT_ERROR).
+pub(crate) const PKCS12_ADD_134: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 134,
+    func: c"PKCS12_pack_p7encdata_ex",
+    lib: 35,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_unpack_p7encdata` at `crypto/pkcs12/p12_add.c:162` (PKCS12_R_DECODE_ERROR).
+pub(crate) const PKCS12_ADD_162: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 162,
+    func: c"PKCS12_unpack_p7encdata",
+    lib: 35,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_unpack_authsafes` at `crypto/pkcs12/p12_add.c:202` (PKCS12_R_CONTENT_TYPE_NOT_DATA).
+pub(crate) const PKCS12_ADD_202: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 202,
+    func: c"PKCS12_unpack_authsafes",
+    lib: 35,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_unpack_authsafes` at `crypto/pkcs12/p12_add.c:207` (PKCS12_R_DECODE_ERROR).
+pub(crate) const PKCS12_ADD_207: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_add.c",
+    line: 207,
+    func: c"PKCS12_unpack_authsafes",
+    lib: 35,
+    reason: 101,
+    dynamic_reason: false,
+};
+
 /// `X509at_get_attr` at `crypto/x509/x509_att.c:59` (ERR_R_PASSED_NULL_PARAMETER).
 pub(crate) const X509_ATT_59: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
@@ -46561,6 +46711,21 @@ pub(crate) static ALL: &[ErrSite] = &[
     PKCS12_202,
     PKCS12_221,
     PKCS12_237,
+    PKCS12_ADD_27,
+    PKCS12_ADD_32,
+    PKCS12_ADD_36,
+    PKCS12_ADD_54,
+    PKCS12_ADD_59,
+    PKCS12_ADD_64,
+    PKCS12_ADD_78,
+    PKCS12_ADD_83,
+    PKCS12_ADD_105,
+    PKCS12_ADD_109,
+    PKCS12_ADD_126,
+    PKCS12_ADD_134,
+    PKCS12_ADD_162,
+    PKCS12_ADD_202,
+    PKCS12_ADD_207,
     X509_ATT_59,
     X509_ATT_63,
     X509_ATT_72,

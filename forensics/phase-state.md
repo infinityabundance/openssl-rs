@@ -18,7 +18,7 @@ enforced here:
 | 7 | EVP framework | `complete` |  |
 | 8 | Native cryptographic primitives | `complete` |  |
 | 9 | RAND / DRBG + entropy | `complete` |  |
-| 10 | Key formats + PKCS + STORE | `in-progress` | 141 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4) |
+| 10 | Key formats + PKCS + STORE | `in-progress` | 137 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4) |
 | 11 | X.509 + verification | `not-started` | not started |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | not started |
 | 13 | Legacy / deprecated compatibility | `not-started` | not started |

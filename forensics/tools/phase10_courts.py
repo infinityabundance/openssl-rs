@@ -89,11 +89,12 @@ COURTS: list[tuple[str, str]] = [
     # 10.6's behavioural court: the twenty-six `d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names
     # the five authority units publish, driven with fixed legacy keys and compared byte for byte.
     ("RT-KEYFORMAT", "rt_keyformat_probe.c"),
-    # 10.2's behavioural court: the `PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups
-    # `p12_asn.c` lands, the `SafeBag` accessors and constructors `p12_sbag.c` lands, the
-    # attribute helpers of `p12_attr.c` and the Unicode conversions of `p12_utl.c`, driven
-    # through the public `pkcs12.h` surface and compared as DER bytes rather than a parsed
-    # structure (docs/PHASE-10-SUBPHASES.md section 3.2).
+    # 10.2's and 10.3's behavioural court: the `PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA`
+    # item groups `p12_asn.c` lands, the `SafeBag` accessors and constructors `p12_sbag.c`
+    # lands, the attribute helpers of `p12_attr.c` and the Unicode conversions of `p12_utl.c`,
+    # plus 10.3's `PKCS12_item_pack_safebag`, the two `PKCS12_decrypt_skey` spellings and
+    # `PKCS12_add_secret`, driven through the public `pkcs12.h` surface and compared as DER bytes
+    # rather than a parsed structure (docs/PHASE-10-SUBPHASES.md section 3.2).
     ("RT-PKCS12", "rt_pkcs12_probe.c"),
 ]
 
@@ -105,7 +106,12 @@ PENDING_COURTS: dict[str, str] = {
                  "tree already carries: `test/recipes/30-test_evp_data/evppbe_pkcs12.txt` and "
                  "its `evppbe_pbkdf2.txt` sibling, with the `80-test_pkcs12.t` recipe data. "
                  "Candidate-only, like every `CT-*` court (docs/DECISIONS.md D201); no network "
-                 "fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md).",
+                 "fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md). **10.3's "
+                 "closure was checked against this court and has nothing vector-checkable**: its "
+                 "four landed exports are the ASN.1 `SafeBag` packer, a shrouded-key reader and "
+                 "`PKCS12_add_secret`, and its remaining rows are the `PKCS7`/`X509`/'EVP_PKEY' "
+                 "container builders that reach no KDF or PBE vector, so registering a corpus "
+                 "here would invent one rather than measure it.",
     "RT-STORE": "10.5 -- `OSSL_STORE_open(_ex)` and the `file` loader, the `OSSL_STORE_INFO` "
                 "type and its constructor/accessor family, the `OSSL_STORE_LOADER` object and "
                 "its registry, and the `OSSL_STORE_SEARCH` family: the `OSSL_STORE_INFO` type "
@@ -305,18 +311,26 @@ def main(argv: list[str]) -> int:
             "keys, compares the exact bytes and each malformed-input arm's error queue, and "
             "references the two `i2d_PKCS8PrivateKey_nid_*` writers held pending because "
             "`PKCS8_encrypt` (10.4) is unlanded. "
-            "`RT-PKCS12` is 10.2's behavioural court: it builds the `PKCS12_SAFEBAG`/"
+            "`RT-PKCS12` is 10.2's and 10.3's behavioural court: it builds the `PKCS12_SAFEBAG`/"
             "`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups from fixed inputs and fixed hand-written "
             "DER fixtures, prints their bytes, and drives the `SafeBag` accessor surface, the "
             "attribute helpers and the `OPENSSL_{asc2uni,uni2asc,utf82uni,uni2utf8}` conversions, "
             "the ownership adoption of the `create0_*` constructors and the refusal arms with "
-            "their error coordinates. **It does not cover the `PKCS12` container itself**: "
+            "their error coordinates. Since 10.3 it also drives the four exports of that subphase "
+            "whose closure is landed -- `PKCS12_item_pack_safebag` (a fixed `PKCS8_PRIV_KEY_INFO` "
+            "packed as a `certBag`, printed as DER), the two `PKCS12_decrypt_skey` spellings (a "
+            "shrouded key bag with a non-PBE algorithm, whose refusal and error coordinate are "
+            "the observation) and `PKCS12_add_secret` (the `add_*` surface and the stack it "
+            "builds). **It does not cover the `PKCS12` container itself**: "
             "`PKCS12_it`/`_new`/`_free`, `d2i_PKCS12`/`i2d_PKCS12`, `PKCS12_AUTHSAFES_it` and the "
             "four `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp` spellings are held open on Phase 12's "
-            "`PKCS7_it`, the four `PKCS12_SAFEBAG_get1_*` readers on Phase 11's `X509_it`, and "
-            "the three `PKCS12_SAFEBAG_create_{cert,crl,pkcs8_encrypt*}` spellings on 10.3/10.4; "
-            "the probe prints each as `pending.` with its blocker rather than driving a "
-            "fabricated arm (docs/PHASE-10-SUBPHASES.md section 3.5)."
+            "`PKCS7_it`; the four `PKCS12_SAFEBAG_get1_*` readers and the `create_cert`/"
+            "`create_crl` pair on Phase 11's `X509_it`; `PKCS12_add_key*` on Phase 11's "
+            "`EVP_PKEY2PKCS8`; the three `create_pkcs8_encrypt*` spellings on 10.4; the four MAC "
+            "setters on 10.4's `PKCS12_key_gen_utf8_ex`; and the rest of `p12_crt.c`/`p12_add.c`/"
+            "`p12_init.c`/`p12_npas.c` on Phase 12's `PKCS7`. The probe prints each as `pending.` "
+            "with its blocker rather than driving a fabricated arm "
+            "(docs/PHASE-10-SUBPHASES.md section 3.5)."
         ),
     }
 
