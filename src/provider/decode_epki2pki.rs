@@ -50,7 +50,6 @@ use crate::params::{
 };
 use crate::passphrase::OsslPassphraseCallback;
 use crate::pkcs12::p12_decr::PKCS12_pbe_crypt_ex;
-use crate::provider::activate::OsslAlgorithm;
 use crate::provider::cipher::param_utf8_string;
 use crate::provider::ctx::prov_libctx_of;
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
@@ -62,10 +61,6 @@ use crate::runtime::err::{
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::obj::OBJ_obj2txt;
 use crate::selftest::OsslCallback;
-
-/// `OSSL_OP_DECODER` — `include/openssl/core_dispatch.h:296`. The provider queries name it, and
-/// the census resolves the arm's constant by this final path segment.
-pub(crate) const OSSL_OP_DECODER: c_int = 21;
 
 /// `OSSL_MAX_PROPQUERY_SIZE` — `include/internal/sizes.h:19`.
 const OSSL_MAX_PROPQUERY_SIZE: usize = 256;
@@ -432,8 +427,9 @@ unsafe extern "C" fn epki2pki_decode(
 }
 
 /// `ossl_EncryptedPrivateKeyInfo_der_to_der_decoder_functions[]` —
-/// `decode_epki2pki.c:236-245`. Five named slots and the terminator.
-static ENCRYPTED_PRIVATE_KEY_INFO_DER_FUNCTIONS: [OsslDispatch; 6] = [
+/// `decode_epki2pki.c:236-245`. Five named slots and the terminator. It is `pub(crate)` because
+/// `decode_der2key.rs`'s combined `deflt_decoder[]`/`base_decoder[]` carries it as its last row.
+pub(crate) static ENCRYPTED_PRIVATE_KEY_INFO_DER_FUNCTIONS: [OsslDispatch; 6] = [
     OsslDispatch {
         function_id: OSSL_FUNC_DECODER_NEWCTX,
         function: epki2pki_newctx as *mut c_void,
@@ -457,47 +453,6 @@ static ENCRYPTED_PRIVATE_KEY_INFO_DER_FUNCTIONS: [OsslDispatch; 6] = [
     OsslDispatch {
         function_id: OSSL_DISPATCH_END,
         function: ptr::null_mut(),
-    },
-];
-
-/// The `output=input` property each row carries, with its provider's own prefix.
-const DEFAULT_DECODER_PROPERTY: *const c_char =
-    c"provider=default,fips=yes,input=der,structure=EncryptedPrivateKeyInfo".as_ptr();
-/// The base provider's copy.
-const BASE_DECODER_PROPERTY: *const c_char =
-    c"provider=base,fips=yes,input=der,structure=EncryptedPrivateKeyInfo".as_ptr();
-
-/// `deflt_decoder[]`'s rows this unit publishes — `providers/decoders.inc`'s
-/// `DECODER_w_structure("DER", der, yes, der, EncryptedPrivateKeyInfo)` as `defltprov.c` expands
-/// it. The `DER` name and its property are the row's identity; the census joins on both.
-pub(crate) static DEFLT_DECODERS: [OsslAlgorithm; 2] = [
-    OsslAlgorithm {
-        algorithm_names: c"DER".as_ptr(),
-        property_definition: DEFAULT_DECODER_PROPERTY,
-        implementation: ENCRYPTED_PRIVATE_KEY_INFO_DER_FUNCTIONS.as_ptr().cast(),
-        algorithm_description: ptr::null(),
-    },
-    OsslAlgorithm {
-        algorithm_names: ptr::null(),
-        property_definition: ptr::null(),
-        implementation: ptr::null(),
-        algorithm_description: ptr::null(),
-    },
-];
-
-/// `base_decoder[]`'s copy of the same row, with the base provider's property.
-pub(crate) static BASE_DECODERS: [OsslAlgorithm; 2] = [
-    OsslAlgorithm {
-        algorithm_names: c"DER".as_ptr(),
-        property_definition: BASE_DECODER_PROPERTY,
-        implementation: ENCRYPTED_PRIVATE_KEY_INFO_DER_FUNCTIONS.as_ptr().cast(),
-        algorithm_description: ptr::null(),
-    },
-    OsslAlgorithm {
-        algorithm_names: ptr::null(),
-        property_definition: ptr::null(),
-        implementation: ptr::null(),
-        algorithm_description: ptr::null(),
     },
 ];
 
@@ -537,30 +492,5 @@ mod tests {
             "the decoder table is missing a slot"
         );
         assert_eq!(i, 5);
-    }
-
-    /// The two provider rows carry the same `DER` name and dispatch, and differ only in the
-    /// provider prefix of the property — the base provider's copy of the `default` row.
-    #[test]
-    fn the_two_provider_rows_differ_only_in_their_prefix() {
-        // SAFETY: both pointers are static C strings this module wrote.
-        unsafe {
-            let d = core::ffi::CStr::from_ptr(DEFLT_DECODERS[0].property_definition).to_bytes();
-            let b = core::ffi::CStr::from_ptr(BASE_DECODERS[0].property_definition).to_bytes();
-            assert!(d.starts_with(b"provider=default,"));
-            assert!(b.starts_with(b"provider=base,"));
-            assert_eq!(
-                &d[b"provider=default".len()..],
-                &b[b"provider=base".len()..]
-            );
-            assert_eq!(
-                core::ffi::CStr::from_ptr(DEFLT_DECODERS[0].algorithm_names).to_bytes(),
-                b"DER"
-            );
-        }
-        assert_eq!(
-            DEFLT_DECODERS[0].implementation,
-            BASE_DECODERS[0].implementation
-        );
     }
 }

@@ -40312,6 +40312,86 @@ pub(crate) const PROV_DECODE_EPKI2PKI_179: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `der2key_set_ctx_params_decoder` at `providers/implementations/encode_decode/decode_der2key.c:202` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DECODE_DER2KEY_202: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_der2key.c",
+    line: 202,
+    func: c"der2key_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `der2key_decode` at `providers/implementations/encode_decode/decode_der2key.c:300` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PROV_DECODE_DER2KEY_300: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_der2key.c",
+    line: 300,
+    func: c"der2key_decode",
+    lib: 57,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_d2i_PKCS8` at `providers/implementations/encode_decode/decode_der2key.c:699` (PROV_R_UNEXPECTED_KEY_PARAMETERS).
+pub(crate) const PROV_DECODE_DER2KEY_699: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_der2key.c",
+    line: 699,
+    func: c"slh_dsa_d2i_PKCS8",
+    lib: 57,
+    reason: 249,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_d2i_PUBKEY` at `providers/implementations/encode_decode/decode_der2key.c:751` (PROV_R_BAD_ENCODING).
+pub(crate) const PROV_DECODE_DER2KEY_751: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_der2key.c",
+    line: 751,
+    func: c"slh_dsa_d2i_PUBKEY",
+    lib: 57,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_d2i_PUBKEY` at `providers/implementations/encode_decode/decode_der2key.c:765` (PROV_R_BAD_ENCODING).
+pub(crate) const PROV_DECODE_DER2KEY_765: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_der2key.c",
+    line: 765,
+    func: c"slh_dsa_d2i_PUBKEY",
+    lib: 57,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_d2i_PUBKEY` at `providers/implementations/encode_decode/decode_der2key.c:773` (PROV_R_BAD_ENCODING).
+pub(crate) const PROV_DECODE_DER2KEY_773: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_der2key.c",
+    line: 773,
+    func: c"slh_dsa_d2i_PUBKEY",
+    lib: 57,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_d2i_PUBKEY` at `providers/implementations/encode_decode/decode_der2key.c:779` (PROV_R_BAD_ENCODING).
+pub(crate) const PROV_DECODE_DER2KEY_779: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_der2key.c",
+    line: 779,
+    func: c"slh_dsa_d2i_PUBKEY",
+    lib: 57,
+    reason: 141,
+    dynamic_reason: false,
+};
+
+/// `slh_dsa_d2i_PUBKEY` at `providers/implementations/encode_decode/decode_der2key.c:786` (PROV_R_BAD_ENCODING).
+pub(crate) const PROV_DECODE_DER2KEY_786: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_der2key.c",
+    line: 786,
+    func: c"slh_dsa_d2i_PUBKEY",
+    lib: 57,
+    reason: 141,
+    dynamic_reason: false,
+};
+
 /// `ossl_ml_common_pkcs8_fmt_order` at `providers/implementations/encode_decode/ml_common_codecs.c:83` (PROV_R_ML_DSA_NO_FORMAT).
 pub(crate) const ML_COMMON_CODECS_83: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_common_codecs.c",
@@ -45771,6 +45851,14 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_ENCODE_KEY2BLOB_177,
     PROV_DECODE_EPKI2PKI_88,
     PROV_DECODE_EPKI2PKI_179,
+    PROV_DECODE_DER2KEY_202,
+    PROV_DECODE_DER2KEY_300,
+    PROV_DECODE_DER2KEY_699,
+    PROV_DECODE_DER2KEY_751,
+    PROV_DECODE_DER2KEY_765,
+    PROV_DECODE_DER2KEY_773,
+    PROV_DECODE_DER2KEY_779,
+    PROV_DECODE_DER2KEY_786,
     ML_COMMON_CODECS_83,
     ML_KEM_CODECS_258,
     ML_KEM_CODECS_312,

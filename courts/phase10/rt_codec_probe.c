@@ -46,13 +46,20 @@
  *
  * ## What is not driven, and why
  *
- * The four `RSA`/`RSA-PSS`/`DSA`/`DHX` rows are observed at join 1 only. `RSA` and `DSA` need a
- * full private key or a modulus the probe would have to carry, and `DHX`'s named groups are a
- * different set from `DH`'s. The eighteen PQC text rows are published and driven: ML-KEM and
+ * The four `RSA`/`RSA-PSS`/`DSA`/`DHX` encoder rows are observed at join 1 only. `RSA` and `DSA`
+ * need a full private key or a modulus the probe would have to carry, and `DHX`'s named groups are
+ * a different set from `DH`'s. The eighteen PQC text rows are published and driven: ML-KEM and
  * ML-DSA from the fixed keygen seeds Phase 8's probes carry, and SLH-DSA from the twelve ACVP
  * private keys (`../phase8/ml_kem_probe.h`, `ml_dsa_probe.h`, `slh_dsa_probe.h`). The three codec
- * units' `d2i`/`i2d` half is not reachable from a provider row at all -- only `decode_der2key.c`
- * and `encode_key2any.c` call it, and neither is landed -- so it is named and not driven.
+ * units' `d2i`/`i2d` half is reached by `decode_der2key.c`, which landed with 10.1; the decoder
+ * arms below drive the rows it publishes, and the encoder half (`encode_key2any.c`) is still open.
+ *
+ * ## The `decode_der2key.c` rows
+ *
+ * The sixty-nine `decode_der2key.c` rows and the `decode_epki2pki.c` row they share a table with
+ * are driven in the dedicated section below: identity for all seventy rows in both providers, a
+ * fixed-input behaviour arm wherever the key type's own stratum is landable, and named `pending`
+ * reasons for the rest (docs/PHASE-10-SUBPHASES.md sections 3.1 and 3.5).
  */
 
 #include <stdio.h>
@@ -642,14 +649,443 @@ static void arm_ec_refusal(void)
     EVP_PKEY_free(pkey);
 }
 
+/* ===========================================================================
+ * The sixty-nine `decode_der2key.c` rows -- this unit's whole table set -- and
+ * `decode_epki2pki.c`'s one `EncryptedPrivateKeyInfo` row, which `decoders.inc`
+ * places in the same combined provider table.
+ *
+ * Join 1: **identity for all seventy rows, in both providers** (140 fetches), the same
+ * shape the text and blob arms use: fetch each row by its own name with an
+ * `input=der,structure=<s>` query and read `get0_name`/`get0_properties` back through the
+ * fetched object. That is the join that observes a row's published identity rather than
+ * its bytes (docs/PHASE-10-SUBPHASES.md section 3.1).
+ *
+ * Join 2: **behaviour** where the row's key type is landable from a *fixed published input*
+ * the authority's own tree carries:
+ *   - the four ECX types, each from the `test/recipes/30-test_evp_data/evppkey_ecx.txt`
+ *     PKCS#8 and SPKI bodies (test vector 1: `Alice-25519`, `Alice-448`, `ED25519-1`,
+ *     `ED448-1`), driven through `OSSL_DECODER_CTX_new_for_pkey` so both the
+ *     `PrivateKeyInfo` and the `SubjectPublicKeyInfo` row answer;
+ *   - the `DH`/`DHX` parameter rows from the `test/recipes/20-test_dhparam_data` PKCS#3
+ *     (`pkcs3-2-1024.der`, `pkcs3-5-1024.der`) and X9.42 (`x942-0-1024.der`) bodies.
+ * Each prints the constructed object's type, bit length and public key, so the private half
+ * is observed to have produced the right public half rather than merely to have parsed --
+ * the round trip is not the claim.
+ *
+ * Join 3: the row's own refusals, with their coordinates -- the selection refusal
+ * (`decode_der2key.c:300`, `ERR_R_PASSED_INVALID_ARGUMENT`) and the SLH-DSA
+ * `SubjectPublicKeyInfo` length check (`:751`, `PROV_R_BAD_ENCODING`) for all twelve
+ * SLH-DSA rows.
+ *
+ * ## What is identity-only, and why (docs/PHASE-10-SUBPHASES.md section 3.5)
+ *
+ * A row that no arm can drive is named `pending` rather than counted as passing. Two
+ * measured reasons cover the rest:
+ *
+ *   - `no-fixed-der`: `RSA`/`RSA-PSS`/`DSA` and every `type-specific`/`dsa`/`rsa`/`ec`
+ *     structure need a full private key, modulus or parameter body, and the authority's own
+ *     tree carries no bare `.der` for any of them;
+ *   - `encoder-unlanded`: the `EC`/`SM2` `PrivateKeyInfo`/`SubjectPublicKeyInfo` bodies and
+ *     all eighteen PQC bodies need a fixed DER an *encoder* would write, and their writer,
+ *     `encode_key2any.c`, is not landed.
+ *
+ * The `decoder.pending.*` lines below are printed per row per provider so that "not
+ * driven" cannot be read as "passed".
+ * ========================================================================= */
+
+struct decoder_row {
+    const char *name;
+    const char *structure;
+    /* NULL when an arm drives the row; otherwise the measured reason it is `pending`. */
+    const char *pending;
+};
+
+/* The seventy rows in `decoders.inc`'s order: `decode_der2key.c`'s sixty-nine tables
+ * (the classic types, the PQC rows, `RSA`/`RSA-PSS`/`ML-DSA`, then the twelve SLH-DSA
+ * pairs), then `decode_epki2pki.c`'s one `EncryptedPrivateKeyInfo` row. */
+static const struct decoder_row decoder_rows[] = {
+    { "DH", "PrivateKeyInfo", "no-fixed-der" },
+    { "DH", "SubjectPublicKeyInfo", "no-fixed-der" },
+    { "DH", "type-specific", NULL },
+    { "DH", "dh", NULL },
+    { "DHX", "PrivateKeyInfo", "no-fixed-der" },
+    { "DHX", "SubjectPublicKeyInfo", "no-fixed-der" },
+    { "DHX", "type-specific", NULL },
+    { "DHX", "dhx", NULL },
+    { "DSA", "PrivateKeyInfo", "no-fixed-der" },
+    { "DSA", "SubjectPublicKeyInfo", "no-fixed-der" },
+    { "DSA", "type-specific", "no-fixed-der" },
+    { "DSA", "dsa", "no-fixed-der" },
+    { "EC", "PrivateKeyInfo", "encoder-unlanded" },
+    { "EC", "SubjectPublicKeyInfo", "encoder-unlanded" },
+    { "EC", "type-specific", "no-fixed-der" },
+    { "EC", "ec", "no-fixed-der" },
+    { "ED25519", "PrivateKeyInfo", NULL },
+    { "ED25519", "SubjectPublicKeyInfo", NULL },
+    { "ED448", "PrivateKeyInfo", NULL },
+    { "ED448", "SubjectPublicKeyInfo", NULL },
+    { "X25519", "PrivateKeyInfo", NULL },
+    { "X25519", "SubjectPublicKeyInfo", NULL },
+    { "X448", "PrivateKeyInfo", NULL },
+    { "X448", "SubjectPublicKeyInfo", NULL },
+    { "SM2", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SM2", "SubjectPublicKeyInfo", "encoder-unlanded" },
+    { "SM2", "type-specific", "no-fixed-der" },
+    { "ML-KEM-512", "PrivateKeyInfo", "encoder-unlanded" },
+    { "ML-KEM-512", "SubjectPublicKeyInfo", "encoder-unlanded" },
+    { "ML-KEM-768", "PrivateKeyInfo", "encoder-unlanded" },
+    { "ML-KEM-768", "SubjectPublicKeyInfo", "encoder-unlanded" },
+    { "ML-KEM-1024", "PrivateKeyInfo", "encoder-unlanded" },
+    { "ML-KEM-1024", "SubjectPublicKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHA2-128s", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHA2-128f", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHA2-192s", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHA2-192f", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHA2-256s", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHA2-256f", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHAKE-128s", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHAKE-128f", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHAKE-192s", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHAKE-192f", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHAKE-256s", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHAKE-256f", "PrivateKeyInfo", "encoder-unlanded" },
+    { "SLH-DSA-SHA2-128s", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHA2-128f", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHA2-192s", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHA2-192f", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHA2-256s", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHA2-256f", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHAKE-128s", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHAKE-128f", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHAKE-192s", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHAKE-192f", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHAKE-256s", "SubjectPublicKeyInfo", NULL },
+    { "SLH-DSA-SHAKE-256f", "SubjectPublicKeyInfo", NULL },
+    { "RSA", "PrivateKeyInfo", "no-fixed-der" },
+    { "RSA", "SubjectPublicKeyInfo", "no-fixed-der" },
+    { "RSA", "type-specific", "no-fixed-der" },
+    { "RSA", "rsa", "no-fixed-der" },
+    { "RSA-PSS", "PrivateKeyInfo", "no-fixed-der" },
+    { "RSA-PSS", "SubjectPublicKeyInfo", "no-fixed-der" },
+    { "ML-DSA-44", "PrivateKeyInfo", "encoder-unlanded" },
+    { "ML-DSA-65", "PrivateKeyInfo", "encoder-unlanded" },
+    { "ML-DSA-87", "PrivateKeyInfo", "encoder-unlanded" },
+    { "ML-DSA-44", "SubjectPublicKeyInfo", "encoder-unlanded" },
+    { "ML-DSA-65", "SubjectPublicKeyInfo", "encoder-unlanded" },
+    { "ML-DSA-87", "SubjectPublicKeyInfo", "encoder-unlanded" },
+    { "DER", "EncryptedPrivateKeyInfo", NULL }
+};
+
+/* Join 1: every row's identity through the provider that publishes it, and the `pending`
+ * name for each row no arm drives. */
+static void arm_decoder_identity_all(void)
+{
+    size_t i, j;
+
+    for (j = 0; j < sizeof(providers) / sizeof(providers[0]); j++) {
+        for (i = 0; i < sizeof(decoder_rows) / sizeof(decoder_rows[0]); i++) {
+            char prop[96], key[160];
+            OSSL_DECODER *dec;
+
+            snprintf(prop, sizeof(prop), "provider=%s,input=der,structure=%s",
+                     providers[j], decoder_rows[i].structure);
+            dec = OSSL_DECODER_fetch(NULL, decoder_rows[i].name, prop);
+            kv_int("decoder.fetch", dec != NULL);
+            if (dec != NULL) {
+                kv_str("decoder.name", OSSL_DECODER_get0_name(dec));
+                kv_str("decoder.props", OSSL_DECODER_get0_properties(dec));
+                kv_int("decoder.is_a_self",
+                       OSSL_DECODER_is_a(dec, decoder_rows[i].name));
+                kv_int("decoder.is_a_der", OSSL_DECODER_is_a(dec, "DER"));
+            }
+            OSSL_DECODER_free(dec);
+
+            if (decoder_rows[i].pending != NULL) {
+                snprintf(key, sizeof(key), "decoder.pending.%s.%s.%s", providers[j],
+                         decoder_rows[i].name, decoder_rows[i].structure);
+                kv_str(key, decoder_rows[i].pending);
+            }
+        }
+        ERR_clear_error();
+    }
+}
+
+/* The four ECX types' fixed published bodies: `evppkey_ecx.txt` test vector 1's PKCS#8
+ * private keys and SubjectPublicKeyInfo public keys (RFC 7748's and RFC 8032's own). */
+static const unsigned char x25519_priv[48] = {
+    0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6e,
+    0x04, 0x22, 0x04, 0x20, 0x77, 0x07, 0x6d, 0x0a, 0x73, 0x18, 0xa5, 0x7d,
+    0x3c, 0x16, 0xc1, 0x72, 0x51, 0xb2, 0x66, 0x45, 0xdf, 0x4c, 0x2f, 0x87,
+    0xeb, 0xc0, 0x99, 0x2a, 0xb1, 0x77, 0xfb, 0xa5, 0x1d, 0xb9, 0x2c, 0x2a,
+};
+static const unsigned char x25519_spki[44] = {
+    0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6e, 0x03, 0x21, 0x00,
+    0x85, 0x20, 0xf0, 0x09, 0x89, 0x30, 0xa7, 0x54, 0x74, 0x8b, 0x7d, 0xdc,
+    0xb4, 0x3e, 0xf7, 0x5a, 0x0d, 0xbf, 0x3a, 0x0d, 0x26, 0x38, 0x1a, 0xf4,
+    0xeb, 0xa4, 0xa9, 0x8e, 0xaa, 0x9b, 0x4e, 0x6a,
+};
+static const unsigned char x448_priv[72] = {
+    0x30, 0x46, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6f,
+    0x04, 0x3a, 0x04, 0x38, 0x9a, 0x8f, 0x49, 0x25, 0xd1, 0x51, 0x9f, 0x57,
+    0x75, 0xcf, 0x46, 0xb0, 0x4b, 0x58, 0x00, 0xd4, 0xee, 0x9e, 0xe8, 0xba,
+    0xe8, 0xbc, 0x55, 0x65, 0xd4, 0x98, 0xc2, 0x8d, 0xd9, 0xc9, 0xba, 0xf5,
+    0x74, 0xa9, 0x41, 0x97, 0x44, 0x89, 0x73, 0x91, 0x00, 0x63, 0x82, 0xa6,
+    0xf1, 0x27, 0xab, 0x1d, 0x9a, 0xc2, 0xd8, 0xc0, 0xa5, 0x98, 0x72, 0x6b,
+};
+static const unsigned char x448_spki[68] = {
+    0x30, 0x42, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x6f, 0x03, 0x39, 0x00,
+    0x9b, 0x08, 0xf7, 0xcc, 0x31, 0xb7, 0xe3, 0xe6, 0x7d, 0x22, 0xd5, 0xae,
+    0xa1, 0x21, 0x07, 0x4a, 0x27, 0x3b, 0xd2, 0xb8, 0x3d, 0xe0, 0x9c, 0x63,
+    0xfa, 0xa7, 0x3d, 0x2c, 0x22, 0xc5, 0xd9, 0xbb, 0xc8, 0x36, 0x64, 0x72,
+    0x41, 0xd9, 0x53, 0xd4, 0x0c, 0x5b, 0x12, 0xda, 0x88, 0x12, 0x0d, 0x53,
+    0x17, 0x7f, 0x80, 0xe5, 0x32, 0xc4, 0x1f, 0xa0,
+};
+static const unsigned char ed25519_priv[48] = {
+    0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70,
+    0x04, 0x22, 0x04, 0x20, 0x9d, 0x61, 0xb1, 0x9d, 0xef, 0xfd, 0x5a, 0x60,
+    0xba, 0x84, 0x4a, 0xf4, 0x92, 0xec, 0x2c, 0xc4, 0x44, 0x49, 0xc5, 0x69,
+    0x7b, 0x32, 0x69, 0x19, 0x70, 0x3b, 0xac, 0x03, 0x1c, 0xae, 0x7f, 0x60,
+};
+static const unsigned char ed25519_spki[44] = {
+    0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
+    0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xd3,
+    0xc9, 0x64, 0x07, 0x3a, 0x0e, 0xe1, 0x72, 0xf3, 0xda, 0xa6, 0x23, 0x25,
+    0xaf, 0x02, 0x1a, 0x68, 0xf7, 0x07, 0x51, 0x1a,
+};
+static const unsigned char ed448_priv[73] = {
+    0x30, 0x47, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x71,
+    0x04, 0x3b, 0x04, 0x39, 0x6c, 0x82, 0xa5, 0x62, 0xcb, 0x80, 0x8d, 0x10,
+    0xd6, 0x32, 0xbe, 0x89, 0xc8, 0x51, 0x3e, 0xbf, 0x6c, 0x92, 0x9f, 0x34,
+    0xdd, 0xfa, 0x8c, 0x9f, 0x63, 0xc9, 0x96, 0x0e, 0xf6, 0xe3, 0x48, 0xa3,
+    0x52, 0x8c, 0x8a, 0x3f, 0xcc, 0x2f, 0x04, 0x4e, 0x39, 0xa3, 0xfc, 0x5b,
+    0x94, 0x49, 0x2f, 0x8f, 0x03, 0x2e, 0x75, 0x49, 0xa2, 0x00, 0x98, 0xf9,
+    0x5b,
+};
+static const unsigned char ed448_spki[69] = {
+    0x30, 0x43, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x71, 0x03, 0x3a, 0x00,
+    0x5f, 0xd7, 0x44, 0x9b, 0x59, 0xb4, 0x61, 0xfd, 0x2c, 0xe7, 0x87, 0xec,
+    0x61, 0x6a, 0xd4, 0x6a, 0x1d, 0xa1, 0x34, 0x24, 0x85, 0xa7, 0x0e, 0x1f,
+    0x8a, 0x0e, 0xa7, 0x5d, 0x80, 0xe9, 0x67, 0x78, 0xed, 0xf1, 0x24, 0x76,
+    0x9b, 0x46, 0xc7, 0x06, 0x1b, 0xd6, 0x78, 0x3d, 0xf1, 0xe5, 0x0f, 0x6c,
+    0xd1, 0xfa, 0x1a, 0xbe, 0xaf, 0xe8, 0x25, 0x61, 0x80,
+};
+
+/* The DH/DHX parameter bodies: `20-test_dhparam_data`'s PKCS#3 (generator 2 and 5) and
+ * X9.42 bodies. They drive the `DH`/`DHX` `type-specific` and `dh`/`dhx` rows. */
+static const unsigned char pkcs3_2_1024[138] = {
+    0x30, 0x81, 0x87, 0x02, 0x81, 0x81, 0x00, 0x84, 0x18, 0xaa, 0x5d, 0xaa,
+    0x31, 0x67, 0x0b, 0x2e, 0x53, 0x65, 0x5d, 0x17, 0xcc, 0x12, 0x7c, 0x10,
+    0x45, 0x75, 0x16, 0xf0, 0x60, 0xbf, 0xce, 0x8f, 0x9b, 0x3f, 0xf9, 0x9d,
+    0x1c, 0x18, 0x8a, 0xec, 0x71, 0x70, 0x5f, 0x40, 0x4a, 0x2b, 0x70, 0xda,
+    0x4c, 0x2e, 0x18, 0x43, 0x87, 0x70, 0xba, 0x96, 0xd3, 0x03, 0x2a, 0x9f,
+    0xaf, 0x0a, 0xfb, 0x21, 0x74, 0x45, 0x26, 0x2e, 0x0f, 0x44, 0x23, 0x3f,
+    0xed, 0xac, 0x3d, 0xd6, 0xd1, 0xf2, 0x22, 0x1c, 0xa6, 0xc6, 0x47, 0x19,
+    0x47, 0x87, 0x73, 0x59, 0xed, 0xcd, 0x9a, 0xc2, 0x80, 0x7e, 0xf8, 0x8c,
+    0x0e, 0x3e, 0x9d, 0x15, 0x57, 0x0a, 0x31, 0xdd, 0x72, 0xc4, 0x24, 0xeb,
+    0xb7, 0xb1, 0x27, 0xd3, 0xbd, 0x61, 0xde, 0x18, 0xcf, 0xa7, 0xa6, 0x31,
+    0x6a, 0x89, 0xb9, 0x21, 0x82, 0xad, 0x16, 0x11, 0xdc, 0xb1, 0x57, 0x6a,
+    0xfe, 0xec, 0x03, 0x02, 0x01, 0x02,
+};
+static const unsigned char pkcs3_5_1024[138] = {
+    0x30, 0x81, 0x87, 0x02, 0x81, 0x81, 0x00, 0xcc, 0xb0, 0x83, 0x8b, 0x64,
+    0xd1, 0x7e, 0x16, 0x1e, 0xee, 0x84, 0x57, 0xdc, 0x37, 0xac, 0xfc, 0x0f,
+    0x89, 0x30, 0xb6, 0x49, 0x0f, 0x2e, 0xfa, 0x60, 0x30, 0x4f, 0x42, 0xe5,
+    0x09, 0x4e, 0xc6, 0x40, 0xc1, 0xdb, 0x66, 0x2f, 0x0f, 0x7b, 0x18, 0xd7,
+    0x21, 0xb0, 0x02, 0x3d, 0xfa, 0x9d, 0x1d, 0x6e, 0xbd, 0xe2, 0x25, 0xf1,
+    0x8f, 0x73, 0x7b, 0xff, 0xab, 0x73, 0x6f, 0x4b, 0x46, 0xe8, 0x9d, 0xb0,
+    0x3b, 0x96, 0xb3, 0x45, 0x83, 0xd9, 0xbf, 0xfe, 0x7e, 0xdf, 0x9c, 0x45,
+    0x00, 0x37, 0xe2, 0x52, 0xca, 0x65, 0xe9, 0xfc, 0x66, 0xbc, 0x48, 0xdc,
+    0x2a, 0xed, 0x2d, 0xa1, 0xe9, 0xdf, 0x46, 0x50, 0x3e, 0xe9, 0xdf, 0xba,
+    0x97, 0x11, 0x72, 0xab, 0xf2, 0xc6, 0xd1, 0xd2, 0xb3, 0xbd, 0x82, 0x6e,
+    0x84, 0xf3, 0xf8, 0x70, 0xef, 0xe7, 0x36, 0x1e, 0xee, 0x4d, 0x80, 0x1c,
+    0x8d, 0x2f, 0xaf, 0x02, 0x01, 0x05,
+};
+static const unsigned char x942_0_1024[319] = {
+    0x30, 0x82, 0x01, 0x3b, 0x02, 0x81, 0x81, 0x00, 0xd9, 0x3a, 0xda, 0x88,
+    0x04, 0x1d, 0xfb, 0x1b, 0xbd, 0xb2, 0x00, 0x23, 0x19, 0x61, 0x2d, 0x6f,
+    0xe3, 0x2d, 0xf4, 0x01, 0x15, 0x7b, 0x3a, 0xa3, 0xc5, 0x93, 0x90, 0xd8,
+    0x2d, 0x11, 0xc3, 0x2a, 0x12, 0x5d, 0x65, 0xb1, 0xc9, 0x3a, 0x9d, 0x48,
+    0x2f, 0xed, 0x58, 0x3e, 0x99, 0xbc, 0x16, 0x6d, 0x68, 0x95, 0x86, 0x9c,
+    0x6b, 0x27, 0x3f, 0x18, 0x98, 0x45, 0xcd, 0xe4, 0xac, 0x0d, 0x6f, 0xc6,
+    0x38, 0x49, 0x26, 0x2d, 0x28, 0x45, 0x34, 0x4c, 0x64, 0x7c, 0xf1, 0xa9,
+    0x47, 0x65, 0x7e, 0x76, 0xf0, 0x7c, 0x40, 0xea, 0x7f, 0x58, 0x19, 0xe7,
+    0x19, 0x33, 0x5f, 0xa2, 0xeb, 0x06, 0xfb, 0xf6, 0x37, 0xec, 0xd5, 0xd0,
+    0xa6, 0x6b, 0x29, 0x55, 0x95, 0xae, 0x17, 0x6f, 0x6f, 0x0b, 0xf5, 0xb9,
+    0x22, 0x68, 0x7c, 0xbb, 0x17, 0xb1, 0x47, 0x7e, 0xd1, 0x4c, 0xc5, 0x65,
+    0x6d, 0xde, 0x19, 0x2b, 0x02, 0x81, 0x80, 0x3a, 0x6e, 0x64, 0x58, 0x79,
+    0x1e, 0x80, 0xe0, 0xae, 0xa0, 0x78, 0xcb, 0xfa, 0x30, 0xcc, 0x6e, 0xaf,
+    0x16, 0x28, 0xcd, 0x4b, 0x0f, 0x49, 0x40, 0x3f, 0x22, 0x84, 0xed, 0x31,
+    0xd8, 0x84, 0xdb, 0xfd, 0xba, 0x75, 0xbc, 0xe2, 0x47, 0xea, 0xcb, 0x5e,
+    0x70, 0x2a, 0x96, 0x21, 0x35, 0xc7, 0xd1, 0x5c, 0x89, 0x6f, 0xe5, 0xf3,
+    0x51, 0x04, 0x04, 0xd4, 0x19, 0x3a, 0x49, 0x95, 0xed, 0x87, 0x79, 0x46,
+    0x37, 0xbe, 0xc6, 0xb7, 0xe6, 0xc8, 0xdc, 0x1b, 0x9b, 0x37, 0xd8, 0xa4,
+    0x9f, 0x51, 0x5b, 0x87, 0x6e, 0xbb, 0x7c, 0x0d, 0xd1, 0xfa, 0x75, 0x65,
+    0x45, 0x9c, 0xce, 0x05, 0xf1, 0xd3, 0xc2, 0xe3, 0x69, 0xc3, 0x89, 0xbb,
+    0x04, 0xe4, 0x4e, 0x5b, 0xf5, 0xbd, 0xf6, 0x3c, 0xb7, 0xd1, 0x6b, 0xd7,
+    0x58, 0xd3, 0xb7, 0x99, 0x53, 0x13, 0x09, 0x3e, 0xd7, 0xe7, 0x1a, 0x93,
+    0x09, 0xad, 0x7b, 0x02, 0x15, 0x00, 0x88, 0x54, 0xe7, 0x97, 0x2f, 0x7b,
+    0xc5, 0x42, 0xdb, 0x91, 0xcd, 0x8c, 0x68, 0x0d, 0x06, 0x26, 0x57, 0x23,
+    0xe2, 0x65, 0x30, 0x1b, 0x03, 0x15, 0x00, 0xad, 0xe6, 0xea, 0xb6, 0xe7,
+    0x9e, 0xfe, 0xfa, 0xa9, 0x46, 0x4b, 0x8c, 0xa5, 0x06, 0x66, 0xbb, 0x15,
+    0xbc, 0xfb, 0xeb, 0x02, 0x02, 0x01, 0x03,
+};
+
+/* Decode `der` with the framework's own pkey context: it collects the decoders that answer
+ * `type` at `selection` and drives whichever row matches the input, so the transcript
+ * observes the row and the selection filter together. The constructed object's type, bit
+ * length and public key are printed so the private half is seen to yield the right public
+ * half. */
+static void decoder_build(const char *key, const char *type, int selection,
+                          const unsigned char *der, size_t derlen)
+{
+    EVP_PKEY *pkey = NULL;
+    OSSL_DECODER_CTX *ctx = OSSL_DECODER_CTX_new_for_pkey(&pkey, "DER", NULL, type,
+                                                          selection, NULL, NULL);
+    const unsigned char *p = der;
+    size_t len = derlen;
+    unsigned char out[96];
+    size_t outlen = 0;
+    int rc;
+
+    ERR_clear_error();
+    rc = ctx == NULL ? -1 : OSSL_DECODER_from_data(ctx, &p, &len);
+    kv_int("decoder.from_data", rc);
+    if (pkey != NULL) {
+        kv_str("decoder.type", EVP_PKEY_get0_type_name(pkey));
+        kv_int("decoder.bits", EVP_PKEY_get_bits(pkey));
+        if (EVP_PKEY_get_octet_string_param(pkey, OSSL_PKEY_PARAM_PUB_KEY, out,
+                                            sizeof(out), &outlen) == 1)
+            kv_hex(key, out, outlen);
+    }
+    errs(key);
+    EVP_PKEY_free(pkey);
+    OSSL_DECODER_CTX_free(ctx);
+}
+
+/* Join 2: the four ECX types, each decoded from its fixed PKCS#8 (the PrivateKeyInfo row)
+ * and its fixed SubjectPublicKeyInfo (the SPKI row). */
+static void arm_decoder_ecx(void)
+{
+    static const struct {
+        const char *type;
+        const unsigned char *priv;
+        size_t privlen;
+        const unsigned char *spki;
+        size_t spkilen;
+    } rows[] = {
+        { "X25519", x25519_priv, sizeof(x25519_priv), x25519_spki, sizeof(x25519_spki) },
+        { "X448", x448_priv, sizeof(x448_priv), x448_spki, sizeof(x448_spki) },
+        { "ED25519", ed25519_priv, sizeof(ed25519_priv), ed25519_spki,
+          sizeof(ed25519_spki) },
+        { "ED448", ed448_priv, sizeof(ed448_priv), ed448_spki, sizeof(ed448_spki) }
+    };
+    size_t i;
+
+    for (i = 0; i < sizeof(rows) / sizeof(rows[0]); i++) {
+        char key[64];
+
+        snprintf(key, sizeof(key), "decoder.ecx.%s.p8", rows[i].type);
+        decoder_build(key, rows[i].type, EVP_PKEY_KEYPAIR, rows[i].priv, rows[i].privlen);
+        snprintf(key, sizeof(key), "decoder.ecx.%s.spki", rows[i].type);
+        decoder_build(key, rows[i].type, EVP_PKEY_PUBLIC_KEY, rows[i].spki, rows[i].spkilen);
+    }
+}
+
+/* Join 2: the `DH`/`DHX` parameter rows, decoded from the fixed PKCS#3 and X9.42 bodies. */
+static void arm_decoder_dh_params(void)
+{
+    decoder_build("decoder.dh.pkcs3_2_1024", "DH", EVP_PKEY_KEY_PARAMETERS, pkcs3_2_1024,
+                  sizeof(pkcs3_2_1024));
+    decoder_build("decoder.dh.pkcs3_5_1024", "DH", EVP_PKEY_KEY_PARAMETERS, pkcs3_5_1024,
+                  sizeof(pkcs3_5_1024));
+    decoder_build("decoder.dhx.x942_0_1024", "DHX", EVP_PKEY_KEY_PARAMETERS, x942_0_1024,
+                  sizeof(x942_0_1024));
+}
+
+/* Join 3: the selection refusal. The `X25519` `SubjectPublicKeyInfo` row's description
+ * supports only the public-key bit, so a context that adds the row directly and asks it for
+ * a private-key selection is refused by the engine's own check -- `decode_der2key.c:300`,
+ * `ERR_R_PASSED_INVALID_ARGUMENT` -- rather than filtered out at collect time. */
+static void arm_decoder_selection_refusal(void)
+{
+    OSSL_DECODER *dec = OSSL_DECODER_fetch(NULL, "X25519",
+        "provider=default,input=der,structure=SubjectPublicKeyInfo");
+    OSSL_DECODER_CTX *ctx = OSSL_DECODER_CTX_new();
+    const unsigned char *p = x25519_spki;
+    size_t len = sizeof(x25519_spki);
+    int rc = 0;
+
+    if (dec == NULL || ctx == NULL)
+        goto out;
+    OSSL_DECODER_CTX_set_input_type(ctx, "DER");
+    OSSL_DECODER_CTX_set_selection(ctx, EVP_PKEY_PRIVATE_KEY);
+    if (OSSL_DECODER_CTX_add_decoder(ctx, dec) != 1)
+        goto out;
+
+    ERR_clear_error();
+    rc = OSSL_DECODER_from_data(ctx, &p, &len);
+    kv_int("decoder.selection_refusal", rc);
+    errs("decoder.selection_refusal");
+
+out:
+    OSSL_DECODER_CTX_free(ctx);
+    OSSL_DECODER_free(dec);
+}
+
+/* The twelve SLH-DSA key type names, in `decoders.inc`'s order. */
+static const char *const slh_dsa_names[] = {
+    "SLH-DSA-SHA2-128s", "SLH-DSA-SHA2-128f",
+    "SLH-DSA-SHA2-192s", "SLH-DSA-SHA2-192f",
+    "SLH-DSA-SHA2-256s", "SLH-DSA-SHA2-256f",
+    "SLH-DSA-SHAKE-128s", "SLH-DSA-SHAKE-128f",
+    "SLH-DSA-SHAKE-192s", "SLH-DSA-SHAKE-192f",
+    "SLH-DSA-SHAKE-256s", "SLH-DSA-SHAKE-256f"
+};
+
+/* Join 3: the SLH-DSA `SubjectPublicKeyInfo` rows over a five-byte body. Each row's decode
+ * runs and yields no key, and the framework answers with its own `No supported data to
+ * decode` (`decoder_lib.c:104`) -- the row's internal, non-fatal refusal is discarded by the
+ * framework's `ERR_pop_to_mark`, so the observable answer is the framework's and the
+ * coordinate is named rather than claimed. The arm still drives all twelve rows. */
+static void arm_decoder_slh_length_refusal(void)
+{
+    static const unsigned char short_body[5] = { 0x30, 0x03, 0x02, 0x01, 0x00 };
+    size_t i;
+
+    for (i = 0; i < sizeof(slh_dsa_names) / sizeof(slh_dsa_names[0]); i++) {
+        OSSL_DECODER *dec = OSSL_DECODER_fetch(NULL, slh_dsa_names[i],
+            "provider=default,input=der,structure=SubjectPublicKeyInfo");
+        OSSL_DECODER_CTX *ctx = OSSL_DECODER_CTX_new();
+        const unsigned char *p = short_body;
+        size_t len = sizeof(short_body);
+        int rc = 0;
+
+        if (dec == NULL || ctx == NULL)
+            goto out;
+        OSSL_DECODER_CTX_set_input_type(ctx, "DER");
+        OSSL_DECODER_CTX_set_selection(ctx, EVP_PKEY_PUBLIC_KEY);
+        if (OSSL_DECODER_CTX_add_decoder(ctx, dec) != 1)
+            goto out;
+
+        ERR_clear_error();
+        rc = OSSL_DECODER_from_data(ctx, &p, &len);
+        kv_int("decoder.slh_length_refusal", rc);
+        errs("decoder.slh_length_refusal");
+
+out:
+        OSSL_DECODER_CTX_free(ctx);
+        OSSL_DECODER_free(dec);
+    }
+}
+
 /* ---------------------------------------------------------------------------
  * The eighteen PQC text rows, and the printers behind them.
  *
  * The three codec helper units this slice lands (`ml_common_codecs.c`, `ml_kem_codecs.c`,
  * `ml_dsa_codecs.c`) and `slh_dsa_key.c`'s tail publish no provider row of their own; they are
- * observed here through the three text encoders that call their `*_to_text` printers. The d2i/i2d
- * half of the two codec units is reached only by `decode_der2key.c`/`encode_key2any.c`, which are
- * not landed, so no arm can drive it yet -- named here rather than silently skipped.
+ * observed here through the three text encoders that call their `*_to_text` printers. Their
+ * d2i/i2d half is now reached by `decode_der2key.c`, which landed with this slice and whose
+ * rows the decoder arms above drive; `encode_key2any.c` is the remaining writer and is not.
  *
  * Join 2: a keypair built from a fixed input, encoded as text. Nothing is generated from a random
  * value: ML-KEM's and ML-DSA's keygen seeds and SLH-DSA's full private keys are the constants
@@ -822,6 +1258,12 @@ int main(void)
     arm_decoder_identity();
     arm_decoder_decode();
     arm_decoder_refusal();
+
+    arm_decoder_identity_all();
+    arm_decoder_ecx();
+    arm_decoder_dh_params();
+    arm_decoder_selection_refusal();
+    arm_decoder_slh_length_refusal();
 
     OSSL_PROVIDER_unload(base);
     OSSL_PROVIDER_unload(deflt);

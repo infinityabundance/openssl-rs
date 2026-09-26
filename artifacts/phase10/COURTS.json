@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 486,
+        "authority_observations": 1375,
         "candidate_exit_code": 0,
-        "candidate_observations": 486,
+        "candidate_observations": 1375,
         "candidate_stderr_tail": [],
         "court": "RT-CODEC",
         "crashed": false,
@@ -67,7 +67,7 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_codec_probe.c",
-      "sha256": "67b3ecc2e8d72ae9ebb8886dd92dcbb1fa917cb3dafcfb525a0a68e01195ad35"
+      "sha256": "520de45c2de30379931f28a09c4571c3e7d3eb2fed61ed2419dc9ca5ae8220e4"
     }
   ],
   "kind": "phase10-courts",

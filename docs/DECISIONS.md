@@ -31080,3 +31080,65 @@ at the default thread count is **1061 passed, 0 failed** (eight more than D435's
 `courts/phase10/rt_codec_probe.c` change; `gen_err_raise_sites.py`, `phase10_courts.py` and
 `provider_court_coverage.py` change; `forensics/prerequisites.json` loses the SLH-DSA divergence row;
 and the atlases, the census and `forensics/regression-baseline.json` are regenerated.
+
+## D437 -- 10.1 lands `decode_der2key.c` whole: 69 tables, 138 rows, and Phase 10 passes a third of the stratum
+
+D436 unblocked the largest decoder unit by landing its four-helper closure, and this slice lands it.
+`src/provider/decode_der2key.rs` (3,461 lines) is the whole unit: the engine
+(`der2key_newctx`/`freectx`/`check_selection`/`decode`/`export_object`, `der2key_decode_p8`, the
+machine-generated `set_ctx_params` parser, `KeytypeDesc`/`Der2keyCtx`), the SLH-DSA `d2i_PKCS8`/`d2i_PUBKEY`
+helper with its five `PROV_R_BAD_ENCODING`/`PROV_R_UNEXPECTED_KEY_PARAMETERS` arms, and **all 69
+`MAKE_DECODER` tables**. They register as 138 new rows, so Phase 10's provider rows move from
+`implemented 64` to **`implemented 202 / unimplemented 434`** of 636 -- a third of the stratum -- with the
+decoder operation at 70 of its 76 rows per provider, and the `EncryptedPrivateKeyInfo` rows they share a
+table with already landed at D435.
+
+**`RT-CODEC` grows from 486 to 1,375 observations, and every join is deliberate.** Join 1 is identity:
+all 70 rows across both providers, 140 fetches, each reading `get0_name`/`get0_properties`/`is_a` back
+with `input=der` and its structure. Join 2 is behaviour over fixed inputs for 25 rows: the four ECX
+types' PKCS#8 and SPKI from the pinned `evppkey_ecx.txt` vector 1, and the `DH`/`DHX` parameter rows
+from `20-test_dhparam_data`'s own PKCS#3 and X9.42 DERs, through `OSSL_DECODER_CTX_new_for_pkey` and
+`OSSL_DECODER_from_data`, printing the type, the bits and the decoded public key -- not a round-trip
+claim. Join 3 is the refusals: the selection refusal observes `decode_der2key.c:300` exactly
+(`lib=57, reason=524550`), and the twelve SLH-DSA SPKI rows are driven over a five-byte body.
+**Forty-five rows are held `pending` and printed as such** rather than counted as passing: seventeen
+`no-fixed-der` (the authority tree carries no bare DER for `RSA`/`RSA-PSS`/`DSA`/`DH`/`DHX`/`EC`/`SM2`'s
+PKCS#8 and SPKI rows) and twenty-eight `encoder-unlanded` (a fixed DER only `encode_key2any.c`, still
+blocked, could write). §3.5 is the rule being followed, and the count of what is driven is stated
+separately from the count of what exists.
+
+**Two forensic tools needed a real fix, and both are the class this project keeps finding.**
+`prototype_court.py` treated an invocation inside *any* `macro_rules!` body as a call, but such an
+invocation is a template with `$`-parameters, so the `dec!`/`slh_pair!` wrappers forwarding to
+`make_decoder!` were reported as unreadable; the scanner now skips macro-definition spans, and its six
+sensitivity controls still fire. `dispatch_court.py` needed `KeyFromPkcs8Fn` -- `decode_der2key.h`'s
+`key_from_pkcs8_t`, a provider-implementation-header typedef the installed-surface atlas does not
+record -- exempted through `NOT_A_DISPATCH`, following the `WRAP_FN` precedent. The unit joins
+`gen_err_raise_sites.py`'s coverage (4,170 to **4,178** sites, with the eight `PROV_DECODE_DER2KEY_*`
+coordinates present).
+
+**Two plan corrections, one structural.** The census reader cannot read a `macro_rules!`-generated
+table: `gen_provider_algorithms.py` reads rows from table text, so the combined provider tables are
+spelled as literal `OsslAlgorithm` rows rather than through the `row!`/`decoder_rows!` macros the unit
+first used, with a unit test holding the mirror property between the two spellings. And the SLH-DSA
+`:751` coordinate is **not observable through the public decoder path** -- that length check is a
+non-fatal "this decoder did not match" refusal that `decoder_process`'s `ERR_pop_to_mark` discards once
+the decoder answers success without an object, so both sides then answer the framework's `No supported
+data to decode` (`decoder_lib.c:104`). The arm drives the twelve rows; the coordinate is **named, not
+claimed**, and that distinction is the point.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count is **1064 passed, 0 failed**. `run_courts.py`, `court_coverage.py` (0
+non-observable) and `provider_court_coverage.py` (523 implemented, 523 directly courted, **0 unmatched**)
+clean; phase 10 reads two courts and 1,462 observations. `forensics/phase10-obligations.json` still reads
+`owned=298 implemented=87 open=211`, because a provider row is not an export. Phase 9 `complete`, Phase
+10 `in-progress`; `PIPELINE OK` exit 0 twice.
+
+### Movement
+
+`src/provider/decode_der2key.rs` is added; `src/provider/{base,digest,mod}.rs`, `src/runtime/err_sites.rs`,
+`courts/phase10/rt_codec_probe.c`, `forensics/tools/{gen_err_raise_sites,prototype_court,dispatch_court}.py`
+and `forensics/tools/phase10_courts.py` change; and the atlases, the census and
+`forensics/regression-baseline.json` are regenerated. `encode_key2any.c` remains blocked on 10.6 and 10.4.

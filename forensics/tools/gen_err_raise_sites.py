@@ -1141,6 +1141,14 @@ COVERED_FILES = [
     # the machine-generated `set_ctx_params` parser's `PROV_R_REPEATED_PARAMETER` (`:87`) and the
     # passphrase refusal's `PROV_R_UNABLE_TO_GET_PASSPHRASE` (`:179`).
     ("providers/implementations/encode_decode/decode_epki2pki.c", "PROV_DECODE_EPKI2PKI"),
+    # Phase 10.1's largest provider codec unit: `providers/implementations/encode_decode/
+    # decode_der2key.c` -- the 69 DER-to-key decoder tables and the shared engine. It is a generated
+    # `.c.in`, so its `__FILE__` carries only the build-relative path. Its eight raises are the
+    # machine-generated `set_ctx_params` parser's `PROV_R_REPEATED_PARAMETER` (`:202`), the engine's
+    # own `ERR_R_PASSED_INVALID_ARGUMENT` selection refusal (`:300`), and the SLH-DSA arms'
+    # `PROV_R_UNEXPECTED_KEY_PARAMETERS` (`:699`) and five `PROV_R_BAD_ENCODING` refusals
+    # (`:751`, `:765`, `:773`, `:779`, `:786`).
+    ("providers/implementations/encode_decode/decode_der2key.c", "PROV_DECODE_DER2KEY"),
     # Phase 10.1's PQC codec closure units (D435). The first is
     # `providers/implementations/encode_decode/ml_common_codecs.c`, the shared SPKI/PKCS#8 format
     # tables and `ossl_ml_common_pkcs8_fmt_order`: its one raise is the `PROV_R_ML_DSA_NO_FORMAT`

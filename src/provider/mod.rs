@@ -111,9 +111,13 @@ pub(crate) mod encode_key2text;
 // `i2o_ECPublicKey`, landed with Phase 8.7.
 pub(crate) mod encode_key2blob;
 // Phase 10.1's first provider codec *decoder* unit: `providers/implementations/encode_decode/
-// decode_epki2pki.c`, the `EncryptedPrivateKeyInfo`-to-`PrivateKeyInfo` DER engine, and the crate's
-// `deflt_decoder[]`/`base_decoder[]` home.
+// decode_epki2pki.c`, the `EncryptedPrivateKeyInfo`-to-`PrivateKeyInfo` DER engine. Its dispatch
+// table is referenced by `decode_der2key.rs`'s combined `deflt_decoder[]`/`base_decoder[]`.
 pub(crate) mod decode_epki2pki;
+// Phase 10.1's largest provider codec unit: `providers/implementations/encode_decode/
+// decode_der2key.c`, the 69 DER-to-key decoder tables and the shared engine behind them. It is the
+// crate's `deflt_decoder[]`/`base_decoder[]` home, since it publishes 69 of the 70 rows landed.
+pub(crate) mod decode_der2key;
 // Phase 10.1's first PQC codec *closure* unit: `providers/implementations/encode_decode/
 // ml_common_codecs.c`, the shared ASN.1 SPKI/PKCS#8 format tables and the one
 // `ossl_ml_common_pkcs8_fmt_order` helper the two PQC codec units stand on. It publishes no row;

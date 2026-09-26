@@ -242,6 +242,17 @@ DRBG_VTABLE = ("not a provider dispatch: a member of `struct prov_drbg_st`, decl
 WRAP_FN = ("not a provider dispatch: `cipher_aes_wrp.c:28-30`'s `aeswrap_fn`, a typedef local to a "
            "provider implementation file, which the atlas -- whose universe is the installed "
            "public surface -- records no typedef for")
+# `providers/implementations/encode_decode/decode_der2key.h` -- `key_from_pkcs8_t`, the callback
+# the decoder rows' `key_from_pkcs8` slot holds (it wraps `OSSL_FUNC_keymgmt_load`). It is a
+# typedef local to a provider implementation header, exactly `aeswrap_fn`'s shape, so the atlas --
+# whose universe is the installed public surface -- records no typedef for it and the convention
+# rule has no name to join on. The five sibling aliases for the same header's callbacks
+# (`d2i_PKCS8_fn`, `d2i_PUBKEY_fn`, `check_key_fn`, `adjust_key_fn`, `free_key_fn`) are declared
+# Rust-ABI `unsafe fn`, so the function-alias reader never extracts them.
+KEY_FROM_PKCS8_FN = (
+    "not a provider dispatch: `decode_der2key.h`'s `key_from_pkcs8_t`, a typedef local to a "
+    "provider implementation header, which the atlas -- whose universe is the installed public "
+    "surface -- records no typedef for")
 # `prov/ciphercommon.h:30` -- `PROV_CIPHER_FUNC(type, name, args)` expands to
 # `typedef type(*OSSL_##name##_fn) args`, so the typedef is produced by the preprocessor and there
 # is no `typedef` declaration for a declaration reader to record. `OSSL_xts_stream_fn` is the one
@@ -535,6 +546,7 @@ NOT_A_DISPATCH: dict[str, str] = {
     "ConfFinishFn": ("not a provider dispatch: the crate's `conf_finish_func` equivalent for the "
                      "`CONF_METHOD` vtable; the authority declares the module finish callback "
                      "only as a local typedef in `conf.h`, which the atlas does not record"),
+    "KeyFromPkcs8Fn": KEY_FROM_PKCS8_FN,
     "ConfCreateFn": CONF_INT,
     "ConfDestroyFn": CONF_INT,
     "ConfDestroyDataFn": CONF_INT,
