@@ -41562,6 +41562,596 @@ pub(crate) const PKCS12_ADD_207: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `PKCS12_init_ex` at `crypto/pkcs12/p12_init.c:23` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_INIT_23: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_init.c",
+    line: 23,
+    func: c"PKCS12_init_ex",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_init_ex` at `crypto/pkcs12/p12_init.c:32` (ERR_R_PKCS7_LIB).
+pub(crate) const PKCS12_INIT_32: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_init.c",
+    line: 32,
+    func: c"PKCS12_init_ex",
+    lib: 35,
+    reason: 524321,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_init_ex` at `crypto/pkcs12/p12_init.c:39` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_INIT_39: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_init.c",
+    line: 39,
+    func: c"PKCS12_init_ex",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_init_ex` at `crypto/pkcs12/p12_init.c:44` (PKCS12_R_UNSUPPORTED_PKCS12_MODE).
+pub(crate) const PKCS12_INIT_44: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_init.c",
+    line: 44,
+    func: c"PKCS12_init_ex",
+    lib: 35,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `PBMAC1_get1_pbkdf2_param` at `crypto/pkcs12/p12_mutl.c:90` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PKCS12_MUTL_90: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 90,
+    func: c"PBMAC1_get1_pbkdf2_param",
+    lib: 35,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `PBMAC1_get1_pbkdf2_param` at `crypto/pkcs12/p12_mutl.c:96` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const PKCS12_MUTL_96: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 96,
+    func: c"PBMAC1_get1_pbkdf2_param",
+    lib: 35,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `PBMAC1_PBKDF2_HMAC` at `crypto/pkcs12/p12_mutl.c:122` (ERR_R_UNSUPPORTED).
+pub(crate) const PKCS12_MUTL_122: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 122,
+    func: c"PBMAC1_PBKDF2_HMAC",
+    lib: 35,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `PBMAC1_PBKDF2_HMAC` at `crypto/pkcs12/p12_mutl.c:135` (ERR_R_FETCH_FAILED).
+pub(crate) const PKCS12_MUTL_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 135,
+    func: c"PBMAC1_PBKDF2_HMAC",
+    lib: 35,
+    reason: 524557,
+    dynamic_reason: false,
+};
+
+/// `PBMAC1_PBKDF2_HMAC` at `crypto/pkcs12/p12_mutl.c:142` (PKCS12_R_PARSE_ERROR).
+pub(crate) const PKCS12_MUTL_142: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 142,
+    func: c"PBMAC1_PBKDF2_HMAC",
+    lib: 35,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `PBMAC1_PBKDF2_HMAC` at `crypto/pkcs12/p12_mutl.c:152` (PKCS12_R_PARSE_ERROR).
+pub(crate) const PKCS12_MUTL_152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 152,
+    func: c"PBMAC1_PBKDF2_HMAC",
+    lib: 35,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `PBMAC1_PBKDF2_HMAC` at `crypto/pkcs12/p12_mutl.c:160` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PKCS12_MUTL_160: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 160,
+    func: c"PBMAC1_PBKDF2_HMAC",
+    lib: 35,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_gen_mac` at `crypto/pkcs12/p12_mutl.c:195` (PKCS12_R_CONTENT_TYPE_NOT_DATA).
+pub(crate) const PKCS12_MUTL_195: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 195,
+    func: c"pkcs12_gen_mac",
+    lib: 35,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_gen_mac` at `crypto/pkcs12/p12_mutl.c:200` (PKCS12_R_DECODE_ERROR).
+pub(crate) const PKCS12_MUTL_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 200,
+    func: c"pkcs12_gen_mac",
+    lib: 35,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_gen_mac` at `crypto/pkcs12/p12_mutl.c:227` (PKCS12_R_UNKNOWN_DIGEST_ALGORITHM).
+pub(crate) const PKCS12_MUTL_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 227,
+    func: c"pkcs12_gen_mac",
+    lib: 35,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_gen_mac` at `crypto/pkcs12/p12_mutl.c:250` (PKCS12_R_KEY_GEN_ERROR).
+pub(crate) const PKCS12_MUTL_250: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 250,
+    func: c"pkcs12_gen_mac",
+    lib: 35,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_gen_mac` at `crypto/pkcs12/p12_mutl.c:274` (PKCS12_R_KEY_GEN_ERROR).
+pub(crate) const PKCS12_MUTL_274: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 274,
+    func: c"pkcs12_gen_mac",
+    lib: 35,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_gen_mac` at `crypto/pkcs12/p12_mutl.c:284` (PKCS12_R_KEY_GEN_ERROR).
+pub(crate) const PKCS12_MUTL_284: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 284,
+    func: c"pkcs12_gen_mac",
+    lib: 35,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_verify_mac` at `crypto/pkcs12/p12_mutl.c:321` (PKCS12_R_MAC_ABSENT).
+pub(crate) const PKCS12_MUTL_321: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 321,
+    func: c"PKCS12_verify_mac",
+    lib: 35,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_verify_mac` at `crypto/pkcs12/p12_mutl.c:334` (ERR_R_UNSUPPORTED).
+pub(crate) const PKCS12_MUTL_334: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 334,
+    func: c"PKCS12_verify_mac",
+    lib: 35,
+    reason: 524556,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_verify_mac` at `crypto/pkcs12/p12_mutl.c:341` (PKCS12_R_MAC_GENERATION_ERROR).
+pub(crate) const PKCS12_MUTL_341: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 341,
+    func: c"PKCS12_verify_mac",
+    lib: 35,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_verify_mac` at `crypto/pkcs12/p12_mutl.c:348` (PKCS12_R_MAC_GENERATION_ERROR).
+pub(crate) const PKCS12_MUTL_348: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 348,
+    func: c"PKCS12_verify_mac",
+    lib: 35,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_set_mac` at `crypto/pkcs12/p12_mutl.c:375` (PKCS12_R_MAC_SETUP_ERROR).
+pub(crate) const PKCS12_MUTL_375: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 375,
+    func: c"PKCS12_set_mac",
+    lib: 35,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_set_mac` at `crypto/pkcs12/p12_mutl.c:382` (PKCS12_R_MAC_GENERATION_ERROR).
+pub(crate) const PKCS12_MUTL_382: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 382,
+    func: c"PKCS12_set_mac",
+    lib: 35,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_set_mac` at `crypto/pkcs12/p12_mutl.c:387` (PKCS12_R_MAC_STRING_SET_ERROR).
+pub(crate) const PKCS12_MUTL_387: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 387,
+    func: c"PKCS12_set_mac",
+    lib: 35,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_setup_mac` at `crypto/pkcs12/p12_mutl.c:415` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_MUTL_415: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 415,
+    func: c"pkcs12_setup_mac",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_setup_mac` at `crypto/pkcs12/p12_mutl.c:419` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_MUTL_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 419,
+    func: c"pkcs12_setup_mac",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `pkcs12_setup_mac` at `crypto/pkcs12/p12_mutl.c:440` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS12_MUTL_440: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 440,
+    func: c"pkcs12_setup_mac",
+    lib: 35,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_set_pbmac1_pbkdf2` at `crypto/pkcs12/p12_mutl.c:487` (PKCS12_R_UNKNOWN_DIGEST_ALGORITHM).
+pub(crate) const PKCS12_MUTL_487: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 487,
+    func: c"PKCS12_set_pbmac1_pbkdf2",
+    lib: 35,
+    reason: 118,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_set_pbmac1_pbkdf2` at `crypto/pkcs12/p12_mutl.c:497` (ERR_R_RAND_LIB).
+pub(crate) const PKCS12_MUTL_497: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 497,
+    func: c"PKCS12_set_pbmac1_pbkdf2",
+    lib: 35,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_set_pbmac1_pbkdf2` at `crypto/pkcs12/p12_mutl.c:511` (PKCS12_R_MAC_SETUP_ERROR).
+pub(crate) const PKCS12_MUTL_511: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 511,
+    func: c"PKCS12_set_pbmac1_pbkdf2",
+    lib: 35,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_set_pbmac1_pbkdf2` at `crypto/pkcs12/p12_mutl.c:516` (PKCS12_R_MAC_SETUP_ERROR).
+pub(crate) const PKCS12_MUTL_516: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 516,
+    func: c"PKCS12_set_pbmac1_pbkdf2",
+    lib: 35,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_set_pbmac1_pbkdf2` at `crypto/pkcs12/p12_mutl.c:537` (PKCS12_R_MAC_GENERATION_ERROR).
+pub(crate) const PKCS12_MUTL_537: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 537,
+    func: c"PKCS12_set_pbmac1_pbkdf2",
+    lib: 35,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_set_pbmac1_pbkdf2` at `crypto/pkcs12/p12_mutl.c:541` (PKCS12_R_MAC_STRING_SET_ERROR).
+pub(crate) const PKCS12_MUTL_541: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
+    line: 541,
+    func: c"PKCS12_set_pbmac1_pbkdf2",
+    lib: 35,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_ctrl` at `crypto/pkcs7/pk7_lib.c:32` (PKCS7_R_NO_CONTENT).
+pub(crate) const PKCS7_LIB_32: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 32,
+    func: c"PKCS7_ctrl",
+    lib: 33,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_ctrl` at `crypto/pkcs7/pk7_lib.c:44` (PKCS7_R_OPERATION_NOT_SUPPORTED_ON_THIS_TYPE).
+pub(crate) const PKCS7_LIB_44: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 44,
+    func: c"PKCS7_ctrl",
+    lib: 33,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_ctrl` at `crypto/pkcs7/pk7_lib.c:59` (PKCS7_R_OPERATION_NOT_SUPPORTED_ON_THIS_TYPE).
+pub(crate) const PKCS7_LIB_59: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 59,
+    func: c"PKCS7_ctrl",
+    lib: 33,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_ctrl` at `crypto/pkcs7/pk7_lib.c:66` (PKCS7_R_UNKNOWN_OPERATION).
+pub(crate) const PKCS7_LIB_66: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 66,
+    func: c"PKCS7_ctrl",
+    lib: 33,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_set_content` at `crypto/pkcs7/pk7_lib.c:108` (PKCS7_R_UNSUPPORTED_CONTENT_TYPE).
+pub(crate) const PKCS7_LIB_108: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 108,
+    func: c"PKCS7_set_content",
+    lib: 33,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_set_type` at `crypto/pkcs7/pk7_lib.c:179` (PKCS7_R_UNSUPPORTED_CONTENT_TYPE).
+pub(crate) const PKCS7_LIB_179: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 179,
+    func: c"PKCS7_set_type",
+    lib: 33,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_add_signer` at `crypto/pkcs7/pk7_lib.c:213` (PKCS7_R_WRONG_CONTENT_TYPE).
+pub(crate) const PKCS7_LIB_213: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 213,
+    func: c"PKCS7_add_signer",
+    lib: 33,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_add_signer` at `crypto/pkcs7/pk7_lib.c:233` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS7_LIB_233: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 233,
+    func: c"PKCS7_add_signer",
+    lib: 33,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_add_certificate` at `crypto/pkcs7/pk7_lib.c:271` (PKCS7_R_WRONG_CONTENT_TYPE).
+pub(crate) const PKCS7_LIB_271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 271,
+    func: c"PKCS7_add_certificate",
+    lib: 33,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_add_crl` at `crypto/pkcs7/pk7_lib.c:292` (PKCS7_R_WRONG_CONTENT_TYPE).
+pub(crate) const PKCS7_LIB_292: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 292,
+    func: c"PKCS7_add_crl",
+    lib: 33,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_add_crl` at `crypto/pkcs7/pk7_lib.c:299` (ERR_R_CRYPTO_LIB).
+pub(crate) const PKCS7_LIB_299: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 299,
+    func: c"PKCS7_add_crl",
+    lib: 33,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_SIGNER_INFO_set` at `crypto/pkcs7/pk7_lib.c:388` (PKCS7_R_SIGNING_CTRL_FAILURE).
+pub(crate) const PKCS7_LIB_388: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 388,
+    func: c"PKCS7_SIGNER_INFO_set",
+    lib: 33,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_SIGNER_INFO_set` at `crypto/pkcs7/pk7_lib.c:392` (PKCS7_R_SIGNING_NOT_SUPPORTED_FOR_THIS_KEY_TYPE).
+pub(crate) const PKCS7_LIB_392: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 392,
+    func: c"PKCS7_SIGNER_INFO_set",
+    lib: 33,
+    reason: 148,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_add_signature` at `crypto/pkcs7/pk7_lib.c:407` (PKCS7_R_NO_DEFAULT_DIGEST).
+pub(crate) const PKCS7_LIB_407: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 407,
+    func: c"PKCS7_add_signature",
+    lib: 33,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_set_digest` at `crypto/pkcs7/pk7_lib.c:531` (ERR_R_ASN1_LIB).
+pub(crate) const PKCS7_LIB_531: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 531,
+    func: c"PKCS7_set_digest",
+    lib: 33,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_set_digest` at `crypto/pkcs7/pk7_lib.c:539` (PKCS7_R_WRONG_CONTENT_TYPE).
+pub(crate) const PKCS7_LIB_539: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 539,
+    func: c"PKCS7_set_digest",
+    lib: 33,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_add_recipient_info` at `crypto/pkcs7/pk7_lib.c:603` (PKCS7_R_WRONG_CONTENT_TYPE).
+pub(crate) const PKCS7_LIB_603: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 603,
+    func: c"PKCS7_add_recipient_info",
+    lib: 33,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_RECIP_INFO_set` at `crypto/pkcs7/pk7_lib.c:652` (PKCS7_R_ENCRYPTION_NOT_SUPPORTED_FOR_THIS_KEY_TYPE).
+pub(crate) const PKCS7_LIB_652: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 652,
+    func: c"PKCS7_RECIP_INFO_set",
+    lib: 33,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_RECIP_INFO_set` at `crypto/pkcs7/pk7_lib.c:659` (PKCS7_R_ENCRYPTION_NOT_SUPPORTED_FOR_THIS_KEY_TYPE).
+pub(crate) const PKCS7_LIB_659: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 659,
+    func: c"PKCS7_RECIP_INFO_set",
+    lib: 33,
+    reason: 150,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_RECIP_INFO_set` at `crypto/pkcs7/pk7_lib.c:664` (PKCS7_R_ENCRYPTION_CTRL_FAILURE).
+pub(crate) const PKCS7_LIB_664: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 664,
+    func: c"PKCS7_RECIP_INFO_set",
+    lib: 33,
+    reason: 149,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_set_cipher` at `crypto/pkcs7/pk7_lib.c:703` (PKCS7_R_WRONG_CONTENT_TYPE).
+pub(crate) const PKCS7_LIB_703: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 703,
+    func: c"PKCS7_set_cipher",
+    lib: 33,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_set_cipher` at `crypto/pkcs7/pk7_lib.c:710` (PKCS7_R_CIPHER_HAS_NO_OBJECT_IDENTIFIER).
+pub(crate) const PKCS7_LIB_710: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 710,
+    func: c"PKCS7_set_cipher",
+    lib: 33,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_stream` at `crypto/pkcs7/pk7_lib.c:731` (PKCS7_R_NO_CONTENT).
+pub(crate) const PKCS7_LIB_731: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 731,
+    func: c"PKCS7_stream",
+    lib: 33,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_stream` at `crypto/pkcs7/pk7_lib.c:743` (PKCS7_R_NO_CONTENT).
+pub(crate) const PKCS7_LIB_743: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 743,
+    func: c"PKCS7_stream",
+    lib: 33,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_stream` at `crypto/pkcs7/pk7_lib.c:755` (PKCS7_R_NO_CONTENT).
+pub(crate) const PKCS7_LIB_755: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 755,
+    func: c"PKCS7_stream",
+    lib: 33,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `PKCS7_stream` at `crypto/pkcs7/pk7_lib.c:760` (PKCS7_R_UNSUPPORTED_CONTENT_TYPE).
+pub(crate) const PKCS7_LIB_760: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs7/pk7_lib.c",
+    line: 760,
+    func: c"PKCS7_stream",
+    lib: 33,
+    reason: 112,
+    dynamic_reason: false,
+};
+
 /// `X509at_get_attr` at `crypto/x509/x509_att.c:59` (ERR_R_PASSED_NULL_PARAMETER).
 pub(crate) const X509_ATT_59: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/x509/x509_att.c",
@@ -46726,6 +47316,65 @@ pub(crate) static ALL: &[ErrSite] = &[
     PKCS12_ADD_162,
     PKCS12_ADD_202,
     PKCS12_ADD_207,
+    PKCS12_INIT_23,
+    PKCS12_INIT_32,
+    PKCS12_INIT_39,
+    PKCS12_INIT_44,
+    PKCS12_MUTL_90,
+    PKCS12_MUTL_96,
+    PKCS12_MUTL_122,
+    PKCS12_MUTL_135,
+    PKCS12_MUTL_142,
+    PKCS12_MUTL_152,
+    PKCS12_MUTL_160,
+    PKCS12_MUTL_195,
+    PKCS12_MUTL_200,
+    PKCS12_MUTL_227,
+    PKCS12_MUTL_250,
+    PKCS12_MUTL_274,
+    PKCS12_MUTL_284,
+    PKCS12_MUTL_321,
+    PKCS12_MUTL_334,
+    PKCS12_MUTL_341,
+    PKCS12_MUTL_348,
+    PKCS12_MUTL_375,
+    PKCS12_MUTL_382,
+    PKCS12_MUTL_387,
+    PKCS12_MUTL_415,
+    PKCS12_MUTL_419,
+    PKCS12_MUTL_440,
+    PKCS12_MUTL_487,
+    PKCS12_MUTL_497,
+    PKCS12_MUTL_511,
+    PKCS12_MUTL_516,
+    PKCS12_MUTL_537,
+    PKCS12_MUTL_541,
+    PKCS7_LIB_32,
+    PKCS7_LIB_44,
+    PKCS7_LIB_59,
+    PKCS7_LIB_66,
+    PKCS7_LIB_108,
+    PKCS7_LIB_179,
+    PKCS7_LIB_213,
+    PKCS7_LIB_233,
+    PKCS7_LIB_271,
+    PKCS7_LIB_292,
+    PKCS7_LIB_299,
+    PKCS7_LIB_388,
+    PKCS7_LIB_392,
+    PKCS7_LIB_407,
+    PKCS7_LIB_531,
+    PKCS7_LIB_539,
+    PKCS7_LIB_603,
+    PKCS7_LIB_652,
+    PKCS7_LIB_659,
+    PKCS7_LIB_664,
+    PKCS7_LIB_703,
+    PKCS7_LIB_710,
+    PKCS7_LIB_731,
+    PKCS7_LIB_743,
+    PKCS7_LIB_755,
+    PKCS7_LIB_760,
     X509_ATT_59,
     X509_ATT_63,
     X509_ATT_72,

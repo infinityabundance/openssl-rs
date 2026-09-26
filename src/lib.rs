@@ -143,6 +143,9 @@ pub mod pem;
 // ASN.1 decrypt/encrypt pair over it, and `p12_p8d.c`'s two `PKCS8_decrypt` spellings. It
 // lands early because `PKCS8_decrypt` is the PKCS#8 reader `pem_read_bio_key_legacy` reaches.
 pub mod pkcs12;
+// Phase 10's pulled-forward subset of Phase 12's `crypto/pkcs7/`: the `PKCS7` object the `PFX`
+// container's `authsafes` column is, on the closure D441 measured. See `src/pkcs7/mod.rs`.
+pub mod pkcs7;
 pub mod property;
 pub mod provider;
 // Phase 8's `crypto/quic_vlint.c`: the QUIC variable-length integer codec, transcribed whole

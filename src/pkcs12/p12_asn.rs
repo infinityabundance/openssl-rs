@@ -6,13 +6,13 @@
 //!
 //! ## What lands, and what is held open with its blocker
 //!
-//! Three of the four groups land whole — `PKCS12_MAC_DATA`, `PKCS12_BAGS`, `PKCS12_SAFEBAG` and
-//! the `PKCS12_SAFEBAGS` template — together with their `_it`/`_new`/`_free`/`d2i_`/`i2d_` names.
-//! The `PKCS12` group itself is **held open**: its `authsafes` column is `ASN1_SIMPLE(PKCS12,
-//! authsafes, PKCS7)`, and `PKCS7_it` is `crypto/pkcs7/pk7_asn1.c`'s, which the ownership atlas
-//! gives to Phase 12. `PKCS12_it`, `PKCS12_new`, `PKCS12_free`, `d2i_PKCS12`, `i2d_PKCS12` and
-//! `PKCS12_AUTHSAFES_it` (the `SEQUENCE OF PKCS7` template) therefore cannot be built until
-//! Phase 12 lands the `PKCS7` object; they are left `open` in the ledger rather than stubbed.
+//! All four groups land — `PKCS12_MAC_DATA`, `PKCS12_BAGS`, `PKCS12_SAFEBAG` and the
+//! `PKCS12_SAFEBAGS` template — together with their `_it`/`_new`/`_free`/`d2i_`/`i2d_` names.
+//! The `PKCS12` group itself is `ASN1_SIMPLE(PKCS12, authsafes, PKCS7)`, so it needed `PKCS7_it`,
+//! which `crypto/pkcs7/pk7_asn1.c` defines and Phase 12 owns. D441 measured that every one of
+//! this stratum's remaining container exports was blocked on it; the `PKCS7` subset was pulled
+//! forward (see [`crate::pkcs7`]), and `PKCS12_it`, `PKCS12_new`, `PKCS12_free`, `d2i_PKCS12`,
+//! `i2d_PKCS12` and `PKCS12_AUTHSAFES_it` land here as the first of the rows that unblocks.
 //!
 //! ## The `PFX` order, and why the struct's order is not it
 //!
@@ -44,6 +44,8 @@ use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
 use crate::asn1::p8_pkey::PKCS8_PRIV_KEY_INFO_it;
 use crate::asn1::x_sig::{X509Sig, X509_SIG_it};
+use crate::pkcs7::{PKCS7_it, Pkcs7};
+use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{
     Asn1Object, NID_certBag, NID_crlBag, NID_keyBag, NID_pkcs8ShroudedKeyBag, NID_safeContentsBag,
     NID_sdsiCertificate, NID_secretBag, NID_x509Certificate, NID_x509Crl,
@@ -571,6 +573,165 @@ static PKCS12_SAFEBAGS_ITEM: Asn1Item = Asn1Item {
 #[no_mangle]
 pub extern "C" fn PKCS12_SAFEBAGS_it() -> *const Asn1Item {
     &PKCS12_SAFEBAGS_ITEM
+}
+
+/// `PKCS12_AUTHSAFES_item_tt` — `ASN1_ITEM_TEMPLATE(PKCS12_AUTHSAFES)` at
+/// `crypto/pkcs12/p12_asn.c:88`,
+/// `ASN1_EX_TEMPLATE_TYPE(ASN1_TFLG_SEQUENCE_OF, 0, PKCS12_AUTHSAFES, PKCS7)`. It is the
+/// `SEQUENCE OF PKCS7` an `authsafes` column carries, and it is the second name D441 measured on
+/// `PKCS7_it`.
+static PKCS12_AUTHSAFES_ITEM_TT: Asn1Template = Asn1Template {
+    flags: ASN1_TFLG_SEQUENCE_OF,
+    tag: 0,
+    offset: 0,
+    field_name: c"PKCS12_AUTHSAFES".as_ptr(),
+    item: PKCS7_it as *mut c_void,
+};
+
+/// `PKCS12_AUTHSAFES_it`'s descriptor — `ASN1_ITEM_TEMPLATE_END(PKCS12_AUTHSAFES)` at `:89`: a
+/// `PRIMITIVE` item over one `SEQUENCE OF` template, `utype` `-1`, `tcount` 0 — the same shape as
+/// [`PKCS12_SAFEBAGS_ITEM`].
+static PKCS12_AUTHSAFES_ITEM: Asn1Item = Asn1Item {
+    itype: ASN1_ITYPE_PRIMITIVE,
+    utype: V_ASN1_UNDEF as c_long,
+    templates: &PKCS12_AUTHSAFES_ITEM_TT,
+    tcount: 0,
+    funcs: ptr::null(),
+    size: 0,
+    sname: c"PKCS12_AUTHSAFES".as_ptr(),
+};
+
+/// `const ASN1_ITEM *PKCS12_AUTHSAFES_it(void)` — from `ASN1_ITEM_TEMPLATE_END(PKCS12_AUTHSAFES)`.
+#[no_mangle]
+pub extern "C" fn PKCS12_AUTHSAFES_it() -> *const Asn1Item {
+    &PKCS12_AUTHSAFES_ITEM
+}
+
+// ---------------------------------------------------------------------------------------------
+// PKCS12 -- the PFX container
+// ---------------------------------------------------------------------------------------------
+
+/// `struct PKCS12_st` — `crypto/pkcs12/p12_local.h:16-20`. The struct order is `version`, `mac`,
+/// `authsafes`; the ASN.1 order is `version`, `authsafes`, `mac`. The template below follows the
+/// *template*, and the offsets follow the struct — which is why the `mac` column sits at 8 and
+/// the `authsafes` column at 16.
+#[repr(C)]
+pub struct Pkcs12 {
+    /// `ASN1_INTEGER *version`.
+    pub(crate) version: *mut Asn1String,
+    /// `PKCS12_MAC_DATA *mac` — optional and last on the wire.
+    pub(crate) mac: *mut Pkcs12MacData,
+    /// `PKCS7 *authsafes` — a `NID_pkcs7_data` contentInfo holding the `PKCS12_AUTHSAFES` DER.
+    pub(crate) authsafes: *mut Pkcs7,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<Pkcs12>() == 24);
+    assert!(core::mem::offset_of!(Pkcs12, version) == 0);
+    assert!(core::mem::offset_of!(Pkcs12, mac) == 8);
+    assert!(core::mem::offset_of!(Pkcs12, authsafes) == 16);
+};
+
+/// The authority's `__FILE__` for this unit, used by the memory functions whose file/line are the
+/// call's rather than a raised coordinate.
+const FILE: &core::ffi::CStr = c"crypto/pkcs12/p12_asn.c";
+
+/// `PKCS12_seq_tt` — `ASN1_SEQUENCE(PKCS12)` at `crypto/pkcs12/p12_asn.c:19-23`: `version`, the
+/// `authsafes` `PKCS7` and the optional `mac`. The order is the template's, not the struct's
+/// (the module doc: §3.2's byte identity).
+static PKCS12_TT: [Asn1Template; 3] = [
+    Asn1Template {
+        flags: 0,
+        tag: 0,
+        offset: 0,
+        field_name: c"version".as_ptr(),
+        item: ASN1_INTEGER_it as *mut c_void,
+    },
+    Asn1Template {
+        flags: 0,
+        tag: 0,
+        offset: 16,
+        field_name: c"authsafes".as_ptr(),
+        item: PKCS7_it as *mut c_void,
+    },
+    Asn1Template {
+        flags: ASN1_TFLG_OPTIONAL,
+        tag: 0,
+        offset: 8,
+        field_name: c"mac".as_ptr(),
+        item: PKCS12_MAC_DATA_it as *mut c_void,
+    },
+];
+
+/// `PKCS12_it`'s descriptor — `ASN1_SEQUENCE_END(PKCS12)` at `:23`.
+static PKCS12_ITEM: Asn1Item = Asn1Item {
+    itype: ASN1_ITYPE_SEQUENCE,
+    utype: V_ASN1_SEQUENCE as c_long,
+    templates: PKCS12_TT.as_ptr(),
+    tcount: 3,
+    funcs: ptr::null(),
+    size: core::mem::size_of::<Pkcs12>() as c_long,
+    sname: c"PKCS12".as_ptr(),
+};
+
+/// `const ASN1_ITEM *PKCS12_it(void)` — from `ASN1_SEQUENCE_END(PKCS12)`.
+#[no_mangle]
+pub extern "C" fn PKCS12_it() -> *const Asn1Item {
+    &PKCS12_ITEM
+}
+
+/// `PKCS12 *PKCS12_new(void)` — `crypto/pkcs12/p12_asn.c:27-30`,
+/// `(PKCS12 *)ASN1_item_new(ASN1_ITEM_rptr(PKCS12))`.
+#[no_mangle]
+pub extern "C" fn PKCS12_new() -> *mut Pkcs12 {
+    // SAFETY: `PKCS12_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(PKCS12_it()).cast::<Pkcs12>() }
+}
+
+/// `void PKCS12_free(PKCS12 *p12)` — `crypto/pkcs12/p12_asn.c:32-39`. The `authsafes` object's
+/// property query is released first (it is a copy the `PKCS7` owns, and the item layer would not
+/// know to free it), then the structure is freed.
+///
+/// # Safety
+/// `p12` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_free(p12: *mut Pkcs12) {
+    if p12.is_null() {
+        return;
+    }
+    // SAFETY: `p12` is live; `authsafes` is either null or this object's own `PKCS7`.
+    unsafe {
+        if !(*p12).authsafes.is_null() {
+            CRYPTO_free((*(*p12).authsafes).ctx.propq.cast(), FILE.as_ptr(), 35);
+            (*(*p12).authsafes).ctx.propq = ptr::null_mut();
+        }
+        ASN1_item_free(p12.cast(), PKCS12_it());
+    }
+}
+
+/// `PKCS12 *d2i_PKCS12(PKCS12 **a, const unsigned char **in, long len)` — from
+/// `IMPLEMENT_ASN1_ENCODE_FUNCTIONS_fname(PKCS12, PKCS12, PKCS12)` at `:25`.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_PKCS12(
+    a: *mut *mut Pkcs12,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut Pkcs12 {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_d2i(a.cast(), in_, len, PKCS12_it()).cast::<Pkcs12>() }
+}
+
+/// `int i2d_PKCS12(const PKCS12 *a, unsigned char **out)` — the same macro's encoder.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_PKCS12(a: *const Pkcs12, out: *mut *mut c_uchar) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, PKCS12_it()) }
 }
 
 #[cfg(test)]
