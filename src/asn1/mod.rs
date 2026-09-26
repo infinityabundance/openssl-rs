@@ -62,6 +62,7 @@ pub mod der;
 pub mod evp_asn1;
 pub mod fre;
 pub mod i2d;
+pub mod i2d_evp;
 pub mod items;
 pub mod layout;
 pub mod new;

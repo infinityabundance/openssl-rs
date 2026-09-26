@@ -53,6 +53,8 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use core::ptr;
 
 use crate::asn1::d2i_pr::ossl_d2i_PrivateKey_legacy;
+use crate::asn1::i2d_evp::i2d_PrivateKey;
+use crate::asn1::layout::I2dOfVoid;
 use crate::asn1::p8_pkey::{d2i_PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO_free};
 use crate::asn1::x_sig::{d2i_X509_SIG, X509_SIG_free};
 use crate::decoder_lib::OSSL_DECODER_from_bio;
@@ -61,20 +63,24 @@ use crate::decoder_pkey::{OSSL_DECODER_CTX_new_for_pkey, OSSL_DECODER_CTX_set_pe
 use crate::evp::evp_pkey::evp_pkcs82pkey_legacy;
 use crate::evp::keymgmt_lib::evp_keymgmt_util_has;
 use crate::evp::pem_bridge::{ossl_pem_check_suffix, PemPasswordCb};
-use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_new, EVP_PKEY_set_type_str, EvpPkey};
+use crate::evp::pkey::{
+    evp_pkey_copy_downgraded, evp_pkey_is_provided, EVP_PKEY_free, EVP_PKEY_new,
+    EVP_PKEY_set_type_str, EvpPkey,
+};
 use crate::evp::pkey_asn1::EVP_PKEY_asn1_find_str;
 use crate::passphrase::{
     ossl_pw_clear_passphrase_data, ossl_pw_enable_passphrase_caching, ossl_pw_pem_password,
     ossl_pw_set_pem_password_cb, OsslPassphraseData, PassphraseUnion,
 };
 use crate::pem::pem_lib::{
-    PEM_bytes_read_bio, PEM_bytes_read_bio_secmem, PEM_def_callback, PEM_BUFSIZE,
-    PEM_STRING_EVP_PKEY, PEM_STRING_PARAMETERS, PEM_STRING_PKCS8, PEM_STRING_PKCS8INF,
+    PEM_ASN1_write_bio, PEM_bytes_read_bio, PEM_bytes_read_bio_secmem, PEM_def_callback,
+    PEM_BUFSIZE, PEM_STRING_EVP_PKEY, PEM_STRING_PARAMETERS, PEM_STRING_PKCS8, PEM_STRING_PKCS8INF,
     PEM_STRING_PUBLIC,
 };
 use crate::pkcs12::p12_p8d::PKCS8_decrypt;
 use crate::runtime::bio::bf_readbuff::BIO_f_readbuffer;
 use crate::runtime::bio::bss_file::BIO_s_file;
+use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{
     BIO_ctrl, BIO_free, BIO_new, BIO_pop, BIO_push, Bio, BIO_CTRL_EOF, BIO_C_FILE_SEEK,
     BIO_C_FILE_TELL, BIO_C_SET_FILE_PTR, BIO_NOCLOSE,
@@ -850,20 +856,115 @@ pub unsafe extern "C" fn PEM_read_PrivateKey(
     unsafe { PEM_read_PrivateKey_ex(fp, x, cb, u, ptr::null_mut(), ptr::null()) }
 }
 
+/// `int PEM_write_bio_PrivateKey_traditional(BIO *bp, const EVP_PKEY *x, const EVP_CIPHER *enc,
+/// const unsigned char *kstr, int klen, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_pkey.c:342-370`.
+///
+/// The one writer of Phase 10.6's set. A provided key that is also assigned is **downgraded to a
+/// legacy copy first** (`evp_pkey_copy_downgraded`), because the traditional spelling is defined by
+/// the legacy method's `old_priv_encode` and a provider key has none; if that method is absent the
+/// authority refuses `PEM_R_UNSUPPORTED_PUBLIC_KEY_TYPE`. The block name is the method's own
+/// `pem_str` plus `" PRIVATE KEY"`, and the body is `PEM_ASN1_write_bio` over `i2d_PrivateKey`.
+///
+/// # Safety
+/// `bp` must be a live BIO; `x` NULL or a live `EVP_PKEY`; the four trailing arguments as
+/// `PEM_ASN1_write_bio`'s contract.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_PrivateKey_traditional(
+    bp: *mut Bio,
+    x: *const EvpPkey,
+    enc: *const c_void,
+    kstr: *const c_uchar,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: `x` is NULL or live per the contract.
+    if x.is_null() {
+        return 0;
+    }
+
+    let mut copy: *mut EvpPkey = ptr::null_mut();
+    let mut x = x;
+    // SAFETY: `x` is live per the contract.
+    let assigned_and_provided =
+        unsafe { evp_pkey_is_assigned(x) != 0 && evp_pkey_is_provided(x) != 0 };
+    if assigned_and_provided {
+        // SAFETY: `copy` is this frame's slot and `x` is live.
+        if unsafe { evp_pkey_copy_downgraded(&raw mut copy, x) } != 0 {
+            x = copy;
+        }
+    }
+
+    // SAFETY: `x` is live per the contract.
+    let ameth = unsafe { (*x).ameth };
+    let old_priv_encode = if ameth.is_null() {
+        None
+    } else {
+        // SAFETY: `ameth` is `x`'s own method table.
+        unsafe { (*ameth).old_priv_encode }
+    };
+    if old_priv_encode.is_none() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PEM_PKEY_360) };
+        // SAFETY: `copy` is NULL or this frame's own allocation.
+        unsafe { EVP_PKEY_free(copy) };
+        return 0;
+    }
+
+    let mut pem_str = [0 as c_char; 80];
+    // SAFETY: `ameth` is non-NULL because `old_priv_encode` was read from it; `pem_str` is 80 bytes
+    // and the format the authority's own.
+    unsafe {
+        BIO_snprintf(
+            pem_str.as_mut_ptr(),
+            pem_str.len(),
+            c"%s PRIVATE KEY".as_ptr(),
+            (*ameth).pem_str,
+        )
+    };
+
+    // SAFETY: this wrapper restates `i2d_PrivateKey`'s contract in `I2dOfVoid`'s terms.
+    unsafe extern "C" fn i2d_void(v: *const c_void, out: *mut *mut c_uchar) -> c_int {
+        // SAFETY: the caller's contract, restated in the typed encoder's terms.
+        unsafe { i2d_PrivateKey(v.cast::<EvpPkey>(), out) }
+    }
+    let i2d: I2dOfVoid = i2d_void;
+
+    // SAFETY: every argument is the caller's; `x` is live and `pem_str` is NUL-terminated.
+    let ret = unsafe {
+        PEM_ASN1_write_bio(
+            Some(i2d),
+            pem_str.as_ptr(),
+            bp,
+            x.cast::<c_void>(),
+            enc.cast::<crate::evp::cipher::EvpCipher>(),
+            kstr,
+            klen,
+            cb,
+            u,
+        )
+    };
+    // SAFETY: `copy` is NULL or this frame's own allocation.
+    unsafe { EVP_PKEY_free(copy) };
+    ret
+}
+
 // ---------------------------------------------------------------------------------------------
 // Withheld: the write half — `pem_pkey.c:318-370`, `:393-407`, `:433-451` — and the two
 // `PEM_read_bio_Parameters*` spellings, `:377-391`
 // ---------------------------------------------------------------------------------------------
 //
-// `PEM_write_bio_PrivateKey_ex`/`_PrivateKey`/`_PrivateKey_traditional`, `PEM_write_PrivateKey_ex`/
-// `_PrivateKey` and `PEM_write_bio_Parameters` are the `PEM_write_cb_ex_fnsig`/`PEM_write_fnsig`
-// expansions whose bodies are `crypto/pem/pem_local.h`'s
-// `IMPLEMENT_PEM_provided_write_body_*`. Their `legacy:` fall-through is
-// `PEM_write_bio_PKCS8PrivateKey` (`crypto/pem/pem_pk8.c`, Phase 13's and unlanded) and
+// `PEM_write_bio_PrivateKey_ex`/`_PrivateKey`, `PEM_write_PrivateKey_ex`/`_PrivateKey` and
+// `PEM_write_bio_Parameters` are the `PEM_write_cb_ex_fnsig`/`PEM_write_fnsig` expansions whose
+// bodies are `crypto/pem/pem_local.h`'s `IMPLEMENT_PEM_provided_write_body_*`. Their `legacy:`
+// fall-through is `PEM_write_bio_PKCS8PrivateKey` (`crypto/pem/pem_pk8.c`) and
 // `PEM_write_bio_PrivateKey_traditional`, and the `pass` body reaches
 // `OSSL_ENCODER_CTX_set_cipher`/`_set_passphrase`/`_set_pem_password_cb`. A writer that omitted
-// the fall-through would answer 0 where the authority encodes, so the six are withheld as one
-// block with this coordinate rather than stubbed.
+// the fall-through would answer 0 where the authority encodes, so the five are withheld as one
+// block with this coordinate rather than stubbed. `PEM_write_bio_PrivateKey_traditional` itself
+// **has landed** (10.6) and is above: the fall-through leg the other five name now exists, so a
+// later phase that lands them has one of its two dependencies ready.
 //
 // **`PEM_read_bio_Parameters` and `PEM_read_bio_Parameters_ex` are withheld for a different,
 // measured reason, and it is not the same block.** They call `pem_read_bio_key` with
@@ -879,6 +980,16 @@ pub unsafe extern "C" fn PEM_read_PrivateKey(
 // transcribing it is free and it names the authority's intent at this coordinate.
 //
 // (`no_password_cb` is defined above; it has no caller until the two are landed.)
+
+/// `#define evp_pkey_is_assigned(pk)` — `include/crypto/evp.h:643`, `(pk)->pkey.ptr != NULL ||
+/// (pk)->keydata != NULL`.
+///
+/// # Safety
+/// `pkey` must be live.
+unsafe fn evp_pkey_is_assigned(pkey: *const EvpPkey) -> c_int {
+    // SAFETY: `pkey` is live per the contract.
+    c_int::from(unsafe { !(*pkey).pkey.is_null() || !(*pkey).keydata.is_null() })
+}
 
 #[cfg(test)]
 mod tests {

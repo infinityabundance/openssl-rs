@@ -417,7 +417,7 @@
         "name": "algorithms",
         "phase": 8,
         "provider_rows": {
-          "handed_on": 473,
+          "handed_on": 457,
           "implemented": 306,
           "owned": 306
         },
@@ -449,7 +449,7 @@
         "name": "rand-drbg",
         "phase": 9,
         "provider_rows": {
-          "handed_on": 473,
+          "handed_on": 457,
           "implemented": 15,
           "owned": 15
         },
@@ -458,7 +458,7 @@
         "stratum": "RAND / DRBG + entropy"
       },
       {
-        "blocking": "211 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4)",
+        "blocking": "187 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -474,9 +474,9 @@
         "phase": 10,
         "provider_rows": {
           "handed_on": 39,
-          "implemented": 202,
+          "implemented": 218,
           "owned": 636,
-          "unimplemented": 434
+          "unimplemented": 418
         },
         "seal_sha256": null,
         "state": "in-progress",
@@ -626,7 +626,7 @@
       "not_started": 11
     }
   },
-  "body_hash": "7e013ab3d51f32c5f745b720872d495ee6588736e4bd8e1077dc587618437e27",
+  "body_hash": "6711b06eadfe519657a612fe190bd4a9bc873cd7103e90df21309925ce967790",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

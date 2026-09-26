@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 272,
       "deferred_to_later_phase": 0,
-      "implemented": 87,
-      "open_in_this_stratum": 211,
+      "implemented": 111,
+      "open_in_this_stratum": 187,
       "owned": 298,
       "received_by_handoff": 26
     },
@@ -306,6 +306,7 @@
       "OSSL_ENCODER_to_data",
       "OSSL_ENCODER_to_fp",
       "OSSL_ENCODER_up_ref",
+      "PEM_write_bio_PrivateKey_traditional",
       "PKCS12_item_decrypt_d2i",
       "PKCS12_item_decrypt_d2i_ex",
       "PKCS12_item_i2d_encrypt",
@@ -313,7 +314,30 @@
       "PKCS12_pbe_crypt",
       "PKCS12_pbe_crypt_ex",
       "PKCS8_decrypt",
-      "PKCS8_decrypt_ex"
+      "PKCS8_decrypt_ex",
+      "b2i_PVK_bio",
+      "b2i_PVK_bio_ex",
+      "b2i_PrivateKey",
+      "b2i_PrivateKey_bio",
+      "b2i_PublicKey",
+      "b2i_PublicKey_bio",
+      "d2i_AutoPrivateKey",
+      "d2i_AutoPrivateKey_ex",
+      "d2i_PKCS8PrivateKey_bio",
+      "d2i_PKCS8PrivateKey_fp",
+      "d2i_PrivateKey",
+      "d2i_PrivateKey_ex",
+      "i2b_PVK_bio",
+      "i2b_PVK_bio_ex",
+      "i2b_PrivateKey_bio",
+      "i2b_PublicKey_bio",
+      "i2d_KeyParams",
+      "i2d_KeyParams_bio",
+      "i2d_PKCS8PrivateKey",
+      "i2d_PKCS8PrivateKey_bio",
+      "i2d_PKCS8PrivateKey_fp",
+      "i2d_PrivateKey",
+      "i2d_PublicKey"
     ],
     "module_prefixes": [
       {
@@ -876,12 +900,6 @@
         "symbol": "OSSL_STORE_vctrl"
       },
       {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pkey.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_bio_PrivateKey_traditional"
-      },
-      {
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
@@ -1440,54 +1458,6 @@
         "symbol": "PKCS8_set0_pbe_ex"
       },
       {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "b2i_PVK_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "b2i_PVK_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "b2i_PrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "b2i_PrivateKey_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "b2i_PublicKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "b2i_PublicKey_bio"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/d2i_pr.rs",
-        "received_from_phase": 7,
-        "symbol": "d2i_AutoPrivateKey"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/d2i_pr.rs",
-        "received_from_phase": 7,
-        "symbol": "d2i_AutoPrivateKey_ex"
-      },
-      {
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
@@ -1522,66 +1492,6 @@
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
         "symbol": "d2i_PKCS12_fp"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 5,
-        "symbol": "d2i_PKCS8PrivateKey_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 5,
-        "symbol": "d2i_PKCS8PrivateKey_fp"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/d2i_pr.rs",
-        "received_from_phase": 7,
-        "symbol": "d2i_PrivateKey"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/d2i_pr.rs",
-        "received_from_phase": 7,
-        "symbol": "d2i_PrivateKey_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "i2b_PVK_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "i2b_PVK_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "i2b_PrivateKey_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pvkfmt.rs",
-        "received_from_phase": 5,
-        "symbol": "i2b_PublicKey_bio"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/i2d_evp.rs",
-        "received_from_phase": 7,
-        "symbol": "i2d_KeyParams"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/i2d_evp.rs",
-        "received_from_phase": 7,
-        "symbol": "i2d_KeyParams_bio"
       },
       {
         "declaring_header": "pkcs12.h",
@@ -1620,24 +1530,6 @@
         "symbol": "i2d_PKCS12_fp"
       },
       {
-        "declaring_header": "evp.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 7,
-        "symbol": "i2d_PKCS8PrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 5,
-        "symbol": "i2d_PKCS8PrivateKey_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 5,
-        "symbol": "i2d_PKCS8PrivateKey_fp"
-      },
-      {
         "declaring_header": "pem.h",
         "module": "src/pem/pem_pk8.rs",
         "received_from_phase": 5,
@@ -1648,18 +1540,6 @@
         "module": "src/pem/pem_pk8.rs",
         "received_from_phase": 5,
         "symbol": "i2d_PKCS8PrivateKey_nid_fp"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/i2d_evp.rs",
-        "received_from_phase": 7,
-        "symbol": "i2d_PrivateKey"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/asn1/i2d_evp.rs",
-        "received_from_phase": 7,
-        "symbol": "i2d_PublicKey"
       }
     ],
     "owned_by_header": {
@@ -1703,17 +1583,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "45cf04e6fc30928b4fa6a43b8a83a8f993f1a374177be67ed96c351ab2318f86"
+      "sha256": "2ce92893947ff78cd640e14116c030e9df868e572937dceda26950996455a70b"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "5b312434e3e802ec4c764395a740cad0c9b5669d331276124e21a8071ecff158"
+      "sha256": "2ef35e0dd6aab48c458663d9b4630a7903942a75b6a198a839b0428aee8748d4"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "63e60d16c410212f26f26b9ee466859b597d0c8a0461e39d91bf31d93eb787e2"
+      "sha256": "3954a8c6c82fecd78ceb2dd558914ccfaa2e0523b0b2a7d70a99be8d22650f23"
     }
   ],
   "kind": "phase10-obligations",

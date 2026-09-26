@@ -410,6 +410,11 @@ COVERED_FILES = [
     ("crypto/pem/pem_oth.c", "PEM_OTH"),
     ("crypto/pem/pem_pkey.c", "PEM_PKEY"),
     ("crypto/pem/pem_pk8.c", "PEM_PK8"),
+    # Phase 10.6: the PVK/MSBLOB unit. `pvkfmt.c` was on Phase 7's exclusion note by name ("the
+    # `pem_pkey.c` and `pem_pk8.c` hand-offs Phase 5 recorded") and is the one file of the five
+    # the twenty-six symbols come from that had no block; its raises are observable through the
+    # ten exports `crypto/pem/pvkfmt.c` publishes and are added here with them.
+    ("crypto/pem/pvkfmt.c", "PVKFMT"),
     # Phase 8: the providers' own translation units. Until this block existed the
     # `PROV_R_*` family had exactly one covered file (`crypto/hpke/hpke_util.c`, added
     # by 7.6 for the shared helpers), so the provider half of the cipher and digest
@@ -1149,6 +1154,13 @@ COVERED_FILES = [
     # `PROV_R_UNEXPECTED_KEY_PARAMETERS` (`:699`) and five `PROV_R_BAD_ENCODING` refusals
     # (`:751`, `:765`, `:773`, `:779`, `:786`).
     ("providers/implementations/encode_decode/decode_der2key.c", "PROV_DECODE_DER2KEY"),
+    # Phase 10.1/10.6's PVK/MSBLOB encoders and decoders. `encode_key2ms.c` and
+    # `decode_pvk2key.c` are `.c.in`-generated (their `__FILE__` is the build-relative spelling,
+    # like `ciphercommon.c`'s), `decode_msblob2key.c` is a plain source file. D435 named the first
+    # `encode_key2ms.c` a pending unit because its writers are `pvkfmt.c`'s; 10.6 lands both sides.
+    ("providers/implementations/encode_decode/encode_key2ms.c", "PROV_ENCODE_KEY2MS"),
+    ("providers/implementations/encode_decode/decode_msblob2key.c", "PROV_DECODE_MSBLOB2KEY"),
+    ("providers/implementations/encode_decode/decode_pvk2key.c", "PROV_DECODE_PVK2KEY"),
     # Phase 10.1's PQC codec closure units (D435). The first is
     # `providers/implementations/encode_decode/ml_common_codecs.c`, the shared SPKI/PKCS#8 format
     # tables and `ossl_ml_common_pkcs8_fmt_order`: its one raise is the `PROV_R_ML_DSA_NO_FORMAT`

@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 475,
+      "crate_files_read": 481,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 372,
       "signatures_checked": 265,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 193,
+      "signatures_not_a_dispatch": 200,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -4611,6 +4611,41 @@
           "alias": "KeyFromPkcs8Fn",
           "at": "src/provider/decode_der2key.rs",
           "why": "not a provider dispatch: `decode_der2key.h`'s `key_from_pkcs8_t`, a typedef local to a provider implementation header, which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "B2iOfVoidFn",
+          "at": "src/provider/decode_msblob2key.rs",
+          "why": "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's `keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "AdjustKeyFn",
+          "at": "src/provider/decode_msblob2key.rs",
+          "why": "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's `keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "FreeKeyFn",
+          "at": "src/provider/decode_msblob2key.rs",
+          "why": "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's `keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "B2iPvkOfBioPwFn",
+          "at": "src/provider/decode_pvk2key.rs",
+          "why": "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's `keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "CheckKeyFn",
+          "at": "src/provider/decode_pvk2key.rs",
+          "why": "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's `keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "AdjustKeyFn",
+          "at": "src/provider/decode_pvk2key.rs",
+          "why": "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's `keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "FreeKeyFn",
+          "at": "src/provider/decode_pvk2key.rs",
+          "why": "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's `keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose universe is the installed public surface -- records no typedef for"
         },
         {
           "alias": "SkCompFn",

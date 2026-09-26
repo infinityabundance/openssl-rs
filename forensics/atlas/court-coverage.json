@@ -1014,6 +1014,7 @@
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
+              "RT-KEYFORMAT",
               "RT-MEM",
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
@@ -1068,6 +1069,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-DH",
               "RT-EC",
+              "RT-KEYFORMAT",
               "RT-MEM",
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
@@ -1339,6 +1341,7 @@
               "RT-FETCH",
               "RT-HMAC",
               "RT-HPKE",
+              "RT-KEYFORMAT",
               "RT-KEYMGMT",
               "RT-LIBCTX",
               "RT-MEM",
@@ -1405,6 +1408,7 @@
               "RT-DRBG",
               "RT-EC",
               "RT-ERR",
+              "RT-KEYFORMAT",
               "RT-PUBKEY",
               "RT-RAND",
               "RT-RAND-USERS",
@@ -3101,6 +3105,7 @@
               "RT-EC",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
+              "RT-KEYFORMAT",
               "RT-PARAM",
               "RT-PEM-KEY",
               "RT-PUBKEY",
@@ -3336,6 +3341,7 @@
               "RT-EC",
               "RT-ERR-BIO",
               "RT-EVP-PEM",
+              "RT-KEYFORMAT",
               "RT-LHASH",
               "RT-OBJ-STREAM",
               "RT-PARAM",
@@ -3789,6 +3795,7 @@
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
+              "RT-KEYFORMAT",
               "RT-LHASH",
               "RT-PARAM",
               "RT-PEM-KEY",
@@ -3868,6 +3875,7 @@
               "RT-AMETH",
               "RT-BIO",
               "RT-CONF",
+              "RT-KEYFORMAT",
               "RT-OBJ-STREAM",
               "RT-PEM-KEY",
               "RT-PUBKEY"
@@ -4113,6 +4121,7 @@
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
+              "RT-KEYFORMAT",
               "RT-LHASH",
               "RT-PARAM",
               "RT-PEM-KEY",
@@ -7116,6 +7125,7 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
+              "RT-KEYFORMAT",
               "RT-PARAM",
               "RT-PEM-KEY",
               "RT-PUBKEY",
@@ -7258,6 +7268,7 @@
               "RT-ASN1",
               "RT-BN",
               "RT-BN-RAND",
+              "RT-KEYFORMAT",
               "RT-PARAM"
             ],
             "symbol": "BN_hex2bn"
@@ -9051,6 +9062,7 @@
             "courts": [
               "RT-ASYM-CIPHER",
               "RT-CIPHER",
+              "RT-CODEC",
               "RT-DIGEST",
               "RT-EVP-MAC",
               "RT-PARAM",
@@ -13377,6 +13389,7 @@
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
               "RT-HPKE",
+              "RT-KEYFORMAT",
               "RT-KEYMGMT",
               "RT-PUBKEY",
               "RT-SIGNATURE"
@@ -13487,6 +13500,7 @@
               "RT-CODEC",
               "RT-ECX",
               "RT-EVP-PKEY",
+              "RT-KEYFORMAT",
               "RT-KEYMGMT"
             ],
             "symbol": "EVP_PKEY_get_bits"
@@ -13632,7 +13646,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY-OPS",
-              "RT-EVP-REF"
+              "RT-EVP-REF",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EVP_PKEY_is_a"
           },
@@ -14039,6 +14054,7 @@
               "RT-AMETH",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
+              "RT-KEYFORMAT",
               "RT-PUBKEY"
             ],
             "symbol": "EVP_PKEY_new"
@@ -17024,6 +17040,7 @@
             "courts": [
               "RT-AMETH",
               "RT-DSA",
+              "RT-KEYFORMAT",
               "RT-PEM-KEY",
               "RT-PUBKEY"
             ],
@@ -18172,6 +18189,7 @@
             "courts": [
               "RT-AMETH",
               "RT-EC",
+              "RT-KEYFORMAT",
               "RT-PEM-KEY",
               "RT-PUBKEY"
             ],
@@ -18196,7 +18214,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EC_KEY_get0_group"
           },
@@ -18275,6 +18294,7 @@
             "courts": [
               "RT-AMETH",
               "RT-EC",
+              "RT-KEYFORMAT",
               "RT-PEM-KEY",
               "RT-PUBKEY"
             ],
@@ -18409,14 +18429,16 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EC_KEY_set_private_key"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EC_KEY_set_public_key"
           },
@@ -18493,7 +18515,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EC_POINT_free"
           },
@@ -18570,14 +18593,16 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EC_POINT_mul"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-EC"
+              "RT-EC",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EC_POINT_new"
           },
@@ -19289,21 +19314,24 @@
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EVP_PKEY_set1_DSA"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EVP_PKEY_set1_EC_KEY"
           },
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EVP_PKEY_set1_RSA"
           },
@@ -19956,6 +19984,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-KEYFORMAT",
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA"
@@ -20904,6 +20933,7 @@
             "basis": "called",
             "courts": [
               "RT-DSA",
+              "RT-KEYFORMAT",
               "RT-PEM-KEY"
             ],
             "symbol": "d2i_DSAPrivateKey"
@@ -20982,6 +21012,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-KEYFORMAT",
               "RT-PEM-KEY",
               "RT-RSA"
             ],
@@ -21686,10 +21717,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 87,
-          "directly_courted_called": 23,
-          "directly_courted_referenced": 64,
-          "implemented": 87,
+          "directly_courted": 111,
+          "directly_courted_called": 48,
+          "directly_courted_referenced": 63,
+          "implemented": 111,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -22084,8 +22115,9 @@
             "symbol": "OSSL_ENCODER_CTX_set_output_type"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_CTX_set_params"
@@ -22272,6 +22304,13 @@
             "symbol": "OSSL_ENCODER_up_ref"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "PEM_write_bio_PrivateKey_traditional"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-KEYFORMAT-REF"
@@ -22326,19 +22365,180 @@
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "PKCS8_decrypt_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "b2i_PVK_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "b2i_PVK_bio_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "b2i_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "b2i_PrivateKey_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "b2i_PublicKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "b2i_PublicKey_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "d2i_AutoPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "d2i_AutoPrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "d2i_PKCS8PrivateKey_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "d2i_PKCS8PrivateKey_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "d2i_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "d2i_PrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2b_PVK_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2b_PVK_bio_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2b_PrivateKey_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2b_PublicKey_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2d_KeyParams"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2d_KeyParams_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2d_PKCS8PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2d_PKCS8PrivateKey_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2d_PKCS8PrivateKey_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2d_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "i2d_PublicKey"
           }
         ],
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 10,
-        "staged_candidate_probes": 2
+        "staged_candidate_probes": 3
       }
     ],
     "totals": {
-      "directly_courted": 2802,
-      "directly_courted_called": 2472,
-      "directly_courted_referenced": 330,
-      "implemented": 2810,
+      "directly_courted": 2826,
+      "directly_courted_called": 2497,
+      "directly_courted_referenced": 329,
+      "implemented": 2834,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -22349,7 +22549,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5367e5d94f08118828f3228fa5edb2965b9f12ad4d93c846bbb6d0be4b86fe1f"
+      "sha256": "3bc5cc7aa2fdb8c9817338a69e3ee2965e22e3dcfb0a263f2cef1cf6ba9ab413"
     },
     {
       "name": "symbol-ownership",
@@ -22364,7 +22564,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "616db711ff63f1cf9f2df9b8ac5fd68b694b8b3988b9ce046816b67e56cb9f01"
+      "sha256": "159b20bc7e381965466c6d7a481131455e527a05f57e5df424092a4dc0e5b0d1"
     },
     {
       "name": "phase3-courts",
@@ -22374,7 +22574,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "5c697da61eeb1578dd5735f21583d85c7dc98464345680caed94add1d6dec76a"
+      "sha256": "9c27ec6e1f3985c08ba2244a63e6321aa1c735e663c6e3126aaa549ec8c475fa"
     },
     {
       "name": "phase4-courts",
@@ -22384,7 +22584,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "5b312434e3e802ec4c764395a740cad0c9b5669d331276124e21a8071ecff158"
+      "sha256": "2ef35e0dd6aab48c458663d9b4630a7903942a75b6a198a839b0428aee8748d4"
     },
     {
       "name": "phase5-courts",
@@ -22394,7 +22594,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "13d3a8c1202d2088f6bd9052fb247299aae7eb9507b563290f6e10ba0a87e8cc"
+      "sha256": "23247f30d7c81b0623c13df4a753dbdcb9f9a1249c41137b6a6d6a49ac6ae51c"
     },
     {
       "name": "phase6-courts",
@@ -22404,7 +22604,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "63e60d16c410212f26f26b9ee466859b597d0c8a0461e39d91bf31d93eb787e2"
+      "sha256": "3954a8c6c82fecd78ceb2dd558914ccfaa2e0523b0b2a7d70a99be8d22650f23"
     },
     {
       "name": "phase7-courts",
@@ -22414,7 +22614,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "761ceadba423bd422dbad9b1ef1dc687765b616e709324b956200b7994a13f31"
+      "sha256": "d2d1894e2b0de6e56bb16bec4ea60f45d42f45484a0bf90617acf68658f7e9f3"
     },
     {
       "name": "phase8-courts",
@@ -22424,7 +22624,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "c8f6fa37e0ac6b49e2bf1cd2c1b228a4d99a01032f23858a7736a80a7d530174"
+      "sha256": "0554e4492288cc543c622b2023ca6365bd37b90da54c0910e5bcb87aea5fd7ba"
     },
     {
       "name": "phase9-courts",
@@ -22434,12 +22634,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "77f90b52dfda6857ecb4f1e2562fe7364a1017b90509751e671801013d7585f2"
+      "sha256": "a6849b163fe221e9522d1f3df89e8fb06768719cb790d9129a9382431c1ee25c"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "7900c6b1bc3a4131c4043061dc1a6a512977ba25f1b4465f458d878a212f4edf"
+      "sha256": "8a49bf6f49e9c00f6369cdf79cdbe55267f898455ef738d05cc85e483c811ff9"
     }
   ],
   "kind": "court-coverage",

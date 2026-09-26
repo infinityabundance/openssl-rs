@@ -85,6 +85,9 @@ COURTS: list[tuple[str, str]] = [
     # and `OSSL_ENCODER_CTX_new_for_pkey`, and the one `OSSL_OP_DECODER` row `decode_epki2pki.c`
     # lands, driven through `OSSL_DECODER_fetch` and `OSSL_DECODER_from_data`.
     ("RT-CODEC", "rt_codec_probe.c"),
+    # 10.6's behavioural court: the twenty-six `d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names
+    # the five authority units publish, driven with fixed legacy keys and compared byte for byte.
+    ("RT-KEYFORMAT", "rt_keyformat_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
@@ -112,16 +115,6 @@ PENDING_COURTS: dict[str, str] = {
                 "publishing provider's library context (D240) and the decoder arm lands after "
                 "10.4's pair, so it cannot be written before then "
                 "(docs/PHASE-10-SUBPHASES.md section 3.3).",
-    "RT-KEYFORMAT": "10.6 -- the 26 symbols phases 5 and 7 handed forward: the PVK and PKCS#8 "
-                    "container reads and writes, the four `d2i_PrivateKey*`/"
-                    "`d2i_AutoPrivateKey*` and the five `i2d_*` names, and "
-                    "`PEM_write_bio_PrivateKey_traditional`, compared by the exact bytes of a "
-                    "fixed key and the error queue and coordinate of each malformed-input arm. "
-                    "Every one is open, and the `d2i_PrivateKey*` pair is the subtle one: it "
-                    "tries `d2i_PrivateKey_decoder` first and falls back to "
-                    "`ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-"
-                    "`:250`), so a probe that only drove the provider path would measure half "
-                    "the function (docs/PHASE-10-SUBPHASES.md section 3.4).",
 }
 
 
@@ -296,12 +289,22 @@ def main(argv: list[str]) -> int:
             "`decode_epki2pki.c` publishes through `OSSL_DECODER_*`, observing each row's identity "
             "(`OSSL_ENCODER_fetch`/`OSSL_DECODER_fetch`'s name and properties), its exact bytes "
             "(`OSSL_ENCODER_to_data`/`OSSL_DECODER_from_data` with a construct callback), and a "
-            "refusal arm for each unit with the error queue. It is a differential compatibility "
+            "refusal arm for each unit with the error queue. Since 10.6 it also drives the four "
+            "`msblob`/`pvk` encoder rows `encode_key2ms.c` publishes and the four `msblob`/`pvk` "
+            "decoder rows `decode_msblob2key.c`/`decode_pvk2key.c` publish, in both providers: "
+            "identity, a fixed RSA and 160-bit-`q` DSA keypair encoded to each output at the "
+            "unencrypted level and the bytes fed back through the matching decoder row, and the "
+            "selection and short-header refusals. It is a differential compatibility "
             "claim about those rows, NOT that the other 572 rows or the remaining decoders are "
             "implemented. "
             "`pending_courts` names the courts the plan gives this stratum and the "
             "subphase that brings each, and every name is printed on each run so that 'not run "
-            "yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3)."
+            "yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3). "
+            "`RT-KEYFORMAT` is 10.6's behavioural court: it drives the twenty-four landed "
+            "`d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names with fixed RSA, DSA and EC "
+            "keys, compares the exact bytes and each malformed-input arm's error queue, and "
+            "references the two `i2d_PKCS8PrivateKey_nid_*` writers held pending because "
+            "`PKCS8_encrypt` (10.4) is unlanded."
         ),
     }
 

@@ -1480,8 +1480,8 @@ mod tests {
             );
         }
         assert_eq!(
-            seen.count, 70,
-            "the walk finds the seventy decoder rows 10.1 landed"
+            seen.count, 74,
+            "the walk finds the seventy-four decoder rows 10.1 and 10.6 landed"
         );
         assert_eq!(seen.named_der, 1, "exactly one of them is named DER");
         crate::runtime::err::ERR_clear_error();

@@ -5,8 +5,10 @@
  * had (`rt_coverage_ref_probe.c`) took the *address* of the eighty-seven inherited exports and
  * claimed nothing about any of them; every one of this stratum's own rows was unimplemented. This
  * probe drives the rows `providers/implementations/encode_decode/encode_key2text.c` (the text
- * encoders), `encode_key2blob.c` (the `EC`/`SM2` public-point blob encoders) and `decode_epki2pki.c`
- * (the `EncryptedPrivateKeyInfo`-to-`PrivateKeyInfo` decoder) publish, through the public
+ * encoders), `encode_key2blob.c` (the `EC`/`SM2` public-point blob encoders), `encode_key2ms.c`
+ * (the `RSA`/`DSA` `msblob`/`pvk` encoders, since 10.6) and `decode_epki2pki.c`
+ * (the `EncryptedPrivateKeyInfo`-to-`PrivateKeyInfo` decoder) and `decode_msblob2key.c`/
+ * `decode_pvk2key.c` (the `msblob`/`pvk` decoders, since 10.6) publish, through the public
  * `OSSL_ENCODER_*`/`OSSL_DECODER_*` surface, and compares the transcript byte for byte against
  * the authority's.
  *
@@ -46,9 +48,12 @@
  *
  * ## What is not driven, and why
  *
- * The four `RSA`/`RSA-PSS`/`DSA`/`DHX` encoder rows are observed at join 1 only. `RSA` and `DSA`
- * need a full private key or a modulus the probe would have to carry, and `DHX`'s named groups are
- * a different set from `DH`'s. The eighteen PQC text rows are published and driven: ML-KEM and
+ * The four `RSA`/`RSA-PSS`/`DSA`/`DHX` **text** encoder rows are observed at join 1 only. The
+ * text printer needs a full private key for `RSA`/`DSA` and `DHX`'s named groups are a different
+ * set from `DH`'s. The MSBLOB/PVK rows below are a different matter: those writers take a bare
+ * key, so the fixed RSA and 160-bit-`q` DSA keypairs `rt_keyformat_keys.h` carries do drive them
+ * (`RSA`/`RSA-PSS`/`DSA`/`DHX` here means the `output=text` rows, not the `output=msblob`/
+ * `output=pvk` ones). The eighteen PQC text rows are published and driven: ML-KEM and
  * ML-DSA from the fixed keygen seeds Phase 8's probes carry, and SLH-DSA from the twelve ACVP
  * private keys (`../phase8/ml_kem_probe.h`, `ml_dsa_probe.h`, `slh_dsa_probe.h`). The three codec
  * units' `d2i`/`i2d` half is reached by `decode_der2key.c`, which landed with 10.1; the decoder
@@ -80,6 +85,10 @@
 #include "../phase8/ml_kem_probe.h"
 #include "../phase8/ml_dsa_probe.h"
 #include "../phase8/slh_dsa_probe.h"
+
+/* The fixed RSA and DSA keypairs 10.6's court (`rt_keyformat_probe.c`) already carries; the
+ * MSBLOB/PVK rows below encode the same deterministic inputs that probe compares bytes for. */
+#include "rt_keyformat_keys.h"
 
 static void kv_int(const char *key, int value)
 {
@@ -1235,6 +1244,213 @@ static void arm_pqc_refusals(void)
     }
 }
 
+/* ===========================================================================
+ * The MSBLOB and PVK rows `encode_key2ms.c` (four encoder rows) and
+ * `decode_msblob2key.c`/`decode_pvk2key.c` (four decoder rows) publish, landed with 10.6.
+ *
+ * Join 1: identity for all eight encoder rows (four rows x two providers) with an
+ * `output=msblob`/`output=pvk` query, and all eight decoder rows with `input=msblob`/
+ * `input=pvk`. These rows carry no `structure=`, unlike the `DECODER_w_structure` rows
+ * above (`decoders.inc:53-54`, `:117-118`).
+ *
+ * Join 2: **behaviour**, from the fixed RSA and DSA keypairs `rt_keyformat_keys.h` carries
+ * (`rsa_pkcs8_der`, `dsa_pkcs8_der`), built through the `PrivateKeyInfo` decoders so no
+ * legacy key is involved. Each is encoded to `msblob` and to `pvk` (the unencrypted level
+ * 0, the one level that needs no legacy `RC4`/`PVKKDF`), and the exact bytes are printed.
+ * Those same bytes are fed back to the matching decoder row and the reconstructed key's
+ * bit length is printed, so the decoder's input is a function of the fixed key alone.
+ *
+ * Join 3: the refusals, with their coordinates. The encoder's `does_selection` refuses a
+ * selection with neither key bit (`KEY_PARAMETERS`) and the `pvk` row's `encode` refuses a
+ * public-only selection; the `msblob` decoder raises `PROV_R_BAD_ENCODING` on a body
+ * shorter than its sixteen-byte header (`decode_msblob2key.c:111`).
+ * ========================================================================= */
+
+/* One row per `encoders.inc`/`decoders.inc` row `encode_key2ms.c` and the two decoder units
+ * publish: the key type's name and the `msblob`/`pvk` output (the decoder's `input=`). */
+static const struct {
+    const char *name;
+    const char *out;
+} ms_rows[] = {
+    { "RSA", "msblob" }, { "RSA", "pvk" }, { "DSA", "msblob" }, { "DSA", "pvk" }
+};
+
+static void arm_ms_identity(void)
+{
+    size_t i, j;
+
+    for (j = 0; j < sizeof(providers) / sizeof(providers[0]); j++) {
+        for (i = 0; i < sizeof(ms_rows) / sizeof(ms_rows[0]); i++) {
+            char prop[80];
+            OSSL_ENCODER *enc;
+            OSSL_DECODER *dec;
+
+            snprintf(prop, sizeof(prop), "provider=%s,output=%s", providers[j], ms_rows[i].out);
+            enc = OSSL_ENCODER_fetch(NULL, ms_rows[i].name, prop);
+            kv_int("ms.enc_fetch", enc != NULL);
+            if (enc != NULL) {
+                kv_str("ms.enc_name", OSSL_ENCODER_get0_name(enc));
+                kv_str("ms.enc_props", OSSL_ENCODER_get0_properties(enc));
+                kv_int("ms.enc_is_a_self", OSSL_ENCODER_is_a(enc, ms_rows[i].name));
+                kv_int("ms.enc_is_a_out", OSSL_ENCODER_is_a(enc, ms_rows[i].out));
+            }
+            OSSL_ENCODER_free(enc);
+
+            snprintf(prop, sizeof(prop), "provider=%s,input=%s", providers[j], ms_rows[i].out);
+            dec = OSSL_DECODER_fetch(NULL, ms_rows[i].name, prop);
+            kv_int("ms.dec_fetch", dec != NULL);
+            if (dec != NULL) {
+                kv_str("ms.dec_name", OSSL_DECODER_get0_name(dec));
+                kv_str("ms.dec_props", OSSL_DECODER_get0_properties(dec));
+                kv_int("ms.dec_is_a_self", OSSL_DECODER_is_a(dec, ms_rows[i].name));
+            }
+            OSSL_DECODER_free(dec);
+        }
+        ERR_clear_error();
+    }
+}
+
+/* Build a provider keypair from a fixed PKCS#8 body, through the decoder rows 10.1 landed. */
+static EVP_PKEY *ms_pkey_from_pkcs8(const char *type, const unsigned char *der, size_t derlen)
+{
+    EVP_PKEY *pkey = NULL;
+    OSSL_DECODER_CTX *ctx = OSSL_DECODER_CTX_new_for_pkey(&pkey, "DER", NULL, type,
+                                                          EVP_PKEY_KEYPAIR, NULL, NULL);
+    const unsigned char *p = der;
+    size_t len = derlen;
+
+    if (ctx == NULL)
+        return NULL;
+    if (OSSL_DECODER_from_data(ctx, &p, &len) != 1) {
+        EVP_PKEY_free(pkey);
+        pkey = NULL;
+    }
+    OSSL_DECODER_CTX_free(ctx);
+    return pkey;
+}
+
+/* Encode `pkey` with the `msblob`/`pvk` rows, print the exact bytes, then feed those same
+ * bytes to the decoder row and print the reconstructed key's bit length. */
+static void ms_roundtrip(const char *type, const unsigned char *der, size_t derlen)
+{
+    static const char *outs[2] = { "msblob", "pvk" };
+    EVP_PKEY *pkey = ms_pkey_from_pkcs8(type, der, derlen);
+    size_t k;
+
+    kv_int("ms.built", pkey != NULL);
+    if (pkey == NULL)
+        return;
+    for (k = 0; k < sizeof(outs) / sizeof(outs[0]); k++) {
+        OSSL_ENCODER_CTX *ectx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEYPAIR,
+                                                               outs[k], NULL, NULL);
+        unsigned char *data = NULL;
+        size_t len = 0;
+        char key[64];
+        int rc;
+
+        /* The provider `pvk` row's default encrypt level is 1, which needs a passphrase no
+         * `OSSL_ENCODER_to_data` supplies; level 0 is the unencrypted form, the one whose bytes
+         * are a function of the key alone (and the only one the legacy `RC4`/`PVKKDF` rows, still
+         * open, are not needed for). */
+        if (strcmp(outs[k], "pvk") == 0) {
+            int level = 0;
+            OSSL_PARAM params[2];
+
+            params[0] = OSSL_PARAM_construct_int(OSSL_ENCODER_PARAM_ENCRYPT_LEVEL, &level);
+            params[1] = OSSL_PARAM_construct_end();
+            kv_int("ms.set_encrypt_level", OSSL_ENCODER_CTX_set_params(ectx, params));
+        }
+
+        ERR_clear_error();
+        rc = OSSL_ENCODER_to_data(ectx, &data, &len);
+        snprintf(key, sizeof(key), "ms.encode.%s.%s", type, outs[k]);
+        kv_int("ms.to_data", rc);
+        errs(key);
+        OSSL_ENCODER_CTX_free(ectx);
+
+        if (rc == 1 && data != NULL) {
+            snprintf(key, sizeof(key), "ms.bytes.%s.%s", type, outs[k]);
+            kv_hex(key, data, len);
+            {
+                EVP_PKEY *got = NULL;
+                OSSL_DECODER_CTX *dctx = OSSL_DECODER_CTX_new_for_pkey(&got, outs[k], NULL, type,
+                                                                       EVP_PKEY_KEYPAIR, NULL, NULL);
+                const unsigned char *p = data;
+                size_t l = len;
+
+                snprintf(key, sizeof(key), "ms.decode.%s.%s", type, outs[k]);
+                ERR_clear_error();
+                if (dctx != NULL)
+                    kv_int("ms.from_data", OSSL_DECODER_from_data(dctx, &p, &l));
+                errs(key);
+                OSSL_DECODER_CTX_free(dctx);
+                if (got != NULL)
+                    kv_int("ms.dec_bits", EVP_PKEY_get_bits(got));
+                EVP_PKEY_free(got);
+            }
+        }
+        OPENSSL_free(data);
+    }
+    EVP_PKEY_free(pkey);
+}
+
+/* Join 3: the refusal arms, each printing the return and the error queue. */
+static void arm_ms_refusals(void)
+{
+    EVP_PKEY *pkey = ms_pkey_from_pkcs8("RSA", rsa_pkcs8_der, sizeof(rsa_pkcs8_der));
+
+    kv_int("ms.refusal.built", pkey != NULL);
+
+    if (pkey != NULL) {
+        OSSL_ENCODER_CTX *ectx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEY_PARAMETERS,
+                                                               "msblob", NULL, NULL);
+        unsigned char *data = NULL;
+        size_t len = 0;
+
+        ERR_clear_error();
+        kv_int("ms.refusal.params_rc", OSSL_ENCODER_to_data(ectx, &data, &len));
+        errs("ms.refusal.params");
+        OPENSSL_free(data);
+        OSSL_ENCODER_CTX_free(ectx);
+
+        /* The `pvk` row's `encode` refuses a public-only selection (`encode_key2ms.c:161`). */
+        ectx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_PUBLIC_KEY, "pvk", NULL, NULL);
+        data = NULL;
+        len = 0;
+        ERR_clear_error();
+        kv_int("ms.refusal.pvk_pub_rc", OSSL_ENCODER_to_data(ectx, &data, &len));
+        errs("ms.refusal.pvk_pub");
+        OPENSSL_free(data);
+        OSSL_ENCODER_CTX_free(ectx);
+    }
+
+    /* The `msblob` decoder's short-header arm (`decode_msblob2key.c:111`). */
+    {
+        static const unsigned char tiny[4] = { 0x01, 0x02, 0x03, 0x04 };
+        EVP_PKEY *got = NULL;
+        OSSL_DECODER_CTX *dctx = OSSL_DECODER_CTX_new_for_pkey(&got, "msblob", NULL, "RSA",
+                                                               EVP_PKEY_KEYPAIR, NULL, NULL);
+        const unsigned char *p = tiny;
+        size_t len = sizeof(tiny);
+
+        ERR_clear_error();
+        if (dctx != NULL)
+            kv_int("ms.refusal.short_rc", OSSL_DECODER_from_data(dctx, &p, &len));
+        errs("ms.refusal.short");
+        OSSL_DECODER_CTX_free(dctx);
+        EVP_PKEY_free(got);
+    }
+
+    EVP_PKEY_free(pkey);
+    ERR_clear_error();
+}
+
+static void arm_ms(void)
+{
+    ms_roundtrip("RSA", rsa_pkcs8_der, sizeof(rsa_pkcs8_der));
+    ms_roundtrip("DSA", dsa160_pkcs8_der, sizeof(dsa160_pkcs8_der));
+}
+
 int main(void)
 {
     OSSL_PROVIDER *deflt = OSSL_PROVIDER_load(NULL, "default");
@@ -1264,6 +1480,10 @@ int main(void)
     arm_decoder_dh_params();
     arm_decoder_selection_refusal();
     arm_decoder_slh_length_refusal();
+
+    arm_ms_identity();
+    arm_ms();
+    arm_ms_refusals();
 
     OSSL_PROVIDER_unload(base);
     OSSL_PROVIDER_unload(deflt);

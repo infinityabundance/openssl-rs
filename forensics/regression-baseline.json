@@ -192,7 +192,7 @@
       "verdict": "pass"
     },
     "RT-CODEC": {
-      "observations": 1375,
+      "observations": 1487,
       "verdict": "pass"
     },
     "RT-COMP": {
@@ -319,6 +319,10 @@
       "observations": 65,
       "verdict": "pass"
     },
+    "RT-KEYFORMAT": {
+      "observations": 256,
+      "verdict": "pass"
+    },
     "RT-KEYFORMAT-REF": {
       "observations": 87,
       "verdict": "pass"
@@ -443,11 +447,11 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 2963,
+    "libcrypto": 2987,
     "libssl": 0
   },
   "open_obligations": {
-    "phase10": 211,
+    "phase10": 187,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -491,11 +495,11 @@
     "9": "complete"
   },
   "prerequisites": {
-    "blocking_dependencies": 7,
+    "blocking_dependencies": 6,
     "divergence_names_covered": 39,
     "findings": 0,
-    "language_census": 5032,
-    "sealed_census": 50
+    "language_census": 5076,
+    "sealed_census": 52
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",
@@ -511,6 +515,8 @@
     "base/OSSL_OP_DECODER/DSA",
     "base/OSSL_OP_DECODER/DSA",
     "base/OSSL_OP_DECODER/DSA",
+    "base/OSSL_OP_DECODER/DSA",
+    "base/OSSL_OP_DECODER/DSA",
     "base/OSSL_OP_DECODER/EC",
     "base/OSSL_OP_DECODER/EC",
     "base/OSSL_OP_DECODER/EC",
@@ -531,6 +537,8 @@
     "base/OSSL_OP_DECODER/ML-KEM-512",
     "base/OSSL_OP_DECODER/ML-KEM-768",
     "base/OSSL_OP_DECODER/ML-KEM-768",
+    "base/OSSL_OP_DECODER/RSA",
+    "base/OSSL_OP_DECODER/RSA",
     "base/OSSL_OP_DECODER/RSA",
     "base/OSSL_OP_DECODER/RSA",
     "base/OSSL_OP_DECODER/RSA",
@@ -571,6 +579,8 @@
     "base/OSSL_OP_ENCODER/DH",
     "base/OSSL_OP_ENCODER/DHX",
     "base/OSSL_OP_ENCODER/DSA",
+    "base/OSSL_OP_ENCODER/DSA",
+    "base/OSSL_OP_ENCODER/DSA",
     "base/OSSL_OP_ENCODER/EC",
     "base/OSSL_OP_ENCODER/EC",
     "base/OSSL_OP_ENCODER/ED25519",
@@ -581,6 +591,8 @@
     "base/OSSL_OP_ENCODER/ML-KEM-1024",
     "base/OSSL_OP_ENCODER/ML-KEM-512",
     "base/OSSL_OP_ENCODER/ML-KEM-768",
+    "base/OSSL_OP_ENCODER/RSA",
+    "base/OSSL_OP_ENCODER/RSA",
     "base/OSSL_OP_ENCODER/RSA",
     "base/OSSL_OP_ENCODER/RSA-PSS",
     "base/OSSL_OP_ENCODER/SLH-DSA-SHA2-128f",
@@ -754,6 +766,8 @@
     "default/OSSL_OP_DECODER/DSA",
     "default/OSSL_OP_DECODER/DSA",
     "default/OSSL_OP_DECODER/DSA",
+    "default/OSSL_OP_DECODER/DSA",
+    "default/OSSL_OP_DECODER/DSA",
     "default/OSSL_OP_DECODER/EC",
     "default/OSSL_OP_DECODER/EC",
     "default/OSSL_OP_DECODER/EC",
@@ -774,6 +788,8 @@
     "default/OSSL_OP_DECODER/ML-KEM-512",
     "default/OSSL_OP_DECODER/ML-KEM-768",
     "default/OSSL_OP_DECODER/ML-KEM-768",
+    "default/OSSL_OP_DECODER/RSA",
+    "default/OSSL_OP_DECODER/RSA",
     "default/OSSL_OP_DECODER/RSA",
     "default/OSSL_OP_DECODER/RSA",
     "default/OSSL_OP_DECODER/RSA",
@@ -841,6 +857,8 @@
     "default/OSSL_OP_ENCODER/DH",
     "default/OSSL_OP_ENCODER/DHX",
     "default/OSSL_OP_ENCODER/DSA",
+    "default/OSSL_OP_ENCODER/DSA",
+    "default/OSSL_OP_ENCODER/DSA",
     "default/OSSL_OP_ENCODER/EC",
     "default/OSSL_OP_ENCODER/EC",
     "default/OSSL_OP_ENCODER/ED25519",
@@ -851,6 +869,8 @@
     "default/OSSL_OP_ENCODER/ML-KEM-1024",
     "default/OSSL_OP_ENCODER/ML-KEM-512",
     "default/OSSL_OP_ENCODER/ML-KEM-768",
+    "default/OSSL_OP_ENCODER/RSA",
+    "default/OSSL_OP_ENCODER/RSA",
     "default/OSSL_OP_ENCODER/RSA",
     "default/OSSL_OP_ENCODER/RSA-PSS",
     "default/OSSL_OP_ENCODER/SLH-DSA-SHA2-128f",
@@ -1026,17 +1046,17 @@
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 473,
-      "9": 473
+      "8": 457,
+      "9": 457
     },
-    "implemented": 523,
+    "implemented": 539,
     "open_by_phase": {
-      "10": 434,
+      "10": 418,
       "13": 39,
       "8": 0,
       "9": 0
     },
     "total": 996,
-    "unimplemented": 473
+    "unimplemented": 457
   }
 }
