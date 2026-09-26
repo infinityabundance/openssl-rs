@@ -1209,6 +1209,26 @@ COVERED_FILES = [
     # read as coverage that does not exist; it lands with the `create`/`add_key` arms that do
     # raise, exactly as `p12_p8d.c` is named under above.
     ("crypto/pkcs12/p12_add.c", "PKCS12_ADD"),
+    # Phase 10's 10.3, re-opened: `crypto/pkcs12/p12_init.c`, the `PKCS12_init(_ex)` pair. The
+    # `PKCS7` subset pulled forward from Phase 12 lets `PKCS12_new` build at last, so the four
+    # sites in this unit (`ERR_R_ASN1_LIB` twice, `ERR_R_PKCS7_LIB` and
+    # `PKCS12_R_UNSUPPORTED_PKCS12_MODE`) become reachable and are covered rather than
+    # reconstructed. It is the file `PKCS12_add_safes_ex` seeds a container through.
+    ("crypto/pkcs12/p12_init.c", "PKCS12_INIT"),
+    # Phase 10's 10.3, re-opened: `crypto/pkcs12/p12_mutl.c`, of which this slice lands
+    # `PKCS12_mac_present`, `PKCS12_get0_mac` and `PKCS12_setup_mac`. `setup_mac`'s three
+    # `ERR_R_ASN1_LIB` arms (the iter allocation, the iteration set and the algorithm set) are
+    # where the covered coordinates come from; the file's `gen_mac`/`set_mac`/`set_pbmac1_pbkdf2`
+    # sites land with 10.4's KDF. The stem is `PKCS12_MUTL` so it cannot collide with `PKCS12`
+    # (carried by `p12_decr.c`/`p12_sbag.c`) or `PKCS12_ADD`.
+    ("crypto/pkcs12/p12_mutl.c", "PKCS12_MUTL"),
+    # Phase 10's pulled-forward `PKCS7` subset (the PKCS#12 landing D441 blocked):
+    # `crypto/pkcs7/pk7_lib.c`'s `PKCS7_set_type`. Its arm for the three content types this
+    # subset does not carry reaches the authority's own `default:`, which raises
+    # `PKCS7_R_UNSUPPORTED_CONTENT_TYPE` at `:179` under `ERR_LIB_PKCS7`, so the coordinate is
+    # generated from the unit rather than transcribed. `pk7_asn1.c` raises nothing and is
+    # deliberately not listed.
+    ("crypto/pkcs7/pk7_lib.c", "PKCS7_LIB"),
     # Phase 11 staging: `crypto/x509/x509_att.c`, the `X509at_add1_attr*` family
     # `PKCS8_pkey_add1_attr*` is one call each to (D368). Its twenty-six sites are
     # `ERR_LIB_X509`, mostly `ERR_R_PASSED_NULL_PARAMETER`, `ERR_R_CRYPTO_LIB` and
@@ -1783,6 +1803,10 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     # refusals D368 transcribes. `pkcs12err.h` is an installed header, so this is `ecerr.h`'s
     # case again.
     "#include <openssl/pkcs12err.h>",
+    # Phase 10's pulled-forward `PKCS7` subset: `PKCS7_R_UNSUPPORTED_CONTENT_TYPE` for
+    # `crypto/pkcs7/pk7_lib.c`'s `PKCS7_set_type` default arm. `pkcs7err.h` is an installed
+    # header, so this is `pkcs12err.h`'s case again.
+    "#include <openssl/pkcs7err.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the

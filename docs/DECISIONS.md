@@ -31382,3 +31382,76 @@ with 0 unmatched; `provider_court_coverage.py` reads 539/539. Phase 9 `complete`
 `forensics/tools/{gen_err_raise_sites,phase10_courts}.py` change; and the ledgers, the atlases, the census
 and `forensics/regression-baseline.json` are regenerated.
 
+## D442 -- the plan is reordered: `crypto/pkcs7/`'s object and ASN.1 are a prerequisite of 10.2/10.3, and Phase 10 moves to 183 of 298
+
+D441 measured that 27 of 10.3's 31 exports are blocked on Phase 12's `PKCS7` object and flagged the
+stratum-ordering defect rather than choosing. The project owner chose: pull it forward. This slice lands
+the subset and records the reorder.
+
+**The subset is measured, not guessed.** `nm --undefined-only` over the authority's own `crypto/pkcs12/`
+build objects, filtered to the two prefixes, names exactly **ten** symbols: `PKCS7_free`, `PKCS7_it`,
+`PKCS7_new`, `PKCS7_new_ex`, `PKCS7_set_type`, `ossl_pkcs7_ctx_get0_libctx`, `ossl_pkcs7_ctx_get0_propq`,
+`ossl_pkcs7_ctx_propagate`, `ossl_pkcs7_set0_libctx` and `ossl_pkcs7_set1_propq`. A new `src/pkcs7/`
+(`pk7_asn1.rs`, `pk7_lib.rs`, 880 lines) carries them, and **fourteen of `pkcs7.h`'s 118 exports land**
+(the five above plus `PKCS7_ENC_CONTENT_it/new/free`, `PKCS7_ENCRYPT_it/new/free` and
+`PKCS7_DIGEST_it/new/free`), leaving 104. **Three of the item's six `ASN1_ADB` arms land -- `data`,
+`digest`, `encrypted` -- and `signed`/`enveloped`/`signedAndEnveloped` are withheld rather than stubbed,
+because their templates name Phase 11's `X509_it`/`X509_CRL_it`/`X509_NAME_it`.** That is not a shortcut:
+PKCS#12 never reaches them (an `authsafes` is always `NID_pkcs7_data` and a `p7encdata` safe is
+`NID_pkcs7_encrypted`), the withheld arms fall to the authority's own `default:` arm raising
+`PKCS7_R_UNSUPPORTED_CONTENT_TYPE` (`PKCS7_LIB_179`), and `ossl_pkcs7_resolve_libctx`'s three propagation
+walks are withheld with a note that for these three arms all three stacks are null by type, so the
+authority's loops iterate zero times. The one gate finding is recorded in `forensics/prerequisites.json`
+as an `owned_by_a_later_stratum` row for `pkcs7_get0_certificates`.
+
+**Ownership is unchanged by the landing.** The atlas still assigns `pkcs7.h` to Phase 12 and the fourteen
+symbols read `implemented` with `owning_phase: 12` while **Phase 12 stays `not-started`** -- no Phase 12
+evidence, ledger, plan, seal or state row is created, and `phase_state.py` still derives `not-started` for
+it. That is the precedent Phase 8 set when it landed 87 exports the atlas assigns to Phase 10, and it is
+why a stratum can be *behind* another in the order while its closure is built *ahead* of it.
+
+**The reorder is the point: PKCS#7 is not Phase 12-only.** `crypto/pkcs7/`'s object and ASN.1 are a
+prerequisite of 10.2 and 10.3, so the plan's §2 ordering had to be corrected rather than worked around --
+which is what a plan derived from the authority's own objects can do, and what a plan read as a backlog
+cannot. The arms' closure split is the same finding one level down: `data`/`digest`/`encrypted` depend on
+nothing above Phase 10, and `signed`/`enveloped`/`signedAndEnveloped` depend on Phase 11.
+
+**Twenty-two exports became reachable and landed.** Twelve of 10.3's twenty-seven --
+`PKCS12_pack_p7data`/`unpack_p7data`/`unpack_p7encdata`, `PKCS12_pack_authsafes`/`unpack_authsafes`,
+`PKCS12_add_safes(_ex)`, `PKCS12_mac_present`/`get0_mac`/`setup_mac`, `PKCS12_init(_ex)` -- and the
+ten `PKCS12`-container rows 10.2 had left open (`PKCS12_it`/`new`/`free`, `d2i_`/`i2d_PKCS12`,
+`PKCS12_AUTHSAFES_it` and the four `_bio`/`_fp` spellings). `setup_mac` needed no KDF at all, only
+`RAND_bytes_ex`, `X509_SIG_getm` and `X509_ALGOR_set0`. **The ledger moves from
+`implemented=161 open=137` to `implemented=183 open=115`**, and 10.3 now stands at 16 implemented of 32
+rather than 4. Eight remain open with a measured Phase 11 blocker
+(`PKCS12_pack_p7encdata(_ex)`, `PKCS12_add_safe(_ex)` and `PKCS12_newpass` need `PKCS5_pbe*set*_ex` and
+the PBE parameter types), and 10.2's `create_cert`/`create_crl` plus the four `get1_cert`/`get1_crl`
+readers stay open because neither `X509_it` nor `X509_CRL_it` is landed. Nothing was stubbed.
+
+**`RT-PKCS12` moves from 146 to 184 observations and twenty-two of its `pending` rows to driven** (45 to
+23 `pending.*` lines), on the real thing §3.2 asked for: the `PFX` DER order (`version`, `authsafes`,
+`mac`) for an empty container and for a fixed-`MacData` one, the `MacData`'s `salt`/`iterations`/
+`digestAlgorithm` read back through `PKCS12_get0_mac`, the two-element authsafes' `SEQUENCE OF PKCS7`
+ordering by i2d bytes and by `unpack_authsafes`, the `_bio`/`_fp` spellings over a memory BIO and a
+`tmpfile`, and two refusal arms with coordinates. The remaining 23 `pending.*` lines have blockers
+corrected from `phase-12-pkcs7` to `phase-11-pkcs5`/`phase-11-pbe`/`phase-11-x509` -- a blocker field
+that moved as the truth moved.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` is
+**1074 passed, 0 failed** at the default thread count and serially. `run_courts.py` is `ok` over nine
+phases; `court_coverage.py` reads phase 10 as 183 implemented and 183 direct with 0 unmatched;
+`provider_court_coverage.py` reads 539/539. `phase_state.py` reads 0-9 `complete`, **10 `in-progress`**,
+11-21 `not-started`. `PIPELINE OK` exit 0 twice, at 107 courts and 42,192 observations.
+
+### Movement
+
+`src/pkcs7/{mod,pk7_asn1,pk7_lib}.rs` and `src/pkcs12/{p12_init,p12_mutl}.rs` are added; `src/lib.rs`,
+`src/pkcs12/{mod,p12_add,p12_asn,p12_crt,p12_utl}.rs`, `src/runtime/err_sites.rs`,
+`courts/phase10/rt_pkcs12_probe.c`, `forensics/prerequisites.json` and
+`forensics/tools/gen_err_raise_sites.py` change; and the ledgers, the atlases, the census and
+`forensics/regression-baseline.json` are regenerated. **The plan's §2 ordering is superseded by this
+entry**: `crypto/pkcs7/`'s `data`/`digest`/`encrypted` arms belong to 10.2/10.3's critical path, and only
+its `signed`/`enveloped`/`signedAndEnveloped` arms and the remaining 104 `pkcs7.h` exports are Phase 12's.
+

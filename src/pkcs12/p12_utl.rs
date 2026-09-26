@@ -7,14 +7,15 @@
 //! `PKCS12_get_friendlyname` (`crypto/pkcs12/p12_attr.c`) reaches `OPENSSL_uni2utf8`, which is
 //! why the unit lands with this subphase.
 //!
-//! ## The four BIO/`FILE` wrappers are held open, and the reason is a Phase 12 dependency
+//! ## The four BIO/`FILE` wrappers, and the `PKCS7` dependency that held them
 //!
 //! `d2i_PKCS12_bio`/`d2i_PKCS12_fp`/`i2d_PKCS12_bio`/`i2d_PKCS12_fp` each call an
 //! `ASN1_item_*_bio`/`_fp` over `ASN1_ITEM_rptr(PKCS12)`, and the two `d2i` spellings also read
-//! the previous value's `PKCS7_CTX` through `ossl_pkcs12_get0_pkcs7ctx`. Both reach the `PKCS12`
-//! item and the `PKCS7` object, neither of which can be built here: `PKCS12_it` is named above
-//! and `PKCS7_it` is Phase 12's (`crypto/pkcs7/pk7_asn1.c`). They are left `open` rather than
-//! stubbed, and `PKCS12`'s own item group lands in the slice that can build the `PKCS7` it needs.
+//! the previous value's `PKCS7_CTX` through `ossl_pkcs12_get0_pkcs7ctx`. Both reached the
+//! `PKCS12` item and the `PKCS7` object, and `PKCS7_it` is Phase 12's
+//! (`crypto/pkcs7/pk7_asn1.c`). **All four land here** now that the `PKCS7` subset is pulled
+//! forward: the `ASN1_item_*_bio`/`_fp` layer is Phase 5's and landed, the `PKCS12` item is this
+//! crate's `p12_asn.rs`, and the context borrow is `p12_init.rs`'s.
 //!
 //! ## The naive/UTF-8 asymmetry is the authority's, and it round-trips through the fallback
 //!
@@ -30,8 +31,14 @@
 
 use core::ffi::{c_char, c_int, c_uchar, c_ulong};
 
+use crate::asn1::a_d2i_fp::{ASN1_item_d2i_bio_ex, ASN1_item_d2i_fp_ex};
+use crate::asn1::a_i2d_fp::{ASN1_item_i2d_bio, ASN1_item_i2d_fp};
 use crate::asn1::a_utf8::{UTF8_getc, UTF8_putc};
-use crate::runtime::bio::sys::strlen;
+use crate::pkcs12::p12_asn::{PKCS12_it, Pkcs12};
+use crate::pkcs12::p12_init::ossl_pkcs12_get0_pkcs7ctx;
+use crate::pkcs7::{ossl_pkcs7_ctx_get0_libctx, ossl_pkcs7_ctx_get0_propq};
+use crate::runtime::bio::sys::{strlen, FILE as StdioFile};
+use crate::runtime::bio::Bio;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 
 /// `crypto/pkcs12/p12_utl.c` — the authority's `__FILE__` string, for the allocator's bookkeeping.
@@ -358,6 +365,71 @@ pub unsafe extern "C" fn OPENSSL_uni2utf8(uni: *const c_uchar, unilen: c_int) ->
         }
     }
     asctmp
+}
+
+/// `int i2d_PKCS12_bio(BIO *bp, const PKCS12 *p12)` — `crypto/pkcs12/p12_utl.c:237-240`.
+///
+/// # Safety
+/// `bp` is a live BIO; `p12` is null or a live `PKCS12`.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_PKCS12_bio(bp: *mut Bio, p12: *const Pkcs12) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { ASN1_item_i2d_bio(PKCS12_it(), bp, p12.cast()) }
+}
+
+/// `int i2d_PKCS12_fp(FILE *fp, const PKCS12 *p12)` — `crypto/pkcs12/p12_utl.c:243-246`.
+///
+/// # Safety
+/// `fp` is a live `FILE *`; `p12` is null or a live `PKCS12`.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_PKCS12_fp(fp: *mut StdioFile, p12: *const Pkcs12) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { ASN1_item_i2d_fp(PKCS12_it(), fp, p12.cast()) }
+}
+
+/// `PKCS12 *d2i_PKCS12_bio(BIO *bp, PKCS12 **p12)` — `crypto/pkcs12/p12_utl.c:249-263`.
+///
+/// When a previous value is supplied, its `authsafes` object's `PKCS7_CTX` — when there is one —
+/// supplies the library context and property query the decode runs in; otherwise both are null.
+///
+/// # Safety
+/// `bp` is a live BIO; `p12` is NULL or a writable slot holding a live `PKCS12`.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_PKCS12_bio(bp: *mut Bio, p12: *mut *mut Pkcs12) -> *mut Pkcs12 {
+    let mut libctx: *mut core::ffi::c_void = core::ptr::null_mut();
+    let mut propq: *const c_char = core::ptr::null();
+    // SAFETY: `p12` is NULL or the caller's slot; the borrowed context is read only when live.
+    unsafe {
+        if !p12.is_null() {
+            let p7ctx = ossl_pkcs12_get0_pkcs7ctx(*p12);
+            if !p7ctx.is_null() {
+                libctx = ossl_pkcs7_ctx_get0_libctx(p7ctx);
+                propq = ossl_pkcs7_ctx_get0_propq(p7ctx);
+            }
+        }
+        ASN1_item_d2i_bio_ex(PKCS12_it(), bp, p12.cast(), libctx, propq).cast::<Pkcs12>()
+    }
+}
+
+/// `PKCS12 *d2i_PKCS12_fp(FILE *fp, PKCS12 **p12)` — `crypto/pkcs12/p12_utl.c:266-280`.
+///
+/// # Safety
+/// `fp` is a live `FILE *`; `p12` is NULL or a writable slot holding a live `PKCS12`.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_PKCS12_fp(fp: *mut StdioFile, p12: *mut *mut Pkcs12) -> *mut Pkcs12 {
+    let mut libctx: *mut core::ffi::c_void = core::ptr::null_mut();
+    let mut propq: *const c_char = core::ptr::null();
+    // SAFETY: `p12` is NULL or the caller's slot; the borrowed context is read only when live.
+    unsafe {
+        if !p12.is_null() {
+            let p7ctx = ossl_pkcs12_get0_pkcs7ctx(*p12);
+            if !p7ctx.is_null() {
+                libctx = ossl_pkcs7_ctx_get0_libctx(p7ctx);
+                propq = ossl_pkcs7_ctx_get0_propq(p7ctx);
+            }
+        }
+        ASN1_item_d2i_fp_ex(PKCS12_it(), fp, p12.cast(), libctx, propq).cast::<Pkcs12>()
+    }
 }
 
 #[cfg(test)]

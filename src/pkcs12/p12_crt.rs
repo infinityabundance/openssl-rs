@@ -14,6 +14,15 @@
 //! subphase's slice can actually drive, and the court builds a one-element
 //! `STACK_OF(PKCS12_SAFEBAG)` through it and prints the bag's DER.
 //!
+//! **The `PKCS7` subset was then pulled forward** (D441's stratum-ordering defect; see
+//! [`crate::pkcs7`]), and [`PKCS12_add_safes_ex`]/[`PKCS12_add_safes`] are the pair that becomes
+//! reachable: they need only `PKCS12_init_ex` and `PKCS12_pack_authsafes`, both of which land on
+//! the pulled-forward object. `PKCS12_add_safe(_ex)` is **not** in that set: its encrypted arm
+//! reaches `PKCS12_pack_p7encdata_ex` (`:323`), which stays open on Phase 11's
+//! `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex`, so the `add_*` pair that calls it stays open with
+//! it. `PKCS12_create(_ex/_ex2)`, `PKCS12_add_cert` and `PKCS12_add_key(_ex)` stay open on Phase
+//! 11's `X509_it`/`EVP_PKEY2PKCS8` as well.
+//!
 //! The unit raises nothing of its own on the landed path, and `pkcs12_add_bag` raises nothing at
 //! all, so `crypto/pkcs12/p12_crt.c` is deliberately **not** an entry in
 //! `gen_err_raise_sites.py`'s `COVERED_FILES`: an entry would read as coverage this slice does
@@ -26,8 +35,12 @@ use core::ffi::{c_int, c_uchar};
 use core::ptr;
 
 use crate::asn1::layout::V_ASN1_OCTET_STRING;
-use crate::pkcs12::p12_asn::{PKCS12_SAFEBAG_free, Pkcs12Safebag};
+use crate::pkcs12::p12_add::PKCS12_pack_authsafes;
+use crate::pkcs12::p12_asn::PKCS12_free;
+use crate::pkcs12::p12_asn::{PKCS12_SAFEBAG_free, Pkcs12, Pkcs12Safebag};
+use crate::pkcs12::p12_init::PKCS12_init_ex;
 use crate::pkcs12::p12_sbag::PKCS12_SAFEBAG_create_secret;
+use crate::runtime::obj::NID_pkcs7_data;
 use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_push, OpenSslStack};
 
 /// `static int pkcs12_add_bag(STACK_OF(PKCS12_SAFEBAG) **pbags, PKCS12_SAFEBAG *bag)` —
@@ -103,6 +116,49 @@ pub unsafe extern "C" fn PKCS12_add_secret(
         return ptr::null_mut();
     }
     bag
+}
+
+/// `PKCS12 *PKCS12_add_safes_ex(STACK_OF(PKCS7) *safes, int nid_p7, OSSL_LIB_CTX *ctx,
+/// const char *propq)` — `crypto/pkcs12/p12_crt.c:387-404`.
+///
+/// A non-positive `nid_p7` means `NID_pkcs7_data`. The container is initialised through
+/// [`PKCS12_init_ex`] and packed with [`PKCS12_pack_authsafes`]; a pack failure releases the
+/// half-built container rather than returning it.
+///
+/// # Safety
+/// `safes` is null or a live stack of `PKCS7`; `ctx` is null or a live library context and
+/// `propq` null or NUL-terminated. The answer is owned by the caller.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_add_safes_ex(
+    safes: *mut OpenSslStack,
+    nid_p7: c_int,
+    ctx: *mut core::ffi::c_void,
+    propq: *const core::ffi::c_char,
+) -> *mut Pkcs12 {
+    let nid_p7 = if nid_p7 <= 0 { NID_pkcs7_data } else { nid_p7 };
+    // SAFETY: `ctx`/`propq` are the caller's.
+    let p12 = unsafe { PKCS12_init_ex(nid_p7, ctx, propq) };
+    if p12.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `p12` is live and owns its `authsafes` column; `safes` is the caller's.
+    if unsafe { PKCS12_pack_authsafes(p12, safes) } == 0 {
+        // SAFETY: `p12` is live and this failure path still owns it.
+        unsafe { PKCS12_free(p12) };
+        return ptr::null_mut();
+    }
+    p12
+}
+
+/// `PKCS12 *PKCS12_add_safes(STACK_OF(PKCS7) *safes, int nid_p7)` —
+/// `crypto/pkcs12/p12_crt.c:406-409`.
+///
+/// # Safety
+/// `safes` is null or a live stack of `PKCS7`. The answer is owned by the caller.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_add_safes(safes: *mut OpenSslStack, nid_p7: c_int) -> *mut Pkcs12 {
+    // SAFETY: the arguments are forwarded under this function's contract, with no context.
+    unsafe { PKCS12_add_safes_ex(safes, nid_p7, ptr::null_mut(), ptr::null()) }
 }
 
 #[cfg(test)]

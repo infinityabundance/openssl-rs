@@ -58,9 +58,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 146,
+        "authority_observations": 184,
         "candidate_exit_code": 0,
-        "candidate_observations": 146,
+        "candidate_observations": 184,
         "candidate_stderr_tail": [],
         "court": "RT-PKCS12",
         "crashed": false,
@@ -109,7 +109,7 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_pkcs12_probe.c",
-      "sha256": "d2e30354ddba2e890805680bbdbd2eba707c97d34c6386177ec7789f4a87fac4"
+      "sha256": "e94b18a9cec95fdab795c3539774075af4a74e79471f4a848a1ac80b58a72c07"
     }
   ],
   "kind": "phase10-courts",

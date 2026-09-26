@@ -14,6 +14,14 @@
 //! closure). Their `PKCS#7`-dependent siblings stay open on `crypto/pkcs7/pk7_asn1.c`, which is
 //! Phase 12's.
 //!
+//! **The `PKCS7` subset was then pulled forward** (D441's stratum-ordering defect; see
+//! [`crate::pkcs7`]), which unblocks the container rows: [`p12_init`] (`PKCS12_init(_ex)` and the
+//! `ossl_pkcs12_get0_pkcs7ctx` borrow) and [`p12_mutl`] (the `MacData` accessors and
+//! `PKCS12_setup_mac`), plus the `PKCS12` item group and the five `PKCS#7` spellings whose
+//! blocker was the object itself. The rows still `open` need Phase 11's `X509_it`/`EVP_PKEY2PKCS8`/
+//! `PKCS5_pbe*set*_ex` or 10.4's `PKCS8_encrypt`/`PKCS12_key_gen_utf8_ex`, and are named where
+//! they live.
+//!
 //! `PKCS8_decrypt` is the name `pem_read_bio_key_legacy` (`crypto/pem/pem_pkey.c:165`) reaches
 //! for a `PEM_STRING_PKCS8` block, and `PKCS12_item_decrypt_d2i_ex` is what it decrypts
 //! through; the `crypto/asn1/x_sig.c` module landed the `X509_SIG` these read.
@@ -25,6 +33,8 @@ pub mod p12_asn;
 pub mod p12_attr;
 pub mod p12_crt;
 pub mod p12_decr;
+pub mod p12_init;
+pub mod p12_mutl;
 pub mod p12_p8d;
 pub mod p12_sbag;
 pub mod p12_utl;

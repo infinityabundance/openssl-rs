@@ -38,8 +38,10 @@
 #include <string.h>
 
 #include <openssl/asn1.h>
+#include <openssl/bio.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/objects.h>
 #include <openssl/pkcs12.h>
 #include <openssl/x509.h>
@@ -87,20 +89,15 @@ static void out_err(const char *key)
     ERR_clear_error();
 }
 
-/* A whole block of the rows this subphase cannot drive, printed identically on both sides. */
+/* A whole block of the rows this subphase cannot drive, printed identically on both sides.
+ *
+ * Since the `PKCS7` subset was pulled forward from Phase 12 (see `src/pkcs7/`), the `PKCS12`
+ * container, its five `PKCS#7` spellings, `PKCS12_init(_ex)`, the three `MacData` names and
+ * `PKCS12_add_safes(_ex)` are **driven** rather than printed here. What remains blocked is
+ * blocked outside 10.2/10.3: the `X509_it`/`EVP_PKEY2PKCS8` rows on Phase 11, the PBE
+ * algorithm-identifier rows on Phase 11's `PKCS5_pbe*set*_ex`, and the MAC/KDF rows on 10.4. */
 static void out_pending(void)
 {
-    /* Held open on the `PKCS12` container and its `PKCS7` authsafes (Phase 12). */
-    printf("pending.PKCS12_it=phase-12-pkcs7\n");
-    printf("pending.PKCS12_new=phase-12-pkcs7\n");
-    printf("pending.PKCS12_free=phase-12-pkcs7\n");
-    printf("pending.d2i_PKCS12=phase-12-pkcs7\n");
-    printf("pending.i2d_PKCS12=phase-12-pkcs7\n");
-    printf("pending.PKCS12_AUTHSAFES_it=phase-12-pkcs7\n");
-    printf("pending.d2i_PKCS12_bio=phase-12-pkcs7\n");
-    printf("pending.d2i_PKCS12_fp=phase-12-pkcs7\n");
-    printf("pending.i2d_PKCS12_bio=phase-12-pkcs7\n");
-    printf("pending.i2d_PKCS12_fp=phase-12-pkcs7\n");
     /* Held open on `X509_it`/`X509_CRL_it` and `ossl_x509*_set0_libctx` (Phase 11). */
     printf("pending.PKCS12_SAFEBAG_get1_cert=phase-11-x509\n");
     printf("pending.PKCS12_SAFEBAG_get1_cert_ex=phase-11-x509\n");
@@ -115,40 +112,26 @@ static void out_pending(void)
     printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt=phase-10.4\n");
     printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt_ex=phase-10.4\n");
 
-    /* ----- 10.3: p12_add.c's seven `PKCS#7` container spellings ----- */
-    printf("pending.PKCS12_pack_p7data=phase-12-pkcs7\n");
-    printf("pending.PKCS12_unpack_p7data=phase-12-pkcs7\n");
-    printf("pending.PKCS12_pack_p7encdata=phase-12-pkcs7\n");
-    printf("pending.PKCS12_pack_p7encdata_ex=phase-12-pkcs7\n");
-    printf("pending.PKCS12_unpack_p7encdata=phase-12-pkcs7\n");
-    printf("pending.PKCS12_pack_authsafes=phase-12-pkcs7\n");
-    printf("pending.PKCS12_unpack_authsafes=phase-12-pkcs7\n");
-    /* ----- 10.3: p12_crt.c's ten container builders (add_secret landed) ----- */
+    /* ----- the two `p7encdata` writers: `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex` ----- */
+    printf("pending.PKCS12_pack_p7encdata=phase-11-pkcs5\n");
+    printf("pending.PKCS12_pack_p7encdata_ex=phase-11-pkcs5\n");
+    /* ----- the `add_*` family that is not yet reachable ----- */
     printf("pending.PKCS12_add_cert=phase-11-x509\n");
     printf("pending.PKCS12_add_key=phase-11-pkey2pkcs8\n");
     printf("pending.PKCS12_add_key_ex=phase-11-pkey2pkcs8\n");
-    printf("pending.PKCS12_add_safe=phase-12-pkcs7\n");
-    printf("pending.PKCS12_add_safe_ex=phase-12-pkcs7\n");
-    printf("pending.PKCS12_add_safes=phase-12-pkcs7\n");
-    printf("pending.PKCS12_add_safes_ex=phase-12-pkcs7\n");
-    printf("pending.PKCS12_create=phase-12-pkcs7\n");
-    printf("pending.PKCS12_create_ex=phase-12-pkcs7\n");
-    printf("pending.PKCS12_create_ex2=phase-12-pkcs7\n");
-    /* ----- 10.3: p12_mutl.c's MAC setup. `gen_mac`/`verify_mac`/`set_mac`/
-     * `set_pbmac1_pbkdf2` need 10.4's `PKCS12_key_gen_utf8_ex`; `setup_mac` reaches the
-     * `PKCS7` context through `authsafes`, and `mac_present`/`get0_mac` need the `PKCS12`
-     * object itself, which `PKCS12_new`/`PKCS12_it` cannot build without `PKCS7_it`. ----- */
-    printf("pending.PKCS12_mac_present=phase-12-pkcs7\n");
-    printf("pending.PKCS12_get0_mac=phase-12-pkcs7\n");
+    printf("pending.PKCS12_add_safe=phase-11-pkcs5\n");
+    printf("pending.PKCS12_add_safe_ex=phase-11-pkcs5\n");
+    printf("pending.PKCS12_create=phase-11-x509\n");
+    printf("pending.PKCS12_create_ex=phase-11-x509\n");
+    printf("pending.PKCS12_create_ex2=phase-11-x509\n");
+    /* ----- the MAC/KDF set that needs 10.4's `PKCS12_key_gen_utf8_ex` ----- */
     printf("pending.PKCS12_gen_mac=phase-10.4-kdf\n");
     printf("pending.PKCS12_verify_mac=phase-10.4-kdf\n");
     printf("pending.PKCS12_set_mac=phase-10.4-kdf\n");
-    printf("pending.PKCS12_setup_mac=phase-12-pkcs7\n");
     printf("pending.PKCS12_set_pbmac1_pbkdf2=phase-10.4-kdf\n");
-    /* ----- 10.3: p12_init.c and p12_npas.c ----- */
-    printf("pending.PKCS12_init=phase-12-pkcs7\n");
-    printf("pending.PKCS12_init_ex=phase-12-pkcs7\n");
-    printf("pending.PKCS12_newpass=phase-12-pkcs7\n");
+    /* `PKCS12_newpass` needs the PBE parameter objects and `PKCS8_encrypt_ex`, so it is not
+     * the container that blocks it. */
+    printf("pending.PKCS12_newpass=phase-11-pbe\n");
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -570,6 +553,301 @@ static void court_add3(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * The `PKCS12` container: the `PFX` bytes, the `MacData` fields and the authsafes' ordering.
+ *
+ * The `PKCS7` object's arms this lands were pulled forward from Phase 12 (see `src/pkcs7/`), so
+ * the container's own DER is now comparable byte for byte: `i2d_PKCS12` prints the `PFX` order
+ * (`version`, `authsafes`, `mac`), the `MacData`'s `digestAlgorithm`/`salt`/`iterations` are read
+ * back through `PKCS12_get0_mac`, and a two-element `STACK_OF(PKCS7)` shows the authsafes'
+ * `SEQUENCE OF` ordering. Everything is fixed input; no pointer address is printed.
+ * --------------------------------------------------------------------------------------------- */
+
+/* Build a one-`secretBag` `STACK_OF(PKCS12_SAFEBAG)` from a fixed octet string. */
+static STACK_OF(PKCS12_SAFEBAG) *make_bags(const unsigned char *val, int len)
+{
+    STACK_OF(PKCS12_SAFEBAG) *bags = NULL;
+
+    if (PKCS12_add_secret(&bags, NID_pkcs7_data, val, len) == NULL) {
+        sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+        return NULL;
+    }
+    return bags;
+}
+
+static void court_container(void)
+{
+    static const unsigned char secret_a[3] = { 0x01, 0x02, 0x03 };
+    static const unsigned char secret_b[2] = { 0x09, 0x08 };
+    static unsigned char maccsalt[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+    const unsigned char *p;
+    PKCS12 *p12, *rt;
+    PKCS7 *p7a, *p7b;
+    STACK_OF(PKCS12_SAFEBAG) *bags;
+    STACK_OF(PKCS7) *safes, *back;
+    unsigned char *der = NULL;
+    long len;
+    const ASN1_OCTET_STRING *mac = NULL, *msalt = NULL;
+    const X509_ALGOR *malg = NULL;
+    const ASN1_INTEGER *miter = NULL;
+    BIO *bio;
+    FILE *fp;
+    int i;
+
+    /* The two item accessors the container's template names, driven directly. */
+    out_ptr("container.it", (const void *)PKCS12_it());
+    out_int("container.it_stable", PKCS12_it() == PKCS12_it());
+    out_ptr("container.it_authsafes", (const void *)PKCS12_AUTHSAFES_it());
+    out_int("container.it_authsafes_stable", PKCS12_AUTHSAFES_it() == PKCS12_AUTHSAFES_it());
+
+    /* `PKCS12_init`/`PKCS12_init_ex`: an empty `NID_pkcs7_data` container, its `PFX` bytes and
+     * its accessors. */
+    p12 = PKCS12_init(NID_pkcs7_data);
+    out_ptr("init.data", p12);
+    if (p12 != NULL) {
+        out_int("init.mac_present", PKCS12_mac_present(p12));
+        len = i2d_PKCS12(p12, &der);
+        out_int("init.der.len", len);
+        out_hex("init.der", der, len);
+        OPENSSL_free(der);
+        der = NULL;
+        PKCS12_free(p12);
+    }
+    p12 = PKCS12_init_ex(NID_pkcs7_data, NULL, NULL);
+    out_ptr("init_ex.data", p12);
+    if (p12 != NULL) {
+        der = NULL;
+        out_int("init_ex.der.len", i2d_PKCS12(p12, &der));
+        OPENSSL_free(der);
+        der = NULL;
+        PKCS12_free(p12);
+    }
+
+    /* The `default:` arm of `PKCS12_init_ex`'s mode switch, with its coordinate. */
+    ERR_clear_error();
+    out_ptr("init.badmode", PKCS12_init(NID_pkcs7_encrypted));
+    out_err("init.badmode.err");
+
+    /* `PKCS12_new`/`PKCS12_free`, including the NULL release. */
+    p12 = PKCS12_new();
+    out_ptr("new.p12", p12);
+    PKCS12_free(p12);
+    PKCS12_free(NULL);
+
+    /* A two-element authsafes: two `NID_pkcs7_data` contentInfos over different secrets, packed
+     * into one container. The DER's authsafes column is the `SEQUENCE OF PKCS7` in push order. */
+    bags = make_bags(secret_a, 3);
+    p7a = PKCS12_pack_p7data(bags);
+    out_ptr("p7data.a", p7a);
+    safes = sk_PKCS7_new_null();
+    if (p7a != NULL)
+        sk_PKCS7_push(safes, p7a);
+    bags = make_bags(secret_b, 2);
+    p7b = PKCS12_pack_p7data(bags);
+    out_ptr("p7data.b", p7b);
+    if (p7b != NULL)
+        sk_PKCS7_push(safes, p7b);
+    out_int("safes.num", sk_PKCS7_num(safes));
+
+    p12 = PKCS12_init(NID_pkcs7_data);
+    bags = make_bags(secret_a, 3);
+    p7a = PKCS12_pack_p7data(bags);
+    out_int("pack_authsafes.ret", PKCS12_pack_authsafes(p12, safes));
+    der = NULL;
+    len = i2d_PKCS12(p12, &der);
+    out_hex("authsafes.der", der, len);
+
+    /* `PKCS12_get0_mac` on a container with no `MacData` clears every slot. */
+    mac = (const ASN1_OCTET_STRING *)0x1;
+    msalt = (const ASN1_OCTET_STRING *)0x1;
+    malg = (const X509_ALGOR *)0x1;
+    miter = (const ASN1_INTEGER *)0x1;
+    PKCS12_get0_mac(&mac, &malg, &msalt, &miter, p12);
+    out_ptr("nomac.digest", mac);
+    out_ptr("nomac.alg", malg);
+    out_ptr("nomac.salt", msalt);
+    out_ptr("nomac.iter", miter);
+
+    /* `PKCS12_setup_mac` over a fixed salt and iteration count, then the `MacData` fields the
+     * accessor answers and the `PFX` bytes that now carry them. */
+    out_int("setup_mac.ret", PKCS12_setup_mac(p12, 0x0800, maccsalt, 8, EVP_sha256()));
+    out_int("mac.present", PKCS12_mac_present(p12));
+    PKCS12_get0_mac(&mac, &malg, &msalt, &miter, p12);
+    out_int("mac.iter", ASN1_INTEGER_get(miter));
+    out_int("mac.salt.len", ASN1_STRING_length(msalt));
+    out_hex("mac.salt", ASN1_STRING_get0_data(msalt), ASN1_STRING_length(msalt));
+    out_int("mac.alg.nid", malg != NULL ? OBJ_obj2nid(malg->algorithm) : -1);
+    out_int("mac.digest.len", ASN1_STRING_length(mac));
+    OPENSSL_free(der);
+    der = NULL;
+    len = i2d_PKCS12(p12, &der);
+    out_int("mac.der.len", len);
+    out_hex("mac.der", der, len);
+
+    /* The decoder reads the encoder's bytes back; re-encoding them is the same document, which
+     * is what makes the `PFX` order observable rather than asserted. */
+    p = der;
+    rt = d2i_PKCS12(NULL, &p, len);
+    out_ptr("roundtrip.p12", rt);
+    if (rt != NULL) {
+        unsigned char *der2 = NULL;
+        long len2 = i2d_PKCS12(rt, &der2);
+
+        out_int("roundtrip.mac_present", PKCS12_mac_present(rt));
+        PKCS12_get0_mac(&mac, &malg, &msalt, &miter, rt);
+        out_int("roundtrip.mac.iter", ASN1_INTEGER_get(miter));
+        out_hex("roundtrip.mac.salt", ASN1_STRING_get0_data(msalt),
+                ASN1_STRING_length(msalt));
+        out_hex("roundtrip.der", der2, len2);
+        OPENSSL_free(der2);
+
+        /* `PKCS12_unpack_authsafes`: the two inner contentInfos, in order, by type NID and by
+         * the octet string each carries. */
+        ERR_clear_error();
+        back = PKCS12_unpack_authsafes(rt);
+        out_ptr("unpack_authsafes", back);
+        out_int("unpack_authsafes.num", back != NULL ? sk_PKCS7_num(back) : -1);
+        if (back != NULL) {
+            for (i = 0; i < sk_PKCS7_num(back); i++) {
+                PKCS7 *in = sk_PKCS7_value(back, i);
+
+                out_int("unpack_authsafes.type", OBJ_obj2nid(in->type));
+                out_hex("unpack_authsafes.data", in->d.data->data, in->d.data->length);
+            }
+            sk_PKCS7_pop_free(back, PKCS7_free);
+        }
+        PKCS12_free(rt);
+    }
+    OPENSSL_free(der);
+    der = NULL;
+
+    /* `PKCS12_unpack_p7data` over a freshly packed contentInfo: the bags come back and their DER
+     * is the one that went in. */
+    {
+        PKCS12_SAFEBAG *first;
+
+        bags = make_bags(secret_a, 3);
+        p7a = PKCS12_pack_p7data(bags);
+        ERR_clear_error();
+        back = PKCS12_unpack_p7data(p7a);
+        out_ptr("unpack_p7data", back);
+        out_int("unpack_p7data.num", back != NULL ? sk_PKCS12_SAFEBAG_num(back) : -1);
+        if (back != NULL) {
+            unsigned char *bd = NULL;
+            long bl;
+
+            first = sk_PKCS12_SAFEBAG_value(back, 0);
+            bl = i2d_PKCS12_SAFEBAG(first, &bd);
+            out_hex("unpack_p7data.bag.der", bd, bl);
+            OPENSSL_free(bd);
+            sk_PKCS12_SAFEBAG_pop_free(back, PKCS12_SAFEBAG_free);
+        }
+        PKCS7_free(p7a);
+    }
+
+    /* `PKCS12_add_safes(_ex)`: the same container built in one call, whose DER must be the one
+     * `pack_authsafes` produced above. */
+    safes = sk_PKCS7_new_null();
+    bags = make_bags(secret_a, 3);
+    p7a = PKCS12_pack_p7data(bags);
+    if (p7a != NULL)
+        sk_PKCS7_push(safes, p7a);
+    bags = make_bags(secret_b, 2);
+    p7b = PKCS12_pack_p7data(bags);
+    if (p7b != NULL)
+        sk_PKCS7_push(safes, p7b);
+    p12 = PKCS12_add_safes(safes, NID_pkcs7_data);
+    out_ptr("add_safes.p12", p12);
+    if (p12 != NULL) {
+        der = NULL;
+        len = i2d_PKCS12(p12, &der);
+        out_hex("add_safes.der", der, len);
+
+        /* The BIO and `FILE` spellings over the same object. */
+        bio = BIO_new(BIO_s_mem());
+        out_int("i2d_bio.ret", i2d_PKCS12_bio(bio, p12));
+        {
+            char *contents = NULL;
+            long n = BIO_get_mem_data(bio, &contents);
+
+            out_hex("i2d_bio.der", (const unsigned char *)contents, n);
+            {
+                PKCS12 *frombio = d2i_PKCS12_bio(bio, NULL);
+
+                out_ptr("d2i_bio.p12", frombio);
+                if (frombio != NULL) {
+                    unsigned char *bd = NULL;
+                    long bl = i2d_PKCS12(frombio, &bd);
+                    out_hex("d2i_bio.der", bd, bl);
+                    OPENSSL_free(bd);
+                    PKCS12_free(frombio);
+                }
+            }
+        }
+        BIO_free(bio);
+
+        fp = tmpfile();
+        if (fp != NULL) {
+            PKCS12 *fromfp;
+
+            out_int("i2d_fp.ret", i2d_PKCS12_fp(fp, p12));
+            rewind(fp);
+            ERR_clear_error();
+            fromfp = d2i_PKCS12_fp(fp, NULL);
+            out_ptr("d2i_fp.p12", fromfp);
+            if (fromfp != NULL) {
+                unsigned char *bd = NULL;
+                long bl = i2d_PKCS12(fromfp, &bd);
+                out_hex("d2i_fp.der", bd, bl);
+                OPENSSL_free(bd);
+                PKCS12_free(fromfp);
+            }
+            fclose(fp);
+        }
+        OPENSSL_free(der);
+        der = NULL;
+        PKCS12_free(p12);
+    }
+
+    /* The `_ex` spelling over the same stack: the same container, so the same bytes. */
+    p12 = PKCS12_add_safes_ex(safes, NID_pkcs7_data, NULL, NULL);
+    out_ptr("add_safes_ex.p12", p12);
+    if (p12 != NULL) {
+        der = NULL;
+        out_int("add_safes_ex.der.len", i2d_PKCS12(p12, &der));
+        OPENSSL_free(der);
+        der = NULL;
+        PKCS12_free(p12);
+    }
+    sk_PKCS7_pop_free(safes, PKCS7_free);
+}
+
+/* The container refusals, each with its coordinate. */
+static void court_container_refusals(void)
+{
+    static const unsigned char secret_a[3] = { 0x01, 0x02, 0x03 };
+    STACK_OF(PKCS12_SAFEBAG) *bags;
+    PKCS7 *p7, *enc;
+
+    /* `PKCS12_unpack_p7data` on a non-`data` contentInfo: refused with the container reason. */
+    p7 = PKCS7_new();
+    PKCS7_set_type(p7, NID_pkcs7_encrypted);
+    ERR_clear_error();
+    out_ptr("refuse.unpack_p7data_type", PKCS12_unpack_p7data(p7));
+    out_err("refuse.unpack_p7data_type.err");
+
+    /* `PKCS12_unpack_p7encdata` on a `data` contentInfo: NULL with a clean queue, because the
+     * authority's arm for it raises nothing. */
+    bags = make_bags(secret_a, 3);
+    enc = PKCS12_pack_p7data(bags);
+    ERR_clear_error();
+    out_ptr("refuse.unpack_p7encdata_type", PKCS12_unpack_p7encdata(enc, "pw", -1));
+    out_err("refuse.unpack_p7encdata_type.err");
+
+    PKCS7_free(enc);
+    PKCS7_free(p7);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * The refusals, each with the error queue.
  * --------------------------------------------------------------------------------------------- */
 
@@ -600,6 +878,8 @@ int main(void)
     court_keybags();
     court_items_roundtrip();
     court_add3();
+    court_container();
+    court_container_refusals();
     court_refusals();
     out_pending();
     return 0;
