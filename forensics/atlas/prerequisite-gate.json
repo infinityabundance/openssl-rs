@@ -5,14 +5,13 @@
       "ASN1_item_sign_ctx -> phase 11 (`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:138`) hands the digest context to `ASN1_item_sign_ctx`, which is declared in `x509.h` and is Phase 11's. The hand-off from Phase 5 that 7.4l owns therefore cannot be completed here even though `EVP_DigestSignInit` landed: the `_ex` spelling is a constructor for a context the `x509.h` function consumes, and its own answer would be the delegate's.)",
       "ASN1_item_verify_ctx -> phase 11 (The verification twin of `ASN1_item_sign_ctx`: `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:104`) delegates to it, and it is declared in `x509.h`, Phase 11's. The hand-off from Phase 5 to this stratum cannot be completed while the delegate is another stratum's export.)",
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
-      "d2i_PrivateKey -> phase 10 (`d2i_PrivateKey_decoder` (`crypto/asn1/d2i_pr.c:61`) builds an `OSSL_DECODER_CTX` and is the first thing `d2i_PrivateKey_ex` and `d2i_AutoPrivateKey_ex` try, with the legacy ameth path only as a fallback. **The decoder prerequisite landed in D367** -- `OSSL_DECODER_CTX_new_for_pkey` and the four decoder units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so this row carries **no `blocked_by`** rather than a dependency that is gone: it records the stratum that still owes the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports, whose remaining leg is `ossl_d2i_PrivateKey_legacy` (`:102`) reading the ameth decode pointers Phase 8 owns. `forensics/tools/phase7_obligations.py` moved the four to its `UNBLOCKED_HANDOFFS` for the same reason.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
       "covered_by_a_divergence": 72,
-      "language_surface_not_modelled_by_name": 5032,
+      "language_surface_not_modelled_by_name": 5076,
       "planned_prerequisites": 5
     },
     "census_by_unit": {
@@ -78,10 +77,11 @@
         "crypto/asn1/asn_pack.c": 7,
         "crypto/asn1/bio_asn1.c": 13,
         "crypto/asn1/d2i_param.c": 8,
-        "crypto/asn1/d2i_pr.c": 19,
+        "crypto/asn1/d2i_pr.c": 15,
         "crypto/asn1/d2i_pu.c": 5,
         "crypto/asn1/evp_asn1.c": 13,
         "crypto/asn1/f_int.c": 8,
+        "crypto/asn1/i2d_evp.c": 8,
         "crypto/asn1/p5_scrypt.c": 23,
         "crypto/asn1/p8_pkey.c": 17,
         "crypto/asn1/t_pkey.c": 5,
@@ -218,7 +218,7 @@
         "crypto/encode_decode/encoder_lib.c": 32,
         "crypto/encode_decode/encoder_meth.c": 21,
         "crypto/encode_decode/encoder_pkey.c": 31,
-        "crypto/err/err.c": 87,
+        "crypto/err/err.c": 86,
         "crypto/err/err_all_legacy.c": 11,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 20,
@@ -306,10 +306,12 @@
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 10,
         "crypto/passphrase.c": 23,
-        "crypto/pem/pem_all.c": 28,
-        "crypto/pem/pem_lib.c": 37,
-        "crypto/pem/pem_oth.c": 7,
-        "crypto/pem/pem_pkey.c": 33,
+        "crypto/pem/pem_all.c": 27,
+        "crypto/pem/pem_lib.c": 36,
+        "crypto/pem/pem_oth.c": 6,
+        "crypto/pem/pem_pk8.c": 24,
+        "crypto/pem/pem_pkey.c": 30,
+        "crypto/pem/pvkfmt.c": 23,
         "crypto/pkcs12/p12_decr.c": 14,
         "crypto/pkcs12/p12_p8d.c": 5,
         "crypto/poly1305/poly1305.c": 5,
@@ -484,10 +486,10 @@
       ]
     },
     "checked": {
-      "authority_units": 326,
-      "crate_modules": 475,
+      "authority_units": 329,
+      "crate_modules": 481,
       "deferral_blocker_rows": 0,
-      "deferrals_recorded": 7,
+      "deferrals_recorded": 6,
       "divergence_names_covered": 39,
       "divergence_rows": 11,
       "names_referenced_and_not_built": 19
@@ -579,12 +581,16 @@
         "crypto/objects/obj_dat.c": [
           "ossl_obj_cleanup_int"
         ],
+        "crypto/pem/pvkfmt.c": [
+          "b2i_DSA_PVK_bio",
+          "b2i_RSA_PVK_bio"
+        ],
         "crypto/trace.c": [
           "ossl_trace_cleanup"
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 50
+      "names": 52
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -594,13 +600,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "c76b33a8746dab7d5fea87f3eb592abb7b11b01fd08ebb68210d22621f017347",
+  "body_hash": "f015ec2477cd7aebedf0377a0f226aa65599d2949663928308db4db63058008b",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "5ee3e0eaccea1e26f80d38309f96c54beffa96a61043983b9f282dcf0e12fcf1"
+      "sha256": "d0b4256ac74574f943b74cd9a152aab5941e61465916560188911183a75a5783"
     },
     {
       "name": "macro-owners",
@@ -615,7 +621,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "4dcc13e43b3560a396c87ed1a933b76ba85c1b1b40cfc431ebf5c32cc998e133"
+      "sha256": "5575cfab2b137004ca0aa5c59c277539a1f22b48dd950ac8667f91fab2ee439e"
     },
     {
       "name": "symbol-ownership",
@@ -630,17 +636,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5367e5d94f08118828f3228fa5edb2965b9f12ad4d93c846bbb6d0be4b86fe1f"
+      "sha256": "3bc5cc7aa2fdb8c9817338a69e3ee2965e22e3dcfb0a263f2cef1cf6ba9ab413"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d80e380325607bd7be84fdb4403f2560fffb881d471807e9d48bd72959d674fc"
+      "sha256": "7e801066a59eb89e88409696732c2e8c5003efba8333a5e741a8792f538446e8"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "3b66fd0d19b52ce3f0127dd8762cb47c03b20fe3499c8440ecec901d102f43ad"
+      "sha256": "bbda2dd2b5c36314d93560a9f7b62d7c36e6c1026a7543dee0a07ef12761d73d"
     },
     {
       "name": "crate-source-tree",

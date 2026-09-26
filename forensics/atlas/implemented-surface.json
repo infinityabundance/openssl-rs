@@ -465,7 +465,7 @@
         "x25519_fe64_sub",
         "x25519_fe64_tobytes"
       ],
-      "compiler_emitted_count": 12643,
+      "compiler_emitted_count": 12026,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -473,7 +473,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 2963,
+        "implemented": 2987,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -2971,6 +2971,7 @@
           "PEM_write_bio_DSAparams",
           "PEM_write_bio_ECPKParameters",
           "PEM_write_bio_ECPrivateKey",
+          "PEM_write_bio_PrivateKey_traditional",
           "PEM_write_bio_RSAPrivateKey",
           "PEM_write_bio_RSAPublicKey",
           "PKCS12_item_decrypt_d2i",
@@ -3327,6 +3328,12 @@
           "a2i_ASN1_INTEGER",
           "a2i_ASN1_STRING",
           "asn1_d2i_read_bio",
+          "b2i_PVK_bio",
+          "b2i_PVK_bio_ex",
+          "b2i_PrivateKey",
+          "b2i_PrivateKey_bio",
+          "b2i_PublicKey",
+          "b2i_PublicKey_bio",
           "conf_ssl_get",
           "conf_ssl_get_cmd",
           "conf_ssl_name_find",
@@ -3352,6 +3359,8 @@
           "d2i_ASN1_UTCTIME",
           "d2i_ASN1_UTF8STRING",
           "d2i_ASN1_VISIBLESTRING",
+          "d2i_AutoPrivateKey",
+          "d2i_AutoPrivateKey_ex",
           "d2i_DHparams",
           "d2i_DHxparams",
           "d2i_DIRECTORYSTRING",
@@ -3368,9 +3377,13 @@
           "d2i_EC_PUBKEY",
           "d2i_KeyParams",
           "d2i_KeyParams_bio",
+          "d2i_PKCS8PrivateKey_bio",
+          "d2i_PKCS8PrivateKey_fp",
           "d2i_PKCS8_PRIV_KEY_INFO",
           "d2i_PUBKEY",
           "d2i_PUBKEY_ex",
+          "d2i_PrivateKey",
+          "d2i_PrivateKey_ex",
           "d2i_PublicKey",
           "d2i_RSAPrivateKey",
           "d2i_RSAPublicKey",
@@ -3387,6 +3400,10 @@
           "i2a_ASN1_INTEGER",
           "i2a_ASN1_OBJECT",
           "i2a_ASN1_STRING",
+          "i2b_PVK_bio",
+          "i2b_PVK_bio_ex",
+          "i2b_PrivateKey_bio",
+          "i2b_PublicKey_bio",
           "i2d_ASN1_BIT_STRING",
           "i2d_ASN1_BMPSTRING",
           "i2d_ASN1_ENUMERATED",
@@ -3423,8 +3440,15 @@
           "i2d_ECParameters",
           "i2d_ECPrivateKey",
           "i2d_EC_PUBKEY",
+          "i2d_KeyParams",
+          "i2d_KeyParams_bio",
+          "i2d_PKCS8PrivateKey",
+          "i2d_PKCS8PrivateKey_bio",
+          "i2d_PKCS8PrivateKey_fp",
           "i2d_PKCS8_PRIV_KEY_INFO",
           "i2d_PUBKEY",
+          "i2d_PrivateKey",
+          "i2d_PublicKey",
           "i2d_RSAPrivateKey",
           "i2d_RSAPublicKey",
           "i2d_RSA_OAEP_PARAMS",
@@ -3439,7 +3463,7 @@
           "i2t_ASN1_OBJECT",
           "o2i_ECPublicKey"
         ],
-        "scaffolded": 2933
+        "scaffolded": 2909
       },
       "libssl": {
         "authority_exports": 603,
@@ -3450,18 +3474,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 2963,
-      "scaffolded": 3536
+      "implemented": 2987,
+      "scaffolded": 3512
     }
   },
-  "body_hash": "45cf04e6fc30928b4fa6a43b8a83a8f993f1a374177be67ed96c351ab2318f86",
+  "body_hash": "2ce92893947ff78cd640e14116c030e9df868e572937dceda26950996455a70b",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "3a87889b06d05c484ca6dda408e3e997a20e1a05f2b0a7452f7d00c483fa9dea"
+      "sha256": "50d917f79b5c3292bd391a316ec1f091f513d902c88473d2603f56f746ef1ffa"
     },
     {
       "name": "authority-exports",

@@ -16892,6 +16892,436 @@ pub(crate) const PEM_PK8_258: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `evp_pkey_new0_key` at `crypto/pem/pvkfmt.c:85` (ERR_R_INTERNAL_ERROR).
+pub(crate) const PVKFMT_85: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 85,
+    func: c"evp_pkey_new0_key",
+    lib: 9,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_new0_key` at `crypto/pem/pvkfmt.c:94` (ERR_R_EVP_LIB).
+pub(crate) const PVKFMT_94: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 94,
+    func: c"evp_pkey_new0_key",
+    lib: 9,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_new0_key` at `crypto/pem/pvkfmt.c:102` (ERR_R_EVP_LIB).
+pub(crate) const PVKFMT_102: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 102,
+    func: c"evp_pkey_new0_key",
+    lib: 9,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `evp_pkey_new0_key` at `crypto/pem/pvkfmt.c:109` (ERR_R_EVP_LIB).
+pub(crate) const PVKFMT_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 109,
+    func: c"evp_pkey_new0_key",
+    lib: 9,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_blob_header` at `crypto/pem/pvkfmt.c:176` (PEM_R_EXPECTING_PRIVATE_KEY_BLOB).
+pub(crate) const PVKFMT_176: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 176,
+    func: c"ossl_do_blob_header",
+    lib: 9,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_blob_header` at `crypto/pem/pvkfmt.c:184` (PEM_R_EXPECTING_PUBLIC_KEY_BLOB).
+pub(crate) const PVKFMT_184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 184,
+    func: c"ossl_do_blob_header",
+    lib: 9,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_blob_header` at `crypto/pem/pvkfmt.c:196` (PEM_R_BAD_VERSION_NUMBER).
+pub(crate) const PVKFMT_196: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 196,
+    func: c"ossl_do_blob_header",
+    lib: 9,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_blob_header` at `crypto/pem/pvkfmt.c:209` (PEM_R_EXPECTING_PRIVATE_KEY_BLOB).
+pub(crate) const PVKFMT_209: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 209,
+    func: c"ossl_do_blob_header",
+    lib: 9,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_blob_header` at `crypto/pem/pvkfmt.c:217` (PEM_R_EXPECTING_PUBLIC_KEY_BLOB).
+pub(crate) const PVKFMT_217: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 217,
+    func: c"ossl_do_blob_header",
+    lib: 9,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_blob_header` at `crypto/pem/pvkfmt.c:223` (PEM_R_BAD_MAGIC_NUMBER).
+pub(crate) const PVKFMT_223: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 223,
+    func: c"ossl_do_blob_header",
+    lib: 9,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_blob_header` at `crypto/pem/pvkfmt.c:232` (PEM_R_EXPECTING_DSS_KEY_BLOB).
+pub(crate) const PVKFMT_232: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 232,
+    func: c"ossl_do_blob_header",
+    lib: 9,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_blob_header` at `crypto/pem/pvkfmt.c:240` (PEM_R_EXPECTING_RSA_KEY_BLOB).
+pub(crate) const PVKFMT_240: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 240,
+    func: c"ossl_do_blob_header",
+    lib: 9,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_blob_header` at `crypto/pem/pvkfmt.c:247` (PEM_R_BAD_MAGIC_NUMBER).
+pub(crate) const PVKFMT_247: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 247,
+    func: c"ossl_do_blob_header",
+    lib: 9,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `do_b2i_key` at `crypto/pem/pvkfmt.c:294` (PEM_R_KEYBLOB_HEADER_PARSE_ERROR).
+pub(crate) const PVKFMT_294: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 294,
+    func: c"do_b2i_key",
+    lib: 9,
+    reason: 122,
+    dynamic_reason: false,
+};
+
+/// `do_b2i_key` at `crypto/pem/pvkfmt.c:299` (PEM_R_KEYBLOB_TOO_SHORT).
+pub(crate) const PVKFMT_299: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 299,
+    func: c"do_b2i_key",
+    lib: 9,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `do_b2i_key` at `crypto/pem/pvkfmt.c:310` (PEM_R_UNSUPPORTED_PUBLIC_KEY_TYPE).
+pub(crate) const PVKFMT_310: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 310,
+    func: c"do_b2i_key",
+    lib: 9,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_b2i_bio` at `crypto/pem/pvkfmt.c:335` (PEM_R_KEYBLOB_TOO_SHORT).
+pub(crate) const PVKFMT_335: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 335,
+    func: c"ossl_b2i_bio",
+    lib: 9,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `ossl_b2i_bio` at `crypto/pem/pvkfmt.c:344` (PEM_R_HEADER_TOO_LONG).
+pub(crate) const PVKFMT_344: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 344,
+    func: c"ossl_b2i_bio",
+    lib: 9,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ossl_b2i_bio` at `crypto/pem/pvkfmt.c:352` (PEM_R_KEYBLOB_TOO_SHORT).
+pub(crate) const PVKFMT_352: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 352,
+    func: c"ossl_b2i_bio",
+    lib: 9,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `ossl_b2i_bio` at `crypto/pem/pvkfmt.c:364` (PEM_R_UNSUPPORTED_PUBLIC_KEY_TYPE).
+pub(crate) const PVKFMT_364: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 364,
+    func: c"ossl_b2i_bio",
+    lib: 9,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ossl_b2i_DSA_after_header` at `crypto/pem/pvkfmt.c:431` (ERR_R_DSA_LIB).
+pub(crate) const PVKFMT_431: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 431,
+    func: c"ossl_b2i_DSA_after_header",
+    lib: 9,
+    reason: 524298,
+    dynamic_reason: false,
+};
+
+/// `ossl_b2i_DSA_after_header` at `crypto/pem/pvkfmt.c:434` (ERR_R_BN_LIB).
+pub(crate) const PVKFMT_434: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 434,
+    func: c"ossl_b2i_DSA_after_header",
+    lib: 9,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `ossl_b2i_RSA_after_header` at `crypto/pem/pvkfmt.c:496` (ERR_R_RSA_LIB).
+pub(crate) const PVKFMT_496: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 496,
+    func: c"ossl_b2i_RSA_after_header",
+    lib: 9,
+    reason: 524292,
+    dynamic_reason: false,
+};
+
+/// `ossl_b2i_RSA_after_header` at `crypto/pem/pvkfmt.c:499` (ERR_R_BN_LIB).
+pub(crate) const PVKFMT_499: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 499,
+    func: c"ossl_b2i_RSA_after_header",
+    lib: 9,
+    reason: 524291,
+    dynamic_reason: false,
+};
+
+/// `check_bitlen_rsa` at `crypto/pem/pvkfmt.c:672` (PEM_R_UNSUPPORTED_KEY_COMPONENTS).
+pub(crate) const PVKFMT_672: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 672,
+    func: c"check_bitlen_rsa",
+    lib: 9,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `check_bitlen_dsa` at `crypto/pem/pvkfmt.c:723` (PEM_R_UNSUPPORTED_KEY_COMPONENTS).
+pub(crate) const PVKFMT_723: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 723,
+    func: c"check_bitlen_dsa",
+    lib: 9,
+    reason: 126,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_PVK_header` at `crypto/pem/pvkfmt.c:769` (PEM_R_PVK_TOO_SHORT).
+pub(crate) const PVKFMT_769: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 769,
+    func: c"ossl_do_PVK_header",
+    lib: 9,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_PVK_header` at `crypto/pem/pvkfmt.c:774` (PEM_R_PVK_TOO_SHORT).
+pub(crate) const PVKFMT_774: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 774,
+    func: c"ossl_do_PVK_header",
+    lib: 9,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_PVK_header` at `crypto/pem/pvkfmt.c:779` (PEM_R_BAD_MAGIC_NUMBER).
+pub(crate) const PVKFMT_779: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 779,
+    func: c"ossl_do_PVK_header",
+    lib: 9,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_PVK_header` at `crypto/pem/pvkfmt.c:789` (PEM_R_EXPECTING_RSA_KEY_BLOB).
+pub(crate) const PVKFMT_789: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 789,
+    func: c"ossl_do_PVK_header",
+    lib: 9,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_PVK_header` at `crypto/pem/pvkfmt.c:796` (PEM_R_EXPECTING_DSS_KEY_BLOB).
+pub(crate) const PVKFMT_796: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 796,
+    func: c"ossl_do_PVK_header",
+    lib: 9,
+    reason: 131,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_PVK_header` at `crypto/pem/pvkfmt.c:802` (PEM_R_UNSUPPORTED_PVK_KEY_TYPE).
+pub(crate) const PVKFMT_802: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 802,
+    func: c"ossl_do_PVK_header",
+    lib: 9,
+    reason: 133,
+    dynamic_reason: false,
+};
+
+/// `ossl_do_PVK_header` at `crypto/pem/pvkfmt.c:813` (PEM_R_INCONSISTENT_HEADER).
+pub(crate) const PVKFMT_813: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 813,
+    func: c"ossl_do_PVK_header",
+    lib: 9,
+    reason: 121,
+    dynamic_reason: false,
+};
+
+/// `do_PVK_body_key` at `crypto/pem/pvkfmt.c:870` (ERR_R_EVP_LIB).
+pub(crate) const PVKFMT_870: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 870,
+    func: c"do_PVK_body_key",
+    lib: 9,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `do_PVK_body_key` at `crypto/pem/pvkfmt.c:886` (PEM_R_BAD_PASSWORD_READ).
+pub(crate) const PVKFMT_886: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 886,
+    func: c"do_PVK_body_key",
+    lib: 9,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `do_PVK_body_key` at `crypto/pem/pvkfmt.c:897` (PEM_R_PVK_TOO_SHORT).
+pub(crate) const PVKFMT_897: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 897,
+    func: c"do_PVK_body_key",
+    lib: 9,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `do_PVK_body_key` at `crypto/pem/pvkfmt.c:925` (PEM_R_BAD_DECRYPT).
+pub(crate) const PVKFMT_925: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 925,
+    func: c"do_PVK_body_key",
+    lib: 9,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `do_PVK_body_key` at `crypto/pem/pvkfmt.c:931` (PEM_R_UNSUPPORTED_CIPHER).
+pub(crate) const PVKFMT_931: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 931,
+    func: c"do_PVK_body_key",
+    lib: 9,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `do_PVK_key_bio` at `crypto/pem/pvkfmt.c:960` (PEM_R_PVK_DATA_TOO_SHORT).
+pub(crate) const PVKFMT_960: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 960,
+    func: c"do_PVK_key_bio",
+    lib: 9,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `do_PVK_key_bio` at `crypto/pem/pvkfmt.c:973` (PEM_R_PVK_DATA_TOO_SHORT).
+pub(crate) const PVKFMT_973: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 973,
+    func: c"do_PVK_key_bio",
+    lib: 9,
+    reason: 124,
+    dynamic_reason: false,
+};
+
+/// `i2b_PVK` at `crypto/pem/pvkfmt.c:1091` (PEM_R_BAD_PASSWORD_READ).
+pub(crate) const PVKFMT_1091: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 1091,
+    func: c"i2b_PVK",
+    lib: 9,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `i2b_PVK` at `crypto/pem/pvkfmt.c:1110` (PEM_R_UNSUPPORTED_CIPHER).
+pub(crate) const PVKFMT_1110: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 1110,
+    func: c"i2b_PVK",
+    lib: 9,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `i2b_PVK_bio_ex` at `crypto/pem/pvkfmt.c:1144` (PEM_R_BIO_WRITE_FAILURE).
+pub(crate) const PVKFMT_1144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
+    line: 1144,
+    func: c"i2b_PVK_bio_ex",
+    lib: 9,
+    reason: 118,
+    dynamic_reason: false,
+};
+
 /// `ossl_cipher_generic_get_params_decoder` at `providers/implementations/ciphers/ciphercommon.c:80` (PROV_R_REPEATED_PARAMETER).
 pub(crate) const PROV_CIPHERCOMMON_80: ErrSite = ErrSite {
     file: c"providers/implementations/ciphers/ciphercommon.c",
@@ -40392,6 +40822,96 @@ pub(crate) const PROV_DECODE_DER2KEY_786: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `key2pvk_set_ctx_params_decoder` at `providers/implementations/encode_decode/encode_key2ms.c:124` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_ENCODE_KEY2MS_124: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/encode_key2ms.c",
+    line: 124,
+    func: c"key2pvk_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `key2pvk_encode` at `providers/implementations/encode_decode/encode_key2ms.c:270` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2MS_270: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/encode_key2ms.c",
+    line: 270,
+    func: c"key2pvk_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2pvk_encode` at `providers/implementations/encode_decode/encode_key2ms.c:271` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2MS_271: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/encode_key2ms.c",
+    line: 271,
+    func: c"key2pvk_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2pvk_encode` at `providers/implementations/encode_decode/encode_key2ms.c:274` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2MS_274: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/encode_key2ms.c",
+    line: 274,
+    func: c"key2pvk_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `key2pvk_encode` at `providers/implementations/encode_decode/encode_key2ms.c:275` (ERR_raise dynamic reason).
+pub(crate) const PROV_ENCODE_KEY2MS_275: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/encode_key2ms.c",
+    line: 275,
+    func: c"key2pvk_encode",
+    lib: 57,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `msblob2key_decode` at `providers/implementations/encode_decode/decode_msblob2key.c:111` (PEM_R_KEYBLOB_TOO_SHORT).
+pub(crate) const PROV_DECODE_MSBLOB2KEY_111: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/decode_msblob2key.c",
+    line: 111,
+    func: c"msblob2key_decode",
+    lib: 9,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `msblob2key_decode` at `providers/implementations/encode_decode/decode_msblob2key.c:130` (PEM_R_HEADER_TOO_LONG).
+pub(crate) const PROV_DECODE_MSBLOB2KEY_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/decode_msblob2key.c",
+    line: 130,
+    func: c"msblob2key_decode",
+    lib: 9,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `msblob2key_decode` at `providers/implementations/encode_decode/decode_msblob2key.c:138` (PEM_R_KEYBLOB_TOO_SHORT).
+pub(crate) const PROV_DECODE_MSBLOB2KEY_138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/decode_msblob2key.c",
+    line: 138,
+    func: c"msblob2key_decode",
+    lib: 9,
+    reason: 123,
+    dynamic_reason: false,
+};
+
+/// `pvk2key_set_ctx_params_decoder` at `providers/implementations/encode_decode/decode_pvk2key.c:118` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DECODE_PVK2KEY_118: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_pvk2key.c",
+    line: 118,
+    func: c"pvk2key_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `ossl_ml_common_pkcs8_fmt_order` at `providers/implementations/encode_decode/ml_common_codecs.c:83` (PROV_R_ML_DSA_NO_FORMAT).
 pub(crate) const ML_COMMON_CODECS_83: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_common_codecs.c",
@@ -43509,6 +44029,49 @@ pub(crate) static ALL: &[ErrSite] = &[
     PEM_PK8_185,
     PEM_PK8_243,
     PEM_PK8_258,
+    PVKFMT_85,
+    PVKFMT_94,
+    PVKFMT_102,
+    PVKFMT_109,
+    PVKFMT_176,
+    PVKFMT_184,
+    PVKFMT_196,
+    PVKFMT_209,
+    PVKFMT_217,
+    PVKFMT_223,
+    PVKFMT_232,
+    PVKFMT_240,
+    PVKFMT_247,
+    PVKFMT_294,
+    PVKFMT_299,
+    PVKFMT_310,
+    PVKFMT_335,
+    PVKFMT_344,
+    PVKFMT_352,
+    PVKFMT_364,
+    PVKFMT_431,
+    PVKFMT_434,
+    PVKFMT_496,
+    PVKFMT_499,
+    PVKFMT_672,
+    PVKFMT_723,
+    PVKFMT_769,
+    PVKFMT_774,
+    PVKFMT_779,
+    PVKFMT_789,
+    PVKFMT_796,
+    PVKFMT_802,
+    PVKFMT_813,
+    PVKFMT_870,
+    PVKFMT_886,
+    PVKFMT_897,
+    PVKFMT_925,
+    PVKFMT_931,
+    PVKFMT_960,
+    PVKFMT_973,
+    PVKFMT_1091,
+    PVKFMT_1110,
+    PVKFMT_1144,
     PROV_CIPHERCOMMON_80,
     PROV_CIPHERCOMMON_91,
     PROV_CIPHERCOMMON_106,
@@ -45859,6 +46422,15 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_DECODE_DER2KEY_773,
     PROV_DECODE_DER2KEY_779,
     PROV_DECODE_DER2KEY_786,
+    PROV_ENCODE_KEY2MS_124,
+    PROV_ENCODE_KEY2MS_270,
+    PROV_ENCODE_KEY2MS_271,
+    PROV_ENCODE_KEY2MS_274,
+    PROV_ENCODE_KEY2MS_275,
+    PROV_DECODE_MSBLOB2KEY_111,
+    PROV_DECODE_MSBLOB2KEY_130,
+    PROV_DECODE_MSBLOB2KEY_138,
+    PROV_DECODE_PVK2KEY_118,
     ML_COMMON_CODECS_83,
     ML_KEM_CODECS_258,
     ML_KEM_CODECS_312,

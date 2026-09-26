@@ -245,6 +245,14 @@
       "reason": "The blocking-dependency census rises by **one**, from 19 to 20, and the name is a Phase-8 internal that becomes *visible* for the first time because D340 records it. `ossl_dh_is_foreign` (`crypto/dh/dh_backend.c:122`) is the DH provider backend's, and `crypto/evp/p_lib.c`'s static `detect_foreign_key` calls it whenever a legacy key is attached to an `EVP_PKEY`. D340 lands `crypto/ec/ec_key.c` and `crypto/ec/ec_lib.c` whole, which retires the two Phase-7 deferral rows that `EVP_PKEY_assign` and `EVP_PKEY_get_ec_point_conv_form`/`EVP_PKEY_get_field_type` were blocked on (`EC_KEY_get0_group`, `EC_GROUP_get_curve_name`, `EC_KEY_get_conv_form`, `EC_GROUP_get_field_type`) -- a row whose every blocker has landed is stale by definition, and `blocker_liveness.py` reported exactly that. `EVP_PKEY_assign` still needs `detect_foreign_key`'s three callees, and `ossl_dh_is_foreign` had no owner phase in any atlas, so D340 gives it a deferral row with `owner_phase` 8 rather than leaving the Phase-7 row name a call the atlas cannot resolve. Nothing about the candidate changed: the name was already absent and unlanded, and it is the *record* that is new. The other counters moved down with the same commit and need no row: `sealed_census` stays 52 and the Phase-8 ledger's `open` moved 324 -> 173 as 152 `ec.h` exports landed.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D340"
+    },
+    {
+      "metric": "sealed_census",
+      "before": 50,
+      "after": 52,
+      "reason": "10.6 transcribes `crypto/pem/pvkfmt.c` -- the ten hand-off exports -- giving the unit a crate module, `src/pem/pvkfmt.rs`. The gate's sealed census counts authority internals a transcribed unit calls whose own defining unit's stratum has sealed, so transcribing another authority file necessarily enters that file's not-yet-built tail: two names of it appeared, `b2i_DSA_PVK_bio` (`crypto/pem/pvkfmt.c:486`) and `b2i_RSA_PVK_bio` (`:594`), neither of which the crate defines. They are the two encrypted-PVK readers the unit's `b2i_PVK_bio`/`b2i_PVK_bio_ex` call on the way in; their bodies need the legacy provider's `RC4`/`PVKKDF` rows, which are open, so the unencrypted level was landed and these two are the unit's recorded remainder. The count rises because a whole authority unit that nothing referenced became visible, which is the cause D132 recorded for the blocking list and D314 for this same metric: landing work can move such a count up without any work being undone.",
+      "authority_artifact": "forensics/atlas/prerequisite-gate.json",
+      "recorded_by": "docs/PHASE-10-SUBPHASES.md section 3.4 (subphase 10.6)"
     }
   ]
 }

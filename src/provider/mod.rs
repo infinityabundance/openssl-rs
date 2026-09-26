@@ -118,6 +118,14 @@ pub(crate) mod decode_epki2pki;
 // decode_der2key.c`, the 69 DER-to-key decoder tables and the shared engine behind them. It is the
 // crate's `deflt_decoder[]`/`base_decoder[]` home, since it publishes 69 of the 70 rows landed.
 pub(crate) mod decode_der2key;
+// Phase 10.1/10.6's PVK/MSBLOB provider codecs: `encode_key2ms.c` (the four `i2b_*`-backed
+// MSBLOB/PVK encoders), `decode_msblob2key.c` (the two MSBLOB decoders) and
+// `decode_pvk2key.c` (the two PVK decoders). D435 held all three `pending` for
+// `crypto/pem/pvkfmt.c`, which 10.6 lands; the decoder tables are referenced by
+// `decode_der2key.rs`'s combined `deflt_decoder[]`/`base_decoder[]`.
+pub(crate) mod decode_msblob2key;
+pub(crate) mod decode_pvk2key;
+pub(crate) mod encode_key2ms;
 // Phase 10.1's first PQC codec *closure* unit: `providers/implementations/encode_decode/
 // ml_common_codecs.c`, the shared ASN.1 SPKI/PKCS#8 format tables and the one
 // `ossl_ml_common_pkcs8_fmt_order` helper the two PQC codec units stand on. It publishes no row;

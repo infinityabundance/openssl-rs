@@ -94,6 +94,9 @@ use crate::params::OsslParam;
 use crate::passphrase::OsslPassphraseCallback;
 use crate::provider::activate::OsslAlgorithm;
 use crate::provider::encode_key2blob::{EC_TO_BLOB_FUNCTIONS, SM2_TO_BLOB_FUNCTIONS};
+use crate::provider::encode_key2ms::{
+    DSA_TO_MSBLOB_FUNCTIONS, DSA_TO_PVK_FUNCTIONS, RSA_TO_MSBLOB_FUNCTIONS, RSA_TO_PVK_FUNCTIONS,
+};
 use crate::provider::endecoder_common::{ossl_prov_free_key, ossl_prov_import_key};
 use crate::rsa::object::{
     ossl_rsa_get0_all_params, ossl_rsa_get0_pss_params_30, RSA_get0_key, RSA_test_flags,
@@ -1419,6 +1422,14 @@ const BASE_BLOB_PROPERTY: *const c_char = c"provider=base,fips=yes,output=blob".
 /// The base provider's `SM2` blob property.
 const BASE_SM2_BLOB_PROPERTY: *const c_char = c"provider=base,fips=no,output=blob".as_ptr();
 
+/// The `output=msblob`/`output=pvk` properties `providers/encoders.inc`'s
+/// `ENCODER("RSA", rsa, yes, msblob)`/`(…, pvk)` and their `DSA` siblings (`:149-153`) carry, for
+/// the four rows `src/provider/encode_key2ms.rs` contributes to this table.
+const DEFAULT_MSBLOB_PROPERTY: *const c_char = c"provider=default,fips=yes,output=msblob".as_ptr();
+const DEFAULT_PVK_PROPERTY: *const c_char = c"provider=default,fips=yes,output=pvk".as_ptr();
+const BASE_MSBLOB_PROPERTY: *const c_char = c"provider=base,fips=yes,output=msblob".as_ptr();
+const BASE_PVK_PROPERTY: *const c_char = c"provider=base,fips=yes,output=pvk".as_ptr();
+
 /// `deflt_encoder[]`'s rows the crate publishes — `providers/defltprov.c:675-680` over
 /// `providers/encoders.inc`, restricted to the thirty-one rows landed so far, in the authority's
 /// order: the twenty-nine `ENCODER_TEXT` rows, then the two `ENCODER(…, blob)` rows of
@@ -1427,7 +1438,7 @@ const BASE_SM2_BLOB_PROPERTY: *const c_char = c"provider=base,fips=no,output=blo
 /// Each row is the authority's `ENCODER_TEXT`/`ENCODER` expansion, and each is written as
 /// the same struct literal the census's reader parses (`algorithm_names` then `implementation`) so
 /// that a row and its dispatch symbol cannot drift apart.
-pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 32] = [
+pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 36] = [
     OsslAlgorithm {
         algorithm_names: c"RSA".as_ptr(),
         property_definition: DEFAULT_TEXT_PROPERTY,
@@ -1619,6 +1630,33 @@ pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 32] = [
         implementation: SM2_TO_BLOB_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
+    // The MSBLOB and PVK rows, from `encode_key2ms.rs` (`encoders.inc:149-153`). They follow the
+    // blob rows and precede the `PrivateKeyInfo` families in the authority's order, so appending
+    // them here keeps the crate's table a subsequence (the census's `main` check).
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: DEFAULT_MSBLOB_PROPERTY,
+        implementation: RSA_TO_MSBLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: DEFAULT_PVK_PROPERTY,
+        implementation: RSA_TO_PVK_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: DEFAULT_MSBLOB_PROPERTY,
+        implementation: DSA_TO_MSBLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: DEFAULT_PVK_PROPERTY,
+        implementation: DSA_TO_PVK_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
     OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
@@ -1629,7 +1667,7 @@ pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 32] = [
 
 /// `base_encoder[]`'s rows the crate publishes — `providers/baseprov.c:67-72`, the same
 /// thirty-one rows with the base provider's property.
-pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 32] = [
+pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 36] = [
     OsslAlgorithm {
         algorithm_names: c"RSA".as_ptr(),
         property_definition: BASE_TEXT_PROPERTY,
@@ -1818,6 +1856,31 @@ pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 32] = [
         implementation: SM2_TO_BLOB_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
+    // The MSBLOB and PVK rows, in the authority's order (`encoders.inc:149-153`).
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: BASE_MSBLOB_PROPERTY,
+        implementation: RSA_TO_MSBLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: BASE_PVK_PROPERTY,
+        implementation: RSA_TO_PVK_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: BASE_MSBLOB_PROPERTY,
+        implementation: DSA_TO_MSBLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: BASE_PVK_PROPERTY,
+        implementation: DSA_TO_PVK_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
     OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
@@ -1829,7 +1892,10 @@ pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 32] = [
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::encoder_meth::OSSL_FUNC_ENCODER_DOES_SELECTION;
+    use crate::encoder_meth::{
+        OSSL_FUNC_ENCODER_DOES_SELECTION, OSSL_FUNC_ENCODER_SETTABLE_CTX_PARAMS,
+        OSSL_FUNC_ENCODER_SET_CTX_PARAMS,
+    };
 
     /// Every published row's dispatch table is one of the authority's two encoder shapes: the
     /// `MAKE_TEXT_ENCODER` body (`newctx`, `freectx`, `import_object`, `free_object`, `encode`) or
@@ -1845,6 +1911,7 @@ mod tests {
                 let fns = row.implementation.cast::<OsslDispatch>();
                 let mut i = 0;
                 let mut has_does = false;
+                let mut has_params = 0usize;
                 let mut unexpected = 0;
                 // SAFETY: the table is terminated, and each read is within it.
                 unsafe {
@@ -1855,6 +1922,8 @@ mod tests {
                             | OSSL_FUNC_ENCODER_IMPORT_OBJECT
                             | OSSL_FUNC_ENCODER_FREE_OBJECT
                             | OSSL_FUNC_ENCODER_ENCODE => {}
+                            OSSL_FUNC_ENCODER_SETTABLE_CTX_PARAMS
+                            | OSSL_FUNC_ENCODER_SET_CTX_PARAMS => has_params += 1,
                             OSSL_FUNC_ENCODER_DOES_SELECTION => has_does = true,
                             _ => unexpected += 1,
                         }
@@ -1864,7 +1933,7 @@ mod tests {
                 assert_eq!(unexpected, 0, "an encoder table carries an unexpected slot");
                 assert_eq!(
                     i,
-                    if has_does { 6 } else { 5 },
+                    5 + usize::from(has_does) + has_params,
                     "an encoder table has the wrong number of slots"
                 );
             }

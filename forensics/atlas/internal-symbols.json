@@ -194,11 +194,10 @@
       "src/asn1/bio_asn1.rs: {4: 4, 5: 2}",
       "src/asn1/bitstr.rs: {5: 7, 4: 1}",
       "src/evp/pem_bridge.rs: {5: 9, 7: 1}",
-      "src/pem/pem_pkey.rs: {11: 4, 7: 4}",
+      "src/pem/pem_pkey.rs: {11: 4, 7: 4, 5: 1}",
       "src/provider/core_dispatch.rs: {4: 1, 3: 1}"
     ],
     "modules_without_a_stratum": [
-      "src/asn1/d2i_pr.rs",
       "src/bn/dh_data.rs",
       "src/bn/prime_data.rs",
       "src/context/dispatch.rs",

@@ -253,6 +253,17 @@ KEY_FROM_PKCS8_FN = (
     "not a provider dispatch: `decode_der2key.h`'s `key_from_pkcs8_t`, a typedef local to a "
     "provider implementation header, which the atlas -- whose universe is the installed public "
     "surface -- records no typedef for")
+# `providers/implementations/encode_decode/decode_msblob2key.c` and `decode_pvk2key.c` declare
+# their `keytype_desc_st` callback fields as `.c`-local typedefs (`b2i_of_void_fn`,
+# `adjust_key_fn`, `free_key_fn`, `b2i_PVK_of_bio_pw_fn`, `check_key_fn`). The atlas's universe is
+# the installed public surface, so it records no typedef for a `.c`-local type (the same rule D333
+# applies to `EcFieldSetToOneFn`), and the convention rule has no authority name to join on. The
+# crate declares one Rust alias per type; `adjust_key_fn`/`free_key_fn` appear in both files with
+# the same canonical signature, so a bare name exempts both. Landed with 10.6's two decoder units.
+KEYTYPE_DESC_CALLBACK = (
+    "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's "
+    "`keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose "
+    "universe is the installed public surface -- records no typedef for")
 # `prov/ciphercommon.h:30` -- `PROV_CIPHER_FUNC(type, name, args)` expands to
 # `typedef type(*OSSL_##name##_fn) args`, so the typedef is produced by the preprocessor and there
 # is no `typedef` declaration for a declaration reader to record. `OSSL_xts_stream_fn` is the one
@@ -547,6 +558,12 @@ NOT_A_DISPATCH: dict[str, str] = {
                      "`CONF_METHOD` vtable; the authority declares the module finish callback "
                      "only as a local typedef in `conf.h`, which the atlas does not record"),
     "KeyFromPkcs8Fn": KEY_FROM_PKCS8_FN,
+    # --- `decode_msblob2key.c`/`decode_pvk2key.c`'s `.c`-local `keytype_desc_st` callbacks (10.6) --
+    "B2iOfVoidFn": KEYTYPE_DESC_CALLBACK,
+    "B2iPvkOfBioPwFn": KEYTYPE_DESC_CALLBACK,
+    "AdjustKeyFn": KEYTYPE_DESC_CALLBACK,
+    "FreeKeyFn": KEYTYPE_DESC_CALLBACK,
+    "CheckKeyFn": KEYTYPE_DESC_CALLBACK,
     "ConfCreateFn": CONF_INT,
     "ConfDestroyFn": CONF_INT,
     "ConfDestroyDataFn": CONF_INT,

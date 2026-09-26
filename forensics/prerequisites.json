@@ -36,12 +36,6 @@
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12"
       },
       {
-        "symbol": "d2i_PrivateKey",
-        "owner_phase": 10,
-        "reason": "`d2i_PrivateKey_decoder` (`crypto/asn1/d2i_pr.c:61`) builds an `OSSL_DECODER_CTX` and is the first thing `d2i_PrivateKey_ex` and `d2i_AutoPrivateKey_ex` try, with the legacy ameth path only as a fallback. **The decoder prerequisite landed in D367** -- `OSSL_DECODER_CTX_new_for_pkey` and the four decoder units are transcribed in `src/decoder_meth.rs`, `src/decoder_lib.rs` and `src/decoder_pkey.rs` -- so this row carries **no `blocked_by`** rather than a dependency that is gone: it records the stratum that still owes the four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports, whose remaining leg is `ossl_d2i_PrivateKey_legacy` (`:102`) reading the ameth decode pointers Phase 8 owns. `forensics/tools/phase7_obligations.py` moved the four to its `UNBLOCKED_HANDOFFS` for the same reason.",
-        "evidence": "docs/DECISIONS.md D193 and D367; docs/PHASE-7-SUBPHASES.md row 7.4l"
-      },
-      {
         "symbol": "ASN1_item_sign_ctx",
         "owner_phase": 11,
         "reason": "`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:138`) hands the digest context to `ASN1_item_sign_ctx`, which is declared in `x509.h` and is Phase 11's. The hand-off from Phase 5 that 7.4l owns therefore cannot be completed here even though `EVP_DigestSignInit` landed: the `_ex` spelling is a constructor for a context the `x509.h` function consumes, and its own answer would be the delegate's.",
@@ -569,20 +563,6 @@
         ],
         "reason": "`crypto/asn1/d2i_pu.c` is `src/asn1/d2i_pu.rs` whole -- its single export `d2i_PublicKey` is built, switching on `EVP_PKEY_get_base_id` into `d2i_RSAPublicKey`/`d2i_DSAPublicKey`/`o2i_ECPublicKey`.",
         "evidence": "src/asn1/d2i_pu.rs; docs/DECISIONS.md D354; docs/PHASE-8-SUBPHASES.md row 8.8"
-      },
-      {
-        "unit": "crypto/asn1/d2i_pr.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 10,
-        "reason": "The four `d2i_PrivateKey*`/`d2i_AutoPrivateKey*` exports run `d2i_PrivateKey_decoder` first (`crypto/asn1/d2i_pr.c:172`, `:247`), which builds an `OSSL_DECODER_CTX` with `OSSL_DECODER_CTX_new_for_pkey` (`:78`, `decoder.h`, Phase 10), and fall back to `ossl_d2i_PrivateKey_legacy` (`:102`), which reads the ameth decode pointers (Phase 8). Both phases feed the unit and Phase 10 is the binding one.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
-      },
-      {
-        "unit": "crypto/asn1/i2d_evp.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 10,
-        "reason": "Its five exports all reach `i2d_provided` (`crypto/asn1/i2d_evp.c:33`), which is `OSSL_ENCODER_CTX_new_for_pkey` (`:53`) + `OSSL_ENCODER_to_data` (`:59`), `encoder.h`'s and Phase 10's; their non-provided arms additionally call `i2d_RSAPublicKey` and its siblings and `EVP_PKEY2PKCS8` (`crypto/evp/evp_pkey.c:129`), all of which are Phase 8's or Phase 10's.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
       },
       {
         "unit": "crypto/evp/p_dec.c",

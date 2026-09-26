@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "10": {
-        "implemented": 202,
+        "implemented": 218,
         "unmatched": 0
       },
       "8": {
@@ -69,8 +69,8 @@
         ]
       }
     ],
-    "directly_courted": 523,
-    "implemented_rows": 523,
+    "directly_courted": 539,
+    "implemented_rows": 539,
     "rows": [
       {
         "algorithm_names": "DER",
@@ -258,6 +258,36 @@
         "provider": "base"
       },
       {
+        "algorithm_names": "DSA",
+        "aliases": [
+          "DSA"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "DSA",
+        "aliases": [
+          "DSA"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
         "algorithm_names": "EC",
         "aliases": [
           "EC"
@@ -544,6 +574,40 @@
         ],
         "courts": [
           "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
           "RT-CODEC"
         ],
         "coverage": "direct",
@@ -1155,6 +1219,36 @@
         "provider": "base"
       },
       {
+        "algorithm_names": "DSA",
+        "aliases": [
+          "DSA"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "DSA",
+        "aliases": [
+          "DSA"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
         "algorithm_names": "EC",
         "aliases": [
           "EC"
@@ -1294,6 +1388,40 @@
         ],
         "courts": [
           "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
           "RT-CODEC"
         ],
         "coverage": "direct",
@@ -3733,6 +3861,36 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "DSA",
+        "aliases": [
+          "DSA"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "DSA",
+        "aliases": [
+          "DSA"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "EC",
         "aliases": [
           "EC"
@@ -4019,6 +4177,40 @@
         ],
         "courts": [
           "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
           "RT-CODEC"
         ],
         "coverage": "direct",
@@ -5034,6 +5226,36 @@
         "provider": "default"
       },
       {
+        "algorithm_names": "DSA",
+        "aliases": [
+          "DSA"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "DSA",
+        "aliases": [
+          "DSA"
+        ],
+        "courts": [
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
         "algorithm_names": "EC",
         "aliases": [
           "EC"
@@ -5173,6 +5395,40 @@
         ],
         "courts": [
           "RT-KEYMGMT",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_ENCODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "RSA",
+        "aliases": [
+          "RSA"
+        ],
+        "courts": [
+          "RT-DRBG",
+          "RT-KEYMGMT",
+          "RT-SIGNATURE",
+          "RT-ASYM-CIPHER",
           "RT-CODEC"
         ],
         "coverage": "direct",
@@ -7819,7 +8075,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "937973e5a46cf118a7984f7be5f855e0195ed6570b3933129ae26b9023939fe6"
+      "sha256": "2cfaf4e49589f695e26d5bd9beb568879dfc628f429e679100aa83552e5bce9b"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -7864,7 +8120,7 @@
     {
       "name": "court:RT-CODEC:rt_codec_probe.c",
       "path": "courts/phase10/rt_codec_probe.c",
-      "sha256": "520de45c2de30379931f28a09c4571c3e7d3eb2fed61ed2419dc9ca5ae8220e4"
+      "sha256": "a2c8d427426c3eff0e20503f36a3559d98203f09b49dd52521a99cb2c8939b22"
     }
   ],
   "kind": "provider-court-coverage",

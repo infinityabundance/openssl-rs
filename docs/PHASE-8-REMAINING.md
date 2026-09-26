@@ -62,7 +62,7 @@ from the export list — the method D114, D118 and D122 established. The
 This document projects `forensics/phase8-obligations.json`, and every row
 of that ledger is an **export**. Cross-stratum *internal* names — a helper
 a module references that is not an export — are recorded in a different
-place: `forensics/prerequisites.json`'s `deferrals` (7 rows, 0 of which name Phase 8 as
+place: `forensics/prerequisites.json`'s `deferrals` (6 rows, 0 of which name Phase 8 as
 owner), and
 `forensics/atlas/prerequisite-gate.json` is the generated view of them.
 A reader who only checks the export ledger has not seen that half of the

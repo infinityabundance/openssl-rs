@@ -34,4 +34,6 @@
 pub mod key_legacy;
 pub mod pem_lib;
 pub mod pem_oth;
+pub mod pem_pk8;
 pub mod pem_pkey;
+pub mod pvkfmt;
