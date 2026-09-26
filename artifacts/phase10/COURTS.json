@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-KEYFORMAT-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's eighty-seven inherited `implemented` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-CODEC` is this stratum's first **behavioural** court (10.1): it drives the twenty-nine text and blob encoder rows `encode_key2text.c` and `encode_key2blob.c` publish through the public `OSSL_ENCODER_*` surface and the one `EncryptedPrivateKeyInfo` decoder `decode_epki2pki.c` publishes through `OSSL_DECODER_*`, observing each row's identity (`OSSL_ENCODER_fetch`/`OSSL_DECODER_fetch`'s name and properties), its exact bytes (`OSSL_ENCODER_to_data`/`OSSL_DECODER_from_data` with a construct callback), and a refusal arm for each unit with the error queue. Since 10.6 it also drives the four `msblob`/`pvk` encoder rows `encode_key2ms.c` publishes and the four `msblob`/`pvk` decoder rows `decode_msblob2key.c`/`decode_pvk2key.c` publish, in both providers: identity, a fixed RSA and 160-bit-`q` DSA keypair encoded to each output at the unencrypted level and the bytes fed back through the matching decoder row, and the selection and short-header refusals. It is a differential compatibility claim about those rows, NOT that the other 572 rows or the remaining decoders are implemented. `pending_courts` names the courts the plan gives this stratum and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3). `RT-KEYFORMAT` is 10.6's behavioural court: it drives the twenty-four landed `d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names with fixed RSA, DSA and EC keys, compares the exact bytes and each malformed-input arm's error queue, and references the two `i2d_PKCS8PrivateKey_nid_*` writers held pending because `PKCS8_encrypt` (10.4) is unlanded.",
+    "claim": "`RT-KEYFORMAT-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's eighty-seven inherited `implemented` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-CODEC` is this stratum's first **behavioural** court (10.1): it drives the twenty-nine text and blob encoder rows `encode_key2text.c` and `encode_key2blob.c` publish through the public `OSSL_ENCODER_*` surface and the one `EncryptedPrivateKeyInfo` decoder `decode_epki2pki.c` publishes through `OSSL_DECODER_*`, observing each row's identity (`OSSL_ENCODER_fetch`/`OSSL_DECODER_fetch`'s name and properties), its exact bytes (`OSSL_ENCODER_to_data`/`OSSL_DECODER_from_data` with a construct callback), and a refusal arm for each unit with the error queue. Since 10.6 it also drives the four `msblob`/`pvk` encoder rows `encode_key2ms.c` publishes and the four `msblob`/`pvk` decoder rows `decode_msblob2key.c`/`decode_pvk2key.c` publish, in both providers: identity, a fixed RSA and 160-bit-`q` DSA keypair encoded to each output at the unencrypted level and the bytes fed back through the matching decoder row, and the selection and short-header refusals. It is a differential compatibility claim about those rows, NOT that the other 572 rows or the remaining decoders are implemented. `pending_courts` names the courts the plan gives this stratum and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3). `RT-KEYFORMAT` is 10.6's behavioural court: it drives the twenty-four landed `d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names with fixed RSA, DSA and EC keys, compares the exact bytes and each malformed-input arm's error queue, and references the two `i2d_PKCS8PrivateKey_nid_*` writers held pending because `PKCS8_encrypt` (10.4) is unlanded. `RT-PKCS12` is 10.2's behavioural court: it builds the `PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups from fixed inputs and fixed hand-written DER fixtures, prints their bytes, and drives the `SafeBag` accessor surface, the attribute helpers and the `OPENSSL_{asc2uni,uni2asc,utf82uni,uni2utf8}` conversions, the ownership adoption of the `create0_*` constructors and the refusal arms with their error coordinates. **It does not cover the `PKCS12` container itself**: `PKCS12_it`/`_new`/`_free`, `d2i_PKCS12`/`i2d_PKCS12`, `PKCS12_AUTHSAFES_it` and the four `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp` spellings are held open on Phase 12's `PKCS7_it`, the four `PKCS12_SAFEBAG_get1_*` readers on Phase 11's `X509_it`, and the three `PKCS12_SAFEBAG_create_{cert,crl,pkcs8_encrypt*}` spellings on 10.3/10.4; the probe prints each as `pending.` with its blocker rather than driving a fabricated arm (docs/PHASE-10-SUBPHASES.md section 3.5).",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -55,17 +55,33 @@
           "candidate": "artifacts/phase10/probes/rt_keyformat_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 102,
+        "candidate_exit_code": 0,
+        "candidate_observations": 102,
+        "candidate_stderr_tail": [],
+        "court": "RT-PKCS12",
+        "crashed": false,
+        "probe": "courts/phase10/rt_pkcs12_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase10/probes/rt_pkcs12_probe.authority",
+          "candidate": "artifacts/phase10/probes/rt_pkcs12_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "CT-PKCS12": "10.4 -- the PKCS#12 KDF and PBE construction vectors, whose corpus the pinned tree already carries: `test/recipes/30-test_evp_data/evppbe_pkcs12.txt` and its `evppbe_pbkdf2.txt` sibling, with the `80-test_pkcs12.t` recipe data. Candidate-only, like every `CT-*` court (docs/DECISIONS.md D201); no network fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md).",
-      "RT-PKCS12": "10.2-10.4 -- the `PKCS12` container and its ASN.1, compared as DER bytes and not as a parsed structure: the `PFX` order, the `SafeBag` attribute set and its ordering, the `MacData`'s `digestAlgorithm`/`salt`/`iterations`, and the `PKCS12_gen_mac`/`PKCS12_verify_mac` pair. Every container symbol is open -- the eight decryption names already landed are referenced by `RT-KEYFORMAT-REF`, not driven -- so the court lands with 10.2-10.4 (docs/PHASE-10-SUBPHASES.md section 3.2).",
       "RT-STORE": "10.5 -- `OSSL_STORE_open(_ex)` and the `file` loader, the `OSSL_STORE_INFO` type and its constructor/accessor family, the `OSSL_STORE_LOADER` object and its registry, and the `OSSL_STORE_SEARCH` family: the `OSSL_STORE_INFO` type and refcount surface, the `eof`/`error`/`expect` state machine, and the refusal arms (an unknown scheme, a NULL URI, a loader that answers a NULL `load`) with the error queue. The loader's sub-fetches resolve in the publishing provider's library context (D240) and the decoder arm lands after 10.4's pair, so it cannot be written before then (docs/PHASE-10-SUBPHASES.md section 3.3)."
     },
     "summary": {
       "fail": 0,
-      "pass": 3,
-      "total": 3
+      "pass": 4,
+      "total": 4
     }
   },
   "generator": "forensics/tools/phase10_courts.py",
@@ -89,6 +105,11 @@
       "name": "probe",
       "path": "courts/phase10/rt_keyformat_probe.c",
       "sha256": "6c7b759202dc98896be75f786db8f0458e6f652a4cc5815a651705fa2f6b6b3e"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase10/rt_pkcs12_probe.c",
+      "sha256": "bd9a598ba9b7cc2d91c6c36053ddf3995a0a9057217c0b5a0a51b6c58661afcd"
     }
   ],
   "kind": "phase10-courts",

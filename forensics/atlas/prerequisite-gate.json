@@ -11,7 +11,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 72,
-      "language_surface_not_modelled_by_name": 5076,
+      "language_surface_not_modelled_by_name": 5160,
       "planned_prerequisites": 5
     },
     "census_by_unit": {
@@ -312,8 +312,12 @@
         "crypto/pem/pem_pk8.c": 24,
         "crypto/pem/pem_pkey.c": 30,
         "crypto/pem/pvkfmt.c": 23,
+        "crypto/pkcs12/p12_asn.c": 34,
+        "crypto/pkcs12/p12_attr.c": 8,
         "crypto/pkcs12/p12_decr.c": 14,
         "crypto/pkcs12/p12_p8d.c": 5,
+        "crypto/pkcs12/p12_sbag.c": 30,
+        "crypto/pkcs12/p12_utl.c": 12,
         "crypto/poly1305/poly1305.c": 5,
         "crypto/property/defn_cache.c": 7,
         "crypto/property/property.c": 25,
@@ -486,8 +490,8 @@
       ]
     },
     "checked": {
-      "authority_units": 329,
-      "crate_modules": 481,
+      "authority_units": 333,
+      "crate_modules": 485,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 6,
       "divergence_names_covered": 39,
@@ -600,7 +604,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "f015ec2477cd7aebedf0377a0f226aa65599d2949663928308db4db63058008b",
+  "body_hash": "14517dcb4728ebd864fdf164b4b77d5021f0fa5579f06a4ec418b76cb5df3088",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -621,7 +625,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "5575cfab2b137004ca0aa5c59c277539a1f22b48dd950ac8667f91fab2ee439e"
+      "sha256": "b1df51f5bbd9d2a1d00afd29dad26f0b52fba629a5905d755841edabef8d384d"
     },
     {
       "name": "symbol-ownership",
@@ -636,12 +640,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7b4da29de13450f8fdf8576a990b3703f47f25a222a6ca852632ef998fc162b3"
+      "sha256": "3ca4e3380d19f7b5fcda0960796aaea9e603d53874182af5f672f4869e7c4dec"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7e801066a59eb89e88409696732c2e8c5003efba8333a5e741a8792f538446e8"
+      "sha256": "32e8171e718efab5b3f52f80bf4274eb56a74a164d04dc36d772f7476c89d4a2"
     },
     {
       "name": "prerequisites",

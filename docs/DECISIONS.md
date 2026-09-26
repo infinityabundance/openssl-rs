@@ -31205,6 +31205,62 @@ regenerated `forensics/divergence-obligations.json` change; and the atlases, the
 `compiler_emitted_count` moved 12026 to 10318, a toolchain codegen property excluded from `body_hash` and
 normalized by `evidence_determinism.py`, with the C-visible symbol set unchanged and the ABI courts green.
 
+## D440 -- 10.2 lands 46 of 64 PKCS#12 exports, and the container turns out to be Phase 12's
+
+Subphase 10.2 is the `PKCS12` object and its ASN.1, and **46 of its 64 exports land** in four new modules
+under `src/pkcs12/`: `p12_asn.rs` 16 of 22 (the `MAC_DATA`, `BAGS` and `SAFEBAG` item groups and their
+`d2i`/`i2d` spellings), `p12_sbag.rs` 14 of 22 (the five `get0_*` union readers, `get_nid`/`get_bag_nid`,
+`create_secret`, the two `create0_*` forms and the three attribute readers), `p12_attr.rs` 12 of 12, and
+`p12_utl.rs` 4 of 8 (the four `asc2uni`/`uni2asc`/`utf82uni`/`uni2utf8` turns). The
+`PKCS12_BAGS`/`PKCS12_SAFEBAG` `ANY DEFINED BY` tables are transcribed in the authority's order, and the
+`PFX` template's order -- `version, authsafes, mac`, deliberately *not* the struct order -- is recorded
+in the module doc even though the container itself is withheld. **The ledger moves from
+`implemented=111 open=187` to `implemented=157 open=141`**, which is the largest single-slice move in the
+stratum so far.
+
+**The eighteen that stay open each have a measured blocker, and the largest is a stratum nobody had
+assigned to this subphase.** Six of `p12_asn.c`'s and all four of `p12_utl.c`'s remaining exports --
+`PKCS12_it`/`new`/`free`, `d2i_`/`i2d_PKCS12`, `PKCS12_AUTHSAFES_it` and the two BIO/fp wrappers -- need
+**`PKCS7_it`, which is Phase 12's** (`crypto/pkcs7/pk7_asn1.c`), because the `PFX` structure's
+`authsafes` column is a `PKCS7`. That is a plan correction: §2's 10.2 row named only 10.0 as its
+dependency. Eight of `p12_sbag.c`'s need Phase 11's `X509_it`/`X509_CRL_it` and
+`ossl_x509*_set0_libctx` (the four `get1_cert`/`get1_crl` spellings), 10.3's
+`PKCS12_item_pack_safebag` (the two `create_cert`/`create_crl` forms) and 10.4's `PKCS8_encrypt` (the two
+`create_pkcs8_encrypt*` forms). None is stubbed; all eighteen are `open` in the ledger with those
+reasons, and the plan's §3.2 -- which expects the `PFX` structure's order to be byte-comparable here --
+cannot hold in 10.2 for the same reason, which is now stated rather than assumed.
+
+**`RT-PKCS12` is a real court**, out of `PENDING_COURTS`, with **102 observations** and zero residuals:
+the item-group **DER bytes** for fixed inputs and hand-written fixtures (`SafeBag` secret, keyBag,
+shrouded and safeContents forms; `BAGS`; `MacData`), the accessor surface, the `SET OF` attribute
+ordering, the `create0_*` adoption by pointer identity, and three refusal arms with coordinates (35.112
+for a bad `vtype`, 11.140 for a duplicate attribute). **What it does not cover it prints**: the `PFX`
+container, the four `get1_cert`/`get1_crl` readers and the three `create_{cert,crl,pkcs8_encrypt*}`
+spellings each appear as `pending.<name>=<blocker>` rather than as a pass. A first draft of the probe
+crashed on a malformed `safeContentsBag` fixture because its OID arc was wrong (corrected to
+`.1.12.10.1.6`, with decodes now null-guarded) -- worth recording because a probe that crashes is a
+probe whose fixture was wrong, not a court finding a defect.
+
+`gen_err_raise_sites.py` gains `crypto/pkcs12/p12_sbag.c` (4,230 to **4,238** sites); the other three
+units raise nothing, so they are deliberately **not** listed, with that reason recorded rather than the
+omission being silent.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count is **1072 passed, 0 failed** (eight more than D439's 1064, all taking
+`lock_global_state`). `run_courts.py` reads phase 10 as four courts and 2,018 observations;
+`court_coverage.py` reads 157 implemented and 157 direct with 0 non-observable; `provider_court_coverage.py`
+reads 539/539 with 0 unmatched. Phase 9 `complete`, Phase 10 `in-progress`; `PIPELINE OK` exit 0 twice, at
+107 courts and 42,110 observations.
+
+### Movement
+
+`src/pkcs12/p12_asn.rs`, `p12_sbag.rs`, `p12_attr.rs` and `p12_utl.rs` are added and `src/pkcs12/mod.rs`
+wires them; `src/runtime/err_sites.rs`, `courts/phase10/rt_pkcs12_probe.c`,
+`forensics/tools/{gen_err_raise_sites,phase10_courts}.py` change; and the ledgers, the atlases, the census
+and `forensics/regression-baseline.json` are regenerated.
+
 ## D438 -- 10.6 lands 24 of 26 hand-offs, `RT-KEYFORMAT` becomes a court, and two pre-existing divergences surface
 
 Subphase 10.6 is the 26 symbols phases 5 and 7 handed forward, and **24 of them land**: `src/asn1/i2d_evp.rs`

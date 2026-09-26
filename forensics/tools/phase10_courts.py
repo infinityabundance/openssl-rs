@@ -34,9 +34,10 @@ What the pending courts will establish, and what they will not
 `RT-CODEC` and `RT-KEYFORMAT` compare the authority's *bytes* for the codecs and the hand-off
 helpers: `OSSL_ENCODER_to_data`/`to_bio`/`to_fp`'s exact output, the error queue and coordinate
 for a malformed input, the alias and selection behaviour under `set_output_type`/`set_selection`,
-and the same shape for the `d2i_*`/`i2d_*`/`PEM_*` pairs. `RT-PKCS12` compares the container's
-DER rather than a parsed structure, and `CT-PKCS12` checks the PKCS#12 KDF and PBE outputs
-against the vectors the pinned tree already carries. None of them can claim that a codec which
+and the same shape for the `d2i_*`/`i2d_*`/`PEM_*` pairs. `RT-PKCS12` (10.2) compares the
+`PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups' DER rather than a parsed structure,
+and `CT-PKCS12` checks the PKCS#12 KDF and PBE outputs against the vectors the pinned tree
+already carries. None of them can claim that a codec which
 round-trips is a codec: a transcription whose encoder writes and whose decoder reads back is a
 different library, and docs/PHASE-10-SUBPHASES.md section 3.1 records the three joins that make
 the difference observable. Nothing here is a parity claim about a key's meaning (section 3.5).
@@ -88,19 +89,18 @@ COURTS: list[tuple[str, str]] = [
     # 10.6's behavioural court: the twenty-six `d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names
     # the five authority units publish, driven with fixed legacy keys and compared byte for byte.
     ("RT-KEYFORMAT", "rt_keyformat_probe.c"),
+    # 10.2's behavioural court: the `PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups
+    # `p12_asn.c` lands, the `SafeBag` accessors and constructors `p12_sbag.c` lands, the
+    # attribute helpers of `p12_attr.c` and the Unicode conversions of `p12_utl.c`, driven
+    # through the public `pkcs12.h` surface and compared as DER bytes rather than a parsed
+    # structure (docs/PHASE-10-SUBPHASES.md section 3.2).
+    ("RT-PKCS12", "rt_pkcs12_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
 # can pass, and each is printed with the subphase that brings it so that "not run yet" cannot be
 # read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "RT-PKCS12": "10.2-10.4 -- the `PKCS12` container and its ASN.1, compared as DER bytes and "
-                 "not as a parsed structure: the `PFX` order, the `SafeBag` attribute set and "
-                 "its ordering, the `MacData`'s `digestAlgorithm`/`salt`/`iterations`, and the "
-                 "`PKCS12_gen_mac`/`PKCS12_verify_mac` pair. Every container symbol is open -- "
-                 "the eight decryption names already landed are referenced by "
-                 "`RT-KEYFORMAT-REF`, not driven -- so the court lands with 10.2-10.4 "
-                 "(docs/PHASE-10-SUBPHASES.md section 3.2).",
     "CT-PKCS12": "10.4 -- the PKCS#12 KDF and PBE construction vectors, whose corpus the pinned "
                  "tree already carries: `test/recipes/30-test_evp_data/evppbe_pkcs12.txt` and "
                  "its `evppbe_pbkdf2.txt` sibling, with the `80-test_pkcs12.t` recipe data. "
@@ -304,7 +304,19 @@ def main(argv: list[str]) -> int:
             "`d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names with fixed RSA, DSA and EC "
             "keys, compares the exact bytes and each malformed-input arm's error queue, and "
             "references the two `i2d_PKCS8PrivateKey_nid_*` writers held pending because "
-            "`PKCS8_encrypt` (10.4) is unlanded."
+            "`PKCS8_encrypt` (10.4) is unlanded. "
+            "`RT-PKCS12` is 10.2's behavioural court: it builds the `PKCS12_SAFEBAG`/"
+            "`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups from fixed inputs and fixed hand-written "
+            "DER fixtures, prints their bytes, and drives the `SafeBag` accessor surface, the "
+            "attribute helpers and the `OPENSSL_{asc2uni,uni2asc,utf82uni,uni2utf8}` conversions, "
+            "the ownership adoption of the `create0_*` constructors and the refusal arms with "
+            "their error coordinates. **It does not cover the `PKCS12` container itself**: "
+            "`PKCS12_it`/`_new`/`_free`, `d2i_PKCS12`/`i2d_PKCS12`, `PKCS12_AUTHSAFES_it` and the "
+            "four `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp` spellings are held open on Phase 12's "
+            "`PKCS7_it`, the four `PKCS12_SAFEBAG_get1_*` readers on Phase 11's `X509_it`, and "
+            "the three `PKCS12_SAFEBAG_create_{cert,crl,pkcs8_encrypt*}` spellings on 10.3/10.4; "
+            "the probe prints each as `pending.` with its blocker rather than driving a "
+            "fabricated arm (docs/PHASE-10-SUBPHASES.md section 3.5)."
         ),
     }
 
