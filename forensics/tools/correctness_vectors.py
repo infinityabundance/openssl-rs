@@ -1112,6 +1112,13 @@ BN_RAND_PROBE = REPO_ROOT / "courts" / "phase9" / "ct_bn_rand.c"
 BN_RAND_VECTORS = VECTOR_DIR / "bn_rand_nonce.json"
 DRBG_PROBE = REPO_ROOT / "courts" / "phase9" / "ct_drbg.c"
 DRBG_VECTORS = VECTOR_DIR / "drbg.json"
+# The PKCS#12 KDF correctness probe and its vectors. Like `CT-DRBG`, the probe re-reads the pinned
+# corpus's stanzas as its *inputs* and the vector file carries only the expected bytes, so the two
+# sides' labels (the generator's `pkcs12.NN` and the probe's emitted-stanza index) align by a
+# positional rule neither side reads from the other.
+PKCS12_PROBE = REPO_ROOT / "courts" / "phase10" / "ct_pkcs12.c"
+PKCS12_VECTORS = VECTOR_DIR / "pkcs12.json"
+PKCS12_CORPUS = "test/recipes/30-test_evp_data/evppbe_pkcs12.txt"
 STRING_VECTOR_KIND = "correctness-vectors"
 
 
@@ -1326,6 +1333,47 @@ def run_drbg_court(
             "parity: the authority's observable behaviour is RT-DRBG's question. It is NOT "
             "independent cryptographic validation and NOT formal validation; see "
             "docs/DECISIONS.md D201 and docs/PHASE-9-SUBPHASES.md."
+        ),
+        vector_path=vector_path,
+        probe=probe,
+        work_dir=work_dir,
+        authority_id=authority_id,
+        candidate_dir=candidate_dir,
+        argv=(str(corpus),),
+    )
+
+
+def run_pkcs12_court(
+    name: str,
+    *,
+    vector_path: Path = PKCS12_VECTORS,
+    probe: Path = PKCS12_PROBE,
+    work_dir: Path,
+    authority_id: str = PRODUCTION_AUTHORITY,
+    candidate_dir: Path = CANDIDATE_DIR,
+) -> dict:
+    """`CT-PKCS12` -- the PKCS#12 KDF (`PKCS12_key_gen_uni`) against the pinned corpus.
+
+    The probe takes the corpus path as its one argument rather than carrying the inputs in the
+    vector file: the expected bytes are mirrored there, but the *inputs* are re-read from the
+    pinned corpus so they are not typed twice and cannot drift from it. The corpus's `PBE =
+    pkcs12` stanzas are `test/evp_test.c`'s `pbe_test` cases, and the call is that driver's own
+    `PKCS12_key_gen_uni(pass, pass_len, salt, salt_len, id, iter, key_len, key, md)`.
+    """
+    corpus = resolve_authority(authority_id).source / PKCS12_CORPUS
+    return run_string_vector_court(
+        name,
+        kind="correctness-vectors",
+        claim=(
+            "A correctness-vector PASS means candidate-only construction verification: "
+            "`PKCS12_key_gen_uni` reproduced every `Key` the pinned authority's own "
+            "`test/recipes/30-test_evp_data/evppbe_pkcs12.txt` records, over each stanza's own "
+            "Password/Salt/id/iter/MD, which is the `PKCS12_key_gen_uni` KAT call "
+            "`test/evp_test.c`'s `pbe_test_run` makes and which reaches the provider `PKCS12KDF` "
+            "row (`providers/implementations/kdfs/pkcs12kdf.c`). It is NOT OpenSSL parity: the "
+            "authority's observable behaviour is RT-PKCS12's question. It is NOT independent "
+            "cryptographic validation and NOT formal validation; see docs/DECISIONS.md D201 "
+            "and docs/PHASE-10-SUBPHASES.md."
         ),
         vector_path=vector_path,
         probe=probe,

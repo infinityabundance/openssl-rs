@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4312,
+      "sites": 4321,
       "unattributed": 0
     },
     "covered_files": [
@@ -358,6 +358,9 @@
       "crypto/pkcs12/p12_add.c",
       "crypto/pkcs12/p12_init.c",
       "crypto/pkcs12/p12_mutl.c",
+      "crypto/pkcs12/p12_key.c",
+      "crypto/pkcs12/p12_crpt.c",
+      "crypto/pkcs12/p12_p8e.c",
       "crypto/pkcs7/pk7_lib.c",
       "crypto/x509/x509_att.c",
       "crypto/x509/x_pubkey.c",
@@ -63293,6 +63296,141 @@
         "rel_source": "crypto/pkcs12/p12_mutl.c"
       },
       {
+        "const_name": "PKCS12_KEY_32",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_key.c",
+        "function": "PKCS12_key_gen_asc_ex",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 32,
+        "macro": "ERR_raise",
+        "reason": 524323,
+        "reason_symbol": "ERR_R_PKCS12_LIB",
+        "rel_source": "crypto/pkcs12/p12_key.c"
+      },
+      {
+        "const_name": "PKCS12_KEY_62",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_key.c",
+        "function": "PKCS12_key_gen_utf8_ex",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 62,
+        "macro": "ERR_raise",
+        "reason": 524323,
+        "reason_symbol": "ERR_R_PKCS12_LIB",
+        "rel_source": "crypto/pkcs12/p12_key.c"
+      },
+      {
+        "const_name": "PKCS12_CRPT_41",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_crpt.c",
+        "function": "PKCS12_PBE_keyivgen_ex",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 41,
+        "macro": "ERR_raise",
+        "reason": 101,
+        "reason_symbol": "PKCS12_R_DECODE_ERROR",
+        "rel_source": "crypto/pkcs12/p12_crpt.c"
+      },
+      {
+        "const_name": "PKCS12_CRPT_55",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_crpt.c",
+        "function": "PKCS12_PBE_keyivgen_ex",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 55,
+        "macro": "ERR_raise",
+        "reason": 107,
+        "reason_symbol": "PKCS12_R_KEY_GEN_ERROR",
+        "rel_source": "crypto/pkcs12/p12_crpt.c"
+      },
+      {
+        "const_name": "PKCS12_CRPT_64",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_crpt.c",
+        "function": "PKCS12_PBE_keyivgen_ex",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 64,
+        "macro": "ERR_raise",
+        "reason": 106,
+        "reason_symbol": "PKCS12_R_IV_GEN_ERROR",
+        "rel_source": "crypto/pkcs12/p12_crpt.c"
+      },
+      {
+        "const_name": "PKCS12_P8E_27",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_p8e.c",
+        "function": "PKCS8_encrypt_ex",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 27,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/pkcs12/p12_p8e.c"
+      },
+      {
+        "const_name": "PKCS12_P8E_37",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_p8e.c",
+        "function": "PKCS8_encrypt_ex",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 37,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/pkcs12/p12_p8e.c"
+      },
+      {
+        "const_name": "PKCS12_P8E_48",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_p8e.c",
+        "function": "PKCS8_encrypt_ex",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 48,
+        "macro": "ERR_raise",
+        "reason": 524301,
+        "reason_symbol": "ERR_R_ASN1_LIB",
+        "rel_source": "crypto/pkcs12/p12_p8e.c"
+      },
+      {
+        "const_name": "PKCS12_P8E_79",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_p8e.c",
+        "function": "PKCS8_set0_pbe_ex",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 79,
+        "macro": "ERR_raise",
+        "reason": 103,
+        "reason_symbol": "PKCS12_R_ENCRYPT_ERROR",
+        "rel_source": "crypto/pkcs12/p12_p8e.c"
+      },
+      {
         "const_name": "PKCS7_LIB_32",
         "data_format": null,
         "dynamic_reason": false,
@@ -66947,6 +67085,21 @@
       "name": "authority:crypto/pkcs12/p12_mutl.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_mutl.c",
       "sha256": "4eea5e4abf9ce9751453684602903d33fec6f2265c4e943f5a605c6a310defd7"
+    },
+    {
+      "name": "authority:crypto/pkcs12/p12_key.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_key.c",
+      "sha256": "1b72e94ff5793f43fc3514ecd28c35efa652d23112b6e59aa31ec0eb0a5291fd"
+    },
+    {
+      "name": "authority:crypto/pkcs12/p12_crpt.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_crpt.c",
+      "sha256": "148c0450d5d6d4ac7bef73ccc1ff0f218e68ec79d3c381614d7f29dc9253b560"
+    },
+    {
+      "name": "authority:crypto/pkcs12/p12_p8e.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_p8e.c",
+      "sha256": "7be70d7e09f200ff241272804d9d79831f42066dc89106152a1c63c60ec137e6"
     },
     {
       "name": "authority:crypto/pkcs7/pk7_lib.c",

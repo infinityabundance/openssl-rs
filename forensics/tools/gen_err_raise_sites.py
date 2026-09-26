@@ -1222,6 +1222,24 @@ COVERED_FILES = [
     # sites land with 10.4's KDF. The stem is `PKCS12_MUTL` so it cannot collide with `PKCS12`
     # (carried by `p12_decr.c`/`p12_sbag.c`) or `PKCS12_ADD`.
     ("crypto/pkcs12/p12_mutl.c", "PKCS12_MUTL"),
+    # Phase 10's 10.4: `crypto/pkcs12/p12_key.c`, the six `PKCS12_key_gen_*` spellings over the
+    # provider `PKCS12KDF` row. Its two sites are the two conversions' `ERR_R_PKCS12_LIB` raises
+    # (`:32` in `PKCS12_key_gen_asc_ex`, `:62` in `PKCS12_key_gen_utf8_ex`); `PKCS12_key_gen_uni_ex`
+    # itself raises nothing of its own, so the rest of the unit is not a site. The stem is
+    # `PKCS12_KEY` because the `PKCS12` stem's line numbers collide with this file's `32`.
+    ("crypto/pkcs12/p12_key.c", "PKCS12_KEY"),
+    # Phase 10's 10.4: `crypto/pkcs12/p12_crpt.c`, the two `PKCS12_PBE_keyivgen` spellings and the
+    # empty `PKCS12_PBE_add`. Its three sites are the parameter decode's `PKCS12_R_DECODE_ERROR`
+    # (`:41`) and the two derivation failures (`PKCS12_R_KEY_GEN_ERROR` `:55`,
+    # `PKCS12_R_IV_GEN_ERROR` `:64`). The stem is `PKCS12_CRPT` so it cannot collide with `PKCS12`,
+    # `PKCS12_ADD`, `PKCS12_INIT`, `PKCS12_MUTL` or `PKCS12_KEY`.
+    ("crypto/pkcs12/p12_crpt.c", "PKCS12_CRPT"),
+    # Phase 10's 10.4: `crypto/pkcs12/p12_p8e.c`, of which this slice lands the
+    # `PKCS8_set0_pbe(_ex)` pair. Its four sites are three in the held-open `PKCS8_encrypt_ex`
+    # (`ERR_R_PASSED_NULL_PARAMETER` twice and `ERR_R_ASN1_LIB`) and the landed
+    # `PKCS8_set0_pbe_ex`'s `PKCS12_R_ENCRYPT_ERROR` (`:79`). The file raises, so it belongs to the
+    # subsystem's obligation set even though two of its exports stay open; the stem is `PKCS12_P8E`.
+    ("crypto/pkcs12/p12_p8e.c", "PKCS12_P8E"),
     # Phase 10's pulled-forward `PKCS7` subset (the PKCS#12 landing D441 blocked):
     # `crypto/pkcs7/pk7_lib.c`'s `PKCS7_set_type`. Its arm for the three content types this
     # subset does not carry reaches the authority's own `default:`, which raises

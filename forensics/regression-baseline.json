@@ -71,6 +71,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "CT-PKCS12": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-AMETH": {
       "observations": 471,
       "verdict": "pass"
@@ -368,7 +372,7 @@
       "verdict": "pass"
     },
     "RT-PKCS12": {
-      "observations": 184,
+      "observations": 216,
       "verdict": "pass"
     },
     "RT-PROVIDER": {
@@ -451,11 +455,11 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 3073,
+    "libcrypto": 3084,
     "libssl": 0
   },
   "open_obligations": {
-    "phase10": 115,
+    "phase10": 104,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -502,7 +506,7 @@
     "blocking_dependencies": 6,
     "divergence_names_covered": 40,
     "findings": 0,
-    "language_census": 5408,
+    "language_census": 5442,
     "sealed_census": 52
   },
   "provider_implemented": [

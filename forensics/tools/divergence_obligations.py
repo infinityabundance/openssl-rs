@@ -351,15 +351,24 @@ OBLIGATIONS: list[Row] = [
             "Phase 10's first commit that lands `crypto/pkcs12/p12_crpt.c`, which supplies the "
             "two `PKCS12_PBE_keyivgen` function addresses the six rows lack"
         ),
-        trigger_satisfied=False,
-        disposition="open",
-        evidence="RT-EVP-PBE (the `pbe.find.04`..`pbe.find.09` arms)",
+        trigger_satisfied=True,
+        disposition="fixed",
+        evidence=(
+            "src/pkcs12/p12_crpt.rs (PKCS12_PBE_keyivgen/_ex, transcribed against "
+            "crypto/pkcs12/p12_crpt.c with its three raises); src/evp/evp_pbe.rs (the six "
+            "BUILTIN_PBE rows now carry both addresses); courts/phase10/rt_pkcs12_probe.c "
+            "(the `pbe.find.04`..`pbe.find.09` arms); RT-PKCS12"
+        ),
         note=(
-            "The trigger phrase names Phase 10, which is not yet `complete`, so this row may be "
-            "`open`: the six `builtin_pbe[]` rows carry no keygen until Phase 10 lands "
-            "`p12_crpt.c`, and `EVP_PBE_find`/`_ex` answer 1 with both keygen pointers NULL "
-            "until then. The reader functions themselves are landed; what is owed is the "
-            "contents of two columns."
+            "10.4 landed `crypto/pkcs12/p12_crpt.c`, which is this row's trigger, so the six "
+            "`builtin_pbe[]` rows take both `PKCS12_PBE_keyivgen` addresses and "
+            "`EVP_PBE_find`/`_ex` answer 1 with both keygen out-parameters **non-NULL**. What "
+            "was a contents gap in two columns is now the authority's table. `RT-PKCS12` drives "
+            "all six NIDs through `EVP_PBE_find_ex` and prints the return code, the type, the "
+            "NID and both presence answers, which is the measurement `RT-EVP-PBE` held back "
+            "with a marker while the two libraries differed. The heading reads "
+            "`-- **CLOSED**`. Nothing was stubbed; the guard in `EVP_PBE_CipherInit_ex` still "
+            "covers the eighteen PRF rows, and the six PKCS#12 rows stop taking it."
         ),
     ),
     Row(

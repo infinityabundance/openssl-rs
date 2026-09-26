@@ -108,9 +108,13 @@ static void out_pending(void)
      * second, and the row is still `pending` rather than driven. */
     printf("pending.PKCS12_SAFEBAG_create_cert=phase-11-x509\n");
     printf("pending.PKCS12_SAFEBAG_create_crl=phase-11-x509\n");
-    /* Held open on `PKCS8_encrypt(_ex)` (p12_p8e.c, 10.4). */
-    printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt=phase-10.4\n");
-    printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt_ex=phase-10.4\n");
+    /* Held open on `PKCS8_encrypt(_ex)` (p12_p8e.c, 10.4), whose `PKCS5_pbe_set_ex`/
+     * `PKCS5_pbe2_set_iv_ex` are Phase 11's `x509.h` exports. 10.4 landed the `PKCS8_set0_pbe(_ex)`
+     * half, which takes an already-built `X509_ALGOR` and is driven above. */
+    printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt=phase-11-pkcs5\n");
+    printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt_ex=phase-11-pkcs5\n");
+    printf("pending.PKCS8_encrypt=phase-11-pkcs5\n");
+    printf("pending.PKCS8_encrypt_ex=phase-11-pkcs5\n");
 
     /* ----- the two `p7encdata` writers: `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex` ----- */
     printf("pending.PKCS12_pack_p7encdata=phase-11-pkcs5\n");
@@ -124,14 +128,21 @@ static void out_pending(void)
     printf("pending.PKCS12_create=phase-11-x509\n");
     printf("pending.PKCS12_create_ex=phase-11-x509\n");
     printf("pending.PKCS12_create_ex2=phase-11-x509\n");
-    /* ----- the MAC/KDF set that needs 10.4's `PKCS12_key_gen_utf8_ex` ----- */
-    printf("pending.PKCS12_gen_mac=phase-10.4-kdf\n");
-    printf("pending.PKCS12_verify_mac=phase-10.4-kdf\n");
-    printf("pending.PKCS12_set_mac=phase-10.4-kdf\n");
-    printf("pending.PKCS12_set_pbmac1_pbkdf2=phase-10.4-kdf\n");
+    /* ----- the MAC/KDF set that needs Phase 11's PBMAC1PARAM/PKCS5_pbkdf2_set -----
+     * 10.4 landed `PKCS12_key_gen_utf8_ex`, which these rows also reached, but each still needs a
+     * Phase 11 type: `verify_mac`/`set_pbmac1_pbkdf2` unpack or build a `PBMAC1PARAM`, and the
+     * private `pkcs12_gen_mac` they all reach names `PBMAC1PARAM`/`PBMAC1_get1_pbkdf2_param` in its
+     * PBMAC1 arm. The blocker moved from `phase-10.4-kdf` to `phase-11-pbe` as the truth moved. */
+    printf("pending.PKCS12_gen_mac=phase-11-pbe\n");
+    printf("pending.PKCS12_verify_mac=phase-11-pbe\n");
+    printf("pending.PKCS12_set_mac=phase-11-pbe\n");
+    printf("pending.PKCS12_set_pbmac1_pbkdf2=phase-11-pbe\n");
     /* `PKCS12_newpass` needs the PBE parameter objects and `PKCS8_encrypt_ex`, so it is not
      * the container that blocks it. */
     printf("pending.PKCS12_newpass=phase-11-pbe\n");
+    /* `p12_kiss.c`'s one export: `PKCS12_parse` reads cert bags through
+     * `PKCS12_SAFEBAG_get1_cert_ex` and `ossl_x509_add_cert_new`. */
+    printf("pending.PKCS12_parse=phase-11-x509\n");
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -821,6 +832,212 @@ static void court_container(void)
     sk_PKCS7_pop_free(safes, PKCS7_free);
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * 10.4's PBE pair and KDF: `PKCS12_PBE_add`, `PKCS12_PBE_keyivgen(_ex)`, the six
+ * `builtin_pbe[]` rows' keygen presence (D-PBE-PKCS12-KEYGEN-1's trigger), `PKCS12_key_gen_*`
+ * and `PKCS8_set0_pbe(_ex)`.
+ * --------------------------------------------------------------------------------------------- */
+
+/* `AlgorithmIdentifier { pbeWithSHA1And3-KeyTripleDES-CBC, PBEPARAM }` -- the input
+ * `PKCS8_set0_pbe` encrypts through, and the `ASN1_TYPE` parameter `EVP_PBE_CipherInit_ex`
+ * takes. Hand-written so both sides read the same input; `salt` is the first corpus vector's. */
+static const unsigned char FIX_PBE_ALG[] = {
+    0x30, 0x1b,
+      0x06, 0x0a, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x0c, 0x01, 0x03,
+      0x30, 0x0d,
+        0x04, 0x08, 0x0a, 0x58, 0xcf, 0x64, 0x53, 0x0d, 0x82, 0x3f,
+        0x02, 0x01, 0x01
+};
+
+/* The six `builtin_pbe[]` rows whose keygen column `D-PBE-PKCS12-KEYGEN-1` names, in table order
+ * (indices 4..9 of `EVP_PBE_get`). */
+static const int PBE6_NIDS[6] = {
+    NID_pbe_WithSHA1And128BitRC4,
+    NID_pbe_WithSHA1And40BitRC4,
+    NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+    NID_pbe_WithSHA1And2_Key_TripleDES_CBC,
+    NID_pbe_WithSHA1And128BitRC2_CBC,
+    NID_pbe_WithSHA1And40BitRC2_CBC
+};
+
+static void court_pbe_kdf(void)
+{
+    const unsigned char pass_uni[10] = {
+        0x00, 0x73, 0x00, 0x6d, 0x00, 0x65, 0x00, 0x67, 0x00, 0x00
+    };
+    unsigned char salt[8] = { 0x0a, 0x58, 0xcf, 0x64, 0x53, 0x0d, 0x82, 0x3f };
+    unsigned char out[24];
+    EVP_MD *md;
+    const unsigned char *p;
+    X509_ALGOR *alg = NULL;
+    const ASN1_OBJECT *aobj;
+    int atype = -1;
+    const void *apval = NULL;
+    PKCS8_PRIV_KEY_INFO *p8inf;
+    X509_SIG *sig;
+    ASN1_TYPE param;
+    int i;
+
+    PKCS12_PBE_add();
+
+    /* The divergence's own measurement: `EVP_PBE_find_ex` on each of the six NIDs now answers 1
+     * with both keygen pointers non-NULL, which is what landing `p12_crpt.c` changes. */
+    for (i = 0; i < 6; i++) {
+        int cnid = 12345, mnid = 12345, rc;
+        EVP_PBE_KEYGEN *kg = NULL;
+        EVP_PBE_KEYGEN_EX *kgx = NULL;
+
+        rc = EVP_PBE_find_ex(EVP_PBE_TYPE_OUTER, PBE6_NIDS[i], &cnid, &mnid, &kg, &kgx);
+        printf("pbe.find.%02d=%d,%d,%d,%d,%d,%s,%s\n", i + 4, rc, EVP_PBE_TYPE_OUTER,
+               PBE6_NIDS[i], cnid, mnid, kg != NULL ? "K" : "-", kgx != NULL ? "E" : "-");
+        ERR_clear_error();
+    }
+
+    /* `EVP_PBE_CipherInit_ex` on the two TripleDES rows, whose ciphers the default provider
+     * carries. The RC4/RC2 rows' ciphers are the *legacy* provider's (Phase 13), so a refusal
+     * there would measure that stratum's gap rather than this unit's keygen, and they are driven
+     * by `EVP_PBE_find_ex` above instead. */
+    p = FIX_PBE_ALG;
+    alg = d2i_X509_ALGOR(NULL, &p, (long)sizeof(FIX_PBE_ALG));
+    if (alg == NULL) {
+        printf("pbe.cipherinit.setup=FAIL\n");
+        return;
+    }
+    X509_ALGOR_get0(&aobj, &atype, &apval, alg);
+    (void)aobj;
+    /* `X509_ALGOR_get0`'s `ppval` is the parameter *value*, not the `ASN1_TYPE`; the client
+     * rebuilds the wrapper so `ASN1_TYPE_unpack_sequence` sees a `V_ASN1_SEQUENCE` value. */
+    memset(&param, 0, sizeof(param));
+    param.type = atype;
+    param.value.sequence = (ASN1_STRING *)apval;
+    (void)atype;
+    for (i = 6; i <= 7; i++) {
+        EVP_CIPHER_CTX *cctx = EVP_CIPHER_CTX_new();
+        ASN1_OBJECT *o = OBJ_nid2obj(PBE6_NIDS[i - 4]);
+        int rc;
+
+        ERR_clear_error();
+        rc = EVP_PBE_CipherInit_ex(o, "smeg", -1, &param, cctx, 1, NULL, NULL);
+        printf("pbe.cipherinit.%02d=%d err=", i, rc);
+        {
+            unsigned long e = ERR_get_error();
+
+            if (e == 0)
+                printf("none\n");
+            else
+                printf("%d.%d\n", ERR_GET_LIB(e), ERR_GET_REASON(e));
+        }
+        ERR_clear_error();
+        EVP_CIPHER_CTX_free(cctx);
+    }
+
+    /* The two `PKCS12_PBE_keyivgen` spellings driven **directly**, which is also what makes them
+     * importable symbols of this probe: `EVP_PBE_CipherInit_ex` reaches only the `_ex` one for
+     * these six rows (they all carry `keygen_ex`), so the plain spelling's own observable is a
+     * direct call. The cipher and digest are the DES3 row's, so the call reaches the same KDF. */
+    {
+        EVP_CIPHER *c = EVP_CIPHER_fetch(NULL, "DES-EDE3-CBC", NULL);
+        EVP_MD *hmd = EVP_MD_fetch(NULL, "SHA1", NULL);
+
+        if (c != NULL && hmd != NULL) {
+            EVP_CIPHER_CTX *cctx = EVP_CIPHER_CTX_new();
+
+            ERR_clear_error();
+            out_int("pbe.keyivgen", PKCS12_PBE_keyivgen(cctx, "smeg", -1, &param, c, hmd, 1));
+            out_err("pbe.keyivgen.err");
+            EVP_CIPHER_CTX_free(cctx);
+            cctx = EVP_CIPHER_CTX_new();
+            ERR_clear_error();
+            out_int("pbe.keyivgen_ex",
+                    PKCS12_PBE_keyivgen_ex(cctx, "smeg", -1, &param, c, hmd, 1, NULL, NULL));
+            out_err("pbe.keyivgen_ex.err");
+            EVP_CIPHER_CTX_free(cctx);
+        } else {
+            printf("pbe.keyivgen.setup=FAIL\n");
+            printf("pbe.keyivgen_ex.setup=FAIL\n");
+        }
+        EVP_CIPHER_free(c);
+        EVP_MD_free(hmd);
+    }
+
+    /* The KDF, through all six spellings. The fixed password `smeg` converts to the first corpus
+     * vector's UTF-16BE octets, so `asc`/`utf8`/`uni` all answer that vector's Key. */
+    md = EVP_MD_fetch(NULL, "SHA1", NULL);
+    if (md == NULL) {
+        printf("kdf.setup=FAIL\n");
+        X509_ALGOR_free(alg);
+        return;
+    }
+    ERR_clear_error();
+    out_int("kdf.uni", PKCS12_key_gen_uni((unsigned char *)pass_uni, 10, salt, 8, 1, 1, 24,
+                                          out, md));
+    out_hex("kdf.uni.out", out, 24);
+    out_int("kdf.uni_ex", PKCS12_key_gen_uni_ex((unsigned char *)pass_uni, 10, salt, 8, 1, 1, 24,
+                                                out, md, NULL, NULL));
+    out_hex("kdf.uni_ex.out", out, 24);
+    out_int("kdf.asc", PKCS12_key_gen_asc("smeg", -1, salt, 8, 1, 1, 24, out, md));
+    out_hex("kdf.asc.out", out, 24);
+    out_int("kdf.asc_ex", PKCS12_key_gen_asc_ex("smeg", -1, salt, 8, 1, 1, 24, out, md,
+                                                 NULL, NULL));
+    out_hex("kdf.asc_ex.out", out, 24);
+    out_int("kdf.utf8", PKCS12_key_gen_utf8("smeg", -1, salt, 8, 1, 1, 24, out, md));
+    out_hex("kdf.utf8.out", out, 24);
+    out_int("kdf.utf8_ex", PKCS12_key_gen_utf8_ex("smeg", -1, salt, 8, 1, 1, 24, out, md,
+                                                  NULL, NULL));
+    out_hex("kdf.utf8_ex.out", out, 24);
+    ERR_clear_error();
+    EVP_MD_free(md);
+
+    /* `PKCS8_set0_pbe(_ex)`: encrypt the fixed `PrivateKeyInfo` under the fixed TripleDES PBE,
+     * printed as the `EncryptedPrivateKeyInfo` DER. The algorithm is adopted by the answer. */
+    p = FIX_PKCS8;
+    p8inf = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, (long)sizeof(FIX_PKCS8));
+    sig = NULL;
+    if (p8inf != NULL) {
+        sig = PKCS8_set0_pbe("smeg", -1, p8inf, alg);
+        alg = NULL; /* adopted */
+        {
+            unsigned char *der = NULL;
+            int derlen = i2d_X509_SIG(sig, &der);
+
+            out_int("pkcs8.set0_pbe.derlen", derlen);
+            out_hex("pkcs8.set0_pbe.der", der, derlen);
+            OPENSSL_free(der);
+        }
+        out_ptr("pkcs8.set0_pbe", sig);
+        X509_SIG_free(sig);
+    } else {
+        out_ptr("pkcs8.set0_pbe", NULL);
+    }
+    ERR_clear_error();
+    PKCS8_PRIV_KEY_INFO_free(p8inf);
+    X509_ALGOR_free(alg);
+
+    /* The `_ex` spelling, over its own decode of the same fixture. */
+    p = FIX_PBE_ALG;
+    alg = d2i_X509_ALGOR(NULL, &p, (long)sizeof(FIX_PBE_ALG));
+    p = FIX_PKCS8;
+    p8inf = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, (long)sizeof(FIX_PKCS8));
+    if (alg != NULL && p8inf != NULL) {
+        sig = PKCS8_set0_pbe_ex("smeg", -1, p8inf, alg, NULL, NULL);
+        alg = NULL; /* adopted */
+        {
+            unsigned char *der = NULL;
+            int derlen = i2d_X509_SIG(sig, &der);
+
+            out_int("pkcs8.set0_pbe_ex.derlen", derlen);
+            out_hex("pkcs8.set0_pbe_ex.der", der, derlen);
+            OPENSSL_free(der);
+        }
+        X509_SIG_free(sig);
+    } else {
+        out_ptr("pkcs8.set0_pbe_ex", NULL);
+    }
+    ERR_clear_error();
+    PKCS8_PRIV_KEY_INFO_free(p8inf);
+    X509_ALGOR_free(alg);
+}
+
 /* The container refusals, each with its coordinate. */
 static void court_container_refusals(void)
 {
@@ -880,6 +1097,7 @@ int main(void)
     court_add3();
     court_container();
     court_container_refusals();
+    court_pbe_kdf();
     court_refusals();
     out_pending();
     return 0;

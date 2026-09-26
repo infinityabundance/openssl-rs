@@ -4,8 +4,8 @@
       "blocking": 0,
       "by_disposition": {
         "accepted_permanent_divergence": 3,
-        "fixed": 4,
-        "open": 3
+        "fixed": 5,
+        "open": 2
       },
       "rows": 10
     },
@@ -103,14 +103,14 @@
       {
         "blocking": false,
         "current_owner": 10,
-        "disposition": "open",
-        "evidence": "RT-EVP-PBE (the `pbe.find.04`..`pbe.find.09` arms)",
+        "disposition": "fixed",
+        "evidence": "src/pkcs12/p12_crpt.rs (PKCS12_PBE_keyivgen/_ex, transcribed against crypto/pkcs12/p12_crpt.c with its three raises); src/evp/evp_pbe.rs (the six BUILTIN_PBE rows now carry both addresses); courts/phase10/rt_pkcs12_probe.c (the `pbe.find.04`..`pbe.find.09` arms); RT-PKCS12",
         "id": "D-PBE-PKCS12-KEYGEN-1",
-        "note": "The trigger phrase names Phase 10, which is not yet `complete`, so this row may be `open`: the six `builtin_pbe[]` rows carry no keygen until Phase 10 lands `p12_crpt.c`, and `EVP_PBE_find`/`_ex` answer 1 with both keygen pointers NULL until then. The reader functions themselves are landed; what is owed is the contents of two columns.",
+        "note": "10.4 landed `crypto/pkcs12/p12_crpt.c`, which is this row's trigger, so the six `builtin_pbe[]` rows take both `PKCS12_PBE_keyivgen` addresses and `EVP_PBE_find`/`_ex` answer 1 with both keygen out-parameters **non-NULL**. What was a contents gap in two columns is now the authority's table. `RT-PKCS12` drives all six NIDs through `EVP_PBE_find_ex` and prints the return code, the type, the NID and both presence answers, which is the measurement `RT-EVP-PBE` held back with a marker while the two libraries differed. The heading reads `-- **CLOSED**`. Nothing was stubbed; the guard in `EVP_PBE_CipherInit_ex` still covers the eighteen PRF rows, and the six PKCS#12 rows stop taking it.",
         "originating_phase": 7,
         "trigger_condition": "Phase 10's first commit that lands `crypto/pkcs12/p12_crpt.c`, which supplies the two `PKCS12_PBE_keyivgen` function addresses the six rows lack",
         "trigger_phase": 10,
-        "trigger_satisfied": false
+        "trigger_satisfied": true
       },
       {
         "blocking": false,
@@ -139,14 +139,14 @@
     ],
     "rule": "an obligation blocks its `current_owner` when its trigger has fired (`trigger_satisfied`) and its `disposition` is still `open`; `phase_state.py` applies that test to each stratum"
   },
-  "body_hash": "c736622e3b203e3a41637cdb8cffe5fa21214fa07cc039be166f14bdec24a97d",
+  "body_hash": "10db55d88a7a8e8dc57d2c9207fe962b0310053f0d17d58198471caafccc1cc3",
   "generator": "forensics/tools/divergence_obligations.py",
   "inputs": [
     {
       "name": "divergence-register",
       "note": "the prose register this table transcribes",
       "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-      "sha256": "d8511e99029abd31a107b098e3b788b425284f39152ca7ea7471abfc3e1ce399"
+      "sha256": "08a4e3f2683c8f63e1e657c4618e50ecd83e799edc2fe8e2cbb7ffefc184f0ae"
     },
     {
       "name": "phase-8-seal",
@@ -164,13 +164,13 @@
       "name": "phase-8-obligations",
       "note": "the Phase 8 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "d61da8c4c27c626d8a86b1e84da9b8d98024451011398812405b8b2822886abd"
+      "sha256": "9f4d859013db774be3c5a6e8f2e36656e81543748842280e489246a28a093240"
     },
     {
       "name": "phase-9-obligations",
       "note": "the Phase 9 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "9a63cb69bbd5eca2fd84ec02f4fcf59e6733bfa84536e8abeb1df075d2f65af4"
+      "sha256": "1df11ac1cd470b5f16446c8b713b14ea51517d11aa931b1bb2669dffbb24c407"
     }
   ],
   "kind": "divergence-obligations",
