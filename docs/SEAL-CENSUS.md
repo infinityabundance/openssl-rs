@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2987 | 2909 |
+| libcrypto | 5896 | 3033 | 2863 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2987** | **3512** |
+| **total** | **6499** | **3033** | **3466** |
 
 ## Ownership atlas, by stratum
 
@@ -35,7 +35,7 @@ declared owner; this is that assignment.
 | 7 | EVP framework | `complete` | 924 | 950 | 733 | 217 | 0 |
 | 8 | Native cryptographic primitives | `complete` | 759 | 786 | 786 | 0 | 0 |
 | 9 | RAND / DRBG + entropy | `complete` | 25 | 69 | 69 | 0 | 0 |
-| 10 | Key formats + PKCS + STORE | `in-progress` | 272 | 298 | 111 | 0 | 187 |
+| 10 | Key formats + PKCS + STORE | `in-progress` | 272 | 298 | 157 | 0 | 141 |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
 | 13 | Legacy / deprecated compatibility | `not-started` | 189 | — | — | — | — |
@@ -333,27 +333,28 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 10 — Key formats + PKCS + STORE
 
 * state: `in-progress`
-* blocking: 187 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4)
+* blocking: 141 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase10-obligations.json`
 * atlas-owned: 272
 * owned working set: 298
-* implemented: 111
+* implemented: 157
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 187**
+* **open in this stratum: 141**
 
 Hand-offs received and discharged:
 
 * from phase 5: 16 symbol(s) — `b2i_PVK_bio`, `b2i_PVK_bio_ex`, `b2i_PrivateKey`, `b2i_PrivateKey_bio`, `b2i_PublicKey`, `b2i_PublicKey_bio`, `d2i_PKCS8PrivateKey_bio`, `d2i_PKCS8PrivateKey_fp`, `i2b_PVK_bio`, `i2b_PVK_bio_ex`, `i2b_PrivateKey_bio`, `i2b_PublicKey_bio`, `i2d_PKCS8PrivateKey_bio`, `i2d_PKCS8PrivateKey_fp`, `i2d_PKCS8PrivateKey_nid_bio`, `i2d_PKCS8PrivateKey_nid_fp`
 * from phase 7: 10 symbol(s) — `PEM_write_bio_PrivateKey_traditional`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
 
-Courts: `all pass`, 3 court(s), **1916** authority observation(s) over 3 transcript court(s).
+Courts: `all pass`, 4 court(s), **2018** authority observation(s) over 4 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-KEYFORMAT-REF | `pass` | 87 |
 | RT-CODEC | `pass` | 1487 |
 | RT-KEYFORMAT | `pass` | 342 |
+| RT-PKCS12 | `pass` | 102 |
 
 ## Court coverage
 
@@ -375,8 +376,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 7 | 733 | 733 | 688 | 45 | 0 | 0 | 0 |
 | 8 | 786 | 778 | 778 | 0 | 8 | 0 | 0 |
 | 9 | 69 | 69 | 69 | 0 | 0 | 0 | 0 |
-| 10 | 111 | 111 | 48 | 63 | 0 | 0 | 0 |
-| **total** | **2834** | **2826** | **2497** | **329** | **8** | **0** | **0** |
+| 10 | 157 | 157 | 94 | 63 | 0 | 0 | 0 |
+| **total** | **2880** | **2872** | **2543** | **329** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

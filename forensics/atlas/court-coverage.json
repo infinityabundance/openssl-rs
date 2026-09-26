@@ -1020,6 +1020,7 @@
               "RT-MEM-INSTALL",
               "RT-PARAM",
               "RT-PEM-KEY",
+              "RT-PKCS12",
               "RT-PUBKEY",
               "RT-RSA"
             ],
@@ -1349,6 +1350,7 @@
               "RT-MEM-INSTALL",
               "RT-OBJ-STREAM",
               "RT-PARAM",
+              "RT-PKCS12",
               "RT-PROVIDER",
               "RT-PROVIDER-3P",
               "RT-PUBKEY",
@@ -1409,6 +1411,7 @@
               "RT-EC",
               "RT-ERR",
               "RT-KEYFORMAT",
+              "RT-PKCS12",
               "RT-PUBKEY",
               "RT-RAND",
               "RT-RAND-USERS",
@@ -2137,6 +2140,7 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
+              "RT-PKCS12",
               "RT-PUBKEY",
               "RT-RSA"
             ],
@@ -21719,15 +21723,43 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 111,
-          "directly_courted_called": 48,
+          "directly_courted": 157,
+          "directly_courted_called": 94,
           "directly_courted_referenced": 63,
-          "implemented": 111,
+          "implemented": 157,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
         },
         "directly_courted": [
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "OPENSSL_asc2uni"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "OPENSSL_uni2asc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "OPENSSL_uni2utf8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "OPENSSL_utf82uni"
+          },
           {
             "basis": "called",
             "courts": [
@@ -22313,6 +22345,244 @@
             "symbol": "PEM_write_bio_PrivateKey_traditional"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_BAGS_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_BAGS_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_BAGS_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_MAC_DATA_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_MAC_DATA_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_MAC_DATA_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAGS_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_create0_p8inf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_create0_pkcs8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_create_secret"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get0_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get0_attrs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get0_bag_obj"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get0_bag_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get0_p8inf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get0_pkcs8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get0_safes"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get0_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get_bag_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_get_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_SAFEBAG_set0_attrs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_add1_attr_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_add1_attr_by_txt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_add_CSPName_asc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_add_friendlyname_asc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_add_friendlyname_uni"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_add_friendlyname_utf8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_add_localkeyid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_get_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_get_attr_gen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_get_friendlyname"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-KEYFORMAT-REF"
@@ -22355,6 +22625,13 @@
             "symbol": "PKCS12_pbe_crypt_ex"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS8_add_keyusage"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-KEYFORMAT-REF"
@@ -22367,6 +22644,13 @@
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "PKCS8_decrypt_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS8_get_attr"
           },
           {
             "basis": "called",
@@ -22423,6 +22707,27 @@
               "RT-KEYFORMAT"
             ],
             "symbol": "d2i_AutoPrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "d2i_PKCS12_BAGS"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "d2i_PKCS12_MAC_DATA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "d2i_PKCS12_SAFEBAG"
           },
           {
             "basis": "called",
@@ -22497,6 +22802,27 @@
           {
             "basis": "called",
             "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "i2d_PKCS12_BAGS"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "i2d_PKCS12_MAC_DATA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "i2d_PKCS12_SAFEBAG"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-KEYFORMAT"
             ],
             "symbol": "i2d_PKCS8PrivateKey"
@@ -22533,14 +22859,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 10,
-        "staged_candidate_probes": 3
+        "staged_candidate_probes": 4
       }
     ],
     "totals": {
-      "directly_courted": 2826,
-      "directly_courted_called": 2497,
+      "directly_courted": 2872,
+      "directly_courted_called": 2543,
       "directly_courted_referenced": 329,
-      "implemented": 2834,
+      "implemented": 2880,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -22551,7 +22877,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7b4da29de13450f8fdf8576a990b3703f47f25a222a6ca852632ef998fc162b3"
+      "sha256": "3ca4e3380d19f7b5fcda0960796aaea9e603d53874182af5f672f4869e7c4dec"
     },
     {
       "name": "symbol-ownership",
@@ -22566,7 +22892,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "159b20bc7e381965466c6d7a481131455e527a05f57e5df424092a4dc0e5b0d1"
+      "sha256": "734d5683c042ed6de4a0e31d284a1574b0fd4981bfc80a55b710d2a2ae9a98d8"
     },
     {
       "name": "phase3-courts",
@@ -22576,7 +22902,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "9c27ec6e1f3985c08ba2244a63e6321aa1c735e663c6e3126aaa549ec8c475fa"
+      "sha256": "16252998b02d6fd1b77137f8e02da13723659a6869addfca010cd4bca916a7f9"
     },
     {
       "name": "phase4-courts",
@@ -22586,7 +22912,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2ef35e0dd6aab48c458663d9b4630a7903942a75b6a198a839b0428aee8748d4"
+      "sha256": "e84afe68edeed004ddf237a431b0d8d5913fa3d7129a5506adc88935794e2692"
     },
     {
       "name": "phase5-courts",
@@ -22596,7 +22922,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "23247f30d7c81b0623c13df4a753dbdcb9f9a1249c41137b6a6d6a49ac6ae51c"
+      "sha256": "4a4a91efd1f550318bd98321b8725db72f960daaad867ba98d9304ae0f4bd8a8"
     },
     {
       "name": "phase6-courts",
@@ -22606,7 +22932,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "3954a8c6c82fecd78ceb2dd558914ccfaa2e0523b0b2a7d70a99be8d22650f23"
+      "sha256": "145a30a87717416aa926cff1e916ea6f820d91b53a1676d620661c03412ddb6b"
     },
     {
       "name": "phase7-courts",
@@ -22616,7 +22942,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "d2d1894e2b0de6e56bb16bec4ea60f45d42f45484a0bf90617acf68658f7e9f3"
+      "sha256": "927efd6ef5581990b12d0132597c2cdc14a09058370f32034bf4e3ea7d029db1"
     },
     {
       "name": "phase8-courts",
@@ -22626,7 +22952,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "0554e4492288cc543c622b2023ca6365bd37b90da54c0910e5bcb87aea5fd7ba"
+      "sha256": "995b171d355b2d0b9e3e60c920ea693faa6ecf53cd8326dc1dcd2324e2167c08"
     },
     {
       "name": "phase9-courts",
@@ -22636,12 +22962,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "a6849b163fe221e9522d1f3df89e8fb06768719cb790d9129a9382431c1ee25c"
+      "sha256": "079b0777a0aa940d889664026193d2f68ab43bb7e34d17263ae5ca93d15131e5"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "3792fb0f89c8886201014fcb69b8de0f18fb804e910f6a0dd50362b13176ca78"
+      "sha256": "19963af2788c3c47ae473a8990a7a3baf60290655b3de24a9521f7daaa9288ba"
     }
   ],
   "kind": "court-coverage",

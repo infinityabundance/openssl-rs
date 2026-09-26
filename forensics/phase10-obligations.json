@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 272,
       "deferred_to_later_phase": 0,
-      "implemented": 111,
-      "open_in_this_stratum": 187,
+      "implemented": 157,
+      "open_in_this_stratum": 141,
       "owned": 298,
       "received_by_handoff": 26
     },
@@ -227,6 +227,10 @@
       ]
     },
     "implemented": [
+      "OPENSSL_asc2uni",
+      "OPENSSL_uni2asc",
+      "OPENSSL_uni2utf8",
+      "OPENSSL_utf82uni",
       "OSSL_DECODER_CTX_add_decoder",
       "OSSL_DECODER_CTX_add_extra",
       "OSSL_DECODER_CTX_free",
@@ -307,14 +311,50 @@
       "OSSL_ENCODER_to_fp",
       "OSSL_ENCODER_up_ref",
       "PEM_write_bio_PrivateKey_traditional",
+      "PKCS12_BAGS_free",
+      "PKCS12_BAGS_it",
+      "PKCS12_BAGS_new",
+      "PKCS12_MAC_DATA_free",
+      "PKCS12_MAC_DATA_it",
+      "PKCS12_MAC_DATA_new",
+      "PKCS12_SAFEBAGS_it",
+      "PKCS12_SAFEBAG_create0_p8inf",
+      "PKCS12_SAFEBAG_create0_pkcs8",
+      "PKCS12_SAFEBAG_create_secret",
+      "PKCS12_SAFEBAG_free",
+      "PKCS12_SAFEBAG_get0_attr",
+      "PKCS12_SAFEBAG_get0_attrs",
+      "PKCS12_SAFEBAG_get0_bag_obj",
+      "PKCS12_SAFEBAG_get0_bag_type",
+      "PKCS12_SAFEBAG_get0_p8inf",
+      "PKCS12_SAFEBAG_get0_pkcs8",
+      "PKCS12_SAFEBAG_get0_safes",
+      "PKCS12_SAFEBAG_get0_type",
+      "PKCS12_SAFEBAG_get_bag_nid",
+      "PKCS12_SAFEBAG_get_nid",
+      "PKCS12_SAFEBAG_it",
+      "PKCS12_SAFEBAG_new",
+      "PKCS12_SAFEBAG_set0_attrs",
+      "PKCS12_add1_attr_by_NID",
+      "PKCS12_add1_attr_by_txt",
+      "PKCS12_add_CSPName_asc",
+      "PKCS12_add_friendlyname_asc",
+      "PKCS12_add_friendlyname_uni",
+      "PKCS12_add_friendlyname_utf8",
+      "PKCS12_add_localkeyid",
+      "PKCS12_get_attr",
+      "PKCS12_get_attr_gen",
+      "PKCS12_get_friendlyname",
       "PKCS12_item_decrypt_d2i",
       "PKCS12_item_decrypt_d2i_ex",
       "PKCS12_item_i2d_encrypt",
       "PKCS12_item_i2d_encrypt_ex",
       "PKCS12_pbe_crypt",
       "PKCS12_pbe_crypt_ex",
+      "PKCS8_add_keyusage",
       "PKCS8_decrypt",
       "PKCS8_decrypt_ex",
+      "PKCS8_get_attr",
       "b2i_PVK_bio",
       "b2i_PVK_bio_ex",
       "b2i_PrivateKey",
@@ -323,6 +363,9 @@
       "b2i_PublicKey_bio",
       "d2i_AutoPrivateKey",
       "d2i_AutoPrivateKey_ex",
+      "d2i_PKCS12_BAGS",
+      "d2i_PKCS12_MAC_DATA",
+      "d2i_PKCS12_SAFEBAG",
       "d2i_PKCS8PrivateKey_bio",
       "d2i_PKCS8PrivateKey_fp",
       "d2i_PrivateKey",
@@ -333,6 +376,9 @@
       "i2b_PublicKey_bio",
       "i2d_KeyParams",
       "i2d_KeyParams_bio",
+      "i2d_PKCS12_BAGS",
+      "i2d_PKCS12_MAC_DATA",
+      "i2d_PKCS12_SAFEBAG",
       "i2d_PKCS8PrivateKey",
       "i2d_PKCS8PrivateKey_bio",
       "i2d_PKCS8PrivateKey_fp",
@@ -419,30 +465,6 @@
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation this ledger does not start with the whole working set open: eighty-seven of the atlas-owned exports were landed by Phase 8's 8.8 chain before this stratum was activated, and the ledger reports them as `implemented` because `implemented-surface.json` does -- docs/PHASE-10-SUBPHASES.md section 4 is the measurement. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-10-SUBPHASES.md section 4 decides when the stratum may be called complete.",
     "open": [
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OPENSSL_asc2uni"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OPENSSL_uni2asc"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OPENSSL_uni2utf8"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OPENSSL_utf82uni"
-      },
       {
         "declaring_header": "store.h",
         "module": "src/store/mod.rs",
@@ -909,42 +931,6 @@
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
-        "symbol": "PKCS12_BAGS_free"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_BAGS_it"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_BAGS_new"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_MAC_DATA_free"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_MAC_DATA_it"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_MAC_DATA_new"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
         "symbol": "PKCS12_PBE_add"
       },
       {
@@ -958,24 +944,6 @@
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
         "symbol": "PKCS12_PBE_keyivgen_ex"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAGS_it"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_create0_p8inf"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_create0_pkcs8"
       },
       {
         "declaring_header": "pkcs12.h",
@@ -1005,66 +973,6 @@
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_create_secret"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_free"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get0_attr"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get0_attrs"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get0_bag_obj"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get0_bag_type"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get0_p8inf"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get0_pkcs8"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get0_safes"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get0_type"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
         "symbol": "PKCS12_SAFEBAG_get1_cert"
       },
       {
@@ -1089,73 +997,7 @@
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get_bag_nid"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_get_nid"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_it"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_new"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_set0_attrs"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add1_attr_by_NID"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add1_attr_by_txt"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add_CSPName_asc"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
         "symbol": "PKCS12_add_cert"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add_friendlyname_asc"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add_friendlyname_uni"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add_friendlyname_utf8"
       },
       {
         "declaring_header": "pkcs12.h",
@@ -1168,12 +1010,6 @@
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
         "symbol": "PKCS12_add_key_ex"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add_localkeyid"
       },
       {
         "declaring_header": "pkcs12.h",
@@ -1252,24 +1088,6 @@
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
         "symbol": "PKCS12_get0_mac"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_get_attr"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_get_attr_gen"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_get_friendlyname"
       },
       {
         "declaring_header": "pkcs12.h",
@@ -1425,12 +1243,6 @@
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
-        "symbol": "PKCS8_add_keyusage"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
         "symbol": "PKCS8_encrypt"
       },
       {
@@ -1438,12 +1250,6 @@
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
         "symbol": "PKCS8_encrypt_ex"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS8_get_attr"
       },
       {
         "declaring_header": "pkcs12.h",
@@ -1467,24 +1273,6 @@
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
-        "symbol": "d2i_PKCS12_BAGS"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_PKCS12_MAC_DATA"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_PKCS12_SAFEBAG"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
         "symbol": "d2i_PKCS12_bio"
       },
       {
@@ -1498,24 +1286,6 @@
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
         "symbol": "i2d_PKCS12"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_PKCS12_BAGS"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_PKCS12_MAC_DATA"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_PKCS12_SAFEBAG"
       },
       {
         "declaring_header": "pkcs12.h",
@@ -1583,17 +1353,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "2ce92893947ff78cd640e14116c030e9df868e572937dceda26950996455a70b"
+      "sha256": "e107afe945c0c72ff8c0c6f86519cf84a31ad96153e84eca55aaf327e5b6a67f"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2ef35e0dd6aab48c458663d9b4630a7903942a75b6a198a839b0428aee8748d4"
+      "sha256": "e84afe68edeed004ddf237a431b0d8d5913fa3d7129a5506adc88935794e2692"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "3954a8c6c82fecd78ceb2dd558914ccfaa2e0523b0b2a7d70a99be8d22650f23"
+      "sha256": "145a30a87717416aa926cff1e916ea6f820d91b53a1676d620661c03412ddb6b"
     }
   ],
   "kind": "phase10-obligations",

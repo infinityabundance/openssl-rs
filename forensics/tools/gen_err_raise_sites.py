@@ -1187,6 +1187,16 @@ COVERED_FILES = [
     # **not** covered: `PKCS8_decrypt`/`PKCS8_decrypt_ex` raise nothing, so an entry for it would
     # read as coverage that does not exist -- the reasoning `mdc2_prov.c` is named under above.
     ("crypto/pkcs12/p12_decr.c", "PKCS12"),
+    # Phase 10's 10.2: `crypto/pkcs12/p12_sbag.c`, the `SafeBag` accessors and constructors. Its
+    # eight sites are `ERR_LIB_PKCS12` with `ERR_R_ASN1_LIB` (the five allocation failures),
+    # `PKCS12_R_ENCODE_ERROR` (the octet-string pack) and `PKCS12_R_INVALID_TYPE` (the
+    # unsupported `vtype` in `create_secret`), so covering the unit gives the constructors their
+    # coordinates. `p12_asn.c`, `p12_attr.c` and `p12_utl.c` are **not** covered: none of the
+    # three raises -- the item templates add none, the attribute helpers return their callees'
+    # status, and the conversions only answer NULL -- so an entry for any of them would read as
+    # coverage that does not exist. This is the same reasoning `mdc2_prov.c` and `p12_p8d.c` are
+    # named under above.
+    ("crypto/pkcs12/p12_sbag.c", "PKCS12"),
     # Phase 11 staging: `crypto/x509/x509_att.c`, the `X509at_add1_attr*` family
     # `PKCS8_pkey_add1_attr*` is one call each to (D368). Its twenty-six sites are
     # `ERR_LIB_X509`, mostly `ERR_R_PASSED_NULL_PARAMETER`, `ERR_R_CRYPTO_LIB` and
