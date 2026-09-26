@@ -31141,7 +31141,69 @@ clean; phase 10 reads two courts and 1,462 observations. `forensics/phase10-obli
 `src/provider/decode_der2key.rs` is added; `src/provider/{base,digest,mod}.rs`, `src/runtime/err_sites.rs`,
 `courts/phase10/rt_codec_probe.c`, `forensics/tools/{gen_err_raise_sites,prototype_court,dispatch_court}.py`
 and `forensics/tools/phase10_courts.py` change; and the atlases, the census and
-`forensics/regression-baseline.json` are regenerated. `encode_key2any.c` remains blocked on 10.6 and 10.4.
+`forensics/regression-baseline.json` are regenerated.
+
+## D439 -- the two divergences D438 surfaced are both real, both are repaired, and the register's `fixed` was contradicted before it was earned
+
+D438 named two pre-existing divergences and said neither was fixed by that slice. This slice re-measures
+both against the authority and repairs them, and the first one is the more important because it settled a
+question about the divergence machinery itself.
+
+**`D-PKEY-AMETH-1` was genuinely divergent, so D427's `fixed` was wrong until this change.** The
+authority's `EVP_PKEY_get_id` reads `pkey->type` (`crypto/evp/p_lib.c:1023-1026`),
+`EVP_PKEY_get_base_id` is `EVP_PKEY_type(pkey->type)` (`:1028-1031`), and `pkey_set_type`
+(`:1537-1648`) sets the real `ameth->pkey_id` when the ASN.1 method is found and `EVP_PKEY_KEYMGMT` only
+when it is not -- reaching that method through `PKEY_asn1_find_str` via the **public**
+`EVP_PKEY_set_type_by_keymgmt` (`:1674-1701`), which `crypto/evp/keymgmt_lib.c:64`/`:505` call.
+Measured on provider keys through the decoder path, the candidate answered `-1` (`EVP_PKEY_KEYMGMT`)
+where the authority answers `6` (`EVP_PKEY_RSA`) and `116` (`EVP_PKEY_DSA`), `base_id` `0` where the
+authority answers the real NID. **The cause was a transcription defect, not the register's account of
+it**: `src/evp/keymgmt_lib.rs`'s `evp_keymgmt_util_assign_pkey`/`_copy` called a crate-local helper
+`evp_pkey_set_type_by_keymgmt` that passed `str = NULL` and so skipped the name walk the authority takes.
+The authority has no such helper. Both call sites now call the public `EVP_PKEY_set_type_by_keymgmt`,
+the invented helper is removed, and the doc records the authority's single entry point. `D-PKEY-AMETH-3`'s
+provider-key-typing observable was broken by the same bug and is repaired with it. **This is the first
+time the divergence machinery's own record has been caught asserting a `fixed` that was not earned**,
+which is exactly what D427 built it to prevent -- and the record is corrected rather than cosmetically
+kept: both rows now name `src/evp/keymgmt_lib.rs` in their `evidence`, the table reads 10 rows and 0
+blocking, and no published stratum flipped to blocking, so Phase 8 stays `complete`.
+
+**The `i2d_ECPrivateKey` explicit-tag defect was also real.** The authority's `crypto/ec/ec_asn1.c:159-164`
+uses `ASN1_EXP_OPT(...,0)`/`(...,1)`, which expands to `ASN1_TFLG_EXPLICIT | ASN1_TFLG_CONTEXT |
+ASN1_TFLG_OPTIONAL`; `src/ec/asn1.rs`'s `EC_PRIVATEKEY_SEQ_TT` wrote `EXPTAG | OPTIONAL`, omitting the
+context class bit. Measured, the authority's bytes carry `a0 0a ... a1 44` where the candidate's carried
+`20 0a ... 21 44`, and the `d2i` side returned NULL for the authority's own SEC1 and PKCS#8 EC bodies
+(lib=60, error 13) -- so it could not read real EC private keys at all, not merely write them
+non-identically. The template is corrected and the comment with it. **`RT-KEYFORMAT`'s EC arms are
+enabled** as a result -- `i2d.PrivateKey.ec`, `i2d.PKCS8PrivateKey.ec`, `pem.traditional.ec` and the
+`d2i` SEC1/PKCS#8 arms -- and its observations rise from 256 to **342**, which is the evidence that the
+fix is real rather than asserted.
+
+**Two things are flagged rather than decided.** The `crypto/x509/x_all.c` wrappers
+`i2d_ECPrivateKey_bio`/`_fp` are not implemented in the crate, so no X.509 test is affected today; when
+Phase 11 lands `x_all.c` those wrappers inherit the corrected encoding. And no new machine row was
+created for the EC tag defect, because it was an unintended transcription bug rather than a deliberate
+safety or parity narrowing, and the register's §6 is for recorded divergences rather than for fixed
+bugs -- its record is this entry. If the project wants fixed parity bugs to carry machine rows of their
+own, that is a change to the register's rule and should be decided explicitly rather than slipped in.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count is **1064 passed, 0 failed**. `divergence_obligations.py` and its `--check` are
+clean (10 rows, 0 blocking); `phase_state.py` reads 10 `complete`, 1 `in-progress`, 11 `not-started` with
+**Phase 8 `complete`** and Phase 10 `in-progress`. `run_courts.py`, `court_coverage.py` and
+`provider_court_coverage.py` clean (539/539 provider rows). `PIPELINE OK` exit 0 twice, at 106 courts and
+42,008 observations.
+
+### Movement
+
+`src/evp/keymgmt_lib.rs`, `src/evp/pkey.rs` and `src/ec/asn1.rs` change; `courts/phase10/rt_keyformat_probe.c`
+and `docs/SECURITY_DIVERGENCE_POLICY.md` change; `forensics/tools/divergence_obligations.py` and its
+regenerated `forensics/divergence-obligations.json` change; and the atlases, the census and
+`forensics/regression-baseline.json` are regenerated. `implemented-surface.json`'s
+`compiler_emitted_count` moved 12026 to 10318, a toolchain codegen property excluded from `body_hash` and
+normalized by `evidence_determinism.py`, with the C-visible symbol set unchanged and the ABI courts green.
 
 ## D438 -- 10.6 lands 24 of 26 hand-offs, `RT-KEYFORMAT` becomes a court, and two pre-existing divergences surface
 

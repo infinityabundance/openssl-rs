@@ -320,7 +320,7 @@
       "verdict": "pass"
     },
     "RT-KEYFORMAT": {
-      "observations": 256,
+      "observations": 342,
       "verdict": "pass"
     },
     "RT-KEYFORMAT-REF": {

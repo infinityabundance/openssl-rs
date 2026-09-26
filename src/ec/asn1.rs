@@ -1075,7 +1075,11 @@ fn ecparameters_it() -> *const Asn1Item {
 
 /// `EC_PRIVATEKEY_seq_tt` — `ASN1_SEQUENCE(EC_PRIVATEKEY)` at `crypto/ec/ec_asn1.c:159-164`. The
 /// `parameters` field is `ASN1_EXP_OPT(..., 0)` and `publicKey` is `ASN1_EXP_OPT(..., 1)`, so both
-/// carry `ASN1_TFLG_EXPTAG | ASN1_TFLG_OPTIONAL` and the tag is the `[n]` number.
+/// carry `ASN1_TFLG_EXPLICIT | ASN1_TFLG_OPTIONAL` — the authority's macro expands to
+/// `ASN1_TFLG_EXPTAG | ASN1_TFLG_CONTEXT | ASN1_TFLG_OPTIONAL`, and the **context bit is what
+/// makes the wrapper's class context-specific**, so the emitted tags are `0xa0`/`0xa1` and not
+/// the universal `0x20`/`0x21`. It is written out in full here rather than reduced, exactly as
+/// [`crate::rsa::asn1`]'s PSS/OAEP templates do.
 static EC_PRIVATEKEY_SEQ_TT: [Asn1Template; 4] = [
     Asn1Template {
         flags: ASN1_TFLG_EMBED,
@@ -1092,14 +1096,14 @@ static EC_PRIVATEKEY_SEQ_TT: [Asn1Template; 4] = [
         item: ASN1_OCTET_STRING_it as *mut c_void,
     },
     Asn1Template {
-        flags: ASN1_TFLG_EXPTAG | ASN1_TFLG_OPTIONAL,
+        flags: ASN1_TFLG_EXPLICIT | ASN1_TFLG_OPTIONAL,
         tag: 0,
         offset: OFFSET_PK_PARAMS,
         field_name: c"parameters".as_ptr(),
         item: ECPKPARAMETERS_it as *mut c_void,
     },
     Asn1Template {
-        flags: ASN1_TFLG_EXPTAG | ASN1_TFLG_OPTIONAL,
+        flags: ASN1_TFLG_EXPLICIT | ASN1_TFLG_OPTIONAL,
         tag: 1,
         offset: OFFSET_PK_PUBLIC,
         field_name: c"publicKey".as_ptr(),

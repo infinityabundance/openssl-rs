@@ -168,6 +168,15 @@ static void describe(const char *key, EVP_PKEY *pk)
         kv_int(k, EVP_PKEY_is_a(pk, "EC"));
         snprintf(k, sizeof(k), "%s.bits", key);
         kv_int(k, EVP_PKEY_get_bits(pk));
+        /* The key's own type and its base id. A provider key the decoder built from a body
+         * whose method name is a legacy key type takes that legacy NID on both sides when the
+         * `EVP_PKEY_set_type_by_keymgmt` name walk runs -- the observation `D-PKEY-AMETH-1` is
+         * about, and the one that distinguishes a provider key named `"RSA"` from one named
+         * `"COURT-PKEY"`. */
+        snprintf(k, sizeof(k), "%s.id", key);
+        kv_int(k, EVP_PKEY_get_id(pk));
+        snprintf(k, sizeof(k), "%s.base_id", key);
+        kv_int(k, EVP_PKEY_get_base_id(pk));
     }
 }
 
@@ -268,8 +277,10 @@ static void arm_i2d(void)
     emit_i2d("i2d.KeyParams.ec", i2d_KeyParams, ec);
     emit_i2d("i2d.PrivateKey.rsa", i2d_PrivateKey, rsa);
     emit_i2d("i2d.PrivateKey.dsa", i2d_PrivateKey, dsa);
+    emit_i2d("i2d.PrivateKey.ec", i2d_PrivateKey, ec);
     emit_i2d("i2d.PKCS8PrivateKey.rsa", i2d_PKCS8PrivateKey, rsa);
     emit_i2d("i2d.PKCS8PrivateKey.dsa", i2d_PKCS8PrivateKey, dsa);
+    emit_i2d("i2d.PKCS8PrivateKey.ec", i2d_PKCS8PrivateKey, ec);
     emit_i2d("i2d.PublicKey.rsa", i2d_PublicKey, rsa);
     emit_i2d("i2d.PublicKey.dsa", i2d_PublicKey, dsa);
     emit_i2d("i2d.PublicKey.ec", i2d_PublicKey, ec);
@@ -482,9 +493,6 @@ static void arm_traditional(void)
 {
     EVP_PKEY *rsa = legacy_rsa(), *dsa = legacy_dsa(), *ec = legacy_ec();
 
-    /* The EC traditional spelling is held pending: the underlying phase-8 `old_ec_priv_encode`
-     * emits `0x20`/`0x21` for the `[0]`/`[1]` explicit tags where the authority emits
-     * `0xa0`/`0xa1`, so a byte comparison would measure that defect and not this unit. */
     ERR_clear_error();
     {
         BIO *b = BIO_new(BIO_s_mem());
@@ -500,6 +508,14 @@ static void arm_traditional(void)
                PEM_write_bio_PrivateKey_traditional(b, dsa, NULL, NULL, 0, NULL, NULL));
         drain_bio("pem.traditional.dsa", b);
         errs("pem.traditional.dsa");
+    }
+    ERR_clear_error();
+    {
+        BIO *b = BIO_new(BIO_s_mem());
+        kv_int("pem.traditional.ec.rc",
+               PEM_write_bio_PrivateKey_traditional(b, ec, NULL, NULL, 0, NULL, NULL));
+        drain_bio("pem.traditional.ec", b);
+        errs("pem.traditional.ec");
     }
 
     EVP_PKEY_free(rsa);
@@ -652,6 +668,14 @@ static void arm_d2i(void)
                   sizeof(rsa_pkcs1_der));
     arm_auto_input("d2i.AutoPrivateKey.rsa_pkcs1", rsa_pkcs1_der, sizeof(rsa_pkcs1_der));
     arm_auto_input("d2i.AutoPrivateKey.dsa_trad", dsa_trad_der, sizeof(dsa_trad_der));
+
+    /* The EC private spellings, both arms: the SEC1 `ECPrivateKey` body (`type-specific`) and the
+     * PKCS#8 `PrivateKeyInfo` that wraps it. The two constants carry the authority's own explicit
+     * `[0]`/`[1]` tags (`0xa0`/`0xa1`), so a decoder that expects a different class fails here. */
+    arm_d2i_input("d2i.PrivateKey.ec_sec1", EVP_PKEY_EC, ec_sec1_der, sizeof(ec_sec1_der));
+    arm_d2i_input("d2i.PrivateKey.ec_pkcs8", EVP_PKEY_EC, ec_pkcs8_der, sizeof(ec_pkcs8_der));
+    arm_auto_input("d2i.AutoPrivateKey.ec_sec1", ec_sec1_der, sizeof(ec_sec1_der));
+    arm_auto_input("d2i.AutoPrivateKey.ec_pkcs8", ec_pkcs8_der, sizeof(ec_pkcs8_der));
 
     /* A writer-then-reader pair over the same side's own encoding: the bytes are printed by the
      * writer above, so a disagreement is visible there as well as here. */
