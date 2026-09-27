@@ -31924,3 +31924,62 @@ clean. `PIPELINE OK` exit 0 on two consecutive runs, at 109 courts and **45,139 
 3,206 implemented exports (the new rows are provider rows and one internal, so the export count is
 unchanged at `284 implemented / 14 open`). No Phase 11 row is created.
 
+## D451 -- 10.8, the X.509 object core, and the plan's own conclusion corrected
+
+The owner chose to pull Phase 11's `X509` subset forward rather than defer it, and this is the
+first subphase: **10.8, the `X509` object core.** `crypto/x509/x_x509.c` (310 lines),
+`x_name.c` (552), `x_crl.c` (542)'s object half, `x_exten.c` and `crypto/asn1/x_val.c` are
+transcribed into `src/x509/x_x509.rs`, `x_name.rs`, `x_crl.rs`, `x_exten.rs` and
+`src/asn1/x_val.rs`: the `X509`/`X509_CINF`/`X509_NAME`/`X509_NAME_ENTRY`/`X509_CRL`/
+`X509_CRL_INFO`/`X509_REVOKED`/`X509_EXTENSION`/`X509_VAL` items and their lifecycles,
+`d2i_X509`/`i2d_X509`/`d2i_X509_CRL`/`i2d_X509_CRL`, the `ASN1_ITYPE_EXTERN` name hooks and
+`i2d_re_X509_tbs`. The ledger moves from `implemented=284 open=14` to **`implemented=286 open=12`**:
+`OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the CERT/CRL arms of
+`OSSL_STORE_INFO_free` are closed, and `RT-STORE` moves from 159 to **181** observations.
+
+**The plan's own conclusion was wrong and this entry corrects it.** `docs/PHASE-10-SUBPHASES.md`
+section 6 first measured the X.509 subsystem as a 75-unit, 30,711-line strongly-connected
+component and concluded that no subphase could land because the component "cannot be cut at unit
+granularity". That is true of the units and false of the work: the object core cut out of the SCC
+cleanly, because the transcription's frontier is the **call graph**, and each function whose
+closure is unlanded is withheld by name instead of its whole unit. The section is renumbered
+`10.8`-`10.15` (it had reused `6.1`-`6.8`, colliding with `PHASE-6-SUBPHASES.md`), the correction is
+recorded there with the old conclusion kept visible, and the distance to the rest of the stratum is
+now measured per subphase.
+
+**A tooling defect was found by that collision and fixed at the root.**
+`plan_reconciliation.py` keyed each subphase row's state by the bare subphase id, so two plan
+documents that both number a section `6.1`-`6.6` overwrote each other's state -- Phase 6's
+`complete` erased Phase 10's `in-progress`, turning an in-progress stratum's census into 46
+findings. The key is now plan-scoped (`{phase}:{heading}`), which is what the tool's own contract
+always said it was.
+
+**Withheld, each by name rather than by unit**: `d2i_X509_AUX`/`i2d_X509_AUX` and the
+`X509_CERT_AUX` lifecycle (`x_x509a.c`); the seven extension-cache frees in `X509_it`'s and
+`X509_CRL_it`'s callbacks, whose `v3_*`/`pcy_*` units are unlanded and whose pointers are only ever
+written by `ossl_x509v3_cache_extensions` (so each omission is a no-op on every buildable object,
+marked at the site); `x_name.c`'s print half; and `x_crl.c`'s `crl_cb` `D2I_POST` arm, the CRL
+method-object setters and the lookup/verify callbacks.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1100 passed, 0 failed**. `run_courts.py`, `court_coverage.py` (286 implemented, 286
+direct, 0 non-observable), `provider_court_coverage.py`, `plan_reconciliation.py`,
+`prerequisite_gate.py` and `probe_hygiene.py` clean. `PIPELINE OK` exit 0 on two consecutive runs,
+at 109 courts and **45,161 observations**. `phase_state.py` reads 0-9 `complete`, 10
+`in-progress`, 11-21 `not-started`; Phase-10 provider rows are unchanged at `634 implemented / 2
+open`.
+
+### The next subphase's measured size
+
+Seeded from the still-blocked objects (`store_result.o`, `file_store.o`, `file_store_any2obj.o`)
+and joined one hop to the crate's surface: **18 dependency units, 32 unlanded names, ~10,293
+authority lines**, on top of the store slice itself (`store_result.c` 667 + `file_store.c` 900 +
+`file_store_any2obj.c` 361 = 1,928 lines). The largest are `provider_core.c` (2,679),
+`decoder_lib.c` (1,165), `pvkfmt.c` (1,152), `decoder_meth.c` (675), `keymgmt_lib.c`/
+`keymgmt_meth.c` (~590 each), `x509_cmp.c` (594), `t_x509.c` (559), `x_crl.c` (542, for
+`ossl_x509_crl_set0_libctx`), `x509_obj.c` (179), `x_x509a.c` (174) and `p12_kiss.c` (274, for
+`PKCS12_parse`). A full transitive closure is 542 units and ~182k lines, which is the
+over-approximation a linker sees rather than the work; the ~18-unit direct set is the number.
+

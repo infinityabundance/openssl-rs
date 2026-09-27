@@ -1,18 +1,22 @@
-//! `crypto/x509/x509_set.c`'s `X509_SIG_INFO_set`, the one setter of the signature-info
-//! structure that the `rsa_ameth.c` and `ecx_meth.c` method objects call by name (`:771`
-//! and `:586`/`:602` respectively). Phase 8.8 (D349).
+//! `crypto/x509/x509_set.c`'s `X509_SIG_INFO_set` and `X509_up_ref`, the two functions of the
+//! unit that 10.8's object core reaches. Phase 8.8 (D349) landed the first; Phase 10.8 adds the
+//! second.
 //!
-//! ## A partial unit, and the one export this slice reaches
+//! ## A partial unit, and the two exports this slice reaches
 //!
-//! `crypto/x509/x509_set.c` is the X.509 object's mutator layer: **21 exports**, of which
-//! this module lands **one** (`:200`). The other twenty — the `X509_get_version`/
+//! `crypto/x509/x509_set.c` is the X.509 object's mutator layer: **21 exports**, of which this
+//! module lands **two** (`:120`, `:200`). The other nineteen -- the `X509_get_version`/
 //! `X509_set_version` pair, the four `X509_set_issuer_name`/`_subject_name`/`_pubkey`/
 //! `_serialNumber` setters, the six `notBefore`/`notAfter` accessors, `X509_get0_extensions`,
 //! `X509_get0_uids`, `X509_get0_tbs_sigalg`, `X509_get_X509_PUBKEY`,
-//! `X509_get_signature_info`, `X509_SIG_INFO_get`, `X509_up_ref` and
-//! `X509_get_signature_type` — are the `X509` object layer proper. They are not this
-//! subphase's and none of the five ASN.1 method objects calls any of them; they are
-//! withheld with the rest of the object layer, not stubbed.
+//! `X509_get_signature_info`, `X509_SIG_INFO_get` and `X509_get_signature_type` -- are the `X509`
+//! mutator layer proper. They are not this subphase's, and are withheld rather than stubbed.
+//!
+//! **`X509_up_ref` was withheld by D349 as "the `X509` object layer proper" and is landed here**,
+//! because 10.8 is that object layer: `OSSL_STORE_INFO_get1_CERT` (`src/store/store_lib.rs`) is a
+//! fetched arm that calls it, and the reference count `X509_it`'s `ASN1_AFLG_REFCOUNT` maintains
+//! is the same count this function moves. Its defining unit is this file, which is why it lands
+//! here and not beside the `X509` struct in `src/x509/x_x509.rs`.
 //!
 //! The two internals of the unit, `ossl_x509_init_sig_info` (`:305-309`) and
 //! `ossl_x509_set1_time` (`:78-92`), are withheld with them and are the `covers` of this
@@ -46,6 +50,8 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use core::ffi::c_int;
+
+use crate::x509::x_x509::X509;
 
 /// `struct x509_sig_info_st` — `X509_SIG_INFO`, from `include/crypto/x509.h:50-59`.
 ///
@@ -97,6 +103,23 @@ pub unsafe extern "C" fn X509_SIG_INFO_set(
         (*siginf).secbits = secbits;
         (*siginf).flags = flags;
     }
+}
+
+/// `int X509_up_ref(X509 *x)` — `crypto/x509/x509_set.c:120-130`.
+///
+/// `CRYPTO_UP_REF` followed by the authority's `i > 1` test. The count is the same field
+/// `X509_it`'s `ASN1_AFLG_REFCOUNT` initialises to 1 and `X509_free` decrements.
+///
+/// # Safety
+///
+/// `x` is a live `X509`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_up_ref(x: *mut X509) -> c_int {
+    // SAFETY: `x` is live per the contract.
+    let i = unsafe { (*x).references.wrapping_add(1) };
+    // SAFETY: `x` is live and writable.
+    unsafe { (*x).references = i };
+    c_int::from(i > 1)
 }
 
 #[cfg(test)]

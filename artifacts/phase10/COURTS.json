@@ -75,9 +75,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 159,
+        "authority_observations": 181,
         "candidate_exit_code": 0,
-        "candidate_observations": 159,
+        "candidate_observations": 181,
         "candidate_stderr_tail": [],
         "court": "RT-STORE",
         "crashed": false,
@@ -188,7 +188,7 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_store_probe.c",
-      "sha256": "907a8f099f584c086a1326c300041ee11ce3c05716f1c8965efc41783bd51987"
+      "sha256": "e6380ddae3cbfa234b3cc5a51c82f85210552915832f947c24c2f3a305fa22aa"
     },
     {
       "name": "pkcs12-correctness-probe",

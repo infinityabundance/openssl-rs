@@ -88,6 +88,8 @@ pub mod x_algor;
 pub mod x_bignum;
 pub mod x_int64;
 pub mod x_long;
+// Phase 10.8's `crypto/asn1/x_val.c` -- the `X509_VAL` item the `X509_CINF` template embeds.
+pub mod x_val;
 // Phase 10's `crypto/asn1/x_sig.c` -- the `X509_SIG` (EncryptedPrivateKeyInfo) family, landed
 // early because `PKCS8_decrypt` reads it through `X509_SIG_get0` (D368).
 pub mod x_sig;

@@ -354,3 +354,84 @@ need a reference probe and a runner that this subphase's files do not carry, so 
 lands the ledger is the commit that must land them — a second commit, in `courts/phase10/` and
 `forensics/tools/phase10_courts.py`, before `forensics/tools/pipeline.sh` can reach
 `PIPELINE OK`.
+
+## 6. The pulled-forward X.509 subphases
+
+D450 measured this stratum's remaining distance as "14 exports and 2 provider rows, all reachable only
+through ~45,000 lines of Phase 11's object graph", and the owner asked that the subset actually needed by
+the blocked rows be measured rather than assumed. This section is that measurement. It agrees with
+D442 and D444 rather than correcting them: the subset is the certificate object graph, and it does not
+factor into a first slice small enough to land.
+
+**What was measured.** `nm --undefined-only` over the authority's `openssl-3.6.4-production` build
+objects, seeded from the objects that carry the blocked rows — `crypto/store/libcrypto-lib-store_lib.o`,
+`crypto/store/libcrypto-lib-store_result.o`, all fifteen `crypto/pkcs12/*.o`,
+`providers/implementations/storemgmt/{file_store,file_store_any2obj}.o` — then iterated over the authority
+translation units that define each crate-**unlanded** name. "Landed" is read from
+`forensics/atlas/implemented-surface.json` (the compiled crate's defined surface) and the definition-based
+source scan, never from the bare word.
+
+| closure | authority units | unlanded symbols | authority lines |
+|---|---:|---:|---:|
+| the blocked rows (19 seed objects) | 143 | 507 | 50,031 |
+| the same plus the brief's decoder objects (`libdefault-lib-decode_*.o`; 25 seeds) | 158 | 537 | 61,497 |
+| D450's `X509` object graph, for comparison | 127 | 538 | ~45,241 |
+
+The difference from D450's 127 is stated plainly because it is the opposite of the hoped one: the
+blocked rows' closure is **larger**, not smaller, and it is D450's certificate graph **plus** the
+twenty-five blocked units themselves. The decoder objects add eight `keymgmt` units (`dh_kmgmt.c`,
+`dsa_kmgmt.c`, `ec_kmgmt.c`, `ecx_kmgmt.c`, `ml_dsa_kmgmt.c`, `ml_kem_kmgmt.c`, `rsa_kmgmt.c`,
+`slh_dsa_kmgmt.c`) whose codec helpers those objects reach; every one is already implemented and no
+blocked row reaches it, so that row is not this stratum's work and the 143-unit row is the honest one.
+
+**Why the subset does not factor.** A unit-level dependency partition of the 143-unit closure (edge:
+unit U depends on unit V when U's objects name a symbol V defines; strongly-connected components
+condensed; packed at a 3,500-line budget) gives **eight dependency-ordered chunks**. Seven are at or
+under the budget; the eighth is the certificate object graph and it is **one strongly-connected
+component of 75 units and 30,711 lines** — `x_x509.c`'s `X509_it` template and its `x509_cb` aux
+callbacks name `AUTHORITY_KEYID_free`/`CRL_DIST_POINTS_free`/`ossl_policy_cache_free`/
+`GENERAL_NAMES_free`/`NAME_CONSTRAINTS_free`/`IPAddressFamily_free`/`ASIdentifiers_free`
+(`v3_akid.c`/`v3_crld.c`/`pcy_*.c`/`v3_genn.c`/`v3_ncons.c`/`v3_addr.c`/`v3_asid.c`), and those units'
+own templates reach back into `x509_cmp.c`/`x509_vfy.c`/`x_all.c`/`pk7_*.c`/`ocsp_*.c`/`ct_*.c`. That
+cycle is the one D442 and D444 already recorded; this section is its size.
+
+| # | Subphase | Owns | Depends on | Courts |
+|---|---|---|---|---|
+| 10.8 | **The digest substrate** | the engine table `X509_digest` reaches through `ossl_asn1_item_digest_ex` (`crypto/engine/`'s nine built units — `eng_all`, `eng_ctrl`, `eng_init`, `eng_lib`, `eng_list`, `eng_table`, `tb_asnmth`, `tb_digest`, `tb_pkmeth`), `crypto/o_str.c`, `crypto/ctype.c`, `crypto/defaults.c`; **12 units, 2,975 lines**. Closes no Phase-10 export or row. | — | — |
+| 10.9 | **The ASN.1 digest/sign/verify layer** | `a_digest.c`, `a_sign.c`, `asn1_lib.c`, `evp/digest.c`, and the `X509_NAME_oneline` half of `x509_obj.c`; **5 units, 2,293 lines**. Closes no export or row. | 10.8 | — |
+| 10.10 | **The name, print and `v3` dispatch layer** | `x_name.c` (`X509_NAME_it`/`X509_NAME_ENTRY_it` and the `_new`/`_free`/`_dup`/`d2i_`/`i2d_` family), `x_exten.c` (`X509_EXTENSION_it`), `x_pubkey.c`, `x509_v3.c`, `x509name.c`, `x509rset.c`, `a_strex.c`, `a_verify.c`, `x_spki.c`, `evp/evp_pkey.c`; **10 units, 3,487 lines**. This is the first half of the brief's (a): `X509_NAME`'s item and its `i2d_X509_NAME`. | 10.9 | `RT-STORE` (later) |
+| 10.11 | **The leaf extension items and the policy graph** | `x_val.c` (`X509_VAL_it`), `x_x509a.c` (`X509_CERT_AUX_it`, the alias/keyid accessors), `x509_txt.c`, `pcy_lib.c`, `pcy_node.c`, `v3_audit_id.c`, `v3_group_ac.c`, `v3_ia5.c`, `v3_ind_iss.c`, `v3_ist.c`, `v3_no_ass.c`, `v3_pcia.c`, `v3_skid.c`; plus the `http`/`punycode` units `x_all.c` reaches; **16 units, 3,490 lines**. | 10.10 | — |
+| 10.12 | **The remaining leaf extension items** | `v3_timespec.c`, `v3_pku.c`, `v3_utf8.c`, `v3_no_rev_avail.c`, `v3_single_use.c`, `v3_soa_id.c`; **6 units, 875 lines**. | 10.10 | — |
+| 10.13 | **The certificate object graph (one SCC)** | the 75-unit, **30,711-line** strongly-connected component: `x_x509.c`/`x_crl.c` (`X509_it`/`X509_CRL_it` and lifecycle), `x509_cmp.c`, `x509_set.c`, `x509cset.c`, `t_x509.c`, `x_all.c`, `x509_vfy.c`, `x509_lu.c`, `x509_vpm.c`, `x509_trust.c`, `x509_acert.c`, `x509_req.c`, `x_attrib.c`, all `v3_*.c`, `pcy_cache.c`/`pcy_data.c`/`pcy_map.c`/`pcy_tree.c`, `pk7_*.c`, `ocsp/*`, `ct/*`, `asn1_gen.c`. **This is the second half of the brief's (a) and the whole of its (b).** | 10.8–10.12 | `RT-STORE`, `RT-PKCS12`, `RT-KEYFORMAT` |
+| 10.14 | **The PKCS#12 certificate layer** | the fifteen `crypto/pkcs12/` units (`p12_add.c`'s `PKCS12_add_cert`, `p12_crt.c`'s `PKCS12_create(_ex/_ex2)`, `p12_sbag.c`'s `PKCS12_SAFEBAG_*`, `p12_kiss.c`'s `PKCS12_parse`, and the landed rest); **3,170 lines**. Closes the eleven `pkcs12.h` rows D447 left open. | 10.13 | `RT-PKCS12` |
+| 10.15 | **STORE result and the file loader** | `store_lib.c` (the carved CERT/CRL arms of `OSSL_STORE_INFO_free`/`_get1_CERT`/`_get1_CRL`/`OSSL_STORE_find`, and `OSSL_STORE_load`), `store_result.c`, `file_store.c`, `file_store_any2obj.c`; **4 units, 3,030 lines**. Closes `OSSL_STORE_load`, `OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the two `file` `OSSL_OP_STORE` rows. | 10.13 | `RT-STORE` |
+
+**The unit-level SCC is not a function-level one, and 10.8 is the proof.** This section first
+concluded that no subphase could land because the 30,711-line component "cannot be cut at unit
+granularity". That was true of the units and false of the work: **10.8 landed the `X509` object core**
+-- the `X509`/`X509_CINF`/`X509_NAME`/`X509_CRL`/`X509_EXTENSION`/`X509_VAL` items and their
+lifecycles, `x_name.c`, `x_exten.c`, `x_val.c` and `x_crl.c`'s object half -- by withholding each
+function whose closure is unlanded rather than the unit that contains it, closing
+`OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the CERT/CRL arms of
+`OSSL_STORE_INFO_free`. The unit-level SCC is what a linker sees; the transcription's frontier is
+the call graph, and it is smaller. 10.8–10.12 (13,120 lines) still close no Phase-10 export or row
+on their own, and the remaining distance is measured per subphase rather than assumed. The old
+conclusion, kept because the correction is the point:
+
+> No subphase lands, because the first one the brief asks for is 6.6. 6.1–6.5 (13,120 lines) close no
+> Phase-10 export or row; 6.6 is the 30,711-line component and cannot be cut at unit granularity without
+breaking the free callbacks' closure; 6.7 and 6.8 stay blocked behind it. The brief's first subphase —
+the `X509`/`X509_NAME`/`X509_ALGOR`/`X509_CRL` ASN.1 items and object lifecycle — is a nine-unit,
+2,678-line slice of the authority text (`x_x509.c` 310, `x_name.c` 552, `x_crl.c` 542, `x_x509a.c` 174,
+`x_exten.c` 27, `asn1/x_val.c` 20, `x509_set.c` 309, `x509cset.c` 185, `t_x509.c` 559), but its
+**dependency-complete** closure is **123 units and 43,555 lines**: `X509_it` cannot be built without the
+graph. A function-level pass (each undefined relocation attributed to its containing symbol) lowers the
+needed code to **39 units and ~19,600 unit-lines**, but it does not change the ordering — `X509_free`'s
+callback still names the seven `*_free` functions above — and it under-counts the ASN.1 item templates,
+which the compiler emits as local data, so it is a lower bound rather than a fourth row above.
+
+**The consequence for the ledger.** `forensics/phase10-obligations.json` stays at `284 implemented /
+14 open` and `forensics/atlas/provider-algorithms.json` at `634 implemented / 2 open`; no export, no
+row, no Phase-11 evidence, ledger, plan, seal or state row is created, and Phase 11 still derives
+`not-started`. This section is a measurement of what a future slice must take as one unit, not a
+deferral: the size is a number.

@@ -29,18 +29,23 @@
  *
  * What it cannot drive, and prints as `pending.`
  * ----------------------------------------------
- * The blockage is **per function** (docs/DECISIONS.md D448, corrected by the second 10.5 pass),
- * and the three exports this probe does not call are named below with their measured blockers:
+ * The blockage is **per function** (docs/DECISIONS.md D448, corrected by the second 10.5 pass and
+ * again by 10.8), and what this probe does not call is named below with its measured blocker:
  *
  *  * `OSSL_STORE_load` -- its fetched branch calls `store_result.c`'s
- *    `ossl_store_handle_load_result`, which needs `d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL`
- *    (Phase 11) and `PKCS12_parse` (10.3-withheld).
- *  * `OSSL_STORE_INFO_get1_CERT`/`get1_CRL` -- they call `X509_up_ref`/`X509_CRL_up_ref` (Phase
- *    11). The carved arms of `OSSL_STORE_INFO_free` (CERT/CRL, `X509_free`/`X509_CRL_free`) and
- *    of `OSSL_STORE_find` (BY_NAME/BY_ISSUER_SERIAL, `i2d_X509_NAME`) are named too.
+ *    `ossl_store_handle_load_result`, which needs `d2i_X509_AUX` (Phase 11) and `PKCS12_parse`
+ *    (10.3-withheld). 10.8 landed `d2i_X509`/`d2i_X509_CRL`, so only `d2i_X509_AUX` and
+ *    `PKCS12_parse` remain.
+ *  * `OSSL_STORE_find`'s `BY_NAME`/`BY_ISSUER_SERIAL` arms -- 10.8 landed `i2d_X509_NAME`, but the
+ *    arms sit in the **fetched** branch, which no candidate reaches while the `file`
+ *    `OSSL_OP_STORE` row is unpublished. The blocker is the provider row, not the name encoder.
  *  * the two `OSSL_OP_STORE` provider rows (`file`) -- so `OSSL_STORE_LOADER_fetch` and
  *    `OSSL_STORE_LOADER_do_all_provided` stay **address-taken only**, and the refused paths are
  *    driven through the legacy registry instead.
+ *
+ * 10.8 lands the `X509`/`X509_CRL` object core, so `OSSL_STORE_INFO_get1_CERT`/`_get1_CRL`, the
+ * `CERT`/`CRL` arms of `OSSL_STORE_INFO_free`, and a decode/re-encode/dup/free of a fixed
+ * certificate and CRL are **driven** below rather than named pending.
  *
  * Everything printed is a literal, a string, or a `nonnull`/`null`/int answer; no pointer
  * address is ever printed (the two sides allocate differently, and `probe_hygiene.py` would
@@ -58,6 +63,9 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/store.h>
+#include <openssl/x509.h>
+
+#include "rt_x509_der.h"
 
 /* ---------------------------------------------------------------------------------------------
  * Output helpers -- every line is `key=value`.
@@ -428,6 +436,110 @@ static void drive_store_ctx(OSSL_STORE_LOADER *loader)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * Phase 10.8: the `X509`/`X509_CRL` object core, and the two `OSSL_STORE_INFO` arms it closes.
+ *
+ * The DER is fixed and embedded (`rt_x509_der.h`), so both sides decode the same bytes. Every
+ * observation is a length, a byte-for-byte equality, a nonnull/null or an error coordinate.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_x509_object_core(void)
+{
+    const unsigned char *p;
+    X509 *cert = NULL;
+    X509 *cert2;
+    X509_CRL *crl = NULL;
+    X509_CRL *crl2;
+    unsigned char *der = NULL;
+    int len;
+    OSSL_STORE_INFO *info;
+
+    /* ----- X509 ----- */
+    p = RT_X509_CERT_DER;
+    cert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    out_ptr("x509.d2i", cert);
+    out_err("x509.d2i.err");
+    out_int("x509.d2i.consumed", (long)(p - RT_X509_CERT_DER));
+    if (cert != NULL) {
+        len = i2d_X509(cert, &der);
+        out_int("x509.i2d.len", (long)len);
+        out_int("x509.i2d.same_bytes",
+                len == (int)RT_X509_CERT_DER_LEN
+                    && memcmp(der, RT_X509_CERT_DER, (size_t)len) == 0);
+        OPENSSL_free(der);
+        der = NULL;
+
+        cert2 = X509_dup(cert);
+        out_ptr("x509.dup", cert2);
+        out_int("x509.dup.distinct", cert2 != NULL && cert2 != cert);
+        if (cert2 != NULL) {
+            len = i2d_X509(cert2, &der);
+            out_int("x509.dup.i2d.same_bytes",
+                    len == (int)RT_X509_CERT_DER_LEN
+                        && memcmp(der, RT_X509_CERT_DER, (size_t)len) == 0);
+            OPENSSL_free(der);
+            der = NULL;
+            X509_free(cert2);
+        }
+    }
+
+    /* A one-byte-short decode is the refusal arm, with its coordinate. */
+    p = RT_X509_CERT_DER;
+    out_ptr("x509.d2i.truncated", d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN - 1));
+    out_err("x509.d2i.truncated.err");
+
+    /* ----- X509_CRL ----- */
+    p = RT_X509_CRL_DER;
+    crl = d2i_X509_CRL(NULL, &p, (long)RT_X509_CRL_DER_LEN);
+    out_ptr("crl.d2i", crl);
+    out_err("crl.d2i.err");
+    out_int("crl.d2i.consumed", (long)(p - RT_X509_CRL_DER));
+    if (crl != NULL) {
+        len = i2d_X509_CRL(crl, &der);
+        out_int("crl.i2d.len", (long)len);
+        out_int("crl.i2d.same_bytes",
+                len == (int)RT_X509_CRL_DER_LEN
+                    && memcmp(der, RT_X509_CRL_DER, (size_t)len) == 0);
+        OPENSSL_free(der);
+        der = NULL;
+
+        crl2 = X509_CRL_dup(crl);
+        out_ptr("crl.dup", crl2);
+        out_int("crl.dup.distinct", crl2 != NULL && crl2 != crl);
+        X509_CRL_free(crl2);
+    }
+
+    p = RT_X509_CRL_DER;
+    out_ptr("crl.d2i.truncated", d2i_X509_CRL(NULL, &p, (long)RT_X509_CRL_DER_LEN - 1));
+    out_err("crl.d2i.truncated.err");
+
+    /* ----- the CERT/CRL arms of OSSL_STORE_INFO_free, and get1_CERT/get1_CRL ----- */
+    if (cert != NULL) {
+        X509 *got;
+
+        info = OSSL_STORE_INFO_new_CERT(cert);
+        out_ptr("info.new_CERT.real", info);
+        out_int("info.get0_CERT.is_cert", OSSL_STORE_INFO_get0_CERT(info) == cert);
+        got = OSSL_STORE_INFO_get1_CERT(info);
+        out_int("info.get1_CERT.is_cert", got == cert);
+        /* Release the copy get1 handed back, then the info's own reference. */
+        X509_free(got);
+        OSSL_STORE_INFO_free(info);
+    }
+    if (crl != NULL) {
+        X509_CRL *got;
+
+        info = OSSL_STORE_INFO_new_CRL(crl);
+        out_ptr("info.new_CRL.real", info);
+        out_int("info.get0_CRL.is_crl", OSSL_STORE_INFO_get0_CRL(info) == crl);
+        got = OSSL_STORE_INFO_get1_CRL(info);
+        out_int("info.get1_CRL.is_crl", got == crl);
+        X509_CRL_free(got);
+        OSSL_STORE_INFO_free(info);
+    }
+    out_str("info.free.CERT_CRL_arms", "driven");
+}
+
+/* ---------------------------------------------------------------------------------------------
  * A whole block of what this pass withholds, printed identically on both sides.
  * --------------------------------------------------------------------------------------------- */
 
@@ -436,12 +548,8 @@ static void out_pending(void)
     printf("pending.OSSL_STORE_LOADER_fetch=file_store_provider_row_unpublished\n");
     printf("pending.OSSL_STORE_LOADER_do_all_provided=file_store_provider_row_unpublished\n");
     printf("pending.OSSL_STORE_load=store_result_ossl_store_handle_load_result\n");
-    printf("pending.OSSL_STORE_INFO_get1_CERT=phase11_x509_up_ref\n");
-    printf("pending.OSSL_STORE_INFO_get1_CRL=phase11_x509_crl_up_ref\n");
-    printf("pending.OSSL_STORE_INFO_free.cert_arm=phase11_x509_free\n");
-    printf("pending.OSSL_STORE_INFO_free.crl_arm=phase11_x509_crl_free\n");
-    printf("pending.OSSL_STORE_find.by_name=phase11_i2d_X509_NAME\n");
-    printf("pending.OSSL_STORE_find.by_issuer_serial=phase11_i2d_X509_NAME\n");
+    printf("pending.OSSL_STORE_find.by_name=file_store_provider_row_unpublished\n");
+    printf("pending.OSSL_STORE_find.by_issuer_serial=file_store_provider_row_unpublished\n");
 }
 
 int main(void)
@@ -479,6 +587,9 @@ int main(void)
     /* ----- the OSSL_STORE_INFO and OSSL_STORE_SEARCH object models (store_lib.c) ----- */
     drive_info_object_model();
     drive_search_object_model();
+
+    /* ----- Phase 10.8: the X.509 object core and the arms it closes ----- */
+    drive_x509_object_core();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));
