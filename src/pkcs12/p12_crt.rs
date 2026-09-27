@@ -1,27 +1,27 @@
 //! `crypto/pkcs12/p12_crt.c` — the `PKCS12_create` worker and the `add_*` family. Phase 10 (10.3).
 //!
-//! The authority file is 409 lines and eleven exports. Almost all of it is the container builder:
-//! `PKCS12_create(_ex/_ex2)` and the `PKCS12_add_cert`/`add_key`/`add_safe`/`add_safes` family,
-//! every arm of which reaches the `PKCS7` object (`PKCS12_pack_p7data`/`PKCS12_pack_p7encdata_ex`,
-//! `PKCS12_init_ex`, `PKCS12_pack_authsafes`) that `crypto/pkcs7/pk7_asn1.c` defines and Phase 12
-//! owns, and Phase 11's `X509_it`/`X509_alias_get0`/`X509_digest` and `EVP_PKEY2PKCS8`. Those
-//! ten stay `open` with their measured blockers; the court prints each as `pending`, never as a
-//! pass (docs/PHASE-10-SUBPHASES.md §3.5).
+//! The unit is 409 lines and eleven exports, and **seven of them land here**: the `add_*` family
+//! [`PKCS12_add_secret`], [`PKCS12_add_key`]/[`PKCS12_add_key_ex`],
+//! [`PKCS12_add_safe`]/[`PKCS12_add_safe_ex`] and [`PKCS12_add_safes`]/[`PKCS12_add_safes_ex`].
+//! The container builder's two remaining arms, `PKCS12_create(_ex/_ex2)` and `PKCS12_add_cert`,
+//! stay `open` on Phase 11's certificate object graph and the court prints each as `pending`,
+//! never as a pass (docs/PHASE-10-SUBPHASES.md §3.5).
 //!
-//! **Exactly one export here has a landed closure**: [`PKCS12_add_secret`], whose only callees are
-//! `PKCS12_SAFEBAG_create_secret` (this crate's `p12_sbag.rs`, 10.2) and the internal
-//! `pkcs12_add_bag`, which uses the `OPENSSL_sk_*` stack functions. It is the `add_*` surface the
-//! subphase's slice can actually drive, and the court builds a one-element
-//! `STACK_OF(PKCS12_SAFEBAG)` through it and prints the bag's DER.
+//! [`PKCS12_add_secret`] was the first to land (its only callees are
+//! `PKCS12_SAFEBAG_create_secret` from `p12_sbag.rs` and the internal `pkcs12_add_bag`, which uses
+//! the `OPENSSL_sk_*` stack functions). **The `PKCS7` subset was then pulled forward** (D441; see
+//! [`crate::pkcs7`]) and [`PKCS12_add_safes_ex`]/[`PKCS12_add_safes`] landed on the object it
+//! supplies. **D444's Phase 11 subset pull-forward landed `EVP_PKEY2PKCS8`**, which was
+//! `PKCS12_add_key(_ex)`'s named blocker, and D443's PBE pull-forward plus 10.3's own
+//! `PKCS12_pack_p7encdata_ex` supply `PKCS12_add_safe(_ex)`'s encrypted arm; so both pairs land
+//! here.
 //!
-//! **The `PKCS7` subset was then pulled forward** (D441's stratum-ordering defect; see
-//! [`crate::pkcs7`]), and [`PKCS12_add_safes_ex`]/[`PKCS12_add_safes`] are the pair that becomes
-//! reachable: they need only `PKCS12_init_ex` and `PKCS12_pack_authsafes`, both of which land on
-//! the pulled-forward object. **D443's PBE pull-forward** unblocks `PKCS12_add_safe(_ex)`'s
-//! encrypted arm for the PBE half, but its `PKCS12_pack_p7encdata_ex` callee is still this
-//! subphase's own unwritten work, so that pair stays open. `PKCS12_create(_ex/_ex2)`,
-//! `PKCS12_add_cert` and `PKCS12_add_key(_ex)` stay open on Phase 11's `X509_it`/
-//! `X509_alias_get0`/`EVP_PKEY2PKCS8` and on the fixed-key fixture a court for them would need.
+//! **The two that remain open were measured, not assumed.** `nm --undefined-only` over the
+//! authority's `libcrypto-lib-p12_crt.o` shows the closure of `PKCS12_create(_ex/_ex2)`/`_add_cert`
+//! reaching `X509_check_private_key`, `X509_digest`, `X509_alias_get0`, `X509_keyid_get0`,
+//! `PKCS12_SAFEBAG_create_cert` (all Phase 11's `X509` object graph) and `X509at_add1_attr`;
+//! `EVP_PKEY_get_attr`/`_by_NID` are only on the `copy_bag_attr` path those two share. None of
+//! the `X509_*` names is landed, so nothing of theirs is stubbed.
 //!
 //! The unit raises nothing of its own on the landed path, and `pkcs12_add_bag` raises nothing at
 //! all, so `crypto/pkcs12/p12_crt.c` is deliberately **not** an entry in
@@ -31,16 +31,24 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_uchar};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::layout::V_ASN1_OCTET_STRING;
-use crate::pkcs12::p12_add::PKCS12_pack_authsafes;
+use crate::asn1::p8_pkey::PKCS8_PRIV_KEY_INFO_free;
+use crate::evp::evp_pkey::EVP_PKEY2PKCS8;
+use crate::evp::pkey::EvpPkey;
+use crate::pkcs12::p12_add::{PKCS12_pack_authsafes, PKCS12_pack_p7data, PKCS12_pack_p7encdata_ex};
 use crate::pkcs12::p12_asn::PKCS12_free;
 use crate::pkcs12::p12_asn::{PKCS12_SAFEBAG_free, Pkcs12, Pkcs12Safebag};
+use crate::pkcs12::p12_attr::PKCS8_add_keyusage;
 use crate::pkcs12::p12_init::PKCS12_init_ex;
 use crate::pkcs12::p12_sbag::PKCS12_SAFEBAG_create_secret;
-use crate::runtime::obj::NID_pkcs7_data;
+use crate::pkcs12::p12_sbag::{
+    PKCS12_SAFEBAG_create0_p8inf, PKCS12_SAFEBAG_create_pkcs8_encrypt_ex,
+};
+use crate::pkcs7::PKCS7_free;
+use crate::runtime::obj::{NID_pbe_WithSHA1And40BitRC2_CBC, NID_pkcs7_data};
 use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_push, OpenSslStack};
 
 /// `static int pkcs12_add_bag(STACK_OF(PKCS12_SAFEBAG) **pbags, PKCS12_SAFEBAG *bag)` —
@@ -159,6 +167,212 @@ pub unsafe extern "C" fn PKCS12_add_safes_ex(
 pub unsafe extern "C" fn PKCS12_add_safes(safes: *mut OpenSslStack, nid_p7: c_int) -> *mut Pkcs12 {
     // SAFETY: the arguments are forwarded under this function's contract, with no context.
     unsafe { PKCS12_add_safes_ex(safes, nid_p7, ptr::null_mut(), ptr::null()) }
+}
+
+/// `PKCS12_SAFEBAG *PKCS12_add_key_ex(STACK_OF(PKCS12_SAFEBAG) **pbags, EVP_PKEY *key,
+/// int key_usage, int iter, int nid_key, const char *pass, OSSL_LIB_CTX *ctx,
+/// const char *propq)` — `crypto/pkcs12/p12_crt.c:234-271`.
+///
+/// Serialises `key` to a `PKCS8_PRIV_KEY_INFO`, optionally adds the key-usage attribute, and wraps
+/// it as either a shrouded key bag (`nid_key != -1`, through
+/// [`PKCS12_SAFEBAG_create_pkcs8_encrypt_ex`]) or a plain key bag (`nid_key == -1`, through
+/// [`PKCS12_SAFEBAG_create0_p8inf`]); the bag is then appended to `*pbags`. The unit raises
+/// nothing of its own.
+///
+/// # Safety
+/// `pbags` is NULL or a writable stack slot; `key` is a live `EVP_PKEY`; `pass` is NULL or a
+/// string of `passlen` bytes; `ctx`/`propq` are the shroud's. The answer is owned by the caller
+/// (and borrowed by `*pbags` on success).
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_add_key_ex(
+    pbags: *mut *mut OpenSslStack,
+    key: *mut EvpPkey,
+    key_usage: c_int,
+    iter: c_int,
+    nid_key: c_int,
+    pass: *const c_char,
+    ctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut Pkcs12Safebag {
+    // SAFETY: `key` is live per the caller's contract.
+    let mut p8 = unsafe { EVP_PKEY2PKCS8(key) };
+    if p8.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `p8` is live; every pointer is checked before use.
+    unsafe {
+        if key_usage != 0 && PKCS8_add_keyusage(p8, key_usage) == 0 {
+            PKCS8_PRIV_KEY_INFO_free(p8);
+            return ptr::null_mut();
+        }
+        let bag = if nid_key != -1 {
+            // This call does not take ownership of `p8`.
+            PKCS12_SAFEBAG_create_pkcs8_encrypt_ex(
+                nid_key,
+                pass,
+                -1,
+                ptr::null_mut(),
+                0,
+                iter,
+                p8,
+                ctx,
+                propq,
+            )
+        } else {
+            let bag = PKCS12_SAFEBAG_create0_p8inf(p8);
+            if !bag.is_null() {
+                // The bag takes ownership of `p8`.
+                p8 = ptr::null_mut();
+            }
+            bag
+        };
+        if !p8.is_null() {
+            PKCS8_PRIV_KEY_INFO_free(p8);
+        }
+        if bag.is_null() || pkcs12_add_bag(pbags, bag) == 0 {
+            PKCS12_SAFEBAG_free(bag);
+            return ptr::null_mut();
+        }
+        bag
+    }
+}
+
+/// `PKCS12_SAFEBAG *PKCS12_add_key(STACK_OF(PKCS12_SAFEBAG) **pbags, EVP_PKEY *key, int key_usage,
+/// int iter, int nid_key, const char *pass)` — `crypto/pkcs12/p12_crt.c:273-279`.
+///
+/// # Safety
+/// As [`PKCS12_add_key_ex`], without the context arguments.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_add_key(
+    pbags: *mut *mut OpenSslStack,
+    key: *mut EvpPkey,
+    key_usage: c_int,
+    iter: c_int,
+    nid_key: c_int,
+    pass: *const c_char,
+) -> *mut Pkcs12Safebag {
+    // SAFETY: the arguments are forwarded under this function's contract, with no context.
+    unsafe {
+        PKCS12_add_key_ex(
+            pbags,
+            key,
+            key_usage,
+            iter,
+            nid_key,
+            pass,
+            ptr::null_mut(),
+            ptr::null(),
+        )
+    }
+}
+
+/// `int PKCS12_add_safe_ex(STACK_OF(PKCS7) **psafes, STACK_OF(PKCS12_SAFEBAG) *bags, int nid_safe,
+/// int iter, const char *pass, OSSL_LIB_CTX *ctx, const char *propq)` —
+/// `crypto/pkcs12/p12_crt.c:299-339`.
+///
+/// A NULL `*psafes` is filled with a fresh `STACK_OF(PKCS7)`. A zero `nid_safe` selects the
+/// default `NID_pbe_WithSHA1And40BitRC2_CBC`, `-1` packs a plain `NID_pkcs7_data` contentInfo and
+/// anything else a shrouded one; the resulting `PKCS7` is pushed. On failure a stack this call
+/// built is released, and the half-built `PKCS7` always is.
+///
+/// # Safety
+/// `psafes` is a live writable stack slot; `bags` is null or a live stack of `PKCS12_SAFEBAG`;
+/// `pass` is NULL or NUL-terminated; `ctx`/`propq` are the shroud's.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_add_safe_ex(
+    psafes: *mut *mut OpenSslStack,
+    bags: *mut OpenSslStack,
+    nid_safe: c_int,
+    iter: c_int,
+    pass: *const c_char,
+    ctx: *mut c_void,
+    propq: *const c_char,
+) -> c_int {
+    let mut free_safes = false;
+    // SAFETY: `psafes` is the caller's writable slot.
+    unsafe {
+        if (*psafes).is_null() {
+            let fresh = OPENSSL_sk_new_null();
+            if fresh.is_null() {
+                return 0;
+            }
+            *psafes = fresh;
+            free_safes = true;
+        }
+    }
+
+    let nid_safe = if nid_safe == 0 {
+        NID_pbe_WithSHA1And40BitRC2_CBC
+    } else {
+        nid_safe
+    };
+
+    // SAFETY: `bags` is live (or NULL) and `ctx`/`propq` are the caller's.
+    let p7 = unsafe {
+        if nid_safe == -1 {
+            PKCS12_pack_p7data(bags)
+        } else {
+            PKCS12_pack_p7encdata_ex(
+                nid_safe,
+                pass,
+                -1,
+                ptr::null_mut(),
+                0,
+                iter,
+                bags,
+                ctx,
+                propq,
+            )
+        }
+    };
+    let pushed = if p7.is_null() {
+        false
+    } else {
+        // SAFETY: `p7` is live and `*psafes` is the live stack checked above.
+        unsafe { OPENSSL_sk_push(*psafes, p7.cast()) != 0 }
+    };
+    if !pushed {
+        // SAFETY: `psafes` is the caller's slot; `free_safes` says whether this call built the
+        // stack it holds.
+        unsafe {
+            if free_safes {
+                OPENSSL_sk_free(*psafes);
+                *psafes = ptr::null_mut();
+            }
+            PKCS7_free(p7);
+        }
+        return 0;
+    }
+    1
+}
+
+/// `int PKCS12_add_safe(STACK_OF(PKCS7) **psafes, STACK_OF(PKCS12_SAFEBAG) *bags, int nid_safe,
+/// int iter, const char *pass)` — `crypto/pkcs12/p12_crt.c:341-345`.
+///
+/// # Safety
+/// As [`PKCS12_add_safe_ex`], without the context arguments.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_add_safe(
+    psafes: *mut *mut OpenSslStack,
+    bags: *mut OpenSslStack,
+    nid_safe: c_int,
+    iter: c_int,
+    pass: *const c_char,
+) -> c_int {
+    // SAFETY: the arguments are forwarded under this function's contract, with no context.
+    unsafe {
+        PKCS12_add_safe_ex(
+            psafes,
+            bags,
+            nid_safe,
+            iter,
+            pass,
+            ptr::null_mut(),
+            ptr::null(),
+        )
+    }
 }
 
 #[cfg(test)]

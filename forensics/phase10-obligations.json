@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 272,
       "deferred_to_later_phase": 0,
-      "implemented": 200,
-      "open_in_this_stratum": 98,
+      "implemented": 211,
+      "open_in_this_stratum": 87,
       "owned": 298,
       "received_by_handoff": 26
     },
@@ -347,13 +347,18 @@
       "PKCS12_add_friendlyname_asc",
       "PKCS12_add_friendlyname_uni",
       "PKCS12_add_friendlyname_utf8",
+      "PKCS12_add_key",
+      "PKCS12_add_key_ex",
       "PKCS12_add_localkeyid",
+      "PKCS12_add_safe",
+      "PKCS12_add_safe_ex",
       "PKCS12_add_safes",
       "PKCS12_add_safes_ex",
       "PKCS12_add_secret",
       "PKCS12_decrypt_skey",
       "PKCS12_decrypt_skey_ex",
       "PKCS12_free",
+      "PKCS12_gen_mac",
       "PKCS12_get0_mac",
       "PKCS12_get_attr",
       "PKCS12_get_attr_gen",
@@ -374,14 +379,20 @@
       "PKCS12_key_gen_utf8_ex",
       "PKCS12_mac_present",
       "PKCS12_new",
+      "PKCS12_newpass",
       "PKCS12_pack_authsafes",
       "PKCS12_pack_p7data",
+      "PKCS12_pack_p7encdata",
+      "PKCS12_pack_p7encdata_ex",
       "PKCS12_pbe_crypt",
       "PKCS12_pbe_crypt_ex",
+      "PKCS12_set_mac",
+      "PKCS12_set_pbmac1_pbkdf2",
       "PKCS12_setup_mac",
       "PKCS12_unpack_authsafes",
       "PKCS12_unpack_p7data",
       "PKCS12_unpack_p7encdata",
+      "PKCS12_verify_mac",
       "PKCS8_add_keyusage",
       "PKCS8_decrypt",
       "PKCS8_decrypt_ex",
@@ -1010,30 +1021,6 @@
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
-        "symbol": "PKCS12_add_key"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add_key_ex"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add_safe"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_add_safe_ex"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
         "symbol": "PKCS12_create"
       },
       {
@@ -1052,49 +1039,7 @@
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
-        "symbol": "PKCS12_gen_mac"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_newpass"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_pack_p7encdata"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_pack_p7encdata_ex"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
         "symbol": "PKCS12_parse"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_set_mac"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_set_pbmac1_pbkdf2"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_verify_mac"
       }
     ],
     "owned_by_header": {
@@ -1138,17 +1083,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "8fb3bb54fa4871ad95c0165f130e98d746a947bc420141d4eee71290384beaf2"
+      "sha256": "973dabf3a75a8c5844dd645bffd3ab114bd9eb7a5ad2ff5a7b5d23dc8a5b50bb"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "cc4b9d0ea137c0997fc3f1c72ead581ac34b2d222f5234d6ca261704d51a52b1"
+      "sha256": "b7ac171b6292af1fbc5a9fe3eb0e0fe3357d13e1dbe2eee0d50c52a2c55bcf8b"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "e40a05379b11a19ff510e6481dfb60932414b206a43d16e862c166912480427c"
+      "sha256": "64256ba3bf7d139ed1ab7fcf7e6dd04f686e3706a1686fdfecf6df44f2a83fb0"
     }
   ],
   "kind": "phase10-obligations",
