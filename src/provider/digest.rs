@@ -2168,8 +2168,10 @@ unsafe extern "C" fn deflt_query(
     }
     if operation_id == crate::provider::decode_der2key::OSSL_OP_DECODER {
         // `defltprov.c:725` returns `deflt_decoder`, the crate's own `DEFLT_DECODERS` -- the
-        // sixty-nine `decode_der2key.c` rows and the one `EncryptedPrivateKeyInfo` row 10.1 has
-        // published; the other six decoder rows are still unimplemented and absent.
+        // sixty-nine `decode_der2key.c` rows, the two 10.5 front doors (`decode_spki2typespki.c`
+        // and `decode_pem2der.c`) and the one `EncryptedPrivateKeyInfo` row. 10.5 closes the
+        // `OSSL_OP_DECODER` table; the six open Phase-10 rows that remain are the two `OSSL_OP_STORE`
+        // `file` rows.
         return crate::provider::decode_der2key::DEFLT_DECODERS.as_ptr();
     }
     ptr::null()

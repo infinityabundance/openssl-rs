@@ -78,8 +78,8 @@ use crate::evp::pbe::{
     OSSL_KDF_PARAM_SCRYPT_N, OSSL_KDF_PARAM_SCRYPT_P, OSSL_KDF_PARAM_SCRYPT_R,
 };
 use crate::evp::pkey::{
-    evp_pkey_name2type, evp_pkey_type2name, EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey,
-    OSSL_PKEY_PARAM_PRIV_KEY, OSSL_PKEY_PARAM_PUB_KEY,
+    evp_pkey_is_provided, evp_pkey_name2type, evp_pkey_type2name, EVP_PKEY_free, EVP_PKEY_up_ref,
+    EvpPkey, OSSL_PKEY_PARAM_PRIV_KEY, OSSL_PKEY_PARAM_PUB_KEY,
 };
 use crate::evp::pkey_asn1::Engine;
 use crate::evp::signature::{EVP_SIGNATURE_get0_provider, EvpSignature};
@@ -495,19 +495,35 @@ unsafe fn int_ctx_new(
     let mut keymgmt: *mut EvpKeyMgmt = ptr::null_mut();
 
     if id == -1 {
-        if !pkey.is_null() {
-            // SAFETY: `pkey` is live; with no legacy origin, "not provided" is unreachable.
-            let pkey_keymgmt = unsafe { (*pkey).keymgmt };
-            if !pkey_keymgmt.is_null() {
-                // SAFETY: `pkey_keymgmt` is live.
-                keytype = unsafe { crate::evp::keymgmt::EVP_KEYMGMT_get0_name(pkey_keymgmt) };
+        // **The legacy-pkey arm is the authority's `id = pkey->type`, and its absence was a real
+        // defect.** A pkey that carries only an assigned legacy key (`keymgmt == NULL`) has no name
+        // to look up, so `id` must come from `pkey->type`; without it `keytype` stays NULL and this
+        // function refuses with `EVP_R_UNSUPPORTED_ALGORITHM` where the authority builds the
+        // context. `evp_pkey_copy_downgraded`'s `EVP_PKEY_CTX_new_from_pkey` is the caller that
+        // reaches it, and 10.5's `decode_pem2der.c` is what makes that caller reachable (the
+        // decoded provider key's legacy accessors downgrade). The `src/evp/pkey.rs` comment that
+        // called this arm unreachable was true only while no landed path built a legacy-only pkey.
+        let pkey_is_legacy =
+            // SAFETY: `pkey` is NULL or live per this function's contract.
+            unsafe { !pkey.is_null() && evp_pkey_is_provided(pkey) == 0 };
+        if pkey_is_legacy {
+            // SAFETY: `pkey` is live and has no keymgmt, so its `type` is the legacy method's NID.
+            id = unsafe { (*pkey).type_ };
+        } else {
+            if !pkey.is_null() {
+                // SAFETY: `pkey` is live and provided (its `keymgmt` is non-NULL).
+                let pkey_keymgmt = unsafe { (*pkey).keymgmt };
+                if !pkey_keymgmt.is_null() {
+                    // SAFETY: `pkey_keymgmt` is live.
+                    keytype = unsafe { crate::evp::keymgmt::EVP_KEYMGMT_get0_name(pkey_keymgmt) };
+                }
             }
-        }
-        if !keytype.is_null() {
-            // SAFETY: `keytype` is NUL-terminated.
-            id = unsafe { evp_pkey_name2type(keytype) };
-            if id == NID_undef {
-                id = -1;
+            if !keytype.is_null() {
+                // SAFETY: `keytype` is NUL-terminated.
+                id = unsafe { evp_pkey_name2type(keytype) };
+                if id == NID_undef {
+                    id = -1;
+                }
             }
         }
     }

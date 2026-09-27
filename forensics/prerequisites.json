@@ -122,15 +122,6 @@
         "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123; docs/DECISIONS.md D275 (the `scan_typedefs` grammar fix and the four retirements)"
       },
       {
-        "owner_module": "src/ec/backend.rs",
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_x509_algor_is_sm2"
-        ],
-        "note": "**One name now, and the two that left are the ones D351 landed.** D340 wrote this row for the whole `#ifndef FIPS_MODULE` tail of `crypto/ec/ec_backend.c` -- `ossl_x509_algor_is_sm2`, `ossl_ec_key_param_from_x509_algor` and `ossl_ec_key_from_pkcs8` -- because all three reached the ASN.1/X.509 half, which was 8.8's and slice E's at the time. **The measurement changed in the crate rather than in the authority**: D345 landed `crypto/ec/ec_asn1.c`, D348 `crypto/asn1/x_algor.c` and D349 `crypto/x509/x_pubkey.c` plus `crypto/asn1/p8_pkey.c`, so `X509_ALGOR_get0`, `d2i_ECParameters`, `d2i_ECPrivateKey` and `PKCS8_pkey_get0` are all built, and D351 transcribes the two. What is left is `ossl_x509_algor_is_sm2` (`ec_backend.c:729-757`), withheld for the reason D340 gave: its body reaches `d2i_ECPKParameters` and its only caller in the whole authority is the provider half (`ec_kmgmt.c`), which this crate does not carry, so a transcription would be a function no landed path reaches. `covers` is exact in both directions, which is why the row shrank rather than standing: the gate would otherwise report the two landed names as a record that keeps covering what the crate has since fixed. `ossl_ec_key_from_pkcs8`'s absence of a unit-test arm is recorded in the module's own test module: its first act is `PKCS8_pkey_get0`, so an arm would need a hand-built container rather than a measurement.",
-        "evidence": "docs/DECISIONS.md D340 and D351; crypto/ec/ec_backend.c:729-757 (the one name left) against :759-833 (the two landed); providers/implementations/keymgmt/ec_kmgmt.c as `ossl_x509_algor_is_sm2`'s only caller; forensics/atlas/transcription-edges.json's `crypto/ec/ec_backend.c` edge"
-      },
-      {
         "owner_module": "src/bn/intern.rs",
         "class": "modelled_differently",
         "covers": [

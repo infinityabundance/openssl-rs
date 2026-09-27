@@ -31867,3 +31867,60 @@ from 60 to **159 observations**, authority and candidate identical, 0 residuals.
 `complete`, 10 `in-progress`, 11-21 `not-started`; Phase-10 provider rows are unchanged at
 `630 implemented / 6 open` and `libcrypto` moves to 3,206 implemented exports.
 
+## D450 -- the decoder front doors land, a Phase-8 defect surfaces, and Phase 10's remaining distance is measured rather than estimated
+
+Phase 10 stood at `284 implemented / 14 open` exports and `630 implemented / 6 open` provider rows,
+with every open row blocked on Phase 11's `X509` object graph. D442 and D444 settled what to do
+about that: **measure the subset and pull it forward.** D450 is the measurement, and the one piece
+of it that is small enough to land cleanly.
+
+**Landed: the two decoder front doors.** `crypto/pkcs7`'s pull-forward left four `OSSL_OP_DECODER`
+rows open (`decode_pem2der.c`, `decode_spki2typespki.c`), and their genuinely unlanded closure is
+exactly two names: `ossl_spki2typespki_der_decode` (the sibling unit) and `ossl_x509_algor_is_sm2`
+(`crypto/ec/ec_backend.c:729-757`). Both land, in `src/provider/decode_spki2typespki.rs` (209
+lines), `src/provider/decode_pem2der.rs` (336 lines) and `src/ec/backend.rs`. Phase-10 provider rows
+move from `630 implemented / 6 open` to **`634 implemented / 2 open`**; `RT-CODEC` moves from 4,072
+to **4,160** observations.
+
+**A real Phase-8 defect was found by making the front door reachable.** Publishing the PEM decoder
+makes a decoded key provider-backed, which exposed that `src/evp/pkey_ctx.rs`'s `int_ctx_new`
+refused a legacy-only `EVP_PKEY` where the authority types it from `pkey->type`. That is the
+authority's branch, now transcribed; phase 8's `RT-PUBKEY` is green rather than regressed. The
+`nm` measurement could not have found this: it is a behaviour the closure only reaches once the
+row above it is real.
+
+### The measurement: what Phase 10's remaining rows actually need
+
+`nm --undefined-only` over the authority's objects, iterated over the authority units that define
+each crate-unlanded name until the set stabilises, with "landed" checked by *definition* rather
+than by the bare word:
+
+| closure | authority units | unlanded symbols | authority lines |
+|---|---:|---:|---:|
+| the whole blocked set (seeds: `crypto/store/*`, `crypto/pkcs12/*`, `encode_decode/*`, `storemgmt/*`) | 181 | 597 | ~60,599 |
+| **the `X509` object graph** (`X509_it`, `X509_CRL_it`, `X509_new`/`free`/`up_ref`, `d2i_X509(_AUX)`, `d2i_X509_CRL`, `X509_check_private_key`, `X509_digest`, `ossl_x509_add_cert_new`, `ossl_x509*_set0_libctx`, …) | 127 | 538 | ~45,241 |
+| the decoder front doors (D450's landing) | 3 | 2 | ~580 |
+
+The union is dominated by Phase 11 -- `crypto/x509/*`'s 46 units plus `crypto/ocsp/`, `crypto/ct/`,
+`crypto/engine/`, `crypto/http/`, `crypto/pkcs7/` -- and **the remaining distance to Phase 10's
+seal is that table**: 14 exports and 2 provider rows, all reachable only through ~45,000 lines of
+Phase 11's object graph. Phase 10's own subphases are done; 10.7 waits on a stratum the atlas
+places after it. That is a measurement of the boundary, not a deferral of work, and it is recorded
+here so the next slice's size is a number.
+
+**`D-DECODER-ABSENT-1` is substantively resolved and is a retirement candidate.** With the front
+doors landed the candidate publishes provider decoders, `pem_read_bio_key_decoder` succeeds, and
+`RT-PUBKEY`'s queue-count observable matches the authority. The retirement follows the register's
+own obligation, so it is named here and left for the entry that does it rather than done silently
+in a passing slice.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1094 passed, 0 failed**. `run_courts.py`, `court_coverage.py`,
+`provider_court_coverage.py`, `dispatch_court.py`, `prerequisite_gate.py` and `probe_hygiene.py`
+clean. `PIPELINE OK` exit 0 on two consecutive runs, at 109 courts and **45,139 observations**.
+`phase_state.py` reads 0-9 `complete`, 10 `in-progress`, 11-21 `not-started`; `libcrypto` moves to
+3,206 implemented exports (the new rows are provider rows and one internal, so the export count is
+unchanged at `284 implemented / 14 open`). No Phase 11 row is created.
+

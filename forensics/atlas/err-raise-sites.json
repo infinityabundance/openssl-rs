@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4343,
+      "sites": 4346,
       "unattributed": 0
     },
     "covered_files": [
@@ -352,6 +352,8 @@
       "providers/implementations/encode_decode/encode_key2ms.c",
       "providers/implementations/encode_decode/decode_msblob2key.c",
       "providers/implementations/encode_decode/decode_pvk2key.c",
+      "providers/implementations/encode_decode/decode_spki2typespki.c",
+      "providers/implementations/encode_decode/decode_pem2der.c",
       "providers/implementations/encode_decode/ml_common_codecs.c",
       "providers/implementations/encode_decode/ml_kem_codecs.c",
       "providers/implementations/encode_decode/ml_dsa_codecs.c",
@@ -62158,6 +62160,51 @@
         "rel_source": "providers/implementations/encode_decode/decode_pvk2key.c"
       },
       {
+        "const_name": "PROV_DECODE_SPKI2TYPESPKI_87",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/encode_decode/decode_spki2typespki.c",
+        "function": "spki2typespki_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 87,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/encode_decode/decode_spki2typespki.c"
+      },
+      {
+        "const_name": "PROV_DECODE_PEM2DER_114",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/encode_decode/decode_pem2der.c",
+        "function": "pem2der_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 114,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/encode_decode/decode_pem2der.c"
+      },
+      {
+        "const_name": "PROV_DECODE_PEM2DER_125",
+        "data_format": "\"param %s is repeated\"",
+        "dynamic_reason": false,
+        "file": "providers/implementations/encode_decode/decode_pem2der.c",
+        "function": "pem2der_set_ctx_params_decoder",
+        "generated": true,
+        "lib": 57,
+        "lib_symbol": "ERR_LIB_PROV",
+        "line": 125,
+        "macro": "ERR_raise_data",
+        "reason": 252,
+        "reason_symbol": "PROV_R_REPEATED_PARAMETER",
+        "rel_source": "providers/implementations/encode_decode/decode_pem2der.c"
+      },
+      {
         "const_name": "ML_COMMON_CODECS_83",
         "data_format": "\"no %s private key %s formats are enabled\"",
         "dynamic_reason": false,
@@ -67387,6 +67434,16 @@
       "name": "authority:providers/implementations/encode_decode/decode_pvk2key.c",
       "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/encode_decode/decode_pvk2key.c",
       "sha256": "7774b40e9646c038604d6a91e16df13710b6522998ed51acd37efd9aa2231c45"
+    },
+    {
+      "name": "authority:providers/implementations/encode_decode/decode_spki2typespki.c",
+      "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/encode_decode/decode_spki2typespki.c",
+      "sha256": "17c7e404118a1289cf0e9644c48cca31e410c4da9376c7dbac2fc2dcc91cf892"
+    },
+    {
+      "name": "authority:providers/implementations/encode_decode/decode_pem2der.c",
+      "path": "forensics/authorities/build/openssl-3.6.4-production/providers/implementations/encode_decode/decode_pem2der.c",
+      "sha256": "e1cf222233ea7a05f8b27893e8ec09e78ebed5f483ecf6cd4cebbbb294260068"
     },
     {
       "name": "authority:providers/implementations/encode_decode/ml_common_codecs.c",

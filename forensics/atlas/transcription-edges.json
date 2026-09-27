@@ -799,7 +799,7 @@
         "module": "src/ec/backend.rs",
         "phase": null,
         "phase_source": null,
-        "share": "16/16",
+        "share": "17/17",
         "translation_unit": "crypto/ec/ec_backend.c"
       },
       {
@@ -1823,6 +1823,13 @@
         "phase_source": "module-declaration",
         "share": "1/1",
         "translation_unit": "providers/implementations/encode_decode/libdefault-lib-decode_epki2pki.c"
+      },
+      {
+        "module": "src/provider/decode_spki2typespki.rs",
+        "phase": 10,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/implementations/encode_decode/libdefault-lib-decode_spki2typespki.c"
       },
       {
         "module": "src/provider/der_dsa_sig.rs",
