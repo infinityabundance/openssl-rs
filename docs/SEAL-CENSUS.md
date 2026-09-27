@@ -347,14 +347,14 @@ Hand-offs received and discharged:
 * from phase 5: 16 symbol(s) — `b2i_PVK_bio`, `b2i_PVK_bio_ex`, `b2i_PrivateKey`, `b2i_PrivateKey_bio`, `b2i_PublicKey`, `b2i_PublicKey_bio`, `d2i_PKCS8PrivateKey_bio`, `d2i_PKCS8PrivateKey_fp`, `i2b_PVK_bio`, `i2b_PVK_bio_ex`, `i2b_PrivateKey_bio`, `i2b_PublicKey_bio`, `i2d_PKCS8PrivateKey_bio`, `i2d_PKCS8PrivateKey_fp`, `i2d_PKCS8PrivateKey_nid_bio`, `i2d_PKCS8PrivateKey_nid_fp`
 * from phase 7: 10 symbol(s) — `PEM_write_bio_PrivateKey_traditional`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
 
-Courts: `all pass`, 5 court(s), **2145** authority observation(s) over 4 transcript court(s).
+Courts: `all pass`, 5 court(s), **4730** authority observation(s) over 4 transcript court(s).
 
 The other 1 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
 | RT-KEYFORMAT-REF | `pass` | 87 |
-| RT-CODEC | `pass` | 1487 |
+| RT-CODEC | `pass` | 4072 |
 | RT-KEYFORMAT | `pass` | 349 |
 | RT-PKCS12 | `pass` | 222 |
 | CT-PKCS12 | `pass` | — (structural) |
@@ -379,8 +379,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 7 | 733 | 733 | 688 | 45 | 0 | 0 | 0 |
 | 8 | 786 | 778 | 778 | 0 | 8 | 0 | 0 |
 | 9 | 69 | 69 | 69 | 0 | 0 | 0 | 0 |
-| 10 | 200 | 200 | 137 | 63 | 0 | 0 | 0 |
-| **total** | **2923** | **2915** | **2586** | **329** | **8** | **0** | **0** |
+| 10 | 200 | 200 | 139 | 61 | 0 | 0 | 0 |
+| **total** | **2923** | **2915** | **2588** | **327** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

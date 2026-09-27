@@ -1298,6 +1298,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CODEC",
               "RT-DH",
               "RT-EC",
               "RT-KEYFORMAT",
@@ -9270,6 +9271,7 @@
             "basis": "called",
             "courts": [
               "RT-ASYM-CIPHER",
+              "RT-CODEC",
               "RT-KEYMGMT",
               "RT-PARAM",
               "RT-SIGNATURE"
@@ -9456,6 +9458,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-PARAM"
             ],
             "symbol": "OSSL_PARAM_free"
@@ -14632,6 +14635,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-EVP-PKEY-OPS",
               "RT-EVP-REF"
             ],
@@ -21976,8 +21980,8 @@
         "completed": false,
         "counts": {
           "directly_courted": 200,
-          "directly_courted_called": 137,
-          "directly_courted_referenced": 63,
+          "directly_courted_called": 139,
+          "directly_courted_referenced": 61,
           "implemented": 200,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -22337,8 +22341,9 @@
             "symbol": "OSSL_ENCODER_CTX_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_CTX_get_num_encoders"
@@ -22359,8 +22364,9 @@
             "symbol": "OSSL_ENCODER_CTX_new_for_pkey"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CODEC",
               "RT-KEYFORMAT-REF"
             ],
             "symbol": "OSSL_ENCODER_CTX_set_cipher"
@@ -23417,8 +23423,8 @@
     ],
     "totals": {
       "directly_courted": 2915,
-      "directly_courted_called": 2586,
-      "directly_courted_referenced": 329,
+      "directly_courted_called": 2588,
+      "directly_courted_referenced": 327,
       "implemented": 2923,
       "indirectly_courted": 8,
       "non_observable": 0
@@ -23520,7 +23526,7 @@
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "922cefb84f0ed2c2f520ac26abaaf6903390aa99772014cdfbec2adf57b2c8c4"
+      "sha256": "e46d1a8301fbc050ae56d38bcff504abe456ad6f54ca5428f1c0aed31542baab"
     }
   ],
   "kind": "court-coverage",
