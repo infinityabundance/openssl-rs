@@ -31719,3 +31719,45 @@ consecutive runs, at 108 courts and **44,822 observations**. `phase_state.py` is
 row moves: Phase 10 stands at `200 implemented / 98 open` exports and `630 implemented / 6 open`
 provider rows.
 
+## D447 -- 10.3 lands its eleven PKCS#12 exports, and the eleven it does not land have a measured blocker
+
+10.3 is the container *construction* half of `crypto/pkcs12/`, and this slice lands every export in
+it that this stratum's closure can reach: `PKCS12_add_key(_ex)` and `PKCS12_add_safe(_ex)`
+(`p12_crt.c`), `PKCS12_gen_mac`, `PKCS12_verify_mac`, `PKCS12_set_mac`,
+`PKCS12_set_pbmac1_pbkdf2` and `PKCS12_pack_p7encdata(_ex)` (`p12_mutl.c`, `p12_add.rs`), and
+`PKCS12_newpass` (`p12_npas.c`). The ledger moves from `implemented=200 open=98` to
+**`implemented=211 open=87`**.
+
+**The eleven that stay open stay open for a reason that was measured, not assumed.**
+`nm --undefined-only` over the authority's `crypto/pkcs12/` objects shows each of them reaching a
+name Phase 11 owns and this crate does not yet have: `PKCS12_create(_ex/_ex2)` and
+`PKCS12_add_cert` reach `X509_check_private_key`/`X509_digest`/`X509_alias_get0`/`X509_keyid_get0`;
+the `PKCS12_SAFEBAG_create_cert/_crl` and `_get1_cert(_ex)`/`_get1_crl(_ex)` family reaches
+`X509_it`/`X509_CRL_it` and the `ossl_x509*_set0_libctx` group; `PKCS12_parse` reaches
+`PKCS12_SAFEBAG_get1_cert_ex`/`ossl_x509_add_cert_new`. They are withheld with that blocker named
+in `src/pkcs12/mod.rs` and printed `pending` by the probe; **no Phase 11 evidence, ledger, plan,
+seal or state row is created**, and Phase 11 still derives `not-started`.
+
+**The identity is the DER document and the MAC, per section 3.2.** `courts/phase10/rt_pkcs12_probe.c`
+gains six arms -- `court_mac`, `court_pbmac1`, `court_p7encdata`, `court_add_key`, `court_add_safe`
+and `court_newpass` -- each driving its exports over a **fixed** salt, iteration count and IV, and
+printing either the exact DER or the exact error queue and coordinates. `RT-PKCS12` moves from 222
+to **292** observations. `CT-PKCS12` stays at **6/6**: the correctness plane carries the PKCS#12 KDF
+and PBE vectors, and the authority publishes no container-construction vector, so the container's
+identity is the differential court's rather than a corpus's. That is stated rather than papered
+over.
+
+**`p12_npas.c` is a new module and its coordinates are declared locally.** The unit is not yet in
+`gen_err_raise_sites.py`'s per-phase file list, so `src/pkcs12/p12_npas.rs` declares the three
+`ERR_raise*` sites the way `src/provider/encode_key2any.rs` does (D445) and says so in its module
+doc; they move into the generated `err_sites.rs` when that generator next runs.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1086 passed, 0 failed** (three new tests, each taking the crate-wide global-state lock).
+`run_courts.py`, `court_coverage.py`, `provider_court_coverage.py` and `probe_hygiene.py` clean.
+`PIPELINE OK` exit 0 on two consecutive runs, at 108 courts and **44,892 observations**.
+`phase_state.py` reads 0-9 `complete`, 10 `in-progress`, 11-21 `not-started`. Phase-10 provider rows
+are unchanged at `630 implemented / 6 open`; `libcrypto` moves to 3,133 implemented exports.
+

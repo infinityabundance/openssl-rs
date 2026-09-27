@@ -12,10 +12,18 @@
 //! `PKCS7_new`/`PKCS7_type_is_*`, and `PKCS7_it` is `crypto/pkcs7/pk7_asn1.c`'s — Phase 12's.
 //! **The `PKCS7` subset was pulled forward** (see [`crate::pkcs7`]), so four of the six land here:
 //! [`PKCS12_pack_p7data`], [`PKCS12_unpack_p7data`], [`PKCS12_unpack_p7encdata`],
-//! [`PKCS12_pack_authsafes`] and [`PKCS12_unpack_authsafes`]. The two `p7encdata` **writers** stay
-//! `open`: `PKCS12_pack_p7encdata_ex` reaches Phase 11's `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex`
-//! at `:120`/`:122` to build its `AlgorithmIdentifier`, and `PKCS12_pack_p7encdata` is its
-//! one-line wrapper. They are the only pair here whose blocker is not the `PKCS7` object itself.
+//! [`PKCS12_pack_authsafes`] and [`PKCS12_unpack_authsafes`], and then — once D444's pulled-forward
+//! `x509.h` subset supplied `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex` — also the two `p7encdata`
+//! **writers** [`PKCS12_pack_p7encdata_ex`] and its one-line wrapper [`PKCS12_pack_p7encdata`],
+//! which build the `NID_pkcs7_encrypted` contentInfo's `AlgorithmIdentifier` through those two
+//! builders. **All ten exports of the unit land here.** The pair was the last in this unit whose
+//! blocker was not the `PKCS7` object itself.
+//!
+//! `PKCS12_pack_p7encdata_ex`'s closure was measured with `nm --undefined-only` over the
+//! authority's `libcrypto-lib-p12_add.o`: apart from the names above, every undefined symbol
+//! (`PKCS7_new_ex`/`PKCS7_set_type`, `EVP_CIPHER_fetch`/`_free`, `EVP_get_cipherbyname`,
+//! `PKCS12_item_i2d_encrypt_ex`, `ASN1_OCTET_STRING_free`, `X509_ALGOR_free`, `OBJ_nid2sn`) is a
+//! landed crate symbol.
 //!
 //! ## `PKCS12_item_pack_safebag` unblocks 10.2, one blocker of two
 //!
@@ -32,26 +40,31 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::asn_pack::{ASN1_item_pack, ASN1_item_unpack_ex};
 use crate::asn1::layout::{Asn1Item, Asn1String};
+use crate::asn1::p5_pbe::PKCS5_pbe_set_ex;
+use crate::asn1::p5_pbev2::PKCS5_pbe2_set_iv_ex;
 use crate::asn1::p8_pkey::Pkcs8PrivKeyInfo;
-use crate::asn1::string::ASN1_OCTET_STRING_new;
+use crate::asn1::string::{ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new};
+use crate::asn1::x_algor::X509_ALGOR_free;
 use crate::asn1::x_sig::X509Sig;
+use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EvpCipher};
+use crate::evp::legacy_evp::EVP_get_cipherbyname;
 use crate::pkcs12::p12_asn::{
     PKCS12_AUTHSAFES_it, PKCS12_BAGS_free, PKCS12_BAGS_new, PKCS12_SAFEBAGS_it, PKCS12_SAFEBAG_new,
     Pkcs12, Pkcs12Safebag,
 };
-use crate::pkcs12::p12_decr::PKCS12_item_decrypt_d2i_ex;
+use crate::pkcs12::p12_decr::{PKCS12_item_decrypt_d2i_ex, PKCS12_item_i2d_encrypt_ex};
 use crate::pkcs12::p12_p8d::PKCS8_decrypt_ex;
 use crate::pkcs7::{
     ossl_pkcs7_ctx_get0_libctx, ossl_pkcs7_ctx_get0_propq, ossl_pkcs7_ctx_propagate, PKCS7_free,
-    PKCS7_new, Pkcs7,
+    PKCS7_new, PKCS7_new_ex, PKCS7_set_type, Pkcs7,
 };
-use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::obj::{OBJ_nid2obj, OBJ_obj2nid};
+use crate::runtime::err::{err_sites, raise_site, ERR_pop_to_mark, ERR_set_mark};
+use crate::runtime::obj::{OBJ_nid2obj, OBJ_nid2sn, OBJ_obj2nid};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack};
 
 /// `PKCS12_SAFEBAG *PKCS12_item_pack_safebag(void *obj, const ASN1_ITEM *it, int nid1, int nid2)`
@@ -153,11 +166,12 @@ pub unsafe extern "C" fn PKCS12_decrypt_skey(
 }
 
 /// `PKCS7_type_is_data(a)` — `pkcs7.h.in:194`, `OBJ_obj2nid((a)->type) == NID_pkcs7_data`. The
-/// macro's spelling, which is how the two `unpack` readers guard their arm.
+/// macro's spelling, which is how the two `unpack` readers guard their arm and how
+/// `p12_mutl.c`'s `pkcs12_gen_mac` guards its container.
 ///
 /// # Safety
 /// `p7` is null or a live `PKCS7`.
-unsafe fn pkcs7_type_is_data(p7: *const Pkcs7) -> bool {
+pub(crate) unsafe fn pkcs7_type_is_data(p7: *const Pkcs7) -> bool {
     if p7.is_null() {
         return false;
     }
@@ -293,6 +307,138 @@ pub unsafe extern "C" fn PKCS12_unpack_p7encdata(
             (*p7).ctx.propq,
         )
         .cast::<OpenSslStack>()
+    }
+}
+
+/// `PKCS7 *PKCS12_pack_p7encdata_ex(int pbe_nid, const char *pass, int passlen,
+/// unsigned char *salt, int saltlen, int iter, STACK_OF(PKCS12_SAFEBAG) *bags,
+/// OSSL_LIB_CTX *ctx, const char *propq)` — `crypto/pkcs12/p12_add.c:94-145`.
+///
+/// Builds an `NID_pkcs7_encrypted` contentInfo: the cipher is fetched by the NID's short name
+/// (falling back to the legacy table), the `AlgorithmIdentifier` comes from
+/// `PKCS5_pbe2_set_iv_ex` when a cipher was found and `PKCS5_pbe_set_ex` otherwise, and the octets
+/// are the `PKCS12_SAFEBAGS` encoding encrypted by `PKCS12_item_i2d_encrypt_ex` with `zbuf == 1`.
+/// Every failure releases the half-built object and the fetched cipher.
+///
+/// # Safety
+/// `pass` is NULL or a string of `passlen` bytes (or NUL-terminated when `passlen == -1`); `salt`
+/// is NULL or `saltlen` readable bytes; `bags` is null or a live stack of `PKCS12_SAFEBAG`;
+/// `ctx`/`propq` are the fetch's. The answer is owned by the caller.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_pack_p7encdata_ex(
+    pbe_nid: c_int,
+    pass: *const c_char,
+    passlen: c_int,
+    salt: *mut c_uchar,
+    saltlen: c_int,
+    iter: c_int,
+    bags: *mut OpenSslStack,
+    ctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut Pkcs7 {
+    // SAFETY: `ctx`/`propq` are the caller's.
+    let p7 = unsafe { PKCS7_new_ex(ctx, propq) };
+    if p7.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PKCS12_ADD_105) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `p7` is live and its content union has no arm yet.
+    unsafe {
+        if PKCS7_set_type(p7, crate::runtime::obj::NID_pkcs7_encrypted) == 0 {
+            raise_site(&err_sites::PKCS12_ADD_109);
+            PKCS7_free(p7);
+            return ptr::null_mut();
+        }
+    }
+
+    let _ = ERR_set_mark();
+    // SAFETY: `ctx`/`propq` are the fetch's; `OBJ_nid2sn` names the NID.
+    let pbe_ciph_fetch = unsafe { EVP_CIPHER_fetch(ctx, OBJ_nid2sn(pbe_nid), propq) };
+    let mut pbe_ciph: *const EvpCipher = pbe_ciph_fetch;
+    if pbe_ciph.is_null() {
+        // SAFETY: the NID resolves through the legacy name table.
+        pbe_ciph = unsafe { EVP_get_cipherbyname(OBJ_nid2sn(pbe_nid)) };
+    }
+    let _ = ERR_pop_to_mark();
+
+    // SAFETY: `pbe_ciph` is NULL or a live cipher; `salt`/`ctx` are the builder's arguments.
+    let pbe = unsafe {
+        if pbe_ciph.is_null() {
+            PKCS5_pbe_set_ex(pbe_nid, iter, salt, saltlen, ctx)
+        } else {
+            PKCS5_pbe2_set_iv_ex(pbe_ciph, iter, salt, saltlen, ptr::null_mut(), -1, ctx)
+        }
+    };
+    if pbe.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PKCS12_ADD_126) };
+        // SAFETY: `p7` is this frame's own and the fetched cipher is a reference it holds.
+        unsafe {
+            PKCS7_free(p7);
+            EVP_CIPHER_free(pbe_ciph_fetch);
+        }
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `p7` is live and its encrypted arm holds the algorithm and octets to replace.
+    unsafe {
+        let content = (*(*p7).d.encrypted).enc_data;
+        X509_ALGOR_free((*content).algorithm);
+        (*content).algorithm = pbe;
+        ASN1_OCTET_STRING_free((*content).enc_data);
+        let enc_data = PKCS12_item_i2d_encrypt_ex(
+            pbe,
+            PKCS12_SAFEBAGS_it(),
+            pass,
+            passlen,
+            bags.cast::<c_void>(),
+            1,
+            ctx,
+            propq,
+        );
+        if enc_data.is_null() {
+            raise_site(&err_sites::PKCS12_ADD_134);
+            PKCS7_free(p7);
+            EVP_CIPHER_free(pbe_ciph_fetch);
+            return ptr::null_mut();
+        }
+        (*content).enc_data = enc_data;
+    }
+    // SAFETY: `pbe_ciph_fetch` is NULL or a reference this frame holds.
+    unsafe { EVP_CIPHER_free(pbe_ciph_fetch) };
+    p7
+}
+
+/// `PKCS7 *PKCS12_pack_p7encdata(int pbe_nid, const char *pass, int passlen, unsigned char *salt,
+/// int saltlen, int iter, STACK_OF(PKCS12_SAFEBAG) *bags)` — `crypto/pkcs12/p12_add.c:147-153`.
+///
+/// # Safety
+/// As [`PKCS12_pack_p7encdata_ex`], without the context arguments.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_pack_p7encdata(
+    pbe_nid: c_int,
+    pass: *const c_char,
+    passlen: c_int,
+    salt: *mut c_uchar,
+    saltlen: c_int,
+    iter: c_int,
+    bags: *mut OpenSslStack,
+) -> *mut Pkcs7 {
+    // SAFETY: the arguments are forwarded under this function's contract, with no context.
+    unsafe {
+        PKCS12_pack_p7encdata_ex(
+            pbe_nid,
+            pass,
+            passlen,
+            salt,
+            saltlen,
+            iter,
+            bags,
+            ptr::null_mut(),
+            ptr::null(),
+        )
     }
 }
 

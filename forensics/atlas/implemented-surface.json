@@ -473,7 +473,7 @@
         "x25519_fe64_sub",
         "x25519_fe64_tobytes"
       ],
-      "compiler_emitted_count": 13851,
+      "compiler_emitted_count": 13654,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -481,7 +481,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 3122,
+        "implemented": 3133,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -3036,13 +3036,18 @@
           "PKCS12_add_friendlyname_asc",
           "PKCS12_add_friendlyname_uni",
           "PKCS12_add_friendlyname_utf8",
+          "PKCS12_add_key",
+          "PKCS12_add_key_ex",
           "PKCS12_add_localkeyid",
+          "PKCS12_add_safe",
+          "PKCS12_add_safe_ex",
           "PKCS12_add_safes",
           "PKCS12_add_safes_ex",
           "PKCS12_add_secret",
           "PKCS12_decrypt_skey",
           "PKCS12_decrypt_skey_ex",
           "PKCS12_free",
+          "PKCS12_gen_mac",
           "PKCS12_get0_mac",
           "PKCS12_get_attr",
           "PKCS12_get_attr_gen",
@@ -3063,14 +3068,20 @@
           "PKCS12_key_gen_utf8_ex",
           "PKCS12_mac_present",
           "PKCS12_new",
+          "PKCS12_newpass",
           "PKCS12_pack_authsafes",
           "PKCS12_pack_p7data",
+          "PKCS12_pack_p7encdata",
+          "PKCS12_pack_p7encdata_ex",
           "PKCS12_pbe_crypt",
           "PKCS12_pbe_crypt_ex",
+          "PKCS12_set_mac",
+          "PKCS12_set_pbmac1_pbkdf2",
           "PKCS12_setup_mac",
           "PKCS12_unpack_authsafes",
           "PKCS12_unpack_p7data",
           "PKCS12_unpack_p7encdata",
+          "PKCS12_verify_mac",
           "PKCS1_MGF1",
           "PKCS5_PBE_add",
           "PKCS5_PBE_keyivgen",
@@ -3606,7 +3617,7 @@
           "i2t_ASN1_OBJECT",
           "o2i_ECPublicKey"
         ],
-        "scaffolded": 2774
+        "scaffolded": 2763
       },
       "libssl": {
         "authority_exports": 603,
@@ -3617,18 +3628,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 3122,
-      "scaffolded": 3377
+      "implemented": 3133,
+      "scaffolded": 3366
     }
   },
-  "body_hash": "8fb3bb54fa4871ad95c0165f130e98d746a947bc420141d4eee71290384beaf2",
+  "body_hash": "973dabf3a75a8c5844dd645bffd3ab114bd9eb7a5ad2ff5a7b5d23dc8a5b50bb",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "dcafd1465368987ca3931e52af6f8a308f6b85c0e60ed74f0d07447b939dce4d"
+      "sha256": "98293ee3fb896c6896030f1a3b3624ed09adbd17e0d51ce1b8f22fa11425e934"
     },
     {
       "name": "authority-exports",

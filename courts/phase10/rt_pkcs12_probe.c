@@ -20,13 +20,24 @@
  * the refusal and its error coordinate are the observation), and `PKCS12_add_secret` (the `add_*`
  * surface, including the stack the call builds and the bag's DER).
  *
+ * The second 10.3 slice lands the rest of the subphase, and its arms here are the container's own
+ * identity as a DER document (section 3.2): `PKCS12_set_mac`/`PKCS12_gen_mac`/
+ * `PKCS12_verify_mac` over a **fixed** salt and iteration count (the `MacData`'s
+ * `digestAlgorithm`/`salt`/`iterations` are read back through `PKCS12_get0_mac`, the recomputed
+ * MAC is printed, and the `PFX` bytes are compared); `PKCS12_set_pbmac1_pbkdf2` over fixed
+ * parameters; `PKCS12_pack_p7encdata(_ex)` over a fixed salt/iteration (the encrypted octets are
+ * printed, since a PKCS#5 v1.5 cipher's IV is derived from the salt); `PKCS12_add_key(_ex)` over a
+ * fixed RSA `EVP_PKEY` decoded from the shared fixed key set (the unencrypted `keyBag` arm, so the
+ * bytes are fixed); `PKCS12_add_safe(_ex)` (its plain arm's bytes, its default-PBE arm's structure);
+ * and `PKCS12_newpass` (the password change over a fixed-salt MAC, its result verified both ways).
+ *
  * The `PKCS12` container itself (`PKCS12_it`, `i2d_PKCS12`, the `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp`
- * spellings) and everything in 10.3 that dereferences `PKCS7` or `X509` are **held open**: the
- * `authsafes` column is a `PKCS7` and `PKCS7_it` is Phase 12's, the four `get1_*` certificate
- * readers and the certificate/key builders need Phase 11's `X509_it`, and the MAC setup needs
- * 10.4's `PKCS12_key_gen_utf8_ex`. Those rows are printed as `pending.` with the blocker rather
- * than driven, and the two 10.2 `create_cert`/`create_crl` spellings appear there with their
- * remaining blocker after 10.3 removed the first (docs/PHASE-10-SUBPHASES.md sections 3.2, 3.5).
+ * spellings) is driven above. What remains printed as `pending.` is what needs Phase 11's `X509`
+ * object graph: the four `get1_*` certificate readers and the two `create_cert`/`create_crl`
+ * spellings need `X509_it`/`X509_CRL_it`, `PKCS12_add_cert` and `PKCS12_create(_ex/_ex2)` need
+ * `X509_alias_get0`/`X509_keyid_get0`/`X509_check_private_key`/`X509_digest`, and `PKCS12_parse`
+ * needs `PKCS12_SAFEBAG_get1_cert_ex`/`ossl_x509_add_cert_new`
+ * (docs/PHASE-10-SUBPHASES.md sections 3.2, 3.5).
  *
  * Everything is borrowed or literal: the DER fixtures below are hand-written constants, the
  * strings are literals, and no pointer address is ever printed (two sides allocate differently).
@@ -45,6 +56,8 @@
 #include <openssl/objects.h>
 #include <openssl/pkcs12.h>
 #include <openssl/x509.h>
+
+#include "rt_keyformat_keys.h"
 
 /* ---------------------------------------------------------------------------------------------
  * Output helpers -- every line is `key=value`.
@@ -98,43 +111,22 @@ static void out_err(const char *key)
  * algorithm-identifier rows on Phase 11's `PKCS5_pbe*set*_ex`, and the MAC/KDF rows on 10.4. */
 static void out_pending(void)
 {
-    /* Held open on `X509_it`/`X509_CRL_it` and `ossl_x509*_set0_libctx` (Phase 11). */
+    /* ----- the `X509`-blocked tail, measured on Phase 11's object graph ----- */
+    /* The `get1_*` readers and the certificate bag builders need Phase 11's
+     * `X509_it`/`X509_CRL_it` and `ossl_x509*_set0_libctx`. */
     printf("pending.PKCS12_SAFEBAG_get1_cert=phase-11-x509\n");
     printf("pending.PKCS12_SAFEBAG_get1_cert_ex=phase-11-x509\n");
     printf("pending.PKCS12_SAFEBAG_get1_crl=phase-11-x509\n");
     printf("pending.PKCS12_SAFEBAG_get1_crl_ex=phase-11-x509\n");
-    /* 10.2's two `create_cert`/`create_crl` need this subphase's `PKCS12_item_pack_safebag`
-     * **and** Phase 11's `X509_it`; 10.3 landed the first, so the blocker that remains is the
-     * second, and the row is still `pending` rather than driven. */
     printf("pending.PKCS12_SAFEBAG_create_cert=phase-11-x509\n");
     printf("pending.PKCS12_SAFEBAG_create_crl=phase-11-x509\n");
-    /* Held open on `PKCS8_encrypt(_ex)` (p12_p8e.c, 10.4), whose `PKCS5_pbe_set_ex`/
-     * `PKCS5_pbe2_set_iv_ex` are Phase 11's `x509.h` exports. D443's pull-forward landed those, so
-     * `PKCS8_encrypt(_ex)` and the two `create_pkcs8_encrypt*` spellings are now **driven** above. */
-
-    /* ----- the two `p7encdata` writers: `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex` ----- */
-    printf("pending.PKCS12_pack_p7encdata=phase-10.3\n");
-    printf("pending.PKCS12_pack_p7encdata_ex=phase-10.3\n");
-    /* ----- the `add_*` family that is not yet reachable ----- */
+    /* `PKCS12_add_cert` needs `X509_alias_get0`/`X509_keyid_get0` and `create_cert`; `create` adds
+     * `X509_check_private_key`/`X509_digest`; `PKCS12_parse` needs `get1_cert_ex` and
+     * `ossl_x509_add_cert_new`. None of those names is landed. */
     printf("pending.PKCS12_add_cert=phase-11-x509\n");
-    printf("pending.PKCS12_add_key=phase-10.3\n");
-    printf("pending.PKCS12_add_key_ex=phase-10.3\n");
-    printf("pending.PKCS12_add_safe=phase-10.3\n");
-    printf("pending.PKCS12_add_safe_ex=phase-10.3\n");
     printf("pending.PKCS12_create=phase-11-x509\n");
     printf("pending.PKCS12_create_ex=phase-11-x509\n");
     printf("pending.PKCS12_create_ex2=phase-11-x509\n");
-    /* ----- the MAC/KDF set: the Phase 11 `PBMAC1PARAM`/`PKCS5_pbkdf2_set` blockers are landed by
-     * D443's pull-forward, so what remains is this subphase's own `p12_mutl.c` work. ----- */
-    printf("pending.PKCS12_gen_mac=phase-10.3\n");
-    printf("pending.PKCS12_verify_mac=phase-10.3\n");
-    printf("pending.PKCS12_set_mac=phase-10.3\n");
-    printf("pending.PKCS12_set_pbmac1_pbkdf2=phase-10.3\n");
-    /* `PKCS12_newpass` (`p12_npas.c`) needs `PKCS8_encrypt_ex`, which now lands, so its blocker
-     * is this stratum's own remaining work and not a Phase 11 type. */
-    printf("pending.PKCS12_newpass=phase-10.3\n");
-    /* `p12_kiss.c`'s one export: `PKCS12_parse` reads cert bags through
-     * `PKCS12_SAFEBAG_get1_cert_ex` and `ossl_x509_add_cert_new`. */
     printf("pending.PKCS12_parse=phase-11-x509\n");
 }
 
@@ -1150,6 +1142,313 @@ static void court_container_refusals(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * 10.3's second slice: the MAC, the RFC 9879 PBMAC1 MAC, the encrypted contentInfo, the
+ * `add_key`/`add_safe` surface and the password change.
+ *
+ * Everything below takes a fixed salt and iteration count where the authority would otherwise
+ * draw one, so the bytes are a function of the fixed input alone (docs/PHASE-10-SUBPHASES.md
+ * section 3.2). `PKCS12_newpass` prints the container before and after its deterministic data-arm
+ * repack.
+ * --------------------------------------------------------------------------------------------- */
+
+/* An `NID_pkcs7_data` container over one fixed secretBag. The caller frees it. */
+static PKCS12 *container_one(void)
+{
+    static const unsigned char secret[3] = { 0x01, 0x02, 0x03 };
+    STACK_OF(PKCS7) *safes = sk_PKCS7_new_null();
+    PKCS7 *p7 = PKCS12_pack_p7data(make_bags(secret, 3));
+    PKCS12 *p12;
+
+    if (p7 != NULL)
+        sk_PKCS7_push(safes, p7);
+    p12 = PKCS12_add_safes(safes, NID_pkcs7_data);
+    sk_PKCS7_pop_free(safes, PKCS7_free);
+    return p12;
+}
+
+static void court_mac(void)
+{
+    static unsigned char maccsalt[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+    PKCS12 *p12;
+    unsigned char *der = NULL;
+    unsigned char mac[EVP_MAX_MD_SIZE];
+    unsigned int maclen = 0;
+    long len;
+    const ASN1_OCTET_STRING *digest = NULL, *msalt = NULL;
+    const X509_ALGOR *malg = NULL;
+    const ASN1_INTEGER *miter = NULL;
+
+    p12 = container_one();
+    out_ptr("mac2.p12", p12);
+    if (p12 == NULL)
+        return;
+
+    /* No MacData yet: `mac_present` is 0 and `verify_mac` refuses with `PKCS12_R_MAC_ABSENT`. */
+    out_int("mac2.present_before", PKCS12_mac_present(p12));
+    ERR_clear_error();
+    out_int("mac2.verify_absent", PKCS12_verify_mac(p12, "smeg", -1));
+    out_err("mac2.verify_absent.err");
+
+    /* `PKCS12_set_mac` over a fixed salt and iteration count. */
+    out_int("mac2.set", PKCS12_set_mac(p12, "smeg", -1, maccsalt, 8, 0x0800, EVP_sha256()));
+    out_int("mac2.present_after", PKCS12_mac_present(p12));
+    PKCS12_get0_mac(&digest, &malg, &msalt, &miter, p12);
+    out_int("mac2.iter", ASN1_INTEGER_get(miter));
+    out_int("mac2.alg.nid", malg != NULL ? OBJ_obj2nid(malg->algorithm) : -1);
+    out_hex("mac2.salt", ASN1_STRING_get0_data(msalt), ASN1_STRING_length(msalt));
+    out_int("mac2.digest.len", ASN1_STRING_length(digest));
+    out_hex("mac2.digest", ASN1_STRING_get0_data(digest), ASN1_STRING_length(digest));
+
+    /* `PKCS12_gen_mac` recomputes the same HMAC independently of the stored octets. */
+    ERR_clear_error();
+    out_int("mac2.gen", PKCS12_gen_mac(p12, "smeg", -1, mac, &maclen));
+    out_int("mac2.gen.len", (long)maclen);
+    out_hex("mac2.gen.hex", mac, (long)maclen);
+    out_err("mac2.gen.err");
+
+    /* The DER carries the MacData as its last column; the bytes are the document. */
+    len = i2d_PKCS12(p12, &der);
+    out_int("mac2.der.len", len);
+    out_hex("mac2.der", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+
+    /* Verify both ways: the right password matches, the wrong one answers 0 without raising. */
+    ERR_clear_error();
+    out_int("mac2.verify_ok", PKCS12_verify_mac(p12, "smeg", -1));
+    out_err("mac2.verify_ok.err");
+    ERR_clear_error();
+    out_int("mac2.verify_bad", PKCS12_verify_mac(p12, "wrong", -1));
+    out_err("mac2.verify_bad.err");
+
+    PKCS12_free(p12);
+}
+
+static void court_pbmac1(void)
+{
+    static unsigned char maccsalt[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+    PKCS12 *p12;
+    unsigned char *der = NULL;
+    unsigned char mac[EVP_MAX_MD_SIZE];
+    unsigned int maclen = 0;
+    long len;
+    const ASN1_OCTET_STRING *digest = NULL, *msalt = NULL;
+    const X509_ALGOR *malg = NULL;
+    const ASN1_INTEGER *miter = NULL;
+
+    p12 = container_one();
+    out_ptr("pbmac1.p12", p12);
+    if (p12 == NULL)
+        return;
+
+    ERR_clear_error();
+    out_int("pbmac1.set",
+            PKCS12_set_pbmac1_pbkdf2(p12, "smeg", -1, maccsalt, 8, 0x0800, EVP_sha256(), NULL));
+    out_err("pbmac1.set.err");
+    PKCS12_get0_mac(&digest, &malg, &msalt, &miter, p12);
+    out_int("pbmac1.iter", ASN1_INTEGER_get(miter));
+    out_int("pbmac1.alg.nid", malg != NULL ? OBJ_obj2nid(malg->algorithm) : -1);
+    out_hex("pbmac1.salt", ASN1_STRING_get0_data(msalt), ASN1_STRING_length(msalt));
+    out_hex("pbmac1.digest", ASN1_STRING_get0_data(digest), ASN1_STRING_length(digest));
+
+    ERR_clear_error();
+    out_int("pbmac1.gen", PKCS12_gen_mac(p12, "smeg", -1, mac, &maclen));
+    out_hex("pbmac1.gen.hex", mac, (long)maclen);
+    out_err("pbmac1.gen.err");
+
+    /* The RFC 9879 `PBMAC1PARAM` is inside the container's MacData parameter. */
+    len = i2d_PKCS12(p12, &der);
+    out_int("pbmac1.der.len", len);
+    out_hex("pbmac1.der", der, len);
+    OPENSSL_free(der);
+
+    ERR_clear_error();
+    out_int("pbmac1.verify_ok", PKCS12_verify_mac(p12, "smeg", -1));
+    out_err("pbmac1.verify_ok.err");
+    ERR_clear_error();
+    out_int("pbmac1.verify_bad", PKCS12_verify_mac(p12, "wrong", -1));
+    out_err("pbmac1.verify_bad.err");
+
+    PKCS12_free(p12);
+}
+
+static void court_p7encdata(void)
+{
+    static unsigned char salt[8] = { 0x0a, 0x58, 0xcf, 0x64, 0x53, 0x0d, 0x82, 0x3f };
+    static const unsigned char secret[3] = { 0x01, 0x02, 0x03 };
+    STACK_OF(PKCS12_SAFEBAG) *bags;
+    PKCS7 *p7;
+
+    /* A PKCS#5 v1.5 cipher derives its IV from the salt, so a fixed salt gives fixed octets. */
+    bags = make_bags(secret, 3);
+    p7 = PKCS12_pack_p7encdata(NID_pbe_WithSHA1And3_Key_TripleDES_CBC, "smeg", -1, salt, 8, 1,
+                               bags);
+    out_ptr("p7enc.p7", p7);
+    if (p7 != NULL) {
+        out_int("p7enc.type", OBJ_obj2nid(p7->type));
+        out_int("p7enc.alg", OBJ_obj2nid(p7->d.encrypted->enc_data->algorithm->algorithm));
+        out_int("p7enc.content_type", OBJ_obj2nid(p7->d.encrypted->enc_data->content_type));
+        out_int("p7enc.encdata.len", p7->d.encrypted->enc_data->enc_data->length);
+        out_hex("p7enc.encdata", p7->d.encrypted->enc_data->enc_data->data,
+                p7->d.encrypted->enc_data->enc_data->length);
+        PKCS7_free(p7);
+    }
+    sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+
+    /* The `_ex` spelling over its own stack: the same bytes, since the inputs are the same. */
+    bags = make_bags(secret, 3);
+    p7 = PKCS12_pack_p7encdata_ex(NID_pbe_WithSHA1And3_Key_TripleDES_CBC, "smeg", -1, salt, 8, 1,
+                                  bags, NULL, NULL);
+    out_ptr("p7enc_ex.p7", p7);
+    if (p7 != NULL) {
+        out_int("p7enc_ex.alg", OBJ_obj2nid(p7->d.encrypted->enc_data->algorithm->algorithm));
+        out_int("p7enc_ex.encdata.len", p7->d.encrypted->enc_data->enc_data->length);
+        out_hex("p7enc_ex.encdata", p7->d.encrypted->enc_data->enc_data->data,
+                p7->d.encrypted->enc_data->enc_data->length);
+        PKCS7_free(p7);
+    }
+    sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+}
+
+static void court_add_key(void)
+{
+    const unsigned char *p;
+    EVP_PKEY *pkey;
+    PKCS12_SAFEBAG *bag;
+    STACK_OF(PKCS12_SAFEBAG) *bags = NULL;
+    unsigned char *der = NULL;
+    long len;
+
+    p = rsa_pkcs8_der;
+    pkey = d2i_AutoPrivateKey(NULL, &p, (long)sizeof(rsa_pkcs8_der));
+    out_ptr("add_key.pkey", pkey);
+    if (pkey == NULL)
+        return;
+    out_int("add_key.pkey.id", EVP_PKEY_get_id(pkey));
+    out_int("add_key.pkey.bits", EVP_PKEY_get_bits(pkey));
+
+    /* `nid_key == -1` builds the unencrypted `keyBag`, whose bytes are the fixed key's. */
+    bag = PKCS12_add_key(&bags, pkey, 0, 0x0800, -1, "smeg");
+    out_ptr("add_key.bag", bag);
+    if (bag != NULL) {
+        out_int("add_key.bag_nid", PKCS12_SAFEBAG_get_nid(bag));
+        out_int("add_key.num", sk_PKCS12_SAFEBAG_num(bags));
+        len = i2d_PKCS12_SAFEBAG(bag, &der);
+        out_hex("add_key.der", der, len);
+        OPENSSL_free(der);
+        der = NULL;
+    }
+    sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+    bags = NULL;
+
+    /* The `_ex` spelling over the same key, with a key-usage attribute on the PKCS#8. */
+    bag = PKCS12_add_key_ex(&bags, pkey, 0x80, 0x0800, -1, "smeg", NULL, NULL);
+    out_ptr("add_key_ex.bag", bag);
+    if (bag != NULL) {
+        out_int("add_key_ex.bag_nid", PKCS12_SAFEBAG_get_nid(bag));
+        out_int("add_key_ex.num", sk_PKCS12_SAFEBAG_num(bags));
+        len = i2d_PKCS12_SAFEBAG(bag, &der);
+        out_hex("add_key_ex.der", der, len);
+        OPENSSL_free(der);
+    }
+    sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+    EVP_PKEY_free(pkey);
+}
+
+static void court_add_safe(void)
+{
+    static const unsigned char secret_a[3] = { 0x01, 0x02, 0x03 };
+    STACK_OF(PKCS7) *safes = NULL;
+    STACK_OF(PKCS12_SAFEBAG) *bags;
+    PKCS12 *p12;
+    unsigned char *der = NULL;
+    long len;
+
+    /* The plain arm (`nid_safe == -1`): the packed `NID_pkcs7_data` contentInfo. */
+    bags = make_bags(secret_a, 3);
+    out_int("add_safe.plain", PKCS12_add_safe(&safes, bags, -1, 0, NULL));
+    out_int("add_safe.num", safes != NULL ? sk_PKCS7_num(safes) : -1);
+    if (safes != NULL && sk_PKCS7_num(safes) == 1)
+        out_int("add_safe.type", OBJ_obj2nid(sk_PKCS7_value(safes, 0)->type));
+    p12 = PKCS12_add_safes(safes, 0);
+    out_ptr("add_safe.container", p12);
+    if (p12 != NULL) {
+        len = i2d_PKCS12(p12, &der);
+        out_hex("add_safe.der", der, len);
+        OPENSSL_free(der);
+        der = NULL;
+        PKCS12_free(p12);
+    }
+    sk_PKCS7_pop_free(safes, PKCS7_free);
+    sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+
+    /* The `_ex` spelling over its own stack. */
+    safes = NULL;
+    bags = make_bags(secret_a, 3);
+    out_int("add_safe_ex.plain", PKCS12_add_safe_ex(&safes, bags, -1, 0, NULL, NULL, NULL));
+    out_int("add_safe_ex.num", safes != NULL ? sk_PKCS7_num(safes) : -1);
+    sk_PKCS7_pop_free(safes, PKCS7_free);
+    sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+
+    /* The encrypted arm (`nid_safe != -1`): the salt is drawn, so only the structure is fixed. */
+    safes = NULL;
+    bags = make_bags(secret_a, 3);
+    out_int("add_safe.pbe",
+            PKCS12_add_safe(&safes, bags, NID_pbe_WithSHA1And3_Key_TripleDES_CBC, 0x0800, "smeg"));
+    out_int("add_safe.pbe.num", safes != NULL ? sk_PKCS7_num(safes) : -1);
+    if (safes != NULL && sk_PKCS7_num(safes) == 1)
+        out_int("add_safe.pbe.type", OBJ_obj2nid(sk_PKCS7_value(safes, 0)->type));
+    sk_PKCS7_pop_free(safes, PKCS7_free);
+    sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+}
+
+static void court_newpass(void)
+{
+    static unsigned char maccsalt[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+    PKCS12 *p12;
+    unsigned char *der = NULL;
+    long len;
+
+    /* A NULL container is refused with its own coordinate. */
+    ERR_clear_error();
+    out_int("newpass.null", PKCS12_newpass(NULL, "a", "b"));
+    out_err("newpass.null.err");
+
+    /* A fixed-salt MAC over a data authsafe: the data-arm repack is deterministic, so the
+     * before/after DER is the document. */
+    p12 = container_one();
+    PKCS12_set_mac(p12, "smeg", -1, maccsalt, 8, 0x0800, EVP_sha256());
+    len = i2d_PKCS12(p12, &der);
+    out_hex("newpass.der_before", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+
+    ERR_clear_error();
+    out_int("newpass.change", PKCS12_newpass(p12, "smeg", "newpass"));
+    out_err("newpass.change.err");
+    len = i2d_PKCS12(p12, &der);
+    out_int("newpass.der_after.len", len);
+    out_hex("newpass.der_after", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+    ERR_clear_error();
+    out_int("newpass.verify_new", PKCS12_verify_mac(p12, "newpass", -1));
+    out_err("newpass.verify_new.err");
+    ERR_clear_error();
+    out_int("newpass.verify_old", PKCS12_verify_mac(p12, "smeg", -1));
+    out_err("newpass.verify_old.err");
+    PKCS12_free(p12);
+
+    /* A wrong old password is refused before any repack, with its own coordinate. */
+    p12 = container_one();
+    PKCS12_set_mac(p12, "smeg", -1, maccsalt, 8, 0x0800, EVP_sha256());
+    ERR_clear_error();
+    out_int("newpass.wrong_old", PKCS12_newpass(p12, "wrong", "newpass"));
+    out_err("newpass.wrong_old.err");
+    PKCS12_free(p12);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * The refusals, each with the error queue.
  * --------------------------------------------------------------------------------------------- */
 
@@ -1185,6 +1484,12 @@ int main(void)
     court_pbe_kdf();
     court_pbe_identifiers();
     court_refusals();
+    court_mac();
+    court_pbmac1();
+    court_p7encdata();
+    court_add_key();
+    court_add_safe();
+    court_newpass();
     out_pending();
     return 0;
 }
