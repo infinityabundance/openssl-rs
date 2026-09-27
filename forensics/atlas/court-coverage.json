@@ -720,6 +720,136 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_CINF_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CINF_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CINF_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_INFO_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_INFO_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_INFO_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_dup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_new_ex"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_up_ref"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_dup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_dup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_dup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_get0_der"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_set"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_PUBKEY_dup"
       },
       {
@@ -780,6 +910,26 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_REVOKED_dup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_REVOKED_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_REVOKED_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_REVOKED_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_SIG_INFO_set"
       },
       {
@@ -810,7 +960,82 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_VAL_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_VAL_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_VAL_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_dup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get0_distinguishing_id"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get0_signature"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get_ex_data"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get_signature_nid"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_new_ex"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_set0_distinguishing_id"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_set_ex_data"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_signature_dump"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_up_ref"
       },
       {
         "owing_phase": 11,
@@ -915,6 +1140,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_X509"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_X509_ALGOR"
       },
       {
@@ -930,12 +1160,52 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_X509_CINF"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_CRL"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_CRL_INFO"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_EXTENSION"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_NAME"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_NAME_ENTRY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_X509_PUBKEY"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_X509_REVOKED"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_X509_SIG"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_VAL"
       },
       {
         "owing_phase": 11,
@@ -985,6 +1255,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_X509"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_X509_ALGOR"
       },
       {
@@ -1000,6 +1275,36 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_X509_CINF"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_CRL"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_CRL_INFO"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_EXTENSION"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_NAME"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_NAME_ENTRY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_X509_PUBKEY"
       },
       {
@@ -1010,7 +1315,22 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_X509_REVOKED"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_X509_SIG"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_VAL"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_re_X509_tbs"
       }
     ],
     "strata": [
@@ -21988,10 +22308,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 284,
-          "directly_courted_called": 223,
+          "directly_courted": 286,
+          "directly_courted_called": 225,
           "directly_courted_referenced": 61,
-          "implemented": 284,
+          "implemented": 286,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -22666,6 +22986,20 @@
               "RT-STORE"
             ],
             "symbol": "OSSL_STORE_INFO_get0_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-STORE"
+            ],
+            "symbol": "OSSL_STORE_INFO_get1_CERT"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-STORE"
+            ],
+            "symbol": "OSSL_STORE_INFO_get1_CRL"
           },
           {
             "basis": "called",
@@ -24020,10 +24354,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 2999,
-      "directly_courted_called": 2672,
+      "directly_courted": 3001,
+      "directly_courted_called": 2674,
       "directly_courted_referenced": 327,
-      "implemented": 3007,
+      "implemented": 3009,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -24034,7 +24368,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8e8d6f48ed5afe722e48f6b60c8ade07a4fcb101d1253e8952f3a41ad878dfc0"
+      "sha256": "89cdd0e63da9c96b3afcffd458c688cd472faf683a5da7777035658f8cf6d057"
     },
     {
       "name": "symbol-ownership",
@@ -24049,7 +24383,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "41d1aeb142b3b140af24684145a12f1f171710aaf9a72344274a6d66dfab0965"
+      "sha256": "432f82754aabdcb23a0e0c87eb1e8af8f286d2cc52a6587fa63b381636fa1438"
     },
     {
       "name": "phase3-courts",
@@ -24059,7 +24393,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "c8cc84c261e1c2e879828b381158af273ad6cb9cd51eb590d2b6f9212c3f6936"
+      "sha256": "0028aba726b92cd101507ccf5bdba3bcd8864c450c396b2bb1a00626d84f2685"
     },
     {
       "name": "phase4-courts",
@@ -24069,7 +24403,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "4bab221600bfef5a4023aab63183a5e1a12524b8cfea3b36098b50354423639d"
+      "sha256": "5d8edac72e4ddda8d824f2e7de280deff050e23e99946cbf81c5794d6ec34365"
     },
     {
       "name": "phase5-courts",
@@ -24079,7 +24413,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "1fdf2e7745ce486d25390f05c3fff69944e3d262a11d463c90d88dce1cca013d"
+      "sha256": "39544594de4011eacdd6d16713f7915122d4908382d1618b0b47ff7a7ad5c060"
     },
     {
       "name": "phase6-courts",
@@ -24089,7 +24423,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "3b78998502c2593c32b8d26e24ccfa8bfc165c968520fdb94fa76cd9df431aab"
+      "sha256": "cad91be2557b8b04676fec1679448242a8027e42dd4d6ada63f3c2815f0a3203"
     },
     {
       "name": "phase7-courts",
@@ -24099,7 +24433,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "2ecfc1e7a63fc166270faa7757df6d7932daed38f82d63eaaf00402e74b36bf8"
+      "sha256": "f616d4ac6a7661f736f60681d3333708a903859ace46a691dcd1aece528e018c"
     },
     {
       "name": "phase8-courts",
@@ -24109,7 +24443,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "fc9d141fd47993cc84f345a95d3e7f2ca1c759c7ab1f57fef4cc7d6fe6c795f2"
+      "sha256": "8a576f6b65ea855ef67d3f3abbb8ad4b4921f960328c8bede7d10852c8cb27b6"
     },
     {
       "name": "phase9-courts",
@@ -24119,12 +24453,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "3a9197fe90adf7e6841d2736d7d478dbbeb4387c294af2e26e4d7c315455e5bb"
+      "sha256": "efcf3176d5c1495ee37a04531f3ff8c374427be3e20647c5e55225b84f40640a"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "3a5e76fd7770134ab63f9f000c86aec48ca312a1ce275df6bad449baaebcb278"
+      "sha256": "df4c69a07d7813756698c3268bff8282653aa9453d2c49bff980357256baa08f"
     }
   ],
   "kind": "court-coverage",

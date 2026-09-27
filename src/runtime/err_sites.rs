@@ -43022,6 +43022,116 @@ pub(crate) const X509_PUBKEY_997: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `x509_name_ex_new` at `crypto/x509/x_name.c:97` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_NAME_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 97,
+    func: c"x509_name_ex_new",
+    lib: 13,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `x509_name_ex_new` at `crypto/x509/x_name.c:101` (ERR_R_BUF_LIB).
+pub(crate) const X509_NAME_101: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 101,
+    func: c"x509_name_ex_new",
+    lib: 13,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `x509_name_ex_d2i` at `crypto/x509/x_name.c:210` (ERR_R_NESTED_ASN1_ERROR).
+pub(crate) const X509_NAME_210: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 210,
+    func: c"x509_name_ex_d2i",
+    lib: 13,
+    reason: 524554,
+    dynamic_reason: false,
+};
+
+/// `x509_name_encode` at `crypto/x509/x_name.c:271` (ERR_R_BUF_LIB).
+pub(crate) const X509_NAME_271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 271,
+    func: c"x509_name_encode",
+    lib: 13,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `x509_name_encode` at `crypto/x509/x_name.c:282` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_NAME_282: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 282,
+    func: c"x509_name_encode",
+    lib: 13,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `x509_name_canon` at `crypto/x509/x_name.c:328` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_NAME_328: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 328,
+    func: c"x509_name_canon",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `x509_name_canon` at `crypto/x509/x_name.c:339` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_NAME_339: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 339,
+    func: c"x509_name_canon",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `x509_name_canon` at `crypto/x509/x_name.c:346` (ERR_R_ASN1_LIB).
+pub(crate) const X509_NAME_346: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 346,
+    func: c"x509_name_canon",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `x509_name_canon` at `crypto/x509/x_name.c:351` (ERR_R_OBJ_LIB).
+pub(crate) const X509_NAME_351: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 351,
+    func: c"x509_name_canon",
+    lib: 11,
+    reason: 524296,
+    dynamic_reason: false,
+};
+
+/// `x509_name_canon` at `crypto/x509/x_name.c:357` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_NAME_357: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 357,
+    func: c"x509_name_canon",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509_NAME_print` at `crypto/x509/x_name.c:536` (ERR_R_BUF_LIB).
+pub(crate) const X509_NAME_536: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_name.c",
+    line: 536,
+    func: c"X509_NAME_print",
+    lib: 11,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
 /// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:116` (PROV_R_MISSING_KEY).
 pub(crate) const ECX_KEY_116: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
@@ -47802,6 +47912,17 @@ pub(crate) static ALL: &[ErrSite] = &[
     X509_PUBKEY_913,
     X509_PUBKEY_955,
     X509_PUBKEY_997,
+    X509_NAME_97,
+    X509_NAME_101,
+    X509_NAME_210,
+    X509_NAME_271,
+    X509_NAME_282,
+    X509_NAME_328,
+    X509_NAME_339,
+    X509_NAME_346,
+    X509_NAME_351,
+    X509_NAME_357,
+    X509_NAME_536,
     ECX_KEY_116,
     ECX_KEY_122,
     ECX_KEY_131,

@@ -5,25 +5,74 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 7,
-      "units_not_reached": 4
+      "names_a_file_the_authority_does_not_have": 11,
+      "symbols_not_reached": 1,
+      "units_not_reached": 45
     },
     "census_by_stratum": {
-      "10": 11
+      "10": 57
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
       "names_a_file_the_authority_does_not_have": [
-        "docs/PHASE-10-SUBPHASES.md:10.1:decode_der2key.c",
-        "docs/PHASE-10-SUBPHASES.md:10.1:decode_epki2pki.c",
-        "docs/PHASE-10-SUBPHASES.md:10.1:decode_pem2der.c",
-        "docs/PHASE-10-SUBPHASES.md:10.1:decode_pvk2key.c",
-        "docs/PHASE-10-SUBPHASES.md:10.1:decode_spki2typespki.c",
-        "docs/PHASE-10-SUBPHASES.md:10.1:encode_key2any.c",
-        "docs/PHASE-10-SUBPHASES.md:10.1:encode_key2ms.c"
+        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_der2key.c",
+        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_epki2pki.c",
+        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_pem2der.c",
+        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_pvk2key.c",
+        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_spki2typespki.c",
+        "docs/PHASE-10-SUBPHASES.md:10:10.1:encode_key2any.c",
+        "docs/PHASE-10-SUBPHASES.md:10:10.1:encode_key2ms.c",
+        "docs/PHASE-10-SUBPHASES.md:10:6.2:evp/digest.c",
+        "docs/PHASE-10-SUBPHASES.md:10:6.3:evp/evp_pkey.c",
+        "docs/PHASE-10-SUBPHASES.md:10:6.8:file_store.c",
+        "docs/PHASE-10-SUBPHASES.md:10:6.8:file_store_any2obj.c"
+      ],
+      "symbols_not_reached": [
+        "ossl_asn1_item_digest_ex"
       ],
       "units_not_reached": [
+        "crypto/asn1/a_digest.c",
+        "crypto/asn1/a_sign.c",
+        "crypto/asn1/a_verify.c",
+        "crypto/asn1/x_spki.c",
+        "crypto/ctype.c",
         "crypto/pkcs12/p12_kiss.c",
+        "crypto/store/store_result.c",
+        "crypto/x509/pcy_cache.c",
+        "crypto/x509/pcy_data.c",
+        "crypto/x509/pcy_lib.c",
+        "crypto/x509/pcy_map.c",
+        "crypto/x509/pcy_node.c",
+        "crypto/x509/pcy_tree.c",
+        "crypto/x509/v3_audit_id.c",
+        "crypto/x509/v3_group_ac.c",
+        "crypto/x509/v3_ia5.c",
+        "crypto/x509/v3_ind_iss.c",
+        "crypto/x509/v3_ist.c",
+        "crypto/x509/v3_no_ass.c",
+        "crypto/x509/v3_no_rev_avail.c",
+        "crypto/x509/v3_pcia.c",
+        "crypto/x509/v3_pku.c",
+        "crypto/x509/v3_single_use.c",
+        "crypto/x509/v3_skid.c",
+        "crypto/x509/v3_soa_id.c",
+        "crypto/x509/v3_timespec.c",
+        "crypto/x509/v3_utf8.c",
+        "crypto/x509/x509_acert.c",
+        "crypto/x509/x509_cmp.c",
+        "crypto/x509/x509_lu.c",
+        "crypto/x509/x509_obj.c",
+        "crypto/x509/x509_req.c",
+        "crypto/x509/x509_trust.c",
+        "crypto/x509/x509_txt.c",
+        "crypto/x509/x509_v3.c",
+        "crypto/x509/x509_vfy.c",
+        "crypto/x509/x509_vpm.c",
+        "crypto/x509/x509cset.c",
+        "crypto/x509/x509name.c",
+        "crypto/x509/x509rset.c",
+        "crypto/x509/x_all.c",
+        "crypto/x509/x_x509a.c",
         "providers/implementations/encode_decode/decode_msblob2key.c",
         "providers/implementations/encode_decode/encode_key2blob.c",
         "providers/implementations/encode_decode/encode_key2text.c"
@@ -38,13 +87,13 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 91,
-      "symbols_named_by_a_row": 107,
+      "rows_judged": 99,
+      "symbols_named_by_a_row": 108,
       "symbols_reached": 107,
       "unit_records": 79,
       "units_named_by_a_record": 81,
-      "units_named_by_a_row": 287,
-      "units_reached": 283
+      "units_named_by_a_row": 339,
+      "units_reached": 294
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -53,24 +102,85 @@
       "complete"
     ],
     "promised_units": {
+      "crypto/asn1/a_digest.c": {
+        "defines": [
+          "ossl_asn1_item_digest_ex"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/asn1/a_sign.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/asn1/a_strex.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.3"
+        ],
+        "transcribed_by": [
+          "src/asn1/a_strex.rs"
+        ]
+      },
+      "crypto/asn1/a_verify.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.3"
+        ],
+        "transcribed_by": []
+      },
       "crypto/asn1/ameth_lib.c": {
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4l",
-          "8.8"
+          "7:7.4",
+          "7:7.4l",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/evp/pkey_asn1.rs"
+        ]
+      },
+      "crypto/asn1/asn1_gen.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": [
+          "src/asn1/asn1_gen.rs"
+        ]
+      },
+      "crypto/asn1/asn1_lib.c": {
+        "defines": [
+          "ossl_asn1_string_embed_free",
+          "ossl_asn1_string_set_bits_left",
+          "ossl_sk_ASN1_UTF8STRING2text"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.2"
+        ],
+        "transcribed_by": [
+          "src/asn1/der.rs",
+          "src/asn1/string.rs"
         ]
       },
       "crypto/asn1/asn_mime.c": {
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "5.4",
-          "5.8"
+          "5:5.4",
+          "5:5.8"
         ],
         "transcribed_by": [
           "src/asn1/asn_mime.rs"
@@ -80,8 +190,8 @@
         "defines": [],
         "recorded_by": "units:crypto/asn1/d2i_param.c",
         "subphases": [
-          "7.4",
-          "8.8"
+          "7:7.4",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/asn1/d2i_param.rs"
@@ -93,9 +203,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10.6",
-          "7.4",
-          "8.8"
+          "10:10.6",
+          "7:7.4",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/asn1/d2i_pr.rs"
@@ -105,8 +215,8 @@
         "defines": [],
         "recorded_by": "units:crypto/asn1/d2i_pu.c",
         "subphases": [
-          "7.4",
-          "8.8"
+          "7:7.4",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/asn1/d2i_pu.rs"
@@ -116,9 +226,9 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.6",
-          "7.4",
-          "8.8"
+          "10:10.6",
+          "7:7.4",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/asn1/i2d_evp.rs"
@@ -128,8 +238,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.8",
-          "8.9"
+          "8:8.8",
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/asn1/p8_pkey.rs"
@@ -139,7 +249,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "5.3"
+          "5:5.3"
         ],
         "transcribed_by": [
           "src/asn1/typ.rs"
@@ -155,11 +265,29 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.4",
-          "8.8"
+          "8:8.4",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/asn1/x_algor.rs"
+        ]
+      },
+      "crypto/asn1/x_spki.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/asn1/x_val.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": [
+          "src/asn1/x_val.rs"
         ]
       },
       "crypto/asn1_dsa.c": {
@@ -173,7 +301,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/asn1_dsa.rs"
@@ -188,7 +316,7 @@
         ],
         "recorded_by": "units:crypto/async/async.c",
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": []
       },
@@ -200,7 +328,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.6c"
+          "6:6.6c"
         ],
         "transcribed_by": [
           "src/context/core_bio.rs"
@@ -231,7 +359,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/bn/dh.rs"
@@ -243,7 +371,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/bn/exp.rs"
@@ -262,7 +390,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/bn/intern.rs"
@@ -275,7 +403,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.1"
+          "9:9.1"
         ],
         "transcribed_by": [
           "src/bn/rand.rs"
@@ -285,7 +413,7 @@
         "defines": [],
         "recorded_by": "units:crypto/chacha/chacha_enc.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -295,7 +423,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.6"
+          "7:7.6"
         ],
         "transcribed_by": [
           "src/mac/cmac.rs"
@@ -313,7 +441,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": [
           "src/runtime/conf/api.rs"
@@ -323,7 +451,7 @@
         "defines": [],
         "recorded_by": "units:crypto/conf/conf_mall.c",
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": []
       },
@@ -333,7 +461,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": [
           "src/runtime/conf/modparse.rs",
@@ -347,7 +475,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": [
           "src/runtime/conf/sap.rs"
@@ -359,7 +487,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": [
           "src/runtime/conf/conf_ssl.rs"
@@ -382,7 +510,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.6"
+          "6:6.6"
         ],
         "transcribed_by": [
           "src/context/mod.rs"
@@ -395,10 +523,10 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.6",
-          "6.6f",
-          "6.8f",
-          "7.1"
+          "6:6.6",
+          "6:6.6f",
+          "6:6.8f",
+          "7:7.1"
         ],
         "transcribed_by": [
           "src/evp/algorithm.rs"
@@ -410,9 +538,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.6f",
-          "6.8f",
-          "7.1"
+          "6:6.6f",
+          "6:6.8f",
+          "7:7.1"
         ],
         "transcribed_by": [
           "src/evp/method_store.rs"
@@ -435,11 +563,34 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.6",
-          "6.6b"
+          "6:6.6",
+          "6:6.6b"
         ],
         "transcribed_by": [
           "src/context/namemap.rs"
+        ]
+      },
+      "crypto/ctype.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.1"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/defaults.c": {
+        "defines": [
+          "ossl_get_enginesdir",
+          "ossl_get_modulesdir",
+          "ossl_get_openssldir",
+          "ossl_get_wininstallcontext"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.1"
+        ],
+        "transcribed_by": [
+          "src/runtime/defaults.rs"
         ]
       },
       "crypto/dh/dh_ameth.c": {
@@ -449,8 +600,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5",
-          "8.8"
+          "8:8.5",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/dh/ameth.rs"
@@ -463,7 +614,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/asn1.rs"
@@ -481,7 +632,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/backend.rs"
@@ -495,7 +646,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/check.rs"
@@ -505,7 +656,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/depr.rs"
@@ -518,7 +669,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/gen.rs"
@@ -532,7 +683,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/group_params.rs"
@@ -544,7 +695,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/kdf.rs"
@@ -559,7 +710,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/key.rs"
@@ -575,7 +726,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/object.rs"
@@ -585,7 +736,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/mod.rs"
@@ -598,7 +749,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/pmeth.rs"
@@ -608,7 +759,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/prn.rs"
@@ -618,7 +769,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/rfc5114.rs"
@@ -630,8 +781,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6",
-          "8.8"
+          "8:8.6",
+          "8:8.8"
         ],
         "transcribed_by": []
       },
@@ -639,7 +790,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/asn1.rs"
@@ -654,7 +805,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/backend.rs"
@@ -670,7 +821,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/check.rs"
@@ -680,7 +831,7 @@
         "defines": [],
         "recorded_by": "units:crypto/dsa/dsa_ctrl.c",
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": []
       },
@@ -688,7 +839,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/depr.rs"
@@ -700,7 +851,7 @@
         ],
         "recorded_by": "units:crypto/dsa/dsa_err.c",
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": []
       },
@@ -710,7 +861,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/gen.rs"
@@ -722,7 +873,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/key.rs"
@@ -737,7 +888,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/object.rs"
@@ -747,7 +898,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/mod.rs"
@@ -759,8 +910,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6",
-          "8.7"
+          "8:8.6",
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/dsa/ossl.rs"
@@ -772,7 +923,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/pmeth.rs"
@@ -782,7 +933,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/prn.rs"
@@ -794,7 +945,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/sign.rs"
@@ -804,7 +955,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/vrf.rs"
@@ -814,7 +965,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "6.9"
+          "6:6.9"
         ],
         "transcribed_by": [
           "src/dso/dlfcn.rs"
@@ -826,7 +977,7 @@
         ],
         "recorded_by": "units:crypto/dso/dso_err.c",
         "subphases": [
-          "6.9"
+          "6:6.9"
         ],
         "transcribed_by": []
       },
@@ -834,7 +985,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "6.9"
+          "6:6.9"
         ],
         "transcribed_by": [
           "src/dso/mod.rs"
@@ -844,7 +995,7 @@
         "defines": [],
         "recorded_by": "units:crypto/dso/dso_openssl.c",
         "subphases": [
-          "6.9"
+          "6:6.9"
         ],
         "transcribed_by": []
       },
@@ -859,7 +1010,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.8"
+          "8:8.8"
         ],
         "transcribed_by": []
       },
@@ -871,7 +1022,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": []
       },
@@ -900,7 +1051,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/smpl2.rs"
@@ -913,8 +1064,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7",
-          "8.8"
+          "8:8.7",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/ec/ameth.rs"
@@ -935,7 +1086,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/asn1.rs",
@@ -964,8 +1115,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5",
-          "8.7"
+          "8:8.5",
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/backend.rs"
@@ -975,7 +1126,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/check.rs"
@@ -987,7 +1138,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/curve.rs"
@@ -997,7 +1148,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/cvt.rs"
@@ -1007,7 +1158,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/depr.rs"
@@ -1032,7 +1183,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/key.rs"
@@ -1044,7 +1195,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/kmeth.rs"
@@ -1061,7 +1212,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/lib.rs"
@@ -1078,7 +1229,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/mult.rs"
@@ -1088,7 +1239,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/oct.rs"
@@ -1100,7 +1251,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/pmeth.rs"
@@ -1110,7 +1261,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/print.rs"
@@ -1122,7 +1273,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/kdf.rs"
@@ -1135,7 +1286,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/ecdh_ossl.rs"
@@ -1155,7 +1306,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/ecdsa_ossl.rs"
@@ -1165,7 +1316,7 @@
         "defines": [],
         "recorded_by": "units:crypto/ec/ecdsa_sign.c",
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": []
       },
@@ -1173,7 +1324,7 @@
         "defines": [],
         "recorded_by": "units:crypto/ec/ecdsa_vrf.c",
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": []
       },
@@ -1181,7 +1332,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/prn.rs"
@@ -1203,7 +1354,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/mont.rs"
@@ -1218,7 +1369,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/nist.rs"
@@ -1232,7 +1383,7 @@
         ],
         "recorded_by": "divergence:src/ec/curve.rs",
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": []
       },
@@ -1244,7 +1395,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": []
       },
@@ -1273,7 +1424,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/smpl.rs"
@@ -1289,7 +1440,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.8"
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/ec/ecx_backend.rs"
@@ -1306,7 +1457,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.8"
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/ec/ecx_key.rs"
@@ -1325,8 +1476,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.8",
-          "8.9"
+          "8:8.8",
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/ec/ecx_meth.rs"
@@ -1344,7 +1495,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.9"
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/decoder_lib.rs"
@@ -1361,7 +1512,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.9"
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/decoder_meth.rs"
@@ -1375,7 +1526,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.9"
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/decoder_pkey.rs"
@@ -1393,7 +1544,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": [
           "src/runtime/err.rs"
@@ -1407,8 +1558,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4b"
+          "7:7.4",
+          "7:7.4b"
         ],
         "transcribed_by": [
           "src/evp/asymcipher.rs"
@@ -1418,7 +1569,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/bio_b64.c",
         "subphases": [
-          "7.5"
+          "7:7.5"
         ],
         "transcribed_by": []
       },
@@ -1426,7 +1577,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.5"
+          "7:7.5"
         ],
         "transcribed_by": [
           "src/evp/bio_enc.rs"
@@ -1436,7 +1587,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/bio_md.c",
         "subphases": [
-          "7.5"
+          "7:7.5"
         ],
         "transcribed_by": []
       },
@@ -1444,7 +1595,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.5"
+          "7:7.5"
         ],
         "transcribed_by": [
           "src/evp/bio_ok.rs"
@@ -1456,8 +1607,8 @@
         ],
         "recorded_by": "units:crypto/evp/c_allc.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1467,8 +1618,8 @@
         ],
         "recorded_by": "units:crypto/evp/c_alld.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1476,8 +1627,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3b"
+          "7:7.3",
+          "7:7.3b"
         ],
         "transcribed_by": [
           "src/evp/cipher.rs"
@@ -1493,7 +1644,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": []
       },
@@ -1501,7 +1652,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/dh/ctrl.rs"
@@ -1514,7 +1665,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": []
       },
@@ -1530,9 +1681,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3a",
-          "7.3d"
+          "7:7.3",
+          "7:7.3a",
+          "7:7.3d"
         ],
         "transcribed_by": []
       },
@@ -1540,7 +1691,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/dsa/ctrl.rs"
@@ -1550,8 +1701,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_aes.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1559,8 +1710,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_aes_cbc_hmac_sha1.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1568,8 +1719,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_aes_cbc_hmac_sha256.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1577,8 +1728,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_aria.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1586,8 +1737,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_bf.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1595,8 +1746,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_camellia.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1604,8 +1755,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_cast.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1613,8 +1764,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_chacha20_poly1305.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1622,8 +1773,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_des.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1631,8 +1782,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_des3.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1640,8 +1791,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_idea.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1649,8 +1800,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_null.c",
         "subphases": [
-          "7.3",
-          "7.3b"
+          "7:7.3",
+          "7:7.3b"
         ],
         "transcribed_by": []
       },
@@ -1669,8 +1820,8 @@
         ],
         "recorded_by": "units:crypto/evp/e_old.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1678,8 +1829,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_rc2.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1687,8 +1838,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_rc4.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1696,8 +1847,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_rc4_hmac_md5.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1705,8 +1856,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_seed.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1714,8 +1865,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_sm4.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1723,8 +1874,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_xcbc_d.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1732,7 +1883,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.7"
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/ctrl.rs"
@@ -1746,8 +1897,8 @@
         ],
         "recorded_by": "units:crypto/evp/ec_support.c",
         "subphases": [
-          "7.4",
-          "8.7"
+          "7:7.4",
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/ec/support.rs"
@@ -1759,7 +1910,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.5"
+          "7:7.5"
         ],
         "transcribed_by": [
           "src/evp/encode.rs"
@@ -1769,8 +1920,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/evp_cnf.c",
         "subphases": [
-          "7.4",
-          "7.4n"
+          "7:7.4",
+          "7:7.4n"
         ],
         "transcribed_by": []
       },
@@ -1783,9 +1934,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3b",
-          "7.3c"
+          "7:7.3",
+          "7:7.3b",
+          "7:7.3c"
         ],
         "transcribed_by": [
           "src/evp/cipher_ctx.rs"
@@ -1797,8 +1948,8 @@
         ],
         "recorded_by": "units:crypto/evp/evp_err.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -1817,9 +1968,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.8e",
-          "7.1",
-          "7.2"
+          "6:6.8e",
+          "7:7.1",
+          "7:7.2"
         ],
         "transcribed_by": [
           "src/evp/fetch.rs",
@@ -1830,7 +1981,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": [
           "src/evp/p_legacy.rs"
@@ -1849,10 +2000,10 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3b",
-          "7.3d",
-          "7.4e"
+          "7:7.3",
+          "7:7.3b",
+          "7:7.3d",
+          "7:7.4e"
         ],
         "transcribed_by": [
           "src/evp/digest.rs"
@@ -1862,8 +2013,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4c"
+          "7:7.4",
+          "7:7.4c"
         ],
         "transcribed_by": [
           "src/evp/evp_pbe.rs"
@@ -1875,7 +2026,7 @@
         ],
         "recorded_by": "units:crypto/evp/evp_pkey.c",
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": [
           "src/evp/evp_pkey.rs"
@@ -1885,7 +2036,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/evp_pkey_type.c",
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": []
       },
@@ -1898,8 +2049,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3f"
+          "7:7.3",
+          "7:7.3f"
         ],
         "transcribed_by": [
           "src/evp/rand.rs"
@@ -1916,7 +2067,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3"
+          "7:7.3"
         ],
         "transcribed_by": []
       },
@@ -1927,8 +2078,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4b"
+          "7:7.4",
+          "7:7.4b"
         ],
         "transcribed_by": [
           "src/evp/exchange.rs"
@@ -1940,8 +2091,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3e"
+          "7:7.3",
+          "7:7.3e"
         ],
         "transcribed_by": [
           "src/evp/kdf.rs"
@@ -1951,8 +2102,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/kdf_meth.c",
         "subphases": [
-          "7.3",
-          "7.3e"
+          "7:7.3",
+          "7:7.3e"
         ],
         "transcribed_by": []
       },
@@ -1963,8 +2114,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4b"
+          "7:7.4",
+          "7:7.4b"
         ],
         "transcribed_by": [
           "src/evp/kem.rs"
@@ -1991,8 +2142,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4a"
+          "7:7.4",
+          "7:7.4a"
         ],
         "transcribed_by": [
           "src/evp/keymgmt_lib.rs"
@@ -2023,8 +2174,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4b"
+          "7:7.4",
+          "7:7.4b"
         ],
         "transcribed_by": [
           "src/evp/keymgmt.rs"
@@ -2034,8 +2185,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": [
           "src/evp/legacy_blake2.rs"
@@ -2045,8 +2196,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/legacy_md4.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -2054,8 +2205,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": [
           "src/evp/legacy_md5.rs"
@@ -2065,7 +2216,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/legacy_md5_sha1.c",
         "subphases": [
-          "7.3g"
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -2073,8 +2224,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/legacy_mdc2.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -2082,8 +2233,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": [
           "src/evp/legacy_ripemd.rs"
@@ -2093,8 +2244,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": [
           "src/evp/legacy_sha.rs",
@@ -2105,8 +2256,8 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/legacy_wp.c",
         "subphases": [
-          "7.3",
-          "7.3g"
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": []
       },
@@ -2114,7 +2265,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/m_null.c",
         "subphases": [
-          "7.3d"
+          "7:7.3d"
         ],
         "transcribed_by": []
       },
@@ -2122,10 +2273,10 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/m_sigver.c",
         "subphases": [
-          "7.3d",
-          "7.4",
-          "7.4c",
-          "7.4e"
+          "7:7.3d",
+          "7:7.4",
+          "7:7.4c",
+          "7:7.4e"
         ],
         "transcribed_by": []
       },
@@ -2135,8 +2286,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3e"
+          "7:7.3",
+          "7:7.3e"
         ],
         "transcribed_by": [
           "src/evp/mac.rs"
@@ -2148,8 +2299,8 @@
         ],
         "recorded_by": "units:crypto/evp/mac_meth.c",
         "subphases": [
-          "7.3",
-          "7.3e"
+          "7:7.3",
+          "7:7.3e"
         ],
         "transcribed_by": []
       },
@@ -2161,9 +2312,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.2",
-          "7.3",
-          "7.3g"
+          "7:7.2",
+          "7:7.3",
+          "7:7.3g"
         ],
         "transcribed_by": [
           "src/evp/legacy_evp.rs"
@@ -2173,7 +2324,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": [
           "src/evp/p5_crpt.rs"
@@ -2187,7 +2338,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": [
           "src/evp/p5_crpt2.rs"
@@ -2197,7 +2348,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/p_dec.c",
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": [
           "src/evp/p_dec.rs"
@@ -2207,7 +2358,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/p_enc.c",
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": [
           "src/evp/p_enc.rs"
@@ -2220,9 +2371,9 @@
         ],
         "recorded_by": "units:crypto/evp/p_legacy.c",
         "subphases": [
-          "7.4",
-          "7.4l",
-          "8.4"
+          "7:7.4",
+          "7:7.4l",
+          "8:8.4"
         ],
         "transcribed_by": [
           "src/evp/p_legacy_assign.rs"
@@ -2244,10 +2395,10 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4a",
-          "7.4e",
-          "8.8"
+          "7:7.4",
+          "7:7.4a",
+          "7:7.4e",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/evp/pkey.rs"
@@ -2257,7 +2408,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/p_open.c",
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": []
       },
@@ -2265,7 +2416,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/p_seal.c",
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": []
       },
@@ -2273,7 +2424,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/p_sign.c",
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": []
       },
@@ -2281,7 +2432,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/p_verify.c",
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": []
       },
@@ -2289,7 +2440,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4"
+          "7:7.4"
         ],
         "transcribed_by": [
           "src/evp/pbe.rs"
@@ -2299,8 +2450,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4c"
+          "7:7.4",
+          "7:7.4c"
         ],
         "transcribed_by": [
           "src/evp/pmeth_check.rs"
@@ -2312,8 +2463,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4c"
+          "7:7.4",
+          "7:7.4c"
         ],
         "transcribed_by": [
           "src/evp/pmeth_gn.rs"
@@ -2330,10 +2481,10 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4c",
-          "7.4l",
-          "8.8"
+          "7:7.4",
+          "7:7.4c",
+          "7:7.4l",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/evp/pkey_ctx.rs"
@@ -2345,8 +2496,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3f",
-          "7.5"
+          "7:7.3f",
+          "7:7.5"
         ],
         "transcribed_by": []
       },
@@ -2357,9 +2508,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.4",
-          "7.4b",
-          "7.4e"
+          "7:7.4",
+          "7:7.4b",
+          "7:7.4e"
         ],
         "transcribed_by": [
           "src/evp/signature.rs"
@@ -2375,8 +2526,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.3",
-          "7.3f"
+          "7:7.3",
+          "7:7.3f"
         ],
         "transcribed_by": [
           "src/evp/skeymgmt.rs"
@@ -2388,7 +2539,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/ffc/backend.rs"
@@ -2407,7 +2558,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/ffc/dh.rs"
@@ -2419,7 +2570,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/ffc/key_generate.rs"
@@ -2433,7 +2584,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/ffc/key_validate.rs"
@@ -2462,7 +2613,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/ffc/params.rs"
@@ -2477,7 +2628,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/ffc/params_generate.rs"
@@ -2493,7 +2644,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5"
+          "8:8.5"
         ],
         "transcribed_by": [
           "src/ffc/params_validate.rs"
@@ -2503,7 +2654,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.6"
+          "7:7.6"
         ],
         "transcribed_by": [
           "src/mac/hmac.rs"
@@ -2513,7 +2664,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.6"
+          "7:7.6"
         ],
         "transcribed_by": [
           "src/hpke/mod.rs"
@@ -2526,17 +2677,32 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.11"
+          "6:6.11"
         ],
         "transcribed_by": [
           "src/selftest/indicator.rs"
+        ]
+      },
+      "crypto/o_str.c": {
+        "defines": [
+          "openssl_strerror_r",
+          "ossl_buf2hexstr_sep",
+          "ossl_hexstr2buf_sep",
+          "ossl_to_hex"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.1"
+        ],
+        "transcribed_by": [
+          "src/runtime/str.rs"
         ]
       },
       "crypto/o_time.c": {
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "5.5"
+          "5:5.5"
         ],
         "transcribed_by": [
           "src/runtime/time.rs"
@@ -2567,7 +2733,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/packet.rs"
@@ -2577,7 +2743,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "6.5"
+          "6:6.5"
         ],
         "transcribed_by": [
           "src/params/build.rs"
@@ -2595,8 +2761,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.5",
-          "8.7"
+          "8:8.5",
+          "8:8.7"
         ],
         "transcribed_by": [
           "src/param_build_set.rs"
@@ -2610,7 +2776,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.5"
+          "6:6.5"
         ],
         "transcribed_by": [
           "src/params/mod.rs"
@@ -2620,7 +2786,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.9"
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/pem/key_legacy.rs"
@@ -2632,7 +2798,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "7.5"
+          "7:7.5"
         ],
         "transcribed_by": [
           "src/evp/pem_bridge.rs",
@@ -2643,7 +2809,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "7.5"
+          "7:7.5"
         ],
         "transcribed_by": [
           "src/pem/pem_oth.rs"
@@ -2653,8 +2819,8 @@
         "defines": [],
         "recorded_by": "units:crypto/pem/pem_pk8.c",
         "subphases": [
-          "10.6",
-          "7.5"
+          "10:10.6",
+          "7:7.5"
         ],
         "transcribed_by": [
           "src/pem/pem_pk8.rs",
@@ -2665,9 +2831,9 @@
         "defines": [],
         "recorded_by": "units:crypto/pem/pem_pkey.c",
         "subphases": [
-          "10.6",
-          "7.5",
-          "8.9"
+          "10:10.6",
+          "7:7.5",
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/pem/pem_pkey.rs"
@@ -2677,7 +2843,7 @@
         "defines": [],
         "recorded_by": "units:crypto/pem/pem_sign.c",
         "subphases": [
-          "7.5"
+          "7:7.5"
         ],
         "transcribed_by": []
       },
@@ -2697,7 +2863,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10.6"
+          "10:10.6"
         ],
         "transcribed_by": [
           "src/pem/pvkfmt.rs"
@@ -2707,7 +2873,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.3"
+          "10:10.3",
+          "10:6.7"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_add.rs"
@@ -2717,7 +2884,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.2"
+          "10:10.2"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_asn.rs"
@@ -2727,7 +2894,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.2"
+          "10:10.2"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_attr.rs"
@@ -2737,7 +2904,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.4"
+          "10:10.4"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_crpt.rs"
@@ -2747,7 +2914,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.3"
+          "10:10.3",
+          "10:6.7"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_crt.rs"
@@ -2757,8 +2925,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.4",
-          "8.9"
+          "10:10.4",
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_decr.rs"
@@ -2770,7 +2938,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10.3"
+          "10:10.3"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_init.rs"
@@ -2780,7 +2948,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.4"
+          "10:10.4"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_key.rs"
@@ -2790,7 +2958,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.4"
+          "10:10.4",
+          "10:6.7"
         ],
         "transcribed_by": []
       },
@@ -2798,7 +2967,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.3"
+          "10:10.3"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_mutl.rs"
@@ -2808,7 +2977,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.3"
+          "10:10.3"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_npas.rs"
@@ -2818,8 +2987,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.4",
-          "8.9"
+          "10:10.4",
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_p8d.rs"
@@ -2829,7 +2998,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.4"
+          "10:10.4"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_p8e.rs"
@@ -2839,7 +3008,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.2"
+          "10:10.2",
+          "10:6.7"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_sbag.rs"
@@ -2849,7 +3019,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.2"
+          "10:10.2"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_utl.rs"
@@ -2864,7 +3034,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": [
           "src/mac/poly1305.rs"
@@ -2879,9 +3049,9 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.7",
-          "6.7a",
-          "6.7b"
+          "6:6.7",
+          "6:6.7a",
+          "6:6.7b"
         ],
         "transcribed_by": [
           "src/property/defn_cache.rs"
@@ -2909,10 +3079,10 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.7",
-          "6.7a",
-          "6.7c",
-          "7.1"
+          "6:6.7",
+          "6:6.7a",
+          "6:6.7c",
+          "7:7.1"
         ],
         "transcribed_by": [
           "src/property/globals.rs",
@@ -2925,7 +3095,7 @@
         ],
         "recorded_by": "units:crypto/property/property_err.c",
         "subphases": [
-          "6.7"
+          "6:6.7"
         ],
         "transcribed_by": []
       },
@@ -2941,8 +3111,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.7",
-          "6.7b"
+          "6:6.7",
+          "6:6.7b"
         ],
         "transcribed_by": [
           "src/property/parse.rs"
@@ -2959,8 +3129,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.7",
-          "6.7b"
+          "6:6.7",
+          "6:6.7b"
         ],
         "transcribed_by": [
           "src/property/query.rs"
@@ -2977,8 +3147,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.7",
-          "6.7a"
+          "6:6.7",
+          "6:6.7a"
         ],
         "transcribed_by": [
           "src/property/strings.rs"
@@ -2988,8 +3158,8 @@
         "defines": [],
         "recorded_by": "units:crypto/provider.c",
         "subphases": [
-          "6.8",
-          "6.8b"
+          "6:6.8",
+          "6:6.8b"
         ],
         "transcribed_by": []
       },
@@ -3004,8 +3174,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.8",
-          "6.8e"
+          "6:6.8",
+          "6:6.8e"
         ],
         "transcribed_by": [
           "src/provider/child.rs"
@@ -3019,8 +3189,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.8",
-          "6.8d"
+          "6:6.8",
+          "6:6.8d"
         ],
         "transcribed_by": [
           "src/provider/conf.rs"
@@ -3051,11 +3221,11 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.8",
-          "6.8a",
-          "6.8b",
-          "6.8c",
-          "6.8e"
+          "6:6.8",
+          "6:6.8a",
+          "6:6.8b",
+          "6:6.8c",
+          "6:6.8e"
         ],
         "transcribed_by": [
           "src/provider/activate.rs",
@@ -3069,8 +3239,8 @@
         ],
         "recorded_by": "units:crypto/provider_predefined.c",
         "subphases": [
-          "6.8",
-          "6.8b"
+          "6:6.8",
+          "6:6.8b"
         ],
         "transcribed_by": []
       },
@@ -3083,7 +3253,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.6"
+          "8:8.6"
         ],
         "transcribed_by": [
           "src/quic_vlint.rs"
@@ -3101,8 +3271,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10",
-          "9.2"
+          "6:6.10",
+          "9:9.2"
         ],
         "transcribed_by": [
           "src/rand/rand_lib.rs"
@@ -3129,8 +3299,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.2",
-          "9.5"
+          "9:9.2",
+          "9:9.5"
         ],
         "transcribed_by": [
           "src/rand/pool.rs"
@@ -3143,7 +3313,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.2"
+          "9:9.2"
         ],
         "transcribed_by": [
           "src/rand/rand_uniform.rs"
@@ -3153,7 +3323,7 @@
         "defines": [],
         "recorded_by": "units:crypto/rcu.c",
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": []
       },
@@ -3168,8 +3338,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.4",
-          "8.8"
+          "8:8.4",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/rsa/ameth.rs"
@@ -3181,7 +3351,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.4"
+          "8:8.4"
         ],
         "transcribed_by": [
           "src/rsa/asn1.rs"
@@ -3194,7 +3364,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": [
           "src/rsa/ossl.rs"
@@ -3207,7 +3377,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.4"
+          "8:8.4"
         ],
         "transcribed_by": [
           "src/rsa/pmeth.rs"
@@ -3217,7 +3387,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "8.4"
+          "8:8.4"
         ],
         "transcribed_by": [
           "src/rsa/prn.rs"
@@ -3230,7 +3400,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.11"
+          "6:6.11"
         ],
         "transcribed_by": [
           "src/selftest/mod.rs"
@@ -3249,7 +3419,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": [
           "src/runtime/sparse_array.rs"
@@ -3259,7 +3429,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.5"
+          "10:10.5",
+          "10:6.8"
         ],
         "transcribed_by": [
           "src/store/store_lib.rs"
@@ -3273,7 +3444,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10.5"
+          "10:10.5"
         ],
         "transcribed_by": [
           "src/store/store_meth.rs"
@@ -3288,17 +3459,27 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10.5"
+          "10:10.5"
         ],
         "transcribed_by": [
           "src/store/store_register.rs"
         ]
       },
+      "crypto/store/store_result.c": {
+        "defines": [
+          "ossl_store_handle_load_result"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.8"
+        ],
+        "transcribed_by": []
+      },
       "crypto/store/store_strings.c": {
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10.5"
+          "10:10.5"
         ],
         "transcribed_by": [
           "src/store/store_strings.rs"
@@ -3308,7 +3489,7 @@
         "defines": [],
         "recorded_by": "units:crypto/thread/api.c",
         "subphases": [
-          "6.6e"
+          "6:6.6e"
         ],
         "transcribed_by": []
       },
@@ -3323,7 +3504,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.6e"
+          "6:6.6e"
         ],
         "transcribed_by": [
           "src/context/thread_data.rs"
@@ -3337,7 +3518,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": [
           "src/runtime/threads_common.rs"
@@ -3363,12 +3544,76 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "6.10"
+          "6:6.10"
         ],
         "transcribed_by": [
           "src/runtime/rcu.rs",
           "src/runtime/thread.rs"
         ]
+      },
+      "crypto/x509/pcy_cache.c": {
+        "defines": [
+          "ossl_policy_cache_find_data",
+          "ossl_policy_cache_free",
+          "ossl_policy_cache_set"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/pcy_data.c": {
+        "defines": [
+          "ossl_policy_data_free",
+          "ossl_policy_data_new"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/pcy_lib.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/pcy_map.c": {
+        "defines": [
+          "ossl_policy_cache_set_mapping"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/pcy_node.c": {
+        "defines": [
+          "ossl_policy_level_add_node",
+          "ossl_policy_level_find_node",
+          "ossl_policy_node_cmp_new",
+          "ossl_policy_node_free",
+          "ossl_policy_node_match",
+          "ossl_policy_tree_find_sk"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/pcy_tree.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
       },
       "crypto/x509/t_x509.c": {
         "defines": [
@@ -3377,11 +3622,165 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.8"
+          "10:6.6",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/x509/t_x509.rs"
         ]
+      },
+      "crypto/x509/v3_audit_id.c": {
+        "defines": [
+          "ossl_v3_audit_identity"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_group_ac.c": {
+        "defines": [
+          "ossl_v3_group_ac"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_ia5.c": {
+        "defines": [
+          "ossl_v3_ns_ia5_list"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_ind_iss.c": {
+        "defines": [
+          "ossl_v3_indirect_issuer"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_ist.c": {
+        "defines": [
+          "ossl_v3_issuer_sign_tool"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_no_ass.c": {
+        "defines": [
+          "ossl_v3_no_assertion"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_no_rev_avail.c": {
+        "defines": [
+          "ossl_v3_no_rev_avail"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_pcia.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_pku.c": {
+        "defines": [
+          "ossl_v3_pkey_usage_period"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_single_use.c": {
+        "defines": [
+          "ossl_v3_single_use"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_skid.c": {
+        "defines": [
+          "ossl_v3_skey_id",
+          "ossl_x509_pubkey_hash"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_soa_id.c": {
+        "defines": [
+          "ossl_v3_soa_identifier"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_timespec.c": {
+        "defines": [
+          "ossl_v3_time_specification"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/v3_utf8.c": {
+        "defines": [
+          "ossl_v3_utf8_list"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_acert.c": {
+        "defines": [
+          "OSSL_ISSUER_SERIAL_it",
+          "OSSL_OBJECT_DIGEST_INFO_it",
+          "X509_ACERT_ISSUER_V2FORM_it",
+          "X509_ACERT_ISSUER_it",
+          "X509_HOLDER_it"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
       },
       "crypto/x509/x509_att.c": {
         "defines": [
@@ -3393,11 +3792,50 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.9"
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/x509/x509_att.rs"
         ]
+      },
+      "crypto/x509/x509_cmp.c": {
+        "defines": [
+          "ossl_x509_add_cert_new",
+          "ossl_x509_add_certs_new",
+          "ossl_x509_check_private_key"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_lu.c": {
+        "defines": [
+          "ossl_x509_store_ctx_get_by_subject",
+          "ossl_x509_store_read_lock"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_obj.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_req.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
       },
       "crypto/x509/x509_set.c": {
         "defines": [
@@ -3406,10 +3844,130 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.8"
+          "10:6.6",
+          "8:8.8"
         ],
         "transcribed_by": [
           "src/x509/x509_set.rs"
+        ]
+      },
+      "crypto/x509/x509_trust.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_txt.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_v3.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_vfy.c": {
+        "defines": [
+          "ossl_x509_check_cert_time"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_vpm.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509cset.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509name.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509rset.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x_all.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4",
+          "10:6.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x_attrib.c": {
+        "defines": [
+          "ossl_print_attribute_value"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": [
+          "src/x509/x_attrib.rs"
+        ]
+      },
+      "crypto/x509/x_crl.c": {
+        "defines": [
+          "ossl_x509_crl_set0_libctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": [
+          "src/x509/x_crl.rs"
+        ]
+      },
+      "crypto/x509/x_exten.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.3"
+        ],
+        "transcribed_by": [
+          "src/x509/x_exten.rs"
+        ]
+      },
+      "crypto/x509/x_name.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.3"
+        ],
+        "transcribed_by": [
+          "src/x509/x_name.rs"
         ]
       },
       "crypto/x509/x_pubkey.c": {
@@ -3434,18 +3992,39 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.8",
-          "8.9"
+          "10:6.3",
+          "8:8.8",
+          "8:8.9"
         ],
         "transcribed_by": [
           "src/x509/x_pubkey.rs"
         ]
       },
+      "crypto/x509/x_x509.c": {
+        "defines": [
+          "ossl_x509_set0_libctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.6"
+        ],
+        "transcribed_by": [
+          "src/x509/x_x509.rs"
+        ]
+      },
+      "crypto/x509/x_x509a.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "10:6.4"
+        ],
+        "transcribed_by": []
+      },
       "pkey_derive.c": {
         "defines": [],
         "recorded_by": "units:pkey_derive.c",
         "subphases": [
-          "7.3f"
+          "7:7.3f"
         ],
         "transcribed_by": []
       },
@@ -3455,7 +4034,7 @@
         ],
         "recorded_by": "units:providers/common/capabilities.c",
         "subphases": [
-          "8.2"
+          "8:8.2"
         ],
         "transcribed_by": []
       },
@@ -3469,7 +4048,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.3"
+          "9:9.3"
         ],
         "transcribed_by": []
       },
@@ -3497,7 +4076,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.3"
+          "9:9.3"
         ],
         "transcribed_by": []
       },
@@ -3507,8 +4086,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.1b",
-          "8.2"
+          "8:8.1b",
+          "8:8.2"
         ],
         "transcribed_by": []
       },
@@ -3516,7 +4095,7 @@
         "defines": [],
         "recorded_by": "units:providers/fips/fipsprov.c",
         "subphases": [
-          "9.5"
+          "9:9.5"
         ],
         "transcribed_by": []
       },
@@ -3545,7 +4124,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_aes.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3557,7 +4136,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_aes_siv.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3586,7 +4165,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_aria.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3615,7 +4194,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_camellia.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3628,7 +4207,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3638,7 +4217,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20_hw.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3648,7 +4227,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3658,7 +4237,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_chacha20_poly1305_hw.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3671,7 +4250,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_cts.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3685,7 +4264,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_sm4.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3704,7 +4283,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/cipher_tdes_common.c",
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3733,8 +4312,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.2",
-          "8.3"
+          "8:8.2",
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3748,7 +4327,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/ciphercommon_block.c",
         "subphases": [
-          "8.2"
+          "8:8.2"
         ],
         "transcribed_by": []
       },
@@ -3767,7 +4346,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3786,7 +4365,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3806,7 +4385,7 @@
         ],
         "recorded_by": "units:providers/implementations/ciphers/ciphercommon_hw.c",
         "subphases": [
-          "8.2"
+          "8:8.2"
         ],
         "transcribed_by": []
       },
@@ -3817,7 +4396,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.1b"
+          "8:8.1b"
         ],
         "transcribed_by": []
       },
@@ -3828,7 +4407,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10.1"
+          "10:10.1"
         ],
         "transcribed_by": []
       },
@@ -3839,7 +4418,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10.1"
+          "10:10.1"
         ],
         "transcribed_by": []
       },
@@ -3868,7 +4447,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10.1"
+          "10:10.1"
         ],
         "transcribed_by": []
       },
@@ -3878,7 +4457,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "8.3"
+          "8:8.3"
         ],
         "transcribed_by": []
       },
@@ -3886,7 +4465,7 @@
         "defines": [],
         "recorded_by": "units:providers/implementations/rands/crngt.c",
         "subphases": [
-          "9.5"
+          "9:9.5"
         ],
         "transcribed_by": []
       },
@@ -3912,7 +4491,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.3"
+          "9:9.3"
         ],
         "transcribed_by": []
       },
@@ -3922,7 +4501,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.4"
+          "9:9.4"
         ],
         "transcribed_by": []
       },
@@ -3932,7 +4511,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.4"
+          "9:9.4"
         ],
         "transcribed_by": []
       },
@@ -3944,7 +4523,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.4"
+          "9:9.4"
         ],
         "transcribed_by": []
       },
@@ -3952,7 +4531,7 @@
         "defines": [],
         "recorded_by": "units:providers/implementations/rands/fips_crng_test.c.in",
         "subphases": [
-          "9.5"
+          "9:9.5"
         ],
         "transcribed_by": []
       },
@@ -3962,7 +4541,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.5"
+          "9:9.5"
         ],
         "transcribed_by": []
       },
@@ -3976,7 +4555,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.5"
+          "9:9.5"
         ],
         "transcribed_by": []
       },
@@ -3986,7 +4565,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "9.5"
+          "9:9.5"
         ],
         "transcribed_by": []
       }
@@ -4392,31 +4971,31 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 349
+      "transcribed_units": 354
     }
   },
-  "body_hash": "b5880454dfbcdd47c3c23d9bbf5bf205ced523fee91e0fcbbafed7fa3e39f519",
+  "body_hash": "8ed8f9ffc0d4895443a294387e33396dfcb6b345a4d92d2c3797447252ab9321",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "1202259f7a19a62e884c5ed097c77e0ea531f1b2a8ac33593188eae62fcabbcf"
+      "sha256": "552009cd12a655462fc49517672714df4cce9ae3bc9136649230a5fc6a44ec93"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "90b7c5de6f6372beb00ac76ff7fc345b4b1e427f8160ec665381c9092106ae9a"
+      "sha256": "09a91b1d291fbe4514f5bf8982196635feaaf1329ef9280774e2863eb4d5a6ba"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8e8d6f48ed5afe722e48f6b60c8ade07a4fcb101d1253e8952f3a41ad878dfc0"
+      "sha256": "89cdd0e63da9c96b3afcffd458c688cd472faf683a5da7777035658f8cf6d057"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "35dc7b47463298092f45c11a5789885d79570f0e20ae2edf75c2a246be5309d9"
+      "sha256": "d7772e824f4eaf57715cd35070dec3238dcea85f1bb6ba50807f331ce74345ff"
     },
     {
       "name": "prerequisites",
@@ -4431,7 +5010,7 @@
     {
       "name": "plan-PHASE-10-SUBPHASES",
       "path": "docs/PHASE-10-SUBPHASES.md",
-      "sha256": "c65fb3229b7a8e45fa7dfb1761e664d71a2d645948a6de13bac16d5f74ca1a10"
+      "sha256": "7abe59a78677cd393e0df9b34ee008a6491e9bd64caae7b50f175cd25bbdb1d2"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

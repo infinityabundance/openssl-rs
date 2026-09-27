@@ -475,9 +475,16 @@ def main(argv: list[str]) -> int:
         plan_files.append(plan)
         text = plan.read_text()
         for head, cs in subphase_rows(text):
+            # The row key is **plan-scoped**: a subphase id is unique only within its own plan,
+            # and two plans can and do reuse one (`PHASE-6-SUBPHASES.md`'s `6.1`..`6.6` against
+            # `PHASE-10-SUBPHASES.md` section 6). Keying the state by the bare id let a later
+            # plan's `complete` overwrite an earlier plan's `in-progress`, which turned an
+            # in-progress stratum's census into spurious findings. The state travels with the
+            # keyed row, so the plan that owns the row decides whether it is judged or censused.
+            row = f"{phase}:{head}"
             judged_rows += 1
-            row_state[head] = states.get(phase, "not-started")
-            row_phase[head] = phase
+            row_state[row] = states.get(phase, "not-started")
+            row_phase[row] = phase
             blob = " ".join(cs[1:])
             for raw in _UNIT.findall(blob) + _UNIT_IN.findall(blob):
                 if raw.startswith("./"):
@@ -492,37 +499,37 @@ def main(argv: list[str]) -> int:
                 if raw in unit_records and (
                     unit_records[raw].get("class") == "does_not_exist_in_this_authority"
                 ):
-                    if head not in named_units[raw]:
-                        named_units[raw].append(head)
+                    if row not in named_units[raw]:
+                        named_units[raw].append(row)
                     continue
                 if "/" in raw:
                     tu = raw
                     if tu not in by_basename.get(Path(raw).name, []):
                         unresolvable.append(
-                            {"subphase": head, "plan": rel(plan), "unit": raw}
+                            {"subphase": row, "plan": rel(plan), "unit": raw}
                         )
                         continue
                 else:
                     hit = by_basename.get(raw, [])
                     if not hit:
                         unresolvable.append(
-                            {"subphase": head, "plan": rel(plan), "unit": raw}
+                            {"subphase": row, "plan": rel(plan), "unit": raw}
                         )
                         continue
                     if len(hit) > 1:
                         ambiguous.append(
-                            {"subphase": head, "plan": rel(plan), "basename": raw,
+                            {"subphase": row, "plan": rel(plan), "basename": raw,
                              "candidates": sorted(hit)}
                         )
                         continue
                     tu = hit[0]
-                if head not in named_units[tu]:
-                    named_units[tu].append(head)
+                if row not in named_units[tu]:
+                    named_units[tu].append(row)
             for name in _BACKTICKED.findall(blob):
                 if name not in internal:
                     continue
-                if head not in named_symbols[name]:
-                    named_symbols[name].append(head)
+                if row not in named_symbols[name]:
+                    named_symbols[name].append(row)
 
     # --- P1: a promised unit nothing reaches -------------------------------
     findings: list[dict] = []

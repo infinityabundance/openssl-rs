@@ -9,59 +9,37 @@
 //!
 //! # What lands, and what the measurement says about each
 //!
-//! **Forty-six of the 49 land.** Every one of their closures is inside the crate:
+//! **Forty-eight of the 49 land.** Every one of their closures is inside the crate:
 //! the `OSSL_STORE_CTX` state machine (`open`/`open_ex`/`eof`/`error`/`expect`/
 //! `close`/`attach`/`delete`/`supports_search`/`find`), the `OSSL_STORE_INFO`
 //! constructor and accessor family (`new`, `new_NAME`/`new_PARAMS`/`new_PUBKEY`/
 //! `new_PKEY`/`new_CERT`/`new_CRL`/`set0_NAME_description`, the `get_type`/
 //! `get0_*`/`get1_NAME`/`get1_NAME_description`/`get1_PARAMS`/`get1_PUBKEY`/
-//! `get1_PKEY` accessors, `get0_CERT`/`get0_CRL` and `free`), the whole
-//! `OSSL_STORE_SEARCH` object, and the two deprecated control entry points
+//! `get1_PKEY`/`get1_CERT`/`get1_CRL` accessors, `get0_CERT`/`get0_CRL` and `free`),
+//! the whole `OSSL_STORE_SEARCH` object, and the two deprecated control entry points
 //! (`ctrl`/`vctrl`, whose only `va_arg` walk is the one `int *` of
 //! `OSSL_STORE_C_USE_SECMEM`; that lives in [`crate::store::store_lib_variadic`]).
 //!
-//! The four unlanded names the authority's object needs are exactly D448's:
-//! `X509_free`, `X509_CRL_free`, `X509_up_ref`, `X509_CRL_up_ref`, `i2d_X509_NAME`
-//! (all Phase 11's `X509` object graph) and `ossl_store_handle_load_result`
-//! (`store_result.c`, whose `try_cert`/`try_crl`/`try_pkcs12` reach `d2i_X509`/
-//! `d2i_X509_AUX`/`d2i_X509_CRL` — Phase 11 — and `PKCS12_parse`, withheld by 10.3).
+//! **Phase 10.8 landed the five names D448 named as the blockers**, and with them the
+//! three functions and two arms this module had withheld: `X509_up_ref` and
+//! `X509_CRL_up_ref` close [`OSSL_STORE_INFO_get1_CERT`]/[`OSSL_STORE_INFO_get1_CRL`],
+//! `X509_free`/`X509_CRL_free` close the CERT and CRL arms of
+//! [`OSSL_STORE_INFO_free`], and `i2d_X509_NAME` closes the `BY_NAME` and
+//! `BY_ISSUER_SERIAL` arms of [`OSSL_STORE_find`]. The one remaining unlanded name the
+//! authority's object needs is `ossl_store_handle_load_result` (`store_result.c`, whose
+//! `try_cert`/`try_crl`/`try_pkcs12` reach `d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL` —
+//! `d2i_X509`/`d2i_X509_CRL` landed in 10.8, but `d2i_X509_AUX` did not — and
+//! `PKCS12_parse`, withheld by 10.3).
 //!
 //! # What is withheld, with each one's measured blocker
 //!
 //! * **[`OSSL_STORE_load`] is withheld whole.** Its fetched branch calls
 //!   `ossl_store_handle_load_result` (`store_result.c`), which is **not defined in
-//!   this crate**; the unit and its `d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL`/
-//!   `PKCS12_parse` closure are Phase 11's and 10.3's. The branch is the function's
-//!   central fetched path rather than a `switch` arm, so it is withheld whole rather
-//!   than carved; a transcription of only its legacy branch would answer `NULL` for
-//!   every fetched loader, which is a behaviour change and not a withheld arm.
-//! * **[`OSSL_STORE_INFO_get1_CERT`] is withheld**: it calls `X509_up_ref`, Phase 11's.
-//! * **[`OSSL_STORE_INFO_get1_CRL`] is withheld**: it calls `X509_CRL_up_ref`, Phase 11's.
-//!
-//! # The two blocked *arms* inside functions that otherwise land
-//!
-//! * **[`OSSL_STORE_INFO_free`]'s `OSSL_STORE_INFO_CERT` and `OSSL_STORE_INFO_CRL`
-//!   arms are carved out.** They call `X509_free`/`X509_CRL_free` (Phase 11). Every
-//!   other arm — NAME, PARAMS, PUBKEY, PKEY — is transcribed, and the surrounding
-//!   release of the `OSSL_STORE_INFO` itself is intact. The two arms are noted at
-//!   their site. No reachable behaviour changes: the crate cannot construct an
-//!   `X509`/`X509_CRL`, so no non-NULL object can reach those arms (the refusal arms
-//!   of [`OSSL_STORE_INFO_new_CERT`]/`new_CRL` and `get0_CERT`/`get0_CRL` are driven
-//!   with a NULL object and are identical on both sides).
-//! * **[`OSSL_STORE_find`]'s `OSSL_STORE_SEARCH_BY_NAME` and
-//!   `OSSL_STORE_SEARCH_BY_ISSUER_SERIAL` arms are carved out.** Both call
-//!   `i2d_X509_NAME` (Phase 11). The other two fetched arms (fingerprint, alias) and
-//!   the whole legacy branch — `ctx->loader->find`, which is what a registered
-//!   in-process loader reaches — are transcribed. As with `OSSL_STORE_load`'s
-//!   blocker, the carved arms sit in the **fetched branch**, which no candidate
-//!   transcript can reach while no `OSSL_OP_STORE` provider row is published, so the
-//!   carve changes no reachable behaviour; the difference from `load` is that these
-//!   are two named `switch` arms rather than a branch.
-//!
-//! Note the correction to D448 in the second bullet: `OSSL_STORE_SEARCH_by_name` and
-//! `OSSL_STORE_SEARCH_by_issuer_serial` do **not** call `i2d_X509_NAME` — they only
-//! store the caller's `X509_NAME *` — so both land here, and the blocker attaches to
-//! `OSSL_STORE_find`'s arms alone.
+//!   this crate**; the unit and its `d2i_X509_AUX`/`PKCS12_parse` closure are Phase
+//!   11's and 10.3's. The branch is the function's central fetched path rather than a
+//!   `switch` arm, so it is withheld whole rather than carved; a transcription of only
+//!   its legacy branch would answer `NULL` for every fetched loader, which is a
+//!   behaviour change and not a withheld arm.
 //!
 //! # The `file` provider rows stay unpublished
 //!
@@ -78,11 +56,14 @@
 use core::ffi::{c_char, c_int, c_uchar, c_void, CStr};
 use core::ptr;
 
+use crate::asn1::layout::Asn1String;
+use crate::asn1::prim::ASN1_INTEGER_to_BN;
+use crate::bn::bignum::{BN_free, BigNum};
 use crate::evp::digest::{EVP_MD_get0_name, EVP_MD_get_size, EvpMd};
 use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
 use crate::params::build::{
-    OSSL_PARAM_BLD_free, OSSL_PARAM_BLD_new, OSSL_PARAM_BLD_push_octet_string,
-    OSSL_PARAM_BLD_push_utf8_string, OSSL_PARAM_BLD_to_param,
+    OSSL_PARAM_BLD_free, OSSL_PARAM_BLD_new, OSSL_PARAM_BLD_push_BN,
+    OSSL_PARAM_BLD_push_octet_string, OSSL_PARAM_BLD_push_utf8_string, OSSL_PARAM_BLD_to_param,
 };
 use crate::params::dup::OSSL_PARAM_free;
 use crate::params::{
@@ -104,6 +85,10 @@ use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_pop_free, OpenSslStack};
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcpy};
 use crate::ui::ui_lib::UiMethod;
+use crate::x509::x509_set::X509_up_ref;
+use crate::x509::x_crl::{X509Crl, X509_CRL_free, X509_CRL_up_ref};
+use crate::x509::x_name::{i2d_X509_NAME, X509Name};
+use crate::x509::x_x509::{X509_free, X509};
 
 use super::store_meth::{
     OSSL_STORE_LOADER_fetch, OSSL_STORE_LOADER_free, OSSL_STORE_LOADER_get0_provider,
@@ -144,6 +129,10 @@ const OSSL_STORE_R_UNSUPPORTED_OPERATION: c_int = 118;
 const OSSL_STORE_R_FINGERPRINT_SIZE_DOES_NOT_MATCH_DIGEST: c_int = 121;
 /// `OSSL_STORE_R_NOT_A_PUBLIC_KEY` — `include/openssl/storeerr.h:34`.
 const OSSL_STORE_R_NOT_A_PUBLIC_KEY: c_int = 122;
+/// `OSSL_STORE_R_NOT_A_CERTIFICATE` — `include/openssl/storeerr.h`.
+const OSSL_STORE_R_NOT_A_CERTIFICATE: c_int = 100;
+/// `OSSL_STORE_R_NOT_A_CRL` — `include/openssl/storeerr.h`.
+const OSSL_STORE_R_NOT_A_CRL: c_int = 101;
 
 /// `ERR_R_OSSL_STORE_LIB` — `err.h:342`, `44 | ERR_RFLAG_COMMON`.
 const ERR_R_OSSL_STORE_LIB: c_int = 524332;
@@ -345,6 +334,20 @@ const STORE_LIB_792: err_sites::ErrSite = store_lib_site(
     792,
     c"OSSL_STORE_INFO_get1_PKEY",
     OSSL_STORE_R_NOT_A_PRIVATE_KEY,
+    false,
+);
+/// `OSSL_STORE_INFO_get1_CERT` at `store_lib.c:810` (10.8 closes it).
+const STORE_LIB_810: err_sites::ErrSite = store_lib_site(
+    810,
+    c"OSSL_STORE_INFO_get1_CERT",
+    OSSL_STORE_R_NOT_A_CERTIFICATE,
+    false,
+);
+/// `OSSL_STORE_INFO_get1_CRL` at `store_lib.c:828` (10.8 closes it).
+const STORE_LIB_828: err_sites::ErrSite = store_lib_site(
+    828,
+    c"OSSL_STORE_INFO_get1_CRL",
+    OSSL_STORE_R_NOT_A_CRL,
     false,
 );
 /// `OSSL_STORE_SEARCH_by_key_fingerprint` at `store_lib.c:959` — the one site whose
@@ -937,10 +940,10 @@ pub unsafe extern "C" fn OSSL_STORE_expect(ctx: *mut OsslStoreCtx, expected_type
 /// `int OSSL_STORE_find(OSSL_STORE_CTX *ctx, const OSSL_STORE_SEARCH *search)` —
 /// `store_lib.c:324-418`.
 ///
-/// The `OSSL_STORE_SEARCH_BY_NAME` and `OSSL_STORE_SEARCH_BY_ISSUER_SERIAL` arms of
-/// the fetched branch are **withheld** — both call `i2d_X509_NAME`, which is Phase
-/// 11's `X509` object graph — and each is noted at its site below. The legacy branch
-/// and the fingerprint/alias arms are transcribed whole.
+/// All four fetched arms and the legacy branch are transcribed. The `BY_NAME` and
+/// `BY_ISSUER_SERIAL` arms, which the 10.5 slice carved out for `i2d_X509_NAME`, are
+/// closed by 10.8: the name is encoded with `i2d_X509_NAME` and, for the issuer/serial
+/// search, the serial with `ASN1_INTEGER_to_BN`.
 ///
 /// # Safety
 /// `ctx` must be NULL or live; `search` must be NULL or a live `OsslStoreSearch`.
@@ -983,12 +986,35 @@ pub unsafe extern "C" fn OSSL_STORE_find(
 
         ret = 0; /* Assume the worst */
 
+        // The two locals the `BY_NAME`/`BY_ISSUER_SERIAL` arms fill and the cleanup below
+        // releases: `void *name_der = NULL` and `BIGNUM *number = NULL`.
+        let mut name_der: *mut c_void = ptr::null_mut();
+        let mut number: *mut BigNum = ptr::null_mut();
+
         // SAFETY: the enclosing function's `# Safety` contract makes every pointer used here valid.
         match unsafe { (*search).search_type } {
-            // OSSL_STORE_SEARCH_BY_NAME: withheld — the authority's arm calls
-            // `i2d_X509_NAME(search->name, ...)`, and `i2d_X509_NAME` is Phase 11's
-            // (`x509.h`). No candidate transcript reaches this branch while no
-            // `OSSL_OP_STORE` provider row is published.
+            OSSL_STORE_SEARCH_BY_NAME => {
+                // SAFETY: `search` owns the borrowed name; `name_der` is a live out-slot, and
+                // `i2d_X509_NAME` allocates into it because it is NULL.
+                let name_der_sz = unsafe {
+                    i2d_X509_NAME(
+                        (*search).name.cast::<X509Name>(),
+                        (&raw mut name_der).cast::<*mut c_uchar>(),
+                    )
+                };
+                if name_der_sz > 0 {
+                    // SAFETY: `bld` is live and `name_der` holds `name_der_sz` bytes.
+                    let pushed = unsafe {
+                        OSSL_PARAM_BLD_push_octet_string(
+                            bld,
+                            OSSL_STORE_PARAM_SUBJECT.as_ptr(),
+                            name_der,
+                            name_der_sz as usize,
+                        )
+                    };
+                    ret = c_int::from(pushed != 0);
+                }
+            }
             OSSL_STORE_SEARCH_BY_KEY_FINGERPRINT => {
                 // SAFETY: `bld` is live; the digest and bytes belong to `search`.
                 let digest_ok = unsafe {
@@ -1023,9 +1049,38 @@ pub unsafe extern "C" fn OSSL_STORE_find(
                 };
                 ret = c_int::from(pushed != 0);
             }
-            // OSSL_STORE_SEARCH_BY_ISSUER_SERIAL: withheld — the authority's arm calls
-            // `i2d_X509_NAME(search->name, ...)` and `ASN1_INTEGER_to_BN`; the former is
-            // Phase 11's. Same unreachability as the BY_NAME arm above.
+            OSSL_STORE_SEARCH_BY_ISSUER_SERIAL => {
+                // SAFETY: `search` owns the borrowed name and serial; `name_der` is a live
+                // out-slot, and `i2d_X509_NAME` allocates into it because it is NULL.
+                let name_der_sz = unsafe {
+                    i2d_X509_NAME(
+                        (*search).name.cast::<X509Name>(),
+                        (&raw mut name_der).cast::<*mut c_uchar>(),
+                    )
+                };
+                if name_der_sz > 0 {
+                    // SAFETY: `search->serial` is a borrowed `ASN1_INTEGER`; `ASN1_INTEGER_to_BN`
+                    // with a NULL `bn` allocates a fresh `BIGNUM`.
+                    number = unsafe {
+                        ASN1_INTEGER_to_BN((*search).serial.cast::<Asn1String>(), ptr::null_mut())
+                    };
+                }
+                if name_der_sz > 0 && !number.is_null() {
+                    // SAFETY: `bld` is live, `name_der` holds `name_der_sz` bytes and `number` is
+                    // the allocated BIGNUM.
+                    let pushed = unsafe {
+                        OSSL_PARAM_BLD_push_octet_string(
+                            bld,
+                            OSSL_STORE_PARAM_ISSUER.as_ptr(),
+                            name_der,
+                            name_der_sz as usize,
+                        ) != 0
+                            && OSSL_PARAM_BLD_push_BN(bld, OSSL_STORE_PARAM_SERIAL.as_ptr(), number)
+                                != 0
+                    };
+                    ret = c_int::from(pushed);
+                }
+            }
             _ => {}
         }
         if ret != 0 {
@@ -1041,6 +1096,12 @@ pub unsafe extern "C" fn OSSL_STORE_find(
         }
         // SAFETY: `bld` is live and non-NULL.
         unsafe { OSSL_PARAM_BLD_free(bld) };
+        // SAFETY: `name_der` is NULL or the buffer `i2d_X509_NAME` allocated; `number` is NULL or
+        // the BIGNUM `ASN1_INTEGER_to_BN` allocated.
+        unsafe {
+            CRYPTO_free(name_der, ptr::null(), 0);
+            BN_free(number);
+        }
     } else {
         /* legacy loader section */
         // SAFETY: the enclosing function's `# Safety` contract makes every pointer used here valid.
@@ -1925,11 +1986,56 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_get0_CRL(info: *const OsslStoreInfo) ->
     ptr::null_mut()
 }
 
+/// `X509 *OSSL_STORE_INFO_get1_CERT(const OSSL_STORE_INFO *info)` — `store_lib.c:803-812`.
+///
+/// Closed by 10.8: `X509_up_ref` is now landed.
+///
+/// # Safety
+/// `info` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_STORE_INFO_get1_CERT(info: *const OsslStoreInfo) -> *mut X509 {
+    // SAFETY: `info` is live per the contract.
+    if unsafe { (*info).type_ } == OSSL_STORE_INFO_CERT {
+        // SAFETY: the type is CERT, so `x509` is live as an `X509`.
+        let x = unsafe { (*info).data.x509.cast::<X509>() };
+        // SAFETY: `x` is the object the CERT arm holds.
+        if unsafe { X509_up_ref(x) } == 0 {
+            return ptr::null_mut();
+        }
+        return x;
+    }
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&STORE_LIB_810) };
+    ptr::null_mut()
+}
+
+/// `X509_CRL *OSSL_STORE_INFO_get1_CRL(const OSSL_STORE_INFO *info)` — `store_lib.c:821-830`.
+///
+/// Closed by 10.8: `X509_CRL_up_ref` is now landed.
+///
+/// # Safety
+/// `info` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_STORE_INFO_get1_CRL(info: *const OsslStoreInfo) -> *mut X509Crl {
+    // SAFETY: `info` is live per the contract.
+    if unsafe { (*info).type_ } == OSSL_STORE_INFO_CRL {
+        // SAFETY: the type is CRL, so `crl` is live as an `X509_CRL`.
+        let crl = unsafe { (*info).data.crl.cast::<X509Crl>() };
+        // SAFETY: `crl` is the object the CRL arm holds.
+        if unsafe { X509_CRL_up_ref(crl) } == 0 {
+            return ptr::null_mut();
+        }
+        return crl;
+    }
+    // SAFETY: a compile-time-constant site.
+    unsafe { raise_site(&STORE_LIB_828) };
+    ptr::null_mut()
+}
+
 /// `void OSSL_STORE_INFO_free(OSSL_STORE_INFO *info)` — `store_lib.c:835-861`.
 ///
-/// The `OSSL_STORE_INFO_CERT` and `OSSL_STORE_INFO_CRL` arms are **withheld** — they
-/// call `X509_free`/`X509_CRL_free`, Phase 11's — and are noted at their site. Every
-/// other arm is transcribed, and the object itself is always released.
+/// Every arm is transcribed, including the `CERT` and `CRL` arms 10.8 closed with
+/// `X509_free`/`X509_CRL_free`, and the object itself is always released.
 ///
 /// # Safety
 /// `info` must be NULL or a live object not already freed.
@@ -1960,12 +2066,14 @@ pub unsafe extern "C" fn OSSL_STORE_INFO_free(info: *mut OsslStoreInfo) {
             // SAFETY: the type is PKEY, so `pkey` is live and owned.
             unsafe { EVP_PKEY_free((*info).data.pkey) };
         }
-        // OSSL_STORE_INFO_CERT: withheld — the authority's arm calls
-        // `X509_free(info->_.x509)`, and `X509_free` is Phase 11's (`x509.h`). No
-        // reachable object of this type carries a non-NULL `X509`, so the carve is
-        // not observable; see the module doc.
-        // OSSL_STORE_INFO_CRL: withheld — the authority's arm calls
-        // `X509_CRL_free(info->_.crl)`, and `X509_CRL_free` is Phase 11's.
+        OSSL_STORE_INFO_CERT => {
+            // SAFETY: the type is CERT, so `x509` is live and owned as an `X509`.
+            unsafe { X509_free((*info).data.x509.cast::<X509>()) };
+        }
+        OSSL_STORE_INFO_CRL => {
+            // SAFETY: the type is CRL, so `crl` is live and owned as an `X509_CRL`.
+            unsafe { X509_CRL_free((*info).data.crl.cast::<X509Crl>()) };
+        }
         _ => {}
     }
     // SAFETY: `info` is the allocation `OSSL_STORE_INFO_new` made.

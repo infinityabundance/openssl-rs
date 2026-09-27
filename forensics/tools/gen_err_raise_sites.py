@@ -1280,6 +1280,15 @@ COVERED_FILES = [
     # D349 had the unit deliberately absent because the four functions then landed raised
     # nothing; the completion is what changes that.
     ("crypto/x509/x_pubkey.c", "X509_PUBKEY"),
+    # Phase 10.8's object core (D451): `crypto/x509/x_name.c`, the `X509_NAME` object and its
+    # extern item. The landed hooks raise `ERR_LIB_ASN1` with
+    # `ERR_R_CRYPTO_LIB`/`ERR_R_BUF_LIB`/`ERR_R_NESTED_ASN1_ERROR` (`x509_name_ex_new`,
+    # `x509_name_ex_d2i`, `x509_name_encode`) and `ERR_LIB_X509` with
+    # `ERR_R_CRYPTO_LIB`/`ERR_R_ASN1_LIB`/`ERR_R_OBJ_LIB` (`x509_name_canon`). The table also
+    # carries the one site in the withheld `X509_NAME_print`; an unused coordinate is harmless.
+    # `x_x509.c`, `x_crl.c`, `x_exten.c` and `asn1/x_val.c` raise nothing in the landed subset
+    # and are deliberately not listed.
+    ("crypto/x509/x_name.c", "X509_NAME"),
     # Phase 8.7's ECX key objects (D372): `crypto/ec/ecx_key.c` (the `ECX_KEY` object and
     # `ossl_ecx_compute_key`) and `crypto/ec/ecx_backend.c` (the backend the legacy methods and
     # the providers share). The first is `ERR_LIB_PROV` with the four `PROV_R_*` reasons on the
