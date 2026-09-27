@@ -225,6 +225,10 @@ XLAT_GET = ("not a provider dispatch: the type of `fix_cipher_md`'s two function
             "its own signature rather than as typedefs; the crate names them to parameterise one "
             "function over `EVP_CIPHER` and `EVP_MD`")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
+ENCODE_KEY2ANY_TYPEDEF = (
+    "not a provider dispatch: the authority declares this `typedef` inside `encode_key2any.c` "
+    "itself (`:67-72`), not in an installed header, so the typedefs atlas has no record of it"
+)
 # `providers/implementations/include/prov/drbg.h:59-165` -- `struct prov_drbg_st`'s cached virtual
 # functions (`instantiate`, `uninstantiate`, `reseed`, `generate`) and its two `dnew`/`dfree`
 # callbacks. They are declared **inline in the struct as plain function pointers**, exactly as
@@ -538,6 +542,11 @@ NOT_A_DISPATCH: dict[str, str] = {
     "SkCopyFn": SK_MACRO,
     "SkFreeFn": SK_MACRO,
     "AesWrapFn@src/provider/cipher.rs": WRAP_FN,
+    # `encode_key2any.c:67-72`'s two function-type typedefs: the unit's own `key_to_paramstring_fn`
+    # and `key_to_der_fn`. The authority declares them in the `.c`, not in a header, so the
+    # typedefs atlas cannot name them and no link can resolve. Landed with the engine (D445).
+    "KeyToParamstringFn": ENCODE_KEY2ANY_TYPEDEF,
+    "KeyToDerFn": ENCODE_KEY2ANY_TYPEDEF,
     "OsslXtsStreamFn": PROV_CIPHER_FUNC_TYPE,
     # The same macro-generated typedef one header over. `cipher_sm4_xts.h:14-17` invokes
     # `PROV_CIPHER_FUNC(void, xts_stream, ...)` with `SM4_KEY` parameters and a trailing `enc` where

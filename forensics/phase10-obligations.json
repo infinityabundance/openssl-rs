@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 272,
       "deferred_to_later_phase": 0,
-      "implemented": 198,
-      "open_in_this_stratum": 100,
+      "implemented": 200,
+      "open_in_this_stratum": 98,
       "owned": 298,
       "received_by_handoff": 26
     },
@@ -423,6 +423,8 @@
       "i2d_PKCS8PrivateKey",
       "i2d_PKCS8PrivateKey_bio",
       "i2d_PKCS8PrivateKey_fp",
+      "i2d_PKCS8PrivateKey_nid_bio",
+      "i2d_PKCS8PrivateKey_nid_fp",
       "i2d_PrivateKey",
       "i2d_PublicKey"
     ],
@@ -1093,18 +1095,6 @@
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
         "symbol": "PKCS12_verify_mac"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 5,
-        "symbol": "i2d_PKCS8PrivateKey_nid_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 5,
-        "symbol": "i2d_PKCS8PrivateKey_nid_fp"
       }
     ],
     "owned_by_header": {
@@ -1148,17 +1138,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "cac1f8c53d0a4b5b4af0176d22d96c9ce4d325dc5d7faac09fff366408531225"
+      "sha256": "8fb3bb54fa4871ad95c0165f130e98d746a947bc420141d4eee71290384beaf2"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "014793890f05efaa57dfd722f0e7c2f448ce46df8a9bcb03700a72261cd980a2"
+      "sha256": "cc4b9d0ea137c0997fc3f1c72ead581ac34b2d222f5234d6ca261704d51a52b1"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "254dd07c0e74e3d266e389ada4c401ffef5b797cb7b548ad080b3e0998fd54b4"
+      "sha256": "e40a05379b11a19ff510e6481dfb60932414b206a43d16e862c166912480427c"
     }
   ],
   "kind": "phase10-obligations",

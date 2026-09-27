@@ -1569,7 +1569,7 @@
         "module": "src/pem/pem_lib.rs",
         "phase": 5,
         "phase_source": "module-declaration",
-        "share": "10/10",
+        "share": "10/11",
         "translation_unit": "crypto/pem/pem_lib.c"
       },
       {
@@ -1583,7 +1583,7 @@
         "module": "src/pem/pem_pk8.rs",
         "phase": 5,
         "phase_source": "export-ownership",
-        "share": "4/4",
+        "share": "6/6",
         "translation_unit": "crypto/pem/pem_pk8.c"
       },
       {
@@ -1900,6 +1900,13 @@
         "phase_source": "module-declaration",
         "share": "1/1",
         "translation_unit": "providers/implementations/kem/libdefault-lib-ecx_kem.c"
+      },
+      {
+        "module": "src/provider/encode_key2any.rs",
+        "phase": 10,
+        "phase_source": "module-declaration",
+        "share": "2/4",
+        "translation_unit": "crypto/pem/pem_pk8.c"
       },
       {
         "module": "src/provider/endecoder_common.rs",
@@ -2836,7 +2843,7 @@
         "module": "src/x509/x_pubkey.rs",
         "phase": 11,
         "phase_source": "export-ownership",
-        "share": "40/40",
+        "share": "40/41",
         "translation_unit": "crypto/x509/x_pubkey.c"
       }
     ],
@@ -42108,7 +42115,8 @@
           "x509"
         ],
         "modules": [
-          "src/pem/pem_pk8.rs"
+          "src/pem/pem_pk8.rs",
+          "src/provider/encode_key2any.rs"
         ],
         "tu": "crypto/pem/pem_pk8.c"
       },

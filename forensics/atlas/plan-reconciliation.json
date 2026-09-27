@@ -2661,7 +2661,8 @@
           "7.5"
         ],
         "transcribed_by": [
-          "src/pem/pem_pk8.rs"
+          "src/pem/pem_pk8.rs",
+          "src/provider/encode_key2any.rs"
         ]
       },
       "crypto/pem/pem_pkey.c": {
@@ -4388,28 +4389,28 @@
       "transcribed_units": 344
     }
   },
-  "body_hash": "ffc8792472d6a2254974ec5e8901d09f83aa91820dbdee6a9b4ac6c1b1a35ed2",
+  "body_hash": "e8673f31a560fabb309300869b3a71d1e3be7e839da3c32b6971e753165db8a2",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "b7ae5748996db3888a0f836757ce41d14a6340cfc043e00e2e8bbb7586a36959"
+      "sha256": "c3ba702988a3e34aabe88fecaee0a55fa84a05cc66202ff553200ff266a78897"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "4b882a09be988d65554482efe976fe5328aad39221d270f4f1a0615cf1881856"
+      "sha256": "7c0a9484ca0a5b01290dd21bee356e6af35a235431bec85e884de823234ac868"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9386881b6669c051a01f75c8ee0b63ca84eebb6bd6f1485045e5b8faf3dad718"
+      "sha256": "33fcae40897b0d65bda2aabcad6630e0cba4f1870c3ab1aba0b61e33fafb2fbf"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "857e55a2e8240d3579d1bc91d30a2d07ddfd53de2248f996d18c2fbdf47477b4"
+      "sha256": "5638ae724e62d8fc73e228929125f60ddb93d4b68799a771641c92f47a94b037"
     },
     {
       "name": "prerequisites",

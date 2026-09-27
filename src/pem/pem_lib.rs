@@ -63,6 +63,7 @@ use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, Bio, BIO_C_SET_FILE_PTR};
 use crate::runtime::err::{err_sites, peek_first_reason, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, OPENSSL_cleanse};
 use crate::runtime::str::OPENSSL_strnlen;
+use crate::x509::x_pubkey::{i2d_X509_PUBKEY, X509Pubkey};
 
 /// `PEM_BUFSIZE` — `pem.h`'s header buffer length.
 pub(crate) const PEM_BUFSIZE: c_int = 1024;
@@ -1051,6 +1052,42 @@ pub unsafe extern "C" fn PEM_ASN1_write_bio_ctx(
     // SAFETY: the caller's contract.
     unsafe {
         PEM_ASN1_write_bio_internal(None, i2d, vctx, name, bp, x, enc, kstr, klen, callback, u)
+    }
+}
+
+/// `int PEM_write_bio_X509_PUBKEY(BIO *out, const X509_PUBKEY *x)` — the write_bio half of
+/// `IMPLEMENT_PEM_rw(X509_PUBKEY, X509_PUBKEY, PEM_STRING_PUBLIC, X509_PUBKEY)`
+/// (`crypto/pem/pem_all.c:41`), whose body is `include/openssl/pem.h:156-162`'s
+/// `IMPLEMENT_PEM_write_bio`: `PEM_ASN1_write_bio((i2d_of_void *)i2d_X509_PUBKEY,
+/// PEM_STRING_PUBLIC, out, x, NULL, NULL, 0, NULL, NULL)`.
+///
+/// It is the encoder `encode_key2any.c`'s `SubjectPublicKeyInfo` PEM arm calls (`:354`), so
+/// Phase 10.3 pulls it forward rather than claiming a later stratum's symbol, the way
+/// `src/pem/pem_pk8.rs` builds its own `IMPLEMENT_PEM_*` expansions internally.
+///
+/// # Safety
+/// `out` a live BIO; `x` live.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_X509_PUBKEY(out: *mut Bio, x: *const X509Pubkey) -> c_int {
+    // SAFETY: this wrapper restates `i2d_X509_PUBKEY`'s contract in `I2dOfVoid`'s terms.
+    unsafe extern "C" fn i2d_void(a: *const c_void, p: *mut *mut c_uchar) -> c_int {
+        // SAFETY: the caller's contract, restated in the typed encoder's terms.
+        unsafe { i2d_X509_PUBKEY(a.cast::<X509Pubkey>(), p) }
+    }
+    let i2d: I2dOfVoid = i2d_void;
+    // SAFETY: every argument is live; the two NULLs are the macro's no-cipher arms.
+    unsafe {
+        PEM_ASN1_write_bio(
+            Some(i2d),
+            PEM_STRING_PUBLIC,
+            out,
+            x.cast::<c_void>(),
+            ptr::null(),
+            ptr::null(),
+            0,
+            None,
+            ptr::null_mut(),
+        )
     }
 }
 

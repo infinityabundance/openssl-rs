@@ -585,10 +585,15 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str, str | None]
         )
     }
     spellings = []
+    # **The dispatch expression's `.as_ptr()` may sit on the next line.** `rustfmt` breaks
+    # `implementation: ossl_<long authority name>.as_ptr().cast(),` after the identifier when the
+    # line exceeds the width, and the reader must read a formatted table: requiring the call to
+    # abut the identifier silently under-counted `DEFLT_ENCODERS` (55 of 241 rows) the first time
+    # the `encode_key2any.c` rows landed. D445 is where that was found and this is the repair.
     for m in re.finditer(
         r'algorithm_names:\s*(?:c"([^"]*)"|([A-Za-z_][A-Za-z0-9_]*))\s*'
         r'(?:\.as_ptr\(\))?\s*,'
-        r'(?P<mid>.*?)implementation:\s*([A-Za-z0-9_:]+)\.as_ptr\(\)',
+        r'(?P<mid>.*?)implementation:\s*([A-Za-z0-9_:]+)\s*\.as_ptr\(\)',
         body,
         re.S,
     ):
