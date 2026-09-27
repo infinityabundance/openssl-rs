@@ -431,6 +431,10 @@
       "observations": 159,
       "verdict": "pass"
     },
+    "RT-STORE": {
+      "observations": 60,
+      "verdict": "pass"
+    },
     "RT-THREAD": {
       "observations": 40,
       "verdict": "pass"
@@ -455,11 +459,11 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 3133,
+    "libcrypto": 3160,
     "libssl": 0
   },
   "open_obligations": {
-    "phase10": 87,
+    "phase10": 60,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -506,7 +510,7 @@
     "blocking_dependencies": 6,
     "divergence_names_covered": 40,
     "findings": 0,
-    "language_census": 5376,
+    "language_census": 5415,
     "sealed_census": 52
   },
   "provider_implemented": [

@@ -31761,3 +31761,56 @@ doc; they move into the generated `err_sites.rs` when that generator next runs.
 `phase_state.py` reads 0-9 `complete`, 10 `in-progress`, 11-21 `not-started`. Phase-10 provider rows
 are unchanged at `630 implemented / 6 open`; `libcrypto` moves to 3,133 implemented exports.
 
+## D448 -- 10.5 part one: the loader object and its registry land, and `store_lib.c` is withheld with a measured blocker
+
+`crypto/store/` has four units and 76 exports. This slice lands the three that carry no
+certificate object: `store_strings.c` (1, `OSSL_STORE_INFO_type_string`), `store_meth.c` (10, the
+`OSSL_STORE_LOADER` method object and its `set0_*` accessors) and `store_register.c` (16, the
+loader registry) -- **27 exports**, in a new `src/store/` module tree. The ledger moves from
+`implemented=211 open=87` to **`implemented=238 open=60`**.
+
+**The context slot is built, not faked.** `src/context/mod.rs` now builds and releases the store
+slot in the authority's `P2` position after `encoder_store` (slot 15), and
+`src/provider/stores.rs`'s two loader bridges are real delegations where they were
+`assert_slot_unfilled` guards. That is what makes a registered loader findable by a later
+`OSSL_STORE_LOADER_fetch` rather than merely present in a table.
+
+**`RT-STORE` lands as a court** (`courts/phase10/rt_store_probe.c`, registered in
+`phase10_courts.py` and in `provider_court_coverage.py`'s `COURT_PROBES`, which now names the
+`"file"` algorithm), with **60 observations**, authority and candidate identical.
+
+**Two things are withheld, and both blockers are measured rather than assumed.**
+
+* `store_lib.c`'s **49 exports** stay open. `nm --undefined-only` over
+  `libcrypto-lib-store_lib.o` names names this crate does not define anywhere -- checked by
+  searching for each as a definition, not for the word: `X509_up_ref`, `X509_CRL_up_ref`,
+  `X509_free`, `X509_CRL_free` and `i2d_X509_NAME` for the CERT/CRL arms of
+  `OSSL_STORE_INFO_free`/`get1_CERT`/`get1_CRL` and for `OSSL_STORE_SEARCH_by_name`; `d2i_X509`,
+  `d2i_X509_AUX` and `d2i_X509_CRL` through `store_result.c`'s
+  `ossl_store_handle_load_result`, which `OSSL_STORE_load`'s fetched branch calls; and
+  `PKCS12_parse` (10.3-withheld) for its `try_pkcs12` arm.
+* **The two `file` `OSSL_OP_STORE` provider rows stay `unimplemented`.** `file_store.c` (900 lines)
+  and `file_store_any2obj.c` (361) are not transcribed, and publishing a row in front of a stubbed
+  engine would be a false `implemented` -- the exact thing this census exists to refuse.
+  `OSSL_STORE_LOADER_fetch` and `OSSL_STORE_LOADER_do_all_provided` are therefore **reference-taken
+  and never called**, so the candidate cannot produce a transcript that diverges while the row is
+  absent, and the judge prints each blocker as a `pending.` line instead.
+
+**The `store_lib.c` blockage is per-function and the record says so.** `OSSL_STORE_load`,
+`OSSL_STORE_INFO_free`'s CERT/CRL arms, `OSSL_STORE_INFO_get1_CERT`/`get1_CRL`,
+`OSSL_STORE_find` and the two search objects are the blocked ones; the remaining `OSSL_STORE_INFO`
+constructors and accessors (`new_PKEY`/`new_NAME`/`new_PARAMS`/`new_PUBKEY`/`new_OTHER`, the
+matching `get0_*`, `get_type`, `get0_name`, `up_ref`) and the CTX's `open`/`eof`/`error`/`expect`/
+`close` are not blocked by any of those names. Carving that reachable subset -- each blocked arm
+withheld with its own note, never stubbed -- is the rest of 10.5, and calling the unit wholly
+blocked would have been the opposite error.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1087 passed, 0 failed** (the loader-object test is now the positive form of a guard).
+`run_courts.py`, `court_coverage.py`, `provider_court_coverage.py` and `probe_hygiene.py` clean;
+the census's subsequence and dispatch-partition checks pass. `PIPELINE OK` exit 0 on two
+consecutive runs, at **109 courts** and **44,952 observations**. `phase_state.py` reads 0-9
+`complete`, 10 `in-progress`, 11-21 `not-started`.
+

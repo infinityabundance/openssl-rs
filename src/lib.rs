@@ -168,6 +168,11 @@ pub mod sm4;
 // two crypt units the `SM2` signature and asym-cipher rows publish on.
 pub(crate) mod sm2;
 pub mod status;
+// Phase 10 (10.5) — `crypto/store/`: the `OSSL_STORE_LOADER` object and its registry, and the
+// provider-side loader method fetched over slot 15. The directory is new here; this pass lands
+// `store_strings.c`, `store_register.c` and `store_meth.c` and names the blockers on the two
+// units it withholds (`store_lib.c` and the `file_store.c` provider row) in its module doc.
+pub mod store;
 // Test-only: the one process-wide lock that serialises tests touching the crate's
 // process-global state (init/cleanup, the default `OSSL_LIB_CTX`, the memory
 // functions, the error registry, the object database, the property/method stores,
