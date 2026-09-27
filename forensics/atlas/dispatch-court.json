@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 497,
+      "crate_files_read": 498,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 372,
       "signatures_checked": 265,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 200,
+      "signatures_not_a_dispatch": 202,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -4646,6 +4646,16 @@
           "alias": "FreeKeyFn",
           "at": "src/provider/decode_pvk2key.rs",
           "why": "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's `keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "KeyToParamstringFn",
+          "at": "src/provider/encode_key2any.rs",
+          "why": "not a provider dispatch: the authority declares this `typedef` inside `encode_key2any.c` itself (`:67-72`), not in an installed header, so the typedefs atlas has no record of it"
+        },
+        {
+          "alias": "KeyToDerFn",
+          "at": "src/provider/encode_key2any.rs",
+          "why": "not a provider dispatch: the authority declares this `typedef` inside `encode_key2any.c` itself (`:67-72`), not in an installed header, so the typedefs atlas has no record of it"
         },
         {
           "alias": "SkCompFn",

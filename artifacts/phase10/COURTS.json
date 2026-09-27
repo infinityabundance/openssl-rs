@@ -41,9 +41,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 342,
+        "authority_observations": 349,
         "candidate_exit_code": 0,
-        "candidate_observations": 342,
+        "candidate_observations": 349,
         "candidate_stderr_tail": [],
         "court": "RT-KEYFORMAT",
         "crashed": false,
@@ -163,7 +163,7 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_keyformat_probe.c",
-      "sha256": "6c7b759202dc98896be75f786db8f0458e6f652a4cc5815a651705fa2f6b6b3e"
+      "sha256": "fec98fac5071612f7f2cb2c590bb55c369a6a6659959288a82abde08119ece27"
     },
     {
       "name": "probe",

@@ -29,9 +29,9 @@
  *
  * The encrypted PVK arm (`b2i_*_PVK_bio` over a salted body) needs the `legacy` provider's
  * `PVKKDF`/`RC4` rows, which are not landed; the probe drives the unencrypted level. The two
- * `i2d_PKCS8PrivateKey_nid_*` writers are held pending entirely (`do_pk8pkey`'s legacy encrypted
- * arm needs `PKCS8_encrypt`, 10.4's and open); their **addresses** are taken in `arm_reference`,
- * which claims they are non-NULL and nothing more.
+ * `i2d_PKCS8PrivateKey_nid_*` writers are driven by `arm_pk8`'s legacy PBE arms (`do_pk8pkey`'s
+ * `nid != -1` branch, which `PKCS8_encrypt` now closes); `arm_reference` keeps their address
+ * floor as it does for every other name.
  */
 
 #include <stdio.h>
@@ -182,7 +182,8 @@ static void describe(const char *key, EVP_PKEY *pk)
 
 /* --------------------------------------------------------------------------------------------
  * arm_reference -- all twenty-six names are defined by the linked library. For the twenty-four
- * that are driven below this is a floor; for the two `_nid_` writers it is the whole claim.
+ * that are driven in `arm_pk8` and friends this is a floor; the two `_nid_` writers are driven by
+ * `arm_pk8`'s legacy PBE arms as well.
  * ------------------------------------------------------------------------------------------ */
 
 static void arm_reference(void)
@@ -551,6 +552,48 @@ static void arm_pk8(void)
         if (fp != NULL)
             fclose(fp);
         errs("pk8.i2d_fp");
+    }
+
+    /* i2d_PKCS8PrivateKey_nid_bio / _fp -- `do_pk8pkey`'s `nid != -1` arm, the legacy PBE path
+     * over `PKCS8_encrypt`. The salt is drawn at random, so the DER bytes cannot be the contract;
+     * the *shape* can: the return, the encoded length, a passphrase round-trip through
+     * `d2i_PKCS8PrivateKey_bio`, and the error queue. `NID_pbe_WithSHA1And3_Key_TripleDES_CBC` is
+     * the classic PKCS#1 spelling these two writers exist for. */
+    ERR_clear_error();
+    {
+        BIO *b = BIO_new(BIO_s_mem());
+        if (b != NULL) {
+            BUF_MEM *bm = NULL;
+            int rc = i2d_PKCS8PrivateKey_nid_bio(b, rsa,
+                                                NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+                                                "12345", 5, NULL, NULL);
+            kv_int("pk8.i2d_nid_bio.rc", rc);
+            BIO_ctrl(b, BIO_C_GET_BUF_MEM_PTR, 0, &bm);
+            kv_int("pk8.i2d_nid_bio.len", bm != NULL ? (int)bm->length : -1);
+            if (bm != NULL && bm->length > 0) {
+                BIO *in = BIO_new_mem_buf(bm->data, (int)bm->length);
+                EVP_PKEY *pk = d2i_PKCS8PrivateKey_bio(in, NULL, NULL, (void *)"12345");
+                kv_int("pk8.i2d_nid_bio.roundtrip", pk != NULL);
+                EVP_PKEY_free(pk);
+                BIO_free(in);
+            }
+            errs("pk8.i2d_nid_bio");
+        }
+        BIO_free(b);
+    }
+    ERR_clear_error();
+    {
+        FILE *fp = tmpfile();
+        if (fp != NULL) {
+            int rc = i2d_PKCS8PrivateKey_nid_fp(fp, rsa,
+                                                NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+                                                "12345", 5, NULL, NULL);
+            kv_int("pk8.i2d_nid_fp.rc", rc);
+            fflush(fp);
+            kv_int("pk8.i2d_nid_fp.len", (int)ftell(fp));
+            fclose(fp);
+        }
+        errs("pk8.i2d_nid_fp");
     }
 
     /* d2i_PKCS8PrivateKey_bio / _fp over the fixed PBES2 vector, passphrase through the `u`

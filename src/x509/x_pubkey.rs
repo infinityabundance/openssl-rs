@@ -86,6 +86,7 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
+use crate::asn1::a_i2d_fp::ASN1_item_i2d_bio;
 use crate::asn1::bitstr::{set_bits_left, ASN1_BIT_STRING_set};
 use crate::asn1::d2i::{asn1_item_embed_d2i, ASN1_item_d2i, ASN1_item_d2i_ex};
 use crate::asn1::fre::ASN1_item_free;
@@ -813,6 +814,19 @@ pub unsafe extern "C" fn d2i_X509_PUBKEY(
 pub unsafe extern "C" fn i2d_X509_PUBKEY(a: *const X509Pubkey, out: *mut *mut c_uchar) -> c_int {
     // SAFETY: the caller's enclosing `# Safety` section is the contract.
     unsafe { ASN1_item_i2d(a.cast::<c_void>(), out, X509_PUBKEY_it()) }
+}
+
+/// `int i2d_X509_PUBKEY_bio(BIO *bp, const X509_PUBKEY *xpk)` — `crypto/x509/x_all.c:691-694`,
+/// the `ASN1_i2d_bio_of(X509_PUBKEY, i2d_X509_PUBKEY, …)` expansion. It is the encoder
+/// `encode_key2any.c`'s `SubjectPublicKeyInfo` DER arm calls (`:329`), so Phase 10.3 pulls it
+/// forward rather than claiming a later stratum's symbol.
+///
+/// # Safety
+/// `bp` a live BIO; `xpk` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_X509_PUBKEY_bio(bp: *mut Bio, xpk: *const X509Pubkey) -> c_int {
+    // SAFETY: `bp` is live and `xpk` is the caller's object; `X509_PUBKEY_it()` is the item.
+    unsafe { ASN1_item_i2d_bio(X509_PUBKEY_it(), bp, xpk.cast::<c_void>()) }
 }
 
 /// `X509_PUBKEY *X509_PUBKEY_dup(const X509_PUBKEY *a)` — `crypto/x509/x_pubkey.c:286-324`.

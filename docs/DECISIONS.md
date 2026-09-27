@@ -31588,3 +31588,89 @@ co-exist with the landed items, and the D348-style de-duplication to a single ho
 and `forensics/tools/gen_err_raise_sites.py` change; and the ledgers, the atlases, the census and
 `forensics/regression-baseline.json` are regenerated.
 
+## D445 -- `encode_key2any.c` lands whole: 208 expansions, 206 registered rows, 412 provider rows, and three machinery defects found on the way
+
+This closes 10.1. `src/provider/encode_key2any.rs` is the authority's largest provider unit (1,820
+lines, one `MAKE_ENCODER` macro at `:1467-1532` over 208 expansions at `:1538-1819`), and it is
+**the unit's own transcription**, engine and tables, not a table of registrations. The engine is
+`key2any_encode` over `KEY2ANY_CTX`, the seven writers (`key_to_pki_*`, `key_to_epki_*`,
+`key_to_spki_*`, `key_to_type_specific_*`), `key_to_p8info`/`key_to_encp8`/`key_to_pubkey`, and the
+per-type DER producers and parameter-blob builders (`prepare_*_params`, `*_spki_pub_to_der`,
+`*_pki_priv_to_der`, `*_check_key_type`, the seven `k2d_noctx!` closures). The tables are 208
+`make_encoder!` expansions; **206 are registered** as rows by both providers and two --
+`MAKE_ENCODER(sm2, ec, SM2, der/pem)` -- are transcribed and left unregistered, exactly as the
+authority's own `encoders.inc` does.
+
+**Provenance is stated rather than implied.** The engine and the `make_encoder!` macro were found
+in the working tree as an **uncommitted, unfinished** transcription: the macro was written, the
+208 expansions were not, and a `// @@ENCODER_TABLES@@` placeholder stood where they belong. This
+slice generated the expansions and the rows, fixed the defects the compiler and clippy then
+surfaced, and wired the unit into both providers. It did not re-derive the engine.
+
+**Two Phase-11 exports are pulled forward, and only the measured two.**
+`nm --undefined-only` over the authority's `libdefault-lib-encode_key2any.o` names exactly two
+symbols this crate did not implement that the unit reaches, both from the
+`SubjectPublicKeyInfo` arms (`:329`, `:354`): `i2d_X509_PUBKEY_bio` (landed beside
+`i2d_X509_PUBKEY` in `src/x509/x_pubkey.rs`) and `PEM_write_bio_X509_PUBKEY` (landed beside
+`PEM_ASN1_write_bio_ctx` in `src/pem/pem_lib.rs`). Both are thin wrappers over landed machinery
+(`ASN1_item_i2d_bio`, `PEM_ASN1_write_bio`), and **ownership is unchanged**: Phase 11 still derives
+`not-started` and no Phase 11 evidence, ledger, plan, seal or state row is created.
+
+**The 10.4 dependency closes and takes two exports with it.** `pem_pk8.rs`'s `do_pk8pkey`
+withheld the authority's `nid != -1` arm because it needed `PKCS8_encrypt`, and that arm is what
+`i2d_PKCS8PrivateKey_nid_bio`/`_fp` are. With `PKCS8_encrypt_ex` landed (D444) the arm is
+transcribed whole (`pem_pk8.c:135-154`, including the `PEM_R_READ_KEY` read and the cleanse), and
+both exports land. The ledger moves from `implemented=198 open=100` to **`implemented=200
+open=98`**, and `RT-KEYFORMAT` from 342 to **349** observations.
+
+### Three machinery defects, each found by a gate refusing the work
+
+1. **The provider census could not read a formatted table.** `gen_provider_algorithms.py`'s
+   inline reader required `.as_ptr()` to abut the dispatch identifier, so the first formatting pass
+   that wrapped `implementation: <long authority name>.as_ptr().cast(),` onto its own line made it
+   read **55 of 241** rows and refuse the table. The reader now tolerates whitespace before
+   `.as_ptr()`. This is the D417/D420/D421 class: a reader that silently under-counts.
+2. **The row order is `encoders.inc`'s, and it interleaves.** The type-specific rows and the
+   `blob` rows alternate (`EC` ts, `EC` blob, `SM2` ts, `SM2` blob), so appending all
+type-specific rows before the blob rows is not a subsequence and the census refused it. The rows
+are now placed by anchor against the rows already present, in the authority's own order, and the
+subsequence check holds for both tables.
+3. **Two readers cannot see two things this unit needs.** `prerequisite_gate.py` reads definitions
+   textually and cannot see a `macro_rules!`-generated `static`, so a table named after the
+   authority's symbol would read as an unresolved prerequisite; the tables therefore take the
+   crate's existing SCREAMING convention (`RSA_TO_TEXT_FUNCTIONS`) with the authority's symbol name
+   in the doc comment. And `dispatch_court.py` cannot link `encode_key2any.c:67-72`'s two
+   function-type typedefs (`key_to_paramstring_fn`, `key_to_der_fn`) because they are declared in
+   the `.c`, not in an installed header, so the typedefs atlas has no record of them; the crate's
+   two aliases are exempted with that reason rather than left unlinked.
+
+**What is landed and what is not driven, stated plainly.** The 206 rows are implemented, registered
+by both providers, pinned by the census's `algorithm_names`/`property_definition` join, and
+`provider_court_coverage` marks them `direct` (their aliases are named by `rt_codec_probe.c`). **No
+observation drives them yet**: `RT-CODEC` stays at 1,487 observations, and its own header still
+says the encoder half is open. `docs/PHASE-10-SUBPHASES.md` section 3.1's first join is therefore
+only partly read for this unit, and the next slice is the probe arms that read it. The two `_nid_`
+writers cannot be byte-compared at all -- `PKCS8_encrypt` draws a random salt -- so their arm
+observes the return, the encoded length, a passphrase round-trip through the reader and the error
+queue, and says why in the probe.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1083 passed, 0 failed** (two item-shape tests in the new module). `run_courts.py`,
+`court_coverage.py`, `provider_court_coverage.py`, `dispatch_court.py`, `prerequisite_gate.py` and
+`probe_hygiene.py` clean. `PIPELINE OK` exit 0 on two consecutive runs, at 108 courts and 42,237
+observations. `phase_state.py` reads 0-9 `complete`, 10 `in-progress`, 11-21 `not-started`.
+
+### Movement
+
+Phase-10 provider rows move from `218 implemented / 418 open` to **`630 implemented / 6 open`**
+(the 412 `encode_key2any.c` rows; the remaining six are the four `decode_pem2der.c`/
+`decode_spki2typespki.c` rows, waiting on Phase 11's `ossl_x509_algor_is_sm2`, and the two
+`file_store.c` rows 10.5 owes). Phase-10 exports move to `200 implemented / 98 open`. The new
+module is added; `src/provider/mod.rs`, `src/provider/encode_key2text.rs`, `src/dh/asn1.rs`,
+`src/x509/x_pubkey.rs`, `src/pem/pem_lib.rs`, `src/pem/pem_pk8.rs`,
+`courts/phase10/rt_keyformat_probe.c`, `forensics/tools/gen_provider_algorithms.py` and
+`forensics/tools/dispatch_court.py` change; and the ledgers, the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
+

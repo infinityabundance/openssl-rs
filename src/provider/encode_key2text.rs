@@ -93,6 +93,7 @@ use crate::ffc::FfcParams;
 use crate::params::OsslParam;
 use crate::passphrase::OsslPassphraseCallback;
 use crate::provider::activate::OsslAlgorithm;
+use crate::provider::encode_key2any::*;
 use crate::provider::encode_key2blob::{EC_TO_BLOB_FUNCTIONS, SM2_TO_BLOB_FUNCTIONS};
 use crate::provider::encode_key2ms::{
     DSA_TO_MSBLOB_FUNCTIONS, DSA_TO_PVK_FUNCTIONS, RSA_TO_MSBLOB_FUNCTIONS, RSA_TO_PVK_FUNCTIONS,
@@ -1438,7 +1439,7 @@ const BASE_PVK_PROPERTY: *const c_char = c"provider=base,fips=yes,output=pvk".as
 /// Each row is the authority's `ENCODER_TEXT`/`ENCODER` expansion, and each is written as
 /// the same struct literal the census's reader parses (`algorithm_names` then `implementation`) so
 /// that a row and its dispatch symbol cannot drift apart.
-pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 36] = [
+pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 242] = [
     OsslAlgorithm {
         algorithm_names: c"RSA".as_ptr(),
         property_definition: DEFAULT_TEXT_PROPERTY,
@@ -1619,9 +1620,93 @@ pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 36] = [
     // follow the text rows in `deflt_encoder[]`, so appending them keeps the crate's table a
     // subsequence of the authority's order (the census's `main` check).
     OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=type-specific"
+            .as_ptr(),
+        implementation: RSA_TO_TYPE_SPECIFIC_KEYPAIR_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=type-specific"
+            .as_ptr(),
+        implementation: RSA_TO_TYPE_SPECIFIC_KEYPAIR_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=type-specific"
+            .as_ptr(),
+        implementation: DH_TO_TYPE_SPECIFIC_PARAMS_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=type-specific"
+            .as_ptr(),
+        implementation: DH_TO_TYPE_SPECIFIC_PARAMS_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=type-specific"
+            .as_ptr(),
+        implementation: DHX_TO_TYPE_SPECIFIC_PARAMS_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=type-specific"
+            .as_ptr(),
+        implementation: DHX_TO_TYPE_SPECIFIC_PARAMS_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=type-specific"
+            .as_ptr(),
+        implementation: DSA_TO_TYPE_SPECIFIC_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=type-specific"
+            .as_ptr(),
+        implementation: DSA_TO_TYPE_SPECIFIC_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=type-specific"
+            .as_ptr(),
+        implementation: EC_TO_TYPE_SPECIFIC_NO_PUB_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=type-specific"
+            .as_ptr(),
+        implementation: EC_TO_TYPE_SPECIFIC_NO_PUB_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         algorithm_names: c"EC".as_ptr(),
         property_definition: DEFAULT_BLOB_PROPERTY,
         implementation: EC_TO_BLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=default,fips=no,output=der,structure=type-specific"
+            .as_ptr(),
+        implementation: SM2_TO_TYPE_SPECIFIC_NO_PUB_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=default,fips=no,output=pem,structure=type-specific"
+            .as_ptr(),
+        implementation: SM2_TO_TYPE_SPECIFIC_NO_PUB_PEM_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -1658,6 +1743,1560 @@ pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 36] = [
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: RSA_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: RSA_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: RSA_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: RSA_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: RSA_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: RSA_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: RSAPSS_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: RSAPSS_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: RSAPSS_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: RSAPSS_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: RSAPSS_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: RSAPSS_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: DH_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: DH_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: DH_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: DH_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DH_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DH_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: DHX_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: DHX_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: DHX_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: DHX_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DHX_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DHX_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: DSA_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: DSA_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: DSA_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: DSA_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DSA_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DSA_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: EC_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: EC_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: EC_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: EC_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: EC_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: EC_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition:
+            c"provider=default,fips=no,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SM2_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition:
+            c"provider=default,fips=no,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SM2_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=default,fips=no,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SM2_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=default,fips=no,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SM2_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=default,fips=no,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SM2_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=default,fips=no,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SM2_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: X25519_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: X25519_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: X25519_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: X25519_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: X25519_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: X25519_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: X448_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: X448_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: X448_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: X448_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: X448_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: X448_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ED25519_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ED25519_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ED25519_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ED25519_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ED25519_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ED25519_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ED448_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ED448_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ED448_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ED448_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ED448_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ED448_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_512_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_512_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_512_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_512_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_512_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_512_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_768_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_768_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_768_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_768_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_768_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_768_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_1024_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_1024_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_1024_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_1024_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_1024_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_1024_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_44_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_44_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_44_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_44_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_44_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_44_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_65_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_65_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_65_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_65_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_65_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_65_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_87_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition:
+            c"provider=default,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_87_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_87_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=PrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_87_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_87_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_87_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=rsa".as_ptr(),
+        implementation: RSA_TO_RSA_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=rsa".as_ptr(),
+        implementation: RSA_TO_RSA_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=dh".as_ptr(),
+        implementation: DH_TO_DH_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=dh".as_ptr(),
+        implementation: DH_TO_DH_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=dhx".as_ptr(),
+        implementation: DHX_TO_DHX_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=dhx".as_ptr(),
+        implementation: DHX_TO_DHX_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=dsa".as_ptr(),
+        implementation: DSA_TO_DSA_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=dsa".as_ptr(),
+        implementation: DSA_TO_DSA_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=ec".as_ptr(),
+        implementation: EC_TO_EC_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=ec".as_ptr(),
+        implementation: EC_TO_EC_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=pkcs1".as_ptr(),
+        implementation: RSA_TO_PKCS1_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=pkcs1".as_ptr(),
+        implementation: RSA_TO_PKCS1_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=pkcs1".as_ptr(),
+        implementation: RSAPSS_TO_PKCS1_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=pkcs1".as_ptr(),
+        implementation: RSAPSS_TO_PKCS1_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=pkcs3".as_ptr(),
+        implementation: DH_TO_PKCS3_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=pkcs3".as_ptr(),
+        implementation: DH_TO_PKCS3_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=X9.42".as_ptr(),
+        implementation: DHX_TO_X9_42_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=X9.42".as_ptr(),
+        implementation: DHX_TO_X9_42_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=der,structure=X9.62".as_ptr(),
+        implementation: EC_TO_X9_62_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=default,fips=yes,output=pem,structure=X9.62".as_ptr(),
+        implementation: EC_TO_X9_62_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         algorithm_names: ptr::null(),
         property_definition: ptr::null(),
         implementation: ptr::null(),
@@ -1667,7 +3306,7 @@ pub(crate) static DEFLT_ENCODERS: [OsslAlgorithm; 36] = [
 
 /// `base_encoder[]`'s rows the crate publishes — `providers/baseprov.c:67-72`, the same
 /// thirty-one rows with the base provider's property.
-pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 36] = [
+pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 242] = [
     OsslAlgorithm {
         algorithm_names: c"RSA".as_ptr(),
         property_definition: BASE_TEXT_PROPERTY,
@@ -1845,9 +3484,81 @@ pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 36] = [
     },
     // The blob rows, with the base provider's property (see `DEFLT_ENCODERS`).
     OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=type-specific".as_ptr(),
+        implementation: RSA_TO_TYPE_SPECIFIC_KEYPAIR_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=type-specific".as_ptr(),
+        implementation: RSA_TO_TYPE_SPECIFIC_KEYPAIR_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=type-specific".as_ptr(),
+        implementation: DH_TO_TYPE_SPECIFIC_PARAMS_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=type-specific".as_ptr(),
+        implementation: DH_TO_TYPE_SPECIFIC_PARAMS_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=type-specific".as_ptr(),
+        implementation: DHX_TO_TYPE_SPECIFIC_PARAMS_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=type-specific".as_ptr(),
+        implementation: DHX_TO_TYPE_SPECIFIC_PARAMS_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=type-specific".as_ptr(),
+        implementation: DSA_TO_TYPE_SPECIFIC_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=type-specific".as_ptr(),
+        implementation: DSA_TO_TYPE_SPECIFIC_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=type-specific".as_ptr(),
+        implementation: EC_TO_TYPE_SPECIFIC_NO_PUB_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=type-specific".as_ptr(),
+        implementation: EC_TO_TYPE_SPECIFIC_NO_PUB_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
         algorithm_names: c"EC".as_ptr(),
         property_definition: BASE_BLOB_PROPERTY,
         implementation: EC_TO_BLOB_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=base,fips=no,output=der,structure=type-specific".as_ptr(),
+        implementation: SM2_TO_TYPE_SPECIFIC_NO_PUB_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=base,fips=no,output=pem,structure=type-specific".as_ptr(),
+        implementation: SM2_TO_TYPE_SPECIFIC_NO_PUB_PEM_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {
@@ -1879,6 +3590,1502 @@ pub(crate) static BASE_ENCODERS: [OsslAlgorithm; 36] = [
         algorithm_names: c"DSA".as_ptr(),
         property_definition: BASE_PVK_PROPERTY,
         implementation: DSA_TO_PVK_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: RSA_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: RSA_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: RSA_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: RSA_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: RSA_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: RSA_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: RSAPSS_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: RSAPSS_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: RSAPSS_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: RSAPSS_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: RSAPSS_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: RSAPSS_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: DH_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: DH_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: DH_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: DH_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DH_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DH_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: DHX_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: DHX_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: DHX_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: DHX_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DHX_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DHX_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: DSA_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: DSA_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: DSA_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: DSA_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DSA_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: DSA_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: EC_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: EC_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: EC_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: EC_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: EC_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: EC_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=base,fips=no,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SM2_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=base,fips=no,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SM2_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=base,fips=no,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SM2_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=base,fips=no,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SM2_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=base,fips=no,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SM2_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SM2".as_ptr(),
+        property_definition: c"provider=base,fips=no,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SM2_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: X25519_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: X25519_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: X25519_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: X25519_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: X25519_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: X25519_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: X448_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: X448_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: X448_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: X448_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: X448_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"X448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: X448_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ED25519_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ED25519_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ED25519_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ED25519_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ED25519_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED25519".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ED25519_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ED448_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ED448_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ED448_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ED448_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ED448_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ED448".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ED448_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_PRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_PRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_128F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_192F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHA2-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHA2_256F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-128f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_128F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-192f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_192F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256s".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256S_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"SLH-DSA-SHAKE-256f".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: SLH_DSA_SHAKE_256F_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_512_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_512_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_512_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_512_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_512_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-512".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_512_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_768_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_768_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_768_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_768_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_768_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-768".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_768_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_1024_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_1024_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_1024_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_KEM_1024_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_1024_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-KEM-1024".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_KEM_1024_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_44_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_44_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_44_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_44_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_44_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-44".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_44_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_65_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_65_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_65_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_65_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_65_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-65".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_65_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_87_TO_ENCRYPTEDPRIVATEKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=EncryptedPrivateKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_87_TO_ENCRYPTEDPRIVATEKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_87_TO_PRIVATEKEYINFO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=PrivateKeyInfo".as_ptr(),
+        implementation: ML_DSA_87_TO_PRIVATEKEYINFO_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_87_TO_SUBJECTPUBLICKEYINFO_DER_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"ML-DSA-87".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=SubjectPublicKeyInfo"
+            .as_ptr(),
+        implementation: ML_DSA_87_TO_SUBJECTPUBLICKEYINFO_PEM_FUNCTIONS
+            .as_ptr()
+            .cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=rsa".as_ptr(),
+        implementation: RSA_TO_RSA_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=rsa".as_ptr(),
+        implementation: RSA_TO_RSA_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=dh".as_ptr(),
+        implementation: DH_TO_DH_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=dh".as_ptr(),
+        implementation: DH_TO_DH_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=dhx".as_ptr(),
+        implementation: DHX_TO_DHX_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=dhx".as_ptr(),
+        implementation: DHX_TO_DHX_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=dsa".as_ptr(),
+        implementation: DSA_TO_DSA_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=dsa".as_ptr(),
+        implementation: DSA_TO_DSA_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=ec".as_ptr(),
+        implementation: EC_TO_EC_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=ec".as_ptr(),
+        implementation: EC_TO_EC_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=pkcs1".as_ptr(),
+        implementation: RSA_TO_PKCS1_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=pkcs1".as_ptr(),
+        implementation: RSA_TO_PKCS1_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=pkcs1".as_ptr(),
+        implementation: RSAPSS_TO_PKCS1_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"RSA-PSS".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=pkcs1".as_ptr(),
+        implementation: RSAPSS_TO_PKCS1_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=pkcs3".as_ptr(),
+        implementation: DH_TO_PKCS3_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DH".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=pkcs3".as_ptr(),
+        implementation: DH_TO_PKCS3_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=X9.42".as_ptr(),
+        implementation: DHX_TO_X9_42_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"DHX".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=X9.42".as_ptr(),
+        implementation: DHX_TO_X9_42_PEM_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=der,structure=X9.62".as_ptr(),
+        implementation: EC_TO_X9_62_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: c"EC".as_ptr(),
+        property_definition: c"provider=base,fips=yes,output=pem,structure=X9.62".as_ptr(),
+        implementation: EC_TO_X9_62_PEM_FUNCTIONS.as_ptr().cast(),
         algorithm_description: ptr::null(),
     },
     OsslAlgorithm {

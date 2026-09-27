@@ -105,6 +105,7 @@ pub(crate) mod endecoder_common;
 // Phase 10.1's first provider codec unit: `providers/implementations/encode_decode/
 // encode_key2text.c`, the eleven text-encoder tables and their five printers. It is the caller
 // the three `ossl_bio_print_*` helpers in `src/encoder_lib.rs` were withheld for.
+pub(crate) mod encode_key2any;
 pub(crate) mod encode_key2text;
 // Phase 10.1's second provider codec unit: `providers/implementations/encode_decode/
 // encode_key2blob.c`, the `EC`/`SM2` public-point blob encoder tables. Its only closure is
