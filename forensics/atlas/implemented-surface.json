@@ -268,6 +268,7 @@
         "openssl_rs_err_take_data",
         "openssl_rs_evp_pkey_q_keygen",
         "openssl_rs_stat_is_dir",
+        "openssl_rs_store_vctrl",
         "openssl_rs_va_fp",
         "openssl_rs_va_gp",
         "ossl_X509_PUBKEY_INTERNAL_free",
@@ -473,7 +474,7 @@
         "x25519_fe64_sub",
         "x25519_fe64_tobytes"
       ],
-      "compiler_emitted_count": 13661,
+      "compiler_emitted_count": 13968,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -481,7 +482,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 3160,
+        "implemented": 3206,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -2911,6 +2912,29 @@
           "OSSL_SELF_TEST_oncorrupt_byte",
           "OSSL_SELF_TEST_onend",
           "OSSL_SELF_TEST_set_callback",
+          "OSSL_STORE_INFO_free",
+          "OSSL_STORE_INFO_get0_CERT",
+          "OSSL_STORE_INFO_get0_CRL",
+          "OSSL_STORE_INFO_get0_NAME",
+          "OSSL_STORE_INFO_get0_NAME_description",
+          "OSSL_STORE_INFO_get0_PARAMS",
+          "OSSL_STORE_INFO_get0_PKEY",
+          "OSSL_STORE_INFO_get0_PUBKEY",
+          "OSSL_STORE_INFO_get0_data",
+          "OSSL_STORE_INFO_get1_NAME",
+          "OSSL_STORE_INFO_get1_NAME_description",
+          "OSSL_STORE_INFO_get1_PARAMS",
+          "OSSL_STORE_INFO_get1_PKEY",
+          "OSSL_STORE_INFO_get1_PUBKEY",
+          "OSSL_STORE_INFO_get_type",
+          "OSSL_STORE_INFO_new",
+          "OSSL_STORE_INFO_new_CERT",
+          "OSSL_STORE_INFO_new_CRL",
+          "OSSL_STORE_INFO_new_NAME",
+          "OSSL_STORE_INFO_new_PARAMS",
+          "OSSL_STORE_INFO_new_PKEY",
+          "OSSL_STORE_INFO_new_PUBKEY",
+          "OSSL_STORE_INFO_set0_NAME_description",
           "OSSL_STORE_INFO_type_string",
           "OSSL_STORE_LOADER_do_all_provided",
           "OSSL_STORE_LOADER_fetch",
@@ -2935,9 +2959,32 @@
           "OSSL_STORE_LOADER_set_open_ex",
           "OSSL_STORE_LOADER_settable_ctx_params",
           "OSSL_STORE_LOADER_up_ref",
+          "OSSL_STORE_SEARCH_by_alias",
+          "OSSL_STORE_SEARCH_by_issuer_serial",
+          "OSSL_STORE_SEARCH_by_key_fingerprint",
+          "OSSL_STORE_SEARCH_by_name",
+          "OSSL_STORE_SEARCH_free",
+          "OSSL_STORE_SEARCH_get0_bytes",
+          "OSSL_STORE_SEARCH_get0_digest",
+          "OSSL_STORE_SEARCH_get0_name",
+          "OSSL_STORE_SEARCH_get0_serial",
+          "OSSL_STORE_SEARCH_get0_string",
+          "OSSL_STORE_SEARCH_get_type",
+          "OSSL_STORE_attach",
+          "OSSL_STORE_close",
+          "OSSL_STORE_ctrl",
+          "OSSL_STORE_delete",
           "OSSL_STORE_do_all_loaders",
+          "OSSL_STORE_eof",
+          "OSSL_STORE_error",
+          "OSSL_STORE_expect",
+          "OSSL_STORE_find",
+          "OSSL_STORE_open",
+          "OSSL_STORE_open_ex",
           "OSSL_STORE_register_loader",
+          "OSSL_STORE_supports_search",
           "OSSL_STORE_unregister_loader",
+          "OSSL_STORE_vctrl",
           "OSSL_get_max_threads",
           "OSSL_get_thread_support_flags",
           "OSSL_set_max_threads",
@@ -3644,7 +3691,7 @@
           "i2t_ASN1_OBJECT",
           "o2i_ECPublicKey"
         ],
-        "scaffolded": 2736
+        "scaffolded": 2690
       },
       "libssl": {
         "authority_exports": 603,
@@ -3655,18 +3702,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 3160,
-      "scaffolded": 3339
+      "implemented": 3206,
+      "scaffolded": 3293
     }
   },
-  "body_hash": "93638d6f38fc966411cc6ccb24c451978670536d1f710dbc2fb591d774a07c9a",
+  "body_hash": "10dfc57e2bea1af7b46ababa309560ecf6cdde81bee3e29631208440b1a9b0a1",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "edf45bfb64d7bc562219b7f8e505b13cae9555069ccad0177f15389d618008ab"
+      "sha256": "9cb8dc81dc918d1bcc2082444136d5d43d309c29cab16ce66a32f0f10c0e4e7b"
     },
     {
       "name": "authority-exports",

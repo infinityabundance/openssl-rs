@@ -1,12 +1,12 @@
-//! Phase 10 (10.5) — the `crypto/store/` subsystem's loader object, registry and strings.
+//! Phase 10 (10.5) — the `crypto/store/` subsystem: its loader object, its registry, its
+//! strings, and its `OSSL_STORE_CTX` state machine and `OSSL_STORE_INFO`/
+//! `OSSL_STORE_SEARCH` object model.
 //!
 //! This module is the crate's home for `crypto/store/`, and the ledger
 //! (`forensics/phase10-obligations.json`) maps all seventy-six `store.h` exports of the
-//! stratum to `src/store/mod.rs`. This pass lands the three units that carry the
-//! **loader object and its registry** — the part of 10.5 whose closure is landed today —
-//! and withholds the fourth (`store_lib.c`, the `OSSL_STORE_CTX` state machine and the
-//! `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object model) and the two `OSSL_OP_STORE`
-//! provider rows published by `providers/implementations/storemgmt/file_store.c`.
+//! stratum to `src/store/mod.rs`. **All four export-bearing units are landable, and the
+//! whole 76 is measured per function rather than per unit** — the two `OSSL_OP_STORE`
+//! provider rows are the only part still withheld.
 //!
 //! # What landed, unit by unit
 //!
@@ -19,31 +19,35 @@
 //! * [`store_meth`] — `store_meth.c` (511 lines, ten exports): the provider-side loader
 //!   method object, the `OSSL_OP_STORE` dispatch scan, the fetch machinery over the
 //!   store-loader method store (slot 15) and the by-name accessors.
+//! * [`store_lib`] — `store_lib.c` (1,102 lines, forty-nine exports): the
+//!   `OSSL_STORE_CTX` state machine (`open`/`open_ex`/`eof`/`error`/`expect`/`close`/
+//!   `attach`/`delete`/`supports_search`/`find` and the two deprecated control entry
+//!   points) and the `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object model. Forty-six of
+//!   the 49 land; see that module's doc for the three withheld with their measured
+//!   blockers and the two carved arms.
 //!
-//! # What is withheld, and each one's measured blocker
+//! # What is withheld, and its measured blocker
 //!
-//! * **`store_lib.c` (49 exports).** The unit is transcribed in no part here because its
-//!   observable surface is split across two blockers rather than one. Its
-//!   `OSSL_STORE_CTX` state machine and `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object
-//!   model reach Phase 11's `X509` object — `OSSL_STORE_INFO_get1_CERT`/`get1_CRL` call
-//!   `X509_up_ref`/`X509_CRL_up_ref`, `OSSL_STORE_INFO_free`'s CERT/CRL arms call
-//!   `X509_free`/`X509_CRL_free`, `OSSL_STORE_find`'s BY_NAME/BY_ISSUER_SERIAL arms call
-//!   `i2d_X509_NAME`, and `OSSL_STORE_load`'s fetched-loader branch calls
-//!   `ossl_store_handle_load_result` (`store_result.c`), whose `try_cert`/`try_crl`/
-//!   `try_pkcs12` call `d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL`/`PKCS12_parse` — **none of
-//!   which is defined in this crate**. `docs/PHASE-10-SUBPHASES.md` section 4.2 records the
-//!   same finding for the PKCS#12 unit: `X509_it` is Phase 11's. A second, smaller blocker
-//!   is the `store_meth.c`/`store_lib.c` pair's own `OSSL_STORE_LOADER_fetch` consumer;
-//!   the fetch itself is landed here and is courted.
+//! * **Three `store_lib.c` exports** — `OSSL_STORE_load` (its fetched branch
+//!   calls `store_result.c`'s `ossl_store_handle_load_result`, whose closure reaches
+//!   `d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL` and `PKCS12_parse`),
+//!   `OSSL_STORE_INFO_get1_CERT` (`X509_up_ref`) and
+//!   `OSSL_STORE_INFO_get1_CRL` (`X509_CRL_up_ref`). Two arms inside
+//!   functions that otherwise land are carved: `OSSL_STORE_INFO_free`'s CERT/CRL arms
+//!   (`X509_free`/`X509_CRL_free`) and `OSSL_STORE_find`'s BY_NAME/BY_ISSUER_SERIAL arms
+//!   (`i2d_X509_NAME`). Every one of those names is Phase 11's `X509` object graph, except
+//!   `ossl_store_handle_load_result`'s `PKCS12_parse` arm, which 10.3 withholds.
+//!   `docs/PHASE-10-SUBPHASES.md` section 4.2 records the same finding for the PKCS#12 unit:
+//!   `X509_it` is Phase 11's.
 //! * **The two `OSSL_OP_STORE` provider rows** (`forensics/atlas/provider-algorithms.json`:
 //!   `default` and `base`, `algorithm_names` `file`, dispatch `ossl_file_store_functions`).
 //!   They are published by `file_store.c`, whose `file_setup_decoders` builds a decoder
 //!   chain and whose `file_load_file` runs it, and whose result path is `store_result.c`'s
 //!   `ossl_store_handle_load_result` — the same Phase 11 blocker above. A row cannot be
 //!   published without the engine behind it, so the two rows remain `unimplemented` and the
-//!   census says so; the refusal arms that would drive them (an unknown scheme, a NULL URI,
-//!   a loader that answers a NULL `load`) are named `pending` by `RT-STORE`
-//!   (`courts/phase10/rt_store_probe.c`).
+//!   census says so; `OSSL_STORE_LOADER_fetch`/`do_all_provided` stay reference-taken by
+//!   `RT-STORE` rather than called, and the refused schemes are driven through a registered
+//!   in-process legacy loader instead.
 //!
 //! # The loader object, and where each field comes from
 //!
@@ -59,8 +63,9 @@
 //! `*mut c_void`: the authority's `OSSL_STORE_ctrl_fn` takes a C `va_list`, and a `va_list`
 //! cannot cross into Rust (the crate's `runtime/err_variadic.c` exists for the same reason).
 //! The prototype court canonicalises a `va_list` as an opaque pointer, so this spelling is the
-//! one it reads. The field is stored and reported but never called in this pass; its caller is
-//! `store_lib.c`'s `OSSL_STORE_vctrl`, which is withheld.
+//! one it reads. The field is called by [`store_lib`]'s `OSSL_STORE_vctrl` (through
+//! `openssl_rs_store_vctrl`), whose only `va_arg` walk is the `OSSL_STORE_C_USE_SECMEM`
+//! `int *`.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -70,6 +75,7 @@ use core::sync::atomic::AtomicI32;
 use crate::params::OsslParam;
 use crate::provider::OsslProvider;
 
+pub(crate) mod store_lib;
 pub(crate) mod store_meth;
 pub(crate) mod store_register;
 pub(crate) mod store_strings;
@@ -162,8 +168,8 @@ pub(crate) type OsslStoreAttachFn = unsafe extern "C" fn(
 ///
 /// The C `va_list` is canonicalised by the prototype court as an opaque pointer, and the crate
 /// has no `va_list` type (a `va_list` cannot cross into Rust; `runtime/err_variadic.c` exists for
-/// that reason), so the third argument is spelled `*mut c_void`. The loader never calls this
-/// callback — `store_lib.c`'s `OSSL_STORE_vctrl` is the caller and is withheld.
+/// that reason), so the third argument is spelled `*mut c_void`. `store_lib.c`'s `OSSL_STORE_vctrl`
+/// is the only caller, and it forwards the list exactly as the authority does.
 pub(crate) type OsslStoreCtrlFn =
     unsafe extern "C" fn(*mut OsslStoreLoaderCtx, c_int, *mut c_void) -> c_int;
 /// `typedef int (*OSSL_STORE_expect_fn)(OSSL_STORE_LOADER_CTX *ctx, int expected)` —

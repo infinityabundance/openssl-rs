@@ -283,9 +283,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 60,
-              "-O1": 60,
-              "-O2": 60
+              "-O0": 159,
+              "-O1": 159,
+              "-O2": 159
             },
             "side": "authority",
             "verdict": "clean"
@@ -311,9 +311,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 60,
-              "-O1": 60,
-              "-O2": 60
+              "-O0": 159,
+              "-O1": 159,
+              "-O2": 159
             },
             "side": "candidate",
             "verdict": "clean"
@@ -5748,7 +5748,7 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_store_probe.c",
-      "sha256": "e99918a0a6ed8ba62ee84519d2eddbe2f8062416392fbf709b8fdb9b03d5f0a0"
+      "sha256": "907a8f099f584c086a1326c300041ee11ce3c05716f1c8965efc41783bd51987"
     },
     {
       "name": "probe",

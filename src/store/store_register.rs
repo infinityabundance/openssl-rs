@@ -577,7 +577,6 @@ pub unsafe extern "C" fn OSSL_STORE_register_loader(loader: *mut OsslStoreLoader
 ///
 /// # Safety
 /// `scheme` must be NUL-terminated.
-#[allow(dead_code)] // awaited by store_lib.c's `OSSL_STORE_open_ex`, withheld (see the module root)
 pub(crate) unsafe fn ossl_store_get0_loader_int(scheme: *const c_char) -> *const OsslStoreLoader {
     if !ensure_registry() {
         // SAFETY: a compile-time-constant site.
