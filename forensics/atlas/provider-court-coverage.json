@@ -4820,7 +4820,8 @@
           "RT-DIGEST",
           "RT-CIPHER",
           "RT-KEYMGMT",
-          "RT-SIGNATURE"
+          "RT-SIGNATURE",
+          "RT-CODEC"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
@@ -14240,7 +14241,7 @@
     {
       "name": "court:RT-CODEC:rt_codec_probe.c",
       "path": "courts/phase10/rt_codec_probe.c",
-      "sha256": "a2c8d427426c3eff0e20503f36a3559d98203f09b49dd52521a99cb2c8939b22"
+      "sha256": "3ae11d741994225b43215dd0a7af71a035d311108d729964ee6ad440fcfcc182"
     }
   ],
   "kind": "provider-court-coverage",

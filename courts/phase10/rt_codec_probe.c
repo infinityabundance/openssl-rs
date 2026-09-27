@@ -46,6 +46,17 @@
  * key (or salt) differs between two runs and a differential transcript must be a function of its
  * inputs alone. No private value is printed; the keys are parameters and public points.
  *
+ * ## The `encode_key2any.c` DER/PEM rows
+ *
+ * The 206 `encode_key2any.c` rows (`src/provider/encode_key2any.rs`, landed with 10.3) are driven
+ * in the dedicated section below: identity for all 206 rows in both providers, a fixed-input
+ * behaviour arm for each, the refusals the rows' own writers reach (parameters-only EC and DH
+ * keys with a keypair selection, the `cipher_intent` upgrade, the abstract object), and a named
+ * `pending` reason for the one path the public surface cannot reach
+ * (docs/PHASE-10-SUBPHASES.md sections 3.1 and 3.5). The `output=der`/`output=pem` rows and the
+ * `output=text`/`output=blob`/`output=msblob`/`output=pvk` rows are the same stratum's encoder
+ * half; nothing under `encode_key2any.c` is still open.
+ *
  * ## What is not driven, and why
  *
  * The four `RSA`/`RSA-PSS`/`DSA`/`DHX` **text** encoder rows are observed at join 1 only. The
@@ -57,7 +68,7 @@
  * ML-DSA from the fixed keygen seeds Phase 8's probes carry, and SLH-DSA from the twelve ACVP
  * private keys (`../phase8/ml_kem_probe.h`, `ml_dsa_probe.h`, `slh_dsa_probe.h`). The three codec
  * units' `d2i`/`i2d` half is reached by `decode_der2key.c`, which landed with 10.1; the decoder
- * arms below drive the rows it publishes, and the encoder half (`encode_key2any.c`) is still open.
+ * arms below drive the rows it publishes.
  *
  * ## The `decode_der2key.c` rows
  *
@@ -1451,6 +1462,614 @@ static void arm_ms(void)
     ms_roundtrip("DSA", dsa160_pkcs8_der, sizeof(dsa160_pkcs8_der));
 }
 
+/* ===========================================================================
+ * The 206 `encode_key2any.c` DER/PEM encoder rows -- the largest unit of the
+ * key-format stratum, landed with 10.3 (`src/provider/encode_key2any.rs`).
+ *
+ * Join 1: **identity for all 206 rows, in both providers** (412 fetches), the same shape the
+ * text, blob and decoder arms use: fetch each row by its own algorithm name with the row's
+ * property query as `encoders.inc` publishes it (`provider=<p>,fips=<f>,output=<der|pem>,
+ * structure=<...>`) and read `get0_name`/`get0_properties` back through the fetched object.
+ *
+ * Join 2: **behaviour**, over the 206 rows. Each row's key is built once from the fixed,
+ * non-secret probe constants (`rt_keyformat_keys.h`; `../phase8/ml_kem_probe.h`,
+ * `ml_dsa_probe.h`, `slh_dsa_probe.h`), then encoded with `OSSL_ENCODER_CTX_new_for_pkey(pkey,
+ * selection, "DER"/"PEM", structure, NULL)` and the exact bytes `OSSL_ENCODER_to_data` produced
+ * are printed as hex. Nothing is generated from randomness: the RSA/DSA/EC/ECX keys are decoded
+ * from fixed PKCS#8 bodies, the SM2 keypair is scalar one on the published generator, the
+ * DH/DHX keys are a fixed private value on the published named group / X9.42 body, and the PQC
+ * keys are Phase 8's fixed keygen seeds and ACVP private keys.
+ *
+ * Three families reach a refusal rather than bytes, and are observed as such because the input
+ * is only a parameters- or public-only key, which is what the row's own writer refuses:
+ *   - the `DH`/`DHX` `SubjectPublicKeyInfo` rows refuse a private-only key with
+ *     `PROV_R_NOT_A_PUBLIC_KEY` (the keymgmt never derives the public half for these);
+ *   - every `EncryptedPrivateKeyInfo` row with no cipher set returns 0 (its `cipher_intent`
+ *     check), because a `to_data` encode can supply no passphrase and no fixed salt, and the
+ *     authority's own `key_to_epki_*` writers make no bytes without a cipher.
+ *
+ * Join 3: the refusals with their coordinates -- the parameters-only EC key with a keypair
+ * selection (`PROV_R_NOT_A_PRIVATE_KEY`), the `PrivateKeyInfo` row's silent upgrade to
+ * `EncryptedPrivateKeyInfo` when a cipher is set (the `cipher_intent` path, which refuses
+ * `PROV_R_UNABLE_TO_GET_PASSPHRASE` with no passphrase), and the abstract-object arm.
+ *
+ * ## The abstract object, and why it is a named `pending`
+ *
+ * `MAKE_ENCODER`'s `encode` refuses a non-NULL `key_abstract` (`encode_key2any.c:1504`'s site,
+ * `ERR_R_PASSED_INVALID_ARGUMENT`). The framework only passes a non-NULL abstract when a deeper
+ * encoder in the *same* chain has already produced data whose output type is an alias of this
+ * row's algorithm name (`encoder_lib.c:662`). No provider encoder publishes an output type that
+ * is a key-type name, so a chain of these rows never forms and the public `OSSL_ENCODER_*`
+ * surface cannot reach the check. It is reported as a named `pending` rather than driven by a
+ * fabricated arm, per docs/PHASE-10-SUBPHASES.md section 3.5, and the arm still prints the
+ * number of instances `new_for_pkey` collected, so the reason is measured rather than asserted.
+ * ========================================================================= */
+
+/* The fixed input each row's key is built from. */
+enum ek_source {
+    EK_RSA, EK_RSA_PSS, EK_DH, EK_DHX, EK_DSA, EK_EC, EK_SM2,
+    EK_X25519, EK_X448, EK_ED25519, EK_ED448,
+    EK_MLKEM_512, EK_MLKEM_768, EK_MLKEM_1024,
+    EK_MLDSA_44, EK_MLDSA_65, EK_MLDSA_87,
+    EK_SLH_SHA2_128S, EK_SLH_SHA2_128F, EK_SLH_SHA2_192S, EK_SLH_SHA2_192F,
+    EK_SLH_SHA2_256S, EK_SLH_SHA2_256F,
+    EK_SLH_SHAKE_128S, EK_SLH_SHAKE_128F, EK_SLH_SHAKE_192S, EK_SLH_SHAKE_192F,
+    EK_SLH_SHAKE_256S, EK_SLH_SHAKE_256F,
+    EK_SOURCE_COUNT
+};
+
+struct ek_row {
+    const char *name;
+    const char *out;        /* "der" | "pem" */
+    const char *structure;
+    enum ek_source src;
+    int selection;
+    const char *fips;
+};
+
+/* The 206 rows, in `encoders.inc`'s order: the twelve `type-specific` rows (the ten the plan
+ * names plus `DSA`), then `EncryptedPrivateKeyInfo`/`PrivateKeyInfo`/`SubjectPublicKeyInfo` for
+ * every key type, then the structure-name rows, then `PKCS1`/`PKCS3`/`X9.42`/`X9.62`. */
+static const struct ek_row ek_rows[] = {
+    { "RSA", "der", "type-specific", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA", "pem", "type-specific", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "DH", "der", "type-specific", EK_DH, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DH", "pem", "type-specific", EK_DH, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DHX", "der", "type-specific", EK_DHX, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DHX", "pem", "type-specific", EK_DHX, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DSA", "der", "type-specific", EK_DSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "DSA", "pem", "type-specific", EK_DSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "EC", "der", "type-specific", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+    { "EC", "pem", "type-specific", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+    { "SM2", "der", "type-specific", EK_SM2, EVP_PKEY_KEYPAIR, "no" },
+    { "SM2", "pem", "type-specific", EK_SM2, EVP_PKEY_KEYPAIR, "no" },
+    { "RSA", "der", "EncryptedPrivateKeyInfo", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA", "pem", "EncryptedPrivateKeyInfo", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA", "der", "PrivateKeyInfo", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA", "pem", "PrivateKeyInfo", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA", "der", "SubjectPublicKeyInfo", EK_RSA, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "RSA", "pem", "SubjectPublicKeyInfo", EK_RSA, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "RSA-PSS", "der", "EncryptedPrivateKeyInfo", EK_RSA_PSS, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA-PSS", "pem", "EncryptedPrivateKeyInfo", EK_RSA_PSS, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA-PSS", "der", "PrivateKeyInfo", EK_RSA_PSS, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA-PSS", "pem", "PrivateKeyInfo", EK_RSA_PSS, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA-PSS", "der", "SubjectPublicKeyInfo", EK_RSA_PSS, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "RSA-PSS", "pem", "SubjectPublicKeyInfo", EK_RSA_PSS, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "DH", "der", "EncryptedPrivateKeyInfo", EK_DH, EVP_PKEY_KEYPAIR, "yes" },
+    { "DH", "pem", "EncryptedPrivateKeyInfo", EK_DH, EVP_PKEY_KEYPAIR, "yes" },
+    { "DH", "der", "PrivateKeyInfo", EK_DH, EVP_PKEY_KEYPAIR, "yes" },
+    { "DH", "pem", "PrivateKeyInfo", EK_DH, EVP_PKEY_KEYPAIR, "yes" },
+    { "DH", "der", "SubjectPublicKeyInfo", EK_DH, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "DH", "pem", "SubjectPublicKeyInfo", EK_DH, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "DHX", "der", "EncryptedPrivateKeyInfo", EK_DHX, EVP_PKEY_KEYPAIR, "yes" },
+    { "DHX", "pem", "EncryptedPrivateKeyInfo", EK_DHX, EVP_PKEY_KEYPAIR, "yes" },
+    { "DHX", "der", "PrivateKeyInfo", EK_DHX, EVP_PKEY_KEYPAIR, "yes" },
+    { "DHX", "pem", "PrivateKeyInfo", EK_DHX, EVP_PKEY_KEYPAIR, "yes" },
+    { "DHX", "der", "SubjectPublicKeyInfo", EK_DHX, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "DHX", "pem", "SubjectPublicKeyInfo", EK_DHX, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "DSA", "der", "EncryptedPrivateKeyInfo", EK_DSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "DSA", "pem", "EncryptedPrivateKeyInfo", EK_DSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "DSA", "der", "PrivateKeyInfo", EK_DSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "DSA", "pem", "PrivateKeyInfo", EK_DSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "DSA", "der", "SubjectPublicKeyInfo", EK_DSA, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "DSA", "pem", "SubjectPublicKeyInfo", EK_DSA, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "EC", "der", "EncryptedPrivateKeyInfo", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+    { "EC", "pem", "EncryptedPrivateKeyInfo", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+    { "EC", "der", "PrivateKeyInfo", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+    { "EC", "pem", "PrivateKeyInfo", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+    { "EC", "der", "SubjectPublicKeyInfo", EK_EC, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "EC", "pem", "SubjectPublicKeyInfo", EK_EC, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SM2", "der", "EncryptedPrivateKeyInfo", EK_SM2, EVP_PKEY_KEYPAIR, "no" },
+    { "SM2", "pem", "EncryptedPrivateKeyInfo", EK_SM2, EVP_PKEY_KEYPAIR, "no" },
+    { "SM2", "der", "PrivateKeyInfo", EK_SM2, EVP_PKEY_KEYPAIR, "no" },
+    { "SM2", "pem", "PrivateKeyInfo", EK_SM2, EVP_PKEY_KEYPAIR, "no" },
+    { "SM2", "der", "SubjectPublicKeyInfo", EK_SM2, EVP_PKEY_PUBLIC_KEY, "no" },
+    { "SM2", "pem", "SubjectPublicKeyInfo", EK_SM2, EVP_PKEY_PUBLIC_KEY, "no" },
+    { "X25519", "der", "EncryptedPrivateKeyInfo", EK_X25519, EVP_PKEY_KEYPAIR, "yes" },
+    { "X25519", "pem", "EncryptedPrivateKeyInfo", EK_X25519, EVP_PKEY_KEYPAIR, "yes" },
+    { "X25519", "der", "PrivateKeyInfo", EK_X25519, EVP_PKEY_KEYPAIR, "yes" },
+    { "X25519", "pem", "PrivateKeyInfo", EK_X25519, EVP_PKEY_KEYPAIR, "yes" },
+    { "X25519", "der", "SubjectPublicKeyInfo", EK_X25519, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "X25519", "pem", "SubjectPublicKeyInfo", EK_X25519, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "X448", "der", "EncryptedPrivateKeyInfo", EK_X448, EVP_PKEY_KEYPAIR, "yes" },
+    { "X448", "pem", "EncryptedPrivateKeyInfo", EK_X448, EVP_PKEY_KEYPAIR, "yes" },
+    { "X448", "der", "PrivateKeyInfo", EK_X448, EVP_PKEY_KEYPAIR, "yes" },
+    { "X448", "pem", "PrivateKeyInfo", EK_X448, EVP_PKEY_KEYPAIR, "yes" },
+    { "X448", "der", "SubjectPublicKeyInfo", EK_X448, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "X448", "pem", "SubjectPublicKeyInfo", EK_X448, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ED25519", "der", "EncryptedPrivateKeyInfo", EK_ED25519, EVP_PKEY_KEYPAIR, "yes" },
+    { "ED25519", "pem", "EncryptedPrivateKeyInfo", EK_ED25519, EVP_PKEY_KEYPAIR, "yes" },
+    { "ED25519", "der", "PrivateKeyInfo", EK_ED25519, EVP_PKEY_KEYPAIR, "yes" },
+    { "ED25519", "pem", "PrivateKeyInfo", EK_ED25519, EVP_PKEY_KEYPAIR, "yes" },
+    { "ED25519", "der", "SubjectPublicKeyInfo", EK_ED25519, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ED25519", "pem", "SubjectPublicKeyInfo", EK_ED25519, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ED448", "der", "EncryptedPrivateKeyInfo", EK_ED448, EVP_PKEY_KEYPAIR, "yes" },
+    { "ED448", "pem", "EncryptedPrivateKeyInfo", EK_ED448, EVP_PKEY_KEYPAIR, "yes" },
+    { "ED448", "der", "PrivateKeyInfo", EK_ED448, EVP_PKEY_KEYPAIR, "yes" },
+    { "ED448", "pem", "PrivateKeyInfo", EK_ED448, EVP_PKEY_KEYPAIR, "yes" },
+    { "ED448", "der", "SubjectPublicKeyInfo", EK_ED448, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ED448", "pem", "SubjectPublicKeyInfo", EK_ED448, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-KEM-512", "der", "EncryptedPrivateKeyInfo", EK_MLKEM_512, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-512", "pem", "EncryptedPrivateKeyInfo", EK_MLKEM_512, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-512", "der", "PrivateKeyInfo", EK_MLKEM_512, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-512", "pem", "PrivateKeyInfo", EK_MLKEM_512, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-512", "der", "SubjectPublicKeyInfo", EK_MLKEM_512, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-KEM-512", "pem", "SubjectPublicKeyInfo", EK_MLKEM_512, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-KEM-768", "der", "EncryptedPrivateKeyInfo", EK_MLKEM_768, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-768", "pem", "EncryptedPrivateKeyInfo", EK_MLKEM_768, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-768", "der", "PrivateKeyInfo", EK_MLKEM_768, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-768", "pem", "PrivateKeyInfo", EK_MLKEM_768, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-768", "der", "SubjectPublicKeyInfo", EK_MLKEM_768, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-KEM-768", "pem", "SubjectPublicKeyInfo", EK_MLKEM_768, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-KEM-1024", "der", "EncryptedPrivateKeyInfo", EK_MLKEM_1024, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-1024", "pem", "EncryptedPrivateKeyInfo", EK_MLKEM_1024, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-1024", "der", "PrivateKeyInfo", EK_MLKEM_1024, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-1024", "pem", "PrivateKeyInfo", EK_MLKEM_1024, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-KEM-1024", "der", "SubjectPublicKeyInfo", EK_MLKEM_1024, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-KEM-1024", "pem", "SubjectPublicKeyInfo", EK_MLKEM_1024, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-DSA-44", "der", "EncryptedPrivateKeyInfo", EK_MLDSA_44, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-44", "pem", "EncryptedPrivateKeyInfo", EK_MLDSA_44, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-44", "der", "PrivateKeyInfo", EK_MLDSA_44, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-44", "pem", "PrivateKeyInfo", EK_MLDSA_44, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-44", "der", "SubjectPublicKeyInfo", EK_MLDSA_44, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-DSA-44", "pem", "SubjectPublicKeyInfo", EK_MLDSA_44, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-DSA-65", "der", "EncryptedPrivateKeyInfo", EK_MLDSA_65, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-65", "pem", "EncryptedPrivateKeyInfo", EK_MLDSA_65, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-65", "der", "PrivateKeyInfo", EK_MLDSA_65, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-65", "pem", "PrivateKeyInfo", EK_MLDSA_65, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-65", "der", "SubjectPublicKeyInfo", EK_MLDSA_65, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-DSA-65", "pem", "SubjectPublicKeyInfo", EK_MLDSA_65, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-DSA-87", "der", "EncryptedPrivateKeyInfo", EK_MLDSA_87, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-87", "pem", "EncryptedPrivateKeyInfo", EK_MLDSA_87, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-87", "der", "PrivateKeyInfo", EK_MLDSA_87, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-87", "pem", "PrivateKeyInfo", EK_MLDSA_87, EVP_PKEY_KEYPAIR, "yes" },
+    { "ML-DSA-87", "der", "SubjectPublicKeyInfo", EK_MLDSA_87, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "ML-DSA-87", "pem", "SubjectPublicKeyInfo", EK_MLDSA_87, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-128s", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_128S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-128s", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_128S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-128s", "der", "PrivateKeyInfo", EK_SLH_SHA2_128S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-128s", "pem", "PrivateKeyInfo", EK_SLH_SHA2_128S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-128s", "der", "SubjectPublicKeyInfo", EK_SLH_SHA2_128S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-128s", "pem", "SubjectPublicKeyInfo", EK_SLH_SHA2_128S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-128f", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_128F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-128f", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_128F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-128f", "der", "PrivateKeyInfo", EK_SLH_SHA2_128F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-128f", "pem", "PrivateKeyInfo", EK_SLH_SHA2_128F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-128f", "der", "SubjectPublicKeyInfo", EK_SLH_SHA2_128F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-128f", "pem", "SubjectPublicKeyInfo", EK_SLH_SHA2_128F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-192s", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_192S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-192s", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_192S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-192s", "der", "PrivateKeyInfo", EK_SLH_SHA2_192S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-192s", "pem", "PrivateKeyInfo", EK_SLH_SHA2_192S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-192s", "der", "SubjectPublicKeyInfo", EK_SLH_SHA2_192S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-192s", "pem", "SubjectPublicKeyInfo", EK_SLH_SHA2_192S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-192f", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_192F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-192f", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_192F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-192f", "der", "PrivateKeyInfo", EK_SLH_SHA2_192F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-192f", "pem", "PrivateKeyInfo", EK_SLH_SHA2_192F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-192f", "der", "SubjectPublicKeyInfo", EK_SLH_SHA2_192F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-192f", "pem", "SubjectPublicKeyInfo", EK_SLH_SHA2_192F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-256s", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_256S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-256s", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_256S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-256s", "der", "PrivateKeyInfo", EK_SLH_SHA2_256S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-256s", "pem", "PrivateKeyInfo", EK_SLH_SHA2_256S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-256s", "der", "SubjectPublicKeyInfo", EK_SLH_SHA2_256S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-256s", "pem", "SubjectPublicKeyInfo", EK_SLH_SHA2_256S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-256f", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_256F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-256f", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHA2_256F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-256f", "der", "PrivateKeyInfo", EK_SLH_SHA2_256F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-256f", "pem", "PrivateKeyInfo", EK_SLH_SHA2_256F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHA2-256f", "der", "SubjectPublicKeyInfo", EK_SLH_SHA2_256F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHA2-256f", "pem", "SubjectPublicKeyInfo", EK_SLH_SHA2_256F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-128s", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_128S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-128s", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_128S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-128s", "der", "PrivateKeyInfo", EK_SLH_SHAKE_128S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-128s", "pem", "PrivateKeyInfo", EK_SLH_SHAKE_128S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-128s", "der", "SubjectPublicKeyInfo", EK_SLH_SHAKE_128S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-128s", "pem", "SubjectPublicKeyInfo", EK_SLH_SHAKE_128S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-128f", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_128F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-128f", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_128F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-128f", "der", "PrivateKeyInfo", EK_SLH_SHAKE_128F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-128f", "pem", "PrivateKeyInfo", EK_SLH_SHAKE_128F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-128f", "der", "SubjectPublicKeyInfo", EK_SLH_SHAKE_128F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-128f", "pem", "SubjectPublicKeyInfo", EK_SLH_SHAKE_128F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-192s", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_192S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-192s", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_192S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-192s", "der", "PrivateKeyInfo", EK_SLH_SHAKE_192S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-192s", "pem", "PrivateKeyInfo", EK_SLH_SHAKE_192S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-192s", "der", "SubjectPublicKeyInfo", EK_SLH_SHAKE_192S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-192s", "pem", "SubjectPublicKeyInfo", EK_SLH_SHAKE_192S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-192f", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_192F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-192f", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_192F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-192f", "der", "PrivateKeyInfo", EK_SLH_SHAKE_192F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-192f", "pem", "PrivateKeyInfo", EK_SLH_SHAKE_192F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-192f", "der", "SubjectPublicKeyInfo", EK_SLH_SHAKE_192F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-192f", "pem", "SubjectPublicKeyInfo", EK_SLH_SHAKE_192F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-256s", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_256S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-256s", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_256S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-256s", "der", "PrivateKeyInfo", EK_SLH_SHAKE_256S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-256s", "pem", "PrivateKeyInfo", EK_SLH_SHAKE_256S, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-256s", "der", "SubjectPublicKeyInfo", EK_SLH_SHAKE_256S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-256s", "pem", "SubjectPublicKeyInfo", EK_SLH_SHAKE_256S, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-256f", "der", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_256F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-256f", "pem", "EncryptedPrivateKeyInfo", EK_SLH_SHAKE_256F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-256f", "der", "PrivateKeyInfo", EK_SLH_SHAKE_256F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-256f", "pem", "PrivateKeyInfo", EK_SLH_SHAKE_256F, EVP_PKEY_KEYPAIR, "yes" },
+    { "SLH-DSA-SHAKE-256f", "der", "SubjectPublicKeyInfo", EK_SLH_SHAKE_256F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "SLH-DSA-SHAKE-256f", "pem", "SubjectPublicKeyInfo", EK_SLH_SHAKE_256F, EVP_PKEY_PUBLIC_KEY, "yes" },
+    { "RSA", "der", "RSA", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA", "pem", "RSA", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "DH", "der", "DH", EK_DH, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DH", "pem", "DH", EK_DH, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DHX", "der", "DHX", EK_DHX, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DHX", "pem", "DHX", EK_DHX, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DSA", "der", "DSA", EK_DSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "DSA", "pem", "DSA", EK_DSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "EC", "der", "EC", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+    { "EC", "pem", "EC", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA", "der", "PKCS1", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA", "pem", "PKCS1", EK_RSA, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA-PSS", "der", "PKCS1", EK_RSA_PSS, EVP_PKEY_KEYPAIR, "yes" },
+    { "RSA-PSS", "pem", "PKCS1", EK_RSA_PSS, EVP_PKEY_KEYPAIR, "yes" },
+    { "DH", "der", "PKCS3", EK_DH, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DH", "pem", "PKCS3", EK_DH, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DHX", "der", "X9.42", EK_DHX, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "DHX", "pem", "X9.42", EK_DHX, EVP_PKEY_KEY_PARAMETERS, "yes" },
+    { "EC", "der", "X9.62", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+    { "EC", "pem", "X9.62", EK_EC, EVP_PKEY_KEYPAIR, "yes" },
+};
+
+/* Decode a fixed DER body into a key of `type`, or NULL. */
+static EVP_PKEY *ek_decode(const char *type, const unsigned char *der, size_t derlen, int sel)
+{
+    EVP_PKEY *pkey = NULL;
+    OSSL_DECODER_CTX *ctx = OSSL_DECODER_CTX_new_for_pkey(&pkey, "DER", NULL, type, sel,
+                                                          NULL, NULL);
+    const unsigned char *p = der;
+    size_t len = derlen;
+
+    if (ctx == NULL)
+        return NULL;
+    if (OSSL_DECODER_from_data(ctx, &p, &len) != 1) {
+        EVP_PKEY_free(pkey);
+        pkey = NULL;
+    }
+    OSSL_DECODER_CTX_free(ctx);
+    return pkey;
+}
+
+/* Import `params` as a key of `type` at `sel`, or NULL. */
+static EVP_PKEY *ek_fromdata(const char *type, int sel, OSSL_PARAM *params)
+{
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_from_name(NULL, type, NULL);
+    EVP_PKEY *out = NULL;
+
+    if (ctx == NULL)
+        return NULL;
+    (void)EVP_PKEY_fromdata_init(ctx);
+    (void)EVP_PKEY_fromdata(ctx, &out, sel, params);
+    EVP_PKEY_CTX_free(ctx);
+    return out;
+}
+
+/* The RSA-PSS rows' key: the fixed RSA keypair re-imported as an `RSA-PSS` key, because the
+ * authority's tree carries no RSA-PSS PKCS#8. The export/import is a fixed function of the
+ * decoded RSA key alone. */
+static EVP_PKEY *ek_key_rsa_pss(void)
+{
+    EVP_PKEY *rsa = ek_decode("RSA", rsa_pkcs8_der, sizeof(rsa_pkcs8_der), EVP_PKEY_KEYPAIR);
+    OSSL_PARAM *params = NULL;
+    EVP_PKEY *out = NULL;
+    EVP_PKEY_CTX *ctx;
+
+    if (rsa == NULL || EVP_PKEY_todata(rsa, EVP_PKEY_KEYPAIR, &params) != 1)
+        goto out;
+    ctx = EVP_PKEY_CTX_new_from_name(NULL, "RSA-PSS", NULL);
+    if (ctx != NULL) {
+        (void)EVP_PKEY_fromdata_init(ctx);
+        (void)EVP_PKEY_fromdata(ctx, &out, EVP_PKEY_KEYPAIR, params);
+        EVP_PKEY_CTX_free(ctx);
+    }
+out:
+    OSSL_PARAM_free(params);
+    EVP_PKEY_free(rsa);
+    return out;
+}
+
+/* A DH keypair: the fixed private value 2 on the published named `group`. The DH keymgmt does
+ * not derive the public half, so the `SubjectPublicKeyInfo` rows legitimately refuse it. */
+static EVP_PKEY *ek_key_dh(const char *group)
+{
+    static unsigned char two[1] = { 0x02 };
+    OSSL_PARAM params[3];
+
+    params[0] = OSSL_PARAM_construct_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, (char *)group, 0);
+    params[1] = OSSL_PARAM_construct_BN(OSSL_PKEY_PARAM_PRIV_KEY, two, 1);
+    params[2] = OSSL_PARAM_construct_end();
+    return ek_fromdata("DH", EVP_PKEY_KEYPAIR, params);
+}
+
+/* A DHX keypair: the `20-test_dhparam_data` X9.42 body's FFC parameters with the fixed private
+ * value 2. The X9.42 body is a fixed published input, so the import is a function of it. */
+static EVP_PKEY *ek_key_dhx(void)
+{
+    static unsigned char two[1] = { 0x02 };
+    EVP_PKEY *params_pkey = ek_decode("DHX", x942_0_1024, sizeof(x942_0_1024),
+                                      EVP_PKEY_KEY_PARAMETERS);
+    OSSL_PARAM *tp = NULL;
+    OSSL_PARAM *p;
+    EVP_PKEY *out = NULL;
+    size_t n, i;
+
+    if (params_pkey == NULL || EVP_PKEY_todata(params_pkey, EVP_PKEY_KEY_PARAMETERS, &tp) != 1)
+        goto out;
+    for (n = 0; tp[n].key != NULL; n++)
+        ;
+    p = OPENSSL_malloc((n + 2) * sizeof(OSSL_PARAM));
+    if (p == NULL)
+        goto out;
+    for (i = 0; i < n; i++)
+        p[i] = tp[i];
+    p[n] = OSSL_PARAM_construct_BN(OSSL_PKEY_PARAM_PRIV_KEY, two, 1);
+    p[n + 1] = OSSL_PARAM_construct_end();
+    out = ek_fromdata("DHX", EVP_PKEY_KEYPAIR, p);
+    OPENSSL_free(p);
+out:
+    OSSL_PARAM_free(tp);
+    EVP_PKEY_free(params_pkey);
+    return out;
+}
+
+/* An SM2 keypair: the scalar one on the published SM2 generator, so the pair is exactly the
+ * curve generator published in `sm2_g_pub`. The SM2 keymgmt needs the public half to accept the
+ * private half, which is why it is passed. */
+static EVP_PKEY *ek_key_sm2(void)
+{
+    static unsigned char one[1] = { 0x01 };
+    OSSL_PARAM params[4];
+
+    params[0] = OSSL_PARAM_construct_utf8_string(OSSL_PKEY_PARAM_GROUP_NAME, (char *)"SM2", 0);
+    params[1] = OSSL_PARAM_construct_BN(OSSL_PKEY_PARAM_PRIV_KEY, one, 1);
+    params[2] = OSSL_PARAM_construct_octet_string(OSSL_PKEY_PARAM_PUB_KEY, (void *)sm2_g_pub,
+                                                  sizeof(sm2_g_pub));
+    params[3] = OSSL_PARAM_construct_end();
+    return ek_fromdata("SM2", EVP_PKEY_KEYPAIR, params);
+}
+
+/* Build one key from its fixed source, or NULL. */
+static EVP_PKEY *ek_build(enum ek_source src)
+{
+    switch (src) {
+    case EK_RSA:
+        return ek_decode("RSA", rsa_pkcs8_der, sizeof(rsa_pkcs8_der), EVP_PKEY_KEYPAIR);
+    case EK_RSA_PSS:
+        return ek_key_rsa_pss();
+    case EK_DH:
+        return ek_key_dh("ffdhe2048");
+    case EK_DHX:
+        return ek_key_dhx();
+    case EK_DSA:
+        return ek_decode("DSA", dsa_pkcs8_der, sizeof(dsa_pkcs8_der), EVP_PKEY_KEYPAIR);
+    case EK_EC:
+        return ek_decode("EC", ec_pkcs8_der, sizeof(ec_pkcs8_der), EVP_PKEY_KEYPAIR);
+    case EK_SM2:
+        return ek_key_sm2();
+    case EK_X25519:
+        return ek_decode("X25519", x25519_priv, sizeof(x25519_priv), EVP_PKEY_KEYPAIR);
+    case EK_X448:
+        return ek_decode("X448", x448_priv, sizeof(x448_priv), EVP_PKEY_KEYPAIR);
+    case EK_ED25519:
+        return ek_decode("ED25519", ed25519_priv, sizeof(ed25519_priv), EVP_PKEY_KEYPAIR);
+    case EK_ED448:
+        return ek_decode("ED448", ed448_priv, sizeof(ed448_priv), EVP_PKEY_KEYPAIR);
+    case EK_MLKEM_512:
+        return seed_key(ml_kem_kat_rows[0].name, OSSL_PKEY_PARAM_ML_KEM_SEED,
+                        ml_kem_kat_rows[0].seed, ml_kem_kat_rows[0].seedlen);
+    case EK_MLKEM_768:
+        return seed_key(ml_kem_kat_rows[1].name, OSSL_PKEY_PARAM_ML_KEM_SEED,
+                        ml_kem_kat_rows[1].seed, ml_kem_kat_rows[1].seedlen);
+    case EK_MLKEM_1024:
+        return seed_key(ml_kem_kat_rows[2].name, OSSL_PKEY_PARAM_ML_KEM_SEED,
+                        ml_kem_kat_rows[2].seed, ml_kem_kat_rows[2].seedlen);
+    case EK_MLDSA_44:
+        return seed_key("ML-DSA-44", OSSL_PKEY_PARAM_ML_DSA_SEED, ml_dsa_seed,
+                        sizeof(ml_dsa_seed));
+    case EK_MLDSA_65:
+        return seed_key("ML-DSA-65", OSSL_PKEY_PARAM_ML_DSA_SEED, ml_dsa_seed,
+                        sizeof(ml_dsa_seed));
+    case EK_MLDSA_87:
+        return seed_key("ML-DSA-87", OSSL_PKEY_PARAM_ML_DSA_SEED, ml_dsa_seed,
+                        sizeof(ml_dsa_seed));
+    default:
+        /* the twelve SLH-DSA rows, in `slh_dsa_rows`' order */
+        if (src >= EK_SLH_SHA2_128S && src <= EK_SLH_SHAKE_256F) {
+            size_t i = (size_t)(src - EK_SLH_SHA2_128S);
+
+            return priv_key(slh_dsa_rows[i].name, slh_dsa_rows[i].key, slh_dsa_rows[i].len);
+        }
+        return NULL;
+    }
+}
+
+/* Join 1: every row's identity through the provider that publishes it. */
+static void arm_ek_identity(void)
+{
+    size_t i, j;
+
+    for (j = 0; j < sizeof(providers) / sizeof(providers[0]); j++) {
+        for (i = 0; i < sizeof(ek_rows) / sizeof(ek_rows[0]); i++) {
+            char prop[128];
+            OSSL_ENCODER *enc;
+
+            snprintf(prop, sizeof(prop), "provider=%s,fips=%s,output=%s,structure=%s",
+                     providers[j], ek_rows[i].fips, ek_rows[i].out, ek_rows[i].structure);
+            enc = OSSL_ENCODER_fetch(NULL, ek_rows[i].name, prop);
+            kv_int("ek.fetch", enc != NULL);
+            if (enc != NULL) {
+                kv_str("ek.name", OSSL_ENCODER_get0_name(enc));
+                kv_str("ek.props", OSSL_ENCODER_get0_properties(enc));
+                kv_int("ek.is_a_self", OSSL_ENCODER_is_a(enc, ek_rows[i].name));
+            }
+            OSSL_ENCODER_free(enc);
+            ERR_clear_error();
+        }
+    }
+}
+
+/* Join 2: encode each row's key and print the exact bytes. */
+static void arm_ek_encode(void)
+{
+    EVP_PKEY *keys[EK_SOURCE_COUNT];
+    size_t i;
+
+    memset(keys, 0, sizeof(keys));
+    for (i = 0; i < sizeof(ek_rows) / sizeof(ek_rows[0]); i++) {
+        const struct ek_row *r = &ek_rows[i];
+        OSSL_ENCODER_CTX *ctx;
+        unsigned char *data = NULL;
+        size_t len = 0;
+        char key[160];
+        int rc;
+
+        if (keys[r->src] == NULL)
+            keys[r->src] = ek_build(r->src);
+        kv_int("ek.built", keys[r->src] != NULL);
+        snprintf(key, sizeof(key), "ek.%s.%s.%s", r->name, r->out, r->structure);
+        ERR_clear_error();
+        ctx = OSSL_ENCODER_CTX_new_for_pkey(keys[r->src], r->selection, r->out, r->structure,
+                                            NULL);
+        rc = ctx == NULL ? -1 : OSSL_ENCODER_to_data(ctx, &data, &len);
+        kv_int("ek.to_data", rc);
+        if (rc == 1 && data != NULL)
+            kv_hex(key, data, len);
+        OPENSSL_free(data);
+        OSSL_ENCODER_CTX_free(ctx);
+        errs(key);
+    }
+    for (i = 0; i < EK_SOURCE_COUNT; i++)
+        EVP_PKEY_free(keys[i]);
+}
+
+/* Join 3: the refusals, each printing the return and the error queue. */
+static void arm_ek_refusals(void)
+{
+    /* (1) Two parameters-only keys asked to encode a keypair through a DER row. The `EC`
+     * `type-specific` private writer is `i2d_ECPrivateKey`, which the missing private scalar
+     * makes fail through `ASN1` (`ERR_R_PASSED_NULL_PARAMETER`); the `DH` `PrivateKeyInfo`
+     * writer checks its private half directly and raises `PROV_R_NOT_A_PRIVATE_KEY`. Both
+     * shapes are the row's own refusal, and both are fixed functions of the parameters key. */
+    {
+        EVP_PKEY *pkey = params_key("EC", "prime256v1");
+        OSSL_ENCODER_CTX *ctx;
+        unsigned char *data = NULL;
+        size_t len = 0;
+        int rc;
+
+        kv_int("ek.refusal.ec_params_built", pkey != NULL);
+        ERR_clear_error();
+        ctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEYPAIR, "DER", "type-specific", NULL);
+        rc = ctx == NULL ? -1 : OSSL_ENCODER_to_data(ctx, &data, &len);
+        kv_int("ek.refusal.ec_params_rc", rc);
+        errs("ek.ec.params.refuse_keypair");
+        OPENSSL_free(data);
+        OSSL_ENCODER_CTX_free(ctx);
+        EVP_PKEY_free(pkey);
+    }
+    {
+        EVP_PKEY *pkey = params_key("DH", "ffdhe2048");
+        OSSL_ENCODER_CTX *ctx;
+        unsigned char *data = NULL;
+        size_t len = 0;
+        int rc;
+
+        kv_int("ek.refusal.dh_params_built", pkey != NULL);
+        ERR_clear_error();
+        ctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEYPAIR, "DER", "PrivateKeyInfo",
+                                            NULL);
+        rc = ctx == NULL ? -1 : OSSL_ENCODER_to_data(ctx, &data, &len);
+        kv_int("ek.refusal.dh_params_rc", rc);
+        errs("ek.dh.params.refuse_private");
+        OPENSSL_free(data);
+        OSSL_ENCODER_CTX_free(ctx);
+        EVP_PKEY_free(pkey);
+    }
+
+    /* (2) The `cipher_intent` path: an `EncryptedPrivateKeyInfo` row driven with a cipher but no
+     * passphrase. The engine's encryption refuses, `PROV_R_UNABLE_TO_GET_PASSPHRASE`, and the
+     * framework adds `ERR_R_PASSED_INVALID_ARGUMENT` as the UI callback fails. */
+    {
+        EVP_PKEY *pkey = ms_pkey_from_pkcs8("RSA", rsa_pkcs8_der, sizeof(rsa_pkcs8_der));
+        OSSL_ENCODER_CTX *ctx;
+        unsigned char *data = NULL;
+        size_t len = 0;
+        int rc;
+
+        kv_int("ek.refusal.epki_built", pkey != NULL);
+        ERR_clear_error();
+        ctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEYPAIR, "DER",
+                                            "EncryptedPrivateKeyInfo", NULL);
+        kv_int("ek.refusal.epki_cipher_set",
+               OSSL_ENCODER_CTX_set_cipher(ctx, "AES-128-CBC", NULL));
+        rc = ctx == NULL ? -1 : OSSL_ENCODER_to_data(ctx, &data, &len);
+        kv_int("ek.refusal.epki_cipher_rc", rc);
+        errs("ek.epki.cipher_intent");
+        OPENSSL_free(data);
+        OSSL_ENCODER_CTX_free(ctx);
+
+        /* The same cipher set on the `PrivateKeyInfo` row silently upgrades it to the encrypted
+         * form (`key_to_pki_der_priv_bio` forwards to the EPKI writer), so it too refuses. */
+        ERR_clear_error();
+        ctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEYPAIR, "DER", "PrivateKeyInfo",
+                                            NULL);
+        kv_int("ek.refusal.pki_cipher_set",
+               OSSL_ENCODER_CTX_set_cipher(ctx, "AES-128-CBC", NULL));
+        data = NULL;
+        len = 0;
+        rc = ctx == NULL ? -1 : OSSL_ENCODER_to_data(ctx, &data, &len);
+        kv_int("ek.refusal.pki_cipher_rc", rc);
+        errs("ek.pki.cipher_intent");
+        OPENSSL_free(data);
+        OSSL_ENCODER_CTX_free(ctx);
+        EVP_PKEY_free(pkey);
+    }
+
+    /* (3) The abstract-object arm. The check is reached only when the framework has a deeper
+     * encoder's output to hand over, which no chain of these rows forms; the measured reason is
+     * the instance count `new_for_pkey` collected for a single row. The `pending` line says so
+     * rather than the arm being silently absent (docs/PHASE-10-SUBPHASES.md section 3.5). */
+    {
+        EVP_PKEY *pkey = ms_pkey_from_pkcs8("RSA", rsa_pkcs8_der, sizeof(rsa_pkcs8_der));
+        OSSL_ENCODER_CTX *ctx = OSSL_ENCODER_CTX_new_for_pkey(pkey, EVP_PKEY_KEYPAIR, "DER",
+                                                              "PrivateKeyInfo", NULL);
+
+        kv_int("ek.abstract.instances", OSSL_ENCODER_CTX_get_num_encoders(ctx));
+        OSSL_ENCODER_CTX_free(ctx);
+        EVP_PKEY_free(pkey);
+        ERR_clear_error();
+        kv_str("ek.abstract.pending", "abstract-object-unreachable-from-the-public-surface");
+    }
+}
+
 int main(void)
 {
     OSSL_PROVIDER *deflt = OSSL_PROVIDER_load(NULL, "default");
@@ -1484,6 +2103,10 @@ int main(void)
     arm_ms_identity();
     arm_ms();
     arm_ms_refusals();
+
+    arm_ek_identity();
+    arm_ek_encode();
+    arm_ek_refusals();
 
     OSSL_PROVIDER_unload(base);
     OSSL_PROVIDER_unload(deflt);

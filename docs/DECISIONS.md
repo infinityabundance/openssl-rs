@@ -31674,3 +31674,48 @@ module is added; `src/provider/mod.rs`, `src/provider/encode_key2text.rs`, `src/
 `forensics/tools/dispatch_court.py` change; and the ledgers, the atlases, the census and
 `forensics/regression-baseline.json` are regenerated.
 
+## D446 -- RT-CODEC drives the 206 `encode_key2any.c` rows, and 10.1's first join is read
+
+D445 landed the unit and left the evidence open: the rows were implemented and registered, and
+`provider_court_coverage` marked them `direct`, but no observation touched one and `RT-CODEC` sat
+at 1,487. This slice is the probe work `docs/PHASE-10-SUBPHASES.md` section 3.1 requires, and it
+is the difference between a row that exists and a row that has been measured.
+
+`courts/phase10/rt_codec_probe.c` gains a `encode_key2any.c` section. **Identity**: all 206 rows
+are fetched in **both** providers (412 fetches) with the query `encoders.inc` publishes --
+`provider=default|base,fips=…,output=der|pem,structure=…` -- printing `get0_name`,
+`get0_properties` and `is_a`. **Behaviour**: 206 fixed-input encodes through
+`OSSL_ENCODER_CTX_new_for_pkey(pkey, selection, "DER"/"PEM", structure, NULL)`, comparing
+`OSSL_ENCODER_to_data`'s bytes with the authority's. **144 rows emit exact bytes**; **62 return 0
+as the row's own refusal** -- the 58 `EncryptedPrivateKeyInfo` rows, whose `cipher_intent` is unset
+when no cipher is given, and the four `DH`/`DHX` `SubjectPublicKeyInfo` rows, which raise
+`PROV_R_NOT_A_PUBLIC_KEY`. Refusal arms cover the parameters-only key under a keypair selection and
+the `cipher_intent` upgrade on both `EncryptedPrivateKeyInfo` and `PrivateKeyInfo`
+(`PROV_R_UNABLE_TO_GET_PASSPHRASE`).
+
+**Every key is a fixed, non-secret constant** the Phase-10 and Phase-8 probes already carry: the
+RSA/DSA/EC/ECX PKCS#8 bodies, the RSA-PSS key re-imported from the fixed RSA key, the SM2 scalar
+one on the published generator, the fixed DH/DHX private value, and the Phase-8 keygen seeds and
+ACVP keys for the PQC types. Nothing is generated and nothing is salted, so the transcript stays a
+function of its inputs alone.
+
+**One path is pending, with a measured blocker rather than a silent skip.** The abstract-object
+refusal (`encode_key2any.c:1504`) cannot be reached from the public `OSSL_ENCODER_*` surface: a
+non-NULL `key_abstract` is only passed when a deeper encoder in the same chain has produced data
+whose output type is an alias of this row's algorithm name (`encoder_lib.c:662`), and no provider
+encoder publishes such an output type. The arm prints
+`ek.abstract.pending=abstract-object-unreachable-from-the-public-surface` beside the measurement
+`ek.abstract.instances=26` (the encoders one RSA key collects), which is section 3.5's rule: a row
+or path that cannot be driven is named, never counted as passing.
+
+### Verification
+
+`RT-CODEC` moves from **1,487 to 4,072 observations**, candidate and authority byte-identical and
+deterministic across runs, 0 residuals. `provider_court_coverage.py` reads 951 of 951 rows
+`direct` with none unmatched. `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test --lib` is **1083 passed, 0 failed**. `PIPELINE OK` exit 0 on two
+consecutive runs, at 108 courts and **44,822 observations**. `phase_state.py` is unchanged: 0-9
+`complete`, 10 `in-progress`, 11-21 `not-started`. No `src/` file changes, so no export or provider
+row moves: Phase 10 stands at `200 implemented / 98 open` exports and `630 implemented / 6 open`
+provider rows.
+
