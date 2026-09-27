@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 511,
+      "crate_files_read": 521,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,14 +12,14 @@
       "identities_authority_only": 45,
       "identities_checked": 232,
       "identities_mismatches": 0,
-      "links_convention": 235,
+      "links_convention": 243,
       "links_documented": 25,
       "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 351,
-      "signatures_checked": 286,
+      "signatures_authority_only": 343,
+      "signatures_checked": 294,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 202,
+      "signatures_not_a_dispatch": 204,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -1532,15 +1532,7 @@
         "BIO_dgram_sctp_notification_handler_fn",
         "CRYPTO_EX_free",
         "DTLS_timer_cb",
-        "ENGINE_CIPHERS_PTR",
-        "ENGINE_CTRL_FUNC_PTR",
-        "ENGINE_DIGESTS_PTR",
         "ENGINE_GEN_FUNC_PTR",
-        "ENGINE_GEN_INT_FUNC_PTR",
-        "ENGINE_LOAD_KEY_PTR",
-        "ENGINE_PKEY_ASN1_METHS_PTR",
-        "ENGINE_PKEY_METHS_PTR",
-        "ENGINE_SSL_CLIENT_CERT_PTR",
         "GEN_SESSION_CB",
         "OPENSSL_LH_COMPFUNC",
         "OPENSSL_LH_COMPFUNCTHUNK",
@@ -2147,6 +2139,70 @@
           "authority_signature": "fptr(void; ptr(opaque))",
           "crate_signature": "fptr(void; ptr(opaque))",
           "how": "explicit"
+        },
+        {
+          "alias": "EngineGenIntFuncPtr",
+          "at": "src/engine/eng_lib.rs",
+          "authority": "ENGINE_GEN_INT_FUNC_PTR",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EngineCtrlFuncPtr",
+          "at": "src/engine/eng_lib.rs",
+          "authority": "ENGINE_CTRL_FUNC_PTR",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, int:8:s, ptr(opaque), fptr(void; ))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, int:8:s, ptr(opaque), fptr(void; ))",
+          "how": "convention"
+        },
+        {
+          "alias": "EngineLoadKeyPtr",
+          "at": "src/engine/eng_lib.rs",
+          "authority": "ENGINE_LOAD_KEY_PTR",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(int:1:s)), ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(int:1:s)), ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EngineSslClientCertPtr",
+          "at": "src/engine/eng_lib.rs",
+          "authority": "ENGINE_SSL_CLIENT_CERT_PTR",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque), ptr(ptr(opaque)), ptr(ptr(opaque)), ptr(ptr(opaque)), ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque), ptr(ptr(opaque)), ptr(ptr(opaque)), ptr(ptr(opaque)), ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "EngineCiphersPtr",
+          "at": "src/engine/eng_lib.rs",
+          "authority": "ENGINE_CIPHERS_PTR",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(const(opaque))), ptr(ptr(const(int:4:s))), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(const(opaque))), ptr(ptr(const(int:4:s))), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "EngineDigestsPtr",
+          "at": "src/engine/eng_lib.rs",
+          "authority": "ENGINE_DIGESTS_PTR",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(const(opaque))), ptr(ptr(const(int:4:s))), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(const(opaque))), ptr(ptr(const(int:4:s))), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "EnginePkeyMethsPtr",
+          "at": "src/engine/eng_lib.rs",
+          "authority": "ENGINE_PKEY_METHS_PTR",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(opaque)), ptr(ptr(const(int:4:s))), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(opaque)), ptr(ptr(const(int:4:s))), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "EnginePkeyAsn1MethsPtr",
+          "at": "src/engine/eng_lib.rs",
+          "authority": "ENGINE_PKEY_ASN1_METHS_PTR",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(opaque)), ptr(ptr(const(int:4:s))), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(opaque)), ptr(ptr(const(int:4:s))), int:4:s)",
+          "how": "convention"
         },
         {
           "alias": "AsymCipherNewctxFn",
@@ -4493,6 +4549,16 @@
           "alias": "EcKeyVerifyFn",
           "at": "src/ec/mod.rs",
           "why": "not a provider dispatch: a member of `EC_KEY_METHOD`'s table, declared inline in `crypto/ec/ec_local.h:664-688` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EngineCleanupCb",
+          "at": "src/engine/eng_lib.rs",
+          "why": "not a provider dispatch: a callback typedef declared in `crypto/engine/eng_local.h`, which is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "EngineTableDoallCb",
+          "at": "src/engine/eng_table.rs",
+          "why": "not a provider dispatch: a callback typedef declared in `crypto/engine/eng_local.h`, which is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "AlgorithmPreFn",

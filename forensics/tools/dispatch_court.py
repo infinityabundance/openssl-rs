@@ -299,6 +299,13 @@ UI_METHOD_VTABLE = ("not a provider dispatch: a member of `UI_METHOD`'s vtable, 
 # scalar typedef with no declarator for the signature reader to see.
 THREAD_ARCH_INT = ("not a provider dispatch: declared in `include/internal/thread_arch.h:57`, "
                    "which is not installed, so the atlas has no record of it")
+# `crypto/engine/eng_local.h` (Phase 10.9) -- `ENGINE_CLEANUP_CB` (`:44`) and
+# `engine_table_doall_cb` (`:67-70`). Both are callback typedefs in an **internal** header, so
+# the atlas -- whose universe is the installed public surface -- records no typedef for either,
+# and the convention rule has no authority name for the crate's two aliases to join on.
+ENGINE_LOCAL_TYPEDEF = ("not a provider dispatch: a callback typedef declared in "
+                        "`crypto/engine/eng_local.h`, which is internal, so the atlas records "
+                        "no typedef for it")
 
 
 def _inline(fn: str, spelling: str) -> str:
@@ -581,6 +588,9 @@ NOT_A_DISPATCH: dict[str, str] = {
     "ConfLoadBioFn": CONF_INT,
     # --- the thread layer's one alias (`include/internal/thread_arch.h`, D397) ----------------
     "CryptoThreadRoutine": THREAD_ARCH_INT,
+    # --- the engine registry's two callback aliases (`crypto/engine/eng_local.h`, Phase 10.9) ---
+    "EngineCleanupCb": ENGINE_LOCAL_TYPEDEF,
+    "EngineTableDoallCb": ENGINE_LOCAL_TYPEDEF,
     "ConfIsNumberFn": CONF_INT,
     "ConfToIntFn": CONF_INT,
     "DsoMergerFunc": DSO_INT,

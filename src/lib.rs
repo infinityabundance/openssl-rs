@@ -92,6 +92,11 @@ pub mod dso;
 // dispatches to, and the `curve_list[]` method column that is the authority coordinate
 // deciding it.
 pub mod ec;
+// Phase 10.9's digest substrate: the `crypto/engine/` registry core (`X509_digest` reaches the
+// engine table through `ossl_asn1_item_digest_ex`), transcribed as far as the reachable call
+// graph needs it. The `ENGINE_*` exports it defines remain Phase 13's by their `engine.h`
+// declaration; no Phase-10 export, row, or Phase-11 evidence is created.
+pub mod engine;
 pub mod evp;
 // Phase 8.5's `crypto/ffc/` primitives: the FFC domain-parameter object, its generators and
 // validators, and the private-key generator and validators DH and DSA are built on. Every name

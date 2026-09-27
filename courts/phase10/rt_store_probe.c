@@ -54,12 +54,19 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#define _GNU_SOURCE
+
+/* The whole `ENGINE_*` surface is `OSSL_DEPRECATEDIN_3_0`; the deprecation is the authority's
+ * statement about application code, not about a court that must exercise the registry. */
+#define OPENSSL_SUPPRESS_DEPRECATED
+
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include <openssl/crypto.h>
+#include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/store.h>
@@ -552,6 +559,93 @@ static void out_pending(void)
     printf("pending.OSSL_STORE_find.by_issuer_serial=file_store_provider_row_unpublished\n");
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.9 -- the engine registry (`crypto/engine/`), the digest substrate
+ * `X509_digest` reaches through `ossl_asn1_item_digest_ex`.
+ *
+ * The fetch/lookup surface is driven directly: the object lifecycle (`ENGINE_new`/`_free`),
+ * the element accessors, ex_data, the linked list (`ENGINE_add`/`_get_first`/`_get_next`/
+ * `_remove`), the table flags, and the digest registration/select pair the digest path uses.
+ * Every observation is a return code, a `nonnull`/`null`, or a string the library owns; no
+ * pointer address is printed, and the whole `ENGINE` object is released before the probe ends.
+ * --------------------------------------------------------------------------------------------- */
+
+/* An engine `digests` callback over one made-up nid, so the table arm registers something that
+ * collides with no real algorithm; `md != NULL` is the fetch form, `md == NULL` the list form. */
+static const int g_engine_digest_nids[1] = { 0x7ffffff0 };
+
+static int engine_digests_cb(ENGINE *e, const EVP_MD **md, const int **nids, int nid)
+{
+    (void)e;
+    if (md == NULL) {
+        if (nids != NULL)
+            *nids = g_engine_digest_nids;
+        return 1;
+    }
+    if (nid == g_engine_digest_nids[0]) {
+        *md = EVP_sha256();
+        return 1;
+    }
+    return 0;
+}
+
+static void drive_engine_registry(void)
+{
+    ENGINE *e, *g, *sel, *it;
+    int found;
+    int sentinel = 0;
+
+    out_int("engine.table_flags.initial", (long)ENGINE_get_table_flags());
+    ENGINE_set_table_flags(ENGINE_TABLE_FLAG_NOINIT);
+    out_int("engine.table_flags.set", (long)ENGINE_get_table_flags());
+    ENGINE_set_table_flags(0);
+
+    out_ptr("engine.static_state", ENGINE_get_static_state());
+
+    e = ENGINE_new();
+    out_ptr("engine.new", e);
+    out_str("engine.get_id.unset", ENGINE_get_id(e));
+    out_int("engine.get_flags", ENGINE_get_flags(e));
+    out_int("engine.set_id", ENGINE_set_id(e, "probe-engine"));
+    out_str("engine.get_id", ENGINE_get_id(e));
+    out_int("engine.set_name", ENGINE_set_name(e, "probe engine"));
+    out_str("engine.get_name", ENGINE_get_name(e));
+    out_int("engine.set_id.null", ENGINE_set_id(e, NULL));
+    out_err("engine.set_id.null.err");
+
+    out_int("engine.set_ex_data", ENGINE_set_ex_data(e, 0, &sentinel));
+    out_int("engine.get_ex_data.same", ENGINE_get_ex_data(e, 0) == (void *)&sentinel);
+
+    out_ptr("engine.get_digest_engine.unregistered",
+            ENGINE_get_digest_engine(g_engine_digest_nids[0]));
+    out_int("engine.set_digests", ENGINE_set_digests(e, engine_digests_cb));
+    out_int("engine.get_digests.same", ENGINE_get_digests(e) == engine_digests_cb);
+    out_int("engine.register_digests", ENGINE_register_digests(e));
+    sel = ENGINE_get_digest_engine(g_engine_digest_nids[0]);
+    out_ptr("engine.get_digest_engine.registered", sel);
+    out_int("engine.get_digest_engine.is_same", sel == e);
+    out_int("engine.finish", ENGINE_finish(sel));
+    ENGINE_unregister_digests(e);
+    out_int("engine.free", ENGINE_free(e));
+
+    g = ENGINE_new();
+    ENGINE_set_id(g, "probe-listed");
+    ENGINE_set_name(g, "probe listed");
+    out_int("engine.add", ENGINE_add(g));
+    found = 0;
+    for (it = ENGINE_get_first(); it != NULL; it = ENGINE_get_next(it)) {
+        const char *id = ENGINE_get_id(it);
+        if (id != NULL && strcmp(id, "probe-listed") == 0)
+            found = 1;
+    }
+    out_int("engine.listed.found", found);
+    out_int("engine.remove", ENGINE_remove(g));
+    out_int("engine.free.listed", ENGINE_free(g));
+
+    out_int("engine.finish.null", ENGINE_finish(NULL));
+    out_int("engine.free.null", ENGINE_free(NULL));
+}
+
 int main(void)
 {
     OSSL_STORE_LOADER *loader;
@@ -683,6 +777,8 @@ int main(void)
     printf("ref.OSSL_STORE_LOADER_fetch=%s\n", g_ref_fetch != NULL ? "nonnull" : "null");
     printf("ref.OSSL_STORE_LOADER_do_all_provided=%s\n", g_ref_do_all != NULL ? "nonnull" : "null");
     out_str("ref.file_scheme", file_scheme);
+
+    drive_engine_registry();
 
     out_pending();
     return 0;

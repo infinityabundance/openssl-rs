@@ -1301,6 +1301,24 @@ COVERED_FILES = [
     # `ERR_LIB_EC`, `ERR_LIB_DH` and `ERR_LIB_ASN1` with the `EC_R_*`/`ERR_R_*` reasons the two
     # tables' decode, sign and key-generation arms carry.
     ("crypto/ec/ecx_meth.c", "ECX_METH"),
+    # Phase 10.9's digest substrate (D452): the `crypto/engine/` registry core that
+    # `X509_digest` reaches through `ossl_asn1_item_digest_ex` -- the engine object
+    # (`eng_lib.c`), the linked list (`eng_list.c`), the implementation table
+    # (`eng_table.c`), the init/finish pair (`eng_init.c`), the control-command surface
+    # (`eng_ctrl.c`) and the three algorithm tables this slice carries (`tb_digest.c`,
+    # `tb_pkmeth.c`, `tb_asnmth.c`). Each stem is the unit's own name so a line number
+    # cannot collide with another unit's, and the whole file is listed rather than the
+    # landed subset: an unused coordinate is harmless, a missing one is not. `eng_all.c`
+    # is deliberately **not** listed -- it raises nothing (its one function is the
+    # `OPENSSL_init_crypto` call).
+    ("crypto/engine/eng_ctrl.c", "ENG_CTRL"),
+    ("crypto/engine/eng_init.c", "ENG_INIT"),
+    ("crypto/engine/eng_lib.c", "ENG_LIB"),
+    ("crypto/engine/eng_list.c", "ENG_LIST"),
+    ("crypto/engine/eng_table.c", "ENG_TABLE"),
+    ("crypto/engine/tb_asnmth.c", "TB_ASNMTH"),
+    ("crypto/engine/tb_digest.c", "TB_DIGEST"),
+    ("crypto/engine/tb_pkmeth.c", "TB_PKMETH"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -1867,6 +1885,10 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         # `crypto/sm2err.h` is not installed either, so it is the same fallthrough case as
         # `internal/propertyerr.h`; it carries the `crypto/` prefix rather than `internal/`.
         "#include <crypto/sm2err.h>",
+        # Phase 10.9's digest substrate: `ENGINE_R_*` for the `crypto/engine/` registry core.
+        # `engineerr.h` is an installed header (it ships beside `engine.h`), so this is
+        # `ecerr.h`'s fallthrough-free case again.
+        "#include <openssl/engineerr.h>",
         "#include <stdio.h>",
         "",
     ]
