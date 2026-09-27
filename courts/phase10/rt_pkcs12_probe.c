@@ -109,37 +109,30 @@ static void out_pending(void)
     printf("pending.PKCS12_SAFEBAG_create_cert=phase-11-x509\n");
     printf("pending.PKCS12_SAFEBAG_create_crl=phase-11-x509\n");
     /* Held open on `PKCS8_encrypt(_ex)` (p12_p8e.c, 10.4), whose `PKCS5_pbe_set_ex`/
-     * `PKCS5_pbe2_set_iv_ex` are Phase 11's `x509.h` exports. 10.4 landed the `PKCS8_set0_pbe(_ex)`
-     * half, which takes an already-built `X509_ALGOR` and is driven above. */
-    printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt=phase-11-pkcs5\n");
-    printf("pending.PKCS12_SAFEBAG_create_pkcs8_encrypt_ex=phase-11-pkcs5\n");
-    printf("pending.PKCS8_encrypt=phase-11-pkcs5\n");
-    printf("pending.PKCS8_encrypt_ex=phase-11-pkcs5\n");
+     * `PKCS5_pbe2_set_iv_ex` are Phase 11's `x509.h` exports. D443's pull-forward landed those, so
+     * `PKCS8_encrypt(_ex)` and the two `create_pkcs8_encrypt*` spellings are now **driven** above. */
 
     /* ----- the two `p7encdata` writers: `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex` ----- */
-    printf("pending.PKCS12_pack_p7encdata=phase-11-pkcs5\n");
-    printf("pending.PKCS12_pack_p7encdata_ex=phase-11-pkcs5\n");
+    printf("pending.PKCS12_pack_p7encdata=phase-10.3\n");
+    printf("pending.PKCS12_pack_p7encdata_ex=phase-10.3\n");
     /* ----- the `add_*` family that is not yet reachable ----- */
     printf("pending.PKCS12_add_cert=phase-11-x509\n");
-    printf("pending.PKCS12_add_key=phase-11-pkey2pkcs8\n");
-    printf("pending.PKCS12_add_key_ex=phase-11-pkey2pkcs8\n");
-    printf("pending.PKCS12_add_safe=phase-11-pkcs5\n");
-    printf("pending.PKCS12_add_safe_ex=phase-11-pkcs5\n");
+    printf("pending.PKCS12_add_key=phase-10.3\n");
+    printf("pending.PKCS12_add_key_ex=phase-10.3\n");
+    printf("pending.PKCS12_add_safe=phase-10.3\n");
+    printf("pending.PKCS12_add_safe_ex=phase-10.3\n");
     printf("pending.PKCS12_create=phase-11-x509\n");
     printf("pending.PKCS12_create_ex=phase-11-x509\n");
     printf("pending.PKCS12_create_ex2=phase-11-x509\n");
-    /* ----- the MAC/KDF set that needs Phase 11's PBMAC1PARAM/PKCS5_pbkdf2_set -----
-     * 10.4 landed `PKCS12_key_gen_utf8_ex`, which these rows also reached, but each still needs a
-     * Phase 11 type: `verify_mac`/`set_pbmac1_pbkdf2` unpack or build a `PBMAC1PARAM`, and the
-     * private `pkcs12_gen_mac` they all reach names `PBMAC1PARAM`/`PBMAC1_get1_pbkdf2_param` in its
-     * PBMAC1 arm. The blocker moved from `phase-10.4-kdf` to `phase-11-pbe` as the truth moved. */
-    printf("pending.PKCS12_gen_mac=phase-11-pbe\n");
-    printf("pending.PKCS12_verify_mac=phase-11-pbe\n");
-    printf("pending.PKCS12_set_mac=phase-11-pbe\n");
-    printf("pending.PKCS12_set_pbmac1_pbkdf2=phase-11-pbe\n");
-    /* `PKCS12_newpass` needs the PBE parameter objects and `PKCS8_encrypt_ex`, so it is not
-     * the container that blocks it. */
-    printf("pending.PKCS12_newpass=phase-11-pbe\n");
+    /* ----- the MAC/KDF set: the Phase 11 `PBMAC1PARAM`/`PKCS5_pbkdf2_set` blockers are landed by
+     * D443's pull-forward, so what remains is this subphase's own `p12_mutl.c` work. ----- */
+    printf("pending.PKCS12_gen_mac=phase-10.3\n");
+    printf("pending.PKCS12_verify_mac=phase-10.3\n");
+    printf("pending.PKCS12_set_mac=phase-10.3\n");
+    printf("pending.PKCS12_set_pbmac1_pbkdf2=phase-10.3\n");
+    /* `PKCS12_newpass` (`p12_npas.c`) needs `PKCS8_encrypt_ex`, which now lands, so its blocker
+     * is this stratum's own remaining work and not a Phase 11 type. */
+    printf("pending.PKCS12_newpass=phase-10.3\n");
     /* `p12_kiss.c`'s one export: `PKCS12_parse` reads cert bags through
      * `PKCS12_SAFEBAG_get1_cert_ex` and `ossl_x509_add_cert_new`. */
     printf("pending.PKCS12_parse=phase-11-x509\n");
@@ -1039,6 +1032,98 @@ static void court_pbe_kdf(void)
 }
 
 /* The container refusals, each with its coordinate. */
+/* The PBE algorithm-identifier builders D443's pull-forward lands: `PKCS8_encrypt(_ex)` and
+ * the two `PKCS12_SAFEBAG_create_pkcs8_encrypt[_ex]` spellings. A fixed salt and iteration
+ * count are passed so the `EncryptedPrivateKeyInfo` -- and the shrouded key bag over it --
+ * are deterministic, and the DER is the observation (docs/PHASE-10-SUBPHASES.md section 3.2). */
+static void court_pbe_identifiers(void)
+{
+    static const unsigned char salt[8] = { 0x0a, 0x58, 0xcf, 0x64, 0x53, 0x0d, 0x82, 0x3f };
+    const unsigned char *p;
+    PKCS8_PRIV_KEY_INFO *p8inf;
+    X509_SIG *sig;
+    PKCS12_SAFEBAG *bag;
+    unsigned char *der;
+    int derlen;
+
+    /* `PKCS8_encrypt`: the PKCS#5 v1.5 arm. The NID names a PBE scheme and not a cipher, so
+     * `pbe_nid == -1`'s PBES2 path is not taken and no `RAND` is reached. */
+    p = FIX_PKCS8;
+    p8inf = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, (long)sizeof(FIX_PKCS8));
+    if (p8inf != NULL) {
+        sig = PKCS8_encrypt(NID_pbe_WithSHA1And3_Key_TripleDES_CBC, NULL, "smeg", -1,
+                            (unsigned char *)salt, 8, 1, p8inf);
+        der = NULL;
+        derlen = i2d_X509_SIG(sig, &der);
+        out_int("pkcs8.encrypt.derlen", derlen);
+        out_hex("pkcs8.encrypt.der", der, derlen);
+        OPENSSL_free(der);
+        out_ptr("pkcs8.encrypt", sig);
+        ERR_clear_error();
+        X509_SIG_free(sig);
+    } else {
+        out_int("pkcs8.encrypt.derlen", -1);
+    }
+    PKCS8_PRIV_KEY_INFO_free(p8inf);
+
+    /* The `_ex` spelling over its own decode of the same fixture. */
+    p = FIX_PKCS8;
+    p8inf = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, (long)sizeof(FIX_PKCS8));
+    if (p8inf != NULL) {
+        sig = PKCS8_encrypt_ex(NID_pbe_WithSHA1And3_Key_TripleDES_CBC, NULL, "smeg", -1,
+                               (unsigned char *)salt, 8, 1, p8inf, NULL, NULL);
+        der = NULL;
+        derlen = i2d_X509_SIG(sig, &der);
+        out_int("pkcs8.encrypt_ex.derlen", derlen);
+        out_hex("pkcs8.encrypt_ex.der", der, derlen);
+        OPENSSL_free(der);
+        ERR_clear_error();
+        X509_SIG_free(sig);
+    } else {
+        out_int("pkcs8.encrypt_ex.derlen", -1);
+    }
+    PKCS8_PRIV_KEY_INFO_free(p8inf);
+
+    /* `PKCS12_SAFEBAG_create_pkcs8_encrypt`: the shrouded key bag over that `X509_SIG`. */
+    p = FIX_PKCS8;
+    p8inf = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, (long)sizeof(FIX_PKCS8));
+    if (p8inf != NULL) {
+        bag = PKCS12_SAFEBAG_create_pkcs8_encrypt(NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+                                                  "smeg", -1, (unsigned char *)salt, 8, 1, p8inf);
+        der = NULL;
+        derlen = i2d_PKCS12_SAFEBAG(bag, &der);
+        out_int("safebag.create_pkcs8_encrypt.derlen", derlen);
+        out_hex("safebag.create_pkcs8_encrypt.der", der, derlen);
+        OPENSSL_free(der);
+        out_int("safebag.create_pkcs8_encrypt.nid",
+                bag != NULL ? PKCS12_SAFEBAG_get_nid(bag) : -1);
+        ERR_clear_error();
+        PKCS12_SAFEBAG_free(bag);
+    } else {
+        out_int("safebag.create_pkcs8_encrypt.derlen", -1);
+    }
+    PKCS8_PRIV_KEY_INFO_free(p8inf);
+
+    /* The `_ex` spelling. */
+    p = FIX_PKCS8;
+    p8inf = d2i_PKCS8_PRIV_KEY_INFO(NULL, &p, (long)sizeof(FIX_PKCS8));
+    if (p8inf != NULL) {
+        bag = PKCS12_SAFEBAG_create_pkcs8_encrypt_ex(NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
+                                                     "smeg", -1, (unsigned char *)salt, 8, 1,
+                                                     p8inf, NULL, NULL);
+        der = NULL;
+        derlen = i2d_PKCS12_SAFEBAG(bag, &der);
+        out_int("safebag.create_pkcs8_encrypt_ex.derlen", derlen);
+        out_hex("safebag.create_pkcs8_encrypt_ex.der", der, derlen);
+        OPENSSL_free(der);
+        ERR_clear_error();
+        PKCS12_SAFEBAG_free(bag);
+    } else {
+        out_int("safebag.create_pkcs8_encrypt_ex.derlen", -1);
+    }
+    PKCS8_PRIV_KEY_INFO_free(p8inf);
+}
+
 static void court_container_refusals(void)
 {
     static const unsigned char secret_a[3] = { 0x01, 0x02, 0x03 };
@@ -1098,6 +1183,7 @@ int main(void)
     court_container();
     court_container_refusals();
     court_pbe_kdf();
+    court_pbe_identifiers();
     court_refusals();
     out_pending();
     return 0;

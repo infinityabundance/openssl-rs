@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 272,
       "deferred_to_later_phase": 0,
-      "implemented": 194,
-      "open_in_this_stratum": 104,
+      "implemented": 198,
+      "open_in_this_stratum": 100,
       "owned": 298,
       "received_by_handoff": 26
     },
@@ -324,6 +324,8 @@
       "PKCS12_SAFEBAGS_it",
       "PKCS12_SAFEBAG_create0_p8inf",
       "PKCS12_SAFEBAG_create0_pkcs8",
+      "PKCS12_SAFEBAG_create_pkcs8_encrypt",
+      "PKCS12_SAFEBAG_create_pkcs8_encrypt_ex",
       "PKCS12_SAFEBAG_create_secret",
       "PKCS12_SAFEBAG_free",
       "PKCS12_SAFEBAG_get0_attr",
@@ -383,6 +385,8 @@
       "PKCS8_add_keyusage",
       "PKCS8_decrypt",
       "PKCS8_decrypt_ex",
+      "PKCS8_encrypt",
+      "PKCS8_encrypt_ex",
       "PKCS8_get_attr",
       "PKCS8_set0_pbe",
       "PKCS8_set0_pbe_ex",
@@ -974,18 +978,6 @@
         "declaring_header": "pkcs12.h",
         "module": "src/pkcs12/mod.rs",
         "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_create_pkcs8_encrypt"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_SAFEBAG_create_pkcs8_encrypt_ex"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
         "symbol": "PKCS12_SAFEBAG_get1_cert"
       },
       {
@@ -1103,18 +1095,6 @@
         "symbol": "PKCS12_verify_mac"
       },
       {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS8_encrypt"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS8_encrypt_ex"
-      },
-      {
         "declaring_header": "pem.h",
         "module": "src/pem/pem_pk8.rs",
         "received_from_phase": 5,
@@ -1168,17 +1148,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "065628a21e538de236994507186761db645e631217f7dd7958c276f7adadba2b"
+      "sha256": "cac1f8c53d0a4b5b4af0176d22d96c9ce4d325dc5d7faac09fff366408531225"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2e0af07f18c2364fa3483a4b9bdd88913f0ff23530023e4d470478b332bd4c75"
+      "sha256": "014793890f05efaa57dfd722f0e7c2f448ce46df8a9bcb03700a72261cd980a2"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "5812b75f0780fd2658af759b96c5377cacd8e9d13ad7dc8a44b7ebf7fd41dfae"
+      "sha256": "254dd07c0e74e3d266e389ada4c401ffef5b797cb7b548ad080b3e0998fd54b4"
     }
   ],
   "kind": "phase10-obligations",

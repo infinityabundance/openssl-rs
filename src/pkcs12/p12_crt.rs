@@ -17,11 +17,11 @@
 //! **The `PKCS7` subset was then pulled forward** (D441's stratum-ordering defect; see
 //! [`crate::pkcs7`]), and [`PKCS12_add_safes_ex`]/[`PKCS12_add_safes`] are the pair that becomes
 //! reachable: they need only `PKCS12_init_ex` and `PKCS12_pack_authsafes`, both of which land on
-//! the pulled-forward object. `PKCS12_add_safe(_ex)` is **not** in that set: its encrypted arm
-//! reaches `PKCS12_pack_p7encdata_ex` (`:323`), which stays open on Phase 11's
-//! `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex`, so the `add_*` pair that calls it stays open with
-//! it. `PKCS12_create(_ex/_ex2)`, `PKCS12_add_cert` and `PKCS12_add_key(_ex)` stay open on Phase
-//! 11's `X509_it`/`EVP_PKEY2PKCS8` as well.
+//! the pulled-forward object. **D443's PBE pull-forward** unblocks `PKCS12_add_safe(_ex)`'s
+//! encrypted arm for the PBE half, but its `PKCS12_pack_p7encdata_ex` callee is still this
+//! subphase's own unwritten work, so that pair stays open. `PKCS12_create(_ex/_ex2)`,
+//! `PKCS12_add_cert` and `PKCS12_add_key(_ex)` stay open on Phase 11's `X509_it`/
+//! `X509_alias_get0`/`EVP_PKEY2PKCS8` and on the fixed-key fixture a court for them would need.
 //!
 //! The unit raises nothing of its own on the landed path, and `pkcs12_add_bag` raises nothing at
 //! all, so `crypto/pkcs12/p12_crt.c` is deliberately **not** an entry in

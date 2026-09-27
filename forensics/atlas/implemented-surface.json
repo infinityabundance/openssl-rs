@@ -473,7 +473,7 @@
         "x25519_fe64_sub",
         "x25519_fe64_tobytes"
       ],
-      "compiler_emitted_count": 12787,
+      "compiler_emitted_count": 12442,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -481,7 +481,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 3084,
+        "implemented": 3118,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -2069,6 +2069,7 @@
           "EVP_PBE_get",
           "EVP_PBE_scrypt",
           "EVP_PBE_scrypt_ex",
+          "EVP_PKEY2PKCS8",
           "EVP_PKEY_CTX_add1_hkdf_info",
           "EVP_PKEY_CTX_add1_tls1_prf_seed",
           "EVP_PKEY_CTX_ctrl",
@@ -2926,6 +2927,18 @@
           "OSSL_trace_string",
           "OpenSSL_version",
           "OpenSSL_version_num",
+          "PBE2PARAM_free",
+          "PBE2PARAM_it",
+          "PBE2PARAM_new",
+          "PBEPARAM_free",
+          "PBEPARAM_it",
+          "PBEPARAM_new",
+          "PBKDF2PARAM_free",
+          "PBKDF2PARAM_it",
+          "PBKDF2PARAM_new",
+          "PBMAC1PARAM_free",
+          "PBMAC1PARAM_it",
+          "PBMAC1PARAM_new",
           "PEM_ASN1_read",
           "PEM_ASN1_read_bio",
           "PEM_ASN1_write",
@@ -2999,6 +3012,8 @@
           "PKCS12_SAFEBAGS_it",
           "PKCS12_SAFEBAG_create0_p8inf",
           "PKCS12_SAFEBAG_create0_pkcs8",
+          "PKCS12_SAFEBAG_create_pkcs8_encrypt",
+          "PKCS12_SAFEBAG_create_pkcs8_encrypt_ex",
           "PKCS12_SAFEBAG_create_secret",
           "PKCS12_SAFEBAG_free",
           "PKCS12_SAFEBAG_get0_attr",
@@ -3061,6 +3076,15 @@
           "PKCS5_PBE_keyivgen_ex",
           "PKCS5_PBKDF2_HMAC",
           "PKCS5_PBKDF2_HMAC_SHA1",
+          "PKCS5_pbe2_set",
+          "PKCS5_pbe2_set_iv",
+          "PKCS5_pbe2_set_iv_ex",
+          "PKCS5_pbe_set",
+          "PKCS5_pbe_set0_algor",
+          "PKCS5_pbe_set0_algor_ex",
+          "PKCS5_pbe_set_ex",
+          "PKCS5_pbkdf2_set",
+          "PKCS5_pbkdf2_set_ex",
           "PKCS5_v2_PBE_keyivgen",
           "PKCS5_v2_PBE_keyivgen_ex",
           "PKCS5_v2_scrypt_keyivgen",
@@ -3085,6 +3109,8 @@
           "PKCS8_add_keyusage",
           "PKCS8_decrypt",
           "PKCS8_decrypt_ex",
+          "PKCS8_encrypt",
+          "PKCS8_encrypt_ex",
           "PKCS8_get_attr",
           "PKCS8_pkey_add1_attr",
           "PKCS8_pkey_add1_attr_by_NID",
@@ -3470,6 +3496,10 @@
           "d2i_EC_PUBKEY",
           "d2i_KeyParams",
           "d2i_KeyParams_bio",
+          "d2i_PBE2PARAM",
+          "d2i_PBEPARAM",
+          "d2i_PBKDF2PARAM",
+          "d2i_PBMAC1PARAM",
           "d2i_PKCS12",
           "d2i_PKCS12_BAGS",
           "d2i_PKCS12_MAC_DATA",
@@ -3541,6 +3571,10 @@
           "i2d_EC_PUBKEY",
           "i2d_KeyParams",
           "i2d_KeyParams_bio",
+          "i2d_PBE2PARAM",
+          "i2d_PBEPARAM",
+          "i2d_PBKDF2PARAM",
+          "i2d_PBMAC1PARAM",
           "i2d_PKCS12",
           "i2d_PKCS12_BAGS",
           "i2d_PKCS12_MAC_DATA",
@@ -3568,7 +3602,7 @@
           "i2t_ASN1_OBJECT",
           "o2i_ECPublicKey"
         ],
-        "scaffolded": 2812
+        "scaffolded": 2778
       },
       "libssl": {
         "authority_exports": 603,
@@ -3579,18 +3613,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 3084,
-      "scaffolded": 3415
+      "implemented": 3118,
+      "scaffolded": 3381
     }
   },
-  "body_hash": "065628a21e538de236994507186761db645e631217f7dd7958c276f7adadba2b",
+  "body_hash": "cac1f8c53d0a4b5b4af0176d22d96c9ce4d325dc5d7faac09fff366408531225",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "88f8d19f93592f6d9ffb96013c345cc16cf3e530968d43e1d710d94ff4321b3d"
+      "sha256": "c6b2b70657bd06d7023da2693ec76346e7a8e1c8c019fdc7abd7ccc6fee777e8"
     },
     {
       "name": "authority-exports",

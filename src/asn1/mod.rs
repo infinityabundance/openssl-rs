@@ -66,6 +66,12 @@ pub mod i2d_evp;
 pub mod items;
 pub mod layout;
 pub mod new;
+// D443's pull-forward: `crypto/asn1/p5_pbe.c` and `crypto/asn1/p5_pbev2.c` are Phase 11's
+// `x509.h` units, landed early because `PKCS8_encrypt_ex`'s only unlanded names are their
+// `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex` (and the MAC setters need `PKCS5_pbkdf2_set` and
+// the `PBMAC1PARAM` group). See the module docs and `docs/DECISIONS.md` D442's precedent.
+pub mod p5_pbe;
+pub mod p5_pbev2;
 // Phase 8.8's `crypto/asn1/p8_pkey.c` pair, `PKCS8_pkey_set0`/`PKCS8_pkey_get0`, and the
 // `PKCS8_PRIV_KEY_INFO` layout (D349). D368 completes the unit's item half; the `add1_attr`
 // family lands with `crypto/x509/x509_att.c`.
