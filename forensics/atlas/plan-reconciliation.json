@@ -15,17 +15,17 @@
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
       "names_a_file_the_authority_does_not_have": [
+        "docs/PHASE-10-SUBPHASES.md:10:10.10:evp/digest.c",
+        "docs/PHASE-10-SUBPHASES.md:10:10.11:evp/evp_pkey.c",
+        "docs/PHASE-10-SUBPHASES.md:10:10.16:file_store.c",
+        "docs/PHASE-10-SUBPHASES.md:10:10.16:file_store_any2obj.c",
         "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_der2key.c",
         "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_epki2pki.c",
         "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_pem2der.c",
         "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_pvk2key.c",
         "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_spki2typespki.c",
         "docs/PHASE-10-SUBPHASES.md:10:10.1:encode_key2any.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.1:encode_key2ms.c",
-        "docs/PHASE-10-SUBPHASES.md:10:6.2:evp/digest.c",
-        "docs/PHASE-10-SUBPHASES.md:10:6.3:evp/evp_pkey.c",
-        "docs/PHASE-10-SUBPHASES.md:10:6.8:file_store.c",
-        "docs/PHASE-10-SUBPHASES.md:10:6.8:file_store_any2obj.c"
+        "docs/PHASE-10-SUBPHASES.md:10:10.1:encode_key2ms.c"
       ],
       "symbols_not_reached": [
         "ossl_asn1_item_digest_ex"
@@ -87,7 +87,7 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 99,
+      "rows_judged": 100,
       "symbols_named_by_a_row": 108,
       "symbols_reached": 107,
       "unit_records": 79,
@@ -108,7 +108,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.2"
+          "10:10.10"
         ],
         "transcribed_by": []
       },
@@ -116,7 +116,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.2"
+          "10:10.10"
         ],
         "transcribed_by": []
       },
@@ -124,7 +124,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.3"
+          "10:10.11"
         ],
         "transcribed_by": [
           "src/asn1/a_strex.rs"
@@ -134,7 +134,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.3"
+          "10:10.11"
         ],
         "transcribed_by": []
       },
@@ -154,7 +154,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": [
           "src/asn1/asn1_gen.rs"
@@ -168,7 +168,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.2"
+          "10:10.10"
         ],
         "transcribed_by": [
           "src/asn1/der.rs",
@@ -276,7 +276,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.3"
+          "10:10.11"
         ],
         "transcribed_by": []
       },
@@ -284,7 +284,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12",
+          "10:10.8"
         ],
         "transcribed_by": [
           "src/asn1/x_val.rs"
@@ -574,7 +575,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.1"
+          "10:10.9"
         ],
         "transcribed_by": []
       },
@@ -587,7 +588,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.1"
+          "10:10.9"
         ],
         "transcribed_by": [
           "src/runtime/defaults.rs"
@@ -2692,7 +2693,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.1"
+          "10:10.9"
         ],
         "transcribed_by": [
           "src/runtime/str.rs"
@@ -2873,8 +2874,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:10.3",
-          "10:6.7"
+          "10:10.15",
+          "10:10.3"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_add.rs"
@@ -2914,8 +2915,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:10.3",
-          "10:6.7"
+          "10:10.15",
+          "10:10.3"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_crt.rs"
@@ -2958,8 +2959,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:10.4",
-          "10:6.7"
+          "10:10.15",
+          "10:10.4"
         ],
         "transcribed_by": []
       },
@@ -3008,8 +3009,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:10.2",
-          "10:6.7"
+          "10:10.15",
+          "10:10.2"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_sbag.rs"
@@ -3429,8 +3430,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:10.5",
-          "10:6.8"
+          "10:10.16",
+          "10:10.5"
         ],
         "transcribed_by": [
           "src/store/store_lib.rs"
@@ -3471,7 +3472,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.8"
+          "10:10.16"
         ],
         "transcribed_by": []
       },
@@ -3559,7 +3560,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3570,7 +3571,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3578,7 +3579,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3588,7 +3589,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3603,7 +3604,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3611,7 +3612,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3622,7 +3623,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6",
+          "10:10.14",
           "8:8.8"
         ],
         "transcribed_by": [
@@ -3635,7 +3636,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3645,7 +3646,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3655,7 +3656,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3665,7 +3666,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3675,7 +3676,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3685,7 +3686,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3695,7 +3696,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.5"
+          "10:10.13"
         ],
         "transcribed_by": []
       },
@@ -3703,7 +3704,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3713,7 +3714,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.5"
+          "10:10.13"
         ],
         "transcribed_by": []
       },
@@ -3723,7 +3724,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.5"
+          "10:10.13"
         ],
         "transcribed_by": []
       },
@@ -3734,7 +3735,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3744,7 +3745,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.5"
+          "10:10.13"
         ],
         "transcribed_by": []
       },
@@ -3754,7 +3755,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.5"
+          "10:10.13"
         ],
         "transcribed_by": []
       },
@@ -3764,7 +3765,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.5"
+          "10:10.13"
         ],
         "transcribed_by": []
       },
@@ -3778,7 +3779,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3806,7 +3807,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3817,7 +3818,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3825,7 +3826,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.2"
+          "10:10.10"
         ],
         "transcribed_by": []
       },
@@ -3833,7 +3834,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3844,7 +3845,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6",
+          "10:10.14",
           "8:8.8"
         ],
         "transcribed_by": [
@@ -3855,7 +3856,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3863,7 +3864,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -3871,7 +3872,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.3"
+          "10:10.11"
         ],
         "transcribed_by": []
       },
@@ -3881,7 +3882,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3889,7 +3890,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3897,7 +3898,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3905,7 +3906,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.3"
+          "10:10.11"
         ],
         "transcribed_by": []
       },
@@ -3913,7 +3914,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.3"
+          "10:10.11"
         ],
         "transcribed_by": []
       },
@@ -3921,8 +3922,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.4",
-          "10:6.6"
+          "10:10.12",
+          "10:10.14"
         ],
         "transcribed_by": []
       },
@@ -3932,7 +3933,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14"
         ],
         "transcribed_by": [
           "src/x509/x_attrib.rs"
@@ -3944,7 +3945,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14",
+          "10:10.8"
         ],
         "transcribed_by": [
           "src/x509/x_crl.rs"
@@ -3954,7 +3956,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.3"
+          "10:10.11",
+          "10:10.8"
         ],
         "transcribed_by": [
           "src/x509/x_exten.rs"
@@ -3964,7 +3967,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.3"
+          "10:10.11",
+          "10:10.8"
         ],
         "transcribed_by": [
           "src/x509/x_name.rs"
@@ -3992,7 +3996,7 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.3",
+          "10:10.11",
           "8:8.8",
           "8:8.9"
         ],
@@ -4006,7 +4010,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:6.6"
+          "10:10.14",
+          "10:10.8"
         ],
         "transcribed_by": [
           "src/x509/x_x509.rs"
@@ -4016,7 +4021,7 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:6.4"
+          "10:10.12"
         ],
         "transcribed_by": []
       },
@@ -4974,7 +4979,7 @@
       "transcribed_units": 354
     }
   },
-  "body_hash": "8ed8f9ffc0d4895443a294387e33396dfcb6b345a4d92d2c3797447252ab9321",
+  "body_hash": "d03d647d8448cc6ec5a65ace982c8172aad6b98dfbb93f6c06cadb75dd571465",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -5010,7 +5015,7 @@
     {
       "name": "plan-PHASE-10-SUBPHASES",
       "path": "docs/PHASE-10-SUBPHASES.md",
-      "sha256": "7abe59a78677cd393e0df9b34ee008a6491e9bd64caae7b50f175cd25bbdb1d2"
+      "sha256": "94bb214ba306c5d3cbfc050ebc73df3b4ea19846796468a54a6e275db9b6f197"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",
