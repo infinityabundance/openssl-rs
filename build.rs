@@ -185,6 +185,13 @@ fn build_c_adapters(manifest_dir: &Path) -> Result<(), String> {
             "src/evp/pkey_q_keygen_variadic.c",
             "openssl_rs_pkey_q_keygen_variadic",
         ),
+        // `OSSL_STORE_ctrl` is C-variadic and `OSSL_STORE_vctrl` takes a `va_list`,
+        // so both public symbols are the shim's; every decision is `store_lib.rs`'s
+        // `openssl_rs_store_vctrl`, including the one conditional `va_arg` pull.
+        (
+            "src/store/store_lib_variadic.c",
+            "openssl_rs_store_lib_variadic",
+        ),
         // Not a variadic adapter: `struct dirent` and `struct stat` are read on
         // the C side of the ABI so that no field offset is assumed. See the
         // file's own header.

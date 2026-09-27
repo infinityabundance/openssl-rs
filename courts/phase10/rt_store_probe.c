@@ -9,30 +9,38 @@
  * What it establishes, and what it does not
  * -----------------------------------------
  * STORE's identity is a fetch and a loader contract (docs/PHASE-10-SUBPHASES.md section 3.3).
- * This probe drives the part of 10.5 whose closure is landed: the `OSSL_STORE_LOADER` object
- * (`OSSL_STORE_LOADER_new`, the ten setters, the by-name accessors and the refcount pair), the
- * process-global scheme registry (`OSSL_STORE_register_loader`/`_unregister_loader`/
- * `OSSL_STORE_do_all_loaders`) and the `OSSL_STORE_INFO` type-name table
- * (`OSSL_STORE_INFO_type_string`). It drives the refusal arms the authority refuses: a NULL
- * scheme to `OSSL_STORE_LOADER_new`, a scheme that fails RFC 3986's syntax, and a loader whose
- * `load` is NULL -- each with its error queue coordinate.
+ * This probe drives the part of 10.5 whose closure is landed, and after the second pass that is
+ * every export of the four units except three:
+ *
+ *  * the `OSSL_STORE_LOADER` object and its process-global scheme registry (`store_register.c`,
+ *    `store_meth.c`), driven by name and through `OSSL_STORE_do_all_loaders`;
+ *  * the `OSSL_STORE_INFO` type-name table (`store_strings.c`);
+ *  * the whole `OSSL_STORE_INFO` object model (`new`/`new_NAME`/`new_PARAMS`/`new_PUBKEY`/
+ *    `new_PKEY`/`new_CERT`/`new_CRL`/`set0_NAME_description`, `get_type`, the `get0_*` and
+ *    `get1_*` accessors, and `free`) and the whole `OSSL_STORE_SEARCH` object;
+ *  * the `OSSL_STORE_CTX` state machine (`open`/`open_ex`/`attach`/`eof`/`error`/`expect`/
+ *    `find`/`delete`/`close`/`supports_search`, plus the two deprecated control entry points
+ *    `OSSL_STORE_ctrl`/`OSSL_STORE_vctrl`) over an **in-process registered legacy loader**, which
+ *    is what makes the refusal arms reachable without either `file` provider row.
+ *
+ * The refusal arms are the ones section 3.3 names -- an unknown scheme, a NULL URI, a loader
+ * whose registration omits `load` -- each with its error queue coordinate, plus the CTX state
+ * transitions (`eof`, `error`, `expect`, `find`, `close`).
  *
  * What it cannot drive, and prints as `pending.`
  * ----------------------------------------------
- * Two things are outside this pass, and both are the same blocker one level up:
+ * The blockage is **per function** (docs/DECISIONS.md D448, corrected by the second 10.5 pass),
+ * and the three exports this probe does not call are named below with their measured blockers:
  *
- *  * the two `OSSL_OP_STORE` provider rows (`file`, `forensics/atlas/provider-algorithms.json`)
- *    are published by `providers/implementations/storemgmt/file_store.c`, whose decoder chain
- *    and result path reach `store_result.c` and Phase 11's `X509` object. They are
- *    `unimplemented`, so `OSSL_STORE_LOADER_fetch` and `OSSL_STORE_LOADER_do_all_provided`
- *    would behave differently on the two sides -- the authority answers a real `file` loader
- *    and the candidate answers NULL -- and are therefore **address-taken only**: the reference
- *    is what `court_coverage.py` reads (basis `referenced`), and the row's blocker is named
- *    here rather than papered over.
- *  * `store_lib.c`'s `OSSL_STORE_CTX` state machine and `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH`
- *    object model, whose CERT/CRL arms and `OSSL_STORE_find` reach Phase 11's `X509` (`X509_free`,
- *    `X509_up_ref`, `d2i_X509`, `i2d_X509_NAME`), and whose `OSSL_STORE_load` reaches
- *    `store_result.c`. Section 3.5: a row that cannot be driven is named, not silently passed.
+ *  * `OSSL_STORE_load` -- its fetched branch calls `store_result.c`'s
+ *    `ossl_store_handle_load_result`, which needs `d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL`
+ *    (Phase 11) and `PKCS12_parse` (10.3-withheld).
+ *  * `OSSL_STORE_INFO_get1_CERT`/`get1_CRL` -- they call `X509_up_ref`/`X509_CRL_up_ref` (Phase
+ *    11). The carved arms of `OSSL_STORE_INFO_free` (CERT/CRL, `X509_free`/`X509_CRL_free`) and
+ *    of `OSSL_STORE_find` (BY_NAME/BY_ISSUER_SERIAL, `i2d_X509_NAME`) are named too.
+ *  * the two `OSSL_OP_STORE` provider rows (`file`) -- so `OSSL_STORE_LOADER_fetch` and
+ *    `OSSL_STORE_LOADER_do_all_provided` stay **address-taken only**, and the refused paths are
+ *    driven through the legacy registry instead.
  *
  * Everything printed is a literal, a string, or a `nonnull`/`null`/int answer; no pointer
  * address is ever printed (the two sides allocate differently, and `probe_hygiene.py` would
@@ -48,6 +56,7 @@
 
 #include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/store.h>
 
 /* ---------------------------------------------------------------------------------------------
@@ -87,8 +96,8 @@ static void out_err(const char *key)
  *
  * `OSSL_STORE_register_loader` requires `open`, `load`, `eof`, `error` and `close` to be present;
  * one registration below deliberately omits `load` to drive the `LOADER_INCOMPLETE` refusal. The
- * callbacks are never invoked by this probe: the state machine that would call them is
- * `store_lib.c`'s and is withheld.
+ * callbacks are matched against the authority's own signatures and are what the CTX state machine
+ * calls once `OSSL_STORE_open` has resolved this loader.
  * --------------------------------------------------------------------------------------------- */
 
 static OSSL_STORE_LOADER_CTX *probe_open(const OSSL_STORE_LOADER *loader, const char *uri,
@@ -166,12 +175,30 @@ static OSSL_STORE_LOADER *make_loader(const char *scheme, int with_load)
     if (loader == NULL)
         return NULL;
     OSSL_STORE_LOADER_set_open(loader, probe_open);
+    OSSL_STORE_LOADER_set_open_ex(loader, probe_open_ex);
+    OSSL_STORE_LOADER_set_attach(loader, probe_attach);
+    OSSL_STORE_LOADER_set_ctrl(loader, probe_control);
+    OSSL_STORE_LOADER_set_expect(loader, probe_expect);
+    OSSL_STORE_LOADER_set_find(loader, probe_find);
     if (with_load)
         OSSL_STORE_LOADER_set_load(loader, probe_load);
     OSSL_STORE_LOADER_set_eof(loader, probe_eof);
     OSSL_STORE_LOADER_set_error(loader, probe_error);
     OSSL_STORE_LOADER_set_close(loader, probe_close);
     return loader;
+}
+
+/* `OSSL_STORE_vctrl` takes a `va_list`, which a caller can only build from its own variadic
+ * function; this is that caller. */
+static int call_vctrl(OSSL_STORE_CTX *ctx, int cmd, ...)
+{
+    va_list args;
+    int ret;
+
+    va_start(args, cmd);
+    ret = OSSL_STORE_vctrl(ctx, cmd, args);
+    va_end(args);
+    return ret;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -198,6 +225,209 @@ static void do_all_loaders_cb(const OSSL_STORE_LOADER *loader, void *arg)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * The `OSSL_STORE_INFO` object model, driven through its public constructors and accessors.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_info_object_model(void)
+{
+    OSSL_STORE_INFO *name;
+    OSSL_STORE_INFO *params;
+    OSSL_STORE_INFO *pubkey;
+    OSSL_STORE_INFO *pkey;
+    OSSL_STORE_INFO *cert;
+    OSSL_STORE_INFO *crl;
+    EVP_PKEY *pk;
+    char *copy;
+
+    /* The generic constructor, and the NAME arm with its description. */
+    name = OSSL_STORE_INFO_new_NAME(OPENSSL_strdup("a-name"));
+    out_ptr("info.new_NAME", name);
+    out_int("info.get_type.NAME", OSSL_STORE_INFO_get_type(name));
+    out_str("info.get0_NAME", OSSL_STORE_INFO_get0_NAME(name));
+    out_ptr("info.get0_data.NAME", OSSL_STORE_INFO_get0_data(OSSL_STORE_INFO_NAME, name));
+    out_ptr("info.get0_data.NAME.mismatch",
+            OSSL_STORE_INFO_get0_data(OSSL_STORE_INFO_PKEY, name));
+    out_ptr("info.get0_NAME_description.before", OSSL_STORE_INFO_get0_NAME_description(name));
+
+    copy = OSSL_STORE_INFO_get1_NAME(name);
+    out_ptr("info.get1_NAME", copy);
+    out_int("info.get1_NAME.is_copy", copy != OSSL_STORE_INFO_get0_NAME(name));
+    OPENSSL_free(copy);
+
+    out_int("info.set0_NAME_description", OSSL_STORE_INFO_set0_NAME_description(
+                                               name, OPENSSL_strdup("a description")));
+    out_str("info.get0_NAME_description.after", OSSL_STORE_INFO_get0_NAME_description(name));
+    copy = OSSL_STORE_INFO_get1_NAME_description(name);
+    out_str("info.get1_NAME_description", copy);
+    OPENSSL_free(copy);
+
+    /* Every other typed accessor refuses a NAME, with its own reason. */
+    out_ptr("info.get0_PARAMS.on_name", OSSL_STORE_INFO_get0_PARAMS(name));
+    out_ptr("info.get1_PARAMS.on_name", OSSL_STORE_INFO_get1_PARAMS(name));
+    out_err("info.get1_PARAMS.on_name.err");
+    out_ptr("info.get0_PUBKEY.on_name", OSSL_STORE_INFO_get0_PUBKEY(name));
+    out_ptr("info.get1_PUBKEY.on_name", OSSL_STORE_INFO_get1_PUBKEY(name));
+    out_err("info.get1_PUBKEY.on_name.err");
+    out_ptr("info.get0_PKEY.on_name", OSSL_STORE_INFO_get0_PKEY(name));
+    out_ptr("info.get1_PKEY.on_name", OSSL_STORE_INFO_get1_PKEY(name));
+    out_err("info.get1_PKEY.on_name.err");
+    out_ptr("info.get0_CERT.on_name", OSSL_STORE_INFO_get0_CERT(name));
+    out_ptr("info.get0_CRL.on_name", OSSL_STORE_INFO_get0_CRL(name));
+    OSSL_STORE_INFO_free(name);
+
+    /* The three EVP_PKEY arms, driven with a live key so the `get1_*` up-ref is real. */
+    pk = EVP_PKEY_new();
+    params = OSSL_STORE_INFO_new_PARAMS(pk);
+    out_ptr("info.new_PARAMS", params);
+    out_int("info.get_type.PARAMS", OSSL_STORE_INFO_get_type(params));
+    out_int("info.get0_PARAMS.is_key", OSSL_STORE_INFO_get0_PARAMS(params) == pk);
+    out_int("info.get1_PARAMS.is_key", OSSL_STORE_INFO_get1_PARAMS(params) == pk);
+    out_ptr("info.get0_PUBKEY.on_params", OSSL_STORE_INFO_get0_PUBKEY(params));
+    OSSL_STORE_INFO_free(params);
+
+    pk = EVP_PKEY_new();
+    pubkey = OSSL_STORE_INFO_new_PUBKEY(pk);
+    out_ptr("info.new_PUBKEY", pubkey);
+    out_int("info.get_type.PUBKEY", OSSL_STORE_INFO_get_type(pubkey));
+    out_int("info.get0_PUBKEY.is_key", OSSL_STORE_INFO_get0_PUBKEY(pubkey) == pk);
+    out_int("info.get1_PUBKEY.is_key", OSSL_STORE_INFO_get1_PUBKEY(pubkey) == pk);
+    OSSL_STORE_INFO_free(pubkey);
+
+    pk = EVP_PKEY_new();
+    pkey = OSSL_STORE_INFO_new_PKEY(pk);
+    out_ptr("info.new_PKEY", pkey);
+    out_int("info.get_type.PKEY", OSSL_STORE_INFO_get_type(pkey));
+    out_int("info.get0_PKEY.is_key", OSSL_STORE_INFO_get0_PKEY(pkey) == pk);
+    out_int("info.get1_PKEY.is_key", OSSL_STORE_INFO_get1_PKEY(pkey) == pk);
+    out_ptr("info.get0_PARAMS.on_pkey", OSSL_STORE_INFO_get0_PARAMS(pkey));
+    OSSL_STORE_INFO_free(pkey);
+
+    /* The CERT/CRL constructors take an opaque pointer; with a NULL object their accessors
+     * answer NULL and the carve in `OSSL_STORE_INFO_free` is unobservable. */
+    cert = OSSL_STORE_INFO_new_CERT(NULL);
+    out_ptr("info.new_CERT", cert);
+    out_int("info.get_type.CERT", OSSL_STORE_INFO_get_type(cert));
+    out_ptr("info.get0_CERT", OSSL_STORE_INFO_get0_CERT(cert));
+    out_ptr("info.get0_CRL.on_cert", OSSL_STORE_INFO_get0_CRL(cert));
+    OSSL_STORE_INFO_free(cert);
+
+    crl = OSSL_STORE_INFO_new_CRL(NULL);
+    out_ptr("info.new_CRL", crl);
+    out_int("info.get_type.CRL", OSSL_STORE_INFO_get_type(crl));
+    out_ptr("info.get0_CRL", OSSL_STORE_INFO_get0_CRL(crl));
+    OSSL_STORE_INFO_free(crl);
+
+    /* The generic constructor with an arbitrary type, and the NULL free. */
+    cert = OSSL_STORE_INFO_new(OSSL_STORE_INFO_NAME, NULL);
+    out_int("info.new.generic.type", OSSL_STORE_INFO_get_type(cert));
+    OSSL_STORE_INFO_free(cert);
+    OSSL_STORE_INFO_free(NULL);
+    out_str("info.free.null", "ok");
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * The `OSSL_STORE_SEARCH` object.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_search_object_model(void)
+{
+    OSSL_STORE_SEARCH *alias;
+    OSSL_STORE_SEARCH *name;
+    OSSL_STORE_SEARCH *issuer;
+    OSSL_STORE_SEARCH *fp;
+    const EVP_MD *md = EVP_sha256();
+    const unsigned char bytes[32] = { 0 };
+    size_t len = 0;
+    const unsigned char *got;
+
+    alias = OSSL_STORE_SEARCH_by_alias("an-alias");
+    out_ptr("search.by_alias", alias);
+    out_int("search.by_alias.type", OSSL_STORE_SEARCH_get_type(alias));
+    out_str("search.by_alias.string", OSSL_STORE_SEARCH_get0_string(alias));
+    got = OSSL_STORE_SEARCH_get0_bytes(alias, &len);
+    out_int("search.by_alias.len", (long)len);
+    out_ptr("search.by_alias.bytes", got);
+    out_ptr("search.by_alias.name", OSSL_STORE_SEARCH_get0_name(alias));
+    out_ptr("search.by_alias.digest", OSSL_STORE_SEARCH_get0_digest(alias));
+    OSSL_STORE_SEARCH_free(alias);
+
+    name = OSSL_STORE_SEARCH_by_name(NULL);
+    out_ptr("search.by_name", name);
+    out_int("search.by_name.type", OSSL_STORE_SEARCH_get_type(name));
+    out_ptr("search.by_name.name", OSSL_STORE_SEARCH_get0_name(name));
+    OSSL_STORE_SEARCH_free(name);
+
+    issuer = OSSL_STORE_SEARCH_by_issuer_serial(NULL, NULL);
+    out_ptr("search.by_issuer", issuer);
+    out_int("search.by_issuer.type", OSSL_STORE_SEARCH_get_type(issuer));
+    out_ptr("search.by_issuer.serial", OSSL_STORE_SEARCH_get0_serial(issuer));
+    OSSL_STORE_SEARCH_free(issuer);
+
+    fp = OSSL_STORE_SEARCH_by_key_fingerprint(md, bytes, sizeof(bytes));
+    out_ptr("search.by_fp", fp);
+    out_int("search.by_fp.type", OSSL_STORE_SEARCH_get_type(fp));
+    out_int("search.by_fp.digest.is_sha256", OSSL_STORE_SEARCH_get0_digest(fp) == md);
+    OSSL_STORE_SEARCH_free(fp);
+
+    /* A fingerprint whose length does not match the digest is the refusal arm. */
+    fp = OSSL_STORE_SEARCH_by_key_fingerprint(md, bytes, 3);
+    out_ptr("search.by_fp.bad_length", fp);
+    out_err("search.by_fp.bad_length.err");
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * The `OSSL_STORE_CTX` state machine over the registered legacy loader.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_store_ctx(OSSL_STORE_LOADER *loader)
+{
+    OSSL_STORE_CTX *ctx;
+    OSSL_STORE_CTX *actx;
+    OSSL_STORE_SEARCH *search;
+    int secmem = 0;
+
+    (void)loader;
+
+    ctx = OSSL_STORE_open("probe://object", NULL, NULL, NULL, NULL);
+    out_ptr("store.open.legacy", ctx);
+    out_err("store.open.legacy.err");
+    out_int("store.eof", OSSL_STORE_eof(ctx));
+    out_int("store.error", OSSL_STORE_error(ctx));
+    out_int("store.expect.pkey", OSSL_STORE_expect(ctx, OSSL_STORE_INFO_PKEY));
+    out_err("store.expect.pkey.err");
+    out_int("store.expect.negative", OSSL_STORE_expect(ctx, -1));
+    out_err("store.expect.negative.err");
+    out_int("store.expect.too_big", OSSL_STORE_expect(ctx, 7));
+    out_err("store.expect.too_big.err");
+    out_int("store.supports_search.name",
+            OSSL_STORE_supports_search(ctx, OSSL_STORE_SEARCH_BY_NAME));
+    out_int("store.supports_search.alias",
+            OSSL_STORE_supports_search(ctx, OSSL_STORE_SEARCH_BY_ALIAS));
+
+    search = OSSL_STORE_SEARCH_by_alias("an-alias");
+    out_int("store.find.alias", OSSL_STORE_find(ctx, search));
+    out_err("store.find.alias.err");
+    out_int("store.find.null", OSSL_STORE_find(ctx, NULL));
+    out_err("store.find.null.err");
+    OSSL_STORE_SEARCH_free(search);
+
+    out_int("store.ctrl.secmem", OSSL_STORE_ctrl(ctx, OSSL_STORE_C_USE_SECMEM, &secmem));
+    out_err("store.ctrl.secmem.err");
+    out_int("store.vctrl.secmem", call_vctrl(ctx, OSSL_STORE_C_USE_SECMEM, &secmem));
+    out_err("store.vctrl.secmem.err");
+    out_int("store.close", OSSL_STORE_close(ctx));
+
+    /* The same state machine over `OSSL_STORE_attach`, which takes the BIO form. */
+    actx = OSSL_STORE_attach(NULL, "probe", NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    out_ptr("store.attach.legacy", actx);
+    out_int("store.attach.eof", OSSL_STORE_eof(actx));
+    out_int("store.attach.close", OSSL_STORE_close(actx));
+
+    /* `close(NULL)` is the authority's own `ossl_store_close_it(NULL) == 1`. */
+    out_int("store.close.null", OSSL_STORE_close(NULL));
+}
+
+/* ---------------------------------------------------------------------------------------------
  * A whole block of what this pass withholds, printed identically on both sides.
  * --------------------------------------------------------------------------------------------- */
 
@@ -205,12 +435,13 @@ static void out_pending(void)
 {
     printf("pending.OSSL_STORE_LOADER_fetch=file_store_provider_row_unpublished\n");
     printf("pending.OSSL_STORE_LOADER_do_all_provided=file_store_provider_row_unpublished\n");
-    printf("pending.OSSL_STORE_open=store_lib_state_machine_withheld\n");
-    printf("pending.OSSL_STORE_load=store_result_needs_phase11_x509\n");
-    printf("pending.OSSL_STORE_INFO_new_CERT=phase11_x509\n");
-    printf("pending.OSSL_STORE_INFO_get1_PKEY=store_lib_object_model_withheld\n");
-    printf("pending.OSSL_STORE_SEARCH_by_name=store_lib_object_model_withheld\n");
-    printf("pending.OSSL_STORE_find=phase11_i2d_X509_NAME\n");
+    printf("pending.OSSL_STORE_load=store_result_ossl_store_handle_load_result\n");
+    printf("pending.OSSL_STORE_INFO_get1_CERT=phase11_x509_up_ref\n");
+    printf("pending.OSSL_STORE_INFO_get1_CRL=phase11_x509_crl_up_ref\n");
+    printf("pending.OSSL_STORE_INFO_free.cert_arm=phase11_x509_free\n");
+    printf("pending.OSSL_STORE_INFO_free.crl_arm=phase11_x509_crl_free\n");
+    printf("pending.OSSL_STORE_find.by_name=phase11_i2d_X509_NAME\n");
+    printf("pending.OSSL_STORE_find.by_issuer_serial=phase11_i2d_X509_NAME\n");
 }
 
 int main(void)
@@ -244,6 +475,10 @@ int main(void)
     out_str("info.type_string.6", OSSL_STORE_INFO_type_string(6));
     out_ptr("info.type_string.0", OSSL_STORE_INFO_type_string(0));
     out_ptr("info.type_string.7", OSSL_STORE_INFO_type_string(7));
+
+    /* ----- the OSSL_STORE_INFO and OSSL_STORE_SEARCH object models (store_lib.c) ----- */
+    drive_info_object_model();
+    drive_search_object_model();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));
@@ -280,6 +515,9 @@ int main(void)
     out_int("store.register", OSSL_STORE_register_loader(loader));
     out_err("store.register.err");
 
+    /* ----- the CTX state machine over the registered loader (store_lib.c) ----- */
+    drive_store_ctx(loader);
+
     g_do_all_count = 0;
     out_int("store.do_all_loaders", OSSL_STORE_do_all_loaders(do_all_loaders_cb, NULL));
     out_int("store.do_all.count", g_do_all_count);
@@ -311,6 +549,22 @@ int main(void)
     out_int("store.register.incomplete", OSSL_STORE_register_loader(incomplete));
     out_err("store.register.incomplete.err");
     OSSL_STORE_LOADER_free(incomplete);
+
+    /* ----- the open/delete refusal arms, none of which resolves a loader ----- */
+    out_ptr("store.open.null", OSSL_STORE_open(NULL, NULL, NULL, NULL, NULL));
+    out_err("store.open.null.err");
+    out_ptr("store.open_ex.unknown",
+            OSSL_STORE_open_ex("foo://object", NULL, NULL, NULL, NULL, NULL, NULL, NULL));
+    out_err("store.open_ex.unknown.err");
+
+    out_int("store.delete.probe",
+            OSSL_STORE_delete("probe://object", NULL, NULL, NULL, NULL, NULL));
+    out_err("store.delete.probe.err");
+    out_int("store.delete.null", OSSL_STORE_delete(NULL, NULL, NULL, NULL, NULL, NULL));
+    out_err("store.delete.null.err");
+    out_int("store.delete.no_scheme",
+            OSSL_STORE_delete("noscheme", NULL, NULL, NULL, NULL, NULL));
+    out_err("store.delete.no_scheme.err");
 
     /* ----- the two provider-fetch exports: referenced, not called ----- */
     g_ref_fetch = (void (*)(void))OSSL_STORE_LOADER_fetch;

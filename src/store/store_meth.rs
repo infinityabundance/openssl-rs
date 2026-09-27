@@ -827,7 +827,7 @@ pub unsafe extern "C" fn OSSL_STORE_LOADER_get0_properties(
 ///
 /// # Safety
 /// `loader` must be NULL or live.
-#[allow(dead_code)] // read by store_lib.c's `OSSL_STORE_vctrl`, withheld (see the module root)
+#[allow(dead_code)] // no crate caller yet: nothing in `crypto/store/` calls it (its users are provider-side)
 pub(crate) unsafe fn ossl_store_loader_get_number(loader: *const OsslStoreLoader) -> c_int {
     if loader.is_null() {
         // SAFETY: a compile-time-constant site.

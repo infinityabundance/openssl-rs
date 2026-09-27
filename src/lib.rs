@@ -168,10 +168,13 @@ pub mod sm4;
 // two crypt units the `SM2` signature and asym-cipher rows publish on.
 pub(crate) mod sm2;
 pub mod status;
-// Phase 10 (10.5) — `crypto/store/`: the `OSSL_STORE_LOADER` object and its registry, and the
-// provider-side loader method fetched over slot 15. The directory is new here; this pass lands
-// `store_strings.c`, `store_register.c` and `store_meth.c` and names the blockers on the two
-// units it withholds (`store_lib.c` and the `file_store.c` provider row) in its module doc.
+// Phase 10 (10.5) — `crypto/store/`: the `OSSL_STORE_LOADER` object and its registry, the
+// provider-side loader method fetched over slot 15, and `store_lib.c`'s `OSSL_STORE_CTX` state
+// machine and `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object model. The directory is new here;
+// this pass lands all four export-bearing units and names, per function, the three exports and
+// two arms it withholds (Phase 11's `X509` graph, and 10.3's `PKCS12_parse` behind
+// `ossl_store_handle_load_result`) in its module doc. The `file_store.c` provider row is the
+// only whole unit still withheld.
 pub mod store;
 // Test-only: the one process-wide lock that serialises tests touching the crate's
 // process-global state (init/cleanup, the default `OSSL_LIB_CTX`, the memory

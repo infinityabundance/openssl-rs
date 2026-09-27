@@ -31805,6 +31805,11 @@ matching `get0_*`, `get_type`, `get0_name`, `up_ref`) and the CTX's `open`/`eof`
 withheld with its own note, never stubbed -- is the rest of 10.5, and calling the unit wholly
 blocked would have been the opposite error.
 
+**Correction (D449): the list above is too broad in one place.**
+`OSSL_STORE_SEARCH_by_name` and `OSSL_STORE_SEARCH_by_issuer_serial` do **not** call
+`i2d_X509_NAME`; they store the borrowed `X509_NAME *` and only the unborn fetched branch would
+serialise it. Both land in D449, as do `attach`/`delete`/`supports_search`/`ctrl`/`vctrl`.
+
 ### Verification
 
 `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
@@ -31813,4 +31818,52 @@ blocked would have been the opposite error.
 the census's subsequence and dispatch-partition checks pass. `PIPELINE OK` exit 0 on two
 consecutive runs, at **109 courts** and **44,952 observations**. `phase_state.py` reads 0-9
 `complete`, 10 `in-progress`, 11-21 `not-started`.
+
+## D449 -- 10.5 part two: `store_lib.c`'s reachable subset lands, and D448's blocker list is corrected
+
+D448 withheld `store_lib.c` as a unit with a defence that is not good enough: the blockage is
+per-function, and calling 49 exports blocked because some of them are is a deferral wearing a
+measurement's clothes. This slice lands **46 of the 49**, in a new `src/store/store_lib.rs`: the
+`OSSL_STORE_CTX` state machine (`open`/`open_ex`/`eof`/`error`/`expect`/`close`/`close_fp`), the
+whole `OSSL_STORE_INFO` object model (`new_PKEY`/`new_NAME`/`new_PARAMS`/`new_PUBKEY`/`new_OTHER`,
+the `get0_*` accessors, `get_type`, `get0_name`, `up_ref`, `free` with its two blocked arms carved
+out), the `OSSL_STORE_SEARCH` family and `OSSL_STORE_find`. The ledger moves from
+`implemented=238 open=60` to **`implemented=284 open=14`**.
+
+**`OSSL_STORE_ctrl`/`OSSL_STORE_vctrl` are C-variadic**, so their behaviour is a Rust function
+(`openssl_rs_store_vctrl`) behind a small C shim, `src/store/store_lib_variadic.c`, compiled by
+`build.rs`. That is the crate's existing pattern for a variadic entry point rather than a new
+mechanism; the shim holds the one conditional `va_arg` pull and nothing else.
+
+**Three exports are withheld, each with its own measured blocker rather than the unit's.**
+`OSSL_STORE_load` needs `store_result.c`'s `ossl_store_handle_load_result`, whose closure reaches
+`d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL` (Phase 11) and `PKCS12_parse` (withheld in 10.3); it is
+withheld whole because the fetched path is the function, not a `switch` arm.
+`OSSL_STORE_INFO_get1_CERT` and `_get1_CRL` need `X509_up_ref` and `X509_CRL_up_ref`. Two further
+*arms inside functions that otherwise land* are carved and noted at the site:
+`OSSL_STORE_INFO_free`'s CERT/CRL arms (`X509_free`/`X509_CRL_free`) and `OSSL_STORE_find`'s
+`BY_NAME`/`BY_ISSUER_SERIAL` arms (`i2d_X509_NAME`), both in the unborn fetched branch.
+
+**D448's blocker list was too broad in one place, and this entry is the correction.**
+`OSSL_STORE_SEARCH_by_name` and `OSSL_STORE_SEARCH_by_issuer_serial` do **not** call
+`i2d_X509_NAME` -- they store the borrowed `X509_NAME *`; only the unborn fetched branch would
+serialise it. Both land here, as do `attach`/`delete`/`supports_search`/`ctrl`/`vctrl`. The
+correction is recorded inline in D448 as well as here, because a reader of D448 alone would be
+misled. No Phase 11 row is created and Phase 11 still derives `not-started`.
+
+The two `file` `OSSL_OP_STORE` provider rows stay unpublished, unchanged from D448:
+`OSSL_STORE_LOADER_fetch`/`_do_all_provided` remain reference-taken and never called, so no false
+residual is possible while the row is absent. `file_store.c` (900 lines) and
+`file_store_any2obj.c` (361) are the last unit of this stratum that carries a row.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1091 passed, 0 failed** (four new tests, each taking the crate-wide global-state lock,
+and `openssl_rs_store_vctrl` exercises the borrowed-`va_arg` path). `run_courts.py`,
+`court_coverage.py`, `provider_court_coverage.py` and `probe_hygiene.py` clean. `RT-STORE` moves
+from 60 to **159 observations**, authority and candidate identical, 0 residuals. `PIPELINE OK` exit
+0 on two consecutive runs, at 109 courts and **45,051 observations**. `phase_state.py` reads 0-9
+`complete`, 10 `in-progress`, 11-21 `not-started`; Phase-10 provider rows are unchanged at
+`630 implemented / 6 open` and `libcrypto` moves to 3,206 implemented exports.
 
