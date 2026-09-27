@@ -31983,3 +31983,61 @@ authority lines**, on top of the store slice itself (`store_result.c` 667 + `fil
 `PKCS12_parse`). A full transitive closure is 542 units and ~182k lines, which is the
 over-approximation a linker sees rather than the work; the ~18-unit direct set is the number.
 
+## D452 -- 10.9, the digest substrate: the engine table lands, and `X509_digest` gets its dependency
+
+The second pulled-forward subphase. `crypto/engine/`'s nine built units (`eng_lib`, `eng_ctrl`,
+`eng_init`, `eng_table`, `eng_list`, `eng_all`, `tb_digest`, `tb_pkmeth`, `tb_asnmth`) are 2,005
+authority lines, and **~1,915 of them are transcribed** in a new `src/engine/` tree, one module per
+authority unit, with the `ENGINE` object's `#[repr(C)]` layout asserted by `core::mem::offset_of!`.
+`crypto/o_str.c` (451) and `crypto/ctype.c` (313) were already landed as `src/runtime/str.rs` and
+`src/runtime/ctype.rs` (D51), so 10.9's twelve units are the nine engine units plus `defaults.c`'s
+`ossl_get_enginesdir`, not twelve fresh transcriptions. This is what `X509_digest` reaches through
+`ossl_asn1_item_digest_ex`, so the subphase is real work in front of a real row even though it closes
+no Phase-10 export or provider row on its own -- counts stay at `286 implemented / 12 open` and
+`634 implemented / 2 open`, and that is the expected shape for a dependency subphase.
+
+**Withheld by name, each with its blocker** (the D451 rule, applied at function granularity):
+`ENGINE_load_builtin_engines` (`eng_all.c:13-16`) -- the crate's `OPENSSL_init_crypto` refuses the
+`ENGINE_*` bits (`src/runtime/init.rs:254`), so its call would diverge on every invocation;
+`ENGINE_by_id` (`eng_list.c:408-473`) -- its closure needs the withheld loader and `eng_dyn.c`, which
+is not among the twelve; `engine_cleanup_int` (`eng_lib.c:175-184`) -- reachable only from
+`OPENSSL_cleanup`, which the crate's landed cleanup does not yet name; `ENGINE_get_pkey_meth`
+(`tb_pkmeth.c:74-83`) -- no landed caller, its only authority caller being Phase 7's deferred
+`EVP_PKEY_set1_engine`; and `ossl_get_enginesdir`, whose only caller is the withheld `ENGINE_by_id`.
+The method tables proper (`tb_cipher`/`tb_rsa`/`tb_dsa`/`tb_dh`/`tb_eckey`/`tb_rand`, and
+`eng_dyn`/`eng_cnf`/`eng_fat`/`eng_rand`) are **out of scope**, not withheld: they belong to the
+strata that own those methods.
+
+**Two defects were caught by driving the code rather than by compiling it.** `ENGINE_up_ref`
+initially failed to write the incremented count back, which double-frees on
+`ENGINE_unregister_digests`; and the layout-resolved `AtomicPtr` cast carried a typo. Both are fixed
+before the green runs, and both are the kind of thing a fetch-only probe would have missed.
+
+**Three pieces of machinery moved with the subphase.**
+`forensics/tools/gen_err_raise_sites.py` gained the eight raising engine units (the engine header
+`ossl/engineerr.h` was added to the resolver's include set), so their coordinates are generated
+rather than declared. `dispatch_court.py` gained two `NOT_A_DISPATCH` exemptions for
+`EngineCleanupCb`/`EngineTableDoallCb`, which are `crypto/engine/eng_local.h` internal typedefs with
+no installed-header counterpart. `forensics/prerequisites.json` gained two hand-maintained
+`divergences` records -- `engine_lock_init` as `named_differently` and `engine_cleanup_int` as
+`modelled_differently` -- so the prerequisite gate's findings became decisions instead of noise,
+which is the mechanism D345 established.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1100 passed, 0 failed**. `RT-STORE` moves from 181 to **209** observations, over 109
+courts and **45,189** observations in total; `run_courts.py`, `court_coverage.py`,
+`provider_court_coverage.py`, `dispatch_court.py`, `plan_reconciliation.py`,
+`prerequisite_gate.py` and `probe_hygiene.py` clean; `PIPELINE OK` exit 0 twice.
+`phase_state.py` reads 0-9 `complete`, 10 `in-progress`, 11-21 `not-started`. 61 `ENGINE_*` exports
+are now defined; all remain Phase 13's by header and are in no phase ledger.
+
+### What 10.10 now needs
+
+10.10's five units (`a_digest.c`, `a_sign.c`, `asn1_lib.c`, `evp/digest.c` and `x509_obj.c`'s
+`X509_NAME_oneline` half; **2,293 lines**) now have their engine dependency answered:
+`ossl_asn1_item_digest_ex`'s `ENGINE_get_digest_engine` and its `ENGINE_finish` release are landed
+and on the same table. Nothing 10.9 withheld is on 10.10's path, so the remaining distance is still
+section 6's 2,293 lines rather than a number 10.9 changed.
+

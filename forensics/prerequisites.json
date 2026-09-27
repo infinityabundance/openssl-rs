@@ -177,6 +177,24 @@
         ],
         "note": "**Withheld rather than stubbed, and this row is what the prerequisite gate's `unwired_function_in_the_current_stratum` finding becomes once the omission is a decision rather than an oversight.** Phase 10 pulled `crypto/pkcs7/`'s object forward so PKCS#12's `PFX` container could land (D441's stratum-ordering defect): `src/pkcs7/pk7_asn1.rs` transcribes the three `ASN1_ADB(PKCS7)` arms whose item closure is landed (`data`, `digest`, `encrypted`) and `src/pkcs7/pk7_lib.rs` transcribes `PKCS7_set_type` for those arms and the five `ossl_pkcs7_*` context helpers. That makes `crypto/pkcs7/pk7_lib.c` a unit with a crate module, so the unit's unwired internals become countable (D327's rule). This is the one the lexical scan sees: `pkcs7_get0_certificates` (`crypto/pkcs7/pk7_lib.c:294-311`) walks a `signed`/`signedAndEnveloped` contentInfo's certificate stack, and the authority's `ossl_pkcs7_resolve_libctx` (`:450-482`) calls it, `PKCS7_get_signer_info` and `pkcs7_get_recipient_info` to propagate a library context into every `X509`, `PKCS7_RECIP_INFO` and `PKCS7_SIGNER_INFO` a received structure holds. Those three propagation walks call Phase 11's `ossl_x509_set0_libctx` and read `PKCS7_SIGNED`/`PKCS7_SIGN_ENVELOPE`, whose item groups name Phase 11's `X509_it`/`X509_CRL_it`/`X509_NAME_it`; for the three arms this subset carries (`data`, `digest`, `encrypted`) all three stacks are null by the arm's own type, so the authority's loops iterate zero times and `ossl_pkcs7_resolve_libctx`'s observable effect is exactly the early return the transcription keeps. The row fail-closes both ways: if the name is ever built the gate reports it `stale` until the row is removed, and if `src/pkcs7/pk7_lib.rs` stopped owning the unit the record would stop matching.",
         "evidence": "docs/DECISIONS.md D441 (the ordering defect) and the Phase 10 PKCS#7 pull-forward; crypto/pkcs7/pk7_lib.c:294-311 (`pkcs7_get0_certificates`) and :450-482 (`ossl_pkcs7_resolve_libctx`'s three walks) against :484-525 (the five landed context helpers); crypto/pkcs7/pk7_lib.c:468 (`ossl_x509_set0_libctx`, Phase 11's); src/pkcs7/mod.rs and pk7_lib.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/pkcs7/pk7_lib.c` edge"
+      },
+      {
+        "owner_module": "src/engine/eng_lib.rs",
+        "class": "named_differently",
+        "covers": [
+          "engine_lock_init"
+        ],
+        "note": "**Phase 10.9's engine registry names the authority's once differently.** `crypto/engine/eng_local.h` declares `extern CRYPTO_ONCE engine_lock_init`, the module-private run-once every `crypto/engine/` unit except `eng_lib.c` names in `RUN_ONCE(&engine_lock_init, do_engine_lock_init)`. The crate models it as the `static ENGINE_LOCK_INIT: AtomicI32` in `src/engine/eng_lib.rs` and drives it with `run_engine_lock_init`, so no crate identifier is spelled `engine_lock_init` and the lexical scan reports the authority name unwired in `eng_init.c`, `eng_lib.c`, `eng_list.c` and `tb_asnmth.c` at once. It is a variable rather than a function, which is why the crate could not satisfy the scan by calling it; the run-once is nonetheless taken at every one of those four sites through `run_engine_lock_init`. Fail-closes both ways: if `ENGINE_LOCK_INIT` ever stops being driven the four call sites stop compiling, and if `src/engine/eng_lib.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "src/engine/eng_lib.rs (ENGINE_LOCK_INIT, run_engine_lock_init, do_engine_lock_init); crypto/engine/eng_local.h:99-100"
+      },
+      {
+        "owner_module": "src/engine/eng_lib.rs",
+        "class": "modelled_differently",
+        "covers": [
+          "engine_cleanup_int"
+        ],
+        "note": "**Phase 10.9 withholds `engine_cleanup_int` by name.** Its closure is landed -- the cleanup stack, `engine_cleanup_cb_free` and `CRYPTO_THREAD_lock_free` are all built -- but the authority reaches it only from `OPENSSL_cleanup` (`crypto/init.c`), and this crate's landed `OPENSSL_cleanup` (`src/runtime/init.rs`) does not yet name it, exactly as the authority's own comment there (\"must be called before engine_cleanup_int()\") records. Landing the function without its caller would define a symbol nothing reaches and would let the crate claim the cleanup ran, so it is withheld until the init sequence names it; the unit's four other cleanup registrations (`engine_cleanup_add_first`/`_add_last` from `eng_table.c` and `eng_list.c`) are built and called. The record fail-closes both ways: if `engine_cleanup_int` is ever built the gate reports the row stale until it is removed, and if `src/engine/eng_lib.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "src/engine/eng_lib.rs (module header; engine_cleanup_add_first/add_last/cb_free); src/runtime/init.rs:935"
       }
     ],
     "units": [

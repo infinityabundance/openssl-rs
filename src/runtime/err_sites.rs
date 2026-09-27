@@ -43602,6 +43602,576 @@ pub(crate) const ECX_METH_1365: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `int_ctrl_helper` at `crypto/engine/eng_ctrl.c:80` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_CTRL_80: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 80,
+    func: c"int_ctrl_helper",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `int_ctrl_helper` at `crypto/engine/eng_ctrl.c:88` (ENGINE_R_INVALID_CMD_NAME).
+pub(crate) const ENG_CTRL_88: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 88,
+    func: c"int_ctrl_helper",
+    lib: 38,
+    reason: 137,
+    dynamic_reason: false,
+};
+
+/// `int_ctrl_helper` at `crypto/engine/eng_ctrl.c:99` (ENGINE_R_INVALID_CMD_NUMBER).
+pub(crate) const ENG_CTRL_99: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 99,
+    func: c"int_ctrl_helper",
+    lib: 38,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `int_ctrl_helper` at `crypto/engine/eng_ctrl.c:121` (ENGINE_R_INTERNAL_LIST_ERROR).
+pub(crate) const ENG_CTRL_121: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 121,
+    func: c"int_ctrl_helper",
+    lib: 38,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl` at `crypto/engine/eng_ctrl.c:130` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_CTRL_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 130,
+    func: c"ENGINE_ctrl",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl` at `crypto/engine/eng_ctrl.c:154` (ENGINE_R_NO_CONTROL_FUNCTION).
+pub(crate) const ENG_CTRL_154: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 154,
+    func: c"ENGINE_ctrl",
+    lib: 38,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl` at `crypto/engine/eng_ctrl.c:167` (ENGINE_R_NO_CONTROL_FUNCTION).
+pub(crate) const ENG_CTRL_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 167,
+    func: c"ENGINE_ctrl",
+    lib: 38,
+    reason: 120,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_cmd_is_executable` at `crypto/engine/eng_ctrl.c:177` (ENGINE_R_INVALID_CMD_NUMBER).
+pub(crate) const ENG_CTRL_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 177,
+    func: c"ENGINE_cmd_is_executable",
+    lib: 38,
+    reason: 138,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd` at `crypto/engine/eng_ctrl.c:191` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_CTRL_191: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 191,
+    func: c"ENGINE_ctrl_cmd",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd` at `crypto/engine/eng_ctrl.c:210` (ENGINE_R_INVALID_CMD_NAME).
+pub(crate) const ENG_CTRL_210: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 210,
+    func: c"ENGINE_ctrl_cmd",
+    lib: 38,
+    reason: 137,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd_string` at `crypto/engine/eng_ctrl.c:230` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_CTRL_230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 230,
+    func: c"ENGINE_ctrl_cmd_string",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd_string` at `crypto/engine/eng_ctrl.c:249` (ENGINE_R_INVALID_CMD_NAME).
+pub(crate) const ENG_CTRL_249: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 249,
+    func: c"ENGINE_ctrl_cmd_string",
+    lib: 38,
+    reason: 137,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd_string` at `crypto/engine/eng_ctrl.c:253` (ENGINE_R_CMD_NOT_EXECUTABLE).
+pub(crate) const ENG_CTRL_253: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 253,
+    func: c"ENGINE_ctrl_cmd_string",
+    lib: 38,
+    reason: 134,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd_string` at `crypto/engine/eng_ctrl.c:263` (ENGINE_R_INTERNAL_LIST_ERROR).
+pub(crate) const ENG_CTRL_263: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 263,
+    func: c"ENGINE_ctrl_cmd_string",
+    lib: 38,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd_string` at `crypto/engine/eng_ctrl.c:271` (ENGINE_R_COMMAND_TAKES_NO_INPUT).
+pub(crate) const ENG_CTRL_271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 271,
+    func: c"ENGINE_ctrl_cmd_string",
+    lib: 38,
+    reason: 136,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd_string` at `crypto/engine/eng_ctrl.c:286` (ENGINE_R_COMMAND_TAKES_INPUT).
+pub(crate) const ENG_CTRL_286: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 286,
+    func: c"ENGINE_ctrl_cmd_string",
+    lib: 38,
+    reason: 135,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd_string` at `crypto/engine/eng_ctrl.c:303` (ENGINE_R_INTERNAL_LIST_ERROR).
+pub(crate) const ENG_CTRL_303: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 303,
+    func: c"ENGINE_ctrl_cmd_string",
+    lib: 38,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_ctrl_cmd_string` at `crypto/engine/eng_ctrl.c:308` (ENGINE_R_ARGUMENT_IS_NOT_A_NUMBER).
+pub(crate) const ENG_CTRL_308: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
+    line: 308,
+    func: c"ENGINE_ctrl_cmd_string",
+    lib: 38,
+    reason: 133,
+    dynamic_reason: false,
+};
+
+/// `engine_unlocked_finish` at `crypto/engine/eng_init.c:79` (ENGINE_R_FINISH_FAILED).
+pub(crate) const ENG_INIT_79: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_init.c",
+    line: 79,
+    func: c"engine_unlocked_finish",
+    lib: 38,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_init` at `crypto/engine/eng_init.c:90` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_INIT_90: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_init.c",
+    line: 90,
+    func: c"ENGINE_init",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_init` at `crypto/engine/eng_init.c:95` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_INIT_95: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_init.c",
+    line: 95,
+    func: c"ENGINE_init",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_finish` at `crypto/engine/eng_init.c:117` (ENGINE_R_FINISH_FAILED).
+pub(crate) const ENG_INIT_117: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_init.c",
+    line: 117,
+    func: c"ENGINE_finish",
+    lib: 38,
+    reason: 106,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_new` at `crypto/engine/eng_lib.c:33` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_LIB_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_lib.c",
+    line: 33,
+    func: c"ENGINE_new",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_set_id` at `crypto/engine/eng_lib.c:206` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIB_206: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_lib.c",
+    line: 206,
+    func: c"ENGINE_set_id",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_set_name` at `crypto/engine/eng_lib.c:216` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIB_216: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_lib.c",
+    line: 216,
+    func: c"ENGINE_set_name",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `engine_list_add` at `crypto/engine/eng_list.c:64` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIST_64: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 64,
+    func: c"engine_list_add",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `engine_list_add` at `crypto/engine/eng_list.c:73` (ENGINE_R_CONFLICTING_ENGINE_ID).
+pub(crate) const ENG_LIST_73: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 73,
+    func: c"engine_list_add",
+    lib: 38,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `engine_list_add` at `crypto/engine/eng_list.c:81` (ENGINE_R_INTERNAL_LIST_ERROR).
+pub(crate) const ENG_LIST_81: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 81,
+    func: c"engine_list_add",
+    lib: 38,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `engine_list_add` at `crypto/engine/eng_list.c:89` (ENGINE_R_INTERNAL_LIST_ERROR).
+pub(crate) const ENG_LIST_89: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 89,
+    func: c"engine_list_add",
+    lib: 38,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `engine_list_add` at `crypto/engine/eng_list.c:97` (ENGINE_R_INTERNAL_LIST_ERROR).
+pub(crate) const ENG_LIST_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 97,
+    func: c"engine_list_add",
+    lib: 38,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `engine_list_add` at `crypto/engine/eng_list.c:106` (ENGINE_R_INTERNAL_LIST_ERROR).
+pub(crate) const ENG_LIST_106: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 106,
+    func: c"engine_list_add",
+    lib: 38,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `engine_list_remove` at `crypto/engine/eng_list.c:124` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIST_124: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 124,
+    func: c"engine_list_remove",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `engine_list_remove` at `crypto/engine/eng_list.c:132` (ENGINE_R_ENGINE_IS_NOT_IN_LIST).
+pub(crate) const ENG_LIST_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 132,
+    func: c"engine_list_remove",
+    lib: 38,
+    reason: 105,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_first` at `crypto/engine/eng_list.c:235` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_LIST_235: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 235,
+    func: c"ENGINE_get_first",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_first` at `crypto/engine/eng_list.c:247` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_LIST_247: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 247,
+    func: c"ENGINE_get_first",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_last` at `crypto/engine/eng_list.c:262` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_LIST_262: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 262,
+    func: c"ENGINE_get_last",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_last` at `crypto/engine/eng_list.c:274` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_LIST_274: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 274,
+    func: c"ENGINE_get_last",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_next` at `crypto/engine/eng_list.c:288` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIST_288: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 288,
+    func: c"ENGINE_get_next",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_next` at `crypto/engine/eng_list.c:300` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_LIST_300: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 300,
+    func: c"ENGINE_get_next",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_prev` at `crypto/engine/eng_list.c:315` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIST_315: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 315,
+    func: c"ENGINE_get_prev",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_prev` at `crypto/engine/eng_list.c:327` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_LIST_327: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 327,
+    func: c"ENGINE_get_prev",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_add` at `crypto/engine/eng_list.c:343` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIST_343: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 343,
+    func: c"ENGINE_add",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_add` at `crypto/engine/eng_list.c:347` (ENGINE_R_ID_OR_NAME_MISSING).
+pub(crate) const ENG_LIST_347: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 347,
+    func: c"ENGINE_add",
+    lib: 38,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_add` at `crypto/engine/eng_list.c:353` (ENGINE_R_INTERNAL_LIST_ERROR).
+pub(crate) const ENG_LIST_353: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 353,
+    func: c"ENGINE_add",
+    lib: 38,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_remove` at `crypto/engine/eng_list.c:365` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIST_365: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 365,
+    func: c"ENGINE_remove",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_remove` at `crypto/engine/eng_list.c:371` (ENGINE_R_INTERNAL_LIST_ERROR).
+pub(crate) const ENG_LIST_371: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 371,
+    func: c"ENGINE_remove",
+    lib: 38,
+    reason: 110,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_by_id` at `crypto/engine/eng_list.c:413` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIST_413: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 413,
+    func: c"ENGINE_by_id",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_by_id` at `crypto/engine/eng_list.c:420` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_LIST_420: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 420,
+    func: c"ENGINE_by_id",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_by_id` at `crypto/engine/eng_list.c:448` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_LIST_448: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 448,
+    func: c"ENGINE_by_id",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_by_id` at `crypto/engine/eng_list.c:470` (ENGINE_R_NO_SUCH_ENGINE).
+pub(crate) const ENG_LIST_470: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 470,
+    func: c"ENGINE_by_id",
+    lib: 38,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_up_ref` at `crypto/engine/eng_list.c:479` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_LIST_479: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_list.c",
+    line: 479,
+    func: c"ENGINE_up_ref",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `engine_table_register` at `crypto/engine/eng_table.c:135` (ENGINE_R_INIT_FAILED).
+pub(crate) const ENG_TABLE_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_table.c",
+    line: 135,
+    func: c"engine_table_register",
+    lib: 38,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_pkey_asn1_meth` at `crypto/engine/tb_asnmth.c:92` (ENGINE_R_UNIMPLEMENTED_PUBLIC_KEY_METHOD).
+pub(crate) const TB_ASNMTH_92: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/tb_asnmth.c",
+    line: 92,
+    func: c"ENGINE_get_pkey_asn1_meth",
+    lib: 38,
+    reason: 101,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_pkey_asn1_find_str` at `crypto/engine/tb_asnmth.c:200` (ERR_R_CRYPTO_LIB).
+pub(crate) const TB_ASNMTH_200: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/tb_asnmth.c",
+    line: 200,
+    func: c"ENGINE_pkey_asn1_find_str",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_pkey_asn1_find_str` at `crypto/engine/tb_asnmth.c:213` (ERR_R_CRYPTO_LIB).
+pub(crate) const TB_ASNMTH_213: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/tb_asnmth.c",
+    line: 213,
+    func: c"ENGINE_pkey_asn1_find_str",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_digest` at `crypto/engine/tb_digest.c:78` (ENGINE_R_UNIMPLEMENTED_DIGEST).
+pub(crate) const TB_DIGEST_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/tb_digest.c",
+    line: 78,
+    func: c"ENGINE_get_digest",
+    lib: 38,
+    reason: 147,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_pkey_meth` at `crypto/engine/tb_pkmeth.c:79` (ENGINE_R_UNIMPLEMENTED_PUBLIC_KEY_METHOD).
+pub(crate) const TB_PKMETH_79: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/tb_pkmeth.c",
+    line: 79,
+    func: c"ENGINE_get_pkey_meth",
+    lib: 38,
+    reason: 101,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -47970,4 +48540,61 @@ pub(crate) static ALL: &[ErrSite] = &[
     ECX_METH_1293,
     ECX_METH_1330,
     ECX_METH_1365,
+    ENG_CTRL_80,
+    ENG_CTRL_88,
+    ENG_CTRL_99,
+    ENG_CTRL_121,
+    ENG_CTRL_130,
+    ENG_CTRL_154,
+    ENG_CTRL_167,
+    ENG_CTRL_177,
+    ENG_CTRL_191,
+    ENG_CTRL_210,
+    ENG_CTRL_230,
+    ENG_CTRL_249,
+    ENG_CTRL_253,
+    ENG_CTRL_263,
+    ENG_CTRL_271,
+    ENG_CTRL_286,
+    ENG_CTRL_303,
+    ENG_CTRL_308,
+    ENG_INIT_79,
+    ENG_INIT_90,
+    ENG_INIT_95,
+    ENG_INIT_117,
+    ENG_LIB_33,
+    ENG_LIB_206,
+    ENG_LIB_216,
+    ENG_LIST_64,
+    ENG_LIST_73,
+    ENG_LIST_81,
+    ENG_LIST_89,
+    ENG_LIST_97,
+    ENG_LIST_106,
+    ENG_LIST_124,
+    ENG_LIST_132,
+    ENG_LIST_235,
+    ENG_LIST_247,
+    ENG_LIST_262,
+    ENG_LIST_274,
+    ENG_LIST_288,
+    ENG_LIST_300,
+    ENG_LIST_315,
+    ENG_LIST_327,
+    ENG_LIST_343,
+    ENG_LIST_347,
+    ENG_LIST_353,
+    ENG_LIST_365,
+    ENG_LIST_371,
+    ENG_LIST_413,
+    ENG_LIST_420,
+    ENG_LIST_448,
+    ENG_LIST_470,
+    ENG_LIST_479,
+    ENG_TABLE_135,
+    TB_ASNMTH_92,
+    TB_ASNMTH_200,
+    TB_ASNMTH_213,
+    TB_DIGEST_78,
+    TB_PKMETH_79,
 ];

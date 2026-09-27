@@ -10,9 +10,9 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 74,
-      "language_surface_not_modelled_by_name": 5614,
-      "planned_prerequisites": 5
+      "covered_by_a_divergence": 79,
+      "language_surface_not_modelled_by_name": 5676,
+      "planned_prerequisites": 6
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -21,6 +21,8 @@
         "arg": 1,
         "bn_set_static_words": 1,
         "cb_arg": 1,
+        "engine_cleanup_int": 1,
+        "engine_lock_init": 4,
         "in": 1,
         "inlen": 1,
         "libctx": 1,
@@ -69,7 +71,7 @@
         "crypto/asn1/a_strnid.c": 19,
         "crypto/asn1/a_time.c": 14,
         "crypto/asn1/a_type.c": 8,
-        "crypto/asn1/ameth_lib.c": 29,
+        "crypto/asn1/ameth_lib.c": 24,
         "crypto/asn1/asn1_gen.c": 26,
         "crypto/asn1/asn1_lib.c": 12,
         "crypto/asn1/asn_mime.c": 41,
@@ -77,7 +79,7 @@
         "crypto/asn1/asn_pack.c": 6,
         "crypto/asn1/bio_asn1.c": 12,
         "crypto/asn1/d2i_param.c": 8,
-        "crypto/asn1/d2i_pr.c": 14,
+        "crypto/asn1/d2i_pr.c": 13,
         "crypto/asn1/d2i_pu.c": 4,
         "crypto/asn1/evp_asn1.c": 13,
         "crypto/asn1/f_int.c": 8,
@@ -169,7 +171,7 @@
         "crypto/dh/dh_group_params.c": 6,
         "crypto/dh/dh_kdf.c": 7,
         "crypto/dh/dh_key.c": 10,
-        "crypto/dh/dh_lib.c": 18,
+        "crypto/dh/dh_lib.c": 16,
         "crypto/dh/dh_meth.c": 11,
         "crypto/dh/dh_pmeth.c": 18,
         "crypto/dh/dh_prn.c": 4,
@@ -180,7 +182,7 @@
         "crypto/dsa/dsa_depr.c": 3,
         "crypto/dsa/dsa_gen.c": 3,
         "crypto/dsa/dsa_key.c": 10,
-        "crypto/dsa/dsa_lib.c": 20,
+        "crypto/dsa/dsa_lib.c": 18,
         "crypto/dsa/dsa_meth.c": 12,
         "crypto/dsa/dsa_ossl.c": 12,
         "crypto/dsa/dsa_pmeth.c": 13,
@@ -198,8 +200,8 @@
         "crypto/ec/ec_curve.c": 19,
         "crypto/ec/ec_cvt.c": 4,
         "crypto/ec/ec_deprecated.c": 9,
-        "crypto/ec/ec_key.c": 22,
-        "crypto/ec/ec_kmeth.c": 23,
+        "crypto/ec/ec_key.c": 20,
+        "crypto/ec/ec_kmeth.c": 21,
         "crypto/ec/ec_lib.c": 38,
         "crypto/ec/ec_mult.c": 18,
         "crypto/ec/ec_oct.c": 10,
@@ -221,6 +223,14 @@
         "crypto/encode_decode/encoder_lib.c": 31,
         "crypto/encode_decode/encoder_meth.c": 20,
         "crypto/encode_decode/encoder_pkey.c": 30,
+        "crypto/engine/eng_ctrl.c": 6,
+        "crypto/engine/eng_init.c": 7,
+        "crypto/engine/eng_lib.c": 19,
+        "crypto/engine/eng_list.c": 12,
+        "crypto/engine/eng_table.c": 14,
+        "crypto/engine/tb_asnmth.c": 13,
+        "crypto/engine/tb_digest.c": 10,
+        "crypto/engine/tb_pkmeth.c": 10,
         "crypto/err/err.c": 80,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
@@ -233,7 +243,7 @@
         "crypto/evp/ec_ctrl.c": 8,
         "crypto/evp/ec_support.c": 1,
         "crypto/evp/encode.c": 6,
-        "crypto/evp/evp_enc.c": 32,
+        "crypto/evp/evp_enc.c": 30,
         "crypto/evp/evp_fetch.c": 18,
         "crypto/evp/evp_key.c": 7,
         "crypto/evp/evp_lib.c": 24,
@@ -256,11 +266,11 @@
         "crypto/evp/p_dec.c": 5,
         "crypto/evp/p_enc.c": 5,
         "crypto/evp/p_legacy.c": 8,
-        "crypto/evp/p_lib.c": 50,
+        "crypto/evp/p_lib.c": 47,
         "crypto/evp/pbe_scrypt.c": 7,
         "crypto/evp/pmeth_check.c": 7,
         "crypto/evp/pmeth_gn.c": 13,
-        "crypto/evp/pmeth_lib.c": 29,
+        "crypto/evp/pmeth_lib.c": 26,
         "crypto/evp/signature.c": 18,
         "crypto/evp/skeymgmt_meth.c": 12,
         "crypto/ex_data.c": 20,
@@ -310,7 +320,7 @@
         "crypto/params_from_text.c": 9,
         "crypto/passphrase.c": 22,
         "crypto/pem/pem_all.c": 24,
-        "crypto/pem/pem_lib.c": 31,
+        "crypto/pem/pem_lib.c": 30,
         "crypto/pem/pem_oth.c": 5,
         "crypto/pem/pem_pk8.c": 16,
         "crypto/pem/pem_pkey.c": 29,
@@ -342,7 +352,7 @@
         "crypto/provider_core.c": 141,
         "crypto/quic_vlint.c": 1,
         "crypto/rand/prov_seed.c": 11,
-        "crypto/rand/rand_lib.c": 36,
+        "crypto/rand/rand_lib.c": 34,
         "crypto/rand/rand_pool.c": 9,
         "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
@@ -351,7 +361,7 @@
         "crypto/rsa/rsa_asn1.c": 21,
         "crypto/rsa/rsa_backend.c": 23,
         "crypto/rsa/rsa_gen.c": 17,
-        "crypto/rsa/rsa_lib.c": 28,
+        "crypto/rsa/rsa_lib.c": 26,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
         "crypto/rsa/rsa_ossl.c": 20,
@@ -406,12 +416,12 @@
         "crypto/x509/x_crl.c": 96,
         "crypto/x509/x_exten.c": 13,
         "crypto/x509/x_name.c": 43,
-        "crypto/x509/x_pubkey.c": 45,
+        "crypto/x509/x_pubkey.c": 43,
         "crypto/x509/x_x509.c": 39,
         "providers/baseprov.c": 25
       },
       "planned_prerequisites": {
-        "ossl_get_enginesdir": 2,
+        "ossl_get_enginesdir": 3,
         "ossl_get_openssldir": 2,
         "ossl_get_wininstallcontext": 1
       }
@@ -425,6 +435,11 @@
         "arg",
         "bn_set_static_words",
         "cb_arg",
+        "engine_cleanup_int",
+        "engine_lock_init",
+        "engine_lock_init",
+        "engine_lock_init",
+        "engine_lock_init",
         "in",
         "inlen",
         "libctx",
@@ -453,12 +468,7 @@
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_descriptor",
-        "ossl_lib_ctx_get_descriptor",
-        "ossl_lib_ctx_get_descriptor",
-        "ossl_lib_ctx_get_descriptor",
-        "ossl_lib_ctx_get_descriptor"
+        "ossl_lib_ctx_get_data"
       ],
       "language_surface_not_modelled_by_name": [
         "crypto/aria/aria.c:X",
@@ -505,18 +515,19 @@
       "planned_prerequisites": [
         "ossl_get_enginesdir",
         "ossl_get_enginesdir",
+        "ossl_get_enginesdir",
         "ossl_get_openssldir",
         "ossl_get_openssldir",
         "ossl_get_wininstallcontext"
       ]
     },
     "checked": {
-      "authority_units": 354,
-      "crate_modules": 511,
+      "authority_units": 362,
+      "crate_modules": 521,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 6,
-      "divergence_names_covered": 39,
-      "divergence_rows": 11,
+      "divergence_names_covered": 41,
+      "divergence_rows": 13,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -625,13 +636,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "15fee5733e02f31b9f6447482422fafe21e2b72d9d8ca6ee7b5b6c82a823c94b",
+  "body_hash": "02072755f785e97fbe6acbb23d98c8a8ddf84358ea15d85ecf01c8191fa57077",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "552009cd12a655462fc49517672714df4cce9ae3bc9136649230a5fc6a44ec93"
+      "sha256": "d95406a25ece50f859bb5c83d56a36804465e7a8bfe479e6488c5cbdb072f49e"
     },
     {
       "name": "macro-owners",
@@ -646,7 +657,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "09a91b1d291fbe4514f5bf8982196635feaaf1329ef9280774e2863eb4d5a6ba"
+      "sha256": "4a2d96a5f115cb9ae3b734890e53a9ea569c28a1112aa56aad608a12d0b1c830"
     },
     {
       "name": "symbol-ownership",
@@ -661,7 +672,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "89cdd0e63da9c96b3afcffd458c688cd472faf683a5da7777035658f8cf6d057"
+      "sha256": "65955552c8dfe0a4391f477fb619758cb2a76e725ac6761f587da67a46d41f31"
     },
     {
       "name": "phase-state",
@@ -671,7 +682,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "391fcd1dfe475db31d0fcb876b0dc385477011f097cc1ac19d1f489d801bf23a"
+      "sha256": "a602d99bde2214e0ab355661d2edff18c5e97daeef5ef29aea5e68c5b31fa766"
     },
     {
       "name": "crate-source-tree",
