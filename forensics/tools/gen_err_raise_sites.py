@@ -927,6 +927,14 @@ COVERED_FILES = [
     # `ASN1_R_UNKNOWN_DIGEST` at `:165`, the coordinate a caller sees when an OID
     # resolves to no digest method.
     ("crypto/asn1/x_algor.c", "X_ALGOR"),
+    # D443's pull-forward: `crypto/asn1/p5_pbe.c` and `crypto/asn1/p5_pbev2.c` are Phase 11's
+    # `x509.h` units that Phase 10 lands early (they are `PKCS8_encrypt_ex`'s closure and the
+    # MAC setters' blocker). The subsystem rule applies unchanged: every raise in each file is
+    # a coordinate, including the sites of the accessors this slice lands and of the `_set`
+    # façades it does not (`PKCS5_pbe_set0_algor`, `PKCS5_pbe2_set`, ...). The stems are
+    # `P5_PBE` and `P5_PBEV2`.
+    ("crypto/asn1/p5_pbe.c", "P5_PBE"),
+    ("crypto/asn1/p5_pbev2.c", "P5_PBEV2"),
     # Phase 8.5's `crypto/ffc` subsystem. The same rule as `crypto/rsa` above: these are the
     # units of the stratum that **raise**, and a coordinate's `file` string is part of the
     # observable error record. `ffc_params_validate.c` raises the DH

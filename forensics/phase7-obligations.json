@@ -3084,7 +3084,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "065628a21e538de236994507186761db645e631217f7dd7958c276f7adadba2b"
+      "sha256": "cac1f8c53d0a4b5b4af0176d22d96c9ce4d325dc5d7faac09fff366408531225"
     },
     {
       "name": "export-defining-units",
@@ -3094,7 +3094,7 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "d0b4256ac74574f943b74cd9a152aab5941e61465916560188911183a75a5783"
+      "sha256": "b7ae5748996db3888a0f836757ce41d14a6340cfc043e00e2e8bbb7586a36959"
     },
     {
       "name": "typedef-owners",
@@ -3109,7 +3109,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "3fdad3fe278b2f3c0be733ee5f52d3d8064a8941adafac9cde685251ddc817f5"
+      "sha256": "857e55a2e8240d3579d1bc91d30a2d07ddfd53de2248f996d18c2fbdf47477b4"
     },
     {
       "name": "authority-source-tree-and-crate-source",
@@ -3118,7 +3118,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2e0af07f18c2364fa3483a4b9bdd88913f0ff23530023e4d470478b332bd4c75"
+      "sha256": "014793890f05efaa57dfd722f0e7c2f448ce46df8a9bcb03700a72261cd980a2"
     }
   ],
   "kind": "phase7-obligations",

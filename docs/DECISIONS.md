@@ -31527,3 +31527,64 @@ non-observable) and `provider_court_coverage.py` (539/539, 0 unmatched) clean. `
 `forensics/tools/divergence_obligations.py` change; and the ledgers, the atlases, the census and
 `forensics/regression-baseline.json` are regenerated.
 
+## D444 -- the Phase 11 subset is pulled forward, `encode_key2any.c`'s blocker closes, and a gate is found not to bind
+
+D443 measured that the stratum's remaining big movers needed Phase 11, and the owner's `PKCS7` decision is
+extended here on D442's precedent: **pull the measured subset forward.** The subset is measured the same
+way -- `nm --undefined-only` over the authority's `crypto/pkcs12/` objects and
+`providers/implementations/encode_decode/encode_key2any.o`, filtered to the six prefixes -- and names
+**42 symbols, 21 of them already landed and 21 open**. **Thirty `x509.h` exports land**: the
+`PBEPARAM`/`PBE2PARAM`/`PBKDF2PARAM`/`PBMAC1PARAM` items with their `_it`/`_new`/`_free`/`d2i_`/`i2d_`
+spellings (20), the `PKCS5_pbe_set*`/`pbe2_set*`/`pbkdf2_set*` family (9) and `EVP_PKEY2PKCS8` (1), in
+new `src/asn1/p5_pbe.rs` and `src/asn1/p5_pbev2.rs`. `x509.h` moves from 83 implemented of 548 to **113,
+leaving 435**.
+
+**The `X509`/`X509_CRL`/`X509_NAME` family is withheld rather than stubbed**, with D442's explicit note and
+for the same measured reason: `X509_it`'s template and its `x509_cb` aux callbacks name the whole Phase 11
+certificate object graph, which Phase 10's closure never reaches. The `PKCS7` pull-forward could land
+three of its six arms because PKCS#12 provably never reaches the other three; here the item cannot be
+built at all without the certificate graph, so nothing is pretended. **Ownership is unchanged and Phase
+11 still derives `not-started`** -- no Phase 11 evidence, ledger, plan, seal or state row is created.
+
+**With its dependency closed, four more Phase 10 exports land**: 10.2's
+`PKCS12_SAFEBAG_create_pkcs8_encrypt(_ex)` and 10.4's `PKCS8_encrypt(_ex)`, driven by new `RT-PKCS12` arms
+over a fixed salt and iteration count. The ledger moves from `implemented=194 open=104` to
+**`implemented=198 open=100`**, and `RT-PKCS12` from 216 to 222 observations. **The twenty-four remaining
+non-STORE rows now have their blockers corrected rather than repeated**: the Phase 11 ones are gone, so
+the MAC setters and `pack_p7encdata`/`add_safe`/`newpass` read `phase-10.3` (this stratum's own unwritten
+work) and `create(_ex/_ex2)`/`add_cert`/`get1_cert`/`get1_crl`/`create_cert`/`create_crl`/`parse` stay
+`phase-11-x509`.
+
+**`encode_key2any.c` did not land, and the reason has changed shape.** Its last unlanded dependency is now
+closed -- `PKCS8_encrypt_ex` is one of the thirty `x509.h` exports above -- so §2's note ("then
+`encode_key2any.c` once 10.6 and 10.4 have landed") was **wrong about *why* it waited**: the blocker was
+Phase 11, not 10.6 and 10.4, and what remains is the unit's own 1,820-line, 206-table transcription.
+Provider rows are unchanged at `218 implemented / 418 open` and `RT-CODEC` stays at 1,487 observations.
+That is the honest state: the dependency is cleared and the work is not done.
+
+**A gate was found not to bind, which is the kind of finding this project treats as a defect in the
+evidence system rather than a curiosity.** `docs_consistency.py`'s `active_status_check` for the active
+stratum is supposed to extract the plan's `Landed`/`Open` symbol clauses and check them against the
+generated surface; for Phase 10 it extracts **zero** symbols, because the plan's subphase table puts a
+blank line between each row's heading and its paragraph and the extractor's pattern does not cross it. The
+Phase 10 anchor is therefore **vacuous** -- the gate reports success without checking anything, which is
+exactly the class D417/D420/D421 kept finding. It is recorded here rather than fixed in this slice, and it
+is a follow-up with a named cause rather than a mystery. A second, smaller follow-up is recorded too: the
+private `PBEPARAM`/`PBE2PARAM`/`PBKDF2PARAM` descriptors in `src/evp/p5_crpt.rs`/`p5_crpt2.rs` now
+co-exist with the landed items, and the D348-style de-duplication to a single home is outstanding.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` is
+**1081 passed, 0 failed** (two more item-shape tests than D443's 1079). `run_courts.py`,
+`court_coverage.py` and `provider_court_coverage.py` clean. `phase_state.py` reads 0-9 `complete`,
+**10 `in-progress`**, 11-21 `not-started` with **Phase 11 `not-started`**. `PIPELINE OK` exit 0 twice, at
+108 courts and 42,230 observations.
+
+### Movement
+
+`src/asn1/p5_pbe.rs` and `src/asn1/p5_pbev2.rs` are added; `src/asn1/mod.rs`, `src/evp/evp_pkey.rs`,
+`src/pkcs12/{p12_crt,p12_p8e,p12_sbag}.rs`, `src/runtime/err_sites.rs`, `courts/phase10/rt_pkcs12_probe.c`
+and `forensics/tools/gen_err_raise_sites.py` change; and the ledgers, the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
+

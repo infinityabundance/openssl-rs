@@ -221,7 +221,6 @@
       "src/ec/mult.rs",
       "src/ec/pmeth.rs",
       "src/ec/sm2_key.rs",
-      "src/evp/evp_pkey.rs",
       "src/ffc/backend.rs",
       "src/ffi/mod.rs",
       "src/lib.rs",

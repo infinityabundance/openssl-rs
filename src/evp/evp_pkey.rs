@@ -5,9 +5,15 @@
 //! `pem_read_bio_key_legacy`'s PKCS#8 path (`crypto/pem/pem_pkey.c:142`, `:170`) and the
 //! fallback `ossl_d2i_PrivateKey_legacy` reaches for a `PrivateKeyInfo` that the type-specific
 //! decoder refused. Its siblings in the unit — `EVP_PKCS82PKEY_ex`, `EVP_PKCS82PKEY`,
-//! `EVP_PKEY2PKCS8`, `EVP_PKEY_get0_asn1` and the encoder half — are Phase 10's exports and are
-//! **not** landed here; this module is a partial transcription of `crypto/evp/evp_pkey.c` and
-//! names what it withholds rather than implying the unit is whole.
+//! `EVP_PKEY_get0_asn1` and the encoder half — are Phase 10's exports and are **not** landed
+//! here; this module is a partial transcription of `crypto/evp/evp_pkey.c` and names what it
+//! withholds rather than implying the unit is whole.
+//!
+//! **`EVP_PKEY2PKCS8` now lands as an export.** D443 measured it as 10.2/10.3's
+//! `PKCS12_add_key(_ex)` blocker, so the `#[no_mangle]` wrapper over
+//! [`ossl_evp_pkey2pkcs8`] below publishes the `x509.h` symbol. Its owner phase is 11
+//! (`forensics/atlas/symbol-ownership.json`), and Phase 11 stays `not-started`: this is the
+//! same pull-forward as `PKCS5_pbe_set_ex` (D442's precedent, one stratum further on).
 //!
 //! ## The method is reached through the decoded algorithm, not the caller
 //!
@@ -137,6 +143,22 @@ pub unsafe extern "C" fn evp_pkcs82pkey_legacy(
         return ptr::null_mut();
     }
     pkey
+}
+
+/// `PKCS8_PRIV_KEY_INFO *EVP_PKEY2PKCS8(const EVP_PKEY *pkey)` — `crypto/evp/evp_pkey.c:129-185`.
+///
+/// **The export.** It is the [`ossl_evp_pkey2pkcs8`] transcription with a `#[no_mangle]`
+/// symbol: the provided-key arm encodes to PKCS#8 DER through the encoder framework and
+/// re-parses with `d2i_PKCS8_PRIV_KEY_INFO`; the legacy arm lets the method's `priv_encode`
+/// fill a fresh `PKCS8_PRIV_KEY_INFO`. D443 measured this as 10.2/10.3's `PKCS12_add_key(_ex)`
+/// blocker, which is why it lands with Phase 10 although `x509.h` assigns it to Phase 11.
+///
+/// # Safety
+/// `pkey` must be a live `EVP_PKEY`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY2PKCS8(pkey: *const EvpPkey) -> *mut Pkcs8PrivKeyInfo {
+    // SAFETY: `pkey` is live per the contract.
+    unsafe { ossl_evp_pkey2pkcs8(pkey) }
 }
 
 /// `PKCS8_PRIV_KEY_INFO *EVP_PKEY2PKCS8(const EVP_PKEY *pkey)` — `crypto/evp/evp_pkey.c:129-185`.

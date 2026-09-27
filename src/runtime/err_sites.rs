@@ -31822,6 +31822,226 @@ pub(crate) const X_ALGOR_165: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `PKCS5_pbe_set0_algor_ex` at `crypto/asn1/p5_pbe.c:39` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBE_39: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbe.c",
+    line: 39,
+    func: c"PKCS5_pbe_set0_algor_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe_set0_algor_ex` at `crypto/asn1/p5_pbe.c:45` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBE_45: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbe.c",
+    line: 45,
+    func: c"PKCS5_pbe_set0_algor_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe_set0_algor_ex` at `crypto/asn1/p5_pbe.c:65` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBE_65: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbe.c",
+    line: 65,
+    func: c"PKCS5_pbe_set0_algor_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe_set_ex` at `crypto/asn1/p5_pbe.c:97` (ERR_R_X509_LIB).
+pub(crate) const P5_PBE_97: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbe.c",
+    line: 97,
+    func: c"PKCS5_pbe_set_ex",
+    lib: 13,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe2_set_iv_ex` at `crypto/asn1/p5_pbev2.c:64` (ASN1_R_CIPHER_HAS_NO_OBJECT_IDENTIFIER).
+pub(crate) const P5_PBEV2_64: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 64,
+    func: c"PKCS5_pbe2_set_iv_ex",
+    lib: 13,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe2_set_iv_ex` at `crypto/asn1/p5_pbev2.c:69` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_69: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 69,
+    func: c"PKCS5_pbe2_set_iv_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe2_set_iv_ex` at `crypto/asn1/p5_pbev2.c:77` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_77: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 77,
+    func: c"PKCS5_pbe2_set_iv_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe2_set_iv_ex` at `crypto/asn1/p5_pbev2.c:92` (ERR_R_EVP_LIB).
+pub(crate) const P5_PBEV2_92: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 92,
+    func: c"PKCS5_pbe2_set_iv_ex",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe2_set_iv_ex` at `crypto/asn1/p5_pbev2.c:100` (ASN1_R_ERROR_SETTING_CIPHER_PARAMS).
+pub(crate) const P5_PBEV2_100: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 100,
+    func: c"PKCS5_pbe2_set_iv_ex",
+    lib: 13,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe2_set_iv_ex` at `crypto/asn1/p5_pbev2.c:130` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_130: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 130,
+    func: c"PKCS5_pbe2_set_iv_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe2_set_iv_ex` at `crypto/asn1/p5_pbev2.c:137` (ERR_R_X509_LIB).
+pub(crate) const P5_PBEV2_137: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 137,
+    func: c"PKCS5_pbe2_set_iv_ex",
+    lib: 13,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbe2_set_iv_ex` at `crypto/asn1/p5_pbev2.c:147` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_147: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 147,
+    func: c"PKCS5_pbe2_set_iv_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:189` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_189: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 189,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:193` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 193,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:201` (ERR_R_PASSED_INVALID_ARGUMENT).
+pub(crate) const P5_PBEV2_201: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 201,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524550,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:214` (ERR_R_RAND_LIB).
+pub(crate) const P5_PBEV2_214: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 214,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524324,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:222` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 222,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:230` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 230,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:234` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_234: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 234,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:243` (ERR_R_X509_LIB).
+pub(crate) const P5_PBEV2_243: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 243,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:252` (ERR_R_X509_LIB).
+pub(crate) const P5_PBEV2_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 252,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524299,
+    dynamic_reason: false,
+};
+
+/// `PKCS5_pbkdf2_set_ex` at `crypto/asn1/p5_pbev2.c:262` (ERR_R_ASN1_LIB).
+pub(crate) const P5_PBEV2_262: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/p5_pbev2.c",
+    line: 262,
+    func: c"PKCS5_pbkdf2_set_ex",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
 /// `ffc_validate_LN` at `crypto/ffc/ffc_params_generate.c:49` (DH_R_BAD_FFC_PARAMETERS).
 pub(crate) const FFC_PARAMS_GENERATE_49: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/ffc/ffc_params_generate.c",
@@ -46432,6 +46652,28 @@ pub(crate) static ALL: &[ErrSite] = &[
     RSA_SP800_56B_GEN_205,
     RSA_SP800_56B_GEN_454,
     X_ALGOR_165,
+    P5_PBE_39,
+    P5_PBE_45,
+    P5_PBE_65,
+    P5_PBE_97,
+    P5_PBEV2_64,
+    P5_PBEV2_69,
+    P5_PBEV2_77,
+    P5_PBEV2_92,
+    P5_PBEV2_100,
+    P5_PBEV2_130,
+    P5_PBEV2_137,
+    P5_PBEV2_147,
+    P5_PBEV2_189,
+    P5_PBEV2_193,
+    P5_PBEV2_201,
+    P5_PBEV2_214,
+    P5_PBEV2_222,
+    P5_PBEV2_230,
+    P5_PBEV2_234,
+    P5_PBEV2_243,
+    P5_PBEV2_252,
+    P5_PBEV2_262,
     FFC_PARAMS_GENERATE_49,
     FFC_PARAMS_GENERATE_61,
     FFC_PARAMS_GENERATE_77,

@@ -13,7 +13,10 @@
 //! * `PKCS12_SAFEBAG_create_cert`/`create_crl` call `PKCS12_item_pack_safebag`
 //!   (`crypto/pkcs12/p12_add.c`, 10.3), which is open.
 //! * `PKCS12_SAFEBAG_create_pkcs8_encrypt`/`_ex` call `PKCS8_encrypt[_ex]`
-//!   (`crypto/pkcs12/p12_p8e.c`, 10.4) and `EVP_CIPHER_fetch`, so they are 10.4's.
+//!   (`crypto/pkcs12/p12_p8e.c`, 10.4) and `EVP_CIPHER_fetch`. With the PBE pull-forward
+//!   (D443) those landed, so this pair now lands too; the two `get1_*` readers and
+//!   `create_cert`/`create_crl` still wait on Phase 11's `X509_it`/`X509_CRL_it`/
+//!   `ossl_x509*_set0_libctx`.
 //!
 //! Each is left `open` in the ledger rather than stubbed, and the court prints each as `pending`
 //! with the blocker rather than driving a fabricated arm.
@@ -37,22 +40,26 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_uchar};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::a_type::{ASN1_TYPE_new, ASN1_TYPE_set};
 use crate::asn1::layout::{Asn1Type, V_ASN1_OCTET_STRING};
 use crate::asn1::p8_pkey::{PKCS8_pkey_get0_attrs, Pkcs8PrivKeyInfo};
 use crate::asn1::string::{ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new, ASN1_OCTET_STRING_set};
-use crate::asn1::x_sig::X509Sig;
+use crate::asn1::x_sig::{X509Sig, X509_SIG_free};
+use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EvpCipher};
+use crate::evp::legacy_evp::EVP_get_cipherbyname;
 use crate::pkcs12::p12_asn::{
     PKCS12_BAGS_free, PKCS12_BAGS_new, PKCS12_SAFEBAG_new, Pkcs12Bags, Pkcs12Safebag,
 };
 use crate::pkcs12::p12_attr::PKCS12_get_attr_gen;
-use crate::runtime::err::{err_sites, raise_site};
+use crate::pkcs12::p12_p8e::PKCS8_encrypt_ex;
+use crate::runtime::err::{err_sites, raise_site, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::obj::{
     Asn1Object, NID_certBag, NID_crlBag, NID_keyBag, NID_pkcs8ShroudedKeyBag, NID_safeContentsBag,
-    NID_sdsiCertificate, NID_secretBag, NID_x509Certificate, NID_x509Crl, OBJ_nid2obj, OBJ_obj2nid,
+    NID_sdsiCertificate, NID_secretBag, NID_x509Certificate, NID_x509Crl, OBJ_nid2obj, OBJ_nid2sn,
+    OBJ_obj2nid,
 };
 use crate::runtime::stack::OpenSslStack;
 
@@ -370,6 +377,101 @@ pub unsafe extern "C" fn PKCS12_SAFEBAG_create0_pkcs8(p8: *mut X509Sig) -> *mut 
         (*bag).value = p8.cast();
     }
     bag
+}
+
+/// `PKCS12_SAFEBAG *PKCS12_SAFEBAG_create_pkcs8_encrypt_ex(int pbe_nid, const char *pass,
+/// int passlen, unsigned char *salt, int saltlen, int iter, PKCS8_PRIV_KEY_INFO *p8inf,
+/// OSSL_LIB_CTX *ctx, const char *propq)` — `crypto/pkcs12/p12_sbag.c:245-280`.
+///
+/// The cipher is first *fetched* by the NID's short name; a fetch failure falls back to the
+/// legacy table, and a cipher found either way forces `pbe_nid = -1` so the PBES2 builder runs.
+/// The failed fetch's error is discarded by the `ERR_set_mark`/`ERR_pop_to_mark` pair.
+///
+/// # Safety
+/// `pass` is NULL or a string of `passlen` bytes (or NUL-terminated when `passlen == -1`);
+/// `salt` is NULL or `saltlen` readable bytes; `p8inf` is a live `PKCS8_PRIV_KEY_INFO`.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_SAFEBAG_create_pkcs8_encrypt_ex(
+    pbe_nid: c_int,
+    pass: *const c_char,
+    passlen: c_int,
+    salt: *mut c_uchar,
+    saltlen: c_int,
+    iter: c_int,
+    p8inf: *mut Pkcs8PrivKeyInfo,
+    ctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut Pkcs12Safebag {
+    let mut pbe_nid = pbe_nid;
+
+    let _ = ERR_set_mark();
+    // SAFETY: `ctx`/`propq` are the fetch's; a NULL context is the default library context.
+    let pbe_ciph_fetch = unsafe { EVP_CIPHER_fetch(ctx, OBJ_nid2sn(pbe_nid), propq) };
+    let mut pbe_ciph: *const EvpCipher = pbe_ciph_fetch;
+    if pbe_ciph.is_null() {
+        // SAFETY: the NID resolves through the legacy name table.
+        pbe_ciph = unsafe { EVP_get_cipherbyname(OBJ_nid2sn(pbe_nid)) };
+    }
+    let _ = ERR_pop_to_mark();
+
+    if !pbe_ciph.is_null() {
+        pbe_nid = -1;
+    }
+
+    // SAFETY: `pbe_ciph` is NULL or a live cipher; the rest is forwarded.
+    let p8 = unsafe {
+        PKCS8_encrypt_ex(
+            pbe_nid, pbe_ciph, pass, passlen, salt, saltlen, iter, p8inf, ctx, propq,
+        )
+    };
+    if p8.is_null() {
+        // SAFETY: `pbe_ciph_fetch` is NULL or a reference this frame holds.
+        unsafe { EVP_CIPHER_free(pbe_ciph_fetch) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `p8` is live; ownership passes to the bag on success.
+    let bag = unsafe { PKCS12_SAFEBAG_create0_pkcs8(p8) };
+    if bag.is_null() {
+        // SAFETY: `p8` is live and was not adopted.
+        unsafe { X509_SIG_free(p8) };
+    }
+
+    // SAFETY: `pbe_ciph_fetch` is NULL or a reference this frame holds.
+    unsafe { EVP_CIPHER_free(pbe_ciph_fetch) };
+    bag
+}
+
+/// `PKCS12_SAFEBAG *PKCS12_SAFEBAG_create_pkcs8_encrypt(int pbe_nid, const char *pass,
+/// int passlen, unsigned char *salt, int saltlen, int iter,
+/// PKCS8_PRIV_KEY_INFO *p8inf)` — `crypto/pkcs12/p12_sbag.c:282-292`.
+///
+/// # Safety
+/// As [`PKCS12_SAFEBAG_create_pkcs8_encrypt_ex`], without the context arguments.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS12_SAFEBAG_create_pkcs8_encrypt(
+    pbe_nid: c_int,
+    pass: *const c_char,
+    passlen: c_int,
+    salt: *mut c_uchar,
+    saltlen: c_int,
+    iter: c_int,
+    p8inf: *mut Pkcs8PrivKeyInfo,
+) -> *mut Pkcs12Safebag {
+    // SAFETY: the arguments are forwarded under this function's contract, with no context.
+    unsafe {
+        PKCS12_SAFEBAG_create_pkcs8_encrypt_ex(
+            pbe_nid,
+            pass,
+            passlen,
+            salt,
+            saltlen,
+            iter,
+            p8inf,
+            ptr::null_mut(),
+            ptr::null(),
+        )
+    }
 }
 
 #[cfg(test)]

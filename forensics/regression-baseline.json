@@ -372,7 +372,7 @@
       "verdict": "pass"
     },
     "RT-PKCS12": {
-      "observations": 216,
+      "observations": 222,
       "verdict": "pass"
     },
     "RT-PROVIDER": {
@@ -455,11 +455,11 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 3084,
+    "libcrypto": 3118,
     "libssl": 0
   },
   "open_obligations": {
-    "phase10": 104,
+    "phase10": 100,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -506,7 +506,7 @@
     "blocking_dependencies": 6,
     "divergence_names_covered": 40,
     "findings": 0,
-    "language_census": 5442,
+    "language_census": 5452,
     "sealed_census": 52
   },
   "provider_implemented": [
