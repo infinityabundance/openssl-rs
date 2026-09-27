@@ -67,6 +67,13 @@
         "probes": [
           "courts/phase10/rt_codec_probe.c"
         ]
+      },
+      {
+        "court": "RT-STORE",
+        "phase": 10,
+        "probes": [
+          "courts/phase10/rt_store_probe.c"
+        ]
       }
     ],
     "directly_courted": 951,
@@ -14242,6 +14249,11 @@
       "name": "court:RT-CODEC:rt_codec_probe.c",
       "path": "courts/phase10/rt_codec_probe.c",
       "sha256": "3ae11d741994225b43215dd0a7af71a035d311108d729964ee6ad440fcfcc182"
+    },
+    {
+      "name": "court:RT-STORE:rt_store_probe.c",
+      "path": "courts/phase10/rt_store_probe.c",
+      "sha256": "e99918a0a6ed8ba62ee84519d2eddbe2f8062416392fbf709b8fdb9b03d5f0a0"
     }
   ],
   "kind": "provider-court-coverage",

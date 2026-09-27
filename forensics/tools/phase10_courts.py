@@ -98,6 +98,12 @@ COURTS: list[tuple[str, str]] = [
     # `PKCS12_add_secret`, driven through the public `pkcs12.h` surface and compared as DER bytes
     # rather than a parsed structure (docs/PHASE-10-SUBPHASES.md section 3.2).
     ("RT-PKCS12", "rt_pkcs12_probe.c"),
+    # 10.5's behavioural court: the `OSSL_STORE_LOADER` object and its registry
+    # (`store_register.c`), the provider-side loader method fetched over slot 15
+    # (`store_meth.c`) and the `OSSL_STORE_INFO` type-name table (`store_strings.c`), driven
+    # through the public `store.h` surface. `store_lib.c` and the two `file_store.c` provider
+    # rows are withheld with their measured blockers, printed as `pending.` by the probe.
+    ("RT-STORE", "rt_store_probe.c"),
 ]
 
 # The construction court, beside the differential four. It is candidate-only and driven by
@@ -110,18 +116,8 @@ CORRECTNESS_COURTS: list[str] = ["CT-PKCS12"]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
 # can pass, and each is printed with the subphase that brings it so that "not run yet" cannot be
-# read as "passed".
-PENDING_COURTS: dict[str, str] = {
-    "RT-STORE": "10.5 -- `OSSL_STORE_open(_ex)` and the `file` loader, the `OSSL_STORE_INFO` "
-                "type and its constructor/accessor family, the `OSSL_STORE_LOADER` object and "
-                "its registry, and the `OSSL_STORE_SEARCH` family: the `OSSL_STORE_INFO` type "
-                "and refcount surface, the `eof`/`error`/`expect` state machine, and the "
-                "refusal arms (an unknown scheme, a NULL URI, a loader that answers a NULL "
-                "`load`) with the error queue. The loader's sub-fetches resolve in the "
-                "publishing provider's library context (D240) and the decoder arm lands after "
-                "10.4's pair, so it cannot be written before then "
-                "(docs/PHASE-10-SUBPHASES.md section 3.3).",
-}
+# read as "passed". Empty since 10.5 registered `RT-STORE`.
+PENDING_COURTS: dict[str, str] = {}
 
 
 def extra_defs(name: str, libdir: Path) -> list[str]:
@@ -309,6 +305,20 @@ def main(argv: list[str]) -> int:
             "selection and short-header refusals. It is a differential compatibility "
             "claim about those rows, NOT that the other 572 rows or the remaining decoders are "
             "implemented. "
+            "`RT-STORE` is 10.5's behavioural court: it drives the `OSSL_STORE_LOADER` object "
+            "(`OSSL_STORE_LOADER_new`, the ten setters, the by-name accessors and the refcount "
+            "pair), the process-global scheme registry (`OSSL_STORE_register_loader`/"
+            "`_unregister_loader`/`OSSL_STORE_do_all_loaders`) and the `OSSL_STORE_INFO` "
+            "type-name table (`OSSL_STORE_INFO_type_string`), and it drives the refusal arms -- "
+            "a NULL scheme, an RFC 3986-invalid scheme, an unregistered scheme and a loader "
+            "whose `load` is NULL -- with their error coordinates. `store_lib.c`'s "
+            "`OSSL_STORE_CTX` state machine and `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object "
+            "model, and the two `OSSL_OP_STORE` provider rows `file_store.c` publishes, are "
+            "withheld: the first reaches Phase 11's `X509` (`X509_free`/`X509_up_ref`/`d2i_X509`/"
+            "`i2d_X509_NAME`) and `store_result.c`, and the second needs `file_store.c`'s "
+            "decoder chain and `store_result.c` -- so `OSSL_STORE_LOADER_fetch` and "
+            "`OSSL_STORE_LOADER_do_all_provided` are reference-taken rather than called and each "
+            "blocker is printed as `pending.` (docs/PHASE-10-SUBPHASES.md sections 3.3, 3.5). "
             "`pending_courts` names the courts the plan gives this stratum and the "
             "subphase that brings each, and every name is printed on each run so that 'not run "
             "yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3). "

@@ -105,6 +105,12 @@ COURT_PROBES: list[tuple[str, list[str], int]] = [
     # `src/provider/encode_key2blob.rs` publish in the `default` and `base` providers, which is what
     # keeps this join preventive one stratum on.
     ("RT-CODEC", ["courts/phase10/rt_codec_probe.c"], 10),
+    # Phase 10.5's STORE court. It names the `file` scheme literal for the two `OSSL_OP_STORE`
+    # rows `providers/implementations/storemgmt/file_store.c` publishes, so the join is ready on
+    # the commit that lands them (they are withheld with their blocker in 10.5; the probe then
+    # drives `OSSL_STORE_LOADER_fetch` and `OSSL_STORE_LOADER_do_all_provided` for real rather
+    # than reference-taking them -- see courts/phase10/rt_store_probe.c).
+    ("RT-STORE", ["courts/phase10/rt_store_probe.c"], 10),
 ]
 
 # The arm whose name list must equal the census's implemented cipher rows. A static list in a probe
