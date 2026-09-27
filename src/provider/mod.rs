@@ -117,7 +117,7 @@ pub(crate) mod encode_key2blob;
 pub(crate) mod decode_epki2pki;
 // Phase 10.1's largest provider codec unit: `providers/implementations/encode_decode/
 // decode_der2key.c`, the 69 DER-to-key decoder tables and the shared engine behind them. It is the
-// crate's `deflt_decoder[]`/`base_decoder[]` home, since it publishes 69 of the 70 rows landed.
+// crate's `deflt_decoder[]`/`base_decoder[]` home, since it publishes 69 of the 76 rows landed.
 pub(crate) mod decode_der2key;
 // Phase 10.1/10.6's PVK/MSBLOB provider codecs: `encode_key2ms.c` (the four `i2b_*`-backed
 // MSBLOB/PVK encoders), `decode_msblob2key.c` (the two MSBLOB decoders) and
@@ -126,6 +126,13 @@ pub(crate) mod decode_der2key;
 // `decode_der2key.rs`'s combined `deflt_decoder[]`/`base_decoder[]`.
 pub(crate) mod decode_msblob2key;
 pub(crate) mod decode_pvk2key;
+// Phase 10.5's two provider codec decoder units: `decode_spki2typespki.c` (the
+// `SubjectPublicKeyInfo`-to-type-specific-SPKI engine that fronts the DER-to-key chain) and
+// `decode_pem2der.c` (the PEM-to-DER front door that names a PEM block and routes it to the two
+// engines). Both are referenced by `decode_der2key.rs`'s combined `deflt_decoder[]`/`base_decoder[]`,
+// and the SPKI one is what makes `crypto/ec/ec_backend.c`'s `ossl_x509_algor_is_sm2` reached.
+pub(crate) mod decode_pem2der;
+pub(crate) mod decode_spki2typespki;
 pub(crate) mod encode_key2ms;
 // Phase 10.1's first PQC codec *closure* unit: `providers/implementations/encode_decode/
 // ml_common_codecs.c`, the shared ASN.1 SPKI/PKCS#8 format tables and the one

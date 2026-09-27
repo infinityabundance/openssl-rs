@@ -1633,11 +1633,11 @@ mod tests {
     /// the keytype is NULL, and `does_selection` answers 1 for selection 0 (the authority's
     /// "takes anything"), so no row is filtered out. Nothing has loaded a provider in this test,
     /// so `ossl_method_construct` activates only the fallback -- `default` -- and the setup finds
-    /// exactly the seventy `decode_der2key.c` rows that 10.1 landed. (`base`, `is_fallback = 0`,
-    /// is not activated and its mirror table is not reached; `input_type = "PEM"` does not filter
-    /// here because `collect_decoder` gates on `does_selection` alone.) The template is inserted
-    /// into slot 20's cache, so a second call exercises the cache-hit path and answers the same
-    /// seventy.
+    /// the `decode_der2key.c` rows that 10.1 landed plus 10.5's two front doors. (`base`,
+    /// `is_fallback = 0`, is not activated and its mirror table is not reached; `input_type =
+    /// "PEM"` does not filter here because `collect_decoder` gates on `does_selection` alone.) The
+    /// template is inserted into slot 20's cache, so a second call exercises the cache-hit path and
+    /// answers the same count.
     #[test]
     fn new_for_pkey_collects_the_seventy_decoder_rows() {
         use crate::decoder_lib::OSSL_DECODER_CTX_get_num_decoders;
@@ -1663,8 +1663,8 @@ mod tests {
             unsafe {
                 assert_eq!(
                     OSSL_DECODER_CTX_get_num_decoders(ctx),
-                    70,
-                    "the default provider's seventy decode_der2key.c rows"
+                    72,
+                    "the default provider's seventy-two decode_der2key.c rows"
                 );
                 OSSL_DECODER_CTX_free(ctx);
             }

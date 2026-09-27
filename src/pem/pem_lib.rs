@@ -235,6 +235,21 @@ pub(crate) const PEM_STRING_ECPARAMETERS: *const c_char = c"EC PARAMETERS".as_pt
 pub(crate) const PEM_STRING_PUBLIC: *const c_char = c"PUBLIC KEY".as_ptr();
 /// `PEM_STRING_ECPRIVATEKEY` — `include/openssl/pem.h:53`.
 pub(crate) const PEM_STRING_ECPRIVATEKEY: *const c_char = c"EC PRIVATE KEY".as_ptr();
+/// `PEM_STRING_DSA_PUBLIC` — `include/openssl/pem.h:46`. Landed with 10.5's `decode_pem2der.c`,
+/// whose `pem_name_map[]` is the first landed table to name every `pem.h` PEM block.
+pub(crate) const PEM_STRING_DSA_PUBLIC: *const c_char = c"DSA PUBLIC KEY".as_ptr();
+/// `PEM_STRING_SM2PRIVATEKEY` — `include/openssl/pem.h:60`.
+pub(crate) const PEM_STRING_SM2PRIVATEKEY: *const c_char = c"SM2 PRIVATE KEY".as_ptr();
+/// `PEM_STRING_SM2PARAMETERS` — `include/openssl/pem.h:61`.
+pub(crate) const PEM_STRING_SM2PARAMETERS: *const c_char = c"SM2 PARAMETERS".as_ptr();
+/// `PEM_STRING_X509` — `include/openssl/pem.h:36`.
+pub(crate) const PEM_STRING_X509: *const c_char = c"CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509_TRUSTED` — `include/openssl/pem.h:37`.
+pub(crate) const PEM_STRING_X509_TRUSTED: *const c_char = c"TRUSTED CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509_OLD` — `include/openssl/pem.h:35`.
+pub(crate) const PEM_STRING_X509_OLD: *const c_char = c"X509 CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509_CRL` — `include/openssl/pem.h:40`.
+pub(crate) const PEM_STRING_X509_CRL: *const c_char = c"X509 CRL".as_ptr();
 
 /// `OSSL_i2d_of_void_ctx` — `include/openssl/asn1.h:334`'s function *type*.
 ///

@@ -1426,10 +1426,11 @@ mod tests {
 
     /// The fetch block's two entry points: the fetch of an unknown name answers NULL and
     /// **raises** (the walk found no constructor, so the reason is the unsupported one), and the
-    /// do-all walk finds the seventy provider decoder rows this crate publishes -- the sixty-nine
-    /// `decode_der2key.c` tables and the one `DER` `EncryptedPrivateKeyInfo` decoder 10.1 landed.
-    /// Exactly one of them is named `DER`; the rest carry their key type's name. A callback that
-    /// records each decoder's name is the observation.
+    /// do-all walk finds the seventy-six provider decoder rows this crate publishes -- the
+    /// sixty-nine `decode_der2key.c` tables, 10.5's two front doors and the one `DER`
+    /// `EncryptedPrivateKeyInfo` decoder. Three of them are named `DER` (the two front doors and the
+    /// `EncryptedPrivateKeyInfo` row); the rest carry their key type's name. A callback that records
+    /// each decoder's name is the observation.
     #[test]
     fn a_fetch_of_an_unknown_name_refuses_and_the_walk_finds_the_der_rows() {
         // SAFETY: the argument is a NUL-terminated literal and NULL is the default context.
@@ -1480,10 +1481,10 @@ mod tests {
             );
         }
         assert_eq!(
-            seen.count, 74,
-            "the walk finds the seventy-four decoder rows 10.1 and 10.6 landed"
+            seen.count, 76,
+            "the walk finds the seventy-six decoder rows 10.1, 10.5 and 10.6 landed"
         );
-        assert_eq!(seen.named_der, 1, "exactly one of them is named DER");
+        assert_eq!(seen.named_der, 3, "three of them are named DER");
         crate::runtime::err::ERR_clear_error();
     }
 

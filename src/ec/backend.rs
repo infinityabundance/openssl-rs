@@ -15,7 +15,7 @@
 //! * `ossl_ec_key_dup`, the group and key copier [`crate::ec::key::EC_KEY_dup`] calls, which is
 //!   the one name of this unit another *landed* module reads.
 //!
-//! ## The ASN.1/X.509 tail landed with D351, and the divergence row shrank to one name
+//! ## The ASN.1/X.509 tail landed with D351, and 10.5 closed the last name
 //!
 //! `ossl_ec_key_param_from_x509_algor` and `ossl_ec_key_from_pkcs8` are the unit's
 //! `#ifndef FIPS_MODULE` tail. Their bodies reach `X509_ALGOR_get0`, `d2i_ECParameters`,
@@ -23,9 +23,10 @@
 //! `crypto/x509`'s algorithm object, which were 8.8's and slice E's when D340 withheld them.
 //! **Both are in the crate now** (D345's `ec_asn1.c` family, D348's `x_algor.c`, D349's
 //! `p8_pkey.c`), so D351 transcribes the pair and the `forensics/prerequisites.json` divergence
-//! row that covered these names shrinks to `ossl_x509_algor_is_sm2` — which stays withheld, and
-//! for the reason D340 gave: its body reaches `d2i_ECPKParameters` and its only caller is the
-//! provider half, which is not in this crate.
+//! row shrank to `ossl_x509_algor_is_sm2` — whose body reaches `d2i_ECPKParameters` and whose only
+//! caller is the provider half. **That caller is `decode_spki2typespki.c`, landed by 10.5**, so
+//! [`ossl_x509_algor_is_sm2`] below is transcribed and the divergence row is retired: the unit's
+//! `#ifndef FIPS_MODULE` tail is now whole.
 //!
 //! The unit's one refusal coordinate `CRYPTO_R_TOO_SMALL_BUFFER` belongs to
 //! [`crate::param_build_set`], not here; every raise below is an `EC_R_*`/`ERR_R_*` site from
@@ -33,7 +34,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::layout::Asn1String;
@@ -44,7 +45,7 @@ use crate::bn::bignum::{
     BN_set_flags, BigNum, BN_FLG_CONSTTIME,
 };
 use crate::bn::ctx::{BN_CTX_free, BN_CTX_get, BN_CTX_new_ex, BnCtx};
-use crate::ec::asn1::{d2i_ECParameters, d2i_ECPrivateKey};
+use crate::ec::asn1::{d2i_ECPKParameters, d2i_ECParameters, d2i_ECPrivateKey};
 use crate::ec::curve::EC_GROUP_new_by_curve_name_ex;
 use crate::ec::key::EC_KEY_new_ex;
 use crate::ec::key::{
@@ -81,7 +82,8 @@ use crate::runtime::err::raise_site;
 use crate::runtime::ex_data::{CRYPTO_dup_ex_data, CRYPTO_EX_INDEX_EC_KEY};
 use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{
-    Asn1Object, NID_X9_62_characteristic_two_field, NID_X9_62_prime_field, NID_undef, OBJ_obj2nid,
+    Asn1Object, NID_X9_62_characteristic_two_field, NID_X9_62_prime_field, NID_sm2, NID_undef,
+    OBJ_obj2nid,
 };
 use crate::runtime::str::OPENSSL_strcasecmp;
 
@@ -1052,6 +1054,71 @@ pub unsafe extern "C" fn ossl_ec_pt_format_param2id(p: *const OsslParam, id: *mu
 }
 
 // `V_ASN1_UNDEF`/`V_ASN1_SEQUENCE`/`V_ASN1_OBJECT` are read through `crate::asn1::layout`.
+
+/// `int ossl_x509_algor_is_sm2(const X509_ALGOR *palg)` — `ec_backend.c:729-757`. Internal, inside
+/// `#ifndef FIPS_MODULE`.
+///
+/// The predicate `decode_spki2typespki.c` and `ec_kmgmt.c` ask before naming an `EC` public key
+/// "SM2": SM2 reuses the `id-ecPublicKey` OID, so the algorithm identifier alone cannot tell them
+/// apart and the *parameter* is the tie-breaker.
+///
+/// The three cases are the whole function and they are not symmetric:
+///
+/// * `V_ASN1_OBJECT` — a named curve: the parameter *is* the curve OID, so the answer is
+///   `OBJ_obj2nid(parameter) == NID_sm2` with no EC object involved at all.
+/// * `V_ASN1_SEQUENCE` — explicit parameters: the parameter is an `ASN1_STRING` holding an
+///   `ECPKParameters` DER, which is decoded with `d2i_ECPKParameters` and answered by the decoded
+///   group's curve name. The group is freed on **both** arms, so this branch's only ownership rule
+///   is that the answer is read before the free.
+/// * anything else — `0`.
+///
+/// `d2i_ECPKParameters` answers NULL on a malformed parameter, which the authority folds into the
+/// same `ret = 0`; no error queue entry is raised on that path, which is why this function has no
+/// `ERR_raise*` site.
+///
+/// Landed with 10.5 (D449's decoder slice): its only caller in this crate before then was absent,
+/// which is why `forensics/prerequisites.json` withheld it under `D340`/`D351`. `decode_spki2typespki.c`
+/// is that caller now, so the name is reached by a landed path and the divergence row is retired.
+///
+/// # Safety
+/// `palg` is a live `X509_ALGOR`; when its parameter is a `V_ASN1_SEQUENCE` the parameter must be a
+/// live `ASN1_STRING`, which `X509_ALGOR_get0` guarantees for a well-formed object.
+pub(crate) unsafe fn ossl_x509_algor_is_sm2(palg: *const X509Algor) -> c_int {
+    let mut ptype: c_int = 0;
+    let mut pval: *const c_void = ptr::null();
+
+    // SAFETY: `palg` is live per the caller's contract; `ptype`/`pval` are this frame's slots.
+    unsafe { X509_ALGOR_get0(ptr::null_mut(), &mut ptype, &mut pval, palg) };
+
+    if ptype == crate::asn1::layout::V_ASN1_OBJECT {
+        // SAFETY: the parameter of a `V_ASN1_OBJECT` algorithm is an `ASN1_OBJECT`.
+        return c_int::from(unsafe { OBJ_obj2nid(pval.cast::<Asn1Object>()) } == NID_sm2);
+    }
+
+    if ptype == crate::asn1::layout::V_ASN1_SEQUENCE {
+        // SAFETY: the parameter of a `V_ASN1_SEQUENCE` algorithm is an `ASN1_STRING` whose `data`
+        // and `length` are the DER the decoder below reads.
+        let str_ = pval.cast::<Asn1String>();
+        // SAFETY: `str_` is live per the caller's contract. The `ASN1_STRING`'s `data` is the DER
+        // cursor `d2i_ECPKParameters` advances.
+        let mut der: *const c_uchar = unsafe { (*str_).data };
+        // SAFETY: as above.
+        let derlen = unsafe { (*str_).length };
+        // SAFETY: `der` is a readable cursor of `derlen` bytes; the answer owns the new group.
+        let group = unsafe { d2i_ECPKParameters(ptr::null_mut(), &mut der, derlen as c_long) };
+        let ret = if group.is_null() {
+            0
+        } else {
+            // SAFETY: `group` is non-NULL and live here.
+            c_int::from(unsafe { EC_GROUP_get_curve_name(group) } == NID_sm2)
+        };
+        // SAFETY: `group` is NULL or the group `d2i_ECPKParameters` returned; this call owns it.
+        unsafe { EC_GROUP_free(group) };
+        return ret;
+    }
+
+    0
+}
 
 /// `EC_KEY *ossl_ec_key_param_from_x509_algor(const X509_ALGOR *palg, OSSL_LIB_CTX *libctx, const
 /// char *propq)` — `ec_backend.c:759-807`. Internal, inside `#ifndef FIPS_MODULE`.

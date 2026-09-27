@@ -196,7 +196,7 @@
       "verdict": "pass"
     },
     "RT-CODEC": {
-      "observations": 4072,
+      "observations": 4160,
       "verdict": "pass"
     },
     "RT-COMP": {
@@ -508,12 +508,14 @@
   },
   "prerequisites": {
     "blocking_dependencies": 6,
-    "divergence_names_covered": 40,
+    "divergence_names_covered": 39,
     "findings": 0,
-    "language_census": 5453,
+    "language_census": 5448,
     "sealed_census": 52
   },
   "provider_implemented": [
+    "base/OSSL_OP_DECODER/DER",
+    "base/OSSL_OP_DECODER/DER",
     "base/OSSL_OP_DECODER/DER",
     "base/OSSL_OP_DECODER/DH",
     "base/OSSL_OP_DECODER/DH",
@@ -971,6 +973,8 @@
     "default/OSSL_OP_CIPHER/SM4-GCM",
     "default/OSSL_OP_CIPHER/SM4-OFB",
     "default/OSSL_OP_CIPHER/SM4-XTS",
+    "default/OSSL_OP_DECODER/DER",
+    "default/OSSL_OP_DECODER/DER",
     "default/OSSL_OP_DECODER/DER",
     "default/OSSL_OP_DECODER/DH",
     "default/OSSL_OP_DECODER/DH",
@@ -1470,17 +1474,17 @@
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 45,
-      "9": 45
+      "8": 41,
+      "9": 41
     },
-    "implemented": 951,
+    "implemented": 955,
     "open_by_phase": {
-      "10": 6,
+      "10": 2,
       "13": 39,
       "8": 0,
       "9": 0
     },
     "total": 996,
-    "unimplemented": 45
+    "unimplemented": 41
   }
 }

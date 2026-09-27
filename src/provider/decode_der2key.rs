@@ -102,7 +102,9 @@ use crate::provider::decode_epki2pki::ENCRYPTED_PRIVATE_KEY_INFO_DER_FUNCTIONS;
 use crate::provider::decode_msblob2key::{
     MSBLOB_TO_DSA_DECODER_FUNCTIONS, MSBLOB_TO_RSA_DECODER_FUNCTIONS,
 };
+use crate::provider::decode_pem2der::PEM_TO_DER_FUNCTIONS;
 use crate::provider::decode_pvk2key::{PVK_TO_DSA_DECODER_FUNCTIONS, PVK_TO_RSA_DECODER_FUNCTIONS};
+use crate::provider::decode_spki2typespki::SPKI_TO_TYPESPKI_FUNCTIONS;
 use crate::provider::endecoder_common::{ossl_prov_get_keymgmt_export, ossl_read_der};
 use crate::provider::ml_dsa_codecs::{ossl_ml_dsa_d2i_PKCS8, ossl_ml_dsa_d2i_PUBKEY};
 use crate::provider::ml_kem_codecs::{ossl_ml_kem_d2i_PKCS8, ossl_ml_kem_d2i_PUBKEY};
@@ -1368,6 +1370,12 @@ const P_DEF_PVK: *const c_char = c"provider=default,fips=yes,input=pvk".as_ptr()
 const P_BASE_MSBLOB: *const c_char = c"provider=base,fips=yes,input=msblob".as_ptr();
 const P_BASE_PVK: *const c_char = c"provider=base,fips=yes,input=pvk".as_ptr();
 
+// The two 10.5 front-door properties. The SPKI row reuses `P_DEF_SPKI`/`P_BASE_SPKI` above because
+// its property string is the same one (`input=der,structure=SubjectPublicKeyInfo`); the PEM row is
+// the only `input=pem` row in either table.
+const P_DEF_PEM: *const c_char = c"provider=default,fips=yes,input=pem".as_ptr();
+const P_BASE_PEM: *const c_char = c"provider=base,fips=yes,input=pem".as_ptr();
+
 // The `sec` shorthand for the selection words, so the rows read like the `DO_` macros.
 const PRIV: c_int = OSSL_KEYMGMT_SELECT_PRIVATE_KEY;
 const PUB: c_int = OSSL_KEYMGMT_SELECT_PUBLIC_KEY;
@@ -2504,7 +2512,7 @@ dec!(
 // differ only in their property prefix, and the unit's own test checks that mirror.
 // ---------------------------------------------------------------------------
 
-pub(crate) static DEFLT_DECODERS: [OsslAlgorithm; 75] = [
+pub(crate) static DEFLT_DECODERS: [OsslAlgorithm; 77] = [
     OsslAlgorithm {
         algorithm_names: NAME_DH,
         property_definition: P_DEF_P8,
@@ -2948,6 +2956,21 @@ pub(crate) static DEFLT_DECODERS: [OsslAlgorithm; 75] = [
     },
     OsslAlgorithm {
         algorithm_names: NAME_DER,
+        // `decoders.inc`'s two explicit rows (`decoders.inc`'s tail, `defltprov.c`'s own): the
+        // SPKI-to-type-specific front door and the PEM-to-DER front door, in the authority's order
+        // (`row_order` 73 and 74), immediately before the `EncryptedPrivateKeyInfo` row.
+        property_definition: P_DEF_SPKI,
+        implementation: SPKI_TO_TYPESPKI_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: NAME_DER,
+        property_definition: P_DEF_PEM,
+        implementation: PEM_TO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: NAME_DER,
         property_definition:
             c"provider=default,fips=yes,input=der,structure=EncryptedPrivateKeyInfo".as_ptr(),
         implementation: ENCRYPTED_PRIVATE_KEY_INFO_DER_FUNCTIONS.as_ptr().cast(),
@@ -2961,7 +2984,7 @@ pub(crate) static DEFLT_DECODERS: [OsslAlgorithm; 75] = [
     },
 ];
 
-pub(crate) static BASE_DECODERS: [OsslAlgorithm; 75] = [
+pub(crate) static BASE_DECODERS: [OsslAlgorithm; 77] = [
     OsslAlgorithm {
         algorithm_names: NAME_DH,
         property_definition: P_BASE_P8,
@@ -3402,6 +3425,19 @@ pub(crate) static BASE_DECODERS: [OsslAlgorithm; 75] = [
     },
     OsslAlgorithm {
         algorithm_names: NAME_DER,
+        // The same two 10.5 rows as `DEFLT_DECODERS`, with the base provider prefix.
+        property_definition: P_BASE_SPKI,
+        implementation: SPKI_TO_TYPESPKI_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: NAME_DER,
+        property_definition: P_BASE_PEM,
+        implementation: PEM_TO_DER_FUNCTIONS.as_ptr().cast(),
+        algorithm_description: ptr::null(),
+    },
+    OsslAlgorithm {
+        algorithm_names: NAME_DER,
         property_definition: c"provider=base,fips=yes,input=der,structure=EncryptedPrivateKeyInfo"
             .as_ptr(),
         implementation: ENCRYPTED_PRIVATE_KEY_INFO_DER_FUNCTIONS.as_ptr().cast(),
@@ -3471,17 +3507,26 @@ mod tests {
         );
     }
 
-    /// The combined table is 74 rows plus a terminator, the epki row is last, and the two provider
-    /// tables differ only in the provider prefix.
+    /// The combined table is 76 rows plus a terminator, the three 10.5/epki front-door rows are
+    /// last, and the two provider tables differ only in the provider prefix.
     #[test]
     fn the_combined_tables_are_the_seventy_rows_and_mirror_across_providers() {
-        assert_eq!(DEFLT_DECODERS.len(), 75, "74 rows plus the terminator");
-        assert_eq!(BASE_DECODERS.len(), 75);
+        assert_eq!(DEFLT_DECODERS.len(), 77, "76 rows plus the terminator");
+        assert_eq!(BASE_DECODERS.len(), 77);
         // SAFETY: the terminator row's name is null.
-        assert_eq!(DEFLT_DECODERS[74].algorithm_names, ptr::null());
+        assert_eq!(DEFLT_DECODERS[76].algorithm_names, ptr::null());
+        // SAFETY: rows 73 and 74 are the two 10.5 front doors, row 75 the epki row.
         assert_eq!(
-            // SAFETY: row 73 is the epki row.
             DEFLT_DECODERS[73].implementation,
+            SPKI_TO_TYPESPKI_FUNCTIONS.as_ptr().cast::<c_void>()
+        );
+        assert_eq!(
+            DEFLT_DECODERS[74].implementation,
+            PEM_TO_DER_FUNCTIONS.as_ptr().cast::<c_void>()
+        );
+        assert_eq!(
+            // SAFETY: row 75 is the epki row.
+            DEFLT_DECODERS[75].implementation,
             // SAFETY: the epki table's own address.
             ENCRYPTED_PRIVATE_KEY_INFO_DER_FUNCTIONS
                 .as_ptr()
@@ -3489,7 +3534,7 @@ mod tests {
         );
         // SAFETY: every row's two C strings are statics this module wrote.
         unsafe {
-            for i in 0..74 {
+            for i in 0..76 {
                 assert_eq!(
                     DEFLT_DECODERS[i].algorithm_names,
                     BASE_DECODERS[i].algorithm_names

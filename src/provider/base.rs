@@ -237,8 +237,9 @@ unsafe extern "C" fn base_query(
         return crate::provider::encode_key2text::BASE_ENCODERS.as_ptr();
     }
     if operation_id == OSSL_OP_DECODER {
-        // `baseprov.c:106` returns `base_decoder`, of which 10.1 publishes the sixty-nine
-        // `decode_der2key.c` rows and the one `EncryptedPrivateKeyInfo` row.
+        // `baseprov.c:106` returns `base_decoder`, of which 10.5 publishes the whole table: the
+        // sixty-nine `decode_der2key.c` rows, its two front doors and the one `EncryptedPrivateKeyInfo`
+        // row.
         return crate::provider::decode_der2key::BASE_DECODERS.as_ptr();
     }
     if operation_id == OSSL_OP_STORE {

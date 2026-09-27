@@ -720,9 +720,13 @@ struct decoder_row {
     const char *pending;
 };
 
-/* The seventy rows in `decoders.inc`'s order: `decode_der2key.c`'s sixty-nine tables
- * (the classic types, the PQC rows, `RSA`/`RSA-PSS`/`ML-DSA`, then the twelve SLH-DSA
- * pairs), then `decode_epki2pki.c`'s one `EncryptedPrivateKeyInfo` row. */
+/* The rows `decoders.inc` gives this combined table, in its order: `decode_der2key.c`'s
+ * sixty-nine tables (the classic types, the PQC rows, `RSA`/`RSA-PSS`/`ML-DSA`, then the twelve
+ * SLH-DSA pairs), then 10.5's two front doors (`decode_spki2typespki.c`'s
+ * `SubjectPublicKeyInfo` row and `decode_pem2der.c`'s `input=pem` row), then `decode_epki2pki.c`'s
+ * one `EncryptedPrivateKeyInfo` row. The `input=pem` row has no `structure`, so it is identity- and
+ * behaviour-driven by `arm_decoder_frontdoors` rather than by the `input=der,structure=` walk
+ * below. */
 static const struct decoder_row decoder_rows[] = {
     { "DH", "PrivateKeyInfo", "no-fixed-der" },
     { "DH", "SubjectPublicKeyInfo", "no-fixed-der" },
@@ -793,6 +797,7 @@ static const struct decoder_row decoder_rows[] = {
     { "ML-DSA-44", "SubjectPublicKeyInfo", "encoder-unlanded" },
     { "ML-DSA-65", "SubjectPublicKeyInfo", "encoder-unlanded" },
     { "ML-DSA-87", "SubjectPublicKeyInfo", "encoder-unlanded" },
+    { "DER", "SubjectPublicKeyInfo", NULL },
     { "DER", "EncryptedPrivateKeyInfo", NULL }
 };
 
@@ -1095,6 +1100,105 @@ static void arm_decoder_slh_length_refusal(void)
 out:
         OSSL_DECODER_CTX_free(ctx);
         OSSL_DECODER_free(dec);
+    }
+}
+
+/* ---------------------------------------------------------------------------
+ * 10.5's two front-door rows: `decode_spki2typespki.c` and `decode_pem2der.c`.
+ *
+ * The SPKI row is reached by the `input=der,structure=SubjectPublicKeyInfo`
+ * identity walk above; it is *driven* here over the fixed Ed25519
+ * `SubjectPublicKeyInfo` (`ed25519_spki`, the RFC 8032 body the ECX arm already
+ * uses) through an explicitly built context and `decoder_construct`, so the
+ * announced `data-type`/`data-structure`/`data` are the transcript.
+ *
+ * The PEM row has no `structure`, so it is fetched by `input=pem` and driven over
+ * its two engine arms with fixed `PRIVATE KEY` and `PUBLIC KEY` PEM blocks built
+ * from the same Ed25519 bodies: the `PKCS#8` arm routes to `ossl_epki2pki_der_decode`
+ * and the `SubjectPublicKeyInfo` arm to `ossl_spki2typespki_der_decode`. A constant
+ * both sides read is the input, not the expectation.
+ * ------------------------------------------------------------------------- */
+
+static const char ed25519_priv_pem[] =
+    "-----BEGIN PRIVATE KEY-----\n"
+    "MC4CAQAwBQYDK2VwBCIEIJ1hsZ3v/VpguoRK9JLsLMREScVpezJpGXA7rAMcrn9g\n"
+    "-----END PRIVATE KEY-----\n";
+
+static const char ed25519_pub_pem[] =
+    "-----BEGIN PUBLIC KEY-----\n"
+    "MCowBQYDK2VwAyEA11qYAYKxCrfVS/7TyWQHOg7hcvPapiMlrwIaaPcHURo=\n"
+    "-----END PUBLIC KEY-----\n";
+
+/* Fetch one row by name and property, print its identity, then drive it over a fixed body through
+ * an explicitly built context and `decoder_construct`. */
+static void decoder_run_manual(const char *key, const char *name, const char *prop,
+                               const char *input_type, int selection,
+                               const unsigned char *data, size_t datalen)
+{
+    OSSL_DECODER *dec = OSSL_DECODER_fetch(NULL, name, prop);
+    OSSL_DECODER_CTX *ctx = OSSL_DECODER_CTX_new();
+    const unsigned char *p = data;
+    size_t len = datalen;
+    int rc = 0;
+
+    kv_int("frontdoor.fetch", dec != NULL);
+    if (dec != NULL) {
+        kv_str("frontdoor.name", OSSL_DECODER_get0_name(dec));
+        kv_str("frontdoor.props", OSSL_DECODER_get0_properties(dec));
+        kv_int("frontdoor.is_a_der", OSSL_DECODER_is_a(dec, "DER"));
+    }
+    if (dec == NULL || ctx == NULL)
+        goto out;
+    OSSL_DECODER_CTX_set_input_type(ctx, input_type);
+    OSSL_DECODER_CTX_set_selection(ctx, selection);
+    OSSL_DECODER_CTX_set_construct(ctx, decoder_construct);
+    OSSL_DECODER_CTX_set_construct_data(ctx, (void *)key);
+    if (OSSL_DECODER_CTX_add_decoder(ctx, dec) != 1)
+        goto out;
+
+    ERR_clear_error();
+    rc = OSSL_DECODER_from_data(ctx, &p, &len);
+    kv_int("frontdoor.from_data", rc);
+    errs(key);
+
+out:
+    OSSL_DECODER_CTX_free(ctx);
+    OSSL_DECODER_free(dec);
+}
+
+/* The SPKI row: identity (through the explicit fetch) plus the announced object. */
+static void arm_decoder_spki2typespki(void)
+{
+    size_t j;
+
+    for (j = 0; j < sizeof(providers) / sizeof(providers[0]); j++) {
+        char prop[96], key[96];
+
+        snprintf(prop, sizeof(prop),
+                 "provider=%s,input=der,structure=SubjectPublicKeyInfo", providers[j]);
+        snprintf(key, sizeof(key), "frontdoor.spki.%s", providers[j]);
+        decoder_run_manual(key, "DER", prop, "DER", EVP_PKEY_PUBLIC_KEY, ed25519_spki,
+                           sizeof(ed25519_spki));
+    }
+}
+
+/* The PEM row: identity by `input=pem`, then both engine arms over fixed PEM blocks. */
+static void arm_decoder_pem2der(void)
+{
+    size_t j;
+
+    for (j = 0; j < sizeof(providers) / sizeof(providers[0]); j++) {
+        char prop[96], key[96];
+
+        snprintf(prop, sizeof(prop), "provider=%s,input=pem", providers[j]);
+        snprintf(key, sizeof(key), "frontdoor.pem.%s.pkcs8", providers[j]);
+        decoder_run_manual(key, "DER", prop, "PEM", EVP_PKEY_KEYPAIR,
+                           (const unsigned char *)ed25519_priv_pem,
+                           sizeof(ed25519_priv_pem) - 1);
+        snprintf(key, sizeof(key), "frontdoor.pem.%s.spki", providers[j]);
+        decoder_run_manual(key, "DER", prop, "PEM", EVP_PKEY_PUBLIC_KEY,
+                           (const unsigned char *)ed25519_pub_pem,
+                           sizeof(ed25519_pub_pem) - 1);
     }
 }
 
@@ -2099,6 +2203,10 @@ int main(void)
     arm_decoder_dh_params();
     arm_decoder_selection_refusal();
     arm_decoder_slh_length_refusal();
+
+    /* 10.5's two front doors (docs/PHASE-10-SUBPHASES.md section 3.1's decoder rows). */
+    arm_decoder_spki2typespki();
+    arm_decoder_pem2der();
 
     arm_ms_identity();
     arm_ms();

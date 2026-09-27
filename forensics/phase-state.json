@@ -417,7 +417,7 @@
         "name": "algorithms",
         "phase": 8,
         "provider_rows": {
-          "handed_on": 45,
+          "handed_on": 41,
           "implemented": 306,
           "owned": 306
         },
@@ -449,7 +449,7 @@
         "name": "rand-drbg",
         "phase": 9,
         "provider_rows": {
-          "handed_on": 45,
+          "handed_on": 41,
           "implemented": 15,
           "owned": 15
         },
@@ -474,9 +474,9 @@
         "phase": 10,
         "provider_rows": {
           "handed_on": 39,
-          "implemented": 630,
+          "implemented": 634,
           "owned": 636,
-          "unimplemented": 6
+          "unimplemented": 2
         },
         "seal_sha256": null,
         "state": "in-progress",
@@ -626,7 +626,7 @@
       "not_started": 11
     }
   },
-  "body_hash": "3bcb976e1d983c332030a865bcdb54998b10f7bb53e8fb3931843972407d2096",
+  "body_hash": "3e51ed8a8a16df100bf4da68cd65a4631925dc82c5747bf69c376fc2c7329b9a",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

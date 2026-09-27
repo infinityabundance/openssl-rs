@@ -41132,6 +41132,36 @@ pub(crate) const PROV_DECODE_PVK2KEY_118: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `spki2typespki_set_ctx_params_decoder` at `providers/implementations/encode_decode/decode_spki2typespki.c:87` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DECODE_SPKI2TYPESPKI_87: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_spki2typespki.c",
+    line: 87,
+    func: c"spki2typespki_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pem2der_set_ctx_params_decoder` at `providers/implementations/encode_decode/decode_pem2der.c:114` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DECODE_PEM2DER_114: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_pem2der.c",
+    line: 114,
+    func: c"pem2der_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `pem2der_set_ctx_params_decoder` at `providers/implementations/encode_decode/decode_pem2der.c:125` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_DECODE_PEM2DER_125: ErrSite = ErrSite {
+    file: c"providers/implementations/encode_decode/decode_pem2der.c",
+    line: 125,
+    func: c"pem2der_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
 /// `ossl_ml_common_pkcs8_fmt_order` at `providers/implementations/encode_decode/ml_common_codecs.c:83` (PROV_R_ML_DSA_NO_FORMAT).
 pub(crate) const ML_COMMON_CODECS_83: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/providers/implementations/encode_decode/ml_common_codecs.c",
@@ -47583,6 +47613,9 @@ pub(crate) static ALL: &[ErrSite] = &[
     PROV_DECODE_MSBLOB2KEY_130,
     PROV_DECODE_MSBLOB2KEY_138,
     PROV_DECODE_PVK2KEY_118,
+    PROV_DECODE_SPKI2TYPESPKI_87,
+    PROV_DECODE_PEM2DER_114,
+    PROV_DECODE_PEM2DER_125,
     ML_COMMON_CODECS_83,
     ML_KEM_CODECS_258,
     ML_KEM_CODECS_312,

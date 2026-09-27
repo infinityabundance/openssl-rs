@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "10": {
-        "implemented": 630,
+        "implemented": 634,
         "unmatched": 0
       },
       "8": {
@@ -76,9 +76,35 @@
         ]
       }
     ],
-    "directly_courted": 951,
-    "implemented_rows": 951,
+    "directly_courted": 955,
+    "implemented_rows": 955,
     "rows": [
+      {
+        "algorithm_names": "DER",
+        "aliases": [
+          "DER"
+        ],
+        "courts": [
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "DER",
+        "aliases": [
+          "DER"
+        ],
+        "courts": [
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "base"
+      },
       {
         "algorithm_names": "DER",
         "aliases": [
@@ -6741,6 +6767,32 @@
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
         "owning_phase": 8,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "DER",
+        "aliases": [
+          "DER"
+        ],
+        "courts": [
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
+        "provider": "default"
+      },
+      {
+        "algorithm_names": "DER",
+        "aliases": [
+          "DER"
+        ],
+        "courts": [
+          "RT-CODEC"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DECODER",
+        "owning_phase": 10,
         "provider": "default"
       },
       {
@@ -14203,7 +14255,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "f178fbe3793e7ada6b2b7aa5328c435988404b5c19b2aa849454aa8d8b8f931c"
+      "sha256": "89a690f4cf9c189fbd6bb36fcbc6c6e33404ffc8670c4683128351e6c91ea5c1"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -14248,7 +14300,7 @@
     {
       "name": "court:RT-CODEC:rt_codec_probe.c",
       "path": "courts/phase10/rt_codec_probe.c",
-      "sha256": "3ae11d741994225b43215dd0a7af71a035d311108d729964ee6ad440fcfcc182"
+      "sha256": "cd0d3e6400a6d86f94be5c9c32196eb64203cbc3876e75841769ec9100b51083"
     },
     {
       "name": "court:RT-STORE:rt_store_probe.c",

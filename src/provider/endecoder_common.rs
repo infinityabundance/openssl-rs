@@ -162,8 +162,9 @@ pub(crate) unsafe fn ossl_prov_free_key(fns: *const OsslDispatch, key: *mut c_vo
 /// `endecoder_common.c:86-103`.
 ///
 /// `#[allow(dead_code)]`'s reason: **its callers are the decoder units.** Every `*2key` decoder's
-/// `decode` arm reads its DER through this function, and none of them is landed; it is transcribed
-/// because the unit is whole. `provctx` is unused by this crate's core-BIO bridge (`prov/bio_prov.c`
+/// `decode` arm reads its DER through this function; `decode_der2key.c` and 10.5's
+/// `decode_spki2typespki.c` are the two landed ones, and it is transcribed because the unit is
+/// whole. `provctx` is unused by this crate's core-BIO bridge (`prov/bio_prov.c`
 /// is absent), which is why it is `_provctx` here.
 ///
 /// The DER buffer handed back is the `BUF_MEM`'s own data, which the caller frees with

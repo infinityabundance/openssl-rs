@@ -1169,6 +1169,17 @@ COVERED_FILES = [
     ("providers/implementations/encode_decode/encode_key2ms.c", "PROV_ENCODE_KEY2MS"),
     ("providers/implementations/encode_decode/decode_msblob2key.c", "PROV_DECODE_MSBLOB2KEY"),
     ("providers/implementations/encode_decode/decode_pvk2key.c", "PROV_DECODE_PVK2KEY"),
+    # Phase 10.5's `providers/implementations/encode_decode/decode_spki2typespki.c` -- the
+    # `SubjectPublicKeyInfo`-to-type-specific-SPKI decoder that feeds the DER-to-key chain. It is a
+    # generated `.c.in`, so its `__FILE__` carries only the build-relative path (like
+    # `decode_epki2pki.c` above). Its one raise is the machine-generated `set_ctx_params` parser's
+    # `PROV_R_REPEATED_PARAMETER` for `properties`.
+    ("providers/implementations/encode_decode/decode_spki2typespki.c", "PROV_DECODE_SPKI2TYPESPKI"),
+    # Phase 10.5's `providers/implementations/encode_decode/decode_pem2der.c` -- the PEM-to-DER
+    # decoder that names the PEM block and hands its DER to the two engines above. A generated
+    # `.c.in`, so its `__FILE__` is the build-relative path. Its two raises are the parser's
+    # `PROV_R_REPEATED_PARAMETER`, one for `data-structure` and one for `properties`.
+    ("providers/implementations/encode_decode/decode_pem2der.c", "PROV_DECODE_PEM2DER"),
     # Phase 10.1's PQC codec closure units (D435). The first is
     # `providers/implementations/encode_decode/ml_common_codecs.c`, the shared SPKI/PKCS#8 format
     # tables and `ossl_ml_common_pkcs8_fmt_order`: its one raise is the `PROV_R_ML_DSA_NO_FORMAT`
