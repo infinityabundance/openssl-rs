@@ -4762,6 +4762,196 @@ pub(crate) const A_TIME_336: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ASN1_verify` at `crypto/asn1/a_verify.c:36` (ERR_R_EVP_LIB).
+pub(crate) const A_VERIFY_36: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 36,
+    func: c"ASN1_verify",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ASN1_verify` at `crypto/asn1/a_verify.c:42` (ASN1_R_UNKNOWN_MESSAGE_DIGEST_ALGORITHM).
+pub(crate) const A_VERIFY_42: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 42,
+    func: c"ASN1_verify",
+    lib: 13,
+    reason: 161,
+    dynamic_reason: false,
+};
+
+/// `ASN1_verify` at `crypto/asn1/a_verify.c:47` (ASN1_R_INVALID_BIT_STRING_BITS_LEFT).
+pub(crate) const A_VERIFY_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 47,
+    func: c"ASN1_verify",
+    lib: 13,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ASN1_verify` at `crypto/asn1/a_verify.c:53` (ERR_R_INTERNAL_ERROR).
+pub(crate) const A_VERIFY_53: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 53,
+    func: c"ASN1_verify",
+    lib: 13,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ASN1_verify` at `crypto/asn1/a_verify.c:68` (ERR_R_EVP_LIB).
+pub(crate) const A_VERIFY_68: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 68,
+    func: c"ASN1_verify",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ASN1_verify` at `crypto/asn1/a_verify.c:76` (ERR_R_EVP_LIB).
+pub(crate) const A_VERIFY_76: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 76,
+    func: c"ASN1_verify",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:124` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const A_VERIFY_124: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 124,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:129` (ASN1_R_INVALID_BIT_STRING_BITS_LEFT).
+pub(crate) const A_VERIFY_129: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 129,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 220,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:135` (ASN1_R_UNKNOWN_SIGNATURE_ALGORITHM).
+pub(crate) const A_VERIFY_135: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 135,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 199,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:141` (ASN1_R_UNKNOWN_SIGNATURE_ALGORITHM).
+pub(crate) const A_VERIFY_141: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 141,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 199,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:152` (ERR_R_EVP_LIB).
+pub(crate) const A_VERIFY_152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 152,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:166` (ASN1_R_WRONG_PUBLIC_KEY_TYPE).
+pub(crate) const A_VERIFY_166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 166,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 200,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:171` (ERR_R_INTERNAL_ERROR).
+pub(crate) const A_VERIFY_171: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 171,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:177` (ASN1_R_WRONG_PUBLIC_KEY_TYPE).
+pub(crate) const A_VERIFY_177: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 177,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 200,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:184` (ASN1_R_UNKNOWN_MESSAGE_DIGEST_ALGORITHM).
+pub(crate) const A_VERIFY_184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 184,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 161,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:196` (ERR_R_EVP_LIB).
+pub(crate) const A_VERIFY_196: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 196,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:205` (ERR_R_INTERNAL_ERROR).
+pub(crate) const A_VERIFY_205: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 205,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:210` (ERR_R_ASN1_LIB).
+pub(crate) const A_VERIFY_210: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 210,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ASN1_item_verify_ctx` at `crypto/asn1/a_verify.c:219` (ERR_R_EVP_LIB).
+pub(crate) const A_VERIFY_219: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/a_verify.c",
+    line: 219,
+    func: c"ASN1_item_verify_ctx",
+    lib: 13,
+    reason: 524294,
+    dynamic_reason: false,
+};
+
 /// `ASN1_generate_v3` at `crypto/asn1/asn1_gen.c:95` (ERR_raise dynamic reason).
 pub(crate) const ASN1_GEN_95: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/asn1/asn1_gen.c",
@@ -43312,6 +43502,116 @@ pub(crate) const X509_NAME_536: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `X509_NAME_add_entry` at `crypto/x509/x509name.c:228` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509NAME_228: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509name.c",
+    line: 228,
+    func: c"X509_NAME_add_entry",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509_NAME_ENTRY_create_by_txt` at `crypto/x509/x509name.c:252` (X509_R_INVALID_FIELD_NAME).
+pub(crate) const X509NAME_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509name.c",
+    line: 252,
+    func: c"X509_NAME_ENTRY_create_by_txt",
+    lib: 11,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `X509_NAME_ENTRY_create_by_NID` at `crypto/x509/x509name.c:271` (X509_R_UNKNOWN_NID).
+pub(crate) const X509NAME_271: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509name.c",
+    line: 271,
+    func: c"X509_NAME_ENTRY_create_by_NID",
+    lib: 11,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `X509_NAME_ENTRY_set_object` at `crypto/x509/x509name.c:309` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509NAME_309: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509name.c",
+    line: 309,
+    func: c"X509_NAME_ENTRY_set_object",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509v3_add_ext` at `crypto/x509/x509_v3.c:109` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_V3_109: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_v3.c",
+    line: 109,
+    func: c"X509v3_add_ext",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509v3_add_ext` at `crypto/x509/x509_v3.c:115` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_V3_115: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_v3.c",
+    line: 115,
+    func: c"X509v3_add_ext",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509v3_add_ext` at `crypto/x509/x509_v3.c:128` (ERR_R_ASN1_LIB).
+pub(crate) const X509_V3_128: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_v3.c",
+    line: 128,
+    func: c"X509v3_add_ext",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `X509v3_add_ext` at `crypto/x509/x509_v3.c:132` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_V3_132: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_v3.c",
+    line: 132,
+    func: c"X509v3_add_ext",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509v3_add_extensions` at `crypto/x509/x509_v3.c:152` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_V3_152: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_v3.c",
+    line: 152,
+    func: c"X509v3_add_extensions",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_EXTENSION_create_by_NID` at `crypto/x509/x509_v3.c:184` (X509_R_UNKNOWN_NID).
+pub(crate) const X509_V3_184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_v3.c",
+    line: 184,
+    func: c"X509_EXTENSION_create_by_NID",
+    lib: 11,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `X509_EXTENSION_create_by_OBJ` at `crypto/x509/x509_v3.c:201` (ERR_R_ASN1_LIB).
+pub(crate) const X509_V3_201: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_v3.c",
+    line: 201,
+    func: c"X509_EXTENSION_create_by_OBJ",
+    lib: 11,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
 /// `X509_NAME_oneline` at `crypto/x509/x509_obj.c:75` (X509_R_NAME_TOO_LONG).
 pub(crate) const X509_OBJ_75: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/x509/x509_obj.c",
@@ -44866,6 +45166,25 @@ pub(crate) static ALL: &[ErrSite] = &[
     A_STREX_150,
     A_STREX_156,
     A_TIME_336,
+    A_VERIFY_36,
+    A_VERIFY_42,
+    A_VERIFY_47,
+    A_VERIFY_53,
+    A_VERIFY_68,
+    A_VERIFY_76,
+    A_VERIFY_124,
+    A_VERIFY_129,
+    A_VERIFY_135,
+    A_VERIFY_141,
+    A_VERIFY_152,
+    A_VERIFY_166,
+    A_VERIFY_171,
+    A_VERIFY_177,
+    A_VERIFY_184,
+    A_VERIFY_196,
+    A_VERIFY_205,
+    A_VERIFY_210,
+    A_VERIFY_219,
     ASN1_GEN_95,
     ASN1_GEN_275,
     ASN1_GEN_285,
@@ -48721,6 +49040,17 @@ pub(crate) static ALL: &[ErrSite] = &[
     X509_NAME_351,
     X509_NAME_357,
     X509_NAME_536,
+    X509NAME_228,
+    X509NAME_252,
+    X509NAME_271,
+    X509NAME_309,
+    X509_V3_109,
+    X509_V3_115,
+    X509_V3_128,
+    X509_V3_132,
+    X509_V3_152,
+    X509_V3_184,
+    X509_V3_201,
     X509_OBJ_75,
     X509_OBJ_116,
     X509_OBJ_175,

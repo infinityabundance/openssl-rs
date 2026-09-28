@@ -1,27 +1,25 @@
-//! `crypto/evp/evp_pkey.c`'s `evp_pkcs82pkey_legacy` — the legacy `PKCS8_PRIV_KEY_INFO`
-//! to `EVP_PKEY` step. D368.
+//! `crypto/evp/evp_pkey.c` — the legacy `PKCS8_PRIV_KEY_INFO` to `EVP_PKEY` step and the
+//! unit's attribute accessors. Begun by D368, **completed by Phase 10.11**.
 //!
-//! One internal of a large unit, landed because it is the second leg of
-//! `pem_read_bio_key_legacy`'s PKCS#8 path (`crypto/pem/pem_pkey.c:142`, `:170`) and the
-//! fallback `ossl_d2i_PrivateKey_legacy` reaches for a `PrivateKeyInfo` that the type-specific
-//! decoder refused. Its siblings in the unit — `EVP_PKCS82PKEY_ex`, `EVP_PKCS82PKEY`,
-//! `EVP_PKEY_get0_asn1` and the encoder half — are Phase 10's exports and are **not** landed
-//! here; this module is a partial transcription of `crypto/evp/evp_pkey.c` and names what it
-//! withholds rather than implying the unit is whole.
-//!
-//! **`EVP_PKEY2PKCS8` now lands as an export.** D443 measured it as 10.2/10.3's
-//! `PKCS12_add_key(_ex)` blocker, so the `#[no_mangle]` wrapper over
-//! [`ossl_evp_pkey2pkcs8`] below publishes the `x509.h` symbol. Its owner phase is 11
-//! (`forensics/atlas/symbol-ownership.json`), and Phase 11 stays `not-started`: this is the
-//! same pull-forward as `PKCS5_pbe_set_ex` (D442's precedent, one stratum further on).
+//! 10.11 lands the last of the unit: the `EVP_PKCS82PKEY` export (the `_ex` body with the default
+//! context), and the nine `EVP_PKEY_*_attr*` accessors that read and write
+//! `key->attributes` through the landed `X509at_*` collection of `crypto/x509/x509_att.c`. Every
+//! function the authority's unit defines is now transcribed, so nothing of it is withheld.
 //!
 //! ## The method is reached through the decoded algorithm, not the caller
 //!
-//! The function decodes the `PrivateKeyInfo`'s algorithm OID with `PKCS8_pkey_get0`, resolves it
-//! to a NID, and lets `EVP_PKEY_set_type` answer the `EVP_PKEY_ASN1_METHOD` — which is why this
+//! The decode path decodes the `PrivateKeyInfo`'s algorithm OID with `PKCS8_pkey_get0`, resolves
+//! it to a NID, and lets `EVP_PKEY_set_type` answer the `EVP_PKEY_ASN1_METHOD` — which is why this
 //! could not land before 8.8 published `standard_methods[]` (D341's cycle). The decode then runs
 //! `priv_decode_ex` when the method has one and `priv_decode` otherwise, with different failure
 //! diagnostics for each.
+//!
+//! ## The attribute accessors are pass-throughs, and that is the point
+//!
+//! Each `EVP_PKEY_*_attr*` is one call to its `X509at_*` twin with `key->attributes` as the
+//! stack, so the attribute semantics (the duplicate-OID refusal, the `nid`-minus-two answer, the
+//! return-the-removed-element delete) live in `crypto/x509/x509_att.c` and are transcribed once.
+//! The field itself has existed since D349 for the offset; 10.11 is what makes it reachable.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -47,6 +45,12 @@ use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free};
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid, OBJ_obj2txt};
+use crate::x509::x509_att::{
+    X509at_add1_attr, X509at_add1_attr_by_NID, X509at_add1_attr_by_OBJ, X509at_add1_attr_by_txt,
+    X509at_delete_attr, X509at_get_attr, X509at_get_attr_by_NID, X509at_get_attr_by_OBJ,
+    X509at_get_attr_count,
+};
+use crate::x509::x_attrib::X509Attribute;
 
 /// `EVP_PKEY_KEY_PARAMETERS`/`_PUBLIC_KEY`/`_KEYPAIR` — `include/openssl/evp.h:106-113`, spelled
 /// from the `OSSL_KEYMGMT_SELECT_*` bits as the header composes them. `src/evp/pkey.rs` keeps its
@@ -372,4 +376,163 @@ pub(crate) unsafe fn ossl_evp_pkcs82pkey_ex(
     // SAFETY: `dctx` is NULL or live.
     unsafe { OSSL_DECODER_CTX_free(dctx) };
     pkey
+}
+
+/// `EVP_PKEY *EVP_PKCS82PKEY(const PKCS8_PRIV_KEY_INFO *p8)` — `crypto/evp/evp_pkey.c:122-125`.
+///
+/// **The export**, and the plain wrapper over [`ossl_evp_pkcs82pkey_ex`]: the `_ex` body with a
+/// default library context and no property query. `x509.h` declares it and Phase 11 owns the row;
+/// it is published here because the unit 10.11 owns is completed whole, exactly as D443 published
+/// `EVP_PKEY2PKCS8` above it.
+///
+/// # Safety
+/// `p8` must be a live `PKCS8_PRIV_KEY_INFO`.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKCS82PKEY(p8: *const Pkcs8PrivKeyInfo) -> *mut EvpPkey {
+    // SAFETY: `p8` is live per the contract; the context arguments are NULL as the authority's
+    // own wrapper passes them.
+    unsafe { ossl_evp_pkcs82pkey_ex(p8, ptr::null_mut(), ptr::null()) }
+}
+
+/// `int EVP_PKEY_get_attr_count(const EVP_PKEY *key)` — `crypto/evp/evp_pkey.c:190-193`.
+///
+/// # Safety
+/// `key` must be a live key.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_attr_count(key: *const EvpPkey) -> c_int {
+    // SAFETY: `key` is live and its `attributes` field is a live stack or NULL.
+    unsafe { X509at_get_attr_count((*key).attributes) }
+}
+
+/// `int EVP_PKEY_get_attr_by_NID(const EVP_PKEY *key, int nid, int lastpos)` —
+/// `crypto/evp/evp_pkey.c:195-198`.
+///
+/// # Safety
+/// `key` must be a live key.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_attr_by_NID(
+    key: *const EvpPkey,
+    nid: c_int,
+    lastpos: c_int,
+) -> c_int {
+    // SAFETY: `key` is live and `attributes` is a live stack or NULL.
+    unsafe { X509at_get_attr_by_NID((*key).attributes, nid, lastpos) }
+}
+
+/// `int EVP_PKEY_get_attr_by_OBJ(const EVP_PKEY *key, const ASN1_OBJECT *obj, int lastpos)` —
+/// `crypto/evp/evp_pkey.c:200-204`.
+///
+/// # Safety
+/// `key` must be a live key; `obj` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_attr_by_OBJ(
+    key: *const EvpPkey,
+    obj: *const Asn1Object,
+    lastpos: c_int,
+) -> c_int {
+    // SAFETY: `key` is live and `attributes` is a live stack or NULL; `obj` is live.
+    unsafe { X509at_get_attr_by_OBJ((*key).attributes, obj, lastpos) }
+}
+
+/// `X509_ATTRIBUTE *EVP_PKEY_get_attr(const EVP_PKEY *key, int loc)` —
+/// `crypto/evp/evp_pkey.c:206-209`.
+///
+/// # Safety
+/// `key` must be a live key.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_get_attr(key: *const EvpPkey, loc: c_int) -> *mut X509Attribute {
+    // SAFETY: `key` is live and `attributes` is a live stack or NULL.
+    unsafe { X509at_get_attr((*key).attributes, loc) }
+}
+
+/// `X509_ATTRIBUTE *EVP_PKEY_delete_attr(EVP_PKEY *key, int loc)` —
+/// `crypto/evp/evp_pkey.c:211-214`.
+///
+/// # Safety
+/// `key` must be a live key.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_delete_attr(key: *mut EvpPkey, loc: c_int) -> *mut X509Attribute {
+    // SAFETY: `key` is live and `attributes` is a live stack or NULL.
+    unsafe { X509at_delete_attr((*key).attributes, loc) }
+}
+
+/// `int EVP_PKEY_add1_attr(EVP_PKEY *key, X509_ATTRIBUTE *attr)` —
+/// `crypto/evp/evp_pkey.c:216-221`.
+///
+/// # Safety
+/// `key` must be a live key; `attr` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_add1_attr(key: *mut EvpPkey, attr: *mut X509Attribute) -> c_int {
+    // SAFETY: `key` is live and `&mut (*key).attributes` is a writable slot; `attr` is live.
+    if !unsafe { X509at_add1_attr(&raw mut (*key).attributes, attr) }.is_null() {
+        return 1;
+    }
+    0
+}
+
+/// `int EVP_PKEY_add1_attr_by_OBJ(EVP_PKEY *key, const ASN1_OBJECT *obj, int type,
+/// const unsigned char *bytes, int len)` — `crypto/evp/evp_pkey.c:223-230`.
+///
+/// # Safety
+/// `key` must be a live key; `obj` live; `bytes` readable for `len` bytes or NULL when `len` is 0.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_add1_attr_by_OBJ(
+    key: *mut EvpPkey,
+    obj: *const Asn1Object,
+    type_: c_int,
+    bytes: *const c_uchar,
+    len: c_int,
+) -> c_int {
+    // SAFETY: `key` is live and the slot is writable; `obj`/`bytes`/`len` are the caller's.
+    if !unsafe { X509at_add1_attr_by_OBJ(&raw mut (*key).attributes, obj, type_, bytes, len) }
+        .is_null()
+    {
+        return 1;
+    }
+    0
+}
+
+/// `int EVP_PKEY_add1_attr_by_NID(EVP_PKEY *key, int nid, int type, const unsigned char *bytes,
+/// int len)` — `crypto/evp/evp_pkey.c:232-239`.
+///
+/// # Safety
+/// `key` must be a live key; `bytes` readable for `len` bytes or NULL when `len` is 0.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_add1_attr_by_NID(
+    key: *mut EvpPkey,
+    nid: c_int,
+    type_: c_int,
+    bytes: *const c_uchar,
+    len: c_int,
+) -> c_int {
+    // SAFETY: `key` is live and the slot is writable; `bytes`/`len` are the caller's.
+    if !unsafe { X509at_add1_attr_by_NID(&raw mut (*key).attributes, nid, type_, bytes, len) }
+        .is_null()
+    {
+        return 1;
+    }
+    0
+}
+
+/// `int EVP_PKEY_add1_attr_by_txt(EVP_PKEY *key, const char *attrname, int type,
+/// const unsigned char *bytes, int len)` — `crypto/evp/evp_pkey.c:241-248`.
+///
+/// # Safety
+/// `key` must be a live key; `attrname` a NUL-terminated string; `bytes` readable for `len` bytes
+/// or NULL when `len` is 0.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKEY_add1_attr_by_txt(
+    key: *mut EvpPkey,
+    attrname: *const c_char,
+    type_: c_int,
+    bytes: *const c_uchar,
+    len: c_int,
+) -> c_int {
+    // SAFETY: `key` is live and the slot is writable; `attrname`/`bytes`/`len` are the caller's.
+    if !unsafe { X509at_add1_attr_by_txt(&raw mut (*key).attributes, attrname, type_, bytes, len) }
+        .is_null()
+    {
+        return 1;
+    }
+    0
 }

@@ -5,37 +5,21 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 5,
-      "structured_rows": 3,
+      "structured_blockers": 4,
+      "structured_rows": 2,
       "unblocked_rows": 18,
       "unblocked_symbols": 66
     },
     "complete": true,
     "counts": {
       "atlas_owned": 924,
-      "deferred_to_later_phase": 216,
-      "implemented": 734,
+      "deferred_to_later_phase": 215,
+      "implemented": 735,
       "open_in_this_stratum": 0,
       "owned": 950,
       "received_by_handoff": 26
     },
     "deferred": [
-      {
-        "binding_phase": 11,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/asn1/a_verify.c",
-            "kind": "exported",
-            "line": 111,
-            "name": "ASN1_item_verify_ctx",
-            "owning_phase": 11
-          }
-        ],
-        "declaring_header": "asn1.h",
-        "owning_phase": 11,
-        "reason": "`ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:95`) builds its digest context and hands it to `ASN1_item_verify_ctx` (`:104`), which is declared in `x509.h`, is defined at `a_verify.c:111` and is Phase 11's export, so the Phase 5 -> 7 hand-off cannot be completed here. Its signing twin `ASN1_item_sign_ex` stood in this row until subphase 10.10 landed `crypto/asn1/a_sign.c` whole -- including `ASN1_item_sign_ctx` and the `evp_md_ctx_new_ex` that row also named -- at which point the row had to stop covering a symbol the crate now defines (the retire-the-stale-row rule `check_rows` enforces). `forensics/prerequisites.json` carries the remaining name and `RT-EVP-PKEY`'s `NOT_MEASURED` lines name it.",
-        "symbol": "ASN1_item_verify_ex"
-      },
       {
         "binding_phase": 9,
         "blocked_by": [],
@@ -1813,7 +1797,7 @@
       "8": 27,
       "9": 12,
       "10": 10,
-      "11": 4,
+      "11": 3,
       "13": 163
     },
     "handoffs_discharged": {
@@ -2008,6 +1992,7 @@
     },
     "implemented": [
       "ASN1_item_sign_ex",
+      "ASN1_item_verify_ex",
       "BIO_f_base64",
       "BIO_f_cipher",
       "BIO_f_md",
@@ -3055,7 +3040,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "0731800304aaee772a2ffd01986a330af1e7f45b0d86523fd79c6c479c7ed091"
+      "sha256": "dd4ccba5b2e826d68c51f0cc5ce4360b752955c4b0d9826f118c4c5f77d6a68c"
     },
     {
       "name": "export-defining-units",
@@ -3065,7 +3050,7 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "9111914b620274c0cc2439eb427eebfcd5861b3081523b09168eed80730c2b37"
+      "sha256": "3acc7418d8a7648befa82c0ec41762083194d8bafe7485e8363b8779b7935468"
     },
     {
       "name": "typedef-owners",
@@ -3075,7 +3060,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "0cf97618f046571de44680896c8127016de03f42e3f704b0d2b1561ee9a60079"
+      "sha256": "f28f4e9e9887aafebcbe9e82f1a2db3bea7aa1771a1f282ec40e3aa78f96ef4c"
     },
     {
       "name": "phase-state",
@@ -3089,7 +3074,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "836fbb47f21b1f9ee16905d9b5e376d4ae6e8a42432867b65e040b7b5a9a269c"
+      "sha256": "d4ddd0f035791a3ebe232a6d9b437590ccd372020f946a21294b03810c22ac09"
     }
   ],
   "kind": "phase7-obligations",

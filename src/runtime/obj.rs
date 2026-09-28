@@ -1227,6 +1227,13 @@ pub extern "C" fn OBJ_new_nid(num: c_int) -> c_int {
 ///
 /// Returns a pointer into the static table for a known NID, or into the
 /// dynamic registry for a created one; NULL for an unknown NID or a table hole.
+///
+/// **An unknown NID raises `OBJ_R_UNKNOWN_NID` before answering NULL.** The authority's
+/// `obj_dat.c:278` does, and a caller that reads the error queue after a miss observes it; the
+/// crate returned NULL silently until Phase 10.11's `X509v3_get_ext_by_NID` and
+/// `X509_NAME_get_index_by_NID` court arms measured the difference. The authority's read-lock
+/// failure arm (`ERR_R_UNABLE_TO_GET_READ_LOCK`) has no counterpart because the crate has no
+/// `added` lock.
 #[no_mangle]
 pub extern "C" fn OBJ_nid2obj(n: c_int) -> *mut Asn1Object {
     guard_ffi(core::ptr::null_mut(), || {
@@ -1237,7 +1244,13 @@ pub extern "C" fn OBJ_nid2obj(n: c_int) -> *mut Asn1Object {
         }
         match added_lookup_nid(n) {
             Some(p) => p,
-            None => core::ptr::null_mut(),
+            None => {
+                // SAFETY: a compile-time-constant site.
+                unsafe {
+                    crate::runtime::err::raise_site(&crate::runtime::err::err_sites::OBJ_DAT_278)
+                };
+                core::ptr::null_mut()
+            }
         }
     })
 }

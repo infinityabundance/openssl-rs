@@ -198,6 +198,13 @@ COVERED_FILES = [
     ("crypto/asn1/a_strnid.c", "A_STRNID"),
     ("crypto/asn1/a_strex.c", "A_STREX"),
     ("crypto/asn1/a_time.c", "A_TIME"),
+    # Phase 10.11 lands `crypto/asn1/a_verify.c` (`ASN1_item_verify(_ex/_ctx)` and the deprecated
+    # `ASN1_verify`). It was on the "deliberately not covered" list below as Phase 11 surface; the
+    # subphase that lands its call site now owns the coordinate, exactly as 10.10 did for
+    # `a_digest.c`/`a_sign.c`. Its nineteen sites are `ERR_LIB_ASN1` with the generic `ERR_R_*`
+    # codes and the four `ASN1_R_*` reasons (`UNKNOWN_MESSAGE_DIGEST_ALGORITHM`,
+    # `INVALID_BIT_STRING_BITS_LEFT`, `UNKNOWN_SIGNATURE_ALGORITHM`, `WRONG_PUBLIC_KEY_TYPE`).
+    ("crypto/asn1/a_verify.c", "A_VERIFY"),
     ("crypto/asn1/a_type.c", "A_TYPE"),
     ("crypto/asn1/a_utf8.c", "A_UTF8"),
     ("crypto/asn1/a_utctm.c", "A_UTCTM"),
@@ -242,8 +249,8 @@ COVERED_FILES = [
     ("crypto/asn1/asn_mime.c", "ASN_MIME"),
     # Deliberately *not* covered, with the stratum that owns each: `ameth_lib.c`
     # (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
-    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `a_verify.c`,
-    # `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
+    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `x_pkey.c`
+    # (Phase 11); the rest of `asn_mime.c`
     # (Phase 12; the file is covered above for the two coordinates a Phase 5 export
     # raises);
     # `nsseq.c` (Phase 13). Their raises are visible as uncovered sites in
@@ -1301,6 +1308,20 @@ COVERED_FILES = [
     # `x_x509.c`, `x_crl.c`, `x_exten.c` and `asn1/x_val.c` raise nothing in the landed subset
     # and are deliberately not listed.
     ("crypto/x509/x_name.c", "X509_NAME"),
+    # Phase 10.11's `crypto/x509/x509name.c` -- the `X509_NAME` convenience entry points. The
+    # stem is `X509NAME` (not `X509_NAME`) so a line number cannot collide with `x_name.c`'s
+    # constants; the generator is keyed on the stem. Its four sites are `ERR_LIB_X509` with
+    # `ERR_R_CRYPTO_LIB` (`X509_NAME_add_entry`), `ERR_R_PASSED_NULL_PARAMETER`
+    # (`X509_NAME_ENTRY_set_object`), `X509_R_INVALID_FIELD_NAME` through `ERR_raise_data`
+    # (`X509_NAME_ENTRY_create_by_txt`) and `X509_R_UNKNOWN_NID`
+    # (`X509_NAME_ENTRY_create_by_NID`).
+    ("crypto/x509/x509name.c", "X509NAME"),
+    # Phase 10.11's `crypto/x509/x509_v3.c` -- the X.509v3 extension add/get/count/delete
+    # surface. Its six sites are `ERR_LIB_X509` with `ERR_R_PASSED_NULL_PARAMETER` (the two
+    # NULL-argument refusals), `ERR_R_CRYPTO_LIB` and `ERR_R_ASN1_LIB` (`X509v3_add_ext`'s
+    # insert/duplicate failures) and `X509_R_UNKNOWN_NID`
+    # (`X509_EXTENSION_create_by_NID`).
+    ("crypto/x509/x509_v3.c", "X509_V3"),
     # Phase 10.10 lands `crypto/x509/x509_obj.c` (`X509_NAME_oneline`), the printer 10.8's
     # `x_name.c` withheld `X509_NAME_print` behind. Its two sites are `ERR_LIB_X509` with
     # `X509_R_NAME_TOO_LONG` (`:75`, and again through the length guard) and `ERR_R_BUF_LIB`

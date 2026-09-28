@@ -284,26 +284,6 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     ),
     BlockedHandoff(
         symbols=(
-            "ASN1_item_verify_ex",
-        ),
-        binding_phase=11,
-        blocked_by=(
-            Blocker("ASN1_item_verify_ctx", "crypto/asn1/a_verify.c", 111, "exported", 11),
-        ),
-        reason=(
-            "`ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:95`) builds its digest context and hands "
-            "it to `ASN1_item_verify_ctx` (`:104`), which is declared in `x509.h`, is defined at "
-            "`a_verify.c:111` and is Phase 11's export, so the Phase 5 -> 7 hand-off cannot be "
-            "completed here. Its signing twin `ASN1_item_sign_ex` stood in this row until subphase "
-            "10.10 landed `crypto/asn1/a_sign.c` whole -- including `ASN1_item_sign_ctx` and the "
-            "`evp_md_ctx_new_ex` that row also named -- at which point the row had to stop covering "
-            "a symbol the crate now defines (the retire-the-stale-row rule `check_rows` enforces). "
-            "`forensics/prerequisites.json` carries the remaining name and `RT-EVP-PKEY`'s "
-            "`NOT_MEASURED` lines name it."
-        ),
-    ),
-    BlockedHandoff(
-        symbols=(
             "EVP_add_alg_module",
         ),
         binding_phase=11,

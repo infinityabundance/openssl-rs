@@ -34,12 +34,6 @@
         "authority_unit": "providers/legacy-dso-legacyprov.c",
         "reason": "providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.",
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12"
-      },
-      {
-        "symbol": "ASN1_item_verify_ctx",
-        "owner_phase": 11,
-        "reason": "The verification twin of `ASN1_item_sign_ctx`: `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:104`) delegates to it, and it is declared in `x509.h`, Phase 11's. The hand-off from Phase 5 to this stratum cannot be completed while the delegate is another stratum's export.",
-        "evidence": "docs/DECISIONS.md D193; docs/PHASE-7-SUBPHASES.md row 7.4l"
       }
     ],
     "divergences": [
