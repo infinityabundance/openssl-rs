@@ -50,6 +50,9 @@ pub mod cipher;
 pub mod cipher_ctx;
 pub mod digest;
 pub mod encode;
+// Phase 7.4's `crypto/evp/evp_cnf.c` -- the `alg_section` configuration module, landed once
+// `X509V3_get_value_bool` (10.14.3) closed its only blocker. See the module doc.
+pub mod evp_cnf;
 pub mod evp_pbe;
 // Phase 7's `crypto/evp/evp_pkey.c` (D368): the legacy `PKCS8_PRIV_KEY_INFO` -> `EVP_PKEY`
 // step `pem_read_bio_key_legacy` reaches. A partial module -- the unit's encoder half and the

@@ -64,11 +64,10 @@
 //! `EVP_PKEY_meth_find` searches; both `forensics/prerequisites.json` rows are now retired. It is
 //! defined below and called at its authority coordinate by `crate::runtime::init::OPENSSL_cleanup`.
 //!
-//! `EVP_add_alg_module` is `crypto/evp/evp_cnf.c`'s, a 7.4 unit: its body is two lines of
-//! `CONF_module_add`, but the module callback it registers reads the configuration through
-//! `X509V3_get_value_bool` (`crypto/x509/v3_utl.c:266`, Phase 11's), so the pair lands together
-//! rather than half of it here. It is one of the ledger's reasoned deferrals to Phase 11; D196
-//! records the two lines and the coordinate. `EVP_add_cipher_alias` and `EVP_add_digest_alias` are **macros** over
+//! `EVP_add_alg_module` is `crypto/evp/evp_cnf.c`'s, and it **landed as its own module**
+//! ([`crate::evp::evp_cnf`]) once its one blocker did: the module callback it registers reads the
+//! configuration through `X509V3_get_value_bool`, which the 10.14.3 slice built, so the pair's
+//! closure became complete and the deferred row retired. `EVP_add_cipher_alias` and `EVP_add_digest_alias` are **macros** over
 //! `OBJ_NAME_add` in `evp.h` and have no export to transcribe.
 //!
 //! SPDX-License-Identifier: Apache-2.0

@@ -32450,3 +32450,60 @@ open. The broader frontier is D459's 75 units / 26,157 lines minus the two lande
 **~73 units / ~24,900 lines**, to be re-measured by the next slice's `nm` join -- and the next real
 move is unchanged: the **function-level cut inside `v3_utl.c`**.
 
+## D461 -- the `v3_utl.c` cut lands, and the keystone is measured to be six names away
+
+Eleventh pulled-forward slice. **`v3_utl.c` is cut at function level**: of its 51 hand-written
+functions **31 land** (`X509V3_add_value(_uchar)` and the length/value family, `X509V3_conf_free`,
+`X509V3_parse_list`, `strip_spaces`, `ossl_v3_name_cmp`, `i2s_ASN1_INTEGER`/`ENUMERATED`,
+`s2i_ASN1_INTEGER`, `X509V3_get_value_bool`/`_int`, `a2i_IPADDRESS(_NC)`, `ossl_a2i_ipadd`,
+`ipv4_from_asc`/`ipv6_from_asc`/`ipv6_cb`/`ipv6_hex`, `X509V3_NAME_from_section`,
+`ossl_ipaddr_to_asc`, `ossl_bio_print_hex`, `X509_email_free`), and **20 are withheld by name with
+their blockers**. `RT-STORE` moves from 716 to **774** observations (58 arms: parse-list shapes and
+refusals, the adders, the bool/int readers, the sign and radix handling of `s2i_`, both
+`a2i_IPADDRESS` forms, `X509V3_NAME_from_section`) and the total to **45,817** over 109 courts.
+
+**The withholdings split by reason, and both reasons are recorded.** Nine have an unlanded blocker
+(`X509_get1_email`/`_ocsp`/`REQ_get1_email` and the four `X509_check_*` through `do_x509_check`, all
+on `X509_get_ext_d2i` in `x509_ext.c` (10.14.5) and `AUTHORITY_INFO_ACCESS_free` in `v3_info.c`
+(10.14.6); `OSSL_GENERAL_NAMES_print` on `GENERAL_NAME_print` in `v3_san.c`). Eleven more have a
+**complete** closure and **no reachable caller** (`get_email`, `append_ia5`, `sk_strcmp`,
+`skip_prefix`, the five `equal_*`/`wildcard_match`/`valid_star` family and `do_check_string`) --
+D453's second reason, and it is named rather than left as an unexplained dead_code allowance.
+
+**A Phase-7 deferral was discharged as a consequence.** Landing `X509V3_get_value_bool` invalidated
+Phase 7's `EVP_add_alg_module` hand-off, so `crypto/evp/evp_cnf.c` landed **whole**
+(`alg_module_init` and `EVP_add_alg_module`; two `OSSL_TRACE` calls omitted as no-trace) and the
+`phase7_obligations.py` blocked-handoff row and its `forensics/prerequisites.json` unit record were
+retired -- the D453/D454 rule. Phase 7 moves from `deferred 215` to `214` and `implemented 735` to
+`736`.
+
+### The keystone is six names away, measured
+
+**`ossl_x509v3_cache_extensions` did not become reachable, and the reason is a number.** `v3_purp.c`'s
+remaining need is exactly six: `X509_get_ext`, `X509_get_ext_by_NID`, `X509_get_ext_count` and
+`X509_get_ext_d2i` (`x509_ext.c`, 10.14.5), `ossl_x509_init_sig_info` (`x509_set.c`, withheld), and
+`DIST_POINT_set_dpname` (`v3_crld.c`, 10.14.6). And `x509_ext.c`'s own only callees are `v3_lib.c`'s
+withheld lookup half, so the `x509_cmp` <-> `v3_purp` <-> `x509_vfy` cycle is still cut at the
+function level: **the keystone that opens `PKCS12_parse` is gated on `x509_ext.c`, and `x509_ext.c`
+is gated on `v3_lib.c`'s dispatch and a complete `standard_exts[]`.** That chain is now named end to
+end rather than discovered one slice at a time.
+
+**`v3_prn.c` was deliberately not started.** Only `X509V3_EXT_val_prn` (`:24-65`) has a complete
+closure; `X509V3_EXT_print`, `X509V3_extensions_print` and `X509V3_EXT_print_fp` are all blocked by
+`X509V3_EXT_get` (withheld behind `standard_exts[]`), and `unknown_ext_print` is unreachable. A
+one-function module whose other three names cannot be named is not a bite worth taking before the
+dispatch lands -- the same judgement D459 made, applied to a smaller unit.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1114 passed, 0 failed**; 109 courts and **45,817 observations**; `PIPELINE OK` exit 0 on two
+consecutive runs. **The flake did not appear** in any of the ~8 full runs (~16 green runs now).
+Phase-10 counts are unchanged at `296 implemented / 2 open` exports and **`636 implemented / 0 open`**
+provider rows. Phase 11 still derives `not-started`; no Phase 11 row was created.
+
+### The remaining distance
+
+**74 units / 24,708 authority lines** (D460's ~73 / ~24,900, re-measured), of which **71 still need a
+function-level cut**. Two open exports remain; both wait on the chain above.
+

@@ -5,16 +5,16 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 4,
-      "structured_rows": 2,
+      "structured_blockers": 3,
+      "structured_rows": 1,
       "unblocked_rows": 18,
       "unblocked_symbols": 66
     },
     "complete": true,
     "counts": {
       "atlas_owned": 924,
-      "deferred_to_later_phase": 215,
-      "implemented": 735,
+      "deferred_to_later_phase": 214,
+      "implemented": 736,
       "open_in_this_stratum": 0,
       "owned": 950,
       "received_by_handoff": 26
@@ -311,22 +311,6 @@
         "owning_phase": 9,
         "reason": "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and `:46` fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`. The `RAND_*` front landed in D313, so the blocker this row named is now a landed callee; `EVP_CIPHER_CTX_rand_key` is the second name of this group and is owed with it.",
         "symbol": "EVP_SealInit"
-      },
-      {
-        "binding_phase": 11,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/x509/v3_utl.c",
-            "kind": "exported",
-            "line": 266,
-            "name": "X509V3_get_value_bool",
-            "owning_phase": 11
-          }
-        ],
-        "declaring_header": "evp.h",
-        "owning_phase": 11,
-        "reason": "`crypto/evp/evp_cnf.c:69` registers `alg_module_init` (`:24`), whose `fips_mode` arm reads the section value with `X509V3_get_value_bool` (`:46`, defined at `crypto/x509/v3_utl.c:266` and declared in `x509v3.h`, Phase 11's). The other three calls in the handler -- `CONF_imodule_get_value`, `NCONF_get_section`, `evp_set_default_properties_int` -- are landed, so Phase 11 is the only blocker, and it is the same one the subphase plan names for this name.",
-        "symbol": "EVP_add_alg_module"
       },
       {
         "binding_phase": 13,
@@ -1797,7 +1781,7 @@
       "8": 27,
       "9": 12,
       "10": 10,
-      "11": 3,
+      "11": 2,
       "13": 163
     },
     "handoffs_discharged": {
@@ -2643,6 +2627,7 @@
       "EVP_SignFinal_ex",
       "EVP_VerifyFinal",
       "EVP_VerifyFinal_ex",
+      "EVP_add_alg_module",
       "EVP_add_cipher",
       "EVP_add_digest",
       "EVP_blake2b512",
@@ -2960,6 +2945,12 @@
         ]
       },
       {
+        "module": "src/evp/evp_cnf.rs",
+        "prefixes": [
+          "EVP_add_alg_module"
+        ]
+      },
+      {
         "module": "src/evp/legacy_evp.rs",
         "prefixes": [
           "OpenSSL_add_all",
@@ -2967,7 +2958,6 @@
           "EVP_cleanup",
           "EVP_add_cipher",
           "EVP_add_digest",
-          "EVP_add_alg_module",
           "SSLeay_add",
           "OpenSSL_add_all_algorithms"
         ]
@@ -2996,6 +2986,7 @@
       "src/evp/cipher.rs": 110,
       "src/evp/digest.rs": 105,
       "src/evp/encode.rs": 12,
+      "src/evp/evp_cnf.rs": 1,
       "src/evp/exchange.rs": 11,
       "src/evp/fetch.rs": 4,
       "src/evp/kdf.rs": 26,
@@ -3003,7 +2994,7 @@
       "src/evp/keymgmt.rs": 13,
       "src/evp/legacy_cipher.rs": 144,
       "src/evp/legacy_digest.rs": 6,
-      "src/evp/legacy_evp.rs": 3,
+      "src/evp/legacy_evp.rs": 2,
       "src/evp/mac.rs": 29,
       "src/evp/p_legacy.rs": 13,
       "src/evp/pbe.rs": 10,
@@ -3040,7 +3031,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "658c5d0a25a93642aa412aa33e930027ecbc08fda665a10122666e48498a87ab"
+      "sha256": "019428ff5c52f9c257db7d936f95e63e62c9b8968464ebd995e12f34d81bb8d8"
     },
     {
       "name": "export-defining-units",
@@ -3050,7 +3041,7 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "e7f0435b8d6f0b5e5af78412efa809cd5a92837406f194133fbf46623ecee78f"
+      "sha256": "ac2107a21a27cd6999a9e0bcaf27538e80ed4b4660d1b9840cdb9bfd8ebc8d91"
     },
     {
       "name": "typedef-owners",
@@ -3060,7 +3051,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "f74826575c6ea55e617fceb19173a931e9798c5359a1e7d496bf339d6dc353d8"
+      "sha256": "d36adf112024b036061583eefa478702a48e2991d32681e5628aaca26bf8ca2c"
     },
     {
       "name": "phase-state",
@@ -3074,7 +3065,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "9dde322a0634344467501569c5a6d55132698e22a707cecfda5259f277b352cb"
+      "sha256": "78f3cc40277d37c3774422fdd763992d8f6e709beacf28508f47f270b8fbb523"
     }
   ],
   "kind": "phase7-obligations",

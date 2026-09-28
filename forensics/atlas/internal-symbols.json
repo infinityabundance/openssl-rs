@@ -196,6 +196,7 @@
       "src/runtime/confmod/asn1.rs: declared Phase 6, defines exports owned by phase 5",
       "src/runtime/confmod/mod.rs: declared Phase 6, defines exports owned by phase 4",
       "src/runtime/thread_events.rs: declared Phase 6, defines exports owned by phase 3",
+      "src/x509/v3_utl.rs: declared Phase 10, defines exports owned by phase 11",
       "src/x509/x509_cmp.rs: declared Phase 10, defines exports owned by phase 11",
       "src/x509/x509_def.rs: declared Phase 10, defines exports owned by phase 11",
       "src/x509/x509_obj.rs: declared Phase 10, defines exports owned by phase 11",

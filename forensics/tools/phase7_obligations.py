@@ -154,8 +154,12 @@ MODULE_PREFIXES: list[tuple[str, tuple[str, ...]]] = [
     ("src/mac/hmac.rs", ("HMAC_",)),
     ("src/mac/cmac.rs", ("CMAC_",)),
     ("src/hpke/mod.rs", ("OSSL_HPKE_",)),
+    # 7.4's `alg_section` configuration module (`crypto/evp/evp_cnf.c`), which landed with the
+    # 10.14.3 slice once `X509V3_get_value_bool` closed its only blocker. Its single export is
+    # the module's own.
+    ("src/evp/evp_cnf.rs", ("EVP_add_alg_module",)),
     ("src/evp/legacy_evp.rs", ("OpenSSL_add_all", "OPENSSL_add_all", "EVP_cleanup",
-                               "EVP_add_cipher", "EVP_add_digest", "EVP_add_alg_module",
+                               "EVP_add_cipher", "EVP_add_digest",
                                "SSLeay_add", "OpenSSL_add_all_algorithms")),
     # The one-shot legacy MAC. `EVP_MAC` fetches a provider's implementation; this is the
     # older `HMAC()`/`HMAC_Init_ex()` façade over the same construction, and it belongs to
@@ -282,23 +286,9 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
             "(`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else."
         ),
     ),
-    BlockedHandoff(
-        symbols=(
-            "EVP_add_alg_module",
-        ),
-        binding_phase=11,
-        blocked_by=(
-            Blocker("X509V3_get_value_bool", "crypto/x509/v3_utl.c", 266, "exported", 11),
-        ),
-        reason=(
-            "`crypto/evp/evp_cnf.c:69` registers `alg_module_init` (`:24`), whose `fips_mode` arm reads "
-            "the section value with `X509V3_get_value_bool` (`:46`, defined at "
-            "`crypto/x509/v3_utl.c:266` and declared in `x509v3.h`, Phase 11's). The other three calls "
-            "in the handler -- `CONF_imodule_get_value`, `NCONF_get_section`, "
-            "`evp_set_default_properties_int` -- are landed, so Phase 11 is the only blocker, and it is "
-            "the same one the subphase plan names for this name."
-        ),
-    ),
+    # The `EVP_add_alg_module` blocked hand-off was retired when the 10.14.3 slice landed
+    # `X509V3_get_value_bool`, its only blocker; the export itself landed the same pass in
+    # `src/evp/evp_cnf.rs`. Retired rather than left stale, the rule D453/D454 used.
 ]
 
 # ---------------------------------------------------------------------------------------------

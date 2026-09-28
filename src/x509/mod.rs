@@ -211,3 +211,8 @@ pub mod x_all;
 // were measured to wait on. It lands whole; `v3_ncons.c` and `v3_conf.c` are 10.14.4's other two
 // units and are withheld with their measured blockers. See the module docs.
 pub mod v3_genn;
+// Phase 10.14.3's `crypto/x509/v3_utl.c` -- the X.509v3 extension string/value utilities,
+// landed at function granularity: 31 of its 51 hand-written functions are transcribed and 20 are
+// withheld by name (nine on an unlanded callee, eleven closure-complete but unreachable).
+// It is the keystone the forty-odd `v3_*` tables and `v3_prn.c` wait on. See the module docs.
+pub mod v3_utl;
