@@ -113,3 +113,6 @@ pub mod x_val;
 // Phase 10's `crypto/asn1/x_sig.c` -- the `X509_SIG` (EncryptedPrivateKeyInfo) family, landed
 // early because `PKCS8_decrypt` reads it through `X509_SIG_get0` (D368).
 pub mod x_sig;
+// Phase 10.14.2's `crypto/asn1/x_spki.c` -- the `NETSCAPE_SPKAC`/`NETSCAPE_SPKI` items, landed
+// with the `x509spki.c` surface and the two `x_all.c` faces that name them.
+pub mod x_spki;

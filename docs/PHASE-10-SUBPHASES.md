@@ -403,7 +403,7 @@ cycle is the one D442 and D444 already recorded; this section is its size.
 | 10.11 | **The name, print and `v3` dispatch layer** | `x_name.c` (`X509_NAME_it`/`X509_NAME_ENTRY_it` and the `_new`/`_free`/`_dup`/`d2i_`/`i2d_` family), `x_exten.c` (`X509_EXTENSION_it`), `x_pubkey.c`, `x509_v3.c`, `x509name.c`, `x509rset.c`, `a_strex.c`, `a_verify.c`, `x_spki.c`, `evp/evp_pkey.c`; **10 units, 3,487 lines**. This is the first half of the brief's (a): `X509_NAME`'s item and its `i2d_X509_NAME`. | 10.10 | `RT-STORE` (later) |
 | 10.12 | **The leaf extension items and the policy graph** | `x_val.c` (`X509_VAL_it`), `x_x509a.c` (`X509_CERT_AUX_it`, the alias/keyid accessors), `x509_txt.c`, `pcy_lib.c`, `pcy_node.c`, `v3_audit_id.c`, `v3_group_ac.c`, `v3_ia5.c`, `v3_ind_iss.c`, `v3_ist.c`, `v3_no_ass.c`, `v3_pcia.c`, `v3_skid.c`; plus the `http`/`punycode` units `x_all.c` reaches; **16 units, 3,490 lines**. | 10.11 | — |
 | 10.13 | **The remaining leaf extension items** | `v3_timespec.c`, `v3_pku.c`, `v3_utf8.c`, `v3_no_rev_avail.c`, `v3_single_use.c`, `v3_soa_id.c`; **6 units, 875 lines**. | 10.11 | — |
-| 10.14 | **The certificate object graph (one SCC)** *(decomposed in §7; 10.14.1 landed)* | the 75-unit, **30,711-line** strongly-connected component: `x_x509.c`/`x_crl.c` (`X509_it`/`X509_CRL_it` and lifecycle), `x509_cmp.c`, `x509_set.c`, `x509cset.c`, `t_x509.c`, `x_all.c`, `x509_vfy.c`, `x509_lu.c`, `x509_vpm.c`, `x509_trust.c`, `x509_acert.c`, `x509_req.c`, `x_attrib.c`, all `v3_*.c`, `pcy_cache.c`/`pcy_data.c`/`pcy_map.c`/`pcy_tree.c`, `pk7_*.c`, `ocsp/*`, `ct/*`, `asn1_gen.c`. **This is the second half of the brief's (a) and the whole of its (b).** | 10.9–10.13 | `RT-STORE`, `RT-PKCS12`, `RT-KEYFORMAT` |
+| 10.14 | **The certificate object graph (one SCC)** *(decomposed in §7; 10.14.1–10.14.2 landed)* | the 75-unit, **30,711-line** strongly-connected component: `x_x509.c`/`x_crl.c` (`X509_it`/`X509_CRL_it` and lifecycle), `x509_cmp.c`, `x509_set.c`, `x509cset.c`, `t_x509.c`, `x_all.c`, `x509_vfy.c`, `x509_lu.c`, `x509_vpm.c`, `x509_trust.c`, `x509_acert.c`, `x509_req.c`, `x_attrib.c`, all `v3_*.c`, `pcy_cache.c`/`pcy_data.c`/`pcy_map.c`/`pcy_tree.c`, `pk7_*.c`, `ocsp/*`, `ct/*`, `asn1_gen.c`. **This is the second half of the brief's (a) and the whole of its (b).** | 10.9–10.13 | `RT-STORE`, `RT-PKCS12`, `RT-KEYFORMAT` |
 | 10.15 | **The PKCS#12 certificate layer** | the fifteen `crypto/pkcs12/` units (`p12_add.c`'s `PKCS12_add_cert`, `p12_crt.c`'s `PKCS12_create(_ex/_ex2)`, `p12_sbag.c`'s `PKCS12_SAFEBAG_*`, `p12_kiss.c`'s `PKCS12_parse`, and the landed rest); **3,170 lines**. Closes the eleven `pkcs12.h` rows D447 left open. | 10.14 | `RT-PKCS12` |
 | 10.16 | **STORE result and the file loader** | `store_lib.c` (the carved CERT/CRL arms of `OSSL_STORE_INFO_free`/`_get1_CERT`/`_get1_CRL`/`OSSL_STORE_find`, and `OSSL_STORE_load`), `store_result.c`, `file_store.c`, `file_store_any2obj.c`; **4 units, 3,030 lines**. Closes `OSSL_STORE_load`, `OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the two `file` `OSSL_OP_STORE` rows. | 10.14 | `RT-STORE` |
 
@@ -486,7 +486,7 @@ read from `forensics/authorities/src/openssl-3.6.4/`.
 | # | Sub-subphase | Owns (authority units, lines) | Depends on | Closes |
 |---|---|---|---|---|
 | 10.14.1 | **The certificate comparison and accessor surface** *(landed, this session)* | `x509_cmp.c` (594, 27 of 32 fns), `x509cset.c` (185), `x509type.c` (84), and `x509_set.c`'s un-withheld `X509_get_version`/`X509_set_version`/`ossl_x509_set1_time` (~50); **~913** | — | none; unblocks 10.14.2–10.14.15 |
-| 10.14.2 | **The certificate encode/decode faces and the defaults** | `x_all.c` (881), `x509_meth.c` (157), `x509_def.c` (116), `x509spki.c` + `crypto/asn1/x_spki.c` (75 + 28), `x509rset.c` (42); **~1,299** | 10.14.1, 10.14.4 (`v3_genn`/`x509_req` items for `x_all`'s faces) | none |
+| 10.14.2 | **The certificate encode/decode faces and the defaults** *(landed, this session)* | `x_all.c` (881, 73 of 98 fns), `x509_def.c` (116, 2 of 6), `x509spki.c` + `crypto/asn1/x_spki.c` (75 + 28, whole), `x509_meth.c` (157, withheld whole), `x509rset.c` (42, already a doc-and-withholds module from D454); **~1,299** | 10.14.1 | none |
 | 10.14.3 | **The extension value and string utilities** | `v3_utl.c` (1449), `v3_prn.c` (215); **~1,664** | 10.14.1 | none |
 | 10.14.4 | **The general names, constraints and configuration layer** | `v3_ncons.c` (862), `v3_conf.c` (599), `v3_genn.c` (269); **~1,730** | 10.14.3 | none |
 | 10.14.5 | **The purpose table, the extension cache and the dispatch** | `v3_purp.c` (1147) and `v3_lib.c`'s withheld lookup half (`X509V3_EXT_get_nid`/`_get`/`_add_alias`/`_EXT_d2i`/`_get_d2i`/`_add1_i2d`, ~150) over `standard_exts.h`'s 63 tables; **~1,300** | 10.14.3, 10.14.4, 10.14.6–10.14.8 (the tables it dispatches to) | none; **un-withholds 10.14.1's withheld `X509_cmp` and four `X509_add_cert*`** |
@@ -502,6 +502,47 @@ read from `forensics/authorities/src/openssl-3.6.4/`.
 | 10.14.15 | **CT** | `ct_oct.c` (403), `ct_sct.c` (385), `ct_log.c` (335), `ct_sct_ctx.c` (274), `ct_b64.c` (174), `ct_vfy.c` (138), `ct_prn.c` (127), `ct_policy.c` (113), `ct_x509v3.c` (104); **~2,053** | 10.14.11, 10.14.12 | none |
 | 10.15 | **The PKCS#12 certificate layer** (section 6's row, unchanged) | the fifteen `crypto/pkcs12/` units' remaining halves: `p12_sbag.c` (292), `p12_add.c`/`p12_crt.c` (~400), `p12_mutl.c` (552), `p12_kiss.c` (274); **~1,518** | 10.14.13 (PKCS#7), 10.14.11 (the `X509` objects) | **the eleven `pkcs12.h` exports** (`PKCS12_SAFEBAG_create_cert`/`_crl`, `_get1_cert(_ex)`/`_get1_crl(_ex)`, `PKCS12_add_cert`, `PKCS12_create(_ex/_ex2)`, `PKCS12_parse`) |
 | 10.16 | **STORE result and the file loader** (section 6's row, unchanged) | `store_result.c` (667), `store_lib.c`'s carved `OSSL_STORE_load` half, `file_store.c` (828), `file_store_any2obj.c` (330); **~1,825** | 10.14.13 (the decoder chain `store_result` calls), 10.15 | **`OSSL_STORE_load` and the two `file` `OSSL_OP_STORE` rows** |
+
+**10.14.2 landed, and what it leaves.** The second sub-subphase, and the first whose section 7
+dependency is partly **forward** (10.14.4's `v3_genn`/`x509_req` items for `x_all`'s faces).
+`src/x509/x_all.rs` transcribes **73 of `x_all.c`'s 98 functions**: the sign/verify doors
+(`X509_verify`, `X509_sign`/`_ctx`, `X509_CRL_sign`/`_ctx`), the certificate/CRL `d2i_*`/`i2d_*`
+`fp`/`bio` faces, the digest family (`X509_pubkey_digest`, `X509_digest`, `X509_digest_sig`,
+`X509_CRL_digest`, `X509_NAME_digest`), the PKCS#8 / `X509_PUBKEY` / private-key / public-key
+stream faces, the RSA/DSA/EC key stream faces, and the two `NETSCAPE_SPKI` faces. It **withholds
+24 by name, each with its blocker**: `X509_REQ_verify_ex`, `X509_REQ_verify`, `X509_REQ_sign`,
+`X509_REQ_sign_ctx`, `d2i_X509_REQ_fp`/`_bio`, `i2d_X509_REQ_fp`/`_bio` and `X509_REQ_digest` (the
+`X509_REQ` type, 10.14.11); `X509_ACERT_verify`, `X509_ACERT_sign`, `X509_ACERT_sign_ctx`,
+`d2i_X509_ACERT_fp`/`_bio` and `i2d_X509_ACERT_fp`/`_bio` (`X509_ACERT`, 10.14.11);
+`simple_get_asn1`, `X509_load_http` and `X509_CRL_load_http` (`OSSL_HTTP_get`, the `http`/`punycode`
+units withheld since D455); `d2i_PKCS7_fp`/`_bio`, `i2d_PKCS7_fp`/`_bio` and
+`PKCS7_ISSUER_AND_SERIAL_digest` (`d2i_PKCS7`/`i2d_PKCS7` and its item, 10.14.13). `x509_def.rs`
+lands the two environment-name defaults and withholds the four forensic-`OPENSSLDIR` paths (Phase
+16); `x509_meth.rs` withholds `x509_meth.c` whole (the `X509_LOOKUP`/`X509_LOOKUP_METHOD` types,
+10.14.10); `x509rset.c` stays the doc-and-three-withholds module D454 left. `i2d_X509_PUBKEY_bio`
+(`:685-689`) is already landed in `src/x509/x_pubkey.rs` (10.3) and is not defined a second time.
+Because the `NETSCAPE_SPKI` object was the only blocker of the two `NETSCAPE_SPKI` faces,
+`crypto/asn1/x_spki.c` and `x509spki.c` land whole with them rather than being withheld again. Two
+helpers were un-withheld so the faces could be written: `X509_get0_extensions` (`x509_set.c`, read
+by `X509_sign`) and `X509_get0_pubkey_bitstr` (`x_pubkey.c`, read by `X509_pubkey_digest`).
+`RT-STORE` moves from 531 to **670** observations.
+
+**The classical RSA verify path is named, not courted around.** `X509_verify` over an RSA-signed
+object (and `NETSCAPE_SPKI_verify` over one) resolves its digest by name through
+`EVP_get_digestbyname`, which this crate answers NULL for every built-in name — the Phase 13
+legacy-`OBJ_NAME` divergence D333/D343 record (`add_all_legacy_methods` is a no-op,
+`src/runtime/init.rs:234`). That path is therefore incomparable, so the probe prints it as
+`pending.X509_verify.rsa=` and drives `X509_verify`/`NETSCAPE_SPKI_verify` over an **Ed25519**
+signature, which needs no digest-name lookup; the signing faces are driven over the fixed RSA
+key, whose PKCS#1 v1.5 output is deterministic.
+
+**The remaining distance is re-measured at the next slice, not assumed here.** 10.14.2 removes its
+five units (`x_all.c`, `x509_def.c`, `x509_meth.c`, `x509spki.c`, `x_spki.c`; 1,299 lines) from the
+set of *untranscribed* units, but the strict compiled-surface frontier is a closure of undefined
+names, so a unit leaves it only when every name the closure needs is defined; the withheld faces
+keep `x_all.c`, `x509_def.c` and the wholly-withheld `x509_meth.c` in it. D457's last measured
+total — **76 units / 27,335 lines after 10.14.1** — is therefore kept as dated, and the next slice
+re-reads it with the same nm join, exactly as D457 did.
 
 **What each blocker a reader might expect does *not* close.** 10.8 already closed
 `OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the CERT/CRL arms of

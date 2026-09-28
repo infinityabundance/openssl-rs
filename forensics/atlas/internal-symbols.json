@@ -174,6 +174,7 @@
       "src/asn1/a_sign.rs: declared Phase 10, defines exports owned by phase 11",
       "src/asn1/a_verify.rs: declared Phase 10, defines exports owned by phase 11",
       "src/asn1/bio_asn1.rs: declared Phase 5, defines exports owned by phase 4",
+      "src/asn1/x_spki.rs: declared Phase 10, defines exports owned by phase 11",
       "src/context/core_bio.rs: declared Phase 6, defines exports owned by phase 4",
       "src/context/thread_data.rs: declared Phase 6, defines exports owned by phase 3",
       "src/engine/eng_ctrl.rs: declared Phase 10, defines exports owned by phase 13",
@@ -196,11 +197,14 @@
       "src/runtime/confmod/mod.rs: declared Phase 6, defines exports owned by phase 4",
       "src/runtime/thread_events.rs: declared Phase 6, defines exports owned by phase 3",
       "src/x509/x509_cmp.rs: declared Phase 10, defines exports owned by phase 11",
+      "src/x509/x509_def.rs: declared Phase 10, defines exports owned by phase 11",
       "src/x509/x509_obj.rs: declared Phase 10, defines exports owned by phase 11",
       "src/x509/x509_v3.rs: declared Phase 10, defines exports owned by phase 11",
       "src/x509/x509cset.rs: declared Phase 10, defines exports owned by phase 11",
       "src/x509/x509name.rs: declared Phase 10, defines exports owned by phase 11",
-      "src/x509/x509type.rs: declared Phase 10, defines exports owned by phase 11"
+      "src/x509/x509spki.rs: declared Phase 10, defines exports owned by phase 11",
+      "src/x509/x509type.rs: declared Phase 10, defines exports owned by phase 11",
+      "src/x509/x_all.rs: declared Phase 10, defines exports owned by phase 11"
     ],
     "definition": "every symbol the authority's library objects define that is not a DSO export, with the translation unit that defines it; the universe a prerequisite is drawn from, and invisible to every export-based atlas",
     "invariants": {

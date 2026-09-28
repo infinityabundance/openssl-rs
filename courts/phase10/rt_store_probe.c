@@ -68,15 +68,20 @@
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/crypto.h>
+#include <openssl/dsa.h>
+#include <openssl/ec.h>
 #include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
+#include <openssl/obj_mac.h>
+#include <openssl/rsa.h>
 #include <openssl/store.h>
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
+#include "rt_keyformat_keys.h"
 #include "rt_x509_der.h"
 
 /* ---------------------------------------------------------------------------------------------
@@ -812,6 +817,12 @@ static void out_pending(void)
     printf("pending.OSSL_STORE_load=store_result_ossl_store_handle_load_result\n");
     printf("pending.OSSL_STORE_find.by_name=file_store_provider_row_unpublished\n");
     printf("pending.OSSL_STORE_find.by_issuer_serial=file_store_provider_row_unpublished\n");
+    /* 10.14.2: the classical RSA verify path (`X509_verify`/`NETSCAPE_SPKI_verify` over an
+     * RSA-signed object) resolves its digest by name through `EVP_get_digestbyname`, which this
+     * crate answers NULL for every built-in name -- the Phase 13 legacy-`OBJ_NAME` divergence
+     * D333/D343 record (`add_all_legacy_methods` is a no-op). That path is therefore not
+     * comparable; the Ed25519 verify arms are what drive `X509_verify`/`NETSCAPE_SPKI_verify`. */
+    printf("pending.X509_verify.rsa=classical_rsa_path_reads_EVP_get_digestbyname_Phase13_divergence\n");
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -1638,6 +1649,672 @@ static void drive_x509_cmp_surface(void)
     X509_NAME_free(name2);
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.14.2 -- `crypto/x509/x_all.c`, `x509_def.c` and `x509spki.c`/`crypto/asn1/x_spki.c`.
+ *
+ * The certificate encode/decode faces and the digest family, driven over the fixed certificate,
+ * CRL and name; the PKCS#8/X509_PUBKEY/private-key/public-key and RSA/DSA/EC stream faces over
+ * the shared fixed keys; the two environment-name defaults; and the Netscape SPKI object. Every
+ * arm pops its own error queue first (D455's lesson). Signing arms re-encode the signed object,
+ * which is deterministic because PKCS#1 v1.5 is.
+ * --------------------------------------------------------------------------------------------- */
+static void drive_x509_all_surface(void)
+{
+    const unsigned char *p;
+    X509 *cert = NULL, *rtcert = NULL;
+    X509_CRL *crl = NULL, *rtcrl = NULL, *rtcrl2 = NULL;
+    X509_NAME *name = NULL;
+    EVP_PKEY *certkey = NULL, *priv = NULL, *dec = NULL;
+    RSA *rsa = NULL, *rsa2 = NULL;
+    DSA *dsa = NULL, *dsa2 = NULL;
+    EC_KEY *ec = NULL, *ec2 = NULL;
+    X509_PUBKEY *xpk = NULL, *xpk2 = NULL;
+    PKCS8_PRIV_KEY_INFO *p8 = NULL, *p82 = NULL;
+    X509_SIG *sig = NULL, *sig2 = NULL;
+    NETSCAPE_SPKI *spki = NULL, *spki2 = NULL;
+    ASN1_OCTET_STRING *osig = NULL;
+    EVP_MD *md_used = NULL;
+    unsigned char md[EVP_MAX_MD_SIZE];
+    unsigned int mdlen = 0;
+    unsigned char *der = NULL;
+    int len, fallback = 0;
+    char *b64 = NULL;
+    BIO *b = NULL;
+    FILE *fp = NULL;
+
+    p = RT_X509_CERT_DER;
+    cert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    p = RT_X509_CRL_DER;
+    crl = d2i_X509_CRL(NULL, &p, (long)RT_X509_CRL_DER_LEN);
+    p = RT_X509_NAME_DER;
+    name = d2i_X509_NAME(NULL, &p, (long)RT_X509_NAME_DER_LEN);
+    certkey = cert != NULL ? X509_get_pubkey(cert) : NULL;
+    out_ptr("xall.cert", cert);
+    out_ptr("xall.crl", crl);
+    out_ptr("xall.name", name);
+    out_ptr("xall.certkey", certkey);
+
+    /* ----- the certificate and CRL fp/bio faces ----- */
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.x509.i2d_fp", fp != NULL ? i2d_X509_fp(fp, cert) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        rtcert = d2i_X509_fp(fp, NULL);
+    }
+    out_ptr("xall.x509.d2i_fp", rtcert);
+    out_int("xall.x509.d2i_fp.len", rtcert != NULL ? i2d_X509(rtcert, &der) : -1);
+    OPENSSL_free(der);
+    der = NULL;
+    X509_free(rtcert);
+    rtcert = NULL;
+    if (fp != NULL)
+        fclose(fp);
+    fp = NULL;
+
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.x509.i2d_bio", b != NULL ? i2d_X509_bio(b, cert) : -99);
+    if (b != NULL)
+        rtcert = d2i_X509_bio(b, NULL);
+    out_ptr("xall.x509.d2i_bio", rtcert);
+    out_int("xall.x509.d2i_bio.len", rtcert != NULL ? i2d_X509(rtcert, &der) : -1);
+    OPENSSL_free(der);
+    der = NULL;
+    X509_free(rtcert);
+    rtcert = NULL;
+    BIO_free(b);
+    b = NULL;
+
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.crl.i2d_fp", fp != NULL ? i2d_X509_CRL_fp(fp, crl) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        rtcrl = d2i_X509_CRL_fp(fp, NULL);
+    }
+    out_ptr("xall.crl.d2i_fp", rtcrl);
+    out_int("xall.crl.d2i_fp.len", rtcrl != NULL ? i2d_X509_CRL(rtcrl, &der) : -1);
+    OPENSSL_free(der);
+    der = NULL;
+    X509_CRL_free(rtcrl);
+    rtcrl = NULL;
+    if (fp != NULL)
+        fclose(fp);
+    fp = NULL;
+
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.crl.i2d_bio", b != NULL ? i2d_X509_CRL_bio(b, crl) : -99);
+    if (b != NULL)
+        rtcrl = d2i_X509_CRL_bio(b, NULL);
+    out_ptr("xall.crl.d2i_bio", rtcrl);
+    out_int("xall.crl.d2i_bio.len", rtcrl != NULL ? i2d_X509_CRL(rtcrl, &der) : -1);
+    OPENSSL_free(der);
+    der = NULL;
+    X509_CRL_free(rtcrl);
+    rtcrl = NULL;
+    BIO_free(b);
+    b = NULL;
+
+    /* ----- the digest family ----- */
+    ERR_clear_error();
+    out_int("xall.pubkey_digest", X509_pubkey_digest(cert, EVP_sha256(), md, &mdlen));
+    out_int("xall.pubkey_digest.len", (long)mdlen);
+    out_int("xall.pubkey_digest.b0", (long)md[0]);
+    ERR_clear_error();
+    out_int("xall.digest.sha256", X509_digest(cert, EVP_sha256(), md, &mdlen));
+    out_int("xall.digest.sha256.len", (long)mdlen);
+    out_int("xall.digest.sha256.b0", (long)md[0]);
+    ERR_clear_error();
+    out_int("xall.digest.sha1", X509_digest(cert, EVP_sha1(), md, &mdlen));
+    out_int("xall.digest.sha1.len", (long)mdlen);
+    ERR_clear_error();
+    out_int("xall.crl_digest", X509_CRL_digest(crl, EVP_sha256(), md, &mdlen));
+    out_int("xall.crl_digest.len", (long)mdlen);
+    out_int("xall.crl_digest.b0", (long)md[0]);
+    ERR_clear_error();
+    out_int("xall.crl_digest.null", X509_CRL_digest(crl, NULL, md, &mdlen));
+    out_err("xall.crl_digest.null.err");
+    ERR_clear_error();
+    out_int("xall.name_digest", X509_NAME_digest(name, EVP_sha256(), md, &mdlen));
+    out_int("xall.name_digest.len", (long)mdlen);
+    ERR_clear_error();
+    osig = X509_digest_sig(cert, &md_used, &fallback);
+    out_ptr("xall.digest_sig", osig);
+    out_int("xall.digest_sig.fallback", (long)fallback);
+    out_int("xall.digest_sig.len", osig != NULL ? ASN1_STRING_length(osig) : -1);
+    out_int("xall.digest_sig.b0",
+            osig != NULL ? (long)((const unsigned char *)ASN1_STRING_get0_data(osig))[0] : -1);
+    EVP_MD_free(md_used);
+    md_used = NULL;
+    ASN1_OCTET_STRING_free(osig);
+    osig = NULL;
+    ERR_clear_error();
+    out_ptr("xall.digest_sig.null", X509_digest_sig(NULL, NULL, NULL));
+    out_err("xall.digest_sig.null.err");
+
+    /* ----- sign with the fixed RSA key (deterministic PKCS#1 v1.5), and sign_ctx ----- */
+    p = rsa_pkcs1_der;
+    priv = d2i_AutoPrivateKey(NULL, &p, (long)sizeof(rsa_pkcs1_der));
+    out_ptr("xall.priv", priv);
+
+    p = RT_X509_CRL_DER;
+    rtcrl = d2i_X509_CRL(NULL, &p, (long)RT_X509_CRL_DER_LEN);
+    ERR_clear_error();
+    out_int("xall.crl_sign", X509_CRL_sign(rtcrl, priv, EVP_sha256()));
+    ERR_clear_error();
+    out_int("xall.crl_sign.null", X509_CRL_sign(NULL, priv, EVP_sha256()));
+    out_err("xall.crl_sign.null.err");
+    len = i2d_X509_CRL(rtcrl, &der);
+    out_int("xall.crl_sign.len", len);
+    OPENSSL_free(der);
+    der = NULL;
+    {
+        EVP_MD_CTX *sctx = EVP_MD_CTX_new();
+        p = RT_X509_CRL_DER;
+        rtcrl2 = d2i_X509_CRL(NULL, &p, (long)RT_X509_CRL_DER_LEN);
+        ERR_clear_error();
+        out_int("xall.crl_sign_ctx.init",
+                EVP_DigestSignInit(sctx, NULL, EVP_sha256(), NULL, priv));
+        out_int("xall.crl_sign_ctx", X509_CRL_sign_ctx(rtcrl2, sctx));
+        out_int("xall.crl_sign_ctx.len", i2d_X509_CRL(rtcrl2, &der));
+        OPENSSL_free(der);
+        der = NULL;
+        X509_CRL_free(rtcrl2);
+        rtcrl2 = NULL;
+        EVP_MD_CTX_free(sctx);
+    }
+    X509_CRL_free(rtcrl);
+    rtcrl = NULL;
+
+    p = RT_X509_CERT_DER;
+    rtcert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    ERR_clear_error();
+    out_int("xall.cert_sign", X509_sign(rtcert, priv, EVP_sha256()));
+    ERR_clear_error();
+    out_int("xall.cert_sign.null", X509_sign(NULL, priv, EVP_sha256()));
+    out_err("xall.cert_sign.null.err");
+    len = i2d_X509(rtcert, &der);
+    out_int("xall.cert_sign.len", len);
+    OPENSSL_free(der);
+    der = NULL;
+    {
+        EVP_MD_CTX *sctx = EVP_MD_CTX_new();
+        X509 *vcert = NULL;
+        p = RT_X509_CERT_DER;
+        vcert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+        ERR_clear_error();
+        out_int("xall.cert_sign_ctx.init",
+                EVP_DigestSignInit(sctx, NULL, EVP_sha256(), NULL, priv));
+        out_int("xall.cert_sign_ctx", X509_sign_ctx(vcert, sctx));
+        out_int("xall.cert_sign_ctx.len", i2d_X509(vcert, &der));
+        OPENSSL_free(der);
+        der = NULL;
+        X509_free(vcert);
+        EVP_MD_CTX_free(sctx);
+    }
+    X509_free(rtcert);
+    rtcert = NULL;
+
+    /* ----- verify over an Ed25519 signature: no digest-name lookup (the Phase 13
+     * `EVP_get_digestbyname` divergence D333/D343 records is deliberately not on this path), so
+     * the arms are comparable. The key is keygen'd, so only its-answer observations are printed. */
+    {
+        EVP_PKEY_CTX *kctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL);
+        EVP_PKEY *ed = NULL;
+        if (kctx != NULL)
+            EVP_PKEY_keygen_init(kctx);
+        if (kctx != NULL && EVP_PKEY_keygen(kctx, &ed) <= 0)
+            ed = NULL;
+        EVP_PKEY_CTX_free(kctx);
+        out_ptr("xall.ed", ed);
+        p = RT_X509_CERT_DER;
+        rtcert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+        ERR_clear_error();
+        out_int("xall.verify.sign_ed", X509_sign(rtcert, ed, NULL));
+        ERR_clear_error();
+        out_int("xall.verify.self_ed", X509_verify(rtcert, ed));
+        out_err("xall.verify.self_ed.err");
+        ERR_clear_error();
+        out_int("xall.verify.nullkey", X509_verify(rtcert, NULL));
+        out_err("xall.verify.nullkey.err");
+        ERR_clear_error();
+        out_int("xall.verify.wrongkey", X509_verify(rtcert, certkey));
+        X509_free(rtcert);
+        rtcert = NULL;
+        EVP_PKEY_free(ed);
+    }
+
+    /* ----- the RSA stream faces ----- */
+    p = rsa_pkcs1_der;
+    rsa = d2i_RSAPrivateKey(NULL, &p, (long)sizeof(rsa_pkcs1_der));
+    out_ptr("xall.rsa", rsa);
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.rsa.priv_bio", b != NULL ? i2d_RSAPrivateKey_bio(b, rsa) : -99);
+    if (b != NULL)
+        rsa2 = d2i_RSAPrivateKey_bio(b, NULL);
+    out_ptr("xall.rsa.priv_bio.rt", rsa2);
+    RSA_free(rsa2);
+    rsa2 = NULL;
+    BIO_free(b);
+    b = NULL;
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.rsa.pub_bio", b != NULL ? i2d_RSAPublicKey_bio(b, rsa) : -99);
+    if (b != NULL)
+        rsa2 = d2i_RSAPublicKey_bio(b, NULL);
+    out_ptr("xall.rsa.pub_bio.rt", rsa2);
+    RSA_free(rsa2);
+    rsa2 = NULL;
+    BIO_free(b);
+    b = NULL;
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.rsa.pk_bio", b != NULL ? i2d_RSA_PUBKEY_bio(b, rsa) : -99);
+    if (b != NULL)
+        rsa2 = d2i_RSA_PUBKEY_bio(b, NULL);
+    out_ptr("xall.rsa.pk_bio.rt", rsa2);
+    RSA_free(rsa2);
+    rsa2 = NULL;
+    BIO_free(b);
+    b = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.rsa.priv_fp", fp != NULL ? i2d_RSAPrivateKey_fp(fp, rsa) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        rsa2 = d2i_RSAPrivateKey_fp(fp, NULL);
+        out_ptr("xall.rsa.priv_fp.rt", rsa2);
+        RSA_free(rsa2);
+        rsa2 = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.rsa.pub_fp", fp != NULL ? i2d_RSAPublicKey_fp(fp, rsa) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        rsa2 = d2i_RSAPublicKey_fp(fp, NULL);
+        out_ptr("xall.rsa.pub_fp.rt", rsa2);
+        RSA_free(rsa2);
+        rsa2 = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.rsa.pk_fp", fp != NULL ? i2d_RSA_PUBKEY_fp(fp, rsa) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        rsa2 = d2i_RSA_PUBKEY_fp(fp, NULL);
+        out_ptr("xall.rsa.pk_fp.rt", rsa2);
+        RSA_free(rsa2);
+        rsa2 = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+    RSA_free(rsa);
+    rsa = NULL;
+
+    /* ----- the DSA stream faces ----- */
+    p = dsa_trad_der;
+    dsa = d2i_DSAPrivateKey(NULL, &p, (long)sizeof(dsa_trad_der));
+    out_ptr("xall.dsa", dsa);
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.dsa.priv_bio", b != NULL ? i2d_DSAPrivateKey_bio(b, dsa) : -99);
+    if (b != NULL)
+        dsa2 = d2i_DSAPrivateKey_bio(b, NULL);
+    out_ptr("xall.dsa.priv_bio.rt", dsa2);
+    DSA_free(dsa2);
+    dsa2 = NULL;
+    BIO_free(b);
+    b = NULL;
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.dsa.pk_bio", b != NULL ? i2d_DSA_PUBKEY_bio(b, dsa) : -99);
+    if (b != NULL)
+        dsa2 = d2i_DSA_PUBKEY_bio(b, NULL);
+    out_ptr("xall.dsa.pk_bio.rt", dsa2);
+    DSA_free(dsa2);
+    dsa2 = NULL;
+    BIO_free(b);
+    b = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.dsa.priv_fp", fp != NULL ? i2d_DSAPrivateKey_fp(fp, dsa) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        dsa2 = d2i_DSAPrivateKey_fp(fp, NULL);
+        out_ptr("xall.dsa.priv_fp.rt", dsa2);
+        DSA_free(dsa2);
+        dsa2 = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.dsa.pk_fp", fp != NULL ? i2d_DSA_PUBKEY_fp(fp, dsa) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        dsa2 = d2i_DSA_PUBKEY_fp(fp, NULL);
+        out_ptr("xall.dsa.pk_fp.rt", dsa2);
+        DSA_free(dsa2);
+        dsa2 = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+    DSA_free(dsa);
+    dsa = NULL;
+
+    /* ----- the EC stream faces ----- */
+    p = ec_sec1_der;
+    ec = d2i_ECPrivateKey(NULL, &p, (long)sizeof(ec_sec1_der));
+    out_ptr("xall.ec", ec);
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.ec.priv_bio", b != NULL ? i2d_ECPrivateKey_bio(b, ec) : -99);
+    if (b != NULL)
+        ec2 = d2i_ECPrivateKey_bio(b, NULL);
+    out_ptr("xall.ec.priv_bio.rt", ec2);
+    EC_KEY_free(ec2);
+    ec2 = NULL;
+    BIO_free(b);
+    b = NULL;
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.ec.pk_bio", b != NULL ? i2d_EC_PUBKEY_bio(b, ec) : -99);
+    if (b != NULL)
+        ec2 = d2i_EC_PUBKEY_bio(b, NULL);
+    out_ptr("xall.ec.pk_bio.rt", ec2);
+    EC_KEY_free(ec2);
+    ec2 = NULL;
+    BIO_free(b);
+    b = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.ec.priv_fp", fp != NULL ? i2d_ECPrivateKey_fp(fp, ec) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        ec2 = d2i_ECPrivateKey_fp(fp, NULL);
+        out_ptr("xall.ec.priv_fp.rt", ec2);
+        EC_KEY_free(ec2);
+        ec2 = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.ec.pk_fp", fp != NULL ? i2d_EC_PUBKEY_fp(fp, ec) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        ec2 = d2i_EC_PUBKEY_fp(fp, NULL);
+        out_ptr("xall.ec.pk_fp.rt", ec2);
+        EC_KEY_free(ec2);
+        ec2 = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+    EC_KEY_free(ec);
+    ec = NULL;
+
+    /* ----- the private-key / public-key / PKCS#8 stream faces ----- */
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.privkey.bio", b != NULL ? i2d_PrivateKey_bio(b, priv) : -99);
+    if (b != NULL)
+        dec = d2i_PrivateKey_bio(b, NULL);
+    out_ptr("xall.privkey.bio.rt", dec);
+    EVP_PKEY_free(dec);
+    dec = NULL;
+    BIO_free(b);
+    b = NULL;
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.privkey.ex_bio", b != NULL ? i2d_PrivateKey_bio(b, priv) : -99);
+    if (b != NULL)
+        dec = d2i_PrivateKey_ex_bio(b, NULL, NULL, NULL);
+    out_ptr("xall.privkey.ex_bio.rt", dec);
+    EVP_PKEY_free(dec);
+    dec = NULL;
+    BIO_free(b);
+    b = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.privkey.fp", fp != NULL ? i2d_PrivateKey_fp(fp, priv) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        dec = d2i_PrivateKey_fp(fp, NULL);
+        out_ptr("xall.privkey.fp.rt", dec);
+        EVP_PKEY_free(dec);
+        dec = NULL;
+        rewind(fp);
+        dec = d2i_PrivateKey_ex_fp(fp, NULL, NULL, NULL);
+        out_ptr("xall.privkey.ex_fp.rt", dec);
+        EVP_PKEY_free(dec);
+        dec = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.pubkeyface.bio", b != NULL ? i2d_PUBKEY_bio(b, priv) : -99);
+    if (b != NULL)
+        dec = d2i_PUBKEY_bio(b, NULL);
+    out_ptr("xall.pubkeyface.bio.rt", dec);
+    EVP_PKEY_free(dec);
+    dec = NULL;
+    BIO_free(b);
+    b = NULL;
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.pubkeyface.ex_bio", b != NULL ? i2d_PUBKEY_bio(b, priv) : -99);
+    if (b != NULL)
+        dec = d2i_PUBKEY_ex_bio(b, NULL, NULL, NULL);
+    out_ptr("xall.pubkeyface.ex_bio.rt", dec);
+    EVP_PKEY_free(dec);
+    dec = NULL;
+    BIO_free(b);
+    b = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.pubkeyface.fp", fp != NULL ? i2d_PUBKEY_fp(fp, priv) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        dec = d2i_PUBKEY_fp(fp, NULL);
+        out_ptr("xall.pubkeyface.fp.rt", dec);
+        EVP_PKEY_free(dec);
+        dec = NULL;
+        rewind(fp);
+        dec = d2i_PUBKEY_ex_fp(fp, NULL, NULL, NULL);
+        out_ptr("xall.pubkeyface.ex_fp.rt", dec);
+        EVP_PKEY_free(dec);
+        dec = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+
+    /* `PKCS8_PRIV_KEY_INFO` and `i2d_PKCS8PrivateKeyInfo`, fp and bio. */
+    p8 = EVP_PKEY2PKCS8(priv);
+    out_ptr("xall.p8", p8);
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.p8.bio", b != NULL ? i2d_PKCS8_PRIV_KEY_INFO_bio(b, p8) : -99);
+    if (b != NULL)
+        p82 = d2i_PKCS8_PRIV_KEY_INFO_bio(b, NULL);
+    out_ptr("xall.p8.bio.rt", p82);
+    PKCS8_PRIV_KEY_INFO_free(p82);
+    p82 = NULL;
+    BIO_free(b);
+    b = NULL;
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.p8info.bio", b != NULL ? i2d_PKCS8PrivateKeyInfo_bio(b, priv) : -99);
+    if (b != NULL)
+        p82 = d2i_PKCS8_PRIV_KEY_INFO_bio(b, NULL);
+    out_ptr("xall.p8info.bio.rt", p82);
+    PKCS8_PRIV_KEY_INFO_free(p82);
+    p82 = NULL;
+    BIO_free(b);
+    b = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.p8.fp", fp != NULL ? i2d_PKCS8_PRIV_KEY_INFO_fp(fp, p8) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        p82 = d2i_PKCS8_PRIV_KEY_INFO_fp(fp, NULL);
+        out_ptr("xall.p8.fp.rt", p82);
+        PKCS8_PRIV_KEY_INFO_free(p82);
+        p82 = NULL;
+        rewind(fp);
+        out_int("xall.p8info.fp", i2d_PKCS8PrivateKeyInfo_fp(fp, priv));
+        fclose(fp);
+    }
+    fp = NULL;
+    PKCS8_PRIV_KEY_INFO_free(p8);
+    p8 = NULL;
+
+    /* `X509_SIG` (EncryptedPrivateKeyInfo) fp/bio, over the fixed encrypted key. */
+    p = rsa_enc_der;
+    sig = d2i_X509_SIG(NULL, &p, (long)sizeof(rsa_enc_der));
+    out_ptr("xall.sig", sig);
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.sig.bio", b != NULL ? i2d_PKCS8_bio(b, sig) : -99);
+    if (b != NULL)
+        sig2 = d2i_PKCS8_bio(b, NULL);
+    out_ptr("xall.sig.bio.rt", sig2);
+    X509_SIG_free(sig2);
+    sig2 = NULL;
+    BIO_free(b);
+    b = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.sig.fp", fp != NULL ? i2d_PKCS8_fp(fp, sig) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        sig2 = d2i_PKCS8_fp(fp, NULL);
+        out_ptr("xall.sig.fp.rt", sig2);
+        X509_SIG_free(sig2);
+        sig2 = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+    X509_SIG_free(sig);
+    sig = NULL;
+
+    /* `X509_PUBKEY` fp/bio from the certificate's key. */
+    out_int("xall.xpk.set", X509_PUBKEY_set(&xpk, certkey));
+    out_ptr("xall.xpk", xpk);
+    b = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("xall.xpk.bio", b != NULL ? i2d_X509_PUBKEY_bio(b, xpk) : -99);
+    if (b != NULL)
+        xpk2 = d2i_X509_PUBKEY_bio(b, NULL);
+    out_ptr("xall.xpk.bio.rt", xpk2);
+    X509_PUBKEY_free(xpk2);
+    xpk2 = NULL;
+    BIO_free(b);
+    b = NULL;
+    fp = tmpfile();
+    ERR_clear_error();
+    out_int("xall.xpk.fp", fp != NULL ? i2d_X509_PUBKEY_fp(fp, xpk) : -99);
+    if (fp != NULL) {
+        rewind(fp);
+        xpk2 = d2i_X509_PUBKEY_fp(fp, NULL);
+        out_ptr("xall.xpk.fp.rt", xpk2);
+        X509_PUBKEY_free(xpk2);
+        xpk2 = NULL;
+        fclose(fp);
+    }
+    fp = NULL;
+    X509_PUBKEY_free(xpk);
+    xpk = NULL;
+
+    /* ----- the two environment-name defaults ----- */
+    out_str("xall.default_cert_dir_env", X509_get_default_cert_dir_env());
+    out_str("xall.default_cert_file_env", X509_get_default_cert_file_env());
+
+    /* ----- the Netscape SPKI object ----- */
+    spki = NETSCAPE_SPKI_new();
+    out_ptr("xall.spki", spki);
+    if (spki != NULL && spki->spkac == NULL)
+        spki->spkac = NETSCAPE_SPKAC_new();
+    out_ptr("xall.spki.spkac", spki != NULL ? spki->spkac : NULL);
+    if (spki != NULL) {
+        out_int("xall.spki.set_pubkey", NETSCAPE_SPKI_set_pubkey(spki, certkey));
+        out_ptr("xall.spki.get_pubkey", NETSCAPE_SPKI_get_pubkey(spki));
+        /* Fixed content, so the encoding needs no signature and is byte-deterministic. */
+        if (spki->spkac != NULL && spki->spkac->challenge != NULL)
+            ASN1_STRING_set(spki->spkac->challenge, "challenge", 9);
+        if (spki->signature != NULL)
+            ASN1_STRING_set(spki->signature, "sig", 3);
+        X509_ALGOR_set0(&spki->sig_algor, OBJ_nid2obj(NID_sha256WithRSAEncryption), V_ASN1_NULL,
+                        NULL);
+        len = i2d_NETSCAPE_SPKI(spki, &der);
+        out_int("xall.spki.der.len", len);
+        OPENSSL_free(der);
+        der = NULL;
+        b64 = NETSCAPE_SPKI_b64_encode(spki);
+        out_str("xall.spki.b64", b64 != NULL ? b64 : "<null>");
+        if (b64 != NULL) {
+            spki2 = NETSCAPE_SPKI_b64_decode(b64, -1);
+            out_ptr("xall.spki.b64.rt", spki2);
+            out_int("xall.spki.b64.rt.len", spki2 != NULL ? i2d_NETSCAPE_SPKI(spki2, &der) : -1);
+            OPENSSL_free(der);
+            der = NULL;
+            NETSCAPE_SPKI_free(spki2);
+            spki2 = NULL;
+            OPENSSL_free(b64);
+            b64 = NULL;
+        }
+    }
+    NETSCAPE_SPKI_free(spki);
+    spki = NULL;
+
+    /* Ed25519 sign/verify over an SPKI: again no digest-name lookup, so comparable. */
+    {
+        EVP_PKEY_CTX *kctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL);
+        EVP_PKEY *ed = NULL;
+        if (kctx != NULL)
+            EVP_PKEY_keygen_init(kctx);
+        if (kctx != NULL && EVP_PKEY_keygen(kctx, &ed) <= 0)
+            ed = NULL;
+        EVP_PKEY_CTX_free(kctx);
+        spki = NETSCAPE_SPKI_new();
+        if (spki != NULL && ed != NULL) {
+            if (spki->spkac == NULL)
+                spki->spkac = NETSCAPE_SPKAC_new();
+            if (spki->spkac != NULL && spki->spkac->challenge != NULL)
+                ASN1_STRING_set(spki->spkac->challenge, "challenge", 9);
+            NETSCAPE_SPKI_set_pubkey(spki, ed);
+            ERR_clear_error();
+            out_int("xall.spki.sign_ed", NETSCAPE_SPKI_sign(spki, ed, NULL));
+            ERR_clear_error();
+            out_int("xall.spki.verify_ed", NETSCAPE_SPKI_verify(spki, ed));
+            out_err("xall.spki.verify_ed.err");
+            ERR_clear_error();
+            out_int("xall.spki.verify_wrong", NETSCAPE_SPKI_verify(spki, certkey));
+        }
+        NETSCAPE_SPKI_free(spki);
+        spki = NULL;
+        EVP_PKEY_free(ed);
+    }
+    ERR_clear_error();
+    out_ptr("xall.spki.b64.bad", NETSCAPE_SPKI_b64_decode("not base64!", -1));
+    out_err("xall.spki.b64.bad.err");
+
+    EVP_PKEY_free(certkey);
+    EVP_PKEY_free(priv);
+    X509_free(cert);
+    X509_CRL_free(crl);
+    X509_NAME_free(name);
+}
+
 int main(void)
 {
     OSSL_STORE_LOADER *loader;
@@ -1692,6 +2369,9 @@ int main(void)
 
     /* ----- Phase 10.14.1: the certificate comparison and accessor surface ----- */
     drive_x509_cmp_surface();
+
+    /* ----- Phase 10.14.2: the certificate faces, the defaults and the Netscape SPKI object ----- */
+    drive_x509_all_surface();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

@@ -43872,6 +43872,166 @@ pub(crate) const X509_CMP_419: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `X509_REQ_verify_ex` at `crypto/x509/x_all.c:47` (X509_R_UNSUPPORTED_VERSION).
+pub(crate) const X509_ALL_47: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 47,
+    func: c"X509_REQ_verify_ex",
+    lib: 11,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `X509_sign` at `crypto/x509/x_all.c:80` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ALL_80: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 80,
+    func: c"X509_sign",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_sign_ctx` at `crypto/x509/x_all.c:103` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ALL_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 103,
+    func: c"X509_sign_ctx",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_REQ_sign` at `crypto/x509/x_all.c:143` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ALL_143: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 143,
+    func: c"X509_REQ_sign",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_REQ_sign_ctx` at `crypto/x509/x_all.c:155` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ALL_155: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 155,
+    func: c"X509_REQ_sign_ctx",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_CRL_sign` at `crypto/x509/x_all.c:167` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ALL_167: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 167,
+    func: c"X509_CRL_sign",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_CRL_sign_ctx` at `crypto/x509/x_all.c:179` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ALL_179: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 179,
+    func: c"X509_CRL_sign_ctx",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_digest_sig` at `crypto/x509/x_all.c:530` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ALL_530: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 530,
+    func: c"X509_digest_sig",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_digest_sig` at `crypto/x509/x_all.c:535` (X509_R_UNKNOWN_SIGID_ALGS).
+pub(crate) const X509_ALL_535: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 535,
+    func: c"X509_digest_sig",
+    lib: 11,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `X509_digest_sig` at `crypto/x509/x_all.c:551` (X509_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const X509_ALL_551: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 551,
+    func: c"X509_digest_sig",
+    lib: 11,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `X509_digest_sig` at `crypto/x509/x_all.c:582` (X509_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const X509_ALL_582: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 582,
+    func: c"X509_digest_sig",
+    lib: 11,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `X509_digest_sig` at `crypto/x509/x_all.c:589` (X509_R_UNSUPPORTED_ALGORITHM).
+pub(crate) const X509_ALL_589: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 589,
+    func: c"X509_digest_sig",
+    lib: 11,
+    reason: 111,
+    dynamic_reason: false,
+};
+
+/// `X509_CRL_digest` at `crypto/x509/x_all.c:612` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_ALL_612: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 612,
+    func: c"X509_CRL_digest",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `d2i_PrivateKey_ex_fp` at `crypto/x509/x_all.c:740` (ERR_R_BUF_LIB).
+pub(crate) const X509_ALL_740: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 740,
+    func: c"d2i_PrivateKey_ex_fp",
+    lib: 11,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `d2i_PUBKEY_ex_fp` at `crypto/x509/x_all.c:761` (ERR_R_BUF_LIB).
+pub(crate) const X509_ALL_761: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
+    line: 761,
+    func: c"d2i_PUBKEY_ex_fp",
+    lib: 11,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `NETSCAPE_SPKI_b64_decode` at `crypto/x509/x509spki.c:42` (X509_R_BASE64_DECODE_ERROR).
+pub(crate) const X509_SPKI_42: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509spki.c",
+    line: 42,
+    func: c"NETSCAPE_SPKI_b64_decode",
+    lib: 11,
+    reason: 118,
+    dynamic_reason: false,
+};
+
 /// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:116` (PROV_R_MISSING_KEY).
 pub(crate) const ECX_KEY_116: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
@@ -49307,6 +49467,22 @@ pub(crate) static ALL: &[ErrSite] = &[
     X509_CMP_413,
     X509_CMP_416,
     X509_CMP_419,
+    X509_ALL_47,
+    X509_ALL_80,
+    X509_ALL_103,
+    X509_ALL_143,
+    X509_ALL_155,
+    X509_ALL_167,
+    X509_ALL_179,
+    X509_ALL_530,
+    X509_ALL_535,
+    X509_ALL_551,
+    X509_ALL_582,
+    X509_ALL_589,
+    X509_ALL_612,
+    X509_ALL_740,
+    X509_ALL_761,
+    X509_SPKI_42,
     ECX_KEY_116,
     ECX_KEY_122,
     ECX_KEY_131,

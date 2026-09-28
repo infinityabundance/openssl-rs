@@ -435,6 +435,66 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKAC_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKAC_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKAC_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKI_b64_decode"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKI_b64_encode"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKI_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKI_get_pubkey"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKI_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKI_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKI_set_pubkey"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKI_sign"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NETSCAPE_SPKI_verify"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "OSSL_DAY_TIME_BAND_free"
       },
       {
@@ -1415,6 +1475,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_CRL_digest"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_CRL_dup"
       },
       {
@@ -1516,6 +1581,16 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_CRL_set_version"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_sign"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_sign_ctx"
       },
       {
         "owing_phase": 11,
@@ -1676,6 +1751,11 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_NAME_delete_entry"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_digest"
       },
       {
         "owing_phase": 11,
@@ -1960,6 +2040,16 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_digest"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_digest_sig"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_dup"
       },
       {
@@ -1985,7 +2075,17 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_get0_extensions"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_get0_pubkey"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get0_pubkey_bitstr"
       },
       {
         "owing_phase": 11,
@@ -2006,6 +2106,16 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_get0_trust_objects"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get_default_cert_dir_env"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get_default_cert_file_env"
       },
       {
         "owing_phase": 11,
@@ -2140,6 +2250,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_pubkey_digest"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_reject_clear"
       },
       {
@@ -2156,6 +2271,16 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_set_version"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_sign"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_sign_ctx"
       },
       {
         "owing_phase": 11,
@@ -2191,6 +2316,11 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_up_ref"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_verify"
       },
       {
         "owing_phase": 11,
@@ -2290,7 +2420,37 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_DSAPrivateKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_DSAPrivateKey_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_DSA_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_DSA_PUBKEY_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_DSA_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_ECPrivateKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_ECPrivateKey_fp"
       },
       {
         "owing_phase": 11,
@@ -2300,7 +2460,27 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_EC_PUBKEY_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_EC_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_ISSUER_SIGN_TOOL"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_NETSCAPE_SPKAC"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_NETSCAPE_SPKI"
       },
       {
         "owing_phase": 11,
@@ -2385,6 +2565,26 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_PKCS8_PRIV_KEY_INFO_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PKCS8_PRIV_KEY_INFO_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PKCS8_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PKCS8_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_PKEY_USAGE_PERIOD"
       },
       {
@@ -2405,12 +2605,82 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_PUBKEY_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_PUBKEY_ex"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_PUBKEY_ex_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PUBKEY_ex_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PrivateKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PrivateKey_ex_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PrivateKey_ex_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_PrivateKey_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_RSAPrivateKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_RSAPrivateKey_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_RSAPublicKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_RSAPublicKey_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_RSA_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_RSA_PUBKEY_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_RSA_PUBKEY_fp"
       },
       {
         "owing_phase": 11,
@@ -2460,6 +2730,16 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_X509_CRL_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_CRL_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_X509_EXTENSION"
       },
       {
@@ -2480,6 +2760,16 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_X509_PUBKEY_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_X509_REVOKED"
       },
       {
@@ -2495,7 +2785,47 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_X509_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_X509_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_DSAPrivateKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_DSAPrivateKey_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_DSA_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_DSA_PUBKEY_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_DSA_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_ECPrivateKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_ECPrivateKey_fp"
       },
       {
         "owing_phase": 11,
@@ -2505,7 +2835,27 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_EC_PUBKEY_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_EC_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_ISSUER_SIGN_TOOL"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_NETSCAPE_SPKAC"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_NETSCAPE_SPKI"
       },
       {
         "owing_phase": 11,
@@ -2585,7 +2935,37 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_PKCS8PrivateKeyInfo_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_PKCS8PrivateKeyInfo_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_PKCS8_PRIV_KEY_INFO"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_PKCS8_PRIV_KEY_INFO_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_PKCS8_PRIV_KEY_INFO_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_PKCS8_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_PKCS8_fp"
       },
       {
         "owing_phase": 11,
@@ -2610,7 +2990,57 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_PUBKEY_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_PrivateKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_PrivateKey_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_RSAPrivateKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_RSAPrivateKey_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_RSAPublicKey_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_RSAPublicKey_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_RSA_PUBKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_RSA_PUBKEY_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_RSA_PUBKEY_fp"
       },
       {
         "owing_phase": 11,
@@ -2660,6 +3090,16 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_X509_CRL_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_CRL_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_X509_EXTENSION"
       },
       {
@@ -2685,6 +3125,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_X509_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_X509_REVOKED"
       },
       {
@@ -2696,6 +3141,16 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_X509_VAL"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_bio"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_X509_fp"
       },
       {
         "owing_phase": 11,
@@ -7700,7 +8155,8 @@
               "RT-ASN1-STR",
               "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
-              "RT-PKCS12"
+              "RT-PKCS12",
+              "RT-STORE"
             ],
             "symbol": "ASN1_STRING_get0_data"
           },
@@ -13037,7 +13493,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY",
-              "RT-SIGNATURE"
+              "RT-SIGNATURE",
+              "RT-STORE"
             ],
             "symbol": "EVP_DigestSignInit"
           },
@@ -13945,7 +14402,8 @@
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
-              "RT-SIGNATURE"
+              "RT-SIGNATURE",
+              "RT-STORE"
             ],
             "symbol": "EVP_MD_CTX_free"
           },
@@ -14018,7 +14476,8 @@
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
-              "RT-SIGNATURE"
+              "RT-SIGNATURE",
+              "RT-STORE"
             ],
             "symbol": "EVP_MD_CTX_new"
           },
@@ -14142,7 +14601,8 @@
               "RT-PKCS12",
               "RT-RAND-USERS",
               "RT-RSA",
-              "RT-SIGNATURE"
+              "RT-SIGNATURE",
+              "RT-STORE"
             ],
             "symbol": "EVP_MD_free"
           },
@@ -14583,7 +15043,8 @@
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
               "RT-RSA",
-              "RT-SIGNATURE"
+              "RT-SIGNATURE",
+              "RT-STORE"
             ],
             "symbol": "EVP_PKEY_CTX_free"
           },
@@ -14791,7 +15252,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-REF",
-              "RT-KEYFORMAT"
+              "RT-KEYFORMAT",
+              "RT-STORE"
             ],
             "symbol": "EVP_PKEY_CTX_new_id"
           },
@@ -15714,7 +16176,8 @@
               "RT-EVP-PKEY-OPS",
               "RT-EVP-REF",
               "RT-KEYFORMAT",
-              "RT-SIGNATURE"
+              "RT-SIGNATURE",
+              "RT-STORE"
             ],
             "symbol": "EVP_PKEY_keygen"
           },
@@ -15727,7 +16190,8 @@
               "RT-EVP-PKEY-OPS",
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
-              "RT-SIGNATURE"
+              "RT-SIGNATURE",
+              "RT-STORE"
             ],
             "symbol": "EVP_PKEY_keygen_init"
           },
@@ -17227,7 +17691,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-INTROSPECT"
+              "RT-EVP-INTROSPECT",
+              "RT-STORE"
             ],
             "symbol": "EVP_sha1"
           },
@@ -19105,7 +19570,8 @@
               "RT-DSA",
               "RT-KEYFORMAT",
               "RT-PEM-KEY",
-              "RT-PUBKEY"
+              "RT-PUBKEY",
+              "RT-STORE"
             ],
             "symbol": "DSA_free"
           },
@@ -20254,7 +20720,8 @@
               "RT-EC",
               "RT-KEYFORMAT",
               "RT-PEM-KEY",
-              "RT-PUBKEY"
+              "RT-PUBKEY",
+              "RT-STORE"
             ],
             "symbol": "EC_KEY_free"
           },
@@ -22050,7 +22517,8 @@
               "RT-KEYFORMAT",
               "RT-PEM-KEY",
               "RT-PUBKEY",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-STORE"
             ],
             "symbol": "RSA_free"
           },
@@ -22997,7 +23465,8 @@
             "courts": [
               "RT-DSA",
               "RT-KEYFORMAT",
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-STORE"
             ],
             "symbol": "d2i_DSAPrivateKey"
           },
@@ -23047,7 +23516,8 @@
             "basis": "called",
             "courts": [
               "RT-EC",
-              "RT-PEM-KEY"
+              "RT-PEM-KEY",
+              "RT-STORE"
             ],
             "symbol": "d2i_ECPrivateKey"
           },
@@ -23077,7 +23547,8 @@
             "courts": [
               "RT-KEYFORMAT",
               "RT-PEM-KEY",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-STORE"
             ],
             "symbol": "d2i_RSAPrivateKey"
           },
@@ -25604,7 +26075,8 @@
             "basis": "called",
             "courts": [
               "RT-KEYFORMAT",
-              "RT-PKCS12"
+              "RT-PKCS12",
+              "RT-STORE"
             ],
             "symbol": "d2i_AutoPrivateKey"
           },
@@ -25840,7 +26312,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "63f46a67e7330d6e14eab15df4f0b628749926b59762266a40ffeaab685bdb16"
+      "sha256": "22e0f94254bcf4dfebc7817ba4a52e0efbcb08cbd586fe9b1bc0065eea4a74c9"
     },
     {
       "name": "symbol-ownership",
@@ -25855,7 +26327,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "498fede53e392dfb0bf14108f0982a38a88fe69016ba0367d94ed1b3040bc383"
+      "sha256": "adbc417488247323ea0b8ef227a7a187fcf8054de4e14a834dcf14eae59bd0e4"
     },
     {
       "name": "phase3-courts",
@@ -25865,7 +26337,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "03a53ffe9ae561e4dd25fbcf2caad6922f39767d71497611cfa0f4d77ee9bd12"
+      "sha256": "90dee1399942ea3717b651299987ef8bdeaf7943cf183a911e67c989df94881a"
     },
     {
       "name": "phase4-courts",
@@ -25875,7 +26347,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "dea0ecf1959fc62945c9d05a64fdf65e350e2c4e94a855e3d71844e8aa4d11b3"
+      "sha256": "a9adcb5663faec3f48dedd26852b5c4ccbe819ff1d3241d4eec5740c3fe55c7c"
     },
     {
       "name": "phase5-courts",
@@ -25885,7 +26357,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "94ebfa804df5f08251ded7872633eb05b8ef7e2c12672c86a0f6827ae2df57c3"
+      "sha256": "90caee12248b23272514871f6b02dc6cc67cbe10a0777b350597afa9194b131c"
     },
     {
       "name": "phase6-courts",
@@ -25895,7 +26367,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "db94c8f2f96c5a4503d63287a70d86f82f3d637c5b5e539c98b64e4f0714da23"
+      "sha256": "23a026eca033cbd6c5ccb20f6048952c49ce78ce79c25b64ff5485db9e0c1750"
     },
     {
       "name": "phase7-courts",
@@ -25905,7 +26377,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "29d90b38c6a21f8cfb84feb57a59b2ba09e6d3934c7f4106dd73dd12fc028334"
+      "sha256": "78b3286820a4844334f7a64358165f6fa9d443a420bdfd1702e2d0731ba4deac"
     },
     {
       "name": "phase8-courts",
@@ -25915,7 +26387,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "b66f97c62b62437919d8337ec34d079237039c20134486aff20822c05b85280d"
+      "sha256": "b8ca924a7ccc999399484c68fac1152a7254513f8c4d8fe958f9c8fd70b30c57"
     },
     {
       "name": "phase9-courts",
@@ -25925,12 +26397,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "8cfd48410807bb9b76427fda5f94e6e4cc736b466ada5bf682c5328a50e0e09d"
+      "sha256": "d79eb956eaa0ac7c934502a3e89771cdf05fceec839cf7b3e2e481df6cd79adc"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "f863d256306ca2fd2db10655a623a618260336b0d55910d33c852a8c06289dc2"
+      "sha256": "f04c1ad2301b23347903e0b1d0f0d0398283393ffbaf3d98214e0be5f7f66f97"
     }
   ],
   "kind": "court-coverage",

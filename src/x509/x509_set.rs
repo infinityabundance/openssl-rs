@@ -58,6 +58,7 @@ use core::ffi::{c_int, c_long};
 use crate::asn1::layout::Asn1String;
 use crate::asn1::prim::{ASN1_INTEGER_get, ASN1_INTEGER_set};
 use crate::asn1::string::{ASN1_INTEGER_free, ASN1_INTEGER_new, ASN1_STRING_dup, ASN1_TIME_free};
+use crate::runtime::stack::OpenSslStack;
 use crate::x509::x_x509::X509;
 
 /// `struct x509_sig_info_st` — `X509_SIG_INFO`, from `include/crypto/x509.h:50-59`.
@@ -176,6 +177,25 @@ pub unsafe extern "C" fn ossl_x509_set1_time(
         }
     }
     1
+}
+
+/// `const STACK_OF(X509_EXTENSION) *X509_get0_extensions(const X509 *x)` —
+/// `crypto/x509/x509_set.c:167-170`.
+///
+/// The certificate's extension stack, borrowed. **Landed by 10.14.2**, un-withheld from the
+/// mutator layer because `X509_sign`/`X509_sign_ctx` (`crypto/x509/x_all.c`) test its length to
+/// decide whether to force version 3, and the `X509` object 10.8 landed makes the one-field read
+/// writable. The stack is `OpenSslStack`; only its length and elements are read, by the signer
+/// and by the `X509v3_*` surface `x509_v3.c` (10.11) owns.
+///
+/// # Safety
+///
+/// `x` must be a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get0_extensions(x: *const X509) -> *const OpenSslStack {
+    // SAFETY: `x` is live per the contract.
+    unsafe { (*x).cert_info.extensions }
 }
 
 /// `X509_VERSION_1` — `include/openssl/x509.h:651`, the version `X509_set_version` omits from
