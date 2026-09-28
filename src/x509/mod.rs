@@ -206,3 +206,8 @@ pub mod x509_def;
 pub mod x509_meth;
 pub mod x509spki;
 pub mod x_all;
+// Phase 10.14.4's `crypto/x509/v3_genn.c` -- the `GENERAL_NAME`/`GENERAL_NAMES` items and the
+// nine hand-written accessors, the hub every extension table and `v3_utl.rs`'s address checks
+// were measured to wait on. It lands whole; `v3_ncons.c` and `v3_conf.c` are 10.14.4's other two
+// units and are withheld with their measured blockers. See the module docs.
+pub mod v3_genn;

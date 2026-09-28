@@ -478,7 +478,7 @@
         "x25519_fe64_sub",
         "x25519_fe64_tobytes"
       ],
-      "compiler_emitted_count": 14045,
+      "compiler_emitted_count": 14190,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -486,7 +486,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 3646,
+        "implemented": 3684,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -1689,6 +1689,9 @@
           "EC_curve_nid2nist",
           "EC_curve_nist2nid",
           "EC_get_builtin_curves",
+          "EDIPARTYNAME_free",
+          "EDIPARTYNAME_it",
+          "EDIPARTYNAME_new",
           "ENGINE_add",
           "ENGINE_cmd_is_executable",
           "ENGINE_ctrl",
@@ -2593,6 +2596,19 @@
           "EVP_sha512_256",
           "EVP_shake128",
           "EVP_shake256",
+          "GENERAL_NAMES_free",
+          "GENERAL_NAMES_it",
+          "GENERAL_NAMES_new",
+          "GENERAL_NAME_cmp",
+          "GENERAL_NAME_dup",
+          "GENERAL_NAME_free",
+          "GENERAL_NAME_get0_otherName",
+          "GENERAL_NAME_get0_value",
+          "GENERAL_NAME_it",
+          "GENERAL_NAME_new",
+          "GENERAL_NAME_set0_othername",
+          "GENERAL_NAME_set0_value",
+          "GENERAL_NAME_set1_X509_NAME",
           "HMAC",
           "HMAC_CTX_copy",
           "HMAC_CTX_free",
@@ -3134,6 +3150,10 @@
           "OSSL_trace_set_prefix",
           "OSSL_trace_set_suffix",
           "OSSL_trace_string",
+          "OTHERNAME_cmp",
+          "OTHERNAME_free",
+          "OTHERNAME_it",
+          "OTHERNAME_new",
           "OpenSSL_version",
           "OpenSSL_version_num",
           "PBE2PARAM_free",
@@ -3222,6 +3242,8 @@
           "PKCS12_SAFEBAGS_it",
           "PKCS12_SAFEBAG_create0_p8inf",
           "PKCS12_SAFEBAG_create0_pkcs8",
+          "PKCS12_SAFEBAG_create_cert",
+          "PKCS12_SAFEBAG_create_crl",
           "PKCS12_SAFEBAG_create_pkcs8_encrypt",
           "PKCS12_SAFEBAG_create_pkcs8_encrypt_ex",
           "PKCS12_SAFEBAG_create_secret",
@@ -3234,6 +3256,10 @@
           "PKCS12_SAFEBAG_get0_pkcs8",
           "PKCS12_SAFEBAG_get0_safes",
           "PKCS12_SAFEBAG_get0_type",
+          "PKCS12_SAFEBAG_get1_cert",
+          "PKCS12_SAFEBAG_get1_cert_ex",
+          "PKCS12_SAFEBAG_get1_crl",
+          "PKCS12_SAFEBAG_get1_crl_ex",
           "PKCS12_SAFEBAG_get_bag_nid",
           "PKCS12_SAFEBAG_get_nid",
           "PKCS12_SAFEBAG_it",
@@ -3242,6 +3268,7 @@
           "PKCS12_add1_attr_by_NID",
           "PKCS12_add1_attr_by_txt",
           "PKCS12_add_CSPName_asc",
+          "PKCS12_add_cert",
           "PKCS12_add_friendlyname_asc",
           "PKCS12_add_friendlyname_uni",
           "PKCS12_add_friendlyname_utf8",
@@ -3253,6 +3280,9 @@
           "PKCS12_add_safes",
           "PKCS12_add_safes_ex",
           "PKCS12_add_secret",
+          "PKCS12_create",
+          "PKCS12_create_ex",
+          "PKCS12_create_ex2",
           "PKCS12_decrypt_skey",
           "PKCS12_decrypt_skey_ex",
           "PKCS12_free",
@@ -3907,6 +3937,9 @@
           "d2i_EC_PUBKEY",
           "d2i_EC_PUBKEY_bio",
           "d2i_EC_PUBKEY_fp",
+          "d2i_EDIPARTYNAME",
+          "d2i_GENERAL_NAME",
+          "d2i_GENERAL_NAMES",
           "d2i_ISSUER_SIGN_TOOL",
           "d2i_KeyParams",
           "d2i_KeyParams_bio",
@@ -3923,6 +3956,7 @@
           "d2i_OSSL_TIME_SPEC_TIME",
           "d2i_OSSL_TIME_SPEC_WEEKS",
           "d2i_OSSL_TIME_SPEC_X_DAY_OF",
+          "d2i_OTHERNAME",
           "d2i_PBE2PARAM",
           "d2i_PBEPARAM",
           "d2i_PBKDF2PARAM",
@@ -4042,6 +4076,9 @@
           "i2d_EC_PUBKEY",
           "i2d_EC_PUBKEY_bio",
           "i2d_EC_PUBKEY_fp",
+          "i2d_EDIPARTYNAME",
+          "i2d_GENERAL_NAME",
+          "i2d_GENERAL_NAMES",
           "i2d_ISSUER_SIGN_TOOL",
           "i2d_KeyParams",
           "i2d_KeyParams_bio",
@@ -4058,6 +4095,7 @@
           "i2d_OSSL_TIME_SPEC_TIME",
           "i2d_OSSL_TIME_SPEC_WEEKS",
           "i2d_OSSL_TIME_SPEC_X_DAY_OF",
+          "i2d_OTHERNAME",
           "i2d_PBE2PARAM",
           "i2d_PBEPARAM",
           "i2d_PBKDF2PARAM",
@@ -4135,7 +4173,7 @@
           "s2i_ASN1_OCTET_STRING",
           "s2i_ASN1_UTF8STRING"
         ],
-        "scaffolded": 2250
+        "scaffolded": 2212
       },
       "libssl": {
         "authority_exports": 603,
@@ -4146,18 +4184,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 3646,
-      "scaffolded": 2853
+      "implemented": 3684,
+      "scaffolded": 2815
     }
   },
-  "body_hash": "497be6f3677f1e727aeed2f2a0730e6db658939a5091ee867de7b8aac4a0b1a1",
+  "body_hash": "658c5d0a25a93642aa412aa33e930027ecbc08fda665a10122666e48498a87ab",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "0be3675de0d654816cc6224f0f7a0763d3b0884ef8723f7eba701bde76d8294e"
+      "sha256": "db49cfe8e2ed0b0da27600a8df977d6c4fe82f0007163611a60162903a11423a"
     },
     {
       "name": "authority-exports",

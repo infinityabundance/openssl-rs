@@ -42182,6 +42182,46 @@ pub(crate) const PKCS12_ADD_207: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `PKCS12_create_ex2` at `crypto/pkcs12/p12_crt.c:63` (PKCS12_R_INVALID_NULL_ARGUMENT).
+pub(crate) const PKCS12_CRT_63: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_crt.c",
+    line: 63,
+    func: c"PKCS12_create_ex2",
+    lib: 35,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_create_ex2` at `crypto/pkcs12/p12_crt.c:88` (PKCS12_R_CALLBACK_FAILED).
+pub(crate) const PKCS12_CRT_88: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_crt.c",
+    line: 88,
+    func: c"PKCS12_create_ex2",
+    lib: 35,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_create_ex2` at `crypto/pkcs12/p12_crt.c:103` (PKCS12_R_CALLBACK_FAILED).
+pub(crate) const PKCS12_CRT_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_crt.c",
+    line: 103,
+    func: c"PKCS12_create_ex2",
+    lib: 35,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `PKCS12_create_ex2` at `crypto/pkcs12/p12_crt.c:136` (PKCS12_R_CALLBACK_FAILED).
+pub(crate) const PKCS12_CRT_136: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_crt.c",
+    line: 136,
+    func: c"PKCS12_create_ex2",
+    lib: 35,
+    reason: 115,
+    dynamic_reason: false,
+};
+
 /// `PKCS12_init_ex` at `crypto/pkcs12/p12_init.c:23` (ERR_R_ASN1_LIB).
 pub(crate) const PKCS12_INIT_23: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/pkcs12/p12_init.c",
@@ -43740,6 +43780,16 @@ pub(crate) const V3_LIB_306: ErrSite = ErrSite {
     lib: 34,
     reason: 0,
     dynamic_reason: true,
+};
+
+/// `GENERAL_NAME_set1_X509_NAME` at `crypto/x509/v3_genn.c:65` (X509V3_R_INVALID_NULL_ARGUMENT).
+pub(crate) const V3_GENN_65: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_genn.c",
+    line: 65,
+    func: c"GENERAL_NAME_set1_X509_NAME",
+    lib: 34,
+    reason: 107,
+    dynamic_reason: false,
 };
 
 /// `i2s_ASN1_UTF8STRING` at `crypto/x509/v3_utf8.c:34` (ERR_R_PASSED_NULL_PARAMETER).
@@ -49298,6 +49348,10 @@ pub(crate) static ALL: &[ErrSite] = &[
     PKCS12_ADD_162,
     PKCS12_ADD_202,
     PKCS12_ADD_207,
+    PKCS12_CRT_63,
+    PKCS12_CRT_88,
+    PKCS12_CRT_103,
+    PKCS12_CRT_136,
     PKCS12_INIT_23,
     PKCS12_INIT_32,
     PKCS12_INIT_39,
@@ -49454,6 +49508,7 @@ pub(crate) static ALL: &[ErrSite] = &[
     V3_LIB_95,
     V3_LIB_274,
     V3_LIB_306,
+    V3_GENN_65,
     V3_UTF8_34,
     V3_UTF8_49,
     V3_UTF8_53,

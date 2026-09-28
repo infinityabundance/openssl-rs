@@ -4,22 +4,27 @@
 //! union, the four `nid`/`type` readers, the two attribute readers, six constructors and the two
 //! `get1_*` certificate readers. What lands here is everything whose dependency closure is landed.
 //!
-//! ## What is held open, and each with its own measured blocker
+//! ## The six cert/CRL rows, un-withheld by this slice (10.15)
 //!
-//! * `PKCS12_SAFEBAG_get1_cert`/`_crl`/`_ex` (four names) call `ASN1_item_unpack[_ex]` with
-//!   `ASN1_ITEM_rptr(X509)`/`X509_CRL`, and the `_ex` arm also calls `ossl_x509_set0_libctx`/
-//!   `ossl_x509_crl_set0_libctx`. The `X509` and `X509_CRL` items are `crypto/x509/x_x509.c`'s and
-//!   `crypto/x509/x_crl.c`'s, both Phase 11's, so the four cannot be built here.
-//! * `PKCS12_SAFEBAG_create_cert`/`create_crl` call `PKCS12_item_pack_safebag`
-//!   (`crypto/pkcs12/p12_add.c`, 10.3), which is open.
-//! * `PKCS12_SAFEBAG_create_pkcs8_encrypt`/`_ex` call `PKCS8_encrypt[_ex]`
-//!   (`crypto/pkcs12/p12_p8e.c`, 10.4) and `EVP_CIPHER_fetch`. With the PBE pull-forward
-//!   (D443) those landed, so this pair now lands too; the two `get1_*` readers and
-//!   `create_cert`/`create_crl` still wait on Phase 11's `X509_it`/`X509_CRL_it`/
-//!   `ossl_x509*_set0_libctx`.
+//! `PKCS12_SAFEBAG_get1_cert`/`_crl`/`_ex` (four names) call `ASN1_item_unpack[_ex]` with
+//! `ASN1_ITEM_rptr(X509)`/`X509_CRL`, and the `_ex` arm also calls `ossl_x509_set0_libctx`/
+//! `ossl_x509_crl_set0_libctx`; `PKCS12_SAFEBAG_create_cert`/`create_crl` call
+//! `PKCS12_item_pack_safebag`. Every one of those was withheld when this module was written
+//! because the two items and the two `set0_libctx` helpers were **not landed**. 10.8 (`X509_it`,
+//! `ossl_x509_set0_libctx`) and 10.8's CRL object (`X509_CRL_it`, `ossl_x509_crl_set0_libctx`)
+//! then landed them, and 10.3 landed `PKCS12_item_pack_safebag`: the frontier moved and the six
+//! are transcribed here rather than withheld a second time (D451's rule). What remains `open` in
+//! `p12_kiss.c`'s `PKCS12_parse` is `ossl_x509_add_cert_new` (`x509_cmp.c`, 10.14.1), which is
+//! still withheld.
 //!
-//! Each is left `open` in the ledger rather than stubbed, and the court prints each as `pending`
-//! with the blocker rather than driving a fabricated arm.
+//! `PKCS12_SAFEBAG_create_pkcs8_encrypt`/`_ex` call `PKCS8_encrypt[_ex]`
+//! (`crypto/pkcs12/p12_p8e.c`, 10.4) and `EVP_CIPHER_fetch`; with the PBE pull-forward (D443)
+//! those landed, so this pair landed before this slice.
+//!
+//! **No raise of its own.** The six new functions raise nothing directly — `get1_*` lets
+//! `ASN1_item_unpack[_ex]` raise on a decode failure and `create_cert`/`create_crl` delegate to
+//! `PKCS12_item_pack_safebag`, which raises — so the unit's `gen_err_raise_sites.py` entry is
+//! unchanged and its existing coordinates are `err_sites::PKCS12_*`.
 //!
 //! ## The `get0_*` guards are the identity §3.2 measures
 //!
@@ -44,12 +49,14 @@ use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::a_type::{ASN1_TYPE_new, ASN1_TYPE_set};
-use crate::asn1::layout::{Asn1Type, V_ASN1_OCTET_STRING};
+use crate::asn1::asn_pack::{ASN1_item_unpack, ASN1_item_unpack_ex};
+use crate::asn1::layout::{Asn1String, Asn1Type, V_ASN1_OCTET_STRING};
 use crate::asn1::p8_pkey::{PKCS8_pkey_get0_attrs, Pkcs8PrivKeyInfo};
 use crate::asn1::string::{ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new, ASN1_OCTET_STRING_set};
 use crate::asn1::x_sig::{X509Sig, X509_SIG_free};
 use crate::evp::cipher::{EVP_CIPHER_fetch, EVP_CIPHER_free, EvpCipher};
 use crate::evp::legacy_evp::EVP_get_cipherbyname;
+use crate::pkcs12::p12_add::PKCS12_item_pack_safebag;
 use crate::pkcs12::p12_asn::{
     PKCS12_BAGS_free, PKCS12_BAGS_new, PKCS12_SAFEBAG_new, Pkcs12Bags, Pkcs12Safebag,
 };
@@ -62,6 +69,8 @@ use crate::runtime::obj::{
     OBJ_obj2nid,
 };
 use crate::runtime::stack::OpenSslStack;
+use crate::x509::x_crl::{ossl_x509_crl_set0_libctx, X509Crl, X509_CRL_free, X509_CRL_it};
+use crate::x509::x_x509::{ossl_x509_set0_libctx, X509_free, X509_it, X509};
 
 /// `ASN1_TYPE *PKCS12_get_attr(const PKCS12_SAFEBAG *bag, int attr_nid)` —
 /// `crypto/pkcs12/p12_sbag.c:17-20`.
@@ -236,6 +245,180 @@ pub unsafe extern "C" fn PKCS12_SAFEBAG_get0_bag_obj(bag: *const Pkcs12Safebag) 
     let inner = unsafe { (*bag).value.cast::<Pkcs12Bags>() };
     // SAFETY: `inner` is live; its `value` is the `other` arm here.
     unsafe { (*inner).value.cast::<Asn1Type>() }
+}
+
+/// `X509 *PKCS12_SAFEBAG_get1_cert(const PKCS12_SAFEBAG *bag)` —
+/// `crypto/pkcs12/p12_sbag.c:94-102`.
+///
+/// Only a `certBag` whose inner `BAG-TYPE` is `x509Certificate` decodes; anything else answers
+/// NULL without raising. The bytes are unpacked through the static `X509_it`.
+///
+/// # Safety
+/// `bag` is live; the answer is owned by the caller.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_SAFEBAG_get1_cert(bag: *const Pkcs12Safebag) -> *mut X509 {
+    // SAFETY: `bag` is live.
+    if unsafe { PKCS12_SAFEBAG_get_nid(bag) } != NID_certBag {
+        return ptr::null_mut();
+    }
+    // SAFETY: the selector says the union holds a `bag`.
+    let inner = unsafe { (*bag).value.cast::<Pkcs12Bags>() };
+    // SAFETY: `inner` is live and its `type_` is its own object.
+    if unsafe { OBJ_obj2nid((*inner).type_) } != NID_x509Certificate {
+        return ptr::null_mut();
+    }
+    // SAFETY: the inner selector says the octet arm holds the `ASN1_OCTET_STRING`; `X509_it` is
+    // the static item the crate owns.
+    unsafe { ASN1_item_unpack((*inner).value.cast::<Asn1String>(), X509_it()).cast::<X509>() }
+}
+
+/// `X509_CRL *PKCS12_SAFEBAG_get1_crl(const PKCS12_SAFEBAG *bag)` —
+/// `crypto/pkcs12/p12_sbag.c:104-112`.
+///
+/// The `crlBag`/`x509Crl` twin of [`PKCS12_SAFEBAG_get1_cert`], through `X509_CRL_it`.
+///
+/// # Safety
+/// `bag` is live; the answer is owned by the caller.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_SAFEBAG_get1_crl(bag: *const Pkcs12Safebag) -> *mut X509Crl {
+    // SAFETY: `bag` is live.
+    if unsafe { PKCS12_SAFEBAG_get_nid(bag) } != NID_crlBag {
+        return ptr::null_mut();
+    }
+    // SAFETY: the selector says the union holds a `bag`.
+    let inner = unsafe { (*bag).value.cast::<Pkcs12Bags>() };
+    // SAFETY: `inner` is live and its `type_` is its own object.
+    if unsafe { OBJ_obj2nid((*inner).type_) } != NID_x509Crl {
+        return ptr::null_mut();
+    }
+    // SAFETY: the inner selector says the octet arm holds the `ASN1_OCTET_STRING`; `X509_CRL_it`
+    // is the static item the crate owns.
+    unsafe {
+        ASN1_item_unpack((*inner).value.cast::<Asn1String>(), X509_CRL_it()).cast::<X509Crl>()
+    }
+}
+
+/// `X509 *PKCS12_SAFEBAG_get1_cert_ex(const PKCS12_SAFEBAG *bag, OSSL_LIB_CTX *libctx,
+/// const char *propq)` — `crypto/pkcs12/p12_sbag.c:114-130`.
+///
+/// As [`PKCS12_SAFEBAG_get1_cert`], but the decode carries `libctx`/`propq` and the answer is
+/// stamped with them through `ossl_x509_set0_libctx`; a stamping failure releases the decoded
+/// certificate and answers NULL.
+///
+/// # Safety
+/// `bag` is live; `libctx` is NULL or a live context and `propq` NULL or NUL-terminated. The
+/// answer is owned by the caller.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_SAFEBAG_get1_cert_ex(
+    bag: *const Pkcs12Safebag,
+    libctx: *mut core::ffi::c_void,
+    propq: *const c_char,
+) -> *mut X509 {
+    // SAFETY: `bag` is live.
+    if unsafe { PKCS12_SAFEBAG_get_nid(bag) } != NID_certBag {
+        return ptr::null_mut();
+    }
+    // SAFETY: the selector says the union holds a `bag`.
+    let inner = unsafe { (*bag).value.cast::<Pkcs12Bags>() };
+    // SAFETY: `inner` is live and its `type_` is its own object.
+    if unsafe { OBJ_obj2nid((*inner).type_) } != NID_x509Certificate {
+        return ptr::null_mut();
+    }
+    // SAFETY: the inner selector says the octet arm holds the `ASN1_OCTET_STRING`; the context
+    // arguments are the caller's.
+    let ret = unsafe {
+        ASN1_item_unpack_ex(
+            (*inner).value.cast::<Asn1String>(),
+            X509_it(),
+            libctx,
+            propq,
+        )
+        .cast::<X509>()
+    };
+    // SAFETY: `ret` is NULL or a live certificate this frame owns.
+    if unsafe { ossl_x509_set0_libctx(ret, libctx, propq) } == 0 {
+        // SAFETY: `ret` is live and this failure path owns it.
+        unsafe { X509_free(ret) };
+        return ptr::null_mut();
+    }
+    ret
+}
+
+/// `X509_CRL *PKCS12_SAFEBAG_get1_crl_ex(const PKCS12_SAFEBAG *bag, OSSL_LIB_CTX *libctx,
+/// const char *propq)` — `crypto/pkcs12/p12_sbag.c:132-148`.
+///
+/// The `crlBag`/`x509Crl` twin of [`PKCS12_SAFEBAG_get1_cert_ex`], stamping through
+/// `ossl_x509_crl_set0_libctx`.
+///
+/// # Safety
+/// As [`PKCS12_SAFEBAG_get1_cert_ex`], for a CRL. The answer is owned by the caller.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_SAFEBAG_get1_crl_ex(
+    bag: *const Pkcs12Safebag,
+    libctx: *mut core::ffi::c_void,
+    propq: *const c_char,
+) -> *mut X509Crl {
+    // SAFETY: `bag` is live.
+    if unsafe { PKCS12_SAFEBAG_get_nid(bag) } != NID_crlBag {
+        return ptr::null_mut();
+    }
+    // SAFETY: the selector says the union holds a `bag`.
+    let inner = unsafe { (*bag).value.cast::<Pkcs12Bags>() };
+    // SAFETY: `inner` is live and its `type_` is its own object.
+    if unsafe { OBJ_obj2nid((*inner).type_) } != NID_x509Crl {
+        return ptr::null_mut();
+    }
+    // SAFETY: the inner selector says the octet arm holds the `ASN1_OCTET_STRING`; the context
+    // arguments are the caller's.
+    let ret = unsafe {
+        ASN1_item_unpack_ex(
+            (*inner).value.cast::<Asn1String>(),
+            X509_CRL_it(),
+            libctx,
+            propq,
+        )
+        .cast::<X509Crl>()
+    };
+    // SAFETY: `ret` is NULL or a live CRL this frame owns.
+    if unsafe { ossl_x509_crl_set0_libctx(ret, libctx, propq) } == 0 {
+        // SAFETY: `ret` is live and this failure path owns it.
+        unsafe { X509_CRL_free(ret) };
+        return ptr::null_mut();
+    }
+    ret
+}
+
+/// `PKCS12_SAFEBAG *PKCS12_SAFEBAG_create_cert(X509 *x509)` —
+/// `crypto/pkcs12/p12_sbag.c:150-154`.
+///
+/// Packs the certificate through `X509_it` as an `x509Certificate` inside a `certBag`.
+///
+/// # Safety
+/// `x509` is NULL or a live certificate; the answer is owned by the caller and does not adopt
+/// `x509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_SAFEBAG_create_cert(x509: *mut X509) -> *mut Pkcs12Safebag {
+    // SAFETY: `x509`/`X509_it()` are the caller's; the NIDs are the authority's literals.
+    unsafe { PKCS12_item_pack_safebag(x509.cast(), X509_it(), NID_x509Certificate, NID_certBag) }
+}
+
+/// `PKCS12_SAFEBAG *PKCS12_SAFEBAG_create_crl(X509_CRL *crl)` —
+/// `crypto/pkcs12/p12_sbag.c:156-160`.
+///
+/// The `x509Crl`/`crlBag` twin of [`PKCS12_SAFEBAG_create_cert`], through `X509_CRL_it`.
+///
+/// # Safety
+/// `crl` is NULL or a live CRL; the answer is owned by the caller and does not adopt `crl`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_SAFEBAG_create_crl(crl: *mut X509Crl) -> *mut Pkcs12Safebag {
+    // SAFETY: `crl`/`X509_CRL_it()` are the caller's; the NIDs are the authority's literals.
+    unsafe { PKCS12_item_pack_safebag(crl.cast(), X509_CRL_it(), NID_x509Crl, NID_crlBag) }
 }
 
 /// `PKCS12_SAFEBAG *PKCS12_SAFEBAG_create_secret(int type, int vtype,
@@ -536,5 +719,33 @@ mod tests {
         assert_eq!(PKCS12_SAFEBAG_it(), PKCS12_SAFEBAG_it());
         assert_eq!(PKCS12_BAGS_it(), PKCS12_BAGS_it());
         assert_eq!(PKCS12_SAFEBAGS_it(), PKCS12_SAFEBAGS_it());
+    }
+
+    /// The cert/CRL readers refuse a bag whose outer type is not a `certBag`/`crlBag` without
+    /// raising, on both the plain and the context spellings. The positive path needs a certificate
+    /// that encodes, which the RT-PKCS12 court drives from the shared fixed DER.
+    #[test]
+    fn cert_readers_reject_a_secret_bag() {
+        // The item layer and the object table are process-global state.
+        let _guard = crate::test_support::lock_global_state();
+        let value: [c_uchar; 2] = [0xaa, 0xbb];
+        // SAFETY: `value` is two readable bytes and the NIDs are known.
+        let secret = unsafe {
+            PKCS12_SAFEBAG_create_secret(
+                NID_x509Certificate,
+                V_ASN1_OCTET_STRING,
+                value.as_ptr(),
+                2,
+            )
+        };
+        assert!(!secret.is_null());
+        // SAFETY: `secret` is live; the readers inspect its outer type and answer NULL.
+        unsafe {
+            assert!(PKCS12_SAFEBAG_get1_cert(secret).is_null());
+            assert!(PKCS12_SAFEBAG_get1_crl(secret).is_null());
+            assert!(PKCS12_SAFEBAG_get1_cert_ex(secret, ptr::null_mut(), ptr::null()).is_null());
+            assert!(PKCS12_SAFEBAG_get1_crl_ex(secret, ptr::null_mut(), ptr::null()).is_null());
+            PKCS12_SAFEBAG_free(secret);
+        }
     }
 }

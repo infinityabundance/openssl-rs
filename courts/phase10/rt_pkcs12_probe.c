@@ -32,12 +32,12 @@
  * and `PKCS12_newpass` (the password change over a fixed-salt MAC, its result verified both ways).
  *
  * The `PKCS12` container itself (`PKCS12_it`, `i2d_PKCS12`, the `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp`
- * spellings) is driven above. What remains printed as `pending.` is what needs Phase 11's `X509`
- * object graph: the four `get1_*` certificate readers and the two `create_cert`/`create_crl`
- * spellings need `X509_it`/`X509_CRL_it`, `PKCS12_add_cert` and `PKCS12_create(_ex/_ex2)` need
- * `X509_alias_get0`/`X509_keyid_get0`/`X509_check_private_key`/`X509_digest`, and `PKCS12_parse`
- * needs `PKCS12_SAFEBAG_get1_cert_ex`/`ossl_x509_add_cert_new`
- * (docs/PHASE-10-SUBPHASES.md sections 3.2, 3.5).
+ * spellings) is driven above. Since 10.15 the certificate bag builders and the container builder
+ * are driven too, over the shared fixed certificate/CRL DER: `PKCS12_SAFEBAG_create_cert`/`_crl`
+ * and the four `get1_*` readers, `PKCS12_add_cert`, and `PKCS12_create(_ex/_ex2)` with the plain
+ * `data` contentInfo and no MAC so the `PFX` bytes are comparable. What remains printed as
+ * `pending.` is `PKCS12_parse` alone, which needs `ossl_x509_add_cert_new` (`x509_cmp.c`, 10.14.1)
+ * on top of the readers this slice lands (docs/PHASE-10-SUBPHASES.md sections 3.2, 3.5).
  *
  * Everything is borrowed or literal: the DER fixtures below are hand-written constants, the
  * strings are literals, and no pointer address is ever printed (two sides allocate differently).
@@ -58,6 +58,7 @@
 #include <openssl/x509.h>
 
 #include "rt_keyformat_keys.h"
+#include "rt_x509_der.h"
 
 /* ---------------------------------------------------------------------------------------------
  * Output helpers -- every line is `key=value`.
@@ -111,22 +112,9 @@ static void out_err(const char *key)
  * algorithm-identifier rows on Phase 11's `PKCS5_pbe*set*_ex`, and the MAC/KDF rows on 10.4. */
 static void out_pending(void)
 {
-    /* ----- the `X509`-blocked tail, measured on Phase 11's object graph ----- */
-    /* The `get1_*` readers and the certificate bag builders need Phase 11's
-     * `X509_it`/`X509_CRL_it` and `ossl_x509*_set0_libctx`. */
-    printf("pending.PKCS12_SAFEBAG_get1_cert=phase-11-x509\n");
-    printf("pending.PKCS12_SAFEBAG_get1_cert_ex=phase-11-x509\n");
-    printf("pending.PKCS12_SAFEBAG_get1_crl=phase-11-x509\n");
-    printf("pending.PKCS12_SAFEBAG_get1_crl_ex=phase-11-x509\n");
-    printf("pending.PKCS12_SAFEBAG_create_cert=phase-11-x509\n");
-    printf("pending.PKCS12_SAFEBAG_create_crl=phase-11-x509\n");
-    /* `PKCS12_add_cert` needs `X509_alias_get0`/`X509_keyid_get0` and `create_cert`; `create` adds
-     * `X509_check_private_key`/`X509_digest`; `PKCS12_parse` needs `get1_cert_ex` and
-     * `ossl_x509_add_cert_new`. None of those names is landed. */
-    printf("pending.PKCS12_add_cert=phase-11-x509\n");
-    printf("pending.PKCS12_create=phase-11-x509\n");
-    printf("pending.PKCS12_create_ex=phase-11-x509\n");
-    printf("pending.PKCS12_create_ex2=phase-11-x509\n");
+    /* ----- the `PKCS12_parse` tail, measured on `ossl_x509_add_cert_new` ----- */
+    /* `PKCS12_parse` needs `ossl_x509_add_cert_new` (`x509_cmp.c`, 10.14.1), which is withheld
+     * with its own blocker. Every other `pkcs12.h` export this stratum owned is now driven. */
     printf("pending.PKCS12_parse=phase-11-x509\n");
 }
 
@@ -1449,6 +1437,153 @@ static void court_newpass(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * The certificate bag builders and the container builder (10.15).
+ *
+ * The certificate and CRL are decoded from the **shared fixed DER** (`rt_x509_der.h`), so the
+ * `certBag` bytes, the decoded certificate's re-encoded bytes and the plain `PFX` are all
+ * functions of fixed input. `PKCS12_create` is driven with `nid_cert == -1` and `mac_iter == -1`,
+ * which selects the unencrypted `data` contentInfo and no MAC, so no salt or IV is drawn and the
+ * DER is byte-comparable (the authority's default AES arm and MAC would both be random).
+ * --------------------------------------------------------------------------------------------- */
+
+static void court_cert_bags(void)
+{
+    const unsigned char *p;
+    unsigned char *der = NULL;
+    X509 *cert = NULL, *cert2 = NULL;
+    X509_CRL *crl = NULL, *crl2 = NULL;
+    PKCS12_SAFEBAG *bag = NULL;
+    STACK_OF(PKCS12_SAFEBAG) *bags = NULL;
+    PKCS12 *p12 = NULL;
+    long len;
+
+    p = RT_X509_CERT_DER;
+    cert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    p = RT_X509_CRL_DER;
+    crl = d2i_X509_CRL(NULL, &p, (long)RT_X509_CRL_DER_LEN);
+    out_ptr("certbags.cert", cert);
+    out_ptr("certbags.crl", crl);
+
+    /* `PKCS12_SAFEBAG_create_cert` / `_get1_cert`: the bag DER and the decoded DER. */
+    ERR_clear_error();
+    bag = PKCS12_SAFEBAG_create_cert(cert);
+    out_ptr("certbags.create_cert", bag);
+    out_err("certbags.create_cert.err");
+    if (bag != NULL) {
+        out_int("certbags.create_cert.nid", PKCS12_SAFEBAG_get_nid(bag));
+        out_int("certbags.create_cert.bag_nid", PKCS12_SAFEBAG_get_bag_nid(bag));
+        len = i2d_PKCS12_SAFEBAG(bag, &der);
+        out_hex("certbags.create_cert.der", der, len);
+        OPENSSL_free(der);
+        der = NULL;
+        cert2 = PKCS12_SAFEBAG_get1_cert(bag);
+        out_ptr("certbags.get1_cert", cert2);
+        len = i2d_X509(cert2, &der);
+        out_hex("certbags.get1_cert.der", der, len);
+        OPENSSL_free(der);
+        der = NULL;
+        X509_free(cert2);
+        PKCS12_SAFEBAG_free(bag);
+    }
+
+    ERR_clear_error();
+    bag = PKCS12_SAFEBAG_create_cert(cert);
+    cert2 = PKCS12_SAFEBAG_get1_cert_ex(bag, NULL, NULL);
+    out_ptr("certbags.get1_cert_ex", cert2);
+    out_err("certbags.get1_cert_ex.err");
+    X509_free(cert2);
+    PKCS12_SAFEBAG_free(bag);
+
+    /* `PKCS12_SAFEBAG_create_crl` / `_get1_crl`. */
+    ERR_clear_error();
+    bag = PKCS12_SAFEBAG_create_crl(crl);
+    out_ptr("certbags.create_crl", bag);
+    out_err("certbags.create_crl.err");
+    if (bag != NULL) {
+        out_int("certbags.create_crl.nid", PKCS12_SAFEBAG_get_nid(bag));
+        out_int("certbags.create_crl.bag_nid", PKCS12_SAFEBAG_get_bag_nid(bag));
+        len = i2d_PKCS12_SAFEBAG(bag, &der);
+        out_hex("certbags.create_crl.der", der, len);
+        OPENSSL_free(der);
+        der = NULL;
+        crl2 = PKCS12_SAFEBAG_get1_crl(bag);
+        out_ptr("certbags.get1_crl", crl2);
+        len = i2d_X509_CRL(crl2, &der);
+        out_hex("certbags.get1_crl.der", der, len);
+        OPENSSL_free(der);
+        der = NULL;
+        X509_CRL_free(crl2);
+        PKCS12_SAFEBAG_free(bag);
+    }
+
+    ERR_clear_error();
+    bag = PKCS12_SAFEBAG_create_crl(crl);
+    crl2 = PKCS12_SAFEBAG_get1_crl_ex(bag, NULL, NULL);
+    out_ptr("certbags.get1_crl_ex", crl2);
+    out_err("certbags.get1_crl_ex.err");
+    X509_CRL_free(crl2);
+    PKCS12_SAFEBAG_free(bag);
+
+    /* `PKCS12_add_cert`: it builds the collection itself and hands the bag back. */
+    ERR_clear_error();
+    bag = PKCS12_add_cert(&bags, cert);
+    out_ptr("certbags.add_cert", bag);
+    out_err("certbags.add_cert.err");
+    out_int("certbags.add_cert.num", bags != NULL ? sk_PKCS12_SAFEBAG_num(bags) : -1);
+    if (bag != NULL) {
+        len = i2d_PKCS12_SAFEBAG(bag, &der);
+        out_hex("certbags.add_cert.der", der, len);
+        OPENSSL_free(der);
+        der = NULL;
+    }
+    sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free);
+    bags = NULL;
+
+    /* The unencrypted, MAC-free container: same `PFX` from all three spellings. */
+    ERR_clear_error();
+    p12 = PKCS12_create("pass", "name", NULL, cert, NULL, -1, -1, 1, -1, 0);
+    out_ptr("certbags.create", p12);
+    out_err("certbags.create.err");
+    len = i2d_PKCS12(p12, &der);
+    out_hex("certbags.create.der", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+    PKCS12_free(p12);
+
+    ERR_clear_error();
+    p12 = PKCS12_create_ex("pass", "name", NULL, cert, NULL, -1, -1, 1, -1, 0, NULL, NULL);
+    out_ptr("certbags.create_ex", p12);
+    out_err("certbags.create_ex.err");
+    len = i2d_PKCS12(p12, &der);
+    out_hex("certbags.create_ex.der", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+    PKCS12_free(p12);
+
+    ERR_clear_error();
+    p12 = PKCS12_create_ex2("pass", "name", NULL, cert, NULL, -1, -1, 1, -1, 0, NULL, NULL,
+                            NULL, NULL);
+    out_ptr("certbags.create_ex2", p12);
+    out_err("certbags.create_ex2.err");
+    len = i2d_PKCS12(p12, &der);
+    out_hex("certbags.create_ex2.der", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+    PKCS12_free(p12);
+
+    /* A `certBag` is not a `crlBag` and a `secretBag` is neither; each refusal is its own read
+     * with no error raised. */
+    bag = PKCS12_SAFEBAG_create_cert(cert);
+    ERR_clear_error();
+    out_ptr("certbags.get1_crl_of_cert", PKCS12_SAFEBAG_get1_crl(bag));
+    out_err("certbags.get1_crl_of_cert.err");
+    PKCS12_SAFEBAG_free(bag);
+
+    X509_free(cert);
+    X509_CRL_free(crl);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * The refusals, each with the error queue.
  * --------------------------------------------------------------------------------------------- */
 
@@ -1490,6 +1625,7 @@ int main(void)
     court_add_key();
     court_add_safe();
     court_newpass();
+    court_cert_bags();
     out_pending();
     return 0;
 }

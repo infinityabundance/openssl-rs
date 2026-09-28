@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4504,
+      "sites": 4509,
       "unattributed": 0
     },
     "covered_files": [
@@ -363,6 +363,7 @@
       "crypto/pkcs12/p12_decr.c",
       "crypto/pkcs12/p12_sbag.c",
       "crypto/pkcs12/p12_add.c",
+      "crypto/pkcs12/p12_crt.c",
       "crypto/pkcs12/p12_init.c",
       "crypto/pkcs12/p12_mutl.c",
       "crypto/pkcs12/p12_key.c",
@@ -378,6 +379,7 @@
       "crypto/x509/v3_ia5.c",
       "crypto/x509/v3_skid.c",
       "crypto/x509/v3_lib.c",
+      "crypto/x509/v3_genn.c",
       "crypto/x509/v3_utf8.c",
       "crypto/x509/x509_cmp.c",
       "crypto/x509/x_all.c",
@@ -63757,6 +63759,66 @@
         "rel_source": "crypto/pkcs12/p12_add.c"
       },
       {
+        "const_name": "PKCS12_CRT_63",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_crt.c",
+        "function": "PKCS12_create_ex2",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 63,
+        "macro": "ERR_raise",
+        "reason": 104,
+        "reason_symbol": "PKCS12_R_INVALID_NULL_ARGUMENT",
+        "rel_source": "crypto/pkcs12/p12_crt.c"
+      },
+      {
+        "const_name": "PKCS12_CRT_88",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_crt.c",
+        "function": "PKCS12_create_ex2",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 88,
+        "macro": "ERR_raise",
+        "reason": 115,
+        "reason_symbol": "PKCS12_R_CALLBACK_FAILED",
+        "rel_source": "crypto/pkcs12/p12_crt.c"
+      },
+      {
+        "const_name": "PKCS12_CRT_103",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_crt.c",
+        "function": "PKCS12_create_ex2",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 103,
+        "macro": "ERR_raise",
+        "reason": 115,
+        "reason_symbol": "PKCS12_R_CALLBACK_FAILED",
+        "rel_source": "crypto/pkcs12/p12_crt.c"
+      },
+      {
+        "const_name": "PKCS12_CRT_136",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pkcs12/p12_crt.c",
+        "function": "PKCS12_create_ex2",
+        "generated": false,
+        "lib": 35,
+        "lib_symbol": "ERR_LIB_PKCS12",
+        "line": 136,
+        "macro": "ERR_raise",
+        "reason": 115,
+        "reason_symbol": "PKCS12_R_CALLBACK_FAILED",
+        "rel_source": "crypto/pkcs12/p12_crt.c"
+      },
+      {
         "const_name": "PKCS12_INIT_23",
         "data_format": null,
         "dynamic_reason": false,
@@ -66095,6 +66157,21 @@
         "reason": 0,
         "reason_symbol": null,
         "rel_source": "crypto/x509/v3_lib.c"
+      },
+      {
+        "const_name": "V3_GENN_65",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/x509/v3_genn.c",
+        "function": "GENERAL_NAME_set1_X509_NAME",
+        "generated": false,
+        "lib": 34,
+        "lib_symbol": "ERR_LIB_X509V3",
+        "line": 65,
+        "macro": "ERR_raise",
+        "reason": 107,
+        "reason_symbol": "X509V3_R_INVALID_NULL_ARGUMENT",
+        "rel_source": "crypto/x509/v3_genn.c"
       },
       {
         "const_name": "V3_UTF8_34",
@@ -69883,6 +69960,11 @@
       "sha256": "6cc4ec855b9f3c5292c9cff88c7de3f8ab3f846391148c4caa88e78516c8de9c"
     },
     {
+      "name": "authority:crypto/pkcs12/p12_crt.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_crt.c",
+      "sha256": "6a65a3f1b6fa07bada7021a04ebb5b538820cf60246da15b6562b0932cfc3af8"
+    },
+    {
       "name": "authority:crypto/pkcs12/p12_init.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/pkcs12/p12_init.c",
       "sha256": "48dd98f87510e23fb59c450c54528675e76c0743ed6329dfbc665a46c0776399"
@@ -69956,6 +70038,11 @@
       "name": "authority:crypto/x509/v3_lib.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/x509/v3_lib.c",
       "sha256": "6f1092daad6075488c3bcfbb9aa40204c761fea03f7e76e3f75c5da7b4f682b0"
+    },
+    {
+      "name": "authority:crypto/x509/v3_genn.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/x509/v3_genn.c",
+      "sha256": "fbe8f7529d75e6d9a14616dd376e40bf79196d34908bd34560e44e564920b3ca"
     },
     {
       "name": "authority:crypto/x509/v3_utf8.c",

@@ -1,11 +1,11 @@
 //! `crypto/pkcs12/p12_crt.c` — the `PKCS12_create` worker and the `add_*` family. Phase 10 (10.3).
 //!
-//! The unit is 409 lines and eleven exports, and **seven of them land here**: the `add_*` family
+//! The unit is 409 lines and eleven exports, and **all eleven now land**: the `add_*` family
 //! [`PKCS12_add_secret`], [`PKCS12_add_key`]/[`PKCS12_add_key_ex`],
-//! [`PKCS12_add_safe`]/[`PKCS12_add_safe_ex`] and [`PKCS12_add_safes`]/[`PKCS12_add_safes_ex`].
-//! The container builder's two remaining arms, `PKCS12_create(_ex/_ex2)` and `PKCS12_add_cert`,
-//! stay `open` on Phase 11's certificate object graph and the court prints each as `pending`,
-//! never as a pass (docs/PHASE-10-SUBPHASES.md §3.5).
+//! [`PKCS12_add_safe`]/[`PKCS12_add_safe_ex`] and [`PKCS12_add_safes`]/[`PKCS12_add_safes_ex`]
+//! landed first; 10.15 adds the container builder's two remaining arms [`PKCS12_create`]/
+//! [`PKCS12_create_ex`]/[`PKCS12_create_ex2`] and [`PKCS12_add_cert`], with their three static
+//! helpers `copy_bag_attr`, `pkcs12_add_cert_bag` and `pkcs12_remove_bag`.
 //!
 //! [`PKCS12_add_secret`] was the first to land (its only callees are
 //! `PKCS12_SAFEBAG_create_secret` from `p12_sbag.rs` and the internal `pkcs12_add_bag`, which uses
@@ -16,40 +16,60 @@
 //! `PKCS12_pack_p7encdata_ex` supply `PKCS12_add_safe(_ex)`'s encrypted arm; so both pairs land
 //! here.
 //!
-//! **The two that remain open were measured, not assumed.** `nm --undefined-only` over the
-//! authority's `libcrypto-lib-p12_crt.o` shows the closure of `PKCS12_create(_ex/_ex2)`/`_add_cert`
-//! reaching `X509_check_private_key`, `X509_digest`, `X509_alias_get0`, `X509_keyid_get0`,
-//! `PKCS12_SAFEBAG_create_cert` (all Phase 11's `X509` object graph) and `X509at_add1_attr`;
-//! `EVP_PKEY_get_attr`/`_by_NID` are only on the `copy_bag_attr` path those two share. None of
-//! the `X509_*` names is landed, so nothing of theirs is stubbed.
+//! **The container builder was measured, not assumed, and this slice is what the frontier now
+//! allows.** `nm --undefined-only` over the authority's `libcrypto-lib-p12_crt.o` had shown the
+//! closure of `PKCS12_create(_ex/_ex2)`/`_add_cert` reaching `X509_check_private_key`,
+//! `X509_digest`, `X509_alias_get0`, `X509_keyid_get0`, `PKCS12_SAFEBAG_create_cert` and
+//! `X509at_add1_attr`; the first five have since landed (10.14.1's `x509_cmp.rs`, 10.14.2's
+//! `x_all.rs`, 10.12's `x_x509a.rs`, 10.15's `p12_sbag.rs`) and `X509at_add1_attr` has been
+//! landed since 10.11 (`x509_att.rs`), so the builder is transcribed rather than withheld again.
+//! Its only remaining unlanded callee, `EVP_PKEY_get_attr`/`_by_NID`, is landed too (Phase 7's
+//! `evp_pkey.rs`). The two `pkcs12.h` exports still `open` in the whole stratum belong to
+//! `p12_kiss.c`'s `PKCS12_parse` and `store_lib.c`'s `OSSL_STORE_load`.
 //!
-//! The unit raises nothing of its own on the landed path, and `pkcs12_add_bag` raises nothing at
-//! all, so `crypto/pkcs12/p12_crt.c` is deliberately **not** an entry in
-//! `gen_err_raise_sites.py`'s `COVERED_FILES`: an entry would read as coverage this slice does
-//! not have. The file's other raise sites belong to the `create`/`add_key` arms that remain open
-//! and land with them.
+//! `copy_bag_attr` and the two bag-management helpers raise nothing; the builder's four raise
+//! sites (`PKCS12_R_INVALID_NULL_ARGUMENT` once, `PKCS12_R_CALLBACK_FAILED` three times) are now
+//! reachable, so `crypto/pkcs12/p12_crt.c` is an entry in `gen_err_raise_sites.py`'s
+//! `COVERED_FILES` and its coordinates are `err_sites::PKCS12_CRT_*`.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::layout::V_ASN1_OCTET_STRING;
 use crate::asn1::p8_pkey::PKCS8_PRIV_KEY_INFO_free;
-use crate::evp::evp_pkey::EVP_PKEY2PKCS8;
+use crate::evp::evp_pkey::{EVP_PKEY_get_attr, EVP_PKEY_get_attr_by_NID, EVP_PKEY2PKCS8};
+use crate::evp::legacy_sha::EVP_sha1;
 use crate::evp::pkey::EvpPkey;
 use crate::pkcs12::p12_add::{PKCS12_pack_authsafes, PKCS12_pack_p7data, PKCS12_pack_p7encdata_ex};
 use crate::pkcs12::p12_asn::PKCS12_free;
 use crate::pkcs12::p12_asn::{PKCS12_SAFEBAG_free, Pkcs12, Pkcs12Safebag};
-use crate::pkcs12::p12_attr::PKCS8_add_keyusage;
+use crate::pkcs12::p12_attr::{
+    PKCS12_add_friendlyname_utf8, PKCS12_add_localkeyid, PKCS8_add_keyusage,
+};
 use crate::pkcs12::p12_init::PKCS12_init_ex;
-use crate::pkcs12::p12_sbag::PKCS12_SAFEBAG_create_secret;
+use crate::pkcs12::p12_mutl::PKCS12_set_mac;
 use crate::pkcs12::p12_sbag::{
     PKCS12_SAFEBAG_create0_p8inf, PKCS12_SAFEBAG_create_pkcs8_encrypt_ex,
 };
+use crate::pkcs12::p12_sbag::{PKCS12_SAFEBAG_create_cert, PKCS12_SAFEBAG_create_secret};
+use crate::pkcs7::pk7_asn1::Pkcs7;
 use crate::pkcs7::PKCS7_free;
-use crate::runtime::obj::{NID_pbe_WithSHA1And40BitRC2_CBC, NID_pkcs7_data};
-use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_push, OpenSslStack};
+use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::obj::{
+    NID_LocalKeySet, NID_aes_256_cbc, NID_ms_csp_name, NID_pbe_WithSHA1And40BitRC2_CBC,
+    NID_pkcs7_data, NID_undef,
+};
+use crate::runtime::stack::{
+    OPENSSL_sk_delete_ptr, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num,
+    OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
+};
+use crate::x509::x509_att::X509at_add1_attr;
+use crate::x509::x509_cmp::X509_check_private_key;
+use crate::x509::x_all::X509_digest;
+use crate::x509::x_x509::X509;
+use crate::x509::x_x509a::{X509_alias_get0, X509_keyid_get0};
 
 /// `static int pkcs12_add_bag(STACK_OF(PKCS12_SAFEBAG) **pbags, PKCS12_SAFEBAG *bag)` —
 /// `crypto/pkcs12/p12_crt.c:362-385`.
@@ -375,6 +395,479 @@ pub unsafe extern "C" fn PKCS12_add_safe(
     }
 }
 
+/// `typedef int PKCS12_create_cb(PKCS12_SAFEBAG *bag, void *cbarg)` — `include/openssl/pkcs12.h:305`.
+///
+/// The consumer callback `PKCS12_create_ex2` invokes once per bag: `-1` aborts the build, `0`
+/// drops that bag, anything else keeps it.
+#[allow(non_camel_case_types)]
+pub type PKCS12_create_cb =
+    Option<unsafe extern "C" fn(bag: *mut Pkcs12Safebag, cbarg: *mut c_void) -> c_int>;
+
+/// `EVP_MAX_MD_SIZE` — `include/openssl/evp.h:175`: 64, the widest digest the `keyid` buffer must
+/// hold.
+const EVP_MAX_MD_SIZE: usize = 64;
+
+/// `PKCS12_DEFAULT_ITER` — `crypto/pkcs12/p12_local.h:60`: 2048, the iteration count both the
+/// certificate and the MAC default to.
+const PKCS12_DEFAULT_ITER: c_int = 2048;
+
+/// `void (*)(void *)` adapter for `sk_PKCS7_pop_free(safes, PKCS7_free)`.
+///
+/// # Safety
+/// `p` is NULL or a live `PKCS7` this frame owns.
+unsafe extern "C" fn pkcs7_free_void(p: *mut c_void) {
+    // SAFETY: the stack held `PKCS7` values per the caller's contract.
+    unsafe { PKCS7_free(p.cast::<Pkcs7>()) }
+}
+
+/// `void (*)(void *)` adapter for `sk_PKCS12_SAFEBAG_pop_free(bags, PKCS12_SAFEBAG_free)`.
+///
+/// # Safety
+/// `p` is NULL or a live `PKCS12_SAFEBAG` this frame owns.
+unsafe extern "C" fn safebag_free_void(p: *mut c_void) {
+    // SAFETY: the stack held `PKCS12_SAFEBAG` values per the caller's contract.
+    unsafe { PKCS12_SAFEBAG_free(p.cast::<Pkcs12Safebag>()) }
+}
+
+/// `static int copy_bag_attr(PKCS12_SAFEBAG *bag, EVP_PKEY *pkey, int nid)` —
+/// `crypto/pkcs12/p12_crt.c:26-33`.
+///
+/// Copies the `pkey` attribute selected by `nid` onto the bag's attribute stack, or does nothing
+/// and answers 1 when the key does not carry it. A duplicate OID is refused through
+/// `X509at_add1_attr`'s guard, which is what the authority's return-value test observes.
+///
+/// # Safety
+/// `bag` is live; `pkey` is live.
+unsafe fn copy_bag_attr(bag: *mut Pkcs12Safebag, pkey: *mut EvpPkey, nid: c_int) -> c_int {
+    // SAFETY: `pkey` is live per the caller's contract.
+    let idx = unsafe { EVP_PKEY_get_attr_by_NID(pkey, nid, -1) };
+    if idx < 0 {
+        return 1;
+    }
+    // SAFETY: `idx` is a live index into `pkey`'s own attribute stack; the attribute is borrowed.
+    let attr = unsafe { EVP_PKEY_get_attr(pkey, idx) };
+    // SAFETY: `bag` is live, so its `attrib` slot is writable; `attr` is live.
+    c_int::from(!unsafe { X509at_add1_attr(&raw mut (*bag).attrib, attr) }.is_null())
+}
+
+/// `static int pkcs12_remove_bag(STACK_OF(PKCS12_SAFEBAG) **pbags, PKCS12_SAFEBAG *bag)` —
+/// `crypto/pkcs12/p12_crt.c:347-360`.
+///
+/// Removes and frees `bag` from `*pbags`. A NULL `pbags` or `bag` answers 1 (nothing to do); a
+/// bag not on the stack answers 0 and is **not** freed, exactly as the authority leaves it.
+///
+/// # Safety
+/// `pbags` is NULL or a live stack slot; `bag` is NULL or a live bag owned by the caller.
+unsafe fn pkcs12_remove_bag(pbags: *mut *mut OpenSslStack, bag: *mut Pkcs12Safebag) -> c_int {
+    if pbags.is_null() || bag.is_null() {
+        return 1;
+    }
+    // SAFETY: `pbags` is the caller's slot and `*pbags` is a live stack; `bag` is live.
+    let tmp = unsafe { OPENSSL_sk_delete_ptr(*pbags, bag.cast()) };
+    if tmp.is_null() {
+        return 0;
+    }
+    // SAFETY: `tmp` is the removed element, live and transferred to this call.
+    unsafe { PKCS12_SAFEBAG_free(tmp.cast::<Pkcs12Safebag>()) };
+    1
+}
+
+/// `static PKCS12_SAFEBAG *pkcs12_add_cert_bag(STACK_OF(PKCS12_SAFEBAG) **pbags, X509 *cert,
+/// const char *name, int namelen, unsigned char *keyid, int keyidlen)` —
+/// `crypto/pkcs12/p12_crt.c:189-216`.
+///
+/// Builds the `certBag`, stamps the optional friendly name and local key id, and appends it to
+/// `*pbags`. On any failure the half-built bag is released and NULL answered.
+///
+/// # Safety
+/// `pbags` is NULL or a writable stack slot; `cert` is live; `name` is NULL or readable for
+/// `namelen` bytes; `keyid` is NULL or readable for `keyidlen` bytes. The answer is owned by the
+/// caller (and borrowed by `*pbags` on success).
+unsafe fn pkcs12_add_cert_bag(
+    pbags: *mut *mut OpenSslStack,
+    cert: *mut X509,
+    name: *const c_char,
+    namelen: c_int,
+    keyid: *mut c_uchar,
+    keyidlen: c_int,
+) -> *mut Pkcs12Safebag {
+    // SAFETY: `cert` is live per the caller's contract.
+    let bag = unsafe { PKCS12_SAFEBAG_create_cert(cert) };
+    if bag.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: every pointer is checked before use; `bag` is live.
+    unsafe {
+        if !name.is_null() && PKCS12_add_friendlyname_utf8(bag, name, namelen) == 0 {
+            PKCS12_SAFEBAG_free(bag);
+            return ptr::null_mut();
+        }
+        if !keyid.is_null() && PKCS12_add_localkeyid(bag, keyid, keyidlen) == 0 {
+            PKCS12_SAFEBAG_free(bag);
+            return ptr::null_mut();
+        }
+        if pkcs12_add_bag(pbags, bag) == 0 {
+            PKCS12_SAFEBAG_free(bag);
+            return ptr::null_mut();
+        }
+    }
+    bag
+}
+
+/// `PKCS12_SAFEBAG *PKCS12_add_cert(STACK_OF(PKCS12_SAFEBAG) **pbags, X509 *cert)` —
+/// `crypto/pkcs12/p12_crt.c:218-232`.
+///
+/// Carries the certificate's own friendly name and local key id (if present) onto the bag.
+///
+/// # Safety
+/// `pbags` is NULL or a writable stack slot; `cert` is live. The answer is owned by the caller
+/// (and borrowed by `*pbags` on success).
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_add_cert(
+    pbags: *mut *mut OpenSslStack,
+    cert: *mut X509,
+) -> *mut Pkcs12Safebag {
+    let mut namelen: c_int = -1;
+    let mut keyidlen: c_int = -1;
+    // SAFETY: `cert` is live per the caller's contract; both length slots are this frame's.
+    let name = unsafe { X509_alias_get0(cert, &raw mut namelen) }.cast::<c_char>();
+    // SAFETY: as above.
+    let keyid = unsafe { X509_keyid_get0(cert, &raw mut keyidlen) };
+    // SAFETY: the arguments are the caller's and `cert` is live.
+    unsafe { pkcs12_add_cert_bag(pbags, cert, name, namelen, keyid, keyidlen) }
+}
+
+/// `PKCS12 *PKCS12_create_ex2(const char *pass, const char *name, EVP_PKEY *pkey, X509 *cert,
+/// STACK_OF(X509) *ca, int nid_key, int nid_cert, int iter, int mac_iter, int keytype,
+/// OSSL_LIB_CTX *ctx, const char *propq, PKCS12_create_cb *cb, void *cbarg)` —
+/// `crypto/pkcs12/p12_crt.c:35-169`.
+///
+/// The full container builder. The C `goto err` is written as a function-local `'err` block that
+/// jumps to the shared cleanup below, so the release order (`p12`, then `safes`, then `bags`) is
+/// the same on every failure path. A `nid_cert`/`nid_key` of `NID_undef` defaults to AES-256-CBC,
+/// and a zero `iter`/`mac_iter` to `PKCS12_DEFAULT_ITER`; a `mac_iter` of `-1` skips the MAC.
+///
+/// # Safety
+/// `pass` is NULL or a string of the length the callers pass; `pkey`/`cert`/`ca` are NULL or live;
+/// `ctx` is NULL or a live context and `propq` NULL or NUL-terminated; `cb`/`cbarg` are the
+/// caller's. The answer is owned by the caller.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_create_ex2(
+    pass: *const c_char,
+    mut name: *const c_char,
+    pkey: *mut EvpPkey,
+    cert: *mut X509,
+    ca: *mut OpenSslStack,
+    nid_key: c_int,
+    nid_cert: c_int,
+    iter: c_int,
+    mac_iter: c_int,
+    keytype: c_int,
+    ctx: *mut c_void,
+    propq: *const c_char,
+    cb: PKCS12_create_cb,
+    cbarg: *mut c_void,
+) -> *mut Pkcs12 {
+    let mut p12: *mut Pkcs12 = ptr::null_mut();
+    let mut safes: *mut OpenSslStack = ptr::null_mut();
+    let mut bags: *mut OpenSslStack = ptr::null_mut();
+    let mut keyid = [0 as c_uchar; EVP_MAX_MD_SIZE];
+    let mut keyidlen: c_uint = 0;
+    let mut namelen: c_int = -1;
+    let mut pkeyidlen: c_int = -1;
+
+    let nid_cert = if nid_cert == NID_undef {
+        NID_aes_256_cbc
+    } else {
+        nid_cert
+    };
+    let nid_key = if nid_key == NID_undef {
+        NID_aes_256_cbc
+    } else {
+        nid_key
+    };
+    let iter = if iter == 0 { PKCS12_DEFAULT_ITER } else { iter };
+    let mac_iter = if mac_iter == 0 {
+        PKCS12_DEFAULT_ITER
+    } else {
+        mac_iter
+    };
+
+    // The C `goto err` target. Every failure `break 'err`; success falls off the end with a live
+    // `p12` and both stacks released below.
+    'err: {
+        if pkey.is_null() && cert.is_null() && ca.is_null() {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&err_sites::PKCS12_CRT_63) };
+            break 'err;
+        }
+
+        if !pkey.is_null() && !cert.is_null() {
+            // SAFETY: both are live per the contract.
+            if unsafe { X509_check_private_key(cert, pkey) } == 0 {
+                break 'err;
+            }
+            // SAFETY: `cert` is live; `keyid`/`keyidlen` are this frame's.
+            if unsafe { X509_digest(cert, EVP_sha1(), keyid.as_mut_ptr(), &raw mut keyidlen) } == 0
+            {
+                break 'err;
+            }
+        }
+
+        if !cert.is_null() {
+            if name.is_null() {
+                // SAFETY: `cert` is live; `namelen` is this frame's.
+                name = unsafe { X509_alias_get0(cert, &raw mut namelen) }.cast::<c_char>();
+            }
+            let pkeyid: *mut c_uchar;
+            if keyidlen > 0 {
+                pkeyid = keyid.as_mut_ptr();
+                pkeyidlen = keyidlen as c_int;
+            } else {
+                // SAFETY: `cert` is live; `pkeyidlen` is this frame's.
+                pkeyid = unsafe { X509_keyid_get0(cert, &raw mut pkeyidlen) };
+            }
+
+            // SAFETY: `cert` is live; the rest is the caller's or this frame's.
+            let bag = unsafe {
+                pkcs12_add_cert_bag(&raw mut bags, cert, name, namelen, pkeyid, pkeyidlen)
+            };
+            if let Some(cb_fn) = cb {
+                // SAFETY: `cb_fn` is the caller's callback; `bag` may be NULL exactly as the
+                // authority passes it.
+                let cbret = unsafe { cb_fn(bag, cbarg) };
+                if cbret == -1 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::PKCS12_CRT_88) };
+                    break 'err;
+                } else if cbret == 0 {
+                    // SAFETY: `bags`/`bag` are the caller's and this frame's.
+                    unsafe { pkcs12_remove_bag(&raw mut bags, bag) };
+                }
+            }
+        }
+
+        // Add all other certificates.
+        // SAFETY: `ca` is NULL or a live stack; a NULL stack yields a non-positive count.
+        let ca_num = unsafe { OPENSSL_sk_num(ca) };
+        for i in 0..ca_num {
+            // SAFETY: `ca` is live for the count above; `i` is in range.
+            let elem = unsafe { OPENSSL_sk_value(ca, i) }.cast::<X509>();
+            // SAFETY: `elem` is a live certificate; the stack slot is this frame's.
+            let bag = unsafe { PKCS12_add_cert(&raw mut bags, elem) };
+            if bag.is_null() {
+                break 'err;
+            }
+            if let Some(cb_fn) = cb {
+                // SAFETY: `cb_fn` is the caller's callback; `bag` is live.
+                let cbret = unsafe { cb_fn(bag, cbarg) };
+                if cbret == -1 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::PKCS12_CRT_103) };
+                    break 'err;
+                } else if cbret == 0 {
+                    // SAFETY: `bags`/`bag` are this frame's.
+                    unsafe { pkcs12_remove_bag(&raw mut bags, bag) };
+                }
+            }
+        }
+
+        let safe_failed = !bags.is_null() && {
+            // SAFETY: `bags` is NULL or a live stack; the context arguments are the caller's.
+            unsafe { PKCS12_add_safe_ex(&raw mut safes, bags, nid_cert, iter, pass, ctx, propq) }
+        } == 0;
+        if safe_failed {
+            break 'err;
+        }
+
+        // SAFETY: `bags` is NULL or a live stack this frame owns.
+        unsafe { OPENSSL_sk_pop_free(bags, Some(safebag_free_void)) };
+        bags = ptr::null_mut();
+
+        if !pkey.is_null() {
+            // SAFETY: `pkey` is live; the rest is the caller's or this frame's.
+            let bag = unsafe {
+                PKCS12_add_key_ex(
+                    &raw mut bags,
+                    pkey,
+                    keytype,
+                    iter,
+                    nid_key,
+                    pass,
+                    ctx,
+                    propq,
+                )
+            };
+            if bag.is_null() {
+                break 'err;
+            }
+
+            // SAFETY: `bag`/`pkey` are live.
+            if unsafe { copy_bag_attr(bag, pkey, NID_ms_csp_name) } == 0 {
+                break 'err;
+            }
+            // SAFETY: as above.
+            if unsafe { copy_bag_attr(bag, pkey, NID_LocalKeySet) } == 0 {
+                break 'err;
+            }
+
+            // SAFETY: `bag` is live; `name` is NULL or readable.
+            if !name.is_null() && unsafe { PKCS12_add_friendlyname_utf8(bag, name, -1) } == 0 {
+                break 'err;
+            }
+            let keyid_failed = keyidlen != 0 && {
+                // SAFETY: `bag` is live; `keyid` is this frame's buffer of `keyidlen` bytes.
+                unsafe { PKCS12_add_localkeyid(bag, keyid.as_mut_ptr(), keyidlen as c_int) }
+            } == 0;
+            if keyid_failed {
+                break 'err;
+            }
+            if let Some(cb_fn) = cb {
+                // SAFETY: `cb_fn` is the caller's callback; `bag` is live.
+                let cbret = unsafe { cb_fn(bag, cbarg) };
+                if cbret == -1 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::PKCS12_CRT_136) };
+                    break 'err;
+                } else if cbret == 0 {
+                    // SAFETY: `bags`/`bag` are this frame's.
+                    unsafe { pkcs12_remove_bag(&raw mut bags, bag) };
+                }
+            }
+        }
+
+        let safe_failed = !bags.is_null() && {
+            // SAFETY: `bags` is NULL or a live stack; the call takes ownership of `safes` on
+            // success.
+            unsafe { PKCS12_add_safe(&raw mut safes, bags, -1, 0, ptr::null()) }
+        } == 0;
+        if safe_failed {
+            break 'err;
+        }
+
+        // SAFETY: `bags` is NULL or a live stack this frame owns.
+        unsafe { OPENSSL_sk_pop_free(bags, Some(safebag_free_void)) };
+        bags = ptr::null_mut();
+
+        // SAFETY: `safes` is NULL or a live stack; the context arguments are the caller's.
+        p12 = unsafe { PKCS12_add_safes_ex(safes, 0, ctx, propq) };
+        if p12.is_null() {
+            break 'err;
+        }
+
+        // SAFETY: `safes` is NULL or a live stack this frame owns.
+        unsafe { OPENSSL_sk_pop_free(safes, Some(pkcs7_free_void)) };
+        safes = ptr::null_mut();
+
+        let mac_failed = mac_iter != -1 && {
+            // SAFETY: `p12` is live; `pass`/`salt`/`md` are the caller's (or NULL).
+            unsafe { PKCS12_set_mac(p12, pass, -1, ptr::null_mut(), 0, mac_iter, ptr::null()) }
+        } == 0;
+        if mac_failed {
+            // SAFETY: `p12` is live and this failure path still owns it.
+            unsafe { PKCS12_free(p12) };
+            p12 = ptr::null_mut();
+            break 'err;
+        }
+    }
+
+    if p12.is_null() {
+        // SAFETY: `safes`/`bags` are NULL or live stacks this frame owns.
+        unsafe {
+            OPENSSL_sk_pop_free(safes, Some(pkcs7_free_void));
+            OPENSSL_sk_pop_free(bags, Some(safebag_free_void));
+        }
+    }
+    p12
+}
+
+/// `PKCS12 *PKCS12_create_ex(const char *pass, const char *name, EVP_PKEY *pkey, X509 *cert,
+/// STACK_OF(X509) *ca, int nid_key, int nid_cert, int iter, int mac_iter, int keytype,
+/// OSSL_LIB_CTX *ctx, const char *propq)` — `crypto/pkcs12/p12_crt.c:171-179`.
+///
+/// # Safety
+/// As [`PKCS12_create_ex2`], without the callback.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_create_ex(
+    pass: *const c_char,
+    name: *const c_char,
+    pkey: *mut EvpPkey,
+    cert: *mut X509,
+    ca: *mut OpenSslStack,
+    nid_key: c_int,
+    nid_cert: c_int,
+    iter: c_int,
+    mac_iter: c_int,
+    keytype: c_int,
+    ctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut Pkcs12 {
+    // SAFETY: the arguments are forwarded under this function's contract, with no callback.
+    unsafe {
+        PKCS12_create_ex2(
+            pass,
+            name,
+            pkey,
+            cert,
+            ca,
+            nid_key,
+            nid_cert,
+            iter,
+            mac_iter,
+            keytype,
+            ctx,
+            propq,
+            None,
+            ptr::null_mut(),
+        )
+    }
+}
+
+/// `PKCS12 *PKCS12_create(const char *pass, const char *name, EVP_PKEY *pkey, X509 *cert,
+/// STACK_OF(X509) *ca, int nid_key, int nid_cert, int iter, int mac_iter, int keytype)` —
+/// `crypto/pkcs12/p12_crt.c:181-187`.
+///
+/// # Safety
+/// As [`PKCS12_create_ex`], without the context arguments.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn PKCS12_create(
+    pass: *const c_char,
+    name: *const c_char,
+    pkey: *mut EvpPkey,
+    cert: *mut X509,
+    ca: *mut OpenSslStack,
+    nid_key: c_int,
+    nid_cert: c_int,
+    iter: c_int,
+    mac_iter: c_int,
+    keytype: c_int,
+) -> *mut Pkcs12 {
+    // SAFETY: the arguments are forwarded under this function's contract, with no context.
+    unsafe {
+        PKCS12_create_ex(
+            pass,
+            name,
+            pkey,
+            cert,
+            ca,
+            nid_key,
+            nid_cert,
+            iter,
+            mac_iter,
+            keytype,
+            ptr::null_mut(),
+            ptr::null(),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -405,5 +898,28 @@ mod tests {
             OPENSSL_sk_free(bags);
             PKCS12_SAFEBAG_free(bag);
         }
+    }
+
+    /// An all-NULL build request is refused before any allocation, through the covered
+    /// `PKCS12_R_INVALID_NULL_ARGUMENT` site, and answers NULL.
+    #[test]
+    fn create_refuses_an_all_null_request() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: every pointer is a NULL the authority tests for first, and every count is zero.
+        let p12 = unsafe {
+            PKCS12_create(
+                ptr::null(),
+                ptr::null(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                ptr::null_mut(),
+                0,
+                0,
+                0,
+                0,
+                0,
+            )
+        };
+        assert!(p12.is_null());
     }
 }
