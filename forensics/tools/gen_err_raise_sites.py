@@ -1339,6 +1339,16 @@ COVERED_FILES = [
     # `X509V3_R_NO_SUBJECT_DETAILS` (`:103`, both in withheld functions). The two unused
     # coordinates are harmless; the stem is `V3_SKID` so it cannot collide with `V3_IA5`.
     ("crypto/x509/v3_skid.c", "V3_SKID"),
+    # Phase 10.13's `crypto/x509/v3_lib.c` -- the extension registration surface. Only the two
+    # reachable raises are transcribed (`X509V3_EXT_add`'s `ERR_R_CRYPTO_LIB` at `:29`/`:33`); the
+    # withheld lookup half's sites (`X509V3_R_EXTENSION_NOT_FOUND` `:95`, `X509V3_R_EXTENSION_EXISTS`
+    # `:245`, `X509V3_R_EXTENSION_NOT_FOUND` `:261`, `X509V3_R_ERROR_CREATING_EXTENSION` `:274` and
+    # the `:306` site) are generated too, unused until that half lands. Stem `V3_LIB`.
+    ("crypto/x509/v3_lib.c", "V3_LIB"),
+    # Phase 10.13's `crypto/x509/v3_utf8.c` -- the UTF-8 pair. Its four sites are `ERR_LIB_X509V3`
+    # with `ERR_R_PASSED_NULL_PARAMETER` (`:34`), `X509V3_R_INVALID_NULL_ARGUMENT` (`:49`) and
+    # `ERR_R_ASN1_LIB` (`:53`, `:57`). The withheld `ossl_v3_utf8_list` table raises nothing.
+    ("crypto/x509/v3_utf8.c", "V3_UTF8"),
     # Phase 8.7's ECX key objects (D372): `crypto/ec/ecx_key.c` (the `ECX_KEY` object and
     # `ossl_ecx_compute_key`) and `crypto/ec/ecx_backend.c` (the backend the legacy methods and
     # the providers share). The first is `ERR_LIB_PROV` with the four `PROV_R_*` reasons on the

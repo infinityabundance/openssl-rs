@@ -65,6 +65,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/crypto.h>
 #include <openssl/engine.h>
@@ -1136,6 +1137,278 @@ static void drive_x509_leaf_units(void)
     }
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.13 -- the remaining leaf extension items (`v3_timespec.c`, `v3_pku.c`, `v3_utf8.c`)
+ * and the extension registration surface (`v3_lib.c`).
+ *
+ * Each item is built through its public `_new` and structure fields, encoded, decoded and
+ * re-encoded; the byte comparison is the observation. Every arm pops the error queue first
+ * (D455's lesson: an error-coordinate claim is only as good as the queue state it is read from).
+ * The `v3_lib` lookup half (`X509V3_EXT_get_nid`/`_get`) is withheld, so no arm names it; only
+ * the registration half is driven. Every `ASN1_CHOICE` here is driven through its non-`SET OF`
+ * arm (bit strings and `ASN1_NULL`), so the arms need no stack construction.
+ * --------------------------------------------------------------------------------------------- */
+
+/* The two probe-declared methods the registration half is driven with. `ext_nid` is `NID_undef`
+ * (0); the list is `-1`-terminated. Neither is dynamic, so `X509V3_EXT_cleanup` frees nothing but
+ * the list itself, exactly as the authority's own static tables are handled. */
+static X509V3_EXT_METHOD probe_method = { NID_undef, 0, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL };
+static X509V3_EXT_METHOD probe_method_list[] = {
+    { NID_undef, 0, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL },
+    { -1, 0, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, NULL },
+};
+
+/* Encode `value`, decode the bytes, re-encode and compare. `T` is the value's type. */
+#define RT_ROUNDTRIP(tag, T, value, i2dfn, d2ifn, freefn)                  \
+    do {                                                                   \
+        unsigned char *d1_ = NULL, *d2_ = NULL;                            \
+        const unsigned char *pp_;                                          \
+        int l1_, l2_;                                                      \
+        T *v2_;                                                            \
+        ERR_clear_error();                                                 \
+        l1_ = i2dfn((value), &d1_);                                        \
+        out_int(tag ".i2d.len", (long)l1_);                                \
+        ERR_clear_error();                                                 \
+        pp_ = d1_;                                                         \
+        v2_ = (l1_ > 0) ? d2ifn(NULL, &pp_, (long)l1_) : NULL;             \
+        out_ptr(tag ".d2i", v2_);                                          \
+        out_int(tag ".consumed", (long)(pp_ - d1_));                       \
+        ERR_clear_error();                                                 \
+        l2_ = (v2_ != NULL) ? i2dfn(v2_, &d2_) : -1;                       \
+        out_int(tag ".reequal",                                            \
+                (l1_ > 0 && l2_ == l1_ && d2_ != NULL                         \
+                 && memcmp(d1_, d2_, (size_t)l1_) == 0));                  \
+        OPENSSL_free(d2_);                                                 \
+        if (v2_ != NULL)                                                   \
+            freefn(v2_);                                                   \
+        OPENSSL_free(d1_);                                                 \
+    } while (0)
+
+static void drive_x509_10_13_items(void)
+{
+    PKEY_USAGE_PERIOD *pup;
+    OSSL_DAY_TIME *dt;
+    OSSL_DAY_TIME_BAND *band;
+    OSSL_TIME_SPEC_ABSOLUTE *absolute;
+    OSSL_NAMED_DAY *nd;
+    OSSL_TIME_SPEC_X_DAY_OF *xdo;
+    OSSL_TIME_SPEC_DAY *day;
+    OSSL_TIME_SPEC_WEEKS *weeks;
+    OSSL_TIME_SPEC_MONTH *months;
+    OSSL_TIME_PERIOD *period;
+    OSSL_TIME_SPEC_TIME *tst;
+    OSSL_TIME_SPEC *ts;
+    ASN1_UTF8STRING *u8;
+    char *s;
+
+    /* ----- PKEY_USAGE_PERIOD (v3_pku.c) ----- */
+    pup = PKEY_USAGE_PERIOD_new();
+    out_ptr("pku.new", pup);
+    if (pup != NULL) {
+        pup->notBefore = ASN1_GENERALIZEDTIME_new();
+        ASN1_GENERALIZEDTIME_set_string(pup->notBefore, "20260102030405Z");
+        pup->notAfter = ASN1_GENERALIZEDTIME_new();
+        ASN1_GENERALIZEDTIME_set_string(pup->notAfter, "20270102030405Z");
+        RT_ROUNDTRIP("pku", PKEY_USAGE_PERIOD, pup, i2d_PKEY_USAGE_PERIOD,
+                     d2i_PKEY_USAGE_PERIOD, PKEY_USAGE_PERIOD_free);
+        PKEY_USAGE_PERIOD_free(pup);
+    }
+
+    /* ----- OSSL_DAY_TIME (v3_timespec.c) ----- */
+    dt = OSSL_DAY_TIME_new();
+    out_ptr("timespec.day.new", dt);
+    if (dt != NULL) {
+        dt->hour = ASN1_INTEGER_new();
+        ASN1_INTEGER_set(dt->hour, 12);
+        dt->minute = ASN1_INTEGER_new();
+        ASN1_INTEGER_set(dt->minute, 30);
+        dt->second = ASN1_INTEGER_new();
+        ASN1_INTEGER_set(dt->second, 45);
+        RT_ROUNDTRIP("timespec.day", OSSL_DAY_TIME, dt, i2d_OSSL_DAY_TIME,
+                     d2i_OSSL_DAY_TIME, OSSL_DAY_TIME_free);
+        OSSL_DAY_TIME_free(dt);
+    }
+
+    /* ----- OSSL_DAY_TIME_BAND ----- */
+    band = OSSL_DAY_TIME_BAND_new();
+    out_ptr("timespec.band.new", band);
+    if (band != NULL) {
+        band->startDayTime = OSSL_DAY_TIME_new();
+        band->startDayTime->hour = ASN1_INTEGER_new();
+        ASN1_INTEGER_set(band->startDayTime->hour, 9);
+        band->endDayTime = OSSL_DAY_TIME_new();
+        band->endDayTime->hour = ASN1_INTEGER_new();
+        ASN1_INTEGER_set(band->endDayTime->hour, 17);
+        RT_ROUNDTRIP("timespec.band", OSSL_DAY_TIME_BAND, band,
+                     i2d_OSSL_DAY_TIME_BAND, d2i_OSSL_DAY_TIME_BAND,
+                     OSSL_DAY_TIME_BAND_free);
+        OSSL_DAY_TIME_BAND_free(band);
+    }
+
+    /* ----- OSSL_TIME_SPEC_ABSOLUTE ----- */
+    absolute = OSSL_TIME_SPEC_ABSOLUTE_new();
+    out_ptr("timespec.absolute.new", absolute);
+    if (absolute != NULL) {
+        absolute->startTime = ASN1_GENERALIZEDTIME_new();
+        ASN1_GENERALIZEDTIME_set_string(absolute->startTime, "20260101000000Z");
+        absolute->endTime = ASN1_GENERALIZEDTIME_new();
+        ASN1_GENERALIZEDTIME_set_string(absolute->endTime, "20261231235959Z");
+        RT_ROUNDTRIP("timespec.absolute", OSSL_TIME_SPEC_ABSOLUTE, absolute,
+                     i2d_OSSL_TIME_SPEC_ABSOLUTE, d2i_OSSL_TIME_SPEC_ABSOLUTE,
+                     OSSL_TIME_SPEC_ABSOLUTE_free);
+        OSSL_TIME_SPEC_ABSOLUTE_free(absolute);
+    }
+
+    /* ----- OSSL_NAMED_DAY, BIT arm ----- */
+    nd = OSSL_NAMED_DAY_new();
+    out_ptr("timespec.namedday.new", nd);
+    if (nd != NULL) {
+        nd->type = OSSL_NAMED_DAY_TYPE_BIT;
+        nd->choice.bitNamedDays = ASN1_BIT_STRING_new();
+        ASN1_BIT_STRING_set_bit(nd->choice.bitNamedDays, OSSL_NAMED_DAY_BIT_WED, 1);
+        ASN1_BIT_STRING_set_bit(nd->choice.bitNamedDays, OSSL_NAMED_DAY_BIT_SAT, 1);
+        RT_ROUNDTRIP("timespec.namedday", OSSL_NAMED_DAY, nd, i2d_OSSL_NAMED_DAY,
+                     d2i_OSSL_NAMED_DAY, OSSL_NAMED_DAY_free);
+        OSSL_NAMED_DAY_free(nd);
+    }
+
+    /* ----- OSSL_TIME_SPEC_X_DAY_OF, FIRST arm over a BIT-armed named day ----- */
+    xdo = OSSL_TIME_SPEC_X_DAY_OF_new();
+    out_ptr("timespec.xdayof.new", xdo);
+    if (xdo != NULL) {
+        xdo->type = OSSL_TIME_SPEC_X_DAY_OF_FIRST;
+        xdo->choice.first = OSSL_NAMED_DAY_new();
+        xdo->choice.first->type = OSSL_NAMED_DAY_TYPE_BIT;
+        xdo->choice.first->choice.bitNamedDays = ASN1_BIT_STRING_new();
+        ASN1_BIT_STRING_set_bit(xdo->choice.first->choice.bitNamedDays, OSSL_NAMED_DAY_BIT_SUN, 1);
+        RT_ROUNDTRIP("timespec.xdayof", OSSL_TIME_SPEC_X_DAY_OF, xdo,
+                     i2d_OSSL_TIME_SPEC_X_DAY_OF, d2i_OSSL_TIME_SPEC_X_DAY_OF,
+                     OSSL_TIME_SPEC_X_DAY_OF_free);
+        OSSL_TIME_SPEC_X_DAY_OF_free(xdo);
+    }
+
+    /* ----- OSSL_TIME_SPEC_DAY, BIT arm ----- */
+    day = OSSL_TIME_SPEC_DAY_new();
+    out_ptr("timespec.dayspec.new", day);
+    if (day != NULL) {
+        day->type = OSSL_TIME_SPEC_DAY_TYPE_BIT;
+        day->choice.bitDay = ASN1_BIT_STRING_new();
+        ASN1_BIT_STRING_set_bit(day->choice.bitDay, OSSL_TIME_SPEC_DAY_BIT_FRI, 1);
+        RT_ROUNDTRIP("timespec.dayspec", OSSL_TIME_SPEC_DAY, day,
+                     i2d_OSSL_TIME_SPEC_DAY, d2i_OSSL_TIME_SPEC_DAY,
+                     OSSL_TIME_SPEC_DAY_free);
+        OSSL_TIME_SPEC_DAY_free(day);
+    }
+
+    /* ----- OSSL_TIME_SPEC_WEEKS, ALL arm ----- */
+    weeks = OSSL_TIME_SPEC_WEEKS_new();
+    out_ptr("timespec.weeks.new", weeks);
+    if (weeks != NULL) {
+        weeks->type = OSSL_TIME_SPEC_WEEKS_TYPE_ALL;
+        weeks->choice.allWeeks = ASN1_NULL_new();
+        RT_ROUNDTRIP("timespec.weeks", OSSL_TIME_SPEC_WEEKS, weeks,
+                     i2d_OSSL_TIME_SPEC_WEEKS, d2i_OSSL_TIME_SPEC_WEEKS,
+                     OSSL_TIME_SPEC_WEEKS_free);
+        OSSL_TIME_SPEC_WEEKS_free(weeks);
+    }
+
+    /* ----- OSSL_TIME_SPEC_MONTH, ALL arm ----- */
+    months = OSSL_TIME_SPEC_MONTH_new();
+    out_ptr("timespec.months.new", months);
+    if (months != NULL) {
+        months->type = OSSL_TIME_SPEC_MONTH_TYPE_ALL;
+        months->choice.allMonths = ASN1_NULL_new();
+        RT_ROUNDTRIP("timespec.months", OSSL_TIME_SPEC_MONTH, months,
+                     i2d_OSSL_TIME_SPEC_MONTH, d2i_OSSL_TIME_SPEC_MONTH,
+                     OSSL_TIME_SPEC_MONTH_free);
+        OSSL_TIME_SPEC_MONTH_free(months);
+    }
+
+    /* ----- OSSL_TIME_PERIOD, with a BIT-armed day ----- */
+    period = OSSL_TIME_PERIOD_new();
+    out_ptr("timespec.period.new", period);
+    if (period != NULL) {
+        period->days = OSSL_TIME_SPEC_DAY_new();
+        period->days->type = OSSL_TIME_SPEC_DAY_TYPE_BIT;
+        period->days->choice.bitDay = ASN1_BIT_STRING_new();
+        ASN1_BIT_STRING_set_bit(period->days->choice.bitDay, OSSL_TIME_SPEC_DAY_BIT_MON, 1);
+        RT_ROUNDTRIP("timespec.period", OSSL_TIME_PERIOD, period,
+                     i2d_OSSL_TIME_PERIOD, d2i_OSSL_TIME_PERIOD,
+                     OSSL_TIME_PERIOD_free);
+        OSSL_TIME_PERIOD_free(period);
+    }
+
+    /* ----- OSSL_TIME_SPEC_TIME, ABSOLUTE arm ----- */
+    tst = OSSL_TIME_SPEC_TIME_new();
+    out_ptr("timespec.tst.new", tst);
+    if (tst != NULL) {
+        tst->type = OSSL_TIME_SPEC_TIME_TYPE_ABSOLUTE;
+        tst->choice.absolute = OSSL_TIME_SPEC_ABSOLUTE_new();
+        tst->choice.absolute->startTime = ASN1_GENERALIZEDTIME_new();
+        ASN1_GENERALIZEDTIME_set_string(tst->choice.absolute->startTime, "20260304050607Z");
+        RT_ROUNDTRIP("timespec.tst", OSSL_TIME_SPEC_TIME, tst,
+                     i2d_OSSL_TIME_SPEC_TIME, d2i_OSSL_TIME_SPEC_TIME,
+                     OSSL_TIME_SPEC_TIME_free);
+        OSSL_TIME_SPEC_TIME_free(tst);
+    }
+
+    /* ----- OSSL_TIME_SPEC, with a time-zone and notThisTime ----- */
+    ts = OSSL_TIME_SPEC_new();
+    out_ptr("timespec.ts.new", ts);
+    if (ts != NULL) {
+        ts->time = OSSL_TIME_SPEC_TIME_new();
+        ts->time->type = OSSL_TIME_SPEC_TIME_TYPE_ABSOLUTE;
+        ts->time->choice.absolute = OSSL_TIME_SPEC_ABSOLUTE_new();
+        ts->time->choice.absolute->startTime = ASN1_GENERALIZEDTIME_new();
+        ASN1_GENERALIZEDTIME_set_string(ts->time->choice.absolute->startTime,
+                                        "20260708091011Z");
+        ts->notThisTime = 0;
+        ts->timeZone = ASN1_INTEGER_new();
+        ASN1_INTEGER_set(ts->timeZone, 2);
+        RT_ROUNDTRIP("timespec.ts", OSSL_TIME_SPEC, ts, i2d_OSSL_TIME_SPEC,
+                     d2i_OSSL_TIME_SPEC, OSSL_TIME_SPEC_free);
+        OSSL_TIME_SPEC_free(ts);
+    }
+
+    /* ----- the UTF-8 helpers (v3_utf8.c) ----- */
+    ERR_clear_error();
+    u8 = s2i_ASN1_UTF8STRING(NULL, NULL, "probe.utf8");
+    out_ptr("utf8.s2i", u8);
+    s = i2s_ASN1_UTF8STRING(NULL, u8);
+    out_str("utf8.i2s", s);
+    OPENSSL_free(s);
+    ASN1_UTF8STRING_free(u8);
+
+    ERR_clear_error();
+    u8 = ASN1_UTF8STRING_new();
+    out_ptr("utf8.i2s.empty", i2s_ASN1_UTF8STRING(NULL, u8));
+    out_err("utf8.i2s.empty.err");
+    ASN1_UTF8STRING_free(u8);
+
+    ERR_clear_error();
+    out_ptr("utf8.s2i.null", s2i_ASN1_UTF8STRING(NULL, NULL, NULL));
+    out_err("utf8.s2i.null.err");
+
+    /* ----- the registration half of v3_lib.c ----- */
+    ERR_clear_error();
+    out_int("v3lib.add_standard", (long)X509V3_add_standard_extensions());
+    out_err("v3lib.add_standard.err");
+
+    ERR_clear_error();
+    out_int("v3lib.add", (long)X509V3_EXT_add(&probe_method));
+    out_err("v3lib.add.err");
+    ERR_clear_error();
+    out_int("v3lib.add_again", (long)X509V3_EXT_add(&probe_method));
+    out_err("v3lib.add_again.err");
+
+    ERR_clear_error();
+    out_int("v3lib.add_list", (long)X509V3_EXT_add_list(probe_method_list));
+    out_err("v3lib.add_list.err");
+
+    X509V3_EXT_cleanup();
+    out_str("v3lib.cleanup", "ok");
+}
+
 int main(void)
 {
     OSSL_STORE_LOADER *loader;
@@ -1184,6 +1457,9 @@ int main(void)
 
     /* ----- Phase 10.12: the leaf extension items, the X509_AUX layer and the policy graph ----- */
     drive_x509_leaf_units();
+
+    /* ----- Phase 10.13: the remaining leaf extension items and the v3_lib registration surface ----- */
+    drive_x509_10_13_items();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

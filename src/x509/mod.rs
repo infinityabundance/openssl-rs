@@ -21,6 +21,13 @@
 //! src/x509/v3_skid.rs    <-  crypto/x509/v3_skid.c      (10.12)
 //! src/x509/v3_pcia.rs    <-  crypto/x509/v3_pcia.c      (10.12)
 //! src/x509/v3_ist.rs     <-  crypto/x509/v3_ist.c       (10.12)
+//! src/x509/v3_lib.rs     <-  crypto/x509/v3_lib.c       (10.13)
+//! src/x509/v3_pku.rs     <-  crypto/x509/v3_pku.c       (10.13)
+//! src/x509/v3_timespec.rs<-  crypto/x509/v3_timespec.c  (10.13)
+//! src/x509/v3_utf8.rs    <-  crypto/x509/v3_utf8.c      (10.13)
+//! src/x509/v3_no_rev_avail.rs <- crypto/x509/v3_no_rev_avail.c (10.13)
+//! src/x509/v3_single_use.rs   <- crypto/x509/v3_single_use.c   (10.13)
+//! src/x509/v3_soa_id.rs       <- crypto/x509/v3_soa_id.c       (10.13)
 //! ```
 //!
 //! ## Phase 8.8 — the accessor slices
@@ -64,6 +71,29 @@
 //! `http`/`punycode` units `x_all.c` reaches (`X509_load_http`, 10.14). Every module's own doc
 //! names its withholds.
 //!
+//! ## Phase 10.13 — the remaining leaf extension items, and one deliberate scope increase
+//!
+//! The third pulled-forward slice after 10.8. Section 6 gives this subphase six units / 875 lines:
+//! `v3_timespec.c` (599), `v3_pku.c` (52) and the four table-only leaves (`v3_utf8.c`,
+//! `v3_no_rev_avail.c`, `v3_single_use.c`, `v3_soa_id.c`; 224 between them). D455 measured that
+//! only the first two are drivable as-is and named the four leaves' blocker as "no exported symbols
+//! to name, and no landed caller"; the plan expected that pulling `crypto/x509/v3_lib.c` in -- the
+//! unit holding `X509V3_add_standard_extensions`, the leaves' only authority caller -- would make
+//! them land.
+//!
+//! **It does not, and this subphase measures exactly why.** `v3_lib.rs` lands its registration
+//! half (`X509V3_EXT_add`/`_add_list`/`_cleanup`, `X509V3_add_standard_extensions`, the
+//! `X509V3_EXT_METHOD` layout) but **withholds its lookup half by name**: `X509V3_EXT_get_nid`
+//! searches `standard_exts[]` (`standard_exts.h:15-95`), which names **63 `ossl_v3_*` tables**,
+//! of which this subphase lands six and the other ~57 belong to units it does not own (`v3_bcons.c`,
+//! `v3_key_usage.c`, `v3_alt.c`, `v3_cpols.c`, the `crypto/ocsp/` rows, …). A partial table would
+//! silently change `OBJ_bsearch_ext`'s answers, so `X509V3_EXT_get_nid`, `_get`, `_add_alias`,
+//! `_EXT_d2i`, `_get_d2i` and `_add1_i2d` are withheld together. The four leaves therefore remain
+//! withheld -- but with that precise blocker, which is *sharper* than D455's. `v3_utf8.rs` lands
+//! the unit's two public helpers and withholds only its table; `v3_no_rev_avail.rs`,
+//! `v3_single_use.rs` and `v3_soa_id.rs` are doc-only withholds. `v3_timespec.rs` and `v3_pku.rs`
+//! land their item groups (the i2r printers are reached only through the withheld tables).
+//!
 //! ## The canonical structures
 //!
 //! Each `#[repr(C)]` structure a module is the canonical definition for — [`x_pubkey::X509Pubkey`],
@@ -72,7 +102,8 @@
 //! [`x_crl::X509Revoked`], [`crate::asn1::x_val::X509Val`], [`x_x509a::X509CertAux`],
 //! [`pcy_lib::X509PolicyTree`]/[`pcy_lib::X509PolicyLevel`]/[`pcy_lib::X509PolicyNode`]/
 //! [`pcy_lib::X509PolicyData`], [`v3_pcia::ProxyPolicy`]/[`v3_pcia::ProxyCertInfoExtension`] and
-//! [`v3_ist::IssuerSignTool`] — is the authority's own layout, with its offsets asserted by
+//! [`v3_ist::IssuerSignTool`], [`v3_pku::PkeyUsagePeriod`], [`v3_lib::X509V3ExtMethod`] and the
+//! eleven `v3_timespec::Ossl*` structures -- is the authority's own layout, with its offsets asserted by
 //! `core::mem::offset_of!` and a `const _: () = { assert!(...) }` block. The `X.509` numbers come
 //! from `courts/layout/measure-x509.c`, compiled against the pinned authority's own internal
 //! headers, rather than from the declarations.
@@ -119,3 +150,14 @@ pub mod v3_ist;
 pub mod v3_no_ass;
 pub mod v3_pcia;
 pub mod v3_skid;
+// Phase 10.13's remaining leaf extension items. `v3_lib.rs` lands the extension registration
+// surface (and withholds the `standard_exts[]`-backed lookup by name); `v3_timespec.rs` and
+// `v3_pku.rs` land their item groups; `v3_utf8.rs` lands its two string helpers; the three
+// `ASN1_NULL`-only tables withhold whole. See the module docs.
+pub mod v3_lib;
+pub mod v3_no_rev_avail;
+pub mod v3_pku;
+pub mod v3_single_use;
+pub mod v3_soa_id;
+pub mod v3_timespec;
+pub mod v3_utf8;
