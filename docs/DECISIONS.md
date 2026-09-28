@@ -32507,3 +32507,48 @@ provider rows. Phase 11 still derives `not-started`; no Phase 11 row was created
 **74 units / 24,708 authority lines** (D460's ~73 / ~24,900, re-measured), of which **71 still need a
 function-level cut**. Two open exports remain; both wait on the chain above.
 
+## D462 -- the flake, chased: three hypotheses tested, two hazardous patterns found guarded, one leading explanation named
+
+D458 recorded one `cargo test --lib` failure -- **1101 passed, 1 failed** -- and D459, D460 and D461
+could not reproduce it. This entry is a deliberate hunt, and its value is in what it *rules out*
+with evidence rather than in a hopeful green run.
+
+**Reproduction attempts, all green.** Five consecutive full-suite runs on this slice's settled tree:
+**1114 passed, 0 failed** each. That makes **twenty-one consecutive green full runs** since the single
+failure. Two targeted stress runs were added: thirty iterations of the only tests that use timing at
+all (`runtime::thread`, `runtime::rcu`, `context::thread_data` -- 40 tests each time, the category
+D425's thread-pool flake came from) and twenty-five iterations of the modules that reference
+process-global state with **zero** crate-wide-lock calls (`context::namemap`, `provider::mod`,
+`evp::digest`, `evp::cipher`, `evp::pkey_ctx`, `runtime::confmod`). **All green.** Neither thread
+scheduling nor the unlocked global-state modules are the cause on this tree.
+
+**Two genuinely hazardous patterns were found, and both are already guarded.**
+1. `ERR_error_string(NULL)` answers through a **process-global** `ERR_STRING_BUF`
+   (`src/runtime/err.rs:1582`), shared across threads. That is the authority's own contract and is
+   reproduced deliberately (the doc says so at `:1750`), not a defect -- and every test that reads
+   it takes the crate-wide lock (`string_lookups_match_the_measured_authority_values` holds `lock()`).
+2. `GENERIC_LOADED`/`LIB_LOADED` (`:556-558`) are **one-way process-global** flags set by *any*
+   thread's first `ERR` call, so a test asserting the pre-load window is order-dependent by
+   construction. Every such assertion was inspected: the three in
+   `string_lookups_match_the_measured_authority_values` are guarded by the lock, and each asks about
+   a library or reason that is absent from the tables entirely (`200 << 23`, reason `0x7F_FFFF`,
+   `ERR_SYSTEM_FLAG`), so they hold whether or not the tables are loaded. No unguarded window claim
+   remains.
+
+**The leading explanation, and it is a process defect rather than a library one.** D458's own report
+places the failure **"early in the session"** of an agent that was **concurrently writing the tree**.
+A suite run against a partially-written tree is not a measurement of the library; a test added before
+the code it needs, or a module mid-edit, fails once and passes on the next run for reasons that have
+nothing to do with concurrency. That hypothesis fits every observation (twenty-one green runs on
+settled trees; targeted stress green; no hazardous unguarded pattern found) and it is the only one
+that does.
+
+**It is recorded as a hypothesis, not a conclusion, and here is what would falsify it:** a future
+`cargo test --lib` failure on a **committed, clean tree**. To make that attributable, the next slice
+that sees a failure must capture, together, the failing test's **name, assertion and backtrace**, the
+`git --no-optional-locks status --short` at the moment of the run, and the run's position in its
+loop. A failure reported with a dirty tree is the mid-edit explanation; a failure reported with a
+clean tree is a real defect and the entry that records it must chase it with the same rigour this one
+applied. **No retry, no skipped test, no deleted test, and no weakening of any assertion** -- the
+absence of a reproduction is evidence about the tree, never licence to hide the failure.
+
