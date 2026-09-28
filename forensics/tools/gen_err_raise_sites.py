@@ -1360,6 +1360,19 @@ COVERED_FILES = [
     # not listed, and `x509_set.c`'s three sites are all in the still-withheld mutator layer, so
     # it stays unlisted too.
     ("crypto/x509/x509_cmp.c", "X509_CMP"),
+    # Phase 10.14.2's `crypto/x509/x_all.c` -- the certificate encode/decode faces. Its twelve
+    # sites are `ERR_LIB_X509`: the two NULL-certificate refusals in `X509_sign`/`X509_sign_ctx`
+    # (`:80`, `:103`), the CRL twins (`:167`, `:179`), `X509_digest_sig`'s five refusals
+    # (`:530` `ERR_R_PASSED_NULL_PARAMETER`, `:535` `X509_R_UNKNOWN_SIGID_ALGS`, `:551`/`:582`/`:589`
+    # `X509_R_UNSUPPORTED_ALGORITHM`), `X509_CRL_digest`'s NULL method (`:612`) and the two
+    # `_ex_fp` BIO-new failures (`:740`, `:761`, `ERR_R_BUF_LIB`), plus the three withheld
+    # `X509_REQ` sites (`:47`, `:143`, `:155`) whose coordinates are generated unused until
+    # 10.14.11 lands that object. Stem `X509_ALL`.
+    ("crypto/x509/x_all.c", "X509_ALL"),
+    # Phase 10.14.2's `crypto/x509/x509spki.c` -- the Netscape SPKI surface. Its one site is
+    # `ERR_LIB_X509` with `X509_R_BASE64_DECODE_ERROR` (`:42`), the base64 refusal in
+    # `NETSCAPE_SPKI_b64_decode`. Stem `X509_SPKI`.
+    ("crypto/x509/x509spki.c", "X509_SPKI"),
     # Phase 8.7's ECX key objects (D372): `crypto/ec/ecx_key.c` (the `ECX_KEY` object and
     # `ossl_ecx_compute_key`) and `crypto/ec/ecx_backend.c` (the backend the legacy methods and
     # the providers share). The first is `ERR_LIB_PROV` with the four `PROV_R_*` reasons on the

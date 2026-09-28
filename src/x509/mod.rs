@@ -31,6 +31,11 @@
 //! src/x509/x509_cmp.rs   <-  crypto/x509/x509_cmp.c     (10.14.1)
 //! src/x509/x509cset.rs   <-  crypto/x509/x509cset.c     (10.14.1)
 //! src/x509/x509type.rs   <-  crypto/x509/x509type.c     (10.14.1)
+//! src/x509/x_all.rs      <-  crypto/x509/x_all.c        (10.14.2)
+//! src/x509/x509_def.rs   <-  crypto/x509/x509_def.c     (10.14.2)
+//! src/x509/x509_meth.rs  <-  crypto/x509/x509_meth.c    (10.14.2, doc-only withholds)
+//! src/x509/x509spki.rs   <-  crypto/x509/x509spki.c     (10.14.2)
+//! src/asn1/x_spki.rs     <-  crypto/asn1/x_spki.c       (10.14.2)
 //! ```
 //!
 //! ## Phase 8.8 — the accessor slices
@@ -108,6 +113,19 @@
 //! `X509_set_version` and `ossl_x509_set1_time`, which the CRL setters need. See the subphases
 //! document's section 6 for the decomposition this is the first piece of.
 //!
+//! ## Phase 10.14.2 — the certificate encode/decode faces and the defaults
+//!
+//! The second sub-subphase. `x_all.rs` lands `crypto/x509/x_all.c`'s reachable functions — the
+//! sign/verify doors, the certificate/CRL and PKCS#8/PUBKEY/private-key/public-key and
+//! RSA/DSA/EC `_fp`/`_bio` faces, and the digest family — with the `X509_REQ`, `X509_ACERT`,
+//! PKCS#7, HTTP and `PKCS7_ISSUER_AND_SERIAL` faces withheld by name. `x509_def.rs` lands the two
+//! environment-variable names and withholds the four forensic-`OPENSSLDIR` paths. `x509spki.rs`
+//! and `src/asn1/x_spki.rs` land the Netscape SPKI object and its four convenience functions.
+//! `x509_meth.rs` withholds `crypto/x509/x509_meth.c` whole on the missing `X509_LOOKUP` type.
+//! `x509_set.rs` and `x_pubkey.rs` un-withhold `X509_get0_extensions` and
+//! `X509_get0_pubkey_bitstr`, which `X509_sign` and `X509_pubkey_digest` read. Each module's own
+//! doc names its withholds and blockers.
+//!
 //! ## The canonical structures
 //!
 //! Each `#[repr(C)]` structure a module is the canonical definition for — [`x_pubkey::X509Pubkey`],
@@ -182,3 +200,9 @@ pub mod v3_utf8;
 pub mod x509_cmp;
 pub mod x509cset;
 pub mod x509type;
+// Phase 10.14.2's certificate encode/decode faces, the defaults, the Netscape SPKI surface and
+// the withheld lookup-method unit. See the module docs.
+pub mod x509_def;
+pub mod x509_meth;
+pub mod x509spki;
+pub mod x_all;

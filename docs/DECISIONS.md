@@ -32279,3 +32279,67 @@ sub-subphases** (10.14.2-10.14.15, 10.15, 10.16). 10.14.12's `x509_vfy.c` alone 
 need a function-level split of its own. The 12 open exports and 2 open rows are closed by the last two
 rows, 10.15 and 10.16.
 
+## D458 -- 10.14.2 lands the certificate DER faces, and two defects of the plan's own are recorded
+
+Eighth pulled-forward slice. Section 7's **10.14.2** owns five units (~1,299 lines) and lands
+`x_all.c`'s **73 of 98 functions** (`src/x509/x_all.rs`), `x509_def.c`'s 2 of 6, `x509spki.c` and
+`crypto/asn1/x_spki.c` **whole**, and `x509_meth.c` as a **doc-only module with all twenty functions
+withheld**. Two helpers were un-withheld so the faces could be written (`X509_get0_extensions`,
+`X509_get0_pubkey_bitstr`), and `RT-STORE` moves from 531 to **671** observations over 109 courts and
+**45,688** in total; `implemented_surface` moves from 3,555 to **3,646**, all Phase-11-headed.
+
+**Two faces were saved from a second withholding by landing their object.** The `NETSCAPE_SPKI`
+faces (`x_all.c:71`, `:209`) had been withheld since D455 because `crypto/asn1/x_spki.c` was unlanded;
+landing that object and `x509spki.c` made them reachable, so they are transcribed rather than withheld
+again. That is the same rule 10.13 followed and D451 named: a withholding is a claim about the
+frontier, and the frontier moves.
+
+**Withheld by name, each with its blocker**: the `X509_REQ` type's nine faces and the `X509_ACERT`
+type's seven (both `x509_req.c`/`x509_acert.c`, 10.14.11); `OSSL_HTTP_get` and `X509_load_http`/
+`X509_CRL_load_http` (the `http`/`punycode` units withheld since D455); five PKCS#7 faces
+(10.14.13); all twenty of `x509_meth.c` (the `X509_LOOKUP`/`X509_LOOKUP_METHOD` types, 10.14.10); and
+the four `X509_get_default_*dir`/`*area` accessors, which are `OPENSSLDIR` strings and Phase 16's.
+
+### Two defects of the plan's own, recorded rather than smoothed over
+
+**1. Section 7's order is not closure-ordered, and 10.14.3 is the counter-example.** The next ready
+row is not the next-numbered one: `10.14.3` (`v3_utl.c` 1,449 + `v3_prn.c` 215) is **not**
+closure-ready, because its undefined names reach `v3_genn.c`/`v3_conf.c` (10.14.4), 10.13's withheld
+`X509V3_EXT_get`/`X509V3_get_d2i` lookup half, `x509_req.c` (10.14.11) and `v3_akid.c` (10.14.6).
+Landing it now would be a function-level partial rather than a clean row, so it was **not started**
+and nothing was reverted. The plan's rows need a readiness re-measure at each slice rather than a
+fixed numeric order, and that is now what it says.
+
+**2. A test flake was observed once and did not reproduce.** One standalone `cargo test --lib` run in
+this slice reported **1101 passed, 1 failed**; **four subsequent runs -- including both pipeline runs,
+serial and parallel -- reported 1102 passed, 0 failed**, and both are green above. The failing test's
+name was not captured, so this is recorded as an **open instrument defect with no reproduction**
+rather than dismissed as noise or hidden as a retry. The next slice's first task is to run the suite
+with output preserved until it reappears; a flake that cannot be named cannot be fixed, and this
+project's rule is that it is named either way.
+
+### A measurement, not a defect: the classical RSA verify path is incomparable
+
+The `X509_verify`/`NETSCAPE_SPKI_verify` path over an **RSA** signature resolves its digest by name
+through `EVP_get_digestbyname`, which this crate answers NULL for every built-in name -- the
+**already-recorded** Phase 13 legacy `OBJ_NAME` divergence (D333/D343; `add_all_legacy_methods` is a
+no-op at `src/runtime/init.rs:234`). That path is therefore incomparable, so the probe prints
+`pending.X509_verify.rsa=` and drives both functions over an **Ed25519** signature instead, while the
+signing faces use the fixed RSA key whose PKCS#1 v1.5 output is deterministic. This is a previously
+known divergence being met by a new caller, and it is named at the arm rather than worked around
+silently.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1102 passed, 0 failed** on both the serial and parallel pipeline runs; `PIPELINE OK` exit 0 on two
+consecutive runs at 109 courts and **45,688 observations**. Phase-10 counts are unchanged at
+`286 implemented / 12 open` exports and `634 implemented / 2 open` provider rows. Phase 11 still
+derives `not-started`; section 7 marks 10.14.2 landed with every withheld name and blocker.
+
+### The remaining distance
+
+**15 sub-subphases remain** (10.14.3-10.14.15, 10.15, 10.16). The last strict frontier measurement
+(D457, after 10.14.1) is **76 units / 27,335 authority lines**; 10.14.2 did not re-measure it. The 12
+open exports and 2 open provider rows are closed by **10.15 and 10.16 alone**.
+

@@ -19,7 +19,7 @@
 //!
 //! ## What is withheld, with its coordinate
 //!
-//! Two blocks, both measured rather than preferred:
+//! One block, measured rather than preferred:
 //!
 //! * **The eight `crypto/ec/ecx_meth.c`-dependent internals** — four `ossl_d2i_*_PUBKEY` and
 //!   the four `ossl_i2d_*_PUBKEY` twins for `ED25519`, `ED448`, `X25519` and `X448`. The
@@ -30,10 +30,12 @@
 //!   `EVP_PKEY_type` answers `NID_undef`, `EVP_PKEY_set_type` fails and `i2d_PUBKEY` answers
 //!   `-1` where the authority answers the encoded length. A transcription would be a body that
 //!   answers differently from the authority's — the class D349 named.
-//! * **`X509_get0_pubkey_bitstr`** (`:1043-1048`), which reads `x->cert_info.key->public_key`
-//!   off `struct x509_st`. The crate has no `X509` object (Phase 11's), so the three-member
-//!   walk cannot be written. It is an export the prerequisite gate does not observe (it is not
-//!   in the internal-symbol universe), which is why it carries no divergence row.
+//!
+//! **`X509_get0_pubkey_bitstr`** (`:1043-1048`) was withheld here on "the crate has no `X509`
+//! object"; 10.8 landed that object, so **10.14.2 un-withholds it**: it is the one-field walk
+//! `x->cert_info.key->public_key` that `X509_pubkey_digest` (`crypto/x509/x_all.c`) reads. It is
+//! an export the prerequisite gate does not observe (it is not in the internal-symbol universe),
+//! which is why it carries no divergence row.
 //!
 //! ## The `ASN1_ITEM` layer this unit is the authority for
 //!
@@ -138,6 +140,7 @@ use crate::runtime::err::{
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid, OBJ_obj2txt};
+use crate::x509::x_x509::X509;
 
 /// `EVP_PKEY_PUBLIC_KEY` — `include/openssl/evp.h:110`, `KEY_PARAMETERS | SELECT_PUBLIC_KEY`.
 ///
@@ -1021,6 +1024,24 @@ unsafe fn set_err_out(pk: *mut X509Pubkey, _x: *mut *mut X509Pubkey) -> c_int {
     // SAFETY: `pk` is NULL or this call's own live object.
     unsafe { X509_PUBKEY_free(pk) };
     0
+}
+
+/// `ASN1_BIT_STRING *X509_get0_pubkey_bitstr(const X509 *x)` — `crypto/x509/x_pubkey.c:1043-1048`.
+///
+/// The certificate's `subjectPublicKey` bit string, borrowed. **Landed by 10.14.2**, once 10.8's
+/// `X509` object made the walk `x->cert_info.key->public_key` writable. A NULL `x` answers NULL;
+/// a NULL `key` is not guarded, exactly as the authority's two-step read is not.
+///
+/// # Safety
+///
+/// `x` must be NULL or a live `X509`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_get0_pubkey_bitstr(x: *const X509) -> *mut Asn1String {
+    if x.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `x` is live per the check above; `key` is its mandatory `subjectPublicKeyInfo`.
+    unsafe { (*(*x).cert_info.key).public_key }
 }
 
 /// `static int x509_pubkey_decode(EVP_PKEY **ppkey, const X509_PUBKEY *key)` —
