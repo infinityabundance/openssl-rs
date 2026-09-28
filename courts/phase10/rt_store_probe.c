@@ -103,6 +103,21 @@ static void out_ptr(const char *key, const void *p)
     printf("%s=%s\n", key, p != NULL ? "nonnull" : "null");
 }
 
+/* A byte string as lowercase hex, or `null` for a NULL pointer. */
+static void out_hex(const char *key, const unsigned char *p, long n)
+{
+    long i;
+
+    if (p == NULL) {
+        printf("%s=null\n", key);
+        return;
+    }
+    printf("%s=", key);
+    for (i = 0; i < n; i++)
+        printf("%02x", p[i]);
+    printf("\n");
+}
+
 /* The first error on the queue as `lib.reason`, then the queue is cleared. */
 static void out_err(const char *key)
 {
@@ -2315,6 +2330,164 @@ static void drive_x509_all_surface(void)
     X509_NAME_free(name);
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.14.4: the `GENERAL_NAME` / `GENERAL_NAMES` items and accessors.
+ *
+ * Five fixed wire forms cover the context-implicit primitive arms the CHOICE names ([1]
+ * rfc822Name, [2] dNSName, [6] URI, [7] iPAddress, [8] registeredID); each is decoded, its
+ * selector and cursor read, and its bytes re-encoded. The `otherName` and `directoryName` arms
+ * are exercised through the setters (`set0_othername`, `set1_X509_NAME`), and the refusal of a
+ * NULL target carries its error coordinate.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_x509_10_14_4_genn(void)
+{
+    static const unsigned char GN_DNS[] = { 0x82, 0x09, 'a', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e' };
+    static const unsigned char GN_MAIL[] = { 0x81, 0x03, 'a', '@', 'b' };
+    static const unsigned char GN_URI[] = { 0x86, 0x08, 'h', 't', 't', 'p', ':', '/', '/', 'x' };
+    static const unsigned char GN_IP[] = { 0x87, 0x04, 0x7f, 0x00, 0x00, 0x01 };
+    static const unsigned char GN_RID[] = { 0x88, 0x03, 0x55, 0x04, 0x03 };
+    static const unsigned char GN_BOTH[] = {
+        0x30, 0x11,
+        0x82, 0x09, 'a', '.', 'e', 'x', 'a', 'm', 'p', 'l', 'e',
+        0x87, 0x04, 0x7f, 0x00, 0x00, 0x01
+    };
+    static const unsigned char FIX_ANY_OCT[] = { 0x04, 0x01, 0x00 };
+    const unsigned char *p;
+    unsigned char *der = NULL;
+    long len;
+    GENERAL_NAME *n1 = NULL, *n2 = NULL, *dup = NULL, *tgt = NULL;
+    GENERAL_NAMES *names = NULL, *names2 = NULL;
+    ASN1_OBJECT *oid = NULL;
+    ASN1_TYPE *val = NULL;
+
+    out_ptr("genn.it", (const void *)GENERAL_NAME_it());
+    out_ptr("genn.it_names", (const void *)GENERAL_NAMES_it());
+    out_int("genn.it_stable", GENERAL_NAME_it() == GENERAL_NAME_it());
+
+    /* dNSName: decode the fixed wire form, read the selector and re-encode byte-exactly. */
+    p = GN_DNS;
+    n1 = d2i_GENERAL_NAME(NULL, &p, (long)sizeof(GN_DNS));
+    out_ptr("genn.dns", n1);
+    out_int("genn.dns.type", n1 != NULL ? n1->type : -1);
+    out_int("genn.dns.consumed", (long)(p - GN_DNS));
+    len = i2d_GENERAL_NAME(n1, &der);
+    out_hex("genn.dns.der", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+    {
+        int t = -1;
+        out_ptr("genn.dns.get0", GENERAL_NAME_get0_value(n1, &t));
+        out_int("genn.dns.get0.type", t);
+    }
+
+    /* cmp: equal decodes are 0, a different tag is -1, a NULL argument is -1. */
+    p = GN_DNS;
+    n2 = d2i_GENERAL_NAME(NULL, &p, (long)sizeof(GN_DNS));
+    out_int("genn.dns.cmp_same", GENERAL_NAME_cmp(n1, n2));
+    GENERAL_NAME_free(n2);
+    n2 = NULL;
+    p = GN_IP;
+    n2 = d2i_GENERAL_NAME(NULL, &p, (long)sizeof(GN_IP));
+    out_int("genn.dns.cmp_other", GENERAL_NAME_cmp(n1, n2));
+    out_int("genn.dns.cmp_null", GENERAL_NAME_cmp(n1, NULL));
+    GENERAL_NAME_free(n2);
+    n2 = NULL;
+    GENERAL_NAME_free(n1);
+    n1 = NULL;
+
+    /* The remaining simple wire forms decode with their own selector. */
+    p = GN_MAIL;
+    n1 = d2i_GENERAL_NAME(NULL, &p, (long)sizeof(GN_MAIL));
+    out_int("genn.mail.type", n1 != NULL ? n1->type : -1);
+    GENERAL_NAME_free(n1);
+    n1 = NULL;
+    p = GN_URI;
+    n1 = d2i_GENERAL_NAME(NULL, &p, (long)sizeof(GN_URI));
+    out_int("genn.uri.type", n1 != NULL ? n1->type : -1);
+    GENERAL_NAME_free(n1);
+    n1 = NULL;
+    p = GN_IP;
+    n1 = d2i_GENERAL_NAME(NULL, &p, (long)sizeof(GN_IP));
+    out_int("genn.ip.type", n1 != NULL ? n1->type : -1);
+    GENERAL_NAME_free(n1);
+    n1 = NULL;
+    p = GN_RID;
+    n1 = d2i_GENERAL_NAME(NULL, &p, (long)sizeof(GN_RID));
+    out_int("genn.rid.type", n1 != NULL ? n1->type : -1);
+    len = i2d_GENERAL_NAME(n1, &der);
+    out_hex("genn.rid.der", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+    GENERAL_NAME_free(n1);
+    n1 = NULL;
+
+    /* otherName: the setter adopts a real ANY value, then dup and get0_otherName. */
+    n1 = GENERAL_NAME_new();
+    p = FIX_ANY_OCT;
+    val = d2i_ASN1_TYPE(NULL, &p, (long)sizeof(FIX_ANY_OCT));
+    out_ptr("genn.othn.value_in", val);
+    oid = OBJ_nid2obj(NID_commonName);
+    out_int("genn.othn.set", GENERAL_NAME_set0_othername(n1, oid, val));
+    out_int("genn.othn.type", n1 != NULL ? n1->type : -1);
+    {
+        ASN1_OBJECT *poid = NULL;
+        ASN1_TYPE *pval = NULL;
+        out_int("genn.othn.get0", GENERAL_NAME_get0_otherName(n1, &poid, &pval));
+        out_int("genn.othn.oid_nid", poid != NULL ? OBJ_obj2nid(poid) : -1);
+        out_ptr("genn.othn.value", pval);
+    }
+    dup = GENERAL_NAME_dup(n1);
+    out_ptr("genn.othn.dup", dup);
+    out_int("genn.othn.dup.cmp", dup != NULL ? GENERAL_NAME_cmp(n1, dup) : -2);
+    len = i2d_GENERAL_NAME(n1, &der);
+    out_hex("genn.othn.der", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+    GENERAL_NAME_free(dup);
+    dup = NULL;
+    GENERAL_NAME_free(n1);
+    n1 = NULL;
+
+    /* directoryName via set1_X509_NAME (the NULL-DN case), plus the NULL-slot refusal. */
+    ERR_clear_error();
+    out_int("genn.dirname.set_null_dn", GENERAL_NAME_set1_X509_NAME(&tgt, NULL));
+    out_err("genn.dirname.set_null_dn.err");
+    out_ptr("genn.dirname", tgt);
+    out_int("genn.dirname.type", tgt != NULL ? tgt->type : -1);
+    len = i2d_GENERAL_NAME(tgt, &der);
+    out_hex("genn.dirname.der", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+    GENERAL_NAME_free(tgt);
+    tgt = NULL;
+    ERR_clear_error();
+    out_int("genn.dirname.null_tgt", GENERAL_NAME_set1_X509_NAME(NULL, NULL));
+    out_err("genn.dirname.null_tgt.err");
+
+    /* GENERAL_NAMES: the SEQUENCE OF over the two fixed names, and a re-encode. */
+    p = GN_BOTH;
+    names = d2i_GENERAL_NAMES(NULL, &p, (long)sizeof(GN_BOTH));
+    out_ptr("genn.names", names);
+    out_int("genn.names.num", names != NULL ? sk_GENERAL_NAME_num(names) : -1);
+    out_int("genn.names.consumed", (long)(p - GN_BOTH));
+    len = i2d_GENERAL_NAMES(names, &der);
+    out_hex("genn.names.der", der, len);
+    OPENSSL_free(der);
+    der = NULL;
+    p = GN_BOTH;
+    names2 = d2i_GENERAL_NAMES(NULL, &p, (long)sizeof(GN_BOTH));
+    out_int("genn.names.first.cmp",
+            names != NULL && names2 != NULL
+                ? GENERAL_NAME_cmp(sk_GENERAL_NAME_value(names, 0),
+                                   sk_GENERAL_NAME_value(names2, 0))
+                : -2);
+    GENERAL_NAMES_free(names2);
+    names2 = NULL;
+    GENERAL_NAMES_free(names);
+    names = NULL;
+}
+
 int main(void)
 {
     OSSL_STORE_LOADER *loader;
@@ -2372,6 +2545,9 @@ int main(void)
 
     /* ----- Phase 10.14.2: the certificate faces, the defaults and the Netscape SPKI object ----- */
     drive_x509_all_surface();
+
+    /* ----- Phase 10.14.4: the GENERAL_NAME / GENERAL_NAMES items and accessors ----- */
+    drive_x509_10_14_4_genn();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

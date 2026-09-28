@@ -560,3 +560,71 @@ table: its only unlanded callees were `ossl_x509_set1_time` (un-withheld here), 
 the four `X509_add_cert*` names are withheld by name with those blockers rather than stubbed. The
 `x509_cmp ↔ v3_purp ↔ x509_vfy` cycle the two withheld names sit in is the SCC section 6 described,
 and cutting it at the call graph is what makes 10.14.1 landable at all.
+
+**The readiness re-measurement, and the order it corrects (this session).** Before landing
+anything the same `nm --undefined-only` join was re-run over the authority's objects, resolving
+this time each undefined name to the object that defines it and testing that name against the
+crate's compiled surface **and** its ordinary Rust definitions (a `pub fn` without `#[no_mangle]`
+is landed code though not a C symbol — `ossl_safe_getenv`, `ossl_ctype_check`,
+`ossl_pkcs7_ctx_get0_libctx` and their kind), with a whole-unit cascade: land a unit when every
+name its own object leaves undefined is already provided. The measurement falsifies a numeric
+reading of the table above.
+
+* **No 10.14.N row is closure-ready at row granularity.** The cascade lands four units and stalls:
+  `v3_genn.c` (10.14.4), `v3_akeya.c` (10.14.6, a table-only leaf no court can name), `pcy_node.c`
+  (10.14.9, D455's two-part blocker: unnameable from the export surface and called by nothing
+  landed) and `bio_pk7.c` (10.14.13). Every other 10.14.x unit has at least one unlanded callee,
+  so the certificate subsystem is still one function-level cycle.
+* **10.14.3 is still not ready, and its blockers are named exactly** — so it was not started.
+  `v3_utl.c` leaves `X509V3_get_d2i` (`v3_lib.c`, 10.14.5), `GENERAL_NAME_print` (`v3_san.c`,
+  10.14.6), `X509_REQ_get_extensions`/`_get_subject_name` (`x509_req.c`, 10.14.11),
+  `AUTHORITY_INFO_ACCESS_free` (`v3_info.c`) and `X509_get_ext_d2i` (`x509_ext.c`) undefined;
+  `v3_prn.c` needs `X509V3_EXT_get` (`v3_lib.c`) and `X509V3_conf_free` (`v3_utl.c`). None landed.
+* **Three units the table never names are on the critical path**, and are assigned here rather
+  than left implicit: `x509_ext.c` (170 lines; `X509_get_ext_d2i`/`X509_add_ext`/`X509_delete_ext`
+  and the CRL twins; blocks 10.14.3, 10.14.12 and 10.14.15) to **10.14.5**, since its only two
+  callees are `v3_lib.c`'s lookup half; `v3_info.c` (155; `AUTHORITY_INFO_ACCESS_*`/
+  `ACCESS_DESCRIPTION_*`; blocks 10.14.3 and 10.14.14) to **10.14.6**; `v3_pmaps.c` (109;
+  `ossl_v3_policy_mappings`; blocks 10.14.9) to **10.14.9**.
+* **The row that was ready is 10.15's, not any 10.14.x's** — the measurement, not the table's
+  numeric order, is why this session landed there.
+
+**10.15 lands its certificate-bag and container-builder units.** The four `crypto/pkcs12/` units
+the cascade found whole-unit ready are transcribed: `p12_sbag.c`'s six cert/CRL names
+(`PKCS12_SAFEBAG_get1_cert`/`_crl`/`_ex`, `create_cert`/`create_crl`), `p12_crt.c`'s
+`PKCS12_create(_ex/_ex2)` and `PKCS12_add_cert` with the three static helpers `copy_bag_attr`,
+`pkcs12_add_cert_bag` and `pkcs12_remove_bag` (`p12_add.c` and `p12_mutl.c` were already whole).
+The blockers the table recorded — `X509_it`/`X509_CRL_it`, `ossl_x509*_set0_libctx`,
+`X509_alias_get0`/`X509_keyid_get0`, `X509_check_private_key`, `X509_digest`,
+`PKCS12_item_pack_safebag` — all landed in 10.8/10.11/10.14.1/10.14.2, so the frontier moved and
+the names were un-withheld rather than kept again (D451's rule); the table's claim that 10.15 needs
+10.14.13 and 10.14.11 is therefore **falsified for these four units**. **Ten of the twelve open
+`pkcs12.h` exports close** (`PKCS12_SAFEBAG_create_cert`/`_crl`, `_get1_cert(_ex)`/`_get1_crl(_ex)`,
+`PKCS12_add_cert`, `PKCS12_create(_ex/_ex2)`); the two that remain are `PKCS12_parse`
+(`ossl_x509_add_cert_new`, `x509_cmp.c`, 10.14.1) and `OSSL_STORE_load` (10.16). `RT-PKCS12` moves
+from 292 to **317** observations, driving the bag builders and the three `create` spellings over
+the shared fixed certificate/CRL DER with the plain contentInfo and no MAC so the `PFX` bytes are
+comparable; `p12_crt.c` becomes a `gen_err_raise_sites.py` entry (stem `PKCS12_CRT`), its four
+`PKCS12_R_INVALID_NULL_ARGUMENT`/`PKCS12_R_CALLBACK_FAILED` sites now reachable.
+
+**10.14.4 lands `v3_genn.c` whole** — the cascade's one court-drivable hub. `src/x509/v3_genn.rs`
+transcribes the `OTHERNAME`/`EDIPARTYNAME`/`GENERAL_NAME` templates, the `GENERAL_NAMES`
+`SEQUENCE OF`, their generated item groups and the eleven hand-written functions, and adds a
+`gen_err_raise_sites.py` entry (stem `V3_GENN`). Its closure was satisfied by landed items alone
+(`X509_NAME_it`, `ASN1_ANY_it`, `DIRECTORYSTRING_it`, the `ASN1_*_it` string items, `ASN1_dup`, the
+comparators), which is what makes it the hub the remaining tables wait on. Its two sibling units
+**stay withheld by name**: `v3_conf.c` (blocked by `X509V3_EXT_get_nid` `v3_lib.c`,
+`X509V3_conf_free`/`X509V3_parse_list` `v3_utl.c`, `X509_REQ_add_extensions` `x509_req.c`,
+`ASN1_generate_v3` `asn1_gen.c`) and `v3_ncons.c` (blocked by `GENERAL_NAME_print`/
+`v2i_GENERAL_NAME_ex` `v3_san.c`, `ossl_ipaddr_to_asc` `v3_utl.c`, `OSSL_parse_url` `http_lib.c`,
+`ossl_a2ulabel` `punycode.c`). `RT-STORE` moves from 671 to **709** observations.
+
+**The remaining distance, re-measured.** After this session **10 of the fifteen remaining
+sub-subphases are untouched** (10.14.3, 10.14.5–10.14.8, 10.14.10–10.14.12, 10.14.14, 10.14.15)
+and **five are partial** (10.14.4, 10.14.9, 10.14.13, 10.15, 10.16, one to four units landed
+each). The keystone is still the `v3_lib.c ↔ the tables ↔ v3_utl.c` cycle, cut at the function
+level inside `v3_utl.c`: its six blockers are confined to `X509_get1_email`, `X509_get1_ocsp`,
+`X509_REQ_get1_email`, `do_x509_check`'s four callers and `OSSL_GENERAL_NAMES_print`, so landing
+the rest of `v3_utl.c` is what makes the forty-odd table units, then `v3_lib.c`'s lookup half, then
+`x509_ext.c` and 10.14.3 itself reachable. The 2 remaining open exports are closed by 10.15 and
+10.16 alone.

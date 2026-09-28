@@ -1242,11 +1242,16 @@ COVERED_FILES = [
     # `_ERROR_SETTING_ENCRYPTED_DATA_TYPE`, `_ENCRYPT_ERROR`). The stem is `PKCS12_ADD` rather than
     # `PKCS12`: `p12_decr.c` and `p12_sbag.c` already carry `PKCS12` and their line numbers
     # collide with this file's (32, 202), which would emit two different coordinates under one
-    # constant name. `p12_crt.c` is **not** covered yet: the one export this slice lands,
-    # `PKCS12_add_secret`, and its `pkcs12_add_bag` helper raise nothing, so an entry now would
-    # read as coverage that does not exist; it lands with the `create`/`add_key` arms that do
-    # raise, exactly as `p12_p8d.c` is named under above.
+    # constant name. `p12_crt.c` is covered separately below, under the stem `PKCS12_CRT`.
     ("crypto/pkcs12/p12_add.c", "PKCS12_ADD"),
+    # Phase 10's 10.15: `crypto/pkcs12/p12_crt.c`'s `PKCS12_create(_ex/_ex2)`, `PKCS12_add_cert`
+    # and the three static bag helpers. The container builder's four raise sites are
+    # `PKCS12_R_INVALID_NULL_ARGUMENT` (line 63, all of `pkey`/`cert`/`ca` absent) and
+    # `PKCS12_R_CALLBACK_FAILED` (lines 88, 103 and 136, the three `cb` refusals); the earlier
+    # `add_*` half of the unit raises nothing, so those four are the whole coverage. The stem is
+    # `PKCS12_CRT` so it cannot collide with `PKCS12` (carried by `p12_decr.c`/`p12_sbag.c`) or
+    # `PKCS12_ADD`.
+    ("crypto/pkcs12/p12_crt.c", "PKCS12_CRT"),
     # Phase 10's 10.3, re-opened: `crypto/pkcs12/p12_init.c`, the `PKCS12_init(_ex)` pair. The
     # `PKCS7` subset pulled forward from Phase 12 lets `PKCS12_new` build at last, so the four
     # sites in this unit (`ERR_R_ASN1_LIB` twice, `ERR_R_PKCS7_LIB` and
@@ -1345,6 +1350,11 @@ COVERED_FILES = [
     # `:245`, `X509V3_R_EXTENSION_NOT_FOUND` `:261`, `X509V3_R_ERROR_CREATING_EXTENSION` `:274` and
     # the `:306` site) are generated too, unused until that half lands. Stem `V3_LIB`.
     ("crypto/x509/v3_lib.c", "V3_LIB"),
+    # Phase 10.14.4's `crypto/x509/v3_genn.c` -- the `GENERAL_NAME`/`GENERAL_NAMES` items and
+    # accessors. Its one site is `ERR_LIB_X509V3` with `X509V3_R_INVALID_NULL_ARGUMENT` (`:65`),
+    # the NULL-`tgt` refusal in `GENERAL_NAME_set1_X509_NAME`; the generated item functions raise
+    # only through the item layer, not from this unit. Stem `V3_GENN`.
+    ("crypto/x509/v3_genn.c", "V3_GENN"),
     # Phase 10.13's `crypto/x509/v3_utf8.c` -- the UTF-8 pair. Its four sites are `ERR_LIB_X509V3`
     # with `ERR_R_PASSED_NULL_PARAMETER` (`:34`), `X509V3_R_INVALID_NULL_ARGUMENT` (`:49`) and
     # `ERR_R_ASN1_LIB` (`:53`, `:57`). The withheld `ossl_v3_utf8_list` table raises nothing.

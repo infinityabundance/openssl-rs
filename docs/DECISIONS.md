@@ -32343,3 +32343,60 @@ derives `not-started`; section 7 marks 10.14.2 landed with every withheld name a
 (D457, after 10.14.1) is **76 units / 27,335 authority lines**; 10.14.2 did not re-measure it. The 12
 open exports and 2 open provider rows are closed by **10.15 and 10.16 alone**.
 
+## D459 -- 10.15's container builders close ten of the twelve open exports, and the flake stays open
+
+Ninth pulled-forward slice, and the largest single move since 10.1: **ten of Phase 10's twelve open
+exports close**, and the ledger moves from `286 implemented / 12 open` to **`296 implemented / 2
+open`**. Only `PKCS12_parse` and `OSSL_STORE_load` are left, and both are now blocked by exactly one
+name each.
+
+**Task 0 first, and the answer is a negative.** D458 recorded an unreproduced `cargo test --lib`
+failure (one run at 1101/1, four at 1102/0) without a test name. This slice ran the suite **five
+more times, each preserving full output to a file: all five green at 1102/0**. Five consecutive
+passes after a one-off failure is **not** a reproduction, so the defect stays **open and unnamed** --
+recorded as such rather than closed by absence, and with no retry added and no test skipped. The next
+slice should keep capturing output.
+
+**The readiness re-measurement falsified section 7's numeric order again, and worse than D458 found.**
+A whole-unit cascade -- land a unit when every name its object leaves undefined is already provided,
+crediting the crate's ordinary `pub fn` definitions as well as its C symbols -- lands four units and
+stalls. **No `10.14.N` row is closure-ready at row granularity.** `10.14.3` is still not ready and was
+not started: `v3_utl.c` leaves `X509V3_get_d2i`, `GENERAL_NAME_print`, `X509_REQ_get_extensions`,
+`AUTHORITY_INFO_ACCESS_free` and `X509_get_ext_d2i` undefined, and `v3_prn.c` needs `X509V3_EXT_get`.
+Three units section 7 had never named turn out to be on the critical path and are now assigned:
+`x509_ext.c` to **10.14.5**, `v3_info.c` to **10.14.6**, `v3_pmaps.c` to **10.14.9**.
+
+**The row that was ready was 10.15's, not 10.14's, and it closed ten exports.** `p12_sbag.c` is now
+**whole** (`PKCS12_SAFEBAG_get1_cert`/`_crl`/`_ex`, `create_cert`/`create_crl`, `:94-160`) and
+`p12_crt.c` lands `PKCS12_create_ex2`/`_ex`/`create`, `pkcs12_add_cert_bag`, `PKCS12_add_cert`,
+`pkcs12_remove_bag` and `copy_bag_attr`. Every blocker D447 listed for those names is now landed:
+`X509_it`/`X509_CRL_it`, the two `ossl_x509*_set0_libctx`, `X509_alias_get0`/`X509_keyid_get0`,
+`X509_check_private_key`, `X509_digest`, `PKCS12_item_pack_safebag`. **`p12_crt.c` withholds exactly
+one function, `PKCS12_parse`,** whose single blocker is `ossl_x509_add_cert_new` (10.14.1's withhold
+from `x509_cmp.c`) -- so one name in 10.14.1 is now the only thing between Phase 10 and eleven of its
+exports.
+
+**10.14.4 lands `v3_genn.c` whole** (269 lines): the `OTHERNAME`/`EDIPARTYNAME`/`GENERAL_NAME`
+templates, the `GENERAL_NAMES` `SEQUENCE OF`, and all eleven hand-written functions -- the hub the
+remaining extension tables wait on. `v3_conf.c` and `v3_ncons.c` are withheld by name with their
+blockers.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1106 passed, 0 failed** (four new tests). `RT-PKCS12` moves from 292 to **317** observations and
+`RT-STORE` from 671 to **709**; 109 courts, **45,751 observations**, `PIPELINE OK` exit 0 on two
+consecutive runs. Phase-10 provider rows are unchanged at `634 implemented / 2 open`;
+`implemented_surface` moves from 3,646 to **3,684**. Phase 11 still derives `not-started`, and section 7
+now records the re-measurement, the corrected order, the three newly-assigned units and each landed
+row's transcribed-withheld split.
+
+### The remaining distance
+
+**75 units / 26,157 authority lines** in the strict unlanded certificate frontier (the same
+convention as D457's 76 / 27,335), across **15 sub-subphases -- ten untouched, five partial** -- with
+**2 open exports** and **2 open provider rows**, the latter still the two `file` store rows. The next
+real move is a **function-level cut inside `v3_utl.c`** (~900 lines; its six blockers are confined to
+`X509_get1_email`, `X509_get1_ocsp`, `X509_REQ_get1_email`, `do_x509_check`'s callers and
+`OSSL_GENERAL_NAMES_print`), which D458's rule allows: the frontier is the call graph.
+
