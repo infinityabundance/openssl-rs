@@ -672,13 +672,6 @@
         "evidence": "src/evp/p_legacy_assign.rs; docs/DECISIONS.md D353; docs/PHASE-8-SUBPHASES.md rows 8.4-8.7"
       },
       {
-        "unit": "crypto/evp/evp_cnf.c",
-        "class": "deferred_to_later_stratum",
-        "owner_phase": 11,
-        "reason": "Its single export is `EVP_add_alg_module` (`crypto/evp/evp_cnf.c:69`), which registers `alg_module_init` (`:24`); the handler's `fips_mode` arm reads the section value with `X509V3_get_value_bool` (`:46`, defined at `crypto/x509/v3_utl.c:266`), which is `x509v3.h`'s and Phase 11's. The other three calls in the handler are landed.",
-        "evidence": "docs/PHASE-7-SUBPHASES.md section 2; forensics/phase7-obligations.json (this unit's exports are its reasoned deferrals); forensics/prerequisites.json"
-      },
-      {
         "unit": "crypto/pem/pem_pk8.c",
         "class": "deferred_to_later_stratum",
         "owner_phase": 13,

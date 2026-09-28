@@ -673,3 +673,65 @@ resolve: `loader_from_algorithm` refuses a loader without `open`/`attach`, `load
 remaining consumer is `store_result.c`'s `ossl_store_handle_load_result`, which `OSSL_STORE_load`
 still withholds on `PKCS12_parse`; the two units are independent, so the rows publish truthfully
 while that export stays open.
+
+**10.14.3 lands the reachable half of `v3_utl.c` at function granularity, and the cut is measured.**
+The keystone D459 named is done: `crypto/x509/v3_utl.c`'s 51 hand-written functions are cut
+by the function-level closure (`court/v3utl_cut.py`, the same `nm --undefined-only` join over the
+authority object, resolving every relocation to the container that holds it), and **31 land in
+`src/x509/v3_utl.rs`** while **20 are withheld by name**: nine because a callee is unlanded, and
+eleven because their closure is complete but every caller is itself withheld (the D453 second
+reason). The nine blockers:
+
+| withheld | authority lines | blocker |
+|---|---|---|
+| `X509_get1_email` | `:449-458` | `X509_get_ext_d2i` (`x509_ext.c`, 10.14.5) |
+| `X509_get1_ocsp` | `:460-480` | `X509_get_ext_d2i` and `AUTHORITY_INFO_ACCESS_free` (`v3_info.c`, 10.14.6) |
+| `X509_REQ_get1_email` | `:482-494` | `X509_REQ_get_extensions`/`_subject_name` (`x509_req.c`, 10.14.11) and `X509V3_get_d2i` (`v3_lib.c`, 10.14.5) |
+| `do_x509_check` and `X509_check_host`/`_email`/`_ip`/`_ip_asc` | `:869-1059` | `X509_get_ext_d2i` (`x509_ext.c`); the four callers reach only the withheld `do_x509_check` |
+| `OSSL_GENERAL_NAMES_print` | `:1421-1432` | `GENERAL_NAME_print` (`v3_san.c`, 10.14.6) |
+
+The hostname-matching cluster (`skip_prefix`, `equal_nocase`, `equal_case`, `equal_email`,
+`wildcard_match`, `valid_star`, `equal_wildcard`, `do_check_string`) and the three email helpers
+(`get_email`, `append_ia5`, `sk_strcmp`) have a **complete** closure but no reachable caller — every
+one is reached only through a withheld function — so they are withheld under D453's second reason,
+recorded rather than defined unreachable. `x509_local.h`'s `X509V3_conf_add_error_name_value`
+expansion is modelled through `openssl_rs_err_add_data` with the authority's NULL-becomes-`<NULL>`
+rule. `crypto/x509/v3_utl.c` has been in `gen_err_raise_sites.py`'s covered set since Phase 5, so no
+generator input moved; the fifteen `V3_UTL_*` coordinates are all reachable now. `RT-STORE` moves
+from **716 to 774 observations** (the parse-list state machine's four shapes and two refusals, the
+value/`_uchar`/`_bool`/`_bool_nf` adders, the `get_value_bool`/`_int` pair, the `i2s_`/`s2i` sign and
+radix order with the consumption refusal, `i2s_ASN1_ENUMERATED`, both `a2i_IPADDRESS` forms and
+`X509V3_NAME_from_section`), all matching the authority on the first run.
+
+**`v3_prn.c` is measured to yield one function, and is not started.** Its four containers' only
+blocker is `X509V3_EXT_get` (`v3_lib.c`, withheld behind the `standard_exts[]` table), and
+`X509V3_EXT_print`, `X509V3_extensions_print` and `X509V3_EXT_print_fp` all call it; only
+`X509V3_EXT_val_prn`'s closure is complete, and `unknown_ext_print` has no reachable caller. The
+unit is therefore deferred to the slice that lands the dispatch, rather than landed as a one-function
+module whose other three names cannot be named.
+
+**The whole-unit cascade re-measured, and the table units' closures are now satisfied but their
+content is unnameable.** With `v3_utl.c`'s helpers in place the greedy cascade lands at step 1 the
+`v3_*` table units that needed them (`v3_bitst.c`, `v3_extku.c`, `v3_pcons.c`, `v3_bcons.c`,
+`v3_int.c`, `v3_sxnet.c`, `v3_tlsf.c`, `v3_enum.c`, `v3_asid.c`, `v3_battcons.c`, `v3_pmaps.c`,
+`v3_akeya.c`). Every one of them is a **table-only leaf** whose sole content is an unexported
+`ossl_v3_*` table that `nm -D` does not admit and no court can name — D455's two-part blocker — so
+they remain withheld until `v3_lib.c`'s dispatch (`X509V3_EXT_get_nid`, which needs a complete
+`standard_exts[]` over all 63 tables) lands with them. **`ossl_x509v3_cache_extensions` did not
+become reachable**: `v3_purp.c`'s measured remaining-need is six names — the four `X509_get_ext`/
+`_by_NID`/`_count`/`_get_ext_d2i` (`x509_ext.c`, 10.14.5), `ossl_x509_init_sig_info` (`x509_set.c`,
+withheld) and `DIST_POINT_set_dpname` (`v3_crld.c`, 10.14.6) — and `x509_ext.c`'s only two callees
+are `v3_lib.c`'s withheld lookup half, so the `x509_cmp ↔ v3_purp ↔ x509_vfy` SCC is still cut at
+the function level and 10.14.5 is not ready. The table leaves the cascade "lands"
+(`v3_bcons.c`, `v3_crld.c`, `v3_san.c`, …) are counted only by symbol closure; a table-only leaf
+is still unnameable, so they do not close `v3_purp.c` in fact.
+
+**One Phase-7 deferral was discharged as a consequence, and retiring it required landing the
+export.** `EVP_add_alg_module`'s only blocker was `X509V3_get_value_bool`, which this slice landed,
+so `blocker_liveness` fired on the now-stale hand-off. Rather than replace a blocker the authority
+does not have, the pair landed: `crypto/evp/evp_cnf.c` is transcribed as `src/evp/evp_cnf.rs`
+(`alg_module_init` and `EVP_add_alg_module`, whole), Phase 7 moves from `implemented 735 / deferred
+215` to **`implemented 736 / deferred 214`**, and the `phase7_obligations.py` blocked-handoff row and
+the `forensics/prerequisites.json` unit record are retired — the rule D453 and D454 used. Phase-10
+counts are unchanged at **`296 implemented / 2 open`** exports and **`636 implemented / 0 open`**
+provider rows, the expected shape for a dependency sub-subphase.

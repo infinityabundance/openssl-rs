@@ -300,7 +300,7 @@
       "verdict": "pass"
     },
     "RT-EVP-REF": {
-      "observations": 264,
+      "observations": 265,
       "verdict": "pass"
     },
     "RT-EVP-SKEY": {
@@ -432,7 +432,7 @@
       "verdict": "pass"
     },
     "RT-STORE": {
-      "observations": 716,
+      "observations": 774,
       "verdict": "pass"
     },
     "RT-THREAD": {
@@ -454,12 +454,12 @@
     "phase4": 23,
     "phase5": 91,
     "phase6": 0,
-    "phase7": 215,
+    "phase7": 214,
     "phase8": 0,
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 3684,
+    "libcrypto": 3701,
     "libssl": 0
   },
   "open_obligations": {
@@ -510,7 +510,7 @@
     "blocking_dependencies": 4,
     "divergence_names_covered": 49,
     "findings": 0,
-    "language_census": 6023,
+    "language_census": 6100,
     "sealed_census": 52
   },
   "provider_implemented": [

@@ -262,9 +262,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 264,
+        "authority_observations": 265,
         "candidate_exit_code": 0,
-        "candidate_observations": 264,
+        "candidate_observations": 265,
         "candidate_stderr_tail": [],
         "court": "RT-EVP-REF",
         "crashed": false,
@@ -420,7 +420,7 @@
     {
       "name": "probe",
       "path": "courts/phase7/rt_coverage_ref_probe.c",
-      "sha256": "06faabf27f7e5860afd7a65aa0163cdf5047bb23129ba960a10f6debcc4b0bcb"
+      "sha256": "79530f23c89f6cefa4f36a221af192ff1d0eb8a7abbcae22d67a6b8aa1d3a42a"
     },
     {
       "name": "probe",

@@ -2496,6 +2496,171 @@ static void drive_x509_10_14_4_genn(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * Phase 10.14.3 -- `crypto/x509/v3_utl.c`: the X.509v3 extension string/value utilities.
+ *
+ * The landed value/string helpers are driven directly: the `X509V3_parse_list` state machine's
+ * four entry shapes and its two refusals, `X509V3_add_value` and its `_uchar`/`_bool`/`_bool_nf`
+ * siblings, `X509V3_get_value_bool`/`_int` over a stack-local `CONF_VALUE`, the
+ * `i2s_`/`s2i_ASN1_INTEGER` pair (sign and radix order, and the consumption refusal),
+ * `i2s_ASN1_ENUMERATED`, the two `a2i_IPADDRESS` forms and `X509V3_NAME_from_section`. The nine
+ * withheld functions (`X509_get1_email`/`_ocsp`/`X509_REQ_get1_email`, `do_x509_check` and its
+ * four callers, `OSSL_GENERAL_NAMES_print`) are named in the module doc, not here: a probe cannot
+ * link a symbol the candidate does not define. Every arm pops the error queue first (D455's
+ * lesson).
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_x509_10_14_3_utl(void)
+{
+    STACK_OF(CONF_VALUE) *cv;
+    ASN1_INTEGER *aint;
+    ASN1_ENUMERATED *aenum;
+    ASN1_OCTET_STRING *oct;
+    char *s;
+    int i;
+
+    /* X509V3_parse_list: `name:value`, a bare name, a stripped-empty value and a refusal. */
+    cv = X509V3_parse_list("a:b, c : d ,e");
+    out_ptr("utl.parselist", cv);
+    out_int("utl.parselist.num", cv != NULL ? (long)sk_CONF_VALUE_num(cv) : -1);
+    if (cv != NULL) {
+        for (i = 0; i < sk_CONF_VALUE_num(cv); i++) {
+            CONF_VALUE *v = sk_CONF_VALUE_value(cv, i);
+            printf("utl.parselist.%d.name=%s\n", i, v->name != NULL ? v->name : "<null>");
+            printf("utl.parselist.%d.value=%s\n", i, v->value != NULL ? v->value : "<null>");
+        }
+    }
+    sk_CONF_VALUE_pop_free(cv, X509V3_conf_free);
+
+    ERR_clear_error();
+    cv = X509V3_parse_list(":emptyname");
+    out_ptr("utl.parselist.empty_name", cv);
+    out_err("utl.parselist.empty_name.err");
+    sk_CONF_VALUE_pop_free(cv, X509V3_conf_free);
+
+    ERR_clear_error();
+    cv = X509V3_parse_list("name:");
+    out_ptr("utl.parselist.empty_value", cv);
+    out_err("utl.parselist.empty_value.err");
+    sk_CONF_VALUE_pop_free(cv, X509V3_conf_free);
+
+    /* X509V3_add_value and the three typed spellings, into one stack. */
+    cv = NULL;
+    out_int("utl.add.value", X509V3_add_value("k", "v", &cv));
+    out_int("utl.add.value_uchar",
+            X509V3_add_value_uchar("u", (const unsigned char *)"w", &cv));
+    out_int("utl.add.value_bool.true", X509V3_add_value_bool("bt", 1, &cv));
+    out_int("utl.add.value_bool.false", X509V3_add_value_bool("bf", 0, &cv));
+    out_int("utl.add.value_bool_nf.false", X509V3_add_value_bool_nf("bnf", 0, &cv));
+    out_int("utl.add.num", cv != NULL ? (long)sk_CONF_VALUE_num(cv) : -1);
+    if (cv != NULL) {
+        for (i = 0; i < sk_CONF_VALUE_num(cv); i++) {
+            CONF_VALUE *v = sk_CONF_VALUE_value(cv, i);
+            printf("utl.add.%d.name=%s\n", i, v->name != NULL ? v->name : "<null>");
+            printf("utl.add.%d.value=%s\n", i, v->value != NULL ? v->value : "<null>");
+        }
+    }
+    sk_CONF_VALUE_pop_free(cv, X509V3_conf_free);
+
+    /* X509V3_get_value_bool / _int over a stack-local CONF_VALUE. */
+    {
+        CONF_VALUE tv = { NULL, (char *)"b", (char *)"yes" };
+        CONF_VALUE fv = { NULL, (char *)"b", (char *)"no" };
+        CONF_VALUE nv = { NULL, (char *)"b", (char *)"maybe" };
+        CONF_VALUE iv = { NULL, (char *)"i", (char *)"0x1f" };
+        int b = -1;
+        ASN1_INTEGER *got = NULL;
+
+        ERR_clear_error();
+        out_int("utl.getval.bool.true", X509V3_get_value_bool(&tv, &b));
+        out_int("utl.getval.bool.true.val", b);
+        b = -1;
+        out_int("utl.getval.bool.false", X509V3_get_value_bool(&fv, &b));
+        out_int("utl.getval.bool.false.val", b);
+        out_int("utl.getval.bool.bad", X509V3_get_value_bool(&nv, &b));
+        out_err("utl.getval.bool.bad.err");
+
+        ERR_clear_error();
+        out_int("utl.getval.int", X509V3_get_value_int(&iv, &got));
+        out_ptr("utl.getval.int.aint", got);
+        s = i2s_ASN1_INTEGER(NULL, got);
+        out_str("utl.getval.int.text", s);
+        OPENSSL_free(s);
+        ASN1_INTEGER_free(got);
+    }
+
+    /* i2s_/s2i_ASN1_INTEGER: the sign/radix order and the consumption refusal. */
+    ERR_clear_error();
+    aint = s2i_ASN1_INTEGER(NULL, "-0x10");
+    out_ptr("utl.s2i.int", aint);
+    out_err("utl.s2i.int.err");
+    s = i2s_ASN1_INTEGER(NULL, aint);
+    out_str("utl.i2s.int", s);
+    OPENSSL_free(s);
+    ASN1_INTEGER_free(aint);
+
+    ERR_clear_error();
+    out_ptr("utl.s2i.int.bad", s2i_ASN1_INTEGER(NULL, "12x"));
+    out_err("utl.s2i.int.bad.err");
+    ERR_clear_error();
+    out_ptr("utl.s2i.int.null", s2i_ASN1_INTEGER(NULL, NULL));
+    out_err("utl.s2i.int.null.err");
+
+    aenum = ASN1_ENUMERATED_new();
+    ASN1_ENUMERATED_set(aenum, 255);
+    s = i2s_ASN1_ENUMERATED(NULL, aenum);
+    out_str("utl.i2s.enum", s);
+    OPENSSL_free(s);
+    ASN1_ENUMERATED_free(aenum);
+
+    /* The address conversions, both forms and the refusals. */
+    oct = a2i_IPADDRESS("192.0.2.1");
+    out_ptr("utl.a2i.v4", oct);
+    if (oct != NULL)
+        out_hex("utl.a2i.v4.der", ASN1_STRING_get0_data(oct), ASN1_STRING_length(oct));
+    ASN1_OCTET_STRING_free(oct);
+
+    oct = a2i_IPADDRESS("2001:db8::1");
+    out_ptr("utl.a2i.v6", oct);
+    if (oct != NULL)
+        out_hex("utl.a2i.v6.der", ASN1_STRING_get0_data(oct), ASN1_STRING_length(oct));
+    ASN1_OCTET_STRING_free(oct);
+
+    ERR_clear_error();
+    out_ptr("utl.a2i.bad", a2i_IPADDRESS("not-an-ip"));
+    out_err("utl.a2i.bad.err");
+
+    oct = a2i_IPADDRESS_NC("10.0.0.0/255.0.0.0");
+    out_ptr("utl.a2i.nc", oct);
+    if (oct != NULL)
+        out_hex("utl.a2i.nc.der", ASN1_STRING_get0_data(oct), ASN1_STRING_length(oct));
+    ASN1_OCTET_STRING_free(oct);
+
+    ERR_clear_error();
+    out_ptr("utl.a2i.nc.noslash", a2i_IPADDRESS_NC("10.0.0.0"));
+    out_err("utl.a2i.nc.noslash.err");
+
+    /* X509V3_NAME_from_section over a two-entry pair stack, printed one-line. */
+    cv = NULL;
+    X509V3_add_value("CN", "probe.example", &cv);
+    X509V3_add_value("+O", "org", &cv);
+    {
+        X509_NAME *nm = X509_NAME_new();
+        char text[256];
+        memset(text, 0, sizeof(text));
+        out_int("utl.name_from_section", X509V3_NAME_from_section(nm, cv, MBSTRING_ASC));
+        out_ptr("utl.name_from_section.text", X509_NAME_oneline(nm, text, (int)sizeof(text)));
+        printf("utl.name_from_section.oneline=%s\n", text);
+        out_int("utl.name_from_section.count", (long)X509_NAME_entry_count(nm));
+        X509_NAME_free(nm);
+    }
+    sk_CONF_VALUE_pop_free(cv, X509V3_conf_free);
+
+    /* X509_email_free over a NULL stack, the pop-free no-op. */
+    X509_email_free(NULL);
+    out_int("utl.email_free.null", 1);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * Phase 10.16 -- the `file` `OSSL_OP_STORE` provider row.
  *
  * `OSSL_STORE_LOADER_fetch(NULL, "file", NULL)` reaches `deflt_query`'s/`base_query`'s
@@ -2612,6 +2777,9 @@ int main(void)
 
     /* ----- Phase 10.14.4: the GENERAL_NAME / GENERAL_NAMES items and accessors ----- */
     drive_x509_10_14_4_genn();
+
+    /* ----- Phase 10.14.3: the X.509v3 extension string/value utilities ----- */
+    drive_x509_10_14_3_utl();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

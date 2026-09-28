@@ -272,10 +272,12 @@
         "openssl_rs_va_fp",
         "openssl_rs_va_gp",
         "ossl_X509_PUBKEY_INTERNAL_free",
+        "ossl_a2i_ipadd",
         "ossl_any_to_obj_algorithm",
         "ossl_asn1_type_get_octetstring_int",
         "ossl_asn1_type_set_octetstring_int",
         "ossl_base_provider_init",
+        "ossl_bio_print_hex",
         "ossl_c448_ed448_convert_private_key_to_x448",
         "ossl_c448_ed448_derive_public_key",
         "ossl_c448_ed448_sign",
@@ -399,6 +401,7 @@
         "ossl_i2d_ED448_PUBKEY",
         "ossl_i2d_X25519_PUBKEY",
         "ossl_i2d_X448_PUBKEY",
+        "ossl_ipaddr_to_asc",
         "ossl_kdf_data_free",
         "ossl_kdf_data_new",
         "ossl_kdf_data_up_ref",
@@ -433,6 +436,7 @@
         "ossl_pw_set_passphrase",
         "ossl_pw_set_pem_password_cb",
         "ossl_pw_set_ui_method",
+        "ossl_v3_name_cmp",
         "ossl_x25519",
         "ossl_x25519_public_from_private",
         "ossl_x448",
@@ -478,9 +482,10 @@
         "x25519_fe64_mul121666",
         "x25519_fe64_sqr",
         "x25519_fe64_sub",
-        "x25519_fe64_tobytes"
+        "x25519_fe64_tobytes",
+        "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 13806,
+      "compiler_emitted_count": 14028,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -488,7 +493,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 3684,
+        "implemented": 3701,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -2566,6 +2571,7 @@
           "EVP_SignFinal_ex",
           "EVP_VerifyFinal",
           "EVP_VerifyFinal_ex",
+          "EVP_add_alg_module",
           "EVP_add_cipher",
           "EVP_add_digest",
           "EVP_blake2b512",
@@ -3649,7 +3655,17 @@
           "X509V3_EXT_add",
           "X509V3_EXT_add_list",
           "X509V3_EXT_cleanup",
+          "X509V3_NAME_from_section",
           "X509V3_add_standard_extensions",
+          "X509V3_add_value",
+          "X509V3_add_value_bool",
+          "X509V3_add_value_bool_nf",
+          "X509V3_add_value_int",
+          "X509V3_add_value_uchar",
+          "X509V3_conf_free",
+          "X509V3_get_value_bool",
+          "X509V3_get_value_int",
+          "X509V3_parse_list",
           "X509_ALGORS_it",
           "X509_ALGOR_cmp",
           "X509_ALGOR_copy",
@@ -3801,6 +3817,7 @@
           "X509_digest",
           "X509_digest_sig",
           "X509_dup",
+          "X509_email_free",
           "X509_find_by_issuer_and_serial",
           "X509_find_by_subject",
           "X509_free",
@@ -3883,6 +3900,8 @@
           "a2i_ASN1_ENUMERATED",
           "a2i_ASN1_INTEGER",
           "a2i_ASN1_STRING",
+          "a2i_IPADDRESS",
+          "a2i_IPADDRESS_NC",
           "asn1_d2i_read_bio",
           "b2i_PVK_bio",
           "b2i_PVK_bio_ex",
@@ -4166,16 +4185,19 @@
           "i2d_re_X509_CRL_tbs",
           "i2d_re_X509_tbs",
           "i2o_ECPublicKey",
+          "i2s_ASN1_ENUMERATED",
           "i2s_ASN1_IA5STRING",
+          "i2s_ASN1_INTEGER",
           "i2s_ASN1_OCTET_STRING",
           "i2s_ASN1_UTF8STRING",
           "i2t_ASN1_OBJECT",
           "o2i_ECPublicKey",
           "s2i_ASN1_IA5STRING",
+          "s2i_ASN1_INTEGER",
           "s2i_ASN1_OCTET_STRING",
           "s2i_ASN1_UTF8STRING"
         ],
-        "scaffolded": 2212
+        "scaffolded": 2195
       },
       "libssl": {
         "authority_exports": 603,
@@ -4186,18 +4208,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 3684,
-      "scaffolded": 2815
+      "implemented": 3701,
+      "scaffolded": 2798
     }
   },
-  "body_hash": "658c5d0a25a93642aa412aa33e930027ecbc08fda665a10122666e48498a87ab",
+  "body_hash": "019428ff5c52f9c257db7d936f95e63e62c9b8968464ebd995e12f34d81bb8d8",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "06a7b941e604bef4fa2067e9dc4fb8d66c307d1123c844520e97416a5e907085"
+      "sha256": "4bb3c335736d3bf64df7b711454d62b02097f5a1b68958f193a53e6ef0239f7d"
     },
     {
       "name": "authority-exports",
