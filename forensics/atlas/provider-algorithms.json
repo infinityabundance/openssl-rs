@@ -76,11 +76,11 @@
       "handed_on": {
         "10": 39,
         "13": 0,
-        "8": 41,
-        "9": 41
+        "8": 39,
+        "9": 39
       },
       "open": {
-        "10": 2,
+        "10": 0,
         "13": 39,
         "8": 0,
         "9": 0
@@ -14255,15 +14255,16 @@
         "aliases": [
           "file"
         ],
-        "blocked_by": "the OSSL_STORE loaders are Phase 10's.",
+        "blocked_by": null,
         "capability_filtered": false,
         "capability_predicate": null,
+        "crate_dispatch": "ossl_file_store_functions",
         "dispatch_table_symbol": "ossl_file_store_functions",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_STORE",
         "operation_id": 22,
         "owning_phase": 10,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=default,fips=\"yes\"",
         "provider": "default",
         "row_order": 0,
@@ -21748,15 +21749,16 @@
         "aliases": [
           "file"
         ],
-        "blocked_by": "the OSSL_STORE loaders are Phase 10's.",
+        "blocked_by": null,
         "capability_filtered": false,
         "capability_predicate": null,
+        "crate_dispatch": "ossl_file_store_functions",
         "dispatch_table_symbol": "ossl_file_store_functions",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_STORE",
         "operation_id": 22,
         "owning_phase": 10,
-        "plan_match": "operation-default",
+        "plan_match": "crate-table",
         "property_definition": "provider=base,fips=\"yes\"",
         "provider": "base",
         "row_order": 0,

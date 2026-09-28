@@ -36,12 +36,9 @@
  *    `ossl_store_handle_load_result`, which needs `PKCS12_parse` (10.3-withheld) now that 10.12
  *    landed `d2i_X509_AUX`. 10.8 landed `d2i_X509`/`d2i_X509_CRL`, so only `PKCS12_parse`
  *    remains.
- *  * `OSSL_STORE_find`'s `BY_NAME`/`BY_ISSUER_SERIAL` arms -- 10.8 landed `i2d_X509_NAME`, but the
- *    arms sit in the **fetched** branch, which no candidate reaches while the `file`
- *    `OSSL_OP_STORE` row is unpublished. The blocker is the provider row, not the name encoder.
- *  * the two `OSSL_OP_STORE` provider rows (`file`) -- so `OSSL_STORE_LOADER_fetch` and
- *    `OSSL_STORE_LOADER_do_all_provided` stay **address-taken only**, and the refused paths are
- *    driven through the legacy registry instead.
+ *  * the two `OSSL_OP_STORE` provider rows (`file`) were withheld through 10.15. **10.16 publishes
+ *    them**, so `OSSL_STORE_LOADER_fetch`/`do_all_provided` and the fetched `OSSL_STORE_find`
+ *    arms are now **driven** at the end of `main` rather than named pending.
  *
  * 10.8 lands the `X509`/`X509_CRL` object core, so `OSSL_STORE_INFO_get1_CERT`/`_get1_CRL`, the
  * `CERT`/`CRL` arms of `OSSL_STORE_INFO_free`, and a decode/re-encode/dup/free of a fixed
@@ -75,6 +72,7 @@
 #include <openssl/evp.h>
 #include <openssl/objects.h>
 #include <openssl/obj_mac.h>
+#include <openssl/provider.h>
 #include <openssl/rsa.h>
 #include <openssl/store.h>
 #include <openssl/x509.h>
@@ -262,6 +260,19 @@ static void do_all_loaders_cb(const OSSL_STORE_LOADER *loader, void *arg)
     (void)arg;
     g_do_all_count++;
     printf("store.do_all.%s=1\n", OSSL_STORE_LOADER_get0_scheme(loader));
+}
+
+/* The provider walk's visitor. It counts only, because a *fetched* loader's `scheme` is NULL
+ * (`loader_from_algorithm` sets `scheme_id` and `propdef`, not the legacy `scheme` field), so the
+ * legacy visitor's `get0_scheme` would print `(null)` on both sides -- a true but empty
+ * observation. The count is the observable that distinguishes a resolved row from an absent one. */
+static long g_provider_do_all_count;
+
+static void provider_do_all_cb(OSSL_STORE_LOADER *loader, void *arg)
+{
+    (void)loader;
+    (void)arg;
+    g_provider_do_all_count++;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -827,11 +838,7 @@ static void drive_x509v3_extensions(void)
 
 static void out_pending(void)
 {
-    printf("pending.OSSL_STORE_LOADER_fetch=file_store_provider_row_unpublished\n");
-    printf("pending.OSSL_STORE_LOADER_do_all_provided=file_store_provider_row_unpublished\n");
     printf("pending.OSSL_STORE_load=store_result_ossl_store_handle_load_result\n");
-    printf("pending.OSSL_STORE_find.by_name=file_store_provider_row_unpublished\n");
-    printf("pending.OSSL_STORE_find.by_issuer_serial=file_store_provider_row_unpublished\n");
     /* 10.14.2: the classical RSA verify path (`X509_verify`/`NETSCAPE_SPKI_verify` over an
      * RSA-signed object) resolves its digest by name through `EVP_get_digestbyname`, which this
      * crate answers NULL for every built-in name -- the Phase 13 legacy-`OBJ_NAME` divergence
@@ -2488,6 +2495,64 @@ static void drive_x509_10_14_4_genn(void)
     names = NULL;
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.16 -- the `file` `OSSL_OP_STORE` provider row.
+ *
+ * `OSSL_STORE_LOADER_fetch(NULL, "file", NULL)` reaches `deflt_query`'s/`base_query`'s
+ * `OSSL_OP_STORE` arm, runs `construct_loader` and resolves the row through its
+ * open/attach/load/eof/close callbacks; `OSSL_STORE_LOADER_do_all_provided` then finds the row in
+ * both the default (fallback) and the base provider. Both providers are loaded explicitly so the
+ * sweep is deterministic, and every arm pops its own error queue first (D455's lesson).
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_file_store_row(void)
+{
+    OSSL_STORE_LOADER *file_loader;
+    OSSL_STORE_CTX *ctx;
+    OSSL_PROVIDER *d;
+    OSSL_PROVIDER *b;
+
+    ERR_clear_error();
+    d = OSSL_PROVIDER_load(NULL, "default");
+    b = OSSL_PROVIDER_load(NULL, "base");
+    out_ptr("store.file.provider.default", d);
+    out_ptr("store.file.provider.base", b);
+
+    ERR_clear_error();
+    file_loader = OSSL_STORE_LOADER_fetch(NULL, "file", NULL);
+    out_ptr("store.file.fetch", file_loader);
+    out_err("store.file.fetch.err");
+    if (file_loader != NULL)
+        OSSL_STORE_LOADER_free(file_loader);
+
+    ERR_clear_error();
+    g_provider_do_all_count = 0;
+    OSSL_STORE_LOADER_do_all_provided(NULL, provider_do_all_cb, NULL);
+    out_int("store.file.do_all.count", g_provider_do_all_count);
+
+    /* The fetched `OSSL_STORE_find` arms, over a real `file:` context. `/dev/null` stat()s and
+     * opens on the admitted profile and is not a directory, so the `subject`/`issuer` parameters
+     * take file_store.c's `SEARCH_ONLY_SUPPORTED_FOR_DIRECTORIES` refusal -- the same answer on
+     * both sides. This is what the pre-10.16 probe could only name pending. */
+    ERR_clear_error();
+    ctx = OSSL_STORE_open("file:/dev/null", NULL, NULL, NULL, NULL);
+    out_ptr("store.file.find.open", ctx);
+    out_err("store.file.find.open.err");
+    if (ctx != NULL) {
+        X509_NAME *nm = X509_NAME_new();
+        OSSL_STORE_SEARCH *by_name = OSSL_STORE_SEARCH_by_name(nm);
+
+        ERR_clear_error();
+        out_int("store.file.find.by_name", OSSL_STORE_find(ctx, by_name));
+        out_err("store.file.find.by_name.err");
+        OSSL_STORE_SEARCH_free(by_name);
+        X509_NAME_free(nm);
+
+        out_int("store.file.find.close", OSSL_STORE_close(ctx));
+        out_err("store.file.find.close.err");
+    }
+}
+
 int main(void)
 {
     OSSL_STORE_LOADER *loader;
@@ -2495,9 +2560,8 @@ int main(void)
     OSSL_STORE_LOADER *incomplete;
     OSSL_STORE_LOADER *removed;
     const char *scheme = "probe";
-    /* The published row's scheme literal, which `provider_court_coverage.py`'s join reads if
-     * and when the row lands; naming it here is required by the pass even while the row is
-     * withheld. It is never passed to a fetch, because the two sides would answer differently. */
+    /* The published row's scheme literal. `provider_court_coverage.py`'s join reads it, and
+     * `drive_file_store_row` below passes it to the fetch and the provider walk. */
     const char *file_scheme = "file";
     long names = 0;
     /* The two provider-fetch exports are referenced through a volatile slot so the reference
@@ -2643,6 +2707,8 @@ int main(void)
     out_str("ref.file_scheme", file_scheme);
 
     drive_engine_registry();
+
+    drive_file_store_row();
 
     out_pending();
     return 0;

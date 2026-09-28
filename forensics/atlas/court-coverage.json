@@ -12364,6 +12364,7 @@
               "RT-RAND",
               "RT-RAND-USERS",
               "RT-RSA",
+              "RT-STORE",
               "RT-THREADDATA"
             ],
             "symbol": "OSSL_PROVIDER_load"
@@ -26523,7 +26524,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "51c8e979e865d9dba7fb3726da05003afdf567b3bcded04a4d2403e197205fe2"
+      "sha256": "c57afd7b70e1c1cebe2a29521f2e2894e9708f1e39d360d080beb41f29cf8c16"
     },
     {
       "name": "symbol-ownership",
@@ -26578,7 +26579,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "87bee75e332af52f8574dc9071c91b8efff98f3141b848f12dd427c26f8e1463"
+      "sha256": "7cda2ed79fbc30b7494017578bd3934ac9a76d80a06087958f2f29ce55ebe961"
     },
     {
       "name": "phase7-courts",
@@ -26588,7 +26589,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "57be0c5fdb839a85ea7be44eb758bad17a3e7e6eb78fb1f1df44ad7fbc08fc76"
+      "sha256": "0758fce1f5915544df0ca1e81a35651d0f472ad22c6d0f0c6f9fb341673b93c6"
     },
     {
       "name": "phase8-courts",
@@ -26598,7 +26599,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "fda96090f4e80f1587f5dec0477e447297dd8b9c77a375ab6056263fe422b99f"
+      "sha256": "9fa90758ffb69f7e7c57bfbc836d306f69066ea8348b1f3d3bb85d3d5f609e5a"
     },
     {
       "name": "phase9-courts",
@@ -26608,12 +26609,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "96e864e0edb9e2b6fc22a3446bde34a9bce3d7198b7ba3b51f91961165470f00"
+      "sha256": "e8277521b94cea12b69c8a0831bb72362db29d867b52693f88b0f33d8593c186"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "47ed0b49f5bea3863bea0c9b287f1b5048de57f660bd8b1241d16f3909a5a93c"
+      "sha256": "e08299314474c9c6123fd23939c7d2d67a9781fd5d8f01ba914c6936bc6c41c8"
     }
   ],
   "kind": "court-coverage",

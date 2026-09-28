@@ -903,9 +903,9 @@ unsafe extern "C" fn do_one(_id: c_int, method: *mut c_void, arg: *mut c_void) {
 /// `store_meth.c:468-486`.
 ///
 /// The **fetch runs first**, filling the temporary store, and only then are both stores
-/// walked; the temporary one is released last. Because no `OSSL_OP_STORE` row is published
-/// in this pass (`file_store.c` is withheld -- see the module root), the walk finds nothing
-/// and the observations `RT-STORE` makes are its refusal arms.
+/// walked; the temporary one is released last. 10.16 publishes the two `OSSL_OP_STORE` `file`
+/// rows (`src/provider/file_store.rs`), so the walk now finds them; before that it found only
+/// the refusal arms `RT-STORE` observed.
 ///
 /// # Safety
 /// `libctx` NULL or live; `user_fn` a valid callback; `user_arg` opaque to this file.

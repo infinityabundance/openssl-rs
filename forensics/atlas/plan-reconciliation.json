@@ -5012,12 +5012,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "51c8e979e865d9dba7fb3726da05003afdf567b3bcded04a4d2403e197205fe2"
+      "sha256": "c57afd7b70e1c1cebe2a29521f2e2894e9708f1e39d360d080beb41f29cf8c16"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "2be1fd7272d3ae1081281eb7fc5e974fdfcfaaad00d494803d6f0f8fd0b837b3"
+      "sha256": "d4d0b4a2e5f554ad3d205c53139227224fd7abfb587be2b2aa54d9c8dde3b9cb"
     },
     {
       "name": "prerequisites",
@@ -5032,7 +5032,7 @@
     {
       "name": "plan-PHASE-10-SUBPHASES",
       "path": "docs/PHASE-10-SUBPHASES.md",
-      "sha256": "8c68abad2577d230065b36bff0aeb4d3cc402c1b93e6c0ca4ea1516c4951d08a"
+      "sha256": "310ab603a441a5e7f9c4e2faa5c027d280d3d77c498b1fab08b63b07225e90a9"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

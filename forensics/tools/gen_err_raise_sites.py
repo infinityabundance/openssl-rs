@@ -1413,6 +1413,22 @@ COVERED_FILES = [
     ("crypto/engine/tb_asnmth.c", "TB_ASNMTH"),
     ("crypto/engine/tb_digest.c", "TB_DIGEST"),
     ("crypto/engine/tb_pkmeth.c", "TB_PKMETH"),
+    # Phase 10.16's `providers/implementations/storemgmt/file_store.c` -- the `file:` STORE LOADER
+    # the `default` and `base` providers publish as their one `OSSL_OP_STORE` row. It is a `.c.in`
+    # template the build expands into the build tree, so its `__FILE__` is the bare build-relative
+    # path and the coordinates are read from the expanded `.c`, exactly as `ciphercommon.c`'s are.
+    # Its twenty sites are `ERR_LIB_PROV` with `ERR_R_PROV_LIB`/`ERR_R_OSSL_DECODER_LIB` and the
+    # four container reasons (`PROV_R_URI_AUTHORITY_UNSUPPORTED`, `PROV_R_REPEATED_PARAMETER`,
+    # `PROV_R_SEARCH_ONLY_SUPPORTED_FOR_DIRECTORIES`), plus the three `ERR_LIB_SYS` errno sites
+    # (`:187` `OPENSSL_DIR_read`, `:254` `stat`, `:765` the directory walk) whose reasons are
+    # computed and are therefore dynamic. The stem is `PROV_FILE_STORE` so it cannot collide with
+    # `file_store_any2obj.c`'s.
+    ("providers/implementations/storemgmt/file_store.c", "PROV_FILE_STORE"),
+    # Phase 10.16's `providers/implementations/storemgmt/file_store_any2obj.c` -- the `file:`
+    # store's private last-resort decoder. A `.c.in` template like its sibling. Its five sites are
+    # the `PROV_R_REPEATED_PARAMETER` refusal of the `data-structure` decoder (`:100`) and the four
+    # `ERR_LIB_PEM` `ERR_R_BUF_LIB` allocation failures (`:217`, `:242`, `:289`, `:310`).
+    ("providers/implementations/storemgmt/file_store_any2obj.c", "PROV_FILE_STORE_ANY2OBJ"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`

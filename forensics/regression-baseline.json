@@ -432,7 +432,7 @@
       "verdict": "pass"
     },
     "RT-STORE": {
-      "observations": 709,
+      "observations": 716,
       "verdict": "pass"
     },
     "RT-THREAD": {
@@ -510,7 +510,7 @@
     "blocking_dependencies": 4,
     "divergence_names_covered": 49,
     "findings": 0,
-    "language_census": 6028,
+    "language_census": 6023,
     "sealed_census": 52
   },
   "provider_implemented": [
@@ -832,6 +832,7 @@
     "base/OSSL_OP_ENCODER/X448",
     "base/OSSL_OP_ENCODER/X448",
     "base/OSSL_OP_RAND/SEED-SRC",
+    "base/OSSL_OP_STORE/file",
     "default/OSSL_OP_ASYM_CIPHER/RSA",
     "default/OSSL_OP_ASYM_CIPHER/SM2",
     "default/OSSL_OP_CIPHER/AES-128-CBC",
@@ -1468,23 +1469,24 @@
     "default/OSSL_OP_SIGNATURE/SLH-DSA-SHAKE-256s",
     "default/OSSL_OP_SIGNATURE/SM2",
     "default/OSSL_OP_SKEYMGMT/AES",
-    "default/OSSL_OP_SKEYMGMT/GENERIC-SECRET"
+    "default/OSSL_OP_SKEYMGMT/GENERIC-SECRET",
+    "default/OSSL_OP_STORE/file"
   ],
   "provider_rows": {
     "handed_on_by_phase": {
       "10": 39,
       "13": 0,
-      "8": 41,
-      "9": 41
+      "8": 39,
+      "9": 39
     },
-    "implemented": 955,
+    "implemented": 957,
     "open_by_phase": {
-      "10": 2,
+      "10": 0,
       "13": 39,
       "8": 0,
       "9": 0
     },
     "total": 996,
-    "unimplemented": 41
+    "unimplemented": 39
   }
 }
