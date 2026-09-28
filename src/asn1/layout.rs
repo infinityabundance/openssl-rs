@@ -160,6 +160,12 @@ pub struct BitStringBitname {
     pub(crate) sname: *const c_char,
 }
 
+// SAFETY: a name row borrows compile-time constant strings and is never written; the authority's
+// `crl_reasons[]`/`key_usage[]`/`ns_cert_type[]` tables are immutable data. Claiming `Sync` is what
+// lets `v3_enum.rs` hold one as a `static` for `X509V3_EXT_METHOD.usr_data`, the same reason
+// `Asn1Item` and `Asn1Template` claim it.
+unsafe impl Sync for BitStringBitname {}
+
 /// `ASN1_TEMPLATE` — one field of a `SEQUENCE`/`CHOICE` template.
 ///
 /// `item` is declared as a pointer to `ASN1_ITEM_EXP`, which is

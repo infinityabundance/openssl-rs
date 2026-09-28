@@ -32595,3 +32595,58 @@ consecutive runs. Phase-10 counts are unchanged at `296 implemented / 2 open` ex
 further units -- the `v3_lib` <-> tables <-> `v3_utl`/`v3_conf`/`v3_san` component. Behind it: the
 keystone, then `PKCS12_parse`, then `store_result.c` and `OSSL_STORE_load`, then the seal.
 
+## D464 -- the table layer starts: 14 of 63 tables land, and the three-way split is measured
+
+Thirteenth pulled-forward slice, and the first to take option 1 (D463's note): land the tables as
+work, withhold only the *claim* -- the published `standard_exts[]` array and the six `v3_lib.rs`
+lookup names -- until all 63 exist. **Twelve units transcribed whole, 612 authority lines, carrying
+14 of the 63 tables**, each landing its item group, its `i2s_`/`s2i_`/`i2v_`/`v2i_`/`i2r_`/`r2i_`
+callbacks and its `OSSL_V3_EXT_METHOD` row with nothing stubbed: `v3_int` (3 tables), `v3_enum`,
+`v3_audit_id`, `v3_no_ass`, `v3_single_use`, `v3_soa_id`, `v3_group_ac`, `v3_ind_iss`,
+`v3_no_rev_avail`, `v3_ia5` (8 rows), `v3_utf8`, `v3_pku`. `RT-STORE` moves from 806 to **810**
+observations (four arms driving `i2s_ASN1_ENUMERATED_TABLE`, the one newly nameable export) and the
+total to **45,853** over 109 courts.
+
+**The wall is now a three-way split rather than one number**, which is the point of measuring it:
+
+| status | tables | units | authority lines |
+|---|---:|---:|---:|
+| landed whole | **14** | 12 | 612 |
+| closure-ready, withheld for budget | 16 | 12 | 2,714 |
+| withheld by name, unlanded blocker | 33 | 20 | 6,622 |
+| **withheld total** | **49** | 32 | **9,336** |
+
+The **33 genuinely blocked** are dominated by three hubs, not by the tables themselves:
+`v3_san.c`'s general-name printers (`GENERAL_NAME_print`, `v2i`/`i2v_GENERAL_NAME(S)`), `v3_conf.c`'s
+config layer (`X509V3_get_section`/`_section_free`), and `x_attrib.c`'s
+`ossl_print_attribute_value`; the rest reach `http_lib.c`/`punycode.c` or the CT units. **That is the
+useful finding: 33 tables wait on three hubs, so the hubs are worth more than the tables.**
+
+**A representation correction was found and fixed.** `struct v3_ext_method`'s `ASN1_ITEM_EXP *it` is
+a **function** pointer -- `ASN1_ITEM_EXP` is `typedef const ASN1_ITEM *ASN1_ITEM_EXP(void)`, and
+`ASN1_ITEM_ptr(method->it)` calls it -- where D456 had typed it `*const Asn1Item`. `v3_lib.rs` now
+types it as the function pointer and claims `Sync` so the tables can be `static`. No landed code read
+the field, so nothing behaved differently, but a table published against the wrong shape would have.
+Three stale `prerequisites.json` divergence rows were retired (they covered exactly the tables now
+built); no gate was loosened.
+
+**The D462 flake did not reproduce again**: five full runs on the settled tree, **with `git status`
+captured at each run** as D462's protocol requires -- all five `1114 passed, 0 failed` on a clean
+tree. That makes twenty-six green full runs since the single failure, and the protocol is now being
+followed rather than merely described.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1114 passed, 0 failed**; 109 courts and **45,853 observations**; `PIPELINE OK` exit 0 twice.
+Phase-10 counts are unchanged at `296 implemented / 2 open` exports and **`636 implemented / 0
+open`** provider rows. Nothing closed this slice, and none is claimed: the array is a claim, and 49
+of its 63 tables are missing.
+
+### The remaining distance
+
+**49 of 63 tables** -- 33 blocked over 20 units / 6,622 lines and 16 closure-ready over 12 units /
+2,714 lines -- plus D463's 24-name closure over 17 further units; then the array, then
+`X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` /
+`OSSL_STORE_load` -> the seal.
+

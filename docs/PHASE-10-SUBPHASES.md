@@ -791,3 +791,86 @@ collapse, `DIST_POINT_set_dpname`'s NULL/`type 0`/`type 1` shapes, and the `BASI
 item group's build/encode/decode/re-encode/free round trip). The remaining distance to the chain is
 the **44-unit / 9,948-line table layer** plus that 24-name closure — still the whole `v3_lib` ↔
 tables ↔ `v3_utl`/`v3_conf`/`v3_san` component, not a small loader.
+
+**The table layer's first slice lands 14 of the 63 tables, and the array stays the claim.** The
+owner accepted D463's option 1: land the table modules as real Rust, drive each through whatever
+public surface reaches it, and withhold only the published `standard_exts[]` array and the six
+lookup names in `v3_lib.rs` until all 63 tables exist. This slice is the first bite.
+
+* **The measurement, run first.** The same `nm --undefined-only` join, with a unit closure-ready
+  when every name its object leaves undefined is landed **and** crediting the crate's ordinary
+  `pub fn` definitions (the D459 credit), finds **24 of the 44 units closure-ready** and **20
+  blocked**, each with its named blocker. The smallest ready units landed first; the blocked 20 are
+  the same component D463 named, dominated by the `v3_san.c` hub (`GENERAL_NAME_print`,
+  `v2i_GENERAL_NAME_ex`, `i2v_GENERAL_NAME`, `i2v_GENERAL_NAMES`, `v2i_GENERAL_NAMES`), the
+  `v3_conf.c` config layer (`X509V3_get_section`/`_section_free`) and `ossl_print_attribute_value`
+  (`x_attrib.c`).
+* **Twelve units transcribe whole — 612 authority lines — carrying 14 of the 63 tables**: `v3_int.c`
+  (3 tables: `ossl_v3_crl_num`, `ossl_v3_delta_crl`, `ossl_v3_inhibit_anyp`), `v3_enum.c`
+  (`ossl_v3_crl_reason`, with its exported printer `i2s_ASN1_ENUMERATED_TABLE`), `v3_audit_id.c`,
+  `v3_no_ass.c`, `v3_single_use.c`, `v3_soa_id.c`, `v3_group_ac.c`, `v3_ind_iss.c`,
+  `v3_no_rev_avail.c` (one `ASN1_NULL` table each), `v3_ia5.c` (`ossl_v3_ns_ia5_list`, eight rows),
+  `v3_utf8.c` (`ossl_v3_utf8_list`, one row) and `v3_pku.c` (`ossl_v3_pkey_usage_period`, with its
+  `i2r_PKEY_USAGE_PERIOD`). The first nine are Phase 10.12/10.13 leftovers the earlier slices
+  withheld as "dead data with no court"; this slice lands them under the owner's option-1 decision.
+* **Forty-nine tables remain withheld over 32 units (9,336 authority lines), and the split is
+  recorded rather than blurred.** Sixteen tables over 12 units (2,714 lines) are
+  **closure-ready but not attempted within this slice's budget** — the task's rule is that a
+  withholding is a claim about the frontier, and for these the frontier is already past them, so
+  they are named as budget, not as a closure gap. The other 33 tables over 20 units (6,622 lines)
+  are **genuinely blocked**, each by a named unlanded callee (the table below).
+
+| status | tables | units | authority lines |
+|---|---:|---:|---:|
+| landed whole (row's table(s) exist) | **14** | 12 | 612 |
+| closure-ready, withheld for budget | 16 | 12 | 2,714 |
+| withheld by name, with an unlanded blocker | 33 | 20 | 6,622 |
+| **withheld, total** | **49** | **32** | **9,336** |
+
+The budget-deferred 12 are `v3_asid.c` (871), `v3_sxnet.c` (259), `v3_ist.c` (144), `v3_tlsf.c`
+(137), `v3_extku.c` (125, four tables), `v3_pmaps.c` (109), `v3_skid.c` (108), `v3_bitst.c` (100,
+`two tables), `v3_pcons.c` (91), `v3_battcons.c` (86), `v3_bcons.c` (85) and `v3_timespec.c`
+(599, whose item groups landed in 10.13 and whose table and twelve printers remain). The genuinely
+blocked 20 are led by `v3_addr.c` (1,359), `v3_ncons.c` (862, three tables), `v3_crld.c` (724, six
+tables), `v3_san.c` (689), `v3_cpols.c` (515) and `v3_admis.c` (355), whose common blockers are
+`GENERAL_NAME_print`/`v2i_GENERAL_NAME_ex`/`i2v_GENERAL_NAME(S)` (`v3_san.c`),
+`X509V3_get_section`/`_section_free` (`v3_conf.c`) and `ossl_print_attribute_value` (`x_attrib.c`).
+
+* **The representation the slice chose, and why.** A table is a Rust `pub static` the eventual array
+  references by path; it is **not** emitted as a `#[no_mangle]` C symbol. The authority's
+  `ossl_v3_*` are global only because its translation-unit model gives them a symbol; the admitted
+  DSO does not export them (`nm -D` shows none), so no court can name one either way. Keeping them
+  Rust-only is the choice `evp::digest::StaticMd` already made, and it keeps the crate's C surface
+  the ABI the project measures rather than a mirror of the authority's object-file symbol table.
+* **A representation correction fell out of the first table, and it is recorded rather than
+  smoothed over.** `struct v3_ext_method`'s `ASN1_ITEM_EXP *it` (`x509v3.h:69`) is a **function**
+  pointer: `ASN1_ITEM_EXP` is `typedef const ASN1_ITEM *ASN1_ITEM_EXP(void)` (`asn1.h.in:378`), so
+  `ASN1_ITEM_ref(i)` = `i##_it` is the getter function designator and `ASN1_ITEM_ptr(method->it)` =
+  `((iptr)())` calls it. D456's first cut typed the field `*const Asn1Item`; `v3_lib.rs` now types
+  it the function pointer the header declares, a pointer-sized change no landed code read.
+* **Three `prerequisites.json` divergence rows were retired, not loosened.** The `v3_ia5.rs`,
+  `v3_pku.rs` and `v3_utf8.rs` rows covered exactly the tables now built, so the gate's
+  `divergence_record_does_not_match` finding fired and the rows were removed (the D453/D454 rule).
+  No gate was weakened; `prerequisite_gate.py` is clean at 18 divergence rows.
+* **The chain did not move.** `standard_exts[]` is not published (49 tables missing), so
+  `X509V3_EXT_get_nid`/`_get`/`_add_alias`/`_EXT_d2i`/`_get_d2i`/`_add1_i2d` stay withheld,
+  `X509_get_ext_d2i` stays withheld, `ossl_x509v3_cache_extensions` stays unreachable, and
+  `PKCS12_parse` and `OSSL_STORE_load` stay open. Phase-10 counts are unchanged at
+  **`296 implemented / 2 open`** exports and **`636 implemented / 0 open`** provider rows.
+* **The court grew where the surface did.** `RT-STORE` moves from **806 to 810 observations**: four
+  arms driving the one newly nameable export, `i2s_ASN1_ENUMERATED_TABLE` (the row's `usr_data` hit
+  and the fall-through miss to `i2s_ASN1_ENUMERATED`), each popping its own error queue first
+  (D455). The 109-court total moves from **45,849 to 45,853**. The remaining tables add no arm: they
+  are unnameable from the admitted DSO, and their drivable surface (the item groups) was already
+  driven.
+* **The D462 flake was not reproduced.** Five consecutive full `cargo test --lib` runs on the
+  settled tree, each preserving full output and capturing `git --no-optional-locks status --short`
+  at the moment of the run, all read **1114 passed, 0 failed** with a **clean** tree; no retry was
+  added and no test skipped. That is five more green runs since the single D458 failure and still
+  **not** a reproduction, so the defect stays open and unnamed rather than closed by absence.
+
+The remaining distance is therefore **49 tables over 32 units / 9,336 authority lines**, minus the
+blockers that are themselves landable units (`x_attrib.c`'s `ossl_print_attribute_value`, the
+`v3_conf.c` config layer, `v3_san.c`'s general-name printers), plus the **24-name closure** D463
+measured over 17 further units. The next real move is unchanged: land the `v3_san.c`/`v3_conf.c`
+hubs that block the largest cluster, then the rest of the tables, then the array.

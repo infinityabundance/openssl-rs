@@ -234,3 +234,9 @@ pub mod v3_crld;
 // is real; `ossl_v3_bcons` and the two callbacks are withheld by name behind `standard_exts[]`.
 // See the module docs.
 pub mod v3_bcons;
+// Phase 10.14's table layer -- the `ossl_v3_*` rows themselves. Each module lands its unit's row,
+// its item group's callbacks and its `i2s_`/`s2i_`/`i2r_`/`r2i_` printers; only the published
+// `standard_exts[]` and the six `v3_lib.rs` lookup names stay withheld until all 63 tables exist
+// (D456/D463). See `docs/PHASE-10-SUBPHASES.md` section 7.
+pub mod v3_enum;
+pub mod v3_int;

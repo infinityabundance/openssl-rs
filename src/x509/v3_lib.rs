@@ -127,7 +127,16 @@ pub struct X509V3ExtMethod {
     /// `int ext_flags` — `X509V3_EXT_DYNAMIC` / `_CTX_DEP` / `_MULTILINE`.
     pub ext_flags: c_int,
     /// `ASN1_ITEM_EXP *it` — when set the four old-style hooks are ignored.
-    pub it: *const Asn1Item,
+    ///
+    /// `include/openssl/asn1.h.in:378` defines `typedef const ASN1_ITEM *ASN1_ITEM_EXP(void)`, a
+    /// **function** type, so `ASN1_ITEM_ref(iptr)` (`asn1.h.in:384`, `(iptr##_it)`) is the function
+    /// designator `i##_it`, not its result; the read site `ASN1_ITEM_ptr(method->it)`
+    /// (`ASN1_ITEM_ptr(iptr)` = `((iptr)())`) *calls* it. The field is therefore the function
+    /// pointer the authority's header declares. D456's first cut typed it `*const Asn1Item`, a
+    /// placeholder the table layer is the first writer to falsify; the field is pointer-sized
+    /// either way and no landed code read it, so this is a representation correction, not a
+    /// behaviour change.
+    pub it: Option<unsafe extern "C" fn() -> *const Asn1Item>,
     /// `X509V3_EXT_NEW ext_new`.
     pub ext_new: X509V3ExtNew,
     /// `X509V3_EXT_FREE ext_free`.
@@ -169,6 +178,13 @@ const _: () = {
     assert!(core::mem::offset_of!(X509V3ExtMethod, r2i) == 88);
     assert!(core::mem::offset_of!(X509V3ExtMethod, usr_data) == 96);
 };
+
+// SAFETY: a method row is fully initialised at compile time and never written. Its pointer fields
+// borrow the crate's own static items, function addresses and caller `usr_data`; the authority's
+// `standard_exts[]` is exactly this -- an immutable table of immutable rows. Claiming `Sync` is
+// what lets those rows be `static` so the dispatch can hold their addresses, the same reason
+// `Asn1Item` and `Asn1Template` claim it in `src/asn1/layout.rs`.
+unsafe impl Sync for X509V3ExtMethod {}
 
 /// `#define X509V3_EXT_DYNAMIC 0x1` — `include/openssl/x509v3.h:121`.
 pub(crate) const X509V3_EXT_DYNAMIC: c_int = 0x1;
