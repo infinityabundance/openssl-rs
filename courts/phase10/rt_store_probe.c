@@ -33,9 +33,9 @@
  * again by 10.8), and what this probe does not call is named below with its measured blocker:
  *
  *  * `OSSL_STORE_load` -- its fetched branch calls `store_result.c`'s
- *    `ossl_store_handle_load_result`, which needs `d2i_X509_AUX` (Phase 11) and `PKCS12_parse`
- *    (10.3-withheld). 10.8 landed `d2i_X509`/`d2i_X509_CRL`, so only `d2i_X509_AUX` and
- *    `PKCS12_parse` remain.
+ *    `ossl_store_handle_load_result`, which needs `PKCS12_parse` (10.3-withheld) now that 10.12
+ *    landed `d2i_X509_AUX`. 10.8 landed `d2i_X509`/`d2i_X509_CRL`, so only `PKCS12_parse`
+ *    remains.
  *  * `OSSL_STORE_find`'s `BY_NAME`/`BY_ISSUER_SERIAL` arms -- 10.8 landed `i2d_X509_NAME`, but the
  *    arms sit in the **fetched** branch, which no candidate reaches while the `file`
  *    `OSSL_OP_STORE` row is unpublished. The blocker is the provider row, not the name encoder.
@@ -70,8 +70,10 @@
 #include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
+#include <openssl/objects.h>
 #include <openssl/store.h>
 #include <openssl/x509.h>
+#include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
 #include "rt_x509_der.h"
@@ -898,6 +900,242 @@ static void drive_engine_registry(void)
     out_int("engine.free.null", ENGINE_free(NULL));
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.12 -- the leaf extension items, the `X509_AUX` layer, the policy accessors and the
+ * `X509_verify_cert_error_string` table.
+ *
+ * Every arm compares bytes or an integer/string against the same computation on the authority, so
+ * the transcript is the authority's own answers. The certificate suffixes are byte-exact: the
+ * `X509_AUX` round trip sets an alias and a key id, encodes, decodes and compares the re-encoded
+ * bytes. The policy accessors have no live tree to read (building one needs `X509_policy_check`,
+ * 10.14), so each is driven through its NULL-input guard, which the authority's own code makes
+ * observable. The `v3_pcia`/`v3_ist` items and the `v3_ia5`/`v3_skid` string helpers are driven
+ * through their public surfaces.
+ *
+ * What it cannot drive, and therefore does not print: the `v3_*` extension tables
+ * (`ossl_v3_*`), the `v3_ist` callbacks, and `pcy_node.c`'s six `ossl_policy_*` operations -- all
+ * internal symbols the admitted DSO does not export, so no differential arm can name them. Each is
+ * recorded as a withhold in its module's doc, not as a `pending.` line here.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_x509_leaf_units(void)
+{
+    static const unsigned char want_alias[11] = "probe-alias";
+    static const unsigned char want_keyid[4] = { 0x01, 0x02, 0x03, 0x04 };
+    const unsigned char *p;
+    X509 *cert, *cert2, *plain;
+    X509_CERT_AUX *aux, *aux2;
+    X509_POLICY_TREE *tree = NULL;
+    X509_POLICY_LEVEL *level = NULL;
+    X509_POLICY_NODE *node = NULL;
+    PROXY_POLICY *pp, *pp2;
+    PROXY_CERT_INFO_EXTENSION *pcie, *pcie2;
+    ISSUER_SIGN_TOOL *ist, *ist2;
+    ASN1_OCTET_STRING *oct, *oct2;
+    ASN1_IA5STRING *ia5;
+    char *s;
+    unsigned char *der = NULL, *der2 = NULL;
+    int len, alen = -1, klen = -1;
+
+    /* ----- X509_AUX: set, encode, decode, compare ----- */
+    p = RT_X509_CERT_DER;
+    cert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    out_ptr("aux.cert", cert);
+    if (cert != NULL) {
+        out_int("aux.trusted.before", X509_trusted(cert));
+        out_ptr("aux.alias.before", X509_alias_get0(cert, &alen));
+        out_int("aux.alias.before.len", (long)alen);
+        out_int("aux.alias.set", X509_alias_set1(cert, want_alias, 11));
+        out_int("aux.keyid.set", X509_keyid_set1(cert, want_keyid, 4));
+        out_int("aux.trusted.after", X509_trusted(cert));
+        out_int("aux.alias.len", (long)(X509_alias_get0(cert, &alen), alen));
+        out_int("aux.keyid.len", (long)(X509_keyid_get0(cert, &klen), klen));
+        out_int("aux.keyid.byte0", (long)X509_keyid_get0(cert, NULL)[0]);
+
+        len = i2d_X509_AUX(cert, &der);
+        out_int("aux.i2d.len", (long)len);
+        out_int("aux.i2d.gt_plain", len > i2d_X509(cert, NULL));
+
+        p = der;
+        cert2 = d2i_X509_AUX(NULL, &p, (long)len);
+        out_ptr("aux.d2i", cert2);
+        out_err("aux.d2i.err");
+        out_int("aux.d2i.consumed", (long)(p - der));
+        if (cert2 != NULL) {
+            out_int("aux.d2i.trusted", X509_trusted(cert2));
+            out_int("aux.d2i.alias.len", (long)(X509_alias_get0(cert2, &alen), alen));
+            out_int("aux.d2i.alias.bytes",
+                    alen == 11 && memcmp(X509_alias_get0(cert2, NULL), want_alias, 11) == 0);
+            out_int("aux.d2i.keyid.len", (long)(X509_keyid_get0(cert2, &klen), klen));
+            out_int("aux.d2i.keyid.bytes",
+                    klen == 4 && memcmp(X509_keyid_get0(cert2, NULL), want_keyid, 4) == 0);
+            out_int("aux.d2i.reequal",
+                    i2d_X509_AUX(cert2, &der2) == len
+                        && der2 != NULL && memcmp(der, der2, (size_t)len) == 0);
+            out_err("aux.d2i.reequal.err");
+            OPENSSL_free(der2); der2 = NULL;
+            X509_free(cert2);
+        }
+        OPENSSL_free(der); der = NULL;
+
+        /* The clear arms: both succeed on a certificate that has the field. */
+        X509_trust_clear(cert);
+        X509_reject_clear(cert);
+        out_str("aux.cleared", "ok");
+    }
+
+    /* d2i_X509_AUX over a plain certificate: the suffix is absent, so the prefix is consumed. */
+    p = RT_X509_CERT_DER;
+    plain = d2i_X509_AUX(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    out_ptr("aux.d2i.plain", plain);
+    out_int("aux.d2i.plain.consumed", (long)(p - RT_X509_CERT_DER));
+    X509_free(plain);
+
+    /* The NULL-name clear arms answer 1 without a certificate. */
+    out_int("aux.alias.set.null", X509_alias_set1(NULL, NULL, 0));
+    out_int("aux.keyid.set.null", X509_keyid_set1(NULL, NULL, 0));
+
+    /* The truncated decode refuses, with its coordinate. */
+    p = RT_X509_CERT_DER;
+    out_ptr("aux.d2i.truncated", d2i_X509_AUX(NULL, &p, (long)RT_X509_CERT_DER_LEN - 1));
+    out_err("aux.d2i.truncated.err");
+
+    /* ----- the X509_CERT_AUX item itself, over an empty value ----- */
+    aux = X509_CERT_AUX_new();
+    out_ptr("certaux.new", aux);
+    if (aux != NULL) {
+        len = i2d_X509_CERT_AUX(aux, &der);
+        out_int("certaux.i2d.len", (long)len);
+        p = der;
+        aux2 = d2i_X509_CERT_AUX(NULL, &p, (long)len);
+        out_ptr("certaux.d2i", aux2);
+        out_int("certaux.d2i.consumed", (long)(p - der));
+        out_int("certaux.reequal",
+                i2d_X509_CERT_AUX(aux2, &der2) == len
+                    && der2 != NULL && memcmp(der, der2, (size_t)len) == 0);
+        OPENSSL_free(der2); der2 = NULL;
+        OPENSSL_free(der); der = NULL;
+        X509_CERT_AUX_free(aux2);
+        X509_CERT_AUX_free(aux);
+    }
+
+    /* ----- X509_verify_cert_error_string (x509_txt.c) ----- */
+    out_str("cert_err.ok", X509_verify_cert_error_string(0));
+    out_str("cert_err.not_yet", X509_verify_cert_error_string(9));
+    out_str("cert_err.expired", X509_verify_cert_error_string(10));
+    out_str("cert_err.ca_bcons", X509_verify_cert_error_string(89));
+    out_str("cert_err.rpk", X509_verify_cert_error_string(95));
+    out_str("cert_err.crl_verify", X509_verify_cert_error_string(101));
+    out_str("cert_err.unknown", X509_verify_cert_error_string(9999));
+
+    /* ----- the policy accessors (pcy_lib.c), through their NULL guards ----- */
+    out_int("pcy.tree.levels.null", X509_policy_tree_level_count(tree));
+    out_ptr("pcy.tree.level0.null", X509_policy_tree_get0_level(tree, 0));
+    out_ptr("pcy.tree.policies.null", X509_policy_tree_get0_policies(tree));
+    out_ptr("pcy.tree.user_policies.null", X509_policy_tree_get0_user_policies(tree));
+    out_int("pcy.level.nodes.null", X509_policy_level_node_count(level));
+    out_ptr("pcy.level.node0.null", X509_policy_level_get0_node(level, 0));
+    out_ptr("pcy.node.policy.null", X509_policy_node_get0_policy(node));
+    out_ptr("pcy.node.qualifiers.null", X509_policy_node_get0_qualifiers(node));
+    out_ptr("pcy.node.parent.null", X509_policy_node_get0_parent(node));
+
+    /* ----- the RFC 3820 items (v3_pcia.c) ----- */
+    pp = PROXY_POLICY_new();
+    out_ptr("pcia.pp.new", pp);
+    if (pp != NULL) {
+        ASN1_OBJECT_free(pp->policyLanguage);
+        pp->policyLanguage = OBJ_txt2obj("1.2.3.4", 1);
+        pp->policy = ASN1_OCTET_STRING_new();
+        ASN1_OCTET_STRING_set(pp->policy, (const unsigned char *)"pol", 3);
+        len = i2d_PROXY_POLICY(pp, &der);
+        out_int("pcia.pp.i2d.len", (long)len);
+        p = der;
+        pp2 = d2i_PROXY_POLICY(NULL, &p, (long)len);
+        out_ptr("pcia.pp.d2i", pp2);
+        out_int("pcia.pp.d2i.consumed", (long)(p - der));
+        out_int("pcia.pp.reequal",
+                i2d_PROXY_POLICY(pp2, &der2) == len
+                    && der2 != NULL && memcmp(der, der2, (size_t)len) == 0);
+        OPENSSL_free(der2); der2 = NULL;
+        OPENSSL_free(der); der = NULL;
+        PROXY_POLICY_free(pp2);
+        PROXY_POLICY_free(pp);
+    }
+
+    pcie = PROXY_CERT_INFO_EXTENSION_new();
+    out_ptr("pcia.pcie.new", pcie);
+    if (pcie != NULL) {
+        ASN1_OBJECT_free(pcie->proxyPolicy->policyLanguage);
+        pcie->proxyPolicy->policyLanguage = OBJ_txt2obj("1.2.3.4", 1);
+        len = i2d_PROXY_CERT_INFO_EXTENSION(pcie, &der);
+        out_int("pcia.pcie.i2d.len", (long)len);
+        p = der;
+        pcie2 = d2i_PROXY_CERT_INFO_EXTENSION(NULL, &p, (long)len);
+        out_ptr("pcia.pcie.d2i", pcie2);
+        out_int("pcia.pcie.reequal",
+                i2d_PROXY_CERT_INFO_EXTENSION(pcie2, &der2) == len
+                    && der2 != NULL && memcmp(der, der2, (size_t)len) == 0);
+        OPENSSL_free(der2); der2 = NULL;
+        OPENSSL_free(der); der = NULL;
+        PROXY_CERT_INFO_EXTENSION_free(pcie2);
+        PROXY_CERT_INFO_EXTENSION_free(pcie);
+    }
+
+    /* ----- the octet-string helpers (v3_skid.c) ----- */
+    oct = ASN1_OCTET_STRING_new();
+    ASN1_OCTET_STRING_set(oct, want_keyid, 4);
+    s = i2s_ASN1_OCTET_STRING(NULL, oct);
+    out_str("skid.i2s.octet", s);
+    OPENSSL_free(s);
+    ASN1_OCTET_STRING_free(oct);
+
+    oct2 = s2i_ASN1_OCTET_STRING(NULL, NULL, "01:02:03:04");
+    out_ptr("skid.s2i.octet", oct2);
+    s = i2s_ASN1_OCTET_STRING(NULL, oct2);
+    out_str("skid.s2i.octet.hex", s);
+    OPENSSL_free(s);
+    ASN1_OCTET_STRING_free(oct2);
+
+    out_ptr("skid.s2i.octet.bad", s2i_ASN1_OCTET_STRING(NULL, NULL, "nonsense"));
+    out_err("skid.s2i.octet.bad.err");
+
+    /* ----- the IA5 helpers (v3_ia5.c) ----- */
+    ia5 = s2i_ASN1_IA5STRING(NULL, NULL, "probe.test");
+    out_ptr("ia5.s2i", ia5);
+    s = i2s_ASN1_IA5STRING(NULL, ia5);
+    out_str("ia5.i2s", s);
+    OPENSSL_free(s);
+    ASN1_IA5STRING_free(ia5);
+
+    ia5 = ASN1_IA5STRING_new();
+    out_ptr("ia5.i2s.empty", i2s_ASN1_IA5STRING(NULL, ia5));
+    ASN1_IA5STRING_free(ia5);
+    out_ptr("ia5.s2i.null", s2i_ASN1_IA5STRING(NULL, NULL, NULL));
+    out_err("ia5.s2i.null.err");
+
+    /* ----- the Issuer Sign Tool item (v3_ist.c) ----- */
+    ist = ISSUER_SIGN_TOOL_new();
+    out_ptr("ist.new", ist);
+    if (ist != NULL) {
+        ASN1_STRING_set(ist->signTool, "tool", 4);
+        ASN1_STRING_set(ist->cATool, "ca", 2);
+        ASN1_STRING_set(ist->signToolCert, "toolcert", 8);
+        ASN1_STRING_set(ist->cAToolCert, "cacert", 6);
+        len = i2d_ISSUER_SIGN_TOOL(ist, &der);
+        out_int("ist.i2d.len", (long)len);
+        p = der;
+        ist2 = d2i_ISSUER_SIGN_TOOL(NULL, &p, (long)len);
+        out_ptr("ist.d2i", ist2);
+        out_int("ist.reequal",
+                i2d_ISSUER_SIGN_TOOL(ist2, &der2) == len
+                    && der2 != NULL && memcmp(der, der2, (size_t)len) == 0);
+        OPENSSL_free(der2); der2 = NULL;
+        OPENSSL_free(der); der = NULL;
+        ISSUER_SIGN_TOOL_free(ist2);
+        ISSUER_SIGN_TOOL_free(ist);
+    }
+}
+
 int main(void)
 {
     OSSL_STORE_LOADER *loader;
@@ -943,6 +1181,9 @@ int main(void)
     /* ----- Phase 10.11: the name accessors, the DN flags and the extension surface ----- */
     drive_name_print_ex();
     drive_x509v3_extensions();
+
+    /* ----- Phase 10.12: the leaf extension items, the X509_AUX layer and the policy graph ----- */
+    drive_x509_leaf_units();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

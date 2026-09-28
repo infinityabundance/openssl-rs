@@ -8,8 +8,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 79,
-      "language_surface_not_modelled_by_name": 5711,
+      "covered_by_a_divergence": 83,
+      "language_surface_not_modelled_by_name": 5758,
       "planned_prerequisites": 6
     },
     "census_by_unit": {
@@ -39,8 +39,12 @@
         "ossl_print_attribute_value": 1,
         "ossl_release_default_drbg_ctx": 2,
         "ossl_serial_number_print": 1,
+        "ossl_v3_issuer_sign_tool": 1,
+        "ossl_v3_ns_ia5_list": 1,
+        "ossl_v3_skey_id": 1,
         "ossl_x509_init_sig_info": 1,
         "ossl_x509_print_ex_brief": 1,
+        "ossl_x509_pubkey_hash": 1,
         "ossl_x509_set1_time": 1,
         "out_len": 1,
         "outlen": 1,
@@ -330,7 +334,7 @@
         "crypto/pkcs12/p12_asn.c": 32,
         "crypto/pkcs12/p12_attr.c": 8,
         "crypto/pkcs12/p12_crpt.c": 9,
-        "crypto/pkcs12/p12_crt.c": 31,
+        "crypto/pkcs12/p12_crt.c": 29,
         "crypto/pkcs12/p12_decr.c": 12,
         "crypto/pkcs12/p12_init.c": 6,
         "crypto/pkcs12/p12_key.c": 10,
@@ -410,7 +414,12 @@
         "crypto/ui/ui_openssl.c": 9,
         "crypto/ui/ui_util.c": 13,
         "crypto/whrlpool/wp_dgst.c": 3,
-        "crypto/x509/t_x509.c": 98,
+        "crypto/x509/pcy_lib.c": 8,
+        "crypto/x509/t_x509.c": 81,
+        "crypto/x509/v3_ia5.c": 10,
+        "crypto/x509/v3_ist.c": 18,
+        "crypto/x509/v3_pcia.c": 8,
+        "crypto/x509/v3_skid.c": 13,
         "crypto/x509/x509_att.c": 20,
         "crypto/x509/x509_obj.c": 12,
         "crypto/x509/x509_set.c": 42,
@@ -421,7 +430,8 @@
         "crypto/x509/x_exten.c": 13,
         "crypto/x509/x_name.c": 40,
         "crypto/x509/x_pubkey.c": 43,
-        "crypto/x509/x_x509.c": 39,
+        "crypto/x509/x_x509.c": 34,
+        "crypto/x509/x_x509a.c": 14,
         "providers/baseprov.c": 25
       },
       "planned_prerequisites": {
@@ -526,12 +536,12 @@
       ]
     },
     "checked": {
-      "authority_units": 368,
-      "crate_modules": 528,
+      "authority_units": 375,
+      "crate_modules": 540,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 4,
-      "divergence_names_covered": 41,
-      "divergence_rows": 13,
+      "divergence_names_covered": 45,
+      "divergence_rows": 16,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -640,7 +650,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "ebd0b62f01cc53afd68222f81dd1f6c52230448278695c20ed104be7aa8491d1",
+  "body_hash": "247992737aaf8d86a6c4900fefc707ecd3c823ed4e241d6c8d0f949d82adca0e",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -661,7 +671,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "d39cceea95403672ecb8508aca0595252ca6261eb34b0365192478b2509c1413"
+      "sha256": "275667a8d398f4a97125d845344a6477b65ec64f4e116ed789b71c6c09a8913a"
     },
     {
       "name": "symbol-ownership",
@@ -676,7 +686,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0f1084e557598d3e8e4c433fde48f5110af4979c94c0c45bcaa21dc6f7ec2836"
+      "sha256": "8845c8f2b51f59679844418f2f41a848cb6b23a9fdde3974aef460b18193e525"
     },
     {
       "name": "phase-state",
@@ -686,7 +696,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "f28f4e9e9887aafebcbe9e82f1a2db3bea7aa1771a1f282ec40e3aa78f96ef4c"
+      "sha256": "74608c75a6e04d57bf1377263636f333f2c184485dcc819720c7d1536662e8af"
     },
     {
       "name": "crate-source-tree",

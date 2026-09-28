@@ -32131,3 +32131,53 @@ remaining distance is **~3,470 authority lines over 15 units**: `x_x509a.c`, `x5
 removed its blockers on that path -- the `X509_EXTENSION` create/set/get surface, the extension
 stack, and the byte-exact `X509_NAME_print_ex` are in place.
 
+## D455 -- 10.12, the leaf extension items and the policy graph, and a differential-plane limit found by measuring it
+
+Fifth pulled-forward subphase. **`x_x509a.c` (174 lines) lands whole** -- `X509_CERT_AUX_it` and its
+lifecycle, `X509_trusted`, the alias/keyid setters and `X509_alias_get0`/`X509_keyid_get0` -- and it
+**un-withholds the `X509_AUX` layer in `x_x509.c`** (`d2i_X509_AUX`, `i2d_x509_aux_internal`,
+`i2d_X509_AUX` and the two `X509_CERT_AUX_free` calls in `x509_cb`) that D448/D451 had withheld by
+name. `x509_txt.c` (236, `X509_verify_cert_error_string` and the whole `X509_V_ERR_*` table),
+`pcy_lib.c` (105, nine accessors) and `v3_pcia.c` (62) land whole; `v3_ist.c`, `v3_ia5.c` and
+`v3_skid.c` land their exported items and the `i2s_`/`s2i_` helpers. `RT-STORE` moves from 289 to
+**362** observations and the total to **45,379** over 109 courts.
+
+**The finding is a limit of the differential plane, and it is measured rather than assumed.**
+`nm -D` over the admitted prefix shows the authority's shared object **exports no `ossl_v3_*` symbol
+at all**, and hides `ossl_x509_pubkey_hash` and every `ossl_policy_*`. The differential plane links
+its probes against that shared object, so **no court can name those symbols**: a transcription of
+them would be unreachable from every observation this project admits. Combined with their only
+authority callers being unlanded (`X509V3_add_standard_extensions` and `X509V3_EXT_get` in
+`v3_lib.c`, 10.14; `x509_vfy.c`, Phase 11), that makes `pcy_node.c` (157,
+`ossl_policy_node_*`) and the four table-only leaves `v3_audit_id.c`, `v3_group_ac.c`,
+`v3_ind_iss.c`, `v3_no_ass.c` **withheld with a two-part blocker**: not drivable from this profile's
+exported surface, and called by nothing that is landed. The three `http`/`punycode` units (2,244) are
+withheld on `X509_load_http` (`x_all.c`, 10.14). This is the same class as D442's `X509_it` note,
+with a sharper reason: there the symbol was unlanded, here it is unlanded *and* unnameable.
+
+**A defect was found in the probe rather than in the library.** The differential transcript matched
+on the first run, but the probe's first draft read a **stale** error coordinate: the preceding
+`s2i_ASN1_OCTET_STRING("nonsense")` refusal was never popped, so an arm reported the older
+`15.102` instead of `34.107`. Each arm now pops its own error, and the `skid.*.err`/`ia5.*.err` arms
+are what observe it. The compiler could not see this; the court could. It is also a reminder that an
+error-coordinate claim is only as good as the queue state it is read from.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1101 passed, 0 failed**. Phase-10 counts are unchanged at `286 implemented / 12 open` exports and
+`634 implemented / 2 open` provider rows; `implemented_surface` moves from 3,392 to **3,439** and all
+47 new symbols are Phase-11-headed, so they are `not_yet_begun` with no row and no coverage
+obligation. All gates clean (`court_coverage` 286/286 direct, `provider_court_coverage` 634/0
+unmatched, `dispatch_court`, `probe_hygiene`, `plan_reconciliation`, `prerequisite_gate`,
+`evidence_determinism`, `regression_guard`), `PIPELINE OK` exit 0 twice.
+
+### What 10.13 now needs
+
+Section 6 gives 10.13 six units / 875 lines. Two are drivable through exported items as 10.12's were
+-- `v3_timespec.c` (599) and `v3_pku.c` (52), **651 lines** -- and the other four
+(`ossl_v3_utf8_list`, `ossl_v3_no_rev_avail`, `ossl_v3_single_use`, `ossl_v3_soa_identifier`;
+224 lines) share **10.12's exact two-part blocker**, so they stay withheld by name unless 10.14's
+`v3_lib.c` dispatch is pulled in with them. 10.12's own remainder is ~2,760 lines, all of it blocked
+on 10.14 or Phase 11 and named in `src/x509/mod.rs`'s 10.12 section.
+

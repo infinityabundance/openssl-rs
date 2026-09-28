@@ -14,6 +14,13 @@
 //! src/x509/x_name.rs     <-  crypto/x509/x_name.c       (10.8)
 //! src/x509/x_x509.rs     <-  crypto/x509/x_x509.c       (10.8)
 //! src/x509/x_crl.rs      <-  crypto/x509/x_crl.c        (10.8, + X509_CRL_up_ref from x509cset.c)
+//! src/x509/x509_txt.rs   <-  crypto/x509/x509_txt.c     (10.12)
+//! src/x509/x_x509a.rs    <-  crypto/x509/x_x509a.c      (10.12)
+//! src/x509/pcy_lib.rs    <-  crypto/x509/pcy_lib.c      (10.12)
+//! src/x509/v3_ia5.rs     <-  crypto/x509/v3_ia5.c       (10.12)
+//! src/x509/v3_skid.rs    <-  crypto/x509/v3_skid.c      (10.12)
+//! src/x509/v3_pcia.rs    <-  crypto/x509/v3_pcia.c      (10.12)
+//! src/x509/v3_ist.rs     <-  crypto/x509/v3_ist.c       (10.12)
 //! ```
 //!
 //! ## Phase 8.8 — the accessor slices
@@ -42,15 +49,33 @@
 //! **Phase 11 still derives `not-started`** — no Phase 11 evidence, ledger, plan, seal or state row
 //! is created.
 //!
+//! ## Phase 10.12 — the leaf extension items and the policy graph
+//!
+//! The second pulled-forward slice after 10.8: the leaf `crypto/x509/` units whose closure the
+//! certificate object graph needs and which 10.11 left unblocked. `x_x509a.rs` lands the
+//! `X509_CERT_AUX` item and the trust/alias/key-id surface, which un-withholds
+//! `d2i_X509_AUX`/`i2d_X509_AUX` in `x_x509.rs`; `x509_txt.rs` lands `X509_verify_cert_error_string`;
+//! `pcy_lib.rs` lands the policy-tree accessors and the four `pcy_local.h` layouts;
+//! `v3_pcia.rs` and `v3_ist.rs` land their items; `v3_ia5.rs`/`v3_skid.rs` land their string
+//! helpers. **Withheld by name, each with its blocker**: `pcy_node.rs` (all six `ossl_policy_*`
+//! operations — internal and unreachable), the four table-only `v3_*` leaves
+//! (`v3_audit_id`/`v3_group_ac`/`v3_ind_iss`/`v3_no_ass`), the `v3_ia5`/`v3_skid`/`v3_ist` tables
+//! and their `static` callbacks (`X509V3_add_standard_extensions`, `v3_lib.c`, 10.14), and the
+//! `http`/`punycode` units `x_all.c` reaches (`X509_load_http`, 10.14). Every module's own doc
+//! names its withholds.
+//!
 //! ## The canonical structures
 //!
 //! Each `#[repr(C)]` structure a module is the canonical definition for — [`x_pubkey::X509Pubkey`],
 //! [`x509_set::X509SigInfo`], [`x_name::X509Name`]/[`x_name::X509NameEntry`],
 //! [`x_x509::X509`]/[`x_x509::X509Cinf`], [`x_crl::X509Crl`]/[`x_crl::X509CrlInfo`]/
-//! [`x_crl::X509Revoked`] and [`crate::asn1::x_val::X509Val`] — is the authority's own layout, with
-//! its offsets asserted by `core::mem::offset_of!` and a `const _: () = { assert!(...) }` block.
-//! The numbers come from `courts/layout/measure-x509.c`, compiled against the pinned authority's
-//! own internal headers, rather than from the declarations.
+//! [`x_crl::X509Revoked`], [`crate::asn1::x_val::X509Val`], [`x_x509a::X509CertAux`],
+//! [`pcy_lib::X509PolicyTree`]/[`pcy_lib::X509PolicyLevel`]/[`pcy_lib::X509PolicyNode`]/
+//! [`pcy_lib::X509PolicyData`], [`v3_pcia::ProxyPolicy`]/[`v3_pcia::ProxyCertInfoExtension`] and
+//! [`v3_ist::IssuerSignTool`] — is the authority's own layout, with its offsets asserted by
+//! `core::mem::offset_of!` and a `const _: () = { assert!(...) }` block. The `X.509` numbers come
+//! from `courts/layout/measure-x509.c`, compiled against the pinned authority's own internal
+//! headers, rather than from the declarations.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -74,3 +99,23 @@ pub mod x509_obj;
 pub mod x509_v3;
 pub mod x509name;
 pub mod x509rset;
+// Phase 10.12's `crypto/x509/x509_txt.c` -- the `X509_verify_cert_error_string` table.
+pub mod x509_txt;
+// Phase 10.12's `crypto/x509/x_x509a.c` -- the `X509_CERT_AUX` item and the trust/alias/key-id
+// surface that unblocks `d2i_X509_AUX` in `x_x509.rs`.
+pub mod x_x509a;
+// Phase 10.12's policy graph: `pcy_lib.rs` lands the tree/level/node accessors and the four
+// `pcy_local.h` layouts; `pcy_node.rs` withholds the six internal node operations by name.
+pub mod pcy_lib;
+pub mod pcy_node;
+// Phase 10.12's small `v3_*` leaves. `v3_pcia.rs` lands the two RFC 3820 items; `v3_ist.rs`
+// lands the Issuer Sign Tool item; `v3_ia5.rs` and `v3_skid.rs` land their string helpers and
+// withhold their tables; the other four withhold their table-only units whole.
+pub mod v3_audit_id;
+pub mod v3_group_ac;
+pub mod v3_ia5;
+pub mod v3_ind_iss;
+pub mod v3_ist;
+pub mod v3_no_ass;
+pub mod v3_pcia;
+pub mod v3_skid;

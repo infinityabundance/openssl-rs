@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4465,
+      "sites": 4470,
       "unattributed": 0
     },
     "covered_files": [
@@ -375,6 +375,8 @@
       "crypto/x509/x509name.c",
       "crypto/x509/x509_v3.c",
       "crypto/x509/x509_obj.c",
+      "crypto/x509/v3_ia5.c",
+      "crypto/x509/v3_skid.c",
       "crypto/ec/ecx_key.c",
       "crypto/ec/ecx_backend.c",
       "crypto/ec/ecx_meth.c",
@@ -65940,6 +65942,81 @@
         "rel_source": "crypto/x509/x509_obj.c"
       },
       {
+        "const_name": "V3_IA5_46",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/x509/v3_ia5.c",
+        "function": "s2i_ASN1_IA5STRING",
+        "generated": false,
+        "lib": 34,
+        "lib_symbol": "ERR_LIB_X509V3",
+        "line": 46,
+        "macro": "ERR_raise",
+        "reason": 107,
+        "reason_symbol": "X509V3_R_INVALID_NULL_ARGUMENT",
+        "rel_source": "crypto/x509/v3_ia5.c"
+      },
+      {
+        "const_name": "V3_IA5_50",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/x509/v3_ia5.c",
+        "function": "s2i_ASN1_IA5STRING",
+        "generated": false,
+        "lib": 34,
+        "lib_symbol": "ERR_LIB_X509V3",
+        "line": 50,
+        "macro": "ERR_raise",
+        "reason": 524301,
+        "reason_symbol": "ERR_R_ASN1_LIB",
+        "rel_source": "crypto/x509/v3_ia5.c"
+      },
+      {
+        "const_name": "V3_SKID_40",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/x509/v3_skid.c",
+        "function": "s2i_ASN1_OCTET_STRING",
+        "generated": false,
+        "lib": 34,
+        "lib_symbol": "ERR_LIB_X509V3",
+        "line": 40,
+        "macro": "ERR_raise",
+        "reason": 524301,
+        "reason_symbol": "ERR_R_ASN1_LIB",
+        "rel_source": "crypto/x509/v3_skid.c"
+      },
+      {
+        "const_name": "V3_SKID_66",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/x509/v3_skid.c",
+        "function": "ossl_x509_pubkey_hash",
+        "generated": false,
+        "lib": 34,
+        "lib_symbol": "ERR_LIB_X509V3",
+        "line": 66,
+        "macro": "ERR_raise",
+        "reason": 114,
+        "reason_symbol": "X509V3_R_NO_PUBLIC_KEY",
+        "rel_source": "crypto/x509/v3_skid.c"
+      },
+      {
+        "const_name": "V3_SKID_103",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/x509/v3_skid.c",
+        "function": "s2i_skey_id",
+        "generated": false,
+        "lib": 34,
+        "lib_symbol": "ERR_LIB_X509V3",
+        "line": 103,
+        "macro": "ERR_raise",
+        "reason": 125,
+        "reason_symbol": "X509V3_R_NO_SUBJECT_DETAILS",
+        "rel_source": "crypto/x509/v3_skid.c"
+      },
+      {
         "const_name": "ECX_KEY_116",
         "data_format": null,
         "dynamic_reason": false,
@@ -69349,6 +69426,16 @@
       "name": "authority:crypto/x509/x509_obj.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/x509/x509_obj.c",
       "sha256": "d5a91b7491f199f40be12fb001438a048c07b3bef01093b4a5aa75b6fe8f8bc6"
+    },
+    {
+      "name": "authority:crypto/x509/v3_ia5.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/x509/v3_ia5.c",
+      "sha256": "09de91d3e8413e31dd426cc9b6003fcb2517e705e414b9017bacf17226965028"
+    },
+    {
+      "name": "authority:crypto/x509/v3_skid.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/x509/v3_skid.c",
+      "sha256": "42e7e3ea31b20396f2fd643c225c628f8b4f527dc9a3cd1c66eb53bb1a6bdf53"
     },
     {
       "name": "authority:crypto/ec/ecx_key.c",

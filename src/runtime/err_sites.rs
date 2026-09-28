@@ -43642,6 +43642,56 @@ pub(crate) const X509_OBJ_175: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `s2i_ASN1_IA5STRING` at `crypto/x509/v3_ia5.c:46` (X509V3_R_INVALID_NULL_ARGUMENT).
+pub(crate) const V3_IA5_46: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_ia5.c",
+    line: 46,
+    func: c"s2i_ASN1_IA5STRING",
+    lib: 34,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `s2i_ASN1_IA5STRING` at `crypto/x509/v3_ia5.c:50` (ERR_R_ASN1_LIB).
+pub(crate) const V3_IA5_50: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_ia5.c",
+    line: 50,
+    func: c"s2i_ASN1_IA5STRING",
+    lib: 34,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `s2i_ASN1_OCTET_STRING` at `crypto/x509/v3_skid.c:40` (ERR_R_ASN1_LIB).
+pub(crate) const V3_SKID_40: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_skid.c",
+    line: 40,
+    func: c"s2i_ASN1_OCTET_STRING",
+    lib: 34,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509_pubkey_hash` at `crypto/x509/v3_skid.c:66` (X509V3_R_NO_PUBLIC_KEY).
+pub(crate) const V3_SKID_66: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_skid.c",
+    line: 66,
+    func: c"ossl_x509_pubkey_hash",
+    lib: 34,
+    reason: 114,
+    dynamic_reason: false,
+};
+
+/// `s2i_skey_id` at `crypto/x509/v3_skid.c:103` (X509V3_R_NO_SUBJECT_DETAILS).
+pub(crate) const V3_SKID_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_skid.c",
+    line: 103,
+    func: c"s2i_skey_id",
+    lib: 34,
+    reason: 125,
+    dynamic_reason: false,
+};
+
 /// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:116` (PROV_R_MISSING_KEY).
 pub(crate) const ECX_KEY_116: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
@@ -49054,6 +49104,11 @@ pub(crate) static ALL: &[ErrSite] = &[
     X509_OBJ_75,
     X509_OBJ_116,
     X509_OBJ_175,
+    V3_IA5_46,
+    V3_IA5_50,
+    V3_SKID_40,
+    V3_SKID_66,
+    V3_SKID_103,
     ECX_KEY_116,
     ECX_KEY_122,
     ECX_KEY_131,
