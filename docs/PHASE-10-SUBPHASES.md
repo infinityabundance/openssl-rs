@@ -628,3 +628,20 @@ level inside `v3_utl.c`: its six blockers are confined to `X509_get1_email`, `X5
 the rest of `v3_utl.c` is what makes the forty-odd table units, then `v3_lib.c`'s lookup half, then
 `x509_ext.c` and 10.14.3 itself reachable. The 2 remaining open exports are closed by 10.15 and
 10.16 alone.
+
+**The critical path was re-measured against D459, and its "one name" is not the closure.** D459
+records `PKCS12_parse`'s single blocker as `ossl_x509_add_cert_new` (10.14.1's withhold) and
+`ossl_x509_add_cert_new`'s as `X509_self_signed` (`x509_vfy.c`). Both are the *immediate* edge and
+both are true; neither is the closure. The same `nm --undefined-only` join, seeded from the
+authority's `crypto/x509/libcrypto-lib-x509_vfy.o` and `libcrypto-lib-v3_purp.o`, resolves
+`X509_self_signed`'s body to `ossl_x509v3_cache_extensions` (`v3_purp.c`, 10.14.5), whose own
+closure is the whole certificate subsystem: **94 build objects, 333 unlanded names, 73 unlanded
+units and 32,158 authority lines**. Seeded instead from `store_result.o` it is **96 objects, 335
+names, 75 units and 33,099 lines** — the same 10.14.5–10.14.15 frontier counted this session as
+D459's 75 units / 26,157 lines under the certificate-only scope. So the four open items are not
+two short chains and a small loader: pieces 1 and 2 sit behind the unfactored SCC, and none of
+`X509_self_signed`, the four `X509_add_cert*` names, `PKCS12_parse`, `OSSL_STORE_load` or the two
+`file` rows is closure-ready at function granularity. The next real move is unchanged from D459's
+last paragraph: the function-level cut inside `v3_utl.c`, which is the keystone the tables,
+`v3_lib.c`'s lookup half and then `v3_purp.c`'s cache all wait on. Nothing was landed and nothing
+was withheld again; the 296/2 and 634/2 counts stand.
