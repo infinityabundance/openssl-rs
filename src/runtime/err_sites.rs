@@ -45122,6 +45122,256 @@ pub(crate) const TB_PKMETH_79: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `file_open_stream` at `providers/implementations/storemgmt/file_store.c:162` (ERR_R_PROV_LIB).
+pub(crate) const PROV_FILE_STORE_162: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 162,
+    func: c"file_open_stream",
+    lib: 57,
+    reason: 524345,
+    dynamic_reason: false,
+};
+
+/// `file_open_dir` at `providers/implementations/storemgmt/file_store.c:179` (ERR_R_PROV_LIB).
+pub(crate) const PROV_FILE_STORE_179: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 179,
+    func: c"file_open_dir",
+    lib: 57,
+    reason: 524345,
+    dynamic_reason: false,
+};
+
+/// `file_open_dir` at `providers/implementations/storemgmt/file_store.c:187` (ERR_raise_data dynamic reason).
+pub(crate) const PROV_FILE_STORE_187: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 187,
+    func: c"file_open_dir",
+    lib: 2,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `file_open` at `providers/implementations/storemgmt/file_store.c:234` (PROV_R_URI_AUTHORITY_UNSUPPORTED).
+pub(crate) const PROV_FILE_STORE_234: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 234,
+    func: c"file_open",
+    lib: 57,
+    reason: 223,
+    dynamic_reason: false,
+};
+
+/// `file_open` at `providers/implementations/storemgmt/file_store.c:254` (ERR_raise_data dynamic reason).
+pub(crate) const PROV_FILE_STORE_254: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 254,
+    func: c"file_open",
+    lib: 2,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `file_set_ctx_params_decoder` at `providers/implementations/storemgmt/file_store.c:334` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FILE_STORE_334: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 334,
+    func: c"file_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `file_set_ctx_params_decoder` at `providers/implementations/storemgmt/file_store.c:345` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FILE_STORE_345: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 345,
+    func: c"file_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `file_set_ctx_params_decoder` at `providers/implementations/storemgmt/file_store.c:356` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FILE_STORE_356: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 356,
+    func: c"file_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `file_set_ctx_params_decoder` at `providers/implementations/storemgmt/file_store.c:367` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FILE_STORE_367: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 367,
+    func: c"file_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `file_set_ctx_params` at `providers/implementations/storemgmt/file_store.c:426` (PROV_R_SEARCH_ONLY_SUPPORTED_FOR_DIRECTORIES).
+pub(crate) const PROV_FILE_STORE_426: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 426,
+    func: c"file_set_ctx_params",
+    lib: 57,
+    reason: 222,
+    dynamic_reason: false,
+};
+
+/// `file_setup_decoders` at `providers/implementations/storemgmt/file_store.c:494` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const PROV_FILE_STORE_494: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 494,
+    func: c"file_setup_decoders",
+    lib: 57,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `file_setup_decoders` at `providers/implementations/storemgmt/file_store.c:501` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const PROV_FILE_STORE_501: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 501,
+    func: c"file_setup_decoders",
+    lib: 57,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `file_setup_decoders` at `providers/implementations/storemgmt/file_store.c:516` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const PROV_FILE_STORE_516: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 516,
+    func: c"file_setup_decoders",
+    lib: 57,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `file_setup_decoders` at `providers/implementations/storemgmt/file_store.c:533` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const PROV_FILE_STORE_533: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 533,
+    func: c"file_setup_decoders",
+    lib: 57,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `file_setup_decoders` at `providers/implementations/storemgmt/file_store.c:541` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const PROV_FILE_STORE_541: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 541,
+    func: c"file_setup_decoders",
+    lib: 57,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `file_setup_decoders` at `providers/implementations/storemgmt/file_store.c:549` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const PROV_FILE_STORE_549: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 549,
+    func: c"file_setup_decoders",
+    lib: 57,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `file_setup_decoders` at `providers/implementations/storemgmt/file_store.c:594` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const PROV_FILE_STORE_594: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 594,
+    func: c"file_setup_decoders",
+    lib: 57,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `file_setup_decoders` at `providers/implementations/storemgmt/file_store.c:601` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const PROV_FILE_STORE_601: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 601,
+    func: c"file_setup_decoders",
+    lib: 57,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `file_setup_decoders` at `providers/implementations/storemgmt/file_store.c:613` (ERR_R_OSSL_DECODER_LIB).
+pub(crate) const PROV_FILE_STORE_613: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 613,
+    func: c"file_setup_decoders",
+    lib: 57,
+    reason: 524348,
+    dynamic_reason: false,
+};
+
+/// `file_load_dir_entry` at `providers/implementations/storemgmt/file_store.c:765` (ERR_raise dynamic reason).
+pub(crate) const PROV_FILE_STORE_765: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store.c",
+    line: 765,
+    func: c"file_load_dir_entry",
+    lib: 2,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `any2obj_set_ctx_params_decoder` at `providers/implementations/storemgmt/file_store_any2obj.c:100` (PROV_R_REPEATED_PARAMETER).
+pub(crate) const PROV_FILE_STORE_ANY2OBJ_100: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store_any2obj.c",
+    line: 100,
+    func: c"any2obj_set_ctx_params_decoder",
+    lib: 57,
+    reason: 252,
+    dynamic_reason: false,
+};
+
+/// `msblob2obj_decode` at `providers/implementations/storemgmt/file_store_any2obj.c:217` (ERR_R_BUF_LIB).
+pub(crate) const PROV_FILE_STORE_ANY2OBJ_217: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store_any2obj.c",
+    line: 217,
+    func: c"msblob2obj_decode",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `msblob2obj_decode` at `providers/implementations/storemgmt/file_store_any2obj.c:242` (ERR_R_BUF_LIB).
+pub(crate) const PROV_FILE_STORE_ANY2OBJ_242: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store_any2obj.c",
+    line: 242,
+    func: c"msblob2obj_decode",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `pvk2obj_decode` at `providers/implementations/storemgmt/file_store_any2obj.c:289` (ERR_R_BUF_LIB).
+pub(crate) const PROV_FILE_STORE_ANY2OBJ_289: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store_any2obj.c",
+    line: 289,
+    func: c"pvk2obj_decode",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `pvk2obj_decode` at `providers/implementations/storemgmt/file_store_any2obj.c:310` (ERR_R_BUF_LIB).
+pub(crate) const PROV_FILE_STORE_ANY2OBJ_310: ErrSite = ErrSite {
+    file: c"providers/implementations/storemgmt/file_store_any2obj.c",
+    line: 310,
+    func: c"pvk2obj_decode",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
 /// Every recorded raise site, in authority source order.
 ///
 /// This is the complete inventory for the covered files, including the
@@ -49642,4 +49892,29 @@ pub(crate) static ALL: &[ErrSite] = &[
     TB_ASNMTH_213,
     TB_DIGEST_78,
     TB_PKMETH_79,
+    PROV_FILE_STORE_162,
+    PROV_FILE_STORE_179,
+    PROV_FILE_STORE_187,
+    PROV_FILE_STORE_234,
+    PROV_FILE_STORE_254,
+    PROV_FILE_STORE_334,
+    PROV_FILE_STORE_345,
+    PROV_FILE_STORE_356,
+    PROV_FILE_STORE_367,
+    PROV_FILE_STORE_426,
+    PROV_FILE_STORE_494,
+    PROV_FILE_STORE_501,
+    PROV_FILE_STORE_516,
+    PROV_FILE_STORE_533,
+    PROV_FILE_STORE_541,
+    PROV_FILE_STORE_549,
+    PROV_FILE_STORE_594,
+    PROV_FILE_STORE_601,
+    PROV_FILE_STORE_613,
+    PROV_FILE_STORE_765,
+    PROV_FILE_STORE_ANY2OBJ_100,
+    PROV_FILE_STORE_ANY2OBJ_217,
+    PROV_FILE_STORE_ANY2OBJ_242,
+    PROV_FILE_STORE_ANY2OBJ_289,
+    PROV_FILE_STORE_ANY2OBJ_310,
 ];

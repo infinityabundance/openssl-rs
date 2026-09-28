@@ -5,8 +5,9 @@
 //! This module is the crate's home for `crypto/store/`, and the ledger
 //! (`forensics/phase10-obligations.json`) maps all seventy-six `store.h` exports of the
 //! stratum to `src/store/mod.rs`. **All four export-bearing units are landable, and the
-//! whole 76 is measured per function rather than per unit** — the two `OSSL_OP_STORE`
-//! provider rows are the only part still withheld.
+//! whole 76 is measured per function rather than per unit** — 10.16 published the two
+//! `OSSL_OP_STORE` provider rows (`file_store.c`) and left only [`store_lib`]'s
+//! `OSSL_STORE_load` open.
 //!
 //! # What landed, unit by unit
 //!
@@ -41,13 +42,14 @@
 //!   `X509_it` is Phase 11's.
 //! * **The two `OSSL_OP_STORE` provider rows** (`forensics/atlas/provider-algorithms.json`:
 //!   `default` and `base`, `algorithm_names` `file`, dispatch `ossl_file_store_functions`).
-//!   They are published by `file_store.c`, whose `file_setup_decoders` builds a decoder
-//!   chain and whose `file_load_file` runs it, and whose result path is `store_result.c`'s
-//!   `ossl_store_handle_load_result` — the same Phase 11 blocker above. A row cannot be
-//!   published without the engine behind it, so the two rows remain `unimplemented` and the
-//!   census says so; `OSSL_STORE_LOADER_fetch`/`do_all_provided` stay reference-taken by
-//!   `RT-STORE` rather than called, and the refused schemes are driven through a registered
-//!   in-process legacy loader instead.
+//!   **10.16 publishes them**: [`crate::provider::file_store`] transcribes `file_store.c` (and
+//!   its private last-resort decoder `file_store_any2obj.c`), and `deflt_query`/`base_query`
+//!   answer `DEFLT_STORES`/`BASE_STORES` on `OSSL_OP_STORE` (22). The row resolves through its
+//!   open/attach/load/eof/close callbacks, so `OSSL_STORE_LOADER_fetch`/`do_all_provided` and
+//!   the fetched `OSSL_STORE_find` arms are called by `RT-STORE` rather than reference-taken.
+//!   The engine's *result* path — [`store_lib::OSSL_STORE_load`] through `store_result.c`'s
+//!   `ossl_store_handle_load_result` — stays withheld on `PKCS12_parse`, which is the same
+//!   Phase 11 blocker; a loader that opens, loads and closes is not a result handler.
 //!
 //! # The loader object, and where each field comes from
 //!

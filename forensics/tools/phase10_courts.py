@@ -101,8 +101,10 @@ COURTS: list[tuple[str, str]] = [
     # 10.5's behavioural court: the `OSSL_STORE_LOADER` object and its registry
     # (`store_register.c`), the provider-side loader method fetched over slot 15
     # (`store_meth.c`) and the `OSSL_STORE_INFO` type-name table (`store_strings.c`), driven
-    # through the public `store.h` surface. `store_lib.c` and the two `file_store.c` provider
-    # rows are withheld with their measured blockers, printed as `pending.` by the probe.
+    # through the public `store.h` surface. 10.16 publishes the two `file` `OSSL_OP_STORE`
+    # provider rows, so the probe now calls `OSSL_STORE_LOADER_fetch`/`do_all_provided` and the
+    # fetched `OSSL_STORE_find` arms for real; `OSSL_STORE_load` stays printed `pending.`
+    # (`store_result.c`'s `ossl_store_handle_load_result`, 10.16's remaining half).
     ("RT-STORE", "rt_store_probe.c"),
 ]
 
@@ -313,12 +315,13 @@ def main(argv: list[str]) -> int:
             "a NULL scheme, an RFC 3986-invalid scheme, an unregistered scheme and a loader "
             "whose `load` is NULL -- with their error coordinates. `store_lib.c`'s "
             "`OSSL_STORE_CTX` state machine and `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object "
-            "model, and the two `OSSL_OP_STORE` provider rows `file_store.c` publishes, are "
-            "withheld: the first reaches Phase 11's `X509` (`X509_free`/`X509_up_ref`/`d2i_X509`/"
-            "`i2d_X509_NAME`) and `store_result.c`, and the second needs `file_store.c`'s "
-            "decoder chain and `store_result.c` -- so `OSSL_STORE_LOADER_fetch` and "
-            "`OSSL_STORE_LOADER_do_all_provided` are reference-taken rather than called and each "
-            "blocker is printed as `pending.` (docs/PHASE-10-SUBPHASES.md sections 3.3, 3.5). "
+            "model are driven, including the fetched `OSSL_STORE_find` arms; **10.16 publishes "
+            "the two `OSSL_OP_STORE` provider rows `file_store.c` publishes**, so "
+            "`OSSL_STORE_LOADER_fetch` and `OSSL_STORE_LOADER_do_all_provided` are called and "
+            "the `file` fetch resolves. `OSSL_STORE_load` remains the one name printed as "
+            "`pending.`: its fetched branch reaches `store_result.c`'s "
+            "`ossl_store_handle_load_result`, which needs `PKCS12_parse` "
+            "(docs/PHASE-10-SUBPHASES.md sections 3.3, 3.5). "
             "`pending_courts` names the courts the plan gives this stratum and the "
             "subphase that brings each, and every name is printed on each run so that 'not run "
             "yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3). "

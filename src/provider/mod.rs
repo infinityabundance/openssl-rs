@@ -134,6 +134,13 @@ pub(crate) mod decode_pvk2key;
 pub(crate) mod decode_pem2der;
 pub(crate) mod decode_spki2typespki;
 pub(crate) mod encode_key2ms;
+// Phase 10.16's `providers/implementations/storemgmt/file_store.c`: the `file:` STORE LOADER
+// the `default` and `base` providers publish as their one `OSSL_OP_STORE` row, and the two
+// `DEFLT_STORES`/`BASE_STORES` tables those providers' query arms return. Its private
+// last-resort decoder is `file_store_any2obj.c`, transcribed beside it because
+// `file_setup_decoders` is the table's only reader.
+pub(crate) mod file_store;
+pub(crate) mod file_store_any2obj;
 // Phase 10.1's first PQC codec *closure* unit: `providers/implementations/encode_decode/
 // ml_common_codecs.c`, the shared ASN.1 SPKI/PKCS#8 format tables and the one
 // `ossl_ml_common_pkcs8_fmt_order` helper the two PQC codec units stand on. It publishes no row;

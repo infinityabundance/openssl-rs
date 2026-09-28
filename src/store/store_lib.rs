@@ -41,13 +41,14 @@
 //!   its legacy branch would answer `NULL` for every fetched loader, which is a
 //!   behaviour change and not a withheld arm.
 //!
-//! # The `file` provider rows stay unpublished
+//! # The `file` provider rows are published, but this module still does not reach them
 //!
-//! Nothing here publishes either `file` `OSSL_OP_STORE` row. `file_store.c`'s engine
-//! and its `store_result.c` result path are the same Phase 11 blocker, so
-//! `OSSL_STORE_LOADER_fetch`/`do_all_provided` remain reference-taken and never
-//! called by `RT-STORE`; a row in front of a stubbed engine would be a false
-//! `implemented`.
+//! 10.16 publishes both `file` `OSSL_OP_STORE` rows (`src/provider/file_store.rs`), so
+//! `OSSL_STORE_LOADER_fetch`/`do_all_provided` resolve a loader and `RT-STORE` calls them. This
+//! module's [`OSSL_STORE_load`] is still withheld: its fetched branch would drive that loader
+//! through `store_result.c`'s `ossl_store_handle_load_result`, which is not defined here. The two
+//! are independent — a row that resolves is exactly the precondition the fetch needed, and this
+//! function is the remaining consumer that is not yet landed.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 

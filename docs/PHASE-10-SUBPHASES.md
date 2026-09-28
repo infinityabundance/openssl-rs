@@ -645,3 +645,31 @@ two short chains and a small loader: pieces 1 and 2 sit behind the unfactored SC
 last paragraph: the function-level cut inside `v3_utl.c`, which is the keystone the tables,
 `v3_lib.c`'s lookup half and then `v3_purp.c`'s cache all wait on. Nothing was landed and nothing
 was withheld again; the 296/2 and 634/2 counts stand.
+
+**10.16 lands `file_store.c` and `file_store_any2obj.c`, and the two `file` rows resolve.** The
+unit is **1,261 authority lines** (`file_store.c` 900 + `file_store_any2obj.c` 361), transcribed
+whole into `src/provider/file_store.rs` and `src/provider/file_store_any2obj.rs`; **nothing is
+withheld by name** -- every callee its object leaves undefined is landed (the decoder front doors
+and chain, `X509_NAME_hash_ex`, the `X509_NAME` object and printer, the directory walk, the
+core-BIO bridge and the parameter layer). `deflt_query` and `base_query` answer `DEFLT_STORES` and
+`BASE_STORES` on `OSSL_OP_STORE` (22), and both rows carry `ossl_file_store_functions`'s seven
+callbacks. `RT-STORE` moves from **709 to 716 observations**, and the two rows are `implemented`
+with **0 unmatched** in `provider-court-coverage.json`.
+
+**The divergence the previous slice met was in the row, not in the shared fetch path, and that was
+measured rather than assumed.** The reverted candidate raised `ERR_LIB_OSSL_STORE`/
+`ERR_R_UNSUPPORTED` (`44.524556`) at `store_meth.c:362`. Reading that site: its `unsupported` flag
+is `flag_construct_error_occurred == 0`, so `ERR_R_UNSUPPORTED` means `construct_loader` was **never
+called** -- a map with no entry, or a NULL map. An arm whose row reached `construct_loader` but whose
+dispatch table failed the four-clause sanity check would answer `ERR_R_FETCH_FAILED` (`269`)
+instead. The first divergent step is therefore `algorithm_do_map`'s entry loop: the `OSSL_OP_STORE`
+arm exposed no row. Re-running the shared path with a well-formed one-entry table resolved the
+fetch on the first try, and re-running it with an empty table reproduced the exact prior
+signature (`lib=44 reason=524556 fetch=null`); the shared path (`OSSL_STORE_LOADER_fetch` ->
+`ossl_method_store_fetch`/`ossl_method_construct` -> `ossl_provider_query_operation` ->
+`deflt_query`/`base_query`) is intact. The engine's mandatory callbacks are what make the row
+resolve: `loader_from_algorithm` refuses a loader without `open`/`attach`, `load`, `eof` and
+`close` (`store_meth.c:241`), and `ossl_file_store_functions` carries all four. `file_store.c`'
+remaining consumer is `store_result.c`'s `ossl_store_handle_load_result`, which `OSSL_STORE_load`
+still withholds on `PKCS12_parse`; the two units are independent, so the rows publish truthfully
+while that export stays open.

@@ -32400,3 +32400,53 @@ real move is a **function-level cut inside `v3_utl.c`** (~900 lines; its six blo
 `X509_get1_email`, `X509_get1_ocsp`, `X509_REQ_get1_email`, `do_x509_check`'s callers and
 `OSSL_GENERAL_NAMES_print`), which D458's rule allows: the frontier is the call graph.
 
+## D460 -- the `file` store rows close, and the fetch defect was in the row that was not there
+
+Tenth pulled-forward slice, and **Phase 10's provider rows are now complete: `636 implemented / 0
+open`**, up from 634/2. `provider_court_coverage.py` reads 957 implemented rows with **0 unmatched**.
+Only two Phase-10 exports remain open: `PKCS12_parse` and `OSSL_STORE_load`.
+
+**The divergence D459's revert recorded is root-caused, and it was not the shared fetch path.**
+The reverted candidate raised `ERR_LIB_OSSL_STORE`/`ERR_R_UNSUPPORTED` (`44.524556`) from
+`store_meth.c:362`, and reading that site settles it: `unsupported` is
+`flag_construct_error_occurred == 0`, so `ERR_R_UNSUPPORTED` means **`construct_loader` was never
+called** -- the `OSSL_OP_STORE` map carried no row. A row that reached `construct_loader` and failed
+the four-clause sanity check at `store_meth.c:241` would instead have set the flag and answered
+`ERR_R_FETCH_FAILED`. That was then proved rather than argued: instrumenting the container showed
+`deflt_query(NULL, 22, ...)` and `ossl_provider_query_operation(prov, 22, ...)` both return the store
+table, and a **temporary well-formed one-row arm made the fetch resolve on the first run** while a
+temporary rowless arm reproduced the old signature exactly. So
+`OSSL_STORE_LOADER_fetch -> ossl_method_store_fetch -> ossl_provider_query_operation -> deflt_query ->
+construct_loader` was never the defect; the published table was simply incomplete. D459's revert was
+therefore correct at the time and correct to undo once the row was real.
+
+**`file_store.c` (900 lines) and `file_store_any2obj.c` (361) land whole, with nothing withheld.**
+Every callee is landed: the decoder front doors and chain, `X509_NAME_hash_ex`, the `X509_NAME`
+object and printer, `OPENSSL_DIR_*`, the core-BIO bridge and the param layer. Their four
+`ERR_raise_data` "repeated parameter" sites and four per-case `set_input_structure` sites now carry
+generated `err_sites` coordinates (stems `PROV_FILE_STORE`/`PROV_FILE_STORE_ANY2OBJ`). A regression
+test, `provider::file_store::tests::the_file_fetch_resolves_through_the_published_row`, pins the
+fetch path so this cannot silently regress to a fetch-only claim.
+
+**The court now observes the row.** `store.file.fetch=nonnull`, `store.file.fetch.err=none`,
+`store.file.do_all.count=2`, and the `store.file.find.*` arms are driven -- the two stale
+`pending.OSSL_STORE_find.*` lines are gone, because a `find` behind an unpublished row was never a
+withhold, only an artefact of the row's absence. `RT-STORE` moves from 709 to **716** observations.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1110 passed, 0 failed**; 109 courts and **45,758 observations**; `PIPELINE OK` exit 0 on two
+consecutive runs. **The D458/D459 flake did not appear** in any run this slice (a focused run, two
+manual full runs, and both pipeline runs' serial and parallel halves), which makes eleven-plus green
+runs since the single failure -- still not a reproduction, still not closed. Phase 11 still derives
+`not-started`; no Phase 11 row was created.
+
+### The remaining distance
+
+**2 open exports, 0 open provider rows.** 10.16 is half-landed: `store_result.c` (667 lines) and
+`store_lib.c`'s `OSSL_STORE_load` half remain, so `OSSL_STORE_load` and `PKCS12_parse` still derive
+open. The broader frontier is D459's 75 units / 26,157 lines minus the two landed store units --
+**~73 units / ~24,900 lines**, to be re-measured by the next slice's `nm` join -- and the next real
+move is unchanged: the **function-level cut inside `v3_utl.c`**.
+

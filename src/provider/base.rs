@@ -205,12 +205,13 @@ unsafe extern "C" fn base_get_params(_provctx: *mut c_void, params: *mut OsslPar
 ///
 /// The authority's `switch` has four arms and a fall-through to `NULL`: `OSSL_OP_ENCODER` returns
 /// `base_encoder`, `OSSL_OP_DECODER` returns `base_decoder`, `OSSL_OP_STORE` returns `base_store`,
-/// and `OSSL_OP_RAND` returns `base_rands`. The first two now answer the rows 10.1 has published —
+/// and `OSSL_OP_RAND` returns `base_rands`. The first two answer the rows 10.1 has published —
 /// [`crate::provider::encode_key2text::BASE_ENCODERS`] (the text and blob encoders) and
 /// [`crate::provider::decode_epki2pki::BASE_DECODERS`] (the `EncryptedPrivateKeyInfo` decoder);
 /// the rest of the authority's generated rows are still absent and recorded `unimplemented` in
-/// `forensics/atlas/provider-algorithms.json` — and `OSSL_OP_STORE` answers `NULL` until 10.5
-/// lands, the same as the `default:` arm. The `OSSL_OP_RAND` arm returns
+/// `forensics/atlas/provider-algorithms.json`. **10.16 answers `OSSL_OP_STORE` with
+/// [`crate::provider::file_store::BASE_STORES`]**: the one `file` row `base_store[]` publishes,
+/// whose engine is `src/provider/file_store.rs`. The `OSSL_OP_RAND` arm returns
 /// [`crate::provider::seed_src::BASE_RANDS`], the one row this profile publishes.
 ///
 /// `*no_cache` is set to 0 **before** the arms, so the operation tables are cacheable.
@@ -243,8 +244,9 @@ unsafe extern "C" fn base_query(
         return crate::provider::decode_der2key::BASE_DECODERS.as_ptr();
     }
     if operation_id == OSSL_OP_STORE {
-        // `baseprov.c:108` returns `base_store`.
-        return ptr::null();
+        // `baseprov.c:108` returns `base_store`: `stores.inc`'s one Linux row,
+        // `{"file", "provider=base,fips=yes", ossl_file_store_functions}`.
+        return crate::provider::file_store::BASE_STORES.as_ptr();
     }
     if operation_id == OSSL_OP_RAND {
         // `baseprov.c:110` returns `base_rands`, which is `seed_src.rs`'s `BASE_RANDS`.

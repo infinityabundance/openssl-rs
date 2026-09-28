@@ -3,7 +3,7 @@
   "body": {
     "by_phase": {
       "10": {
-        "implemented": 634,
+        "implemented": 636,
         "unmatched": 0
       },
       "8": {
@@ -76,8 +76,8 @@
         ]
       }
     ],
-    "directly_courted": 955,
-    "implemented_rows": 955,
+    "directly_courted": 957,
+    "implemented_rows": 957,
     "rows": [
       {
         "algorithm_names": "DER",
@@ -4804,6 +4804,19 @@
         "coverage": "direct",
         "operation": "OSSL_OP_RAND",
         "owning_phase": 9,
+        "provider": "base"
+      },
+      {
+        "algorithm_names": "file",
+        "aliases": [
+          "file"
+        ],
+        "courts": [
+          "RT-STORE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_STORE",
+        "owning_phase": 10,
         "provider": "base"
       },
       {
@@ -14246,6 +14259,19 @@
         "operation": "OSSL_OP_SKEYMGMT",
         "owning_phase": 8,
         "provider": "default"
+      },
+      {
+        "algorithm_names": "file",
+        "aliases": [
+          "file"
+        ],
+        "courts": [
+          "RT-STORE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_STORE",
+        "owning_phase": 10,
+        "provider": "default"
       }
     ],
     "unmatched": 0
@@ -14255,7 +14281,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "89a690f4cf9c189fbd6bb36fcbc6c6e33404ffc8670c4683128351e6c91ea5c1"
+      "sha256": "d7b2138ccf175e9d3ffa58b738729344f315b6a52e1b3c81427e593d6659bba5"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -14305,7 +14331,7 @@
     {
       "name": "court:RT-STORE:rt_store_probe.c",
       "path": "courts/phase10/rt_store_probe.c",
-      "sha256": "0eb43ae75b9e8b991544ea9ea9580a6edb8829a6a2d681c022e6ac3e14e210bc"
+      "sha256": "c4abe68c5868283024c20633b5beb38afb9288e36572a57d947820a3ddd8cf3c"
     }
   ],
   "kind": "provider-court-coverage",
