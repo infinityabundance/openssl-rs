@@ -1,17 +1,22 @@
 //! `crypto/x509/x_x509.c` — the `X509` object and its `X509_CINF`, transcribed as far as 10.8's
-//! object core reaches. Phase 10.8.
+//! object core reaches. Phase 10.8, completed by 10.12.
 //!
 //! `crypto/x509/x_x509.c` is 310 lines. **The object core lands**: the `X509_CINF` and `X509`
 //! structures with the authority's own layout, both `ASN1_ITEM` descriptors and the `x509_cb`
 //! callback that maintains the extension cache, the `IMPLEMENT_ASN1_*` lifecycles (`X509_CINF_*`,
 //! `X509_new`/`_new_ex`/`_free`/`_dup`, `d2i_X509`/`i2d_X509`), the library-context helpers
 //! (`ossl_x509_set0_libctx`, `X509_set_ex_data`/`X509_get_ex_data`) and the three signature and
-//! `distinguishing_id` readers. **Four things are withheld**, each with its blocker:
+//! `distinguishing_id` readers.
 //!
-//! * `d2i_X509_AUX`/`i2d_X509_AUX` and the file-local `i2d_x509_aux_internal` (`:184-279`), which
-//!   reach `d2i_X509_CERT_AUX`/`i2d_X509_CERT_AUX` (`crypto/x509/x_x509a.c`, `X509_CERT_AUX` is
-//!   not landed), and with them the `X509_CERT_AUX_free` call inside the callback.
-//! * The **extension-cache frees** in `x509_cb`'s `ASN1_OP_D2I_PRE` and `ASN1_OP_FREE_POST` arms:
+//! **10.12 adds the `X509_AUX` layer** (`:177-279`): `d2i_X509_AUX`, the file-local
+//! `i2d_x509_aux_internal` and `i2d_X509_AUX`, now that `X509_CERT_AUX` is landed
+//! (`src/x509/x_x509a.rs`), together with the `X509_CERT_AUX_free(ret->aux)` call in each of
+//! `x509_cb`'s `ASN1_OP_D2I_PRE` and `ASN1_OP_FREE_POST` arms. 10.8 withheld all of these behind
+//! the unlanded item; the item is the only blocker and it is gone, so the whole file is
+//! transcribed.
+//!
+//! **One thing is still withheld**: the **extension-cache frees** in `x509_cb`'s
+//! `ASN1_OP_D2I_PRE` and `ASN1_OP_FREE_POST` arms:
 //!   `AUTHORITY_KEYID_free`, `CRL_DIST_POINTS_free`, `ossl_policy_cache_free`,
 //!   `GENERAL_NAMES_free`, `NAME_CONSTRAINTS_free`, `IPAddressFamily_free` and
 //!   `ASIdentifiers_free`. Every one is defined in a `v3_*`/`pcy_*` unit that is not landed, and
@@ -62,13 +67,14 @@ use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data, CryptoExData,
     CRYPTO_EX_INDEX_X509,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
 use crate::runtime::obj::{Asn1Object, OBJ_obj2nid};
 use crate::runtime::thread::CryptoRwlock;
 use crate::x509::x509_set::X509SigInfo;
 use crate::x509::x_exten::X509_EXTENSION_it;
 use crate::x509::x_name::{X509Name, X509_NAME_it};
 use crate::x509::x_pubkey::{X509Pubkey, X509_PUBKEY_it};
+use crate::x509::x_x509a::{d2i_X509_CERT_AUX, i2d_X509_CERT_AUX, X509CertAux, X509_CERT_AUX_free};
 
 /// The `OPENSSL_FILE` strings for this unit's `OPENSSL_free`/`OPENSSL_strdup` expansions and the
 /// lines they expand at.
@@ -79,6 +85,10 @@ const LINE_FREE_PROPQ: c_int = 144;
 const LINE_STRDUP_PROPQ: c_int = 147;
 /// `x509_cb`'s `OPENSSL_free(ret->propq)` (`:98`).
 const LINE_FREE_PROPQ_FREE_POST: c_int = 98;
+/// `i2d_X509_AUX`'s `OPENSSL_malloc(length)` (`:268`).
+const LINE_MALLOC_AUX: c_int = 268;
+/// `i2d_X509_AUX`'s error-path `OPENSSL_free(*pp)` (`:275`).
+const LINE_FREE_AUX: c_int = 275;
 
 /// `struct x509_cinf_st` — `X509_CINF`, from `include/crypto/x509.h:160-172`.
 ///
@@ -449,17 +459,18 @@ unsafe extern "C" fn x509_cb(
     match operation {
         ASN1_OP_D2I_PRE => {
             // SAFETY: `ret` is live. The cache releases the authority performs here for
-            // `aux`/`akid`/`crldp`/`policy_cache`/`altname`/`nc`/`rfc3779_addr`/`rfc3779_asid` are
+            // `akid`/`crldp`/`policy_cache`/`altname`/`nc`/`rfc3779_addr`/`rfc3779_asid` are
             // withheld: each names a `v3_*`/`pcy_*` free whose unit is not landed, and every one is
             // only ever written by `ossl_x509v3_cache_extensions` (`x509_v3.c`, also not landed),
-            // so on every object this crate can build the pointers are NULL. The two landed frees
-            // are transcribed.
+            // so on every object this crate can build the pointers are NULL. The `aux` free and the
+            // two string frees are landed.
             unsafe {
                 CRYPTO_free_ex_data(
                     CRYPTO_EX_INDEX_X509,
                     ret.cast::<c_void>(),
                     &raw mut (*ret).ex_data,
                 );
+                X509_CERT_AUX_free((*ret).aux.cast());
                 ASN1_OCTET_STRING_free((*ret).skid);
                 ASN1_OCTET_STRING_free((*ret).distinguishing_id);
             }
@@ -472,14 +483,15 @@ unsafe extern "C" fn x509_cb(
             return unsafe { x509_new_post(ret) };
         }
         ASN1_OP_FREE_POST => {
-            // SAFETY: `ret` is live. The seven withheld cache frees are the same ones the
-            // `ASN1_OP_D2I_PRE` arm withholds, for the same reason.
+            // SAFETY: `ret` is live. The six withheld cache frees are the same ones the
+            // `ASN1_OP_D2I_PRE` arm withholds, for the same reason; `aux` and the two strings land.
             unsafe {
                 CRYPTO_free_ex_data(
                     CRYPTO_EX_INDEX_X509,
                     ret.cast::<c_void>(),
                     &raw mut (*ret).ex_data,
                 );
+                X509_CERT_AUX_free((*ret).aux.cast());
                 ASN1_OCTET_STRING_free((*ret).skid);
                 ASN1_OCTET_STRING_free((*ret).distinguishing_id);
                 CRYPTO_free(
@@ -630,6 +642,113 @@ pub unsafe extern "C" fn d2i_X509(
 pub unsafe extern "C" fn i2d_X509(a: *const X509, out: *mut *mut c_uchar) -> c_int {
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
     unsafe { ASN1_item_i2d(a.cast(), out, X509_it()) }
+}
+
+/// `X509 *d2i_X509_AUX(X509 **a, const unsigned char **pp, long length)` —
+/// `crypto/x509/x_x509.c:184-212`.
+///
+/// Decodes the certificate, then, if bytes remain, decodes the `X509_CERT_AUX` suffix into
+/// `ret->aux`. `freeret` records whether this call created the slot, so the error path frees the
+/// certificate only when it did.
+///
+/// # Safety
+///
+/// `a` is NULL or a writable slot; `pp` points at a readable cursor; `length` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_X509_AUX(
+    a: *mut *mut X509,
+    pp: *mut *const c_uchar,
+    length: c_long,
+) -> *mut X509 {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe {
+        let mut q = *pp;
+        let freeret = a.is_null() || (*a).is_null();
+        let ret = d2i_X509(a, &raw mut q, length);
+        if ret.is_null() {
+            return ptr::null_mut();
+        }
+        let consumed = (q as isize - *pp as isize) as c_long;
+        let remaining = length - consumed;
+        if remaining > 0 {
+            let auxslot = &raw mut (*ret).aux as *mut *mut X509CertAux;
+            if d2i_X509_CERT_AUX(auxslot, &raw mut q, remaining).is_null() {
+                if freeret {
+                    X509_free(ret);
+                    if !a.is_null() {
+                        *a = ptr::null_mut();
+                    }
+                }
+                return ptr::null_mut();
+            }
+        }
+        *pp = q;
+        ret
+    }
+}
+
+/// `static int i2d_x509_aux_internal(const X509 *a, unsigned char **pp)` —
+/// `crypto/x509/x_x509.c:220-243`.
+///
+/// Encodes the certificate followed by its AUX suffix, or answers the combined length for a NULL
+/// `pp`. On an AUX failure the cursor is restored to `start`, which is the authority's own hygiene
+/// note about not compounding a lower layer's error-path perturbation.
+///
+/// # Safety
+///
+/// `a` is NULL or live; `pp` is NULL or a writable cursor.
+unsafe fn i2d_x509_aux_internal(a: *const X509, pp: *mut *mut c_uchar) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe {
+        let start = if pp.is_null() { ptr::null_mut() } else { *pp };
+        let length = i2d_X509(a, pp);
+        if length <= 0 || a.is_null() {
+            return length;
+        }
+        let tmplen = i2d_X509_CERT_AUX((*a).aux.cast::<X509CertAux>(), pp);
+        if tmplen < 0 {
+            if !start.is_null() {
+                *pp = start;
+            }
+            return tmplen;
+        }
+        length + tmplen
+    }
+}
+
+/// `int i2d_X509_AUX(const X509 *a, unsigned char **pp)` — `crypto/x509/x_x509.c:254-279`.
+///
+/// With a caller-supplied buffer this is [`i2d_x509_aux_internal`]; with `pp` non-NULL and `*pp`
+/// NULL it allocates the combined buffer and keeps `*pp` at the allocated pointer while the two
+/// encoders advance a local cursor.
+///
+/// # Safety
+///
+/// `a` is NULL or live; `pp` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_X509_AUX(a: *const X509, pp: *mut *mut c_uchar) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe {
+        if pp.is_null() || !(*pp).is_null() {
+            return i2d_x509_aux_internal(a, pp);
+        }
+        let length = i2d_x509_aux_internal(a, ptr::null_mut());
+        if length <= 0 {
+            return length;
+        }
+        let buf = CRYPTO_malloc(length as usize, FILE.as_ptr(), LINE_MALLOC_AUX).cast::<c_uchar>();
+        *pp = buf;
+        let mut tmp = buf;
+        if tmp.is_null() {
+            return -1;
+        }
+        let length = i2d_x509_aux_internal(a, &raw mut tmp);
+        if length <= 0 {
+            CRYPTO_free((*pp).cast(), FILE.as_ptr(), LINE_FREE_AUX);
+            *pp = ptr::null_mut();
+        }
+        length
+    }
 }
 
 /// `X509 *X509_new_ex(OSSL_LIB_CTX *libctx, const char *propq)` — `crypto/x509/x_x509.c:155-165`.

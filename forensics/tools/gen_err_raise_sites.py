@@ -1327,6 +1327,18 @@ COVERED_FILES = [
     # `X509_R_NAME_TOO_LONG` (`:75`, and again through the length guard) and `ERR_R_BUF_LIB`
     # (`:175`).
     ("crypto/x509/x509_obj.c", "X509_OBJ"),
+    # Phase 10.12's `crypto/x509/v3_ia5.c` -- the two `i2s_`/`s2i_ASN1_IA5STRING` helpers the
+    # Netscape IA5 extension table shares. Its two sites are `ERR_LIB_X509V3` with
+    # `X509V3_R_INVALID_NULL_ARGUMENT` (`:46`, the NULL-string refusal) and `ERR_R_ASN1_LIB`
+    # (`:50`, the `ASN1_IA5STRING_new` failure). The withheld `ossl_v3_ns_ia5_list` table raises
+    # nothing.
+    ("crypto/x509/v3_ia5.c", "V3_IA5"),
+    # Phase 10.12's `crypto/x509/v3_skid.c` -- the `i2s_`/`s2i_ASN1_OCTET_STRING` helpers. Its
+    # three sites are `ERR_LIB_X509V3`: `ERR_R_ASN1_LIB` (`:40`, the `ASN1_OCTET_STRING_new`
+    # failure, in the landed `s2i_ASN1_OCTET_STRING`), `X509V3_R_NO_PUBLIC_KEY` (`:66`) and
+    # `X509V3_R_NO_SUBJECT_DETAILS` (`:103`, both in withheld functions). The two unused
+    # coordinates are harmless; the stem is `V3_SKID` so it cannot collide with `V3_IA5`.
+    ("crypto/x509/v3_skid.c", "V3_SKID"),
     # Phase 8.7's ECX key objects (D372): `crypto/ec/ecx_key.c` (the `ECX_KEY` object and
     # `ossl_ecx_compute_key`) and `crypto/ec/ecx_backend.c` (the backend the legacy methods and
     # the providers share). The first is `ERR_LIB_PROV` with the four `PROV_R_*` reasons on the

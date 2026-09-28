@@ -6,10 +6,10 @@
     ],
     "census": {
       "names_a_file_the_authority_does_not_have": 11,
-      "units_not_reached": 39
+      "units_not_reached": 32
     },
     "census_by_stratum": {
-      "10": 50
+      "10": 43
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -33,21 +33,16 @@
         "crypto/store/store_result.c",
         "crypto/x509/pcy_cache.c",
         "crypto/x509/pcy_data.c",
-        "crypto/x509/pcy_lib.c",
         "crypto/x509/pcy_map.c",
         "crypto/x509/pcy_node.c",
         "crypto/x509/pcy_tree.c",
         "crypto/x509/v3_audit_id.c",
         "crypto/x509/v3_group_ac.c",
-        "crypto/x509/v3_ia5.c",
         "crypto/x509/v3_ind_iss.c",
-        "crypto/x509/v3_ist.c",
         "crypto/x509/v3_no_ass.c",
         "crypto/x509/v3_no_rev_avail.c",
-        "crypto/x509/v3_pcia.c",
         "crypto/x509/v3_pku.c",
         "crypto/x509/v3_single_use.c",
-        "crypto/x509/v3_skid.c",
         "crypto/x509/v3_soa_id.c",
         "crypto/x509/v3_timespec.c",
         "crypto/x509/v3_utf8.c",
@@ -56,13 +51,11 @@
         "crypto/x509/x509_lu.c",
         "crypto/x509/x509_req.c",
         "crypto/x509/x509_trust.c",
-        "crypto/x509/x509_txt.c",
         "crypto/x509/x509_vfy.c",
         "crypto/x509/x509_vpm.c",
         "crypto/x509/x509cset.c",
         "crypto/x509/x509rset.c",
         "crypto/x509/x_all.c",
-        "crypto/x509/x_x509a.c",
         "providers/implementations/encode_decode/decode_msblob2key.c",
         "providers/implementations/encode_decode/encode_key2blob.c",
         "providers/implementations/encode_decode/encode_key2text.c"
@@ -83,7 +76,7 @@
       "unit_records": 79,
       "units_named_by_a_record": 81,
       "units_named_by_a_row": 339,
-      "units_reached": 300
+      "units_reached": 307
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -3577,7 +3570,9 @@
         "subphases": [
           "10:10.12"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/pcy_lib.rs"
+        ]
       },
       "crypto/x509/pcy_map.c": {
         "defines": [
@@ -3654,7 +3649,9 @@
         "subphases": [
           "10:10.12"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/v3_ia5.rs"
+        ]
       },
       "crypto/x509/v3_ind_iss.c": {
         "defines": [
@@ -3674,7 +3671,9 @@
         "subphases": [
           "10:10.12"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/v3_ist.rs"
+        ]
       },
       "crypto/x509/v3_no_ass.c": {
         "defines": [
@@ -3702,7 +3701,9 @@
         "subphases": [
           "10:10.12"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/v3_pcia.rs"
+        ]
       },
       "crypto/x509/v3_pku.c": {
         "defines": [
@@ -3733,7 +3734,9 @@
         "subphases": [
           "10:10.12"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/v3_skid.rs"
+        ]
       },
       "crypto/x509/v3_soa_id.c": {
         "defines": [
@@ -3864,7 +3867,9 @@
         "subphases": [
           "10:10.12"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/x509_txt.rs"
+        ]
       },
       "crypto/x509/x509_v3.c": {
         "defines": [],
@@ -4025,7 +4030,9 @@
         "subphases": [
           "10:10.12"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/x_x509a.rs"
+        ]
       },
       "pkey_derive.c": {
         "defines": [],
@@ -4978,10 +4985,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 368
+      "transcribed_units": 375
     }
   },
-  "body_hash": "f82e56613536cd1f2e87eddb25af444dd60996aa9bebb2cc13f0bcf0c92f812b",
+  "body_hash": "a1ede17a1b83efa8fcb4b5d7134412f5f89c3731f0f7971eb5835af937da0a2d",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -4992,12 +4999,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "d39cceea95403672ecb8508aca0595252ca6261eb34b0365192478b2509c1413"
+      "sha256": "275667a8d398f4a97125d845344a6477b65ec64f4e116ed789b71c6c09a8913a"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0f1084e557598d3e8e4c433fde48f5110af4979c94c0c45bcaa21dc6f7ec2836"
+      "sha256": "8845c8f2b51f59679844418f2f41a848cb6b23a9fdde3974aef460b18193e525"
     },
     {
       "name": "phase-state",
@@ -5007,7 +5014,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "f28f4e9e9887aafebcbe9e82f1a2db3bea7aa1771a1f282ec40e3aa78f96ef4c"
+      "sha256": "74608c75a6e04d57bf1377263636f333f2c184485dcc819720c7d1536662e8af"
     },
     {
       "name": "source-manifest",
