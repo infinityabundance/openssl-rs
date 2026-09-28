@@ -69,3 +69,8 @@ pub mod x_x509;
 // Phase 10.10's `crypto/x509/x509_obj.c` -- `X509_NAME_oneline`, the DN printer
 // `x_name.c`'s withheld `X509_NAME_print` was blocked on.
 pub mod x509_obj;
+// Phase 10.11's `crypto/x509/x509_v3.c` -- the X.509v3 extension add/get/count/delete surface.
+// `x509rset.c` and `x509name.c` are the subphase's other two `crypto/x509/` units.
+pub mod x509_v3;
+pub mod x509name;
+pub mod x509rset;

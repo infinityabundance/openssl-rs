@@ -65,12 +65,14 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <openssl/bio.h>
 #include <openssl/crypto.h>
 #include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/store.h>
 #include <openssl/x509.h>
+#include <openssl/x509v3.h>
 
 #include "rt_x509_der.h"
 
@@ -614,6 +616,189 @@ static void drive_name_oneline(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * Phase 10.11 -- `crypto/x509/x509name.c`'s accessors and `crypto/asn1/a_strex.c`'s DN printer.
+ *
+ * The same populated `Name` as 10.10's block, now read through the convenience accessors (the
+ * count, the two index searches, the text lookup with its length-query spelling, the entry and
+ * its object/data/set fields) and printed under eight flag sets. `X509_NAME_print_ex` is a
+ * byte-exact printer, so each flag set's exact text is the observation; `XN_FLAG_COMPAT` routes
+ * through 10.10's `X509_NAME_oneline` and the rest through 10.11's `do_name_ex`.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_name_print_ex(void)
+{
+    const unsigned char *p = RT_X509_NAME_DER;
+    X509_NAME *name = d2i_X509_NAME(NULL, &p, (long)RT_X509_NAME_DER_LEN);
+    BIO *b;
+    char text[256];
+    int n, i;
+    static const struct { const char *k; unsigned long f; } arms[] = {
+        { "rfc2253",        XN_FLAG_RFC2253 },
+        { "oneline",        XN_FLAG_ONELINE },
+        { "multiline",      XN_FLAG_MULTILINE },
+        { "compat",         XN_FLAG_COMPAT },
+        { "fn_oid",         XN_FLAG_SEP_CPLUS_SPC | XN_FLAG_FN_OID },
+        { "fn_none",        XN_FLAG_SEP_CPLUS_SPC | XN_FLAG_FN_NONE },
+        { "sep_comma_plus", XN_FLAG_SEP_COMMA_PLUS | XN_FLAG_FN_SN },
+        { "sep_splus_spc",  XN_FLAG_SEP_SPLUS_SPC | XN_FLAG_FN_SN },
+    };
+
+    out_ptr("name.access.d2i", name);
+    if (name == NULL)
+        return;
+
+    /* `x509name.c`'s accessors over the populated name. */
+    out_int("name.access.count", (long)X509_NAME_entry_count(name));
+    out_int("name.access.index.cn", (long)X509_NAME_get_index_by_NID(name, NID_commonName, -1));
+    out_int("name.access.index.miss",
+            (long)X509_NAME_get_index_by_NID(name, NID_organizationName, -1));
+    out_int("name.access.index.badnid", (long)X509_NAME_get_index_by_NID(name, 1000000, -1));
+    {
+        char buf[128];
+        memset(buf, 0, sizeof(buf));
+        out_int("name.access.text.len",
+                (long)X509_NAME_get_text_by_NID(name, NID_commonName, buf, (int)sizeof(buf)));
+        out_str("name.access.text", buf);
+        out_int("name.access.text.query",
+                (long)X509_NAME_get_text_by_NID(name, NID_commonName, NULL, 0));
+        out_int("name.access.text.miss",
+                (long)X509_NAME_get_text_by_NID(name, NID_organizationName, buf, (int)sizeof(buf)));
+    }
+    {
+        X509_NAME_ENTRY *ent = X509_NAME_get_entry(name, 0);
+        out_ptr("name.access.entry0", ent);
+        out_int("name.access.entry0.set", (long)X509_NAME_ENTRY_set(ent));
+        out_int("name.access.entry0.obj", (long)OBJ_obj2nid(X509_NAME_ENTRY_get_object(ent)));
+        out_int("name.access.entry0.datalen", (long)ASN1_STRING_length(X509_NAME_ENTRY_get_data(ent)));
+        out_ptr("name.access.entry1", X509_NAME_get_entry(name, 1));
+    }
+
+    /* The byte-exact printer, one memory BIO per flag set. */
+    for (i = 0; i < (int)(sizeof(arms) / sizeof(arms[0])); i++) {
+        int r;
+
+        b = BIO_new(BIO_s_mem());
+        if (b == NULL)
+            continue;
+        memset(text, 0, sizeof(text));
+        n = X509_NAME_print_ex(b, name, 0, arms[i].f);
+        r = BIO_read(b, text, (int)sizeof(text) - 1);
+        text[r > 0 ? r : 0] = 0;
+        printf("name.print.%s.ret=%d\n", arms[i].k, n);
+        printf("name.print.%s.text=%s\n", arms[i].k, text);
+        BIO_free(b);
+    }
+
+    /* The NULL-name arm: no entries, so the printer answers zero through the real sink. */
+    b = BIO_new(BIO_s_mem());
+    out_int("name.print.noname", (long)X509_NAME_print_ex(b, NULL, 0, XN_FLAG_RFC2253));
+    BIO_free(b);
+
+    X509_NAME_free(name);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.11 -- `crypto/x509/x509_v3.c`'s extension surface.
+ *
+ * The X.509v3 extension add/get/count/delete layer is directly observable: create an extension
+ * by NID and by OBJ, append duplicates into a caller slot, count, search by NID/OBJ/critical,
+ * fetch by index, replace a batch of same-OID extensions, and delete -- printing the returned
+ * `nonnull`/`null`, the counts and each refusal's error coordinate. The unknown-NID create and
+ * both NULL-target calls are the refusal arms.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_x509v3_extensions(void)
+{
+    STACK_OF(X509_EXTENSION) *sk = NULL, *sk2 = NULL;
+    ASN1_OCTET_STRING *d1 = ASN1_OCTET_STRING_new();
+    ASN1_OCTET_STRING *d2 = ASN1_OCTET_STRING_new();
+    X509_EXTENSION *ex1, *ex2, *removed;
+    X509_EXTENSION *got;
+
+    if (d1 == NULL || d2 == NULL) {
+        out_ptr("v3.setup", NULL);
+        return;
+    }
+    ASN1_OCTET_STRING_set(d1, (const unsigned char *)"BC", 2);
+    ASN1_OCTET_STRING_set(d2, (const unsigned char *)"KU", 2);
+
+    /* Create by NID with the critical flag, and read the three fields back. */
+    ex1 = X509_EXTENSION_create_by_NID(NULL, NID_basic_constraints, 1, d1);
+    out_ptr("v3.create.by_nid", ex1);
+    out_err("v3.create.by_nid.err");
+    out_int("v3.create.by_nid.crit", (long)X509_EXTENSION_get_critical(ex1));
+    out_int("v3.create.by_nid.obj", (long)OBJ_obj2nid(X509_EXTENSION_get_object(ex1)));
+    out_int("v3.create.by_nid.datalen", (long)ASN1_STRING_length(X509_EXTENSION_get_data(ex1)));
+
+    /* The unknown-NID refusal and its coordinate. */
+    ERR_clear_error();
+    out_ptr("v3.create.badnid", X509_EXTENSION_create_by_NID(NULL, 1000000, 0, d1));
+    out_err("v3.create.badnid.err");
+    ERR_clear_error();
+
+    /* `X509v3_add_ext` builds the stack from a NULL slot and duplicates the caller's extension. */
+    sk = X509v3_add_ext(&sk, ex1, -1);
+    out_ptr("v3.add_ext.stack", sk);
+    out_int("v3.count.one", (long)X509v3_get_ext_count(sk));
+    out_int("v3.count.null", (long)X509v3_get_ext_count(NULL));
+
+    /* Create by OBJ, append, and a second extension of a different OID. */
+    ex2 = X509_EXTENSION_create_by_OBJ(NULL, OBJ_nid2obj(NID_key_usage), 0, d2);
+    out_ptr("v3.create.by_obj", ex2);
+    out_int("v3.create.by_obj.crit", (long)X509_EXTENSION_get_critical(ex2));
+    sk = X509v3_add_ext(&sk, ex2, -1);
+    out_int("v3.count.two", (long)X509v3_get_ext_count(sk));
+
+    /* The three searches, present and absent. */
+    out_int("v3.by_nid", (long)X509v3_get_ext_by_NID(sk, NID_basic_constraints, -1));
+    out_int("v3.by_nid.miss", (long)X509v3_get_ext_by_NID(sk, NID_subject_key_identifier, -1));
+    out_int("v3.by_nid.badnid", (long)X509v3_get_ext_by_NID(sk, 1000000, -1));
+    out_int("v3.by_obj", (long)X509v3_get_ext_by_OBJ(sk, X509_EXTENSION_get_object(ex1), -1));
+    out_int("v3.by_obj.miss", (long)X509v3_get_ext_by_OBJ(sk, OBJ_nid2obj(NID_authority_key_identifier), -1));
+    out_int("v3.by_crit.1", (long)X509v3_get_ext_by_critical(sk, 1, -1));
+    out_int("v3.by_crit.0", (long)X509v3_get_ext_by_critical(sk, 0, -1));
+    out_int("v3.by_crit.null", (long)X509v3_get_ext_by_critical(NULL, 1, -1));
+    out_int("v3.by_obj.null", (long)X509v3_get_ext_by_OBJ(NULL, X509_EXTENSION_get_object(ex1), -1));
+
+    /* Fetch by index, in and out of range, and from a NULL stack. */
+    got = X509v3_get_ext(sk, 0);
+    out_ptr("v3.get.0", got);
+    out_int("v3.get.0.obj", (long)OBJ_obj2nid(X509_EXTENSION_get_object(got)));
+    out_ptr("v3.get.5", X509v3_get_ext(sk, 5));
+    out_ptr("v3.get.null", X509v3_get_ext(NULL, 0));
+
+    /* A NULL target slot is the refusal `X509v3_add_ext` and `X509v3_add_extensions` share. */
+    ERR_clear_error();
+    out_ptr("v3.add_ext.null_target", X509v3_add_ext(NULL, ex1, -1));
+    out_err("v3.add_ext.null_target.err");
+    ERR_clear_error();
+
+    /* `X509v3_add_extensions` replaces same-OID entries: the batch stays at two. */
+    sk2 = X509v3_add_extensions(&sk2, sk);
+    out_ptr("v3.add_extensions", sk2);
+    out_int("v3.add_extensions.count", (long)X509v3_get_ext_count(sk2));
+    ERR_clear_error();
+    out_ptr("v3.add_extensions.null_target", X509v3_add_extensions(NULL, sk));
+    out_err("v3.add_extensions.null_target.err");
+    ERR_clear_error();
+
+    /* `X509v3_delete_ext` returns the removed element and drops the count. */
+    removed = X509v3_delete_ext(sk, 0);
+    out_ptr("v3.delete.0", removed);
+    out_int("v3.count.after_delete", (long)X509v3_get_ext_count(sk));
+    out_ptr("v3.delete.5", X509v3_delete_ext(sk, 5));
+    out_ptr("v3.delete.null", X509v3_delete_ext(NULL, 0));
+
+    X509_EXTENSION_free(removed);
+    X509_EXTENSION_free(ex1);
+    X509_EXTENSION_free(ex2);
+    sk_X509_EXTENSION_free(sk);
+    sk_X509_EXTENSION_free(sk2);
+    ASN1_OCTET_STRING_free(d1);
+    ASN1_OCTET_STRING_free(d2);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * A whole block of what this pass withholds, printed identically on both sides.
  * --------------------------------------------------------------------------------------------- */
 
@@ -754,6 +939,10 @@ int main(void)
 
     /* ----- Phase 10.10: the DN printer ----- */
     drive_name_oneline();
+
+    /* ----- Phase 10.11: the name accessors, the DN flags and the extension surface ----- */
+    drive_name_print_ex();
+    drive_x509v3_extensions();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

@@ -40,7 +40,22 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "ASN1_item_verify"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASN1_item_verify_ctx"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "ASN1_sign"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASN1_verify"
       },
       {
         "owing_phase": 13,
@@ -350,7 +365,57 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "EVP_PKCS82PKEY"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "EVP_PKEY2PKCS8"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EVP_PKEY_add1_attr"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EVP_PKEY_add1_attr_by_NID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EVP_PKEY_add1_attr_by_OBJ"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EVP_PKEY_add1_attr_by_txt"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EVP_PKEY_delete_attr"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EVP_PKEY_get_attr"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EVP_PKEY_get_attr_by_NID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EVP_PKEY_get_attr_by_OBJ"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EVP_PKEY_get_attr_count"
       },
       {
         "owing_phase": 11,
@@ -1110,12 +1175,37 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_EXTENSION_create_by_NID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_create_by_OBJ"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_EXTENSION_dup"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_EXTENSION_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_get_critical"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_get_data"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_get_object"
       },
       {
         "owing_phase": 11,
@@ -1130,12 +1220,52 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_EXTENSION_set_critical"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_set_data"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_EXTENSION_set_object"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_create_by_NID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_create_by_OBJ"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_create_by_txt"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_NAME_ENTRY_dup"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_NAME_ENTRY_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_get_data"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_get_object"
       },
       {
         "owing_phase": 11,
@@ -1150,7 +1280,52 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_set"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_set_data"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_ENTRY_set_object"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_add_entry"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_add_entry_by_NID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_add_entry_by_OBJ"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_add_entry_by_txt"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_delete_entry"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_NAME_dup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_entry_count"
       },
       {
         "owing_phase": 11,
@@ -1161,6 +1336,31 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_NAME_get0_der"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_get_entry"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_get_index_by_NID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_get_index_by_OBJ"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_get_text_by_NID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_get_text_by_OBJ"
       },
       {
         "owing_phase": 11,
@@ -1181,6 +1381,16 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_NAME_print"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_print_ex"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_NAME_print_ex_fp"
       },
       {
         "owing_phase": 11,
@@ -1426,6 +1636,46 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509at_get_attr_count"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_add_ext"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_add_extensions"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_delete_ext"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_get_ext"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_get_ext_by_NID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_get_ext_by_OBJ"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_get_ext_by_critical"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_get_ext_count"
       },
       {
         "owing_phase": 11,
@@ -3018,9 +3268,11 @@
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
               "RT-EVP-PBE",
+              "RT-KEYFORMAT",
               "RT-PKCS12",
               "RT-PUBKEY",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-STORE"
             ],
             "symbol": "OBJ_nid2obj"
           },
@@ -3037,9 +3289,11 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
+              "RT-KEYFORMAT",
               "RT-PKCS12",
               "RT-PUBKEY",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-STORE"
             ],
             "symbol": "OBJ_obj2nid"
           },
@@ -3394,7 +3648,8 @@
             "courts": [
               "RT-CONF",
               "RT-ERR",
-              "RT-STACK"
+              "RT-STACK",
+              "RT-STORE"
             ],
             "symbol": "OPENSSL_sk_free"
           },
@@ -4256,7 +4511,8 @@
               "RT-PKCS12",
               "RT-PUBKEY",
               "RT-RAND-USERS",
-              "RT-RUNTIME-EXT"
+              "RT-RUNTIME-EXT",
+              "RT-STORE"
             ],
             "symbol": "BIO_free"
           },
@@ -4710,7 +4966,8 @@
               "RT-PKCS12",
               "RT-PUBKEY",
               "RT-RAND-USERS",
-              "RT-RUNTIME-EXT"
+              "RT-RUNTIME-EXT",
+              "RT-STORE"
             ],
             "symbol": "BIO_new"
           },
@@ -4927,7 +5184,8 @@
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-LHASH",
-              "RT-RUNTIME-EXT"
+              "RT-RUNTIME-EXT",
+              "RT-STORE"
             ],
             "symbol": "BIO_read"
           },
@@ -5036,7 +5294,8 @@
               "RT-PEM-KEY",
               "RT-PKCS12",
               "RT-PUBKEY",
-              "RT-RUNTIME-EXT"
+              "RT-RUNTIME-EXT",
+              "RT-STORE"
             ],
             "symbol": "BIO_s_mem"
           },
@@ -5830,7 +6089,8 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-PRINT",
-              "RT-ASN1-TEMPLATE"
+              "RT-ASN1-TEMPLATE",
+              "RT-KEYFORMAT"
             ],
             "symbol": "ASN1_BIT_STRING_free"
           },
@@ -5861,7 +6121,8 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-PRINT",
-              "RT-ASN1-TEMPLATE"
+              "RT-ASN1-TEMPLATE",
+              "RT-KEYFORMAT"
             ],
             "symbol": "ASN1_BIT_STRING_new"
           },
@@ -6286,7 +6547,9 @@
               "RT-ASN1",
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
-              "RT-DIGEST"
+              "RT-DIGEST",
+              "RT-KEYFORMAT",
+              "RT-STORE"
             ],
             "symbol": "ASN1_OCTET_STRING_free"
           },
@@ -6298,7 +6561,8 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
               "RT-BIO-ASN1",
-              "RT-DIGEST"
+              "RT-DIGEST",
+              "RT-KEYFORMAT"
             ],
             "symbol": "ASN1_OCTET_STRING_it"
           },
@@ -6308,7 +6572,9 @@
               "RT-ASN1",
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
-              "RT-DIGEST"
+              "RT-DIGEST",
+              "RT-KEYFORMAT",
+              "RT-STORE"
             ],
             "symbol": "ASN1_OCTET_STRING_new"
           },
@@ -6317,7 +6583,8 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
-              "RT-BIO-ASN1"
+              "RT-BIO-ASN1",
+              "RT-STORE"
             ],
             "symbol": "ASN1_OCTET_STRING_set"
           },
@@ -6621,7 +6888,9 @@
               "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
               "RT-BIO-ASN1",
-              "RT-PKCS12"
+              "RT-KEYFORMAT",
+              "RT-PKCS12",
+              "RT-STORE"
             ],
             "symbol": "ASN1_STRING_length"
           },
@@ -6670,7 +6939,8 @@
               "RT-ASN1-STR",
               "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
-              "RT-DIGEST"
+              "RT-DIGEST",
+              "RT-KEYFORMAT"
             ],
             "symbol": "ASN1_STRING_set"
           },
@@ -9263,7 +9533,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1",
-              "RT-DIGEST"
+              "RT-DIGEST",
+              "RT-KEYFORMAT"
             ],
             "symbol": "i2d_ASN1_OCTET_STRING"
           },
@@ -10823,10 +11094,10 @@
       {
         "completed": true,
         "counts": {
-          "directly_courted": 734,
-          "directly_courted_called": 689,
-          "directly_courted_referenced": 45,
-          "implemented": 734,
+          "directly_courted": 735,
+          "directly_courted_called": 691,
+          "directly_courted_referenced": 44,
+          "implemented": 735,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -10835,9 +11106,17 @@
           {
             "basis": "called",
             "courts": [
-              "RT-DIGEST"
+              "RT-DIGEST",
+              "RT-KEYFORMAT"
             ],
             "symbol": "ASN1_item_sign_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-KEYFORMAT"
+            ],
+            "symbol": "ASN1_item_verify_ex"
           },
           {
             "basis": "called",
@@ -13467,6 +13746,7 @@
               "RT-EC",
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
+              "RT-KEYFORMAT",
               "RT-KEYMGMT",
               "RT-RSA",
               "RT-SIGNATURE"
@@ -13674,9 +13954,10 @@
             "symbol": "EVP_PKEY_CTX_new_from_pkey"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-EVP-REF"
+              "RT-EVP-REF",
+              "RT-KEYFORMAT"
             ],
             "symbol": "EVP_PKEY_CTX_new_id"
           },
@@ -14597,6 +14878,7 @@
               "RT-ASYM-CIPHER",
               "RT-EVP-PKEY-OPS",
               "RT-EVP-REF",
+              "RT-KEYFORMAT",
               "RT-SIGNATURE"
             ],
             "symbol": "EVP_PKEY_keygen"
@@ -14608,6 +14890,7 @@
               "RT-CODEC",
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
+              "RT-KEYFORMAT",
               "RT-KEYMGMT",
               "RT-SIGNATURE"
             ],
@@ -24708,10 +24991,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 3002,
-      "directly_courted_called": 2675,
-      "directly_courted_referenced": 327,
-      "implemented": 3010,
+      "directly_courted": 3003,
+      "directly_courted_called": 2677,
+      "directly_courted_referenced": 326,
+      "implemented": 3011,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -24722,7 +25005,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d1f95432700b6337fbde5bd06bfb251687679c11cbca979cae7a59591ea5bc3c"
+      "sha256": "0f1084e557598d3e8e4c433fde48f5110af4979c94c0c45bcaa21dc6f7ec2836"
     },
     {
       "name": "symbol-ownership",
@@ -24737,7 +25020,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "df1b5cd653ddb34fc393099890ea243de17aa345e7f06c41712f63575a4aaa02"
+      "sha256": "5717e9c7f788f19cdff39cb96ee6d9a1d6a9e4dd4b1846c0b40d7bb5ff615f2e"
     },
     {
       "name": "phase3-courts",
@@ -24747,7 +25030,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "291b30f292dafebdd2d17338fbaec358321d61213224af977a93dc95e8689dc0"
+      "sha256": "0ab3a54041b8beee62faabffe2857fd678571451a7b6c779d038c5f23b5021e7"
     },
     {
       "name": "phase4-courts",
@@ -24757,7 +25040,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "836fbb47f21b1f9ee16905d9b5e376d4ae6e8a42432867b65e040b7b5a9a269c"
+      "sha256": "d4ddd0f035791a3ebe232a6d9b437590ccd372020f946a21294b03810c22ac09"
     },
     {
       "name": "phase5-courts",
@@ -24767,7 +25050,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "830c885ead85717a2bf70e153f6195b97c60cd89e0430f48600890d6524f01e9"
+      "sha256": "ab4ab95efeecabe51443d2f466e2f69f7656890d1155bb58828d116a42fb026c"
     },
     {
       "name": "phase6-courts",
@@ -24777,17 +25060,17 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "a82b6ef5c98b016206159dfabe59672514647597f58b9fd97285305faa429353"
+      "sha256": "80c0b745e5c36e9e5bfb24911af93902ef3218d446d573f89339c86923058b7d"
     },
     {
       "name": "phase7-courts",
       "path": "artifacts/phase7/COURTS.json",
-      "sha256": "58ea57f551a49e42416b5b6ca6e5c53609eb02881002862451d74fbf4dd3a7fc"
+      "sha256": "01be0059b62233f148fca1ebad7174da7cc53cf7030454f4e88da1aa5bd19d38"
     },
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "1246691b298f95ec2b126e9700e950db71daaf385375a0f303d797833d0ccbb2"
+      "sha256": "85a0e09cb6cca597acca61c99aeaf79e02b97922d83f0045b33af861b36a3101"
     },
     {
       "name": "phase8-courts",
@@ -24797,7 +25080,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "0cf999221702da4b2c0ce3c3d67839b53c3f5950dd8cb9067918f67495ae41fd"
+      "sha256": "cc000477e0c42598ba79c7eb456e798d25ef71c5b856bac11b851178875be34e"
     },
     {
       "name": "phase9-courts",
@@ -24807,12 +25090,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "2f451bbe52c68f6fcf66284e6928f312130b6398f3e7da69d967fef7f35a8407"
+      "sha256": "91a916d822c5d53505736577ad359368afc9b287ff9391cbe69a0c923f03b2b1"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "33463bf5d92d7653635da76a6f68b1f5fdeecf0139024bb9f90730b2f6653cf7"
+      "sha256": "c0087cc238cda953fc6627b30024584c852ae62c0baa3da4a6238295c7458fa7"
     }
   ],
   "kind": "court-coverage",

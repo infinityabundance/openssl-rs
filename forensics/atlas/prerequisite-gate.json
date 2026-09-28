@@ -2,7 +2,6 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "blocking_dependencies": [
-      "ASN1_item_verify_ctx -> phase 11 (The verification twin of `ASN1_item_sign_ctx`: `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:104`) delegates to it, and it is declared in `x509.h`, Phase 11's. The hand-off from Phase 5 to this stratum cannot be completed while the delegate is another stratum's export.)",
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
@@ -10,7 +9,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 79,
-      "language_surface_not_modelled_by_name": 5716,
+      "language_surface_not_modelled_by_name": 5711,
       "planned_prerequisites": 6
     },
     "census_by_unit": {
@@ -68,10 +67,11 @@
         "crypto/asn1/a_mbstr.c": 7,
         "crypto/asn1/a_print.c": 4,
         "crypto/asn1/a_sign.c": 19,
-        "crypto/asn1/a_strex.c": 34,
+        "crypto/asn1/a_strex.c": 12,
         "crypto/asn1/a_strnid.c": 19,
         "crypto/asn1/a_time.c": 14,
         "crypto/asn1/a_type.c": 8,
+        "crypto/asn1/a_verify.c": 18,
         "crypto/asn1/ameth_lib.c": 24,
         "crypto/asn1/asn1_gen.c": 26,
         "crypto/asn1/asn1_lib.c": 12,
@@ -249,7 +249,7 @@
         "crypto/evp/evp_key.c": 7,
         "crypto/evp/evp_lib.c": 24,
         "crypto/evp/evp_pbe.c": 21,
-        "crypto/evp/evp_pkey.c": 27,
+        "crypto/evp/evp_pkey.c": 17,
         "crypto/evp/evp_rand.c": 33,
         "crypto/evp/exchange.c": 20,
         "crypto/evp/kdf_lib.c": 14,
@@ -323,14 +323,14 @@
         "crypto/pem/pem_all.c": 24,
         "crypto/pem/pem_lib.c": 30,
         "crypto/pem/pem_oth.c": 5,
-        "crypto/pem/pem_pk8.c": 16,
+        "crypto/pem/pem_pk8.c": 15,
         "crypto/pem/pem_pkey.c": 29,
         "crypto/pem/pvkfmt.c": 23,
         "crypto/pkcs12/p12_add.c": 21,
         "crypto/pkcs12/p12_asn.c": 32,
         "crypto/pkcs12/p12_attr.c": 8,
         "crypto/pkcs12/p12_crpt.c": 9,
-        "crypto/pkcs12/p12_crt.c": 33,
+        "crypto/pkcs12/p12_crt.c": 31,
         "crypto/pkcs12/p12_decr.c": 12,
         "crypto/pkcs12/p12_init.c": 6,
         "crypto/pkcs12/p12_key.c": 10,
@@ -410,14 +410,16 @@
         "crypto/ui/ui_openssl.c": 9,
         "crypto/ui/ui_util.c": 13,
         "crypto/whrlpool/wp_dgst.c": 3,
-        "crypto/x509/t_x509.c": 104,
+        "crypto/x509/t_x509.c": 98,
         "crypto/x509/x509_att.c": 20,
         "crypto/x509/x509_obj.c": 12,
         "crypto/x509/x509_set.c": 42,
-        "crypto/x509/x_attrib.c": 17,
-        "crypto/x509/x_crl.c": 96,
+        "crypto/x509/x509_v3.c": 11,
+        "crypto/x509/x509name.c": 13,
+        "crypto/x509/x_attrib.c": 15,
+        "crypto/x509/x_crl.c": 93,
         "crypto/x509/x_exten.c": 13,
-        "crypto/x509/x_name.c": 41,
+        "crypto/x509/x_name.c": 40,
         "crypto/x509/x_pubkey.c": 43,
         "crypto/x509/x_x509.c": 39,
         "providers/baseprov.c": 25
@@ -524,10 +526,10 @@
       ]
     },
     "checked": {
-      "authority_units": 365,
-      "crate_modules": 524,
+      "authority_units": 368,
+      "crate_modules": 528,
       "deferral_blocker_rows": 0,
-      "deferrals_recorded": 5,
+      "deferrals_recorded": 4,
       "divergence_names_covered": 41,
       "divergence_rows": 13,
       "names_referenced_and_not_built": 19
@@ -638,13 +640,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "ff2175486795276523f477d8a3c715d8d20c5430b8618bc9766d32322ee5afc8",
+  "body_hash": "ebd0b62f01cc53afd68222f81dd1f6c52230448278695c20ed104be7aa8491d1",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "9111914b620274c0cc2439eb427eebfcd5861b3081523b09168eed80730c2b37"
+      "sha256": "3acc7418d8a7648befa82c0ec41762083194d8bafe7485e8363b8779b7935468"
     },
     {
       "name": "macro-owners",
@@ -659,7 +661,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "0c43896619ae60799b89ae1f803185a04fbe8e60616d08d7ae306df3393edf67"
+      "sha256": "d39cceea95403672ecb8508aca0595252ca6261eb34b0365192478b2509c1413"
     },
     {
       "name": "symbol-ownership",
@@ -674,7 +676,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d1f95432700b6337fbde5bd06bfb251687679c11cbca979cae7a59591ea5bc3c"
+      "sha256": "0f1084e557598d3e8e4c433fde48f5110af4979c94c0c45bcaa21dc6f7ec2836"
     },
     {
       "name": "phase-state",
@@ -684,7 +686,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "0cf97618f046571de44680896c8127016de03f42e3f704b0d2b1561ee9a60079"
+      "sha256": "f28f4e9e9887aafebcbe9e82f1a2db3bea7aa1771a1f282ec40e3aa78f96ef4c"
     },
     {
       "name": "crate-source-tree",

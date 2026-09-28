@@ -32085,3 +32085,49 @@ lines: `x509_v3.c` (273), `x509name.c` (361), `x509rset.c` (42), `a_strex.c`'s u
 ~236. It carries one hand-off consequence: `ASN1_item_verify_ex` now has a **single** blocker,
 `ASN1_item_verify_ctx` (`a_verify.c:111`), so 10.11 closes Phase 7's last blocked row.
 
+## D454 -- 10.11, the name, print and `v3` dispatch layer, and Phase 7's last blocked row retires
+
+Fourth pulled-forward subphase, and the first whose *consequence* reaches another stratum. Section 6
+sizes 10.11 at ten units / 3,487 lines; D453's re-measurement put the fresh text at ~1,300, and the
+landed figure is **~1,087 authority lines**: `x509_v3.c` (273, all 15 functions),
+`x509name.c` (361, all 18), `a_strex.c`'s print half (~163, `do_indent`, `do_name_ex`,
+`X509_NAME_print_ex(_fp)`), `a_verify.c` (226, all four) and `evp_pkey.c`'s remainder
+(`EVP_PKCS82PKEY` and the nine `EVP_PKEY_*_attr*` accessors, ~64), which makes that unit whole.
+`x509rset.c` is transcribed as a documented module with **all three functions withheld by name**
+(`X509_REQ_set_version`/`_set_subject_name`/`_set_pubkey`): their closure is landed but the crate has
+no `X509_REQ` type, which `crypto/x509/x509_req.c` (10.14) owns. A module that is a doc and three
+withholds is the honest shape when the unit cannot be named yet, and it is recorded as such rather
+than left out of the plan.
+
+**Phase 7's last blocked hand-off is discharged.** `ASN1_item_verify_ex`'s single blocker,
+`ASN1_item_verify_ctx` (`a_verify.c:111`), lands with the unit, so the stale `BLOCKED_HANDOFFS` row
+is retired from `forensics/tools/phase7_obligations.py` -- the rule D453 used for
+`ASN1_item_sign_ex` -- and its deferral is removed from `forensics/prerequisites.json`. Phase 7 moves
+from `deferred 216` to `215` and `implemented 734` to `735`. Phase-10 counts are unchanged at
+`286 implemented / 12 open` exports and `634 implemented / 2 open` provider rows.
+
+**A defect was found by driving, not compiling**: `OBJ_nid2obj` returned NULL **silently** for an
+unknown NID where the authority raises `ERR_LIB_OBJ`/`OBJ_R_UNKNOWN_NID` (`crypto/objects/obj_dat.c:278`).
+It now raises, and `RT-STORE`'s `name.access.index.badnid` and `v3.create.badnid` arms are what
+observe it. That is the second time this session a court found a defect the compiler could not
+(D451's `int_ctx_new` was the first).
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1100 passed, 0 failed**. `RT-STORE` moves from 222 to **289** observations (the `x509name.c`
+accessors, `X509_NAME_print_ex` under eight flag sets including `XN_FLAG_COMPAT`, and the whole
+`X509v3_*` surface with its refusals and coordinates) and `RT-KEYFORMAT` from 349 to **370** (an
+Ed25519 sign-then-verify positive arm, a tampered-document refusal, the NULL-key refusal, the
+`_ex`-less `ASN1_item_verify` and the deprecated `ASN1_verify`). 109 courts, **45,306
+observations**, `PIPELINE OK` exit 0 twice, `prototype-court mismatches=0`, `probe-hygiene
+all_clean=True`.
+
+### What 10.12 now needs
+
+Section 6 sizes 10.12 at 16 units / 3,490 lines and `x_val.c` (20) already landed in 10.8, so the
+remaining distance is **~3,470 authority lines over 15 units**: `x_x509a.c`, `x509_txt.c`, `pcy_lib.c`,
+`pcy_node.c`, the small `v3_*` leaves and the `http`/`punycode` units `x_all.c` reaches. 10.11
+removed its blockers on that path -- the `X509_EXTENSION` create/set/get surface, the extension
+stack, and the byte-exact `X509_NAME_print_ex` are in place.
+

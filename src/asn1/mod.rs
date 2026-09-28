@@ -64,6 +64,9 @@ pub mod a_strex;
 pub mod a_strnid;
 pub mod a_type;
 pub mod a_utf8;
+// Phase 10.11's `crypto/asn1/a_verify.c` -- `ASN1_item_verify(_ex/_ctx)` and the deprecated
+// `ASN1_verify`. `ASN1_item_verify_ctx` is the single blocker 10.10 left on the Phase-7 row.
+pub mod a_verify;
 pub mod asn1_gen;
 pub mod asn_mime;
 pub mod asn_pack;

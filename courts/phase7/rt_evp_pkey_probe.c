@@ -3537,8 +3537,8 @@ int main(void)
     printf("EVP_PKEY_meth_get_count=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8_pmeth_lib_c_54\n");
     printf("EVP_PKEY_meth_get0=NOT_MEASURED_STANDARD_METHODS_IS_PHASE_8_pmeth_lib_c_54\n");
     printf("evp_pkey_meth_find_added_by_application=NOT_MEASURED_NO_PUBLIC_DOOR_WITHOUT_PMETH_FIELD\n");
-    printf("ASN1_item_sign_ex=NOT_MEASURED_NEEDS_ASN1_item_sign_ctx_PHASE_11_a_sign_c_138\n");
-    printf("ASN1_item_verify_ex=NOT_MEASURED_NEEDS_ASN1_item_verify_ctx_PHASE_11_a_verify_c_104\n");
+    printf("ASN1_item_sign_ex=NOT_MEASURED_THIS_COURT_NEEDS_A_BOUND_KEY_DRIVEN_BY_RT_KEYFORMAT\n");
+    printf("ASN1_item_verify_ex=NOT_MEASURED_THIS_COURT_NEEDS_A_BOUND_KEY_DRIVEN_BY_RT_KEYFORMAT\n");
     printf("d2i_PrivateKey=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_179\n");
     printf("d2i_PrivateKey_ex=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_166\n");
     printf("d2i_AutoPrivateKey=NOT_MEASURED_NEEDS_OSSL_DECODER_AND_AMETH_PHASE_8_10_d2i_pr_c_254\n");

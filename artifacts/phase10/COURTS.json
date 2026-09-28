@@ -41,9 +41,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 349,
+        "authority_observations": 370,
         "candidate_exit_code": 0,
-        "candidate_observations": 349,
+        "candidate_observations": 370,
         "candidate_stderr_tail": [],
         "court": "RT-KEYFORMAT",
         "crashed": false,
@@ -75,9 +75,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 222,
+        "authority_observations": 289,
         "candidate_exit_code": 0,
-        "candidate_observations": 222,
+        "candidate_observations": 289,
         "candidate_stderr_tail": [],
         "court": "RT-STORE",
         "crashed": false,
@@ -178,7 +178,7 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_keyformat_probe.c",
-      "sha256": "fec98fac5071612f7f2cb2c590bb55c369a6a6659959288a82abde08119ece27"
+      "sha256": "045aad687c8de3dc15edf16f53f71cbae5418ee4f40f44874bbae57a6053e95c"
     },
     {
       "name": "probe",
@@ -188,7 +188,7 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_store_probe.c",
-      "sha256": "79960aeb8a9b9e81920990702cf2022498228d06217787c34f3e221c623fdbae"
+      "sha256": "c6a5ea7ab7219b7569d4f31b04c16d223c562be7ddc80e676627bbf9c0ab435c"
     },
     {
       "name": "pkcs12-correctness-probe",

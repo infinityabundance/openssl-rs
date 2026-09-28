@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/bn.h>
@@ -47,6 +48,7 @@
 #include <openssl/obj_mac.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
+#include <openssl/x509.h>
 
 #include "rt_keyformat_keys.h"
 
@@ -750,6 +752,92 @@ static void arm_d2i(void)
     EVP_PKEY_free(rsa);
 }
 
+/* --------------------------------------------------------------------------------------------
+ * Phase 10.11 -- `crypto/asn1/a_verify.c`, the verify half of the ASN.1 sign/verify pair.
+ *
+ * 10.10 landed `a_sign.c` and drove `ASN1_item_sign_ex`'s NULL-key refusal. 10.11 lands
+ * `a_verify.c` and completes the pair: a fixed legacy RSA key signs a small `ASN1_OCTET_STRING`
+ * through `ASN1_item_sign_ex`, filling the `AlgorithmIdentifier` and the signature bits, and
+ * `ASN1_item_verify_ex` verifies it (the positive arm), refuses a changed document, and refuses
+ * a NULL key -- each refusal with its error-queue coordinate. `ASN1_item_verify`, the `_ex`-less
+ * spelling, is driven on the same positive input.
+ * ------------------------------------------------------------------------------------------ */
+
+static void arm_sign_verify(void)
+{
+    EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_ED25519, NULL);
+    EVP_PKEY *pk = NULL;
+    ASN1_OCTET_STRING *oct = ASN1_OCTET_STRING_new();
+    X509_ALGOR *alg = X509_ALGOR_new();
+    ASN1_BIT_STRING *sig = ASN1_BIT_STRING_new();
+    const ASN1_OBJECT *o;
+    int r;
+
+    if (ctx == NULL || oct == NULL || alg == NULL || sig == NULL) {
+        kv_int("signverify.setup", 0);
+        goto out;
+    }
+    if (EVP_PKEY_keygen_init(ctx) <= 0 || EVP_PKEY_keygen(ctx, &pk) <= 0 || pk == NULL) {
+        kv_int("signverify.setup", 2);
+        goto out;
+    }
+    kv_int("signverify.setup", 1);
+    kv_int("signverify.key.id", EVP_PKEY_id(pk));
+    ASN1_STRING_set(oct, "phase10.11", 10);
+
+    /* Ed25519's algorithm identifier is `id-Ed25519` with absent parameters; the signing arm
+     * takes it as an input because `ASN1_item_sign_ex` fills no algorithm when given NULL. */
+    X509_ALGOR_set0(alg, OBJ_nid2obj(NID_ED25519), V_ASN1_UNDEF, NULL);
+
+    /* The positive signing arm: Ed25519 needs no digest, so `md` is NULL. */
+    ERR_clear_error();
+    r = ASN1_item_sign_ex(ASN1_OCTET_STRING_it(), NULL, NULL, sig, oct, NULL, pk, NULL, NULL, NULL);
+    kv_int("signverify.sign.ret", r);
+    kv_int("signverify.sign.siglen", ASN1_STRING_length(sig));
+    errs("signverify.sign.err");
+    o = NULL;
+    X509_ALGOR_get0(&o, NULL, NULL, alg);
+    kv_int("signverify.sign.algor.nid", o != NULL ? OBJ_obj2nid(o) : -1);
+
+    /* The positive verify arm. */
+    ERR_clear_error();
+    r = ASN1_item_verify_ex(ASN1_OCTET_STRING_it(), alg, sig, oct, NULL, pk, NULL, NULL);
+    kv_int("signverify.verify.ok", r);
+    errs("signverify.verify.ok.err");
+
+    /* The refusal arm: the signed document changes, so the signature no longer matches. */
+    ASN1_STRING_set(oct, "phase10.11!", 11);
+    ERR_clear_error();
+    r = ASN1_item_verify_ex(ASN1_OCTET_STRING_it(), alg, sig, oct, NULL, pk, NULL, NULL);
+    kv_int("signverify.verify.tampered", r);
+    errs("signverify.verify.tampered.err");
+    ASN1_STRING_set(oct, "phase10.11", 10);
+
+    /* The NULL-key refusal: the key context cannot be built without a key. */
+    ERR_clear_error();
+    r = ASN1_item_verify_ex(ASN1_OCTET_STRING_it(), alg, sig, oct, NULL, NULL, NULL, NULL);
+    kv_int("signverify.verify.nullkey", r);
+    errs("signverify.verify.nullkey.err");
+
+    /* The `_ex`-less spelling, a second positive arm. */
+    ERR_clear_error();
+    r = ASN1_item_verify(ASN1_OCTET_STRING_it(), alg, sig, oct, pk);
+    kv_int("signverify.item_verify.no_ex", r);
+    errs("signverify.item_verify.no_ex.err");
+
+    /* The deprecated `ASN1_verify` spelling: for a non-digest OID the name lookup refuses. */
+    ERR_clear_error();
+    r = ASN1_verify((i2d_of_void *)i2d_ASN1_OCTET_STRING, alg, sig, (char *)oct, pk);
+    kv_int("signverify.asn1_verify", r);
+    errs("signverify.asn1_verify.err");
+out:
+    ASN1_BIT_STRING_free(sig);
+    X509_ALGOR_free(alg);
+    ASN1_OCTET_STRING_free(oct);
+    EVP_PKEY_free(pk);
+    EVP_PKEY_CTX_free(ctx);
+}
+
 int main(void)
 {
     arm_reference();
@@ -763,6 +851,8 @@ int main(void)
     arm_pk8();
     ERR_clear_error();
     arm_d2i();
+    ERR_clear_error();
+    arm_sign_verify();
     ERR_clear_error();
     return 0;
 }
