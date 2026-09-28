@@ -32041,3 +32041,47 @@ are now defined; all remain Phase 13's by header and are in no phase ledger.
 and on the same table. Nothing 10.9 withheld is on 10.10's path, so the remaining distance is still
 section 6's 2,293 lines rather than a number 10.9 changed.
 
+## D453 -- 10.10, the ASN.1 digest/sign/verify layer: `X509_digest`'s own text lands
+
+Third pulled-forward subphase. Section 6 sizes 10.10's five units at 2,293 lines, and most of them
+were already in: `asn1_lib.c` (473) landed as `src/asn1/der.rs`/`string.rs`/`bitstr.rs` in Phases 5-6,
+and `evp/digest.c` (1,262) as `src/evp/digest.rs` in Phases 5 and 7. What 10.10 actually transcribes is
+`a_digest.c` (91), `a_sign.c` (288), `x509_obj.c` (179) and `evp_md_ctx_new_ex` (23) -- **581 fresh
+authority lines** -- in `src/asn1/a_digest.rs`, `src/asn1/a_sign.rs` and `src/x509/x509_obj.rs`, plus
+the **frontier advance** that un-withholds `X509_NAME_print` (38 lines) in `x_name.rs` now that its
+only blocker, `X509_NAME_oneline`, is landed. That is the second time a later subphase has shrunk
+because an earlier one moved the frontier, and it is the reason the plan is re-measured per subphase
+rather than trusted.
+
+**Two functions withheld, each with its blocker, both with complete closures** -- the reverse of the
+usual case and worth naming: `ossl_sk_ASN1_UTF8STRING2text` (`asn1_lib.c:435-473`) because its only
+authority callers are `crypto/ts/ts_rsp_verify.c` and `crypto/cmp/cmp_client.c`, neither landed; and
+`evp_digest_fetch_from_prov` (`evp/digest.c:1200-1209`) because nothing in the authority or the crate
+calls it at all. A function whose closure is complete is still withheld when no reachable caller
+exists, and the note says which of the two reasons applies.
+
+**A Phase-7 hand-off was discharged as a consequence.** `ASN1_item_sign_ex` is now built, so
+`forensics/tools/phase7_obligations.py`'s `BLOCKED_HANDOFFS` row was retired rather than left stale --
+the rule D452 used for the prerequisite divergences -- and Phase 7 moves from `deferred 217` to `216`
+and `implemented 733` to `734`. Phase-10 counts are unchanged at `286 implemented / 12 open` exports
+and `634 implemented / 2 open` provider rows, which is the expected shape for a dependency subphase.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1100 passed, 0 failed**. `RT-STORE` moves from 209 to **222** observations (a populated `Name` DER
+lifted from the certificate and decoded through 10.8's `d2i_X509_NAME`, printed both ways, plus the
+empty-name, NULL-name and zero-length-buffer arms) and `RT-DIGEST` from 654 to **670**
+(`ASN1_item_digest` over a legacy and a provider-fetched method, `ASN1_digest`, and the
+`ASN1_item_sign_ex` NULL-key refusal with its coordinate). 109 courts, **45,218 observations**,
+`PIPELINE OK` exit 0 twice, all gates clean and no new exemptions needed.
+
+### What 10.11 now needs
+
+Section 6 sizes 10.11 at 10 units / 3,487 lines, but three are already in: `x_name.c` (552, completed
+here), `x_exten.c` (27, 10.8) and `x_pubkey.c` (1,079, Phase 8.8). The fresh transcription is ~1,300
+lines: `x509_v3.c` (273), `x509name.c` (361), `x509rset.c` (42), `a_strex.c`'s unlanded print half
+(`do_name_ex`, `X509_NAME_print_ex(_fp)`, ~163), `a_verify.c` (226) and `evp_pkey.c`'s remaining
+~236. It carries one hand-off consequence: `ASN1_item_verify_ex` now has a **single** blocker,
+`ASN1_item_verify_ctx` (`a_verify.c:111`), so 10.11 closes Phase 7's last blocked row.
+

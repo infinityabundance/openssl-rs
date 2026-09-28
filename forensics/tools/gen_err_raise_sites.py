@@ -175,6 +175,12 @@ COVERED_FILES = [
     # the exclusion is visible rather than implied. (`a_object.c` is already
     # covered: Phase 4's `OBJ_create` reaches it through `a2d_ASN1_OBJECT`.)
     ("crypto/asn1/a_bitstr.c", "A_BITSTR"),
+    # Phase 10.10 lands `crypto/asn1/a_digest.c` (`ASN1_item_digest`/`ASN1_digest` and the
+    # `ossl_asn1_item_digest_ex` `X509_digest` reaches). It was on the "deliberately not covered"
+    # list below as Phase 7/11 surface; the subphase that owns its call site now owns the
+    # coordinate, so the file is covered here. Its one site is `ASN1_digest`'s
+    # `ERR_LIB_ASN1`/`ERR_R_INTERNAL_ERROR` at `:36`.
+    ("crypto/asn1/a_digest.c", "A_DIGEST"),
     ("crypto/asn1/a_d2i_fp.c", "A_D2I_FP"),
     ("crypto/asn1/a_dup.c", "A_DUP"),
     ("crypto/asn1/a_gentm.c", "A_GENTM"),
@@ -183,6 +189,12 @@ COVERED_FILES = [
     ("crypto/asn1/a_mbstr.c", "A_MBSTR"),
     ("crypto/asn1/a_octet.c", "A_OCTET"),
     ("crypto/asn1/a_print.c", "A_PRINT"),
+    # Phase 10.10 lands `crypto/asn1/a_sign.c` (`ASN1_item_sign(_ex/_ctx)` and the deprecated
+    # `ASN1_sign`). Its eighteen sites are `ERR_LIB_ASN1` with the generic `ERR_R_*` codes and
+    # the `ASN1_R_*` reasons of the algorithm-identifier arms (`UNKNOWN_OBJECT_TYPE`,
+    # `THE_ASN1_OBJECT_IDENTIFIER_IS_NOT_KNOWN_FOR_THIS_MD`, `CONTEXT_NOT_INITIALISED`,
+    # `DIGEST_AND_KEY_TYPE_NOT_SUPPORTED`).
+    ("crypto/asn1/a_sign.c", "A_SIGN"),
     ("crypto/asn1/a_strnid.c", "A_STRNID"),
     ("crypto/asn1/a_strex.c", "A_STREX"),
     ("crypto/asn1/a_time.c", "A_TIME"),
@@ -228,10 +240,10 @@ COVERED_FILES = [
     # is covered for the coordinates a Phase 5 export can raise, exactly as
     # `a_object.c` is covered by Phase 4 for `a2d_ASN1_OBJECT` (D49).
     ("crypto/asn1/asn_mime.c", "ASN_MIME"),
-    # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
-    # `ameth_lib.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
-    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `a_sign.c`,
-    # `a_verify.c`, `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
+    # Deliberately *not* covered, with the stratum that owns each: `ameth_lib.c`
+    # (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
+    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `a_verify.c`,
+    # `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
     # (Phase 12; the file is covered above for the two coordinates a Phase 5 export
     # raises);
     # `nsseq.c` (Phase 13). Their raises are visible as uncovered sites in
@@ -1289,6 +1301,11 @@ COVERED_FILES = [
     # `x_x509.c`, `x_crl.c`, `x_exten.c` and `asn1/x_val.c` raise nothing in the landed subset
     # and are deliberately not listed.
     ("crypto/x509/x_name.c", "X509_NAME"),
+    # Phase 10.10 lands `crypto/x509/x509_obj.c` (`X509_NAME_oneline`), the printer 10.8's
+    # `x_name.c` withheld `X509_NAME_print` behind. Its two sites are `ERR_LIB_X509` with
+    # `X509_R_NAME_TOO_LONG` (`:75`, and again through the length guard) and `ERR_R_BUF_LIB`
+    # (`:175`).
+    ("crypto/x509/x509_obj.c", "X509_OBJ"),
     # Phase 8.7's ECX key objects (D372): `crypto/ec/ecx_key.c` (the `ECX_KEY` object and
     # `ossl_ecx_compute_key`) and `crypto/ec/ecx_backend.c` (the backend the legacy methods and
     # the providers share). The first is `ERR_LIB_PROV` with the four `PROV_R_*` reasons on the

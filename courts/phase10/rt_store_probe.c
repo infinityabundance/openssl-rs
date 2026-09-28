@@ -547,6 +547,73 @@ static void drive_x509_object_core(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * Phase 10.10 -- `crypto/x509/x509_obj.c`'s `X509_NAME_oneline`.
+ *
+ * The DN printer is a byte-exact string producer, so the arms are: a populated name decoded from
+ * the authority document's own `Name` bytes, printed into a caller buffer and through the
+ * allocating spelling; an empty name; the NULL-name arm; and the zero-length-buffer refusal.
+ * No address is printed -- only strings, lengths and `nonnull`/`null`.
+ * --------------------------------------------------------------------------------------------- */
+
+/* The `Name` (`RDNSequence`) that RT_X509_CERT_DER carries as both its issuer and its subject:
+ *
+ *   SEQUENCE { SET { SEQUENCE { OID 2.5.4.3 (commonName), UTF8String "Root CA" } } }
+ *
+ * It is the authority document's own bytes (certificate offsets 32 and 66), lifted out so this
+ * subphase's arms can decode a populated name without an `X509` accessor -- `X509_get_subject_name`
+ * is `x509_cmp.c`, which 10.10 does not land. `d2i_X509_NAME` (10.8) decodes it. */
+static const unsigned char RT_X509_NAME_DER[] = {
+    0x30, 0x12, 0x31, 0x10, 0x30, 0x0e, 0x06, 0x03,
+    0x55, 0x04, 0x03, 0x0c, 0x07, 0x52, 0x6f, 0x6f,
+    0x74, 0x20, 0x43, 0x41,
+};
+#define RT_X509_NAME_DER_LEN 20
+
+static void drive_name_oneline(void)
+{
+    const unsigned char *p = RT_X509_NAME_DER;
+    X509_NAME *name = d2i_X509_NAME(NULL, &p, (long)RT_X509_NAME_DER_LEN);
+    X509_NAME *empty;
+    char buf[256];
+    char *alloc;
+
+    out_ptr("name.d2i", name);
+    out_err("name.d2i.err");
+    out_int("name.d2i.consumed", (long)(p - RT_X509_NAME_DER));
+
+    if (name != NULL) {
+        memset(buf, 0, sizeof(buf));
+        out_str("name.oneline.buf", X509_NAME_oneline(name, buf, (int)sizeof(buf)));
+        out_int("name.oneline.buf.len", (long)strlen(buf));
+
+        /* The allocating spelling returns the library's own block; the caller frees it. */
+        alloc = X509_NAME_oneline(name, NULL, 0);
+        out_ptr("name.oneline.alloc", alloc);
+        out_str("name.oneline.alloc.value", alloc);
+        OPENSSL_free(alloc);
+
+        /* A non-NULL buffer with no room is a refusal, not a partial render. */
+        out_ptr("name.oneline.bufzero", X509_NAME_oneline(name, buf, 0));
+        out_err("name.oneline.bufzero.err");
+    }
+
+    /* The NULL-name arm. */
+    memset(buf, 0, sizeof(buf));
+    out_str("name.oneline.noname", X509_NAME_oneline(NULL, buf, (int)sizeof(buf)));
+    out_int("name.oneline.noname.len", (long)strlen(buf));
+
+    /* An empty name renders as the empty string through the allocating spelling. */
+    empty = X509_NAME_new();
+    alloc = X509_NAME_oneline(empty, NULL, 0);
+    out_ptr("name.oneline.empty.alloc", alloc);
+    out_str("name.oneline.empty.value", alloc);
+    OPENSSL_free(alloc);
+    X509_NAME_free(empty);
+
+    X509_NAME_free(name);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * A whole block of what this pass withholds, printed identically on both sides.
  * --------------------------------------------------------------------------------------------- */
 
@@ -684,6 +751,9 @@ int main(void)
 
     /* ----- Phase 10.8: the X.509 object core and the arms it closes ----- */
     drive_x509_object_core();
+
+    /* ----- Phase 10.10: the DN printer ----- */
+    drive_name_oneline();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

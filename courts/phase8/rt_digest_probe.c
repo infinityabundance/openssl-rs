@@ -67,6 +67,7 @@
 #include <openssl/ripemd.h>
 #include <openssl/sha.h>
 #include <openssl/whrlpool.h>
+#include <openssl/asn1.h>
 #include <openssl/evp.h>
 #include <openssl/kdf.h>
 #include <openssl/thread.h>
@@ -75,6 +76,7 @@
 #include <openssl/core_names.h>
 #include <openssl/core_dispatch.h>
 #include <openssl/err.h>
+#include <openssl/x509.h>
 
 #define RT_MSG_MAX 2048u
 
@@ -2067,6 +2069,99 @@ static void rt_kdf_rows(void)
 }
 
 /* The KDF rows are observed from `main`; the comment above is this probe's own. */
+
+/* ---------------------------------------------------------------------------------------------
+ * The ASN.1 digest/sign seam that subphase 10.10 lands
+ * ---------------------------------------------------------------------------------------------
+ * `ASN1_item_digest` and `ASN1_digest` digest the DER of an ASN.1 value, and both go through
+ * `ossl_asn1_item_digest_ex` -- the function `X509_digest` (`crypto/x509/x_all.c`) calls next.
+ * Two arms of that function are driven here: a legacy `EVP_sha256()`, whose provider is NULL so
+ * the engine table is consulted (and, with nothing registered for the nid, the method is fetched
+ * by name), and a provider-fetched method, whose provider is non-NULL so the fetch is skipped.
+ * The two must agree byte for byte.
+ *
+ * `ASN1_item_sign_ex`'s NULL-key refusal is driven too: `evp_md_ctx_new_ex` cannot build a key
+ * context without a key, so the call answers 0 at its own coordinate. It is the one export of
+ * this seam whose owner stratum (5) is already sealed, so the probe also imports it directly.
+ * The three signing exports are referenced through volatile slots so their addresses are
+ * exercised even where the arm above does not reach them.
+ */
+static void rt_asn1_digest_seam(void)
+{
+    static void (*volatile g_ref_sign_ex)(void);
+    static void (*volatile g_ref_sign)(void);
+    static void (*volatile g_ref_asn1_sign)(void);
+    ASN1_OCTET_STRING *oct = ASN1_OCTET_STRING_new();
+    EVP_MD *pmd;
+    unsigned char md_item[32];
+    unsigned char md[64];
+    unsigned int len = 0;
+    int ret;
+
+    if (oct == NULL) {
+        printf("asn1.digest.oct=null\n");
+        return;
+    }
+    ASN1_STRING_set(oct, "hello", 5);
+
+    /* The legacy method: `EVP_MD_get0_provider(md) == NULL`, so the engine path runs. */
+    ERR_clear_error();
+    memset(md_item, 0, sizeof(md_item));
+    ret = ASN1_item_digest(ASN1_OCTET_STRING_it(), EVP_sha256(), oct, md_item, &len);
+    printf("asn1.digest.item.ret=%d\n", ret);
+    printf("asn1.digest.item.len=%u\n", len);
+    printf("asn1.digest.item.md=");
+    rt_print_hex(md_item, len);
+    printf("\n");
+
+    /* The caller-supplied encoder: `ASN1_digest` digests the same DER through `i2d`. */
+    ERR_clear_error();
+    memset(md, 0, sizeof(md));
+    len = 0;
+    ret = ASN1_digest((i2d_of_void *)i2d_ASN1_OCTET_STRING, EVP_sha256(), (char *)oct, md, &len);
+    printf("asn1.digest.i2d.ret=%d\n", ret);
+    printf("asn1.digest.i2d.len=%u\n", len);
+    printf("asn1.digest.i2d.md=");
+    rt_print_hex(md, len);
+    printf("\n");
+    printf("asn1.digest.i2d.same_item=%d\n", ret == 1 && len == 32 && memcmp(md, md_item, 32) == 0);
+
+    /* A provider-fetched method: the fetch is skipped, the method digests directly. */
+    pmd = EVP_MD_fetch(NULL, "SHA256", NULL);
+    ERR_clear_error();
+    memset(md, 0, sizeof(md));
+    len = 0;
+    ret = ASN1_item_digest(ASN1_OCTET_STRING_it(), pmd, oct, md, &len);
+    printf("asn1.digest.fetched.ret=%d\n", ret);
+    printf("asn1.digest.fetched.len=%u\n", len);
+    printf("asn1.digest.fetched.same_item=%d\n",
+           ret == 1 && len == 32 && memcmp(md, md_item, 32) == 0);
+    EVP_MD_free(pmd);
+
+    /* The NULL-key refusal of `ASN1_item_sign_ex`: its coordinate and answer. */
+    ERR_clear_error();
+    ret = ASN1_item_sign_ex(ASN1_OCTET_STRING_it(), NULL, NULL, NULL, oct, NULL, NULL,
+                            EVP_sha256(), NULL, NULL);
+    printf("asn1.sign.nullkey.ret=%d\n", ret);
+    printf("asn1.sign.nullkey.err=%lu.%lu\n",
+           ERR_GET_LIB(ERR_peek_error()), ERR_GET_REASON(ERR_peek_error()));
+    ERR_clear_error();
+
+    /* The positive signing arms -- `ASN1_item_sign_ex` with a bound key and a digest -- need a
+     * real key and a deterministic scheme, which this probe does not carry; the refusal above is
+     * the arm it drives, and the references below are what give the three exports their edge. */
+    printf("pending.ASN1_item_sign.positive=needs_a_bound_key_and_a_deterministic_signature_scheme\n");
+
+    g_ref_sign_ex = (void (*)(void))ASN1_item_sign_ex;
+    g_ref_sign = (void (*)(void))ASN1_item_sign;
+    g_ref_asn1_sign = (void (*)(void))ASN1_sign;
+    printf("ref.ASN1_item_sign_ex=%s\n", g_ref_sign_ex != NULL ? "nonnull" : "null");
+    printf("ref.ASN1_item_sign=%s\n", g_ref_sign != NULL ? "nonnull" : "null");
+    printf("ref.ASN1_sign=%s\n", g_ref_asn1_sign != NULL ? "nonnull" : "null");
+
+    ASN1_OCTET_STRING_free(oct);
+}
+
 int main(void)
 {
     size_t i;
@@ -2083,6 +2178,7 @@ int main(void)
     rt_provider_section();
     rt_disp_errors();
     rt_kdf_rows();
+    rt_asn1_digest_seam();
 
     return 0;
 }

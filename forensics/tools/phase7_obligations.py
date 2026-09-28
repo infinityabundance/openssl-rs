@@ -284,22 +284,22 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
     ),
     BlockedHandoff(
         symbols=(
-            "ASN1_item_sign_ex", "ASN1_item_verify_ex",
+            "ASN1_item_verify_ex",
         ),
         binding_phase=11,
         blocked_by=(
-            Blocker("ASN1_item_sign_ctx", "crypto/asn1/a_sign.c", 146, "exported", 11),
             Blocker("ASN1_item_verify_ctx", "crypto/asn1/a_verify.c", 111, "exported", 11),
         ),
         reason=(
-            "`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:121`) builds its digest context and then hands "
-            "it to `ASN1_item_sign_ctx` (`:138`); `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:95`) is "
-            "the same shape around `ASN1_item_verify_ctx` (`:104`). Both delegates are declared in "
-            "`x509.h`, are defined in those same two files (`a_sign.c:146`, `a_verify.c:111`) and are "
-            "Phase 11's exports, so the Phase 5 -> 7 hand-off cannot be completed here; "
-            "`forensics/prerequisites.json` carries the pair with this reason and `RT-EVP-PKEY`'s "
-            "`NOT_MEASURED` lines name them. `evp_md_ctx_new_ex`, the other callee, is "
-            "`crypto/evp/digest.c`'s own internal and belongs with this stratum."
+            "`ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:95`) builds its digest context and hands "
+            "it to `ASN1_item_verify_ctx` (`:104`), which is declared in `x509.h`, is defined at "
+            "`a_verify.c:111` and is Phase 11's export, so the Phase 5 -> 7 hand-off cannot be "
+            "completed here. Its signing twin `ASN1_item_sign_ex` stood in this row until subphase "
+            "10.10 landed `crypto/asn1/a_sign.c` whole -- including `ASN1_item_sign_ctx` and the "
+            "`evp_md_ctx_new_ex` that row also named -- at which point the row had to stop covering "
+            "a symbol the crate now defines (the retire-the-stale-row rule `check_rows` enforces). "
+            "`forensics/prerequisites.json` carries the remaining name and `RT-EVP-PKEY`'s "
+            "`NOT_MEASURED` lines name it."
         ),
     ),
     BlockedHandoff(
