@@ -8,8 +8,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 88,
-      "language_surface_not_modelled_by_name": 6100,
+      "covered_by_a_divergence": 94,
+      "language_surface_not_modelled_by_name": 6199,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -39,6 +39,13 @@
         "ossl_print_attribute_value": 1,
         "ossl_release_default_drbg_ctx": 2,
         "ossl_serial_number_print": 1,
+        "ossl_v3_aa_issuing_dist_point": 1,
+        "ossl_v3_bcons": 1,
+        "ossl_v3_crl_hold": 1,
+        "ossl_v3_crl_invdate": 1,
+        "ossl_v3_crld": 1,
+        "ossl_v3_freshest_crl": 1,
+        "ossl_v3_idp": 1,
         "ossl_v3_issuer_sign_tool": 1,
         "ossl_v3_ns_ia5_list": 1,
         "ossl_v3_pkey_usage_period": 1,
@@ -47,7 +54,6 @@
         "ossl_v3_utf8_list": 1,
         "ossl_x509_add_cert_new": 2,
         "ossl_x509_add_certs_new": 1,
-        "ossl_x509_init_sig_info": 1,
         "ossl_x509_print_ex_brief": 1,
         "ossl_x509_pubkey_hash": 1,
         "out_len": 1,
@@ -422,6 +428,8 @@
         "crypto/whrlpool/wp_dgst.c": 3,
         "crypto/x509/pcy_lib.c": 8,
         "crypto/x509/t_x509.c": 72,
+        "crypto/x509/v3_bcons.c": 17,
+        "crypto/x509/v3_crld.c": 68,
         "crypto/x509/v3_genn.c": 24,
         "crypto/x509/v3_ia5.c": 10,
         "crypto/x509/v3_ist.c": 18,
@@ -435,8 +443,9 @@
         "crypto/x509/x509_att.c": 20,
         "crypto/x509/x509_cmp.c": 29,
         "crypto/x509/x509_def.c": 13,
+        "crypto/x509/x509_ext.c": 16,
         "crypto/x509/x509_obj.c": 12,
-        "crypto/x509/x509_set.c": 38,
+        "crypto/x509/x509_set.c": 37,
         "crypto/x509/x509_v3.c": 11,
         "crypto/x509/x509cset.c": 15,
         "crypto/x509/x509name.c": 13,
@@ -444,7 +453,7 @@
         "crypto/x509/x509type.c": 1,
         "crypto/x509/x_all.c": 71,
         "crypto/x509/x_attrib.c": 15,
-        "crypto/x509/x_crl.c": 83,
+        "crypto/x509/x_crl.c": 82,
         "crypto/x509/x_exten.c": 13,
         "crypto/x509/x_name.c": 40,
         "crypto/x509/x_pubkey.c": 42,
@@ -555,12 +564,12 @@
       ]
     },
     "checked": {
-      "authority_units": 389,
-      "crate_modules": 560,
+      "authority_units": 392,
+      "crate_modules": 563,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 4,
-      "divergence_names_covered": 49,
-      "divergence_rows": 20,
+      "divergence_names_covered": 55,
+      "divergence_rows": 21,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -669,7 +678,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "c609de830545475b27c6a5b288dbbf1527622dd8b5f1275e0fbe21cffd9e3943",
+  "body_hash": "bdd11378b54a67f7f39922f1dd718638a853ae5acac4237d404119fc42f9d47b",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -690,7 +699,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "6feae65250de10fab421df59b46cb4216915936dfda44f04a38bd1e9f8fa2cc3"
+      "sha256": "36fa6f04a4c22260472855621dce72976f18f527778777553b3f80fae5cfd928"
     },
     {
       "name": "symbol-ownership",
@@ -705,7 +714,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "647136355521150842cc33a0b363af160247a0b2031f948fc4c0b2d18cb62698"
+      "sha256": "95035a3d9382259de2dae0292ae3a104b2b36afaadc40022116a2055ec9d7809"
     },
     {
       "name": "phase-state",
@@ -715,7 +724,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "d36adf112024b036061583eefa478702a48e2991d32681e5628aaca26bf8ca2c"
+      "sha256": "039a0ecce815ad484e0468f625932b8a5507d38bf503fdf1461daac85fb59a5f"
     },
     {
       "name": "crate-source-tree",

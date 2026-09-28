@@ -118,15 +118,7 @@
         "note": "The one internal of `crypto/bn/bn_intern.c` this crate gives no function, and it is a storage-model divergence rather than a withheld one. The authority's body (`crypto/bn/bn_intern.c:171-182`) is five assignments -- `a->d = (BN_ULONG *)words; a->dmax = a->top = size; a->neg = 0; a->flags |= BN_FLG_STATIC_DATA;` -- and the first of them **aliases the caller's storage into the object**, which is the whole point of the name and which `BN_FLG_STATIC_DATA` then tells `BN_free` not to release. This crate's `BIGNUM` owns its magnitude (`d: Vec<Limb>`, `src/bn/bignum.rs:83`) and `src/bn/bignum.rs:67` already records that the representation the flag describes is not modelled, so the reachable half of the contract is an *owned copy* and not an alias: a later write through the caller's array would not be seen, and the object would carry `BN_FLG_STATIC_DATA` over storage it does own. The other half of the authority's body has no counterpart either -- `bn_correct_top` after a top that is deliberately set wide is the normalisation this representation performs on every store. Both readings are wrong in a direction a reader could not detect, so the name is recorded rather than approximated. **It is unreachable on every path either side has**: `bn_set_static_words` has no caller anywhere in the authority outside its own definition (`grep -rn bn_set_static_words crypto/ include/ providers/` answers the definition and nothing else), and the crate's own callers are the EC layer's, which lands against `src/bn/intern.rs`'s other seven. If a caller ever arrives, the row is what makes the decision visible instead of a `Vec` that quietly copied.",
         "evidence": "crypto/bn/bn_intern.c:171-182; src/bn/bignum.rs:67 and :83 (the representation, and the flag it declines to model); src/bn/intern.rs's module documentation (the three representational gaps); docs/DECISIONS.md D338"
       },
-      {
-        "owner_module": "src/x509/x509_set.rs",
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_x509_init_sig_info"
-        ],
-        "note": "**Withheld rather than stubbed.** `src/x509/x509_set.rs` is a module for `crypto/x509/x509_set.c`, which makes the unit's unwired internals countable (D327's rule). It lands five of the unit's twenty-one exports: `X509_SIG_INFO_set` (`:200-207`, which `rsa_ameth.c:771` and `ecx_meth.c:586`/`:602` reach, Phase 8.8), `X509_up_ref` (`:120-130`, 10.8), and 10.14.1's `X509_get_version` (`:132-135`), `X509_set_version` (`:27-47`) and `ossl_x509_set1_time` (`:78-92`), the helper the CRL setters in `crypto/x509/x509cset.c` call. This is the one internal the lexical scan still sees unwired: `ossl_x509_init_sig_info` (`:305-309`), a one-line delegation to the file-local `static x509_sig_info_init` (`:217`); its only caller is `crypto/x509/v3_purp.c:659`, inside `X509_check_purpose`, which is 10.14.5's and whose closure is unlanded. `ossl_x509_set1_time` was covered here until 10.14.1 landed it and wired it to the `x509cset.c` setters, so it has left `covers`; the row fail-closes both ways the same as its siblings.",
-        "evidence": "docs/DECISIONS.md D349 and the Phase 10.14.1 landing; crypto/x509/x509_set.c:305-309 (the remaining internal) against :27-47, :78-92 and :132-135 (the 10.14.1 slice); crypto/x509/v3_purp.c:659 (the internal's caller) and crypto/x509/x509cset.c:47/54/54 (the setters now calling `ossl_x509_set1_time`); src/x509/x509_set.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/x509_set.c` edge"
-      },
+
       {
         "owner_module": "src/x509/x509_cmp.rs",
         "class": "owned_by_a_later_stratum",
@@ -247,6 +239,29 @@
         ],
         "note": "**Withheld rather than stubbed.** `src/x509/v3_utf8.rs` transcribes `crypto/x509/v3_utf8.c`'s two public string helpers, `i2s_ASN1_UTF8STRING` (`:28-42`) and `s2i_ASN1_UTF8STRING` (`:44-64`), which is what makes the unit's one unwired internal countable. That internal is the one-row `EXT_UTF8STRING` table `ossl_v3_utf8_list` (`:24-26`). Its closure is landed -- the two helpers and `ASN1_UTF8STRING_new`/`_free`/`ASN1_STRING_set` are all built -- but it is an internal symbol the admitted DSO does not export (`nm -D` shows no `ossl_v3_*`), so no differential probe can name it, and its only authority caller is `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`). The dispatch that could reach it by NID, `X509V3_EXT_get_nid`, is withheld in `src/x509/v3_lib.rs` behind the ~63-row `standard_exts[]`. The record fail-closes both ways: if the table is built the gate reports the row stale until it is removed, and if `src/x509/v3_utf8.rs` stopped owning the unit the record would stop matching.",
         "evidence": "docs/DECISIONS.md D455; src/x509/v3_utf8.rs and src/x509/v3_lib.rs's module documentation; crypto/x509/v3_utf8.c:24-26 against :28-64; crypto/x509/v3_lib.c:52-71 and crypto/x509/standard_exts.h:15-95; courts/phase10/rt_store_probe.c (`utf8.*` arms)"
+      },
+      {
+        "owner_module": "src/x509/v3_crld.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_v3_aa_issuing_dist_point",
+          "ossl_v3_crl_hold",
+          "ossl_v3_crl_invdate",
+          "ossl_v3_crld",
+          "ossl_v3_freshest_crl",
+          "ossl_v3_idp"
+        ],
+        "note": "**Withheld rather than stubbed, and this row is what the prerequisite gate's `unwired_function_in_the_current_stratum` findings become once the omission is a decision rather than an oversight.** Phase 10.14.6 transcribes `crypto/x509/v3_crld.c` at function granularity: the `DIST_POINT_NAME` layout and the export `DIST_POINT_set_dpname` (`:526-552`) land, and every other container is withheld by name. That makes the unit's global internals countable (D327's rule), and these six `ossl_v3_*` extension tables are the ones the scan sees: `ossl_v3_crld` (`:26-35`), `ossl_v3_freshest_crl` (`:36-45`), `ossl_v3_idp` (`:360-370`), `ossl_v3_crl_invdate` (`:487-495`), `ossl_v3_crl_hold` (`:496-504`) and `ossl_v3_aa_issuing_dist_point` (`:715-724`). Each is an unexported `ossl_v3_*` symbol the admitted DSO does not admit (`nm -D` shows none), so no differential probe can name it, and each names a `static` callback that is itself withheld (`v2i_crld`/`i2r_crldp`, `i2r_idp`/`v2i_idp`, `i2r_crl_invdate`, `i2r_object`, `v2i_aaidp`/`i2r_aaidp`). Their only authority reach is `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`) and the dispatch `X509V3_EXT_get_nid` (`:52-71`), which is withheld in `src/x509/v3_lib.rs` behind the ~63-row `standard_exts[]` these six are entries of; a partial table would silently change `OBJ_bsearch_ext`'s answers. The record fail-closes both ways: if any table is built the gate reports the row stale until it is removed, and if `src/x509/v3_crld.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "docs/DECISIONS.md D455, D456, D461; src/x509/v3_crld.rs and src/x509/v3_lib.rs's module documentation; crypto/x509/v3_crld.c:26-45, :360-370, :487-504 and :715-724 against :526-552 (the landed export); crypto/x509/v3_lib.c:52-71 and crypto/x509/standard_exts.h:15-95; courts/phase10/rt_store_probe.c (`crld.*` arms)"
+      },
+      {
+        "owner_module": "src/x509/v3_bcons.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_v3_bcons"
+        ],
+        "note": "**Withheld rather than stubbed.** `src/x509/v3_bcons.rs` transcribes `crypto/x509/v3_bcons.c`'s `BASIC_CONSTRAINTS` item -- the `ASN1_SEQUENCE` template (`:38-41`) and the `IMPLEMENT_ASN1_FUNCTIONS` group (`:43`) -- which is what makes the unit's one unwired internal countable (D327's rule) and is why `BASIC_CONSTRAINTS_free`, the seventh name `ossl_x509v3_cache_extensions` (`crypto/x509/v3_purp.c`) needs, is now real. That internal is the `ossl_v3_bcons` row (`:27-35`). It is internal and unexported (`nm -D` on the production prefix shows no `ossl_v3_*`), so no differential probe can name it. Its only authority caller is `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`), which lands in `src/x509/v3_lib.rs` but does not reach it: the dispatch that would -- `X509V3_EXT_get_nid` -- is withheld there because it searches `standard_exts[]` (`standard_exts.h:15-95`), which names ~63 `ossl_v3_*` tables from units this subphase does not own, so a partial table would silently change `OBJ_bsearch_ext`'s answers. The two callbacks `i2v_BASIC_CONSTRAINTS` (`:45-54`) and `v2i_BASIC_CONSTRAINTS` (`:55-85`) are reached only through the table and are withheld with it, which is also why `crypto/x509/v3_bcons.c` is not yet in `gen_err_raise_sites.py`'s `COVERED_FILES` (its only raises are the withheld `v2i_`'s). The record fail-closes both ways: if the table is built the gate reports the row stale until it is removed, and if `src/x509/v3_bcons.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "docs/DECISIONS.md D455, D456; src/x509/v3_bcons.rs and src/x509/v3_lib.rs's module documentation; crypto/x509/v3_bcons.c:27-35 against :38-43; crypto/x509/v3_lib.c:52-71 and crypto/x509/standard_exts.h:15-95; crypto/x509/v3_purp.c (BASIC_CONSTRAINTS_free's caller); courts/phase10/rt_store_probe.c (`bcons.*` arms)"
       }
     ],
     "units": [

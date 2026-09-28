@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4534,
+      "sites": 4537,
       "unattributed": 0
     },
     "covered_files": [
@@ -382,6 +382,7 @@
       "crypto/x509/v3_genn.c",
       "crypto/x509/v3_utf8.c",
       "crypto/x509/x509_cmp.c",
+      "crypto/x509/x509_set.c",
       "crypto/x509/x_all.c",
       "crypto/x509/x509spki.c",
       "crypto/ec/ecx_key.c",
@@ -66371,6 +66372,51 @@
         "rel_source": "crypto/x509/x509_cmp.c"
       },
       {
+        "const_name": "X509_SET_230",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/x509/x509_set.c",
+        "function": "x509_sig_info_init",
+        "generated": false,
+        "lib": 11,
+        "lib_symbol": "ERR_LIB_X509",
+        "line": 230,
+        "macro": "ERR_raise",
+        "reason": 144,
+        "reason_symbol": "X509_R_UNKNOWN_SIGID_ALGS",
+        "rel_source": "crypto/x509/x509_set.c"
+      },
+      {
+        "const_name": "X509_SET_252",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/x509/x509_set.c",
+        "function": "x509_sig_info_init",
+        "generated": false,
+        "lib": 11,
+        "lib_symbol": "ERR_LIB_X509",
+        "line": 252,
+        "macro": "ERR_raise",
+        "reason": 142,
+        "reason_symbol": "X509_R_ERROR_USING_SIGINF_SET",
+        "rel_source": "crypto/x509/x509_set.c"
+      },
+      {
+        "const_name": "X509_SET_284",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/x509/x509_set.c",
+        "function": "x509_sig_info_init",
+        "generated": false,
+        "lib": 11,
+        "lib_symbol": "ERR_LIB_X509",
+        "line": 284,
+        "macro": "ERR_raise",
+        "reason": 141,
+        "reason_symbol": "X509_R_ERROR_GETTING_MD_BY_NID",
+        "rel_source": "crypto/x509/x509_set.c"
+      },
+      {
         "const_name": "X509_ALL_47",
         "data_format": null,
         "dynamic_reason": false,
@@ -70430,6 +70476,11 @@
       "name": "authority:crypto/x509/x509_cmp.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/x509/x509_cmp.c",
       "sha256": "2057f96b93ed194d9b644500b03adfe89e2471f743839b26a2351958e4830e59"
+    },
+    {
+      "name": "authority:crypto/x509/x509_set.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/x509/x509_set.c",
+      "sha256": "b497a7e4aff7331012d1c2a3cc5338795893651b2ec4eba1a266dbb93ccd8c07"
     },
     {
       "name": "authority:crypto/x509/x_all.c",

@@ -2661,6 +2661,138 @@ static void drive_x509_10_14_3_utl(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * Phase 10.14.5 -- `crypto/x509/x509_ext.c`'s `X509`/`X509_CRL` extension accessors.
+ *
+ * The accessors are one-line delegations to `x509_v3.c`'s list primitives, driven over the fixed
+ * certificate and CRL: the counts, the by-NID/by-OBJ/by-critical searches (present and absent),
+ * the by-index fetch (in and out of range), and the add/delete pair including the empty-list
+ * collapse `delete_ext` performs. Every arm pops the error queue first.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_x509_10_14_5_ext(void)
+{
+    const unsigned char *p = RT_X509_CERT_DER;
+    const unsigned char *q = RT_X509_CRL_DER;
+    X509 *cert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    X509_CRL *crl = d2i_X509_CRL(NULL, &q, (long)RT_X509_CRL_DER_LEN);
+    X509_EXTENSION *ex, *made, *removed;
+    ASN1_OCTET_STRING *d = ASN1_OCTET_STRING_new();
+    int before;
+
+    ERR_clear_error();
+    out_int("ext.cert.count", (long)X509_get_ext_count(cert));
+    out_int("ext.cert.by_nid.bcons",
+            (long)X509_get_ext_by_NID(cert, NID_basic_constraints, -1));
+    out_int("ext.cert.by_nid.miss",
+            (long)X509_get_ext_by_NID(cert, NID_subject_alt_name, -1));
+    out_int("ext.cert.by_crit.1", (long)X509_get_ext_by_critical(cert, 1, -1));
+    out_int("ext.cert.by_crit.0", (long)X509_get_ext_by_critical(cert, 0, -1));
+    ex = X509_get_ext(cert, 0);
+    out_ptr("ext.cert.get.0", ex);
+    out_int("ext.cert.get.0.nid", (long)OBJ_obj2nid(X509_EXTENSION_get_object(ex)));
+    out_ptr("ext.cert.get.99", X509_get_ext(cert, 99));
+    out_int("ext.cert.by_obj",
+            (long)X509_get_ext_by_OBJ(cert, X509_EXTENSION_get_object(ex), -1));
+
+    /* `X509_add_ext` appends a duplicate; `X509_delete_ext` removes the first and, on an
+     * emptied list, drops the list itself (`delete_ext`'s collapse). */
+    ASN1_OCTET_STRING_set(d, (const unsigned char *)"BC", 2);
+    made = X509_EXTENSION_create_by_NID(NULL, NID_basic_constraints, 1, d);
+    before = X509_get_ext_count(cert);
+    out_int("ext.cert.add", X509_add_ext(cert, made, -1));
+    out_int("ext.cert.add.delta", (long)(X509_get_ext_count(cert) - before));
+    removed = X509_delete_ext(cert, 0);
+    out_ptr("ext.cert.delete.0", removed);
+    X509_EXTENSION_free(removed);
+    while ((removed = X509_delete_ext(cert, 0)) != NULL)
+        X509_EXTENSION_free(removed);
+    out_int("ext.cert.count.empty", (long)X509_get_ext_count(cert));
+    out_ptr("ext.cert.get.empty", X509_get_ext(cert, 0));
+    X509_EXTENSION_free(made);
+
+    out_int("ext.crl.count", (long)X509_CRL_get_ext_count(crl));
+    out_int("ext.crl.by_nid", (long)X509_CRL_get_ext_by_NID(crl, NID_crl_number, -1));
+    out_ptr("ext.crl.get.0", X509_CRL_get_ext(crl, 0));
+    out_ptr("ext.crl.get.99", X509_CRL_get_ext(crl, 99));
+    out_int("ext.crl.by_crit.0", (long)X509_CRL_get_ext_by_critical(crl, 0, -1));
+
+    ASN1_OCTET_STRING_free(d);
+    X509_free(cert);
+    X509_CRL_free(crl);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.14.6 -- `crypto/x509/v3_crld.c`'s `DIST_POINT_set_dpname`.
+ *
+ * The binder's three reachable shapes are driven over the fixed certificate's issuer name: a NULL
+ * `DIST_POINT_NAME` and a `type != 1` both answer 1 and touch nothing; a `type == 1` with an empty
+ * relative-name fragment duplicates the issuer and generates its encoding. Every arm pops the
+ * error queue first, and no pointer address is printed -- only the `dpname` NULL/non-NULL fact.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_x509_10_14_6_crld(void)
+{
+    const unsigned char *p = RT_X509_CERT_DER;
+    X509 *cert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    const X509_NAME *issuer = X509_get_issuer_name(cert);
+    DIST_POINT_NAME dpn;
+
+    ERR_clear_error();
+    memset(&dpn, 0, sizeof(dpn));
+
+    out_int("crld.set_dpname.null", DIST_POINT_set_dpname(NULL, issuer));
+    dpn.type = 0;
+    out_int("crld.set_dpname.type0", DIST_POINT_set_dpname(&dpn, issuer));
+    out_ptr("crld.set_dpname.type0.dpname", dpn.dpname);
+
+    dpn.type = 1;
+    dpn.name.relativename = NULL;
+    out_int("crld.set_dpname.type1", DIST_POINT_set_dpname(&dpn, issuer));
+    out_ptr("crld.set_dpname.type1.dpname", dpn.dpname);
+    out_int("crld.set_dpname.type1.count",
+            (long)(dpn.dpname != NULL ? X509_NAME_entry_count(dpn.dpname) : -1));
+    X509_NAME_free(dpn.dpname);
+    X509_free(cert);
+
+    /* The `BASIC_CONSTRAINTS` item group: build, set both fields, encode, decode the bytes back,
+     * re-encode and compare, then free. `BASIC_CONSTRAINTS_free` is the seventh name
+     * `ossl_x509v3_cache_extensions` needs, so driving it here is what makes it real. */
+    {
+        BASIC_CONSTRAINTS *bc = BASIC_CONSTRAINTS_new();
+        unsigned char *der1 = NULL, *der2 = NULL;
+        const unsigned char *q;
+        BASIC_CONSTRAINTS *bc2;
+        ASN1_INTEGER *pl;
+        int len1, len2;
+
+        ERR_clear_error();
+        out_ptr("bcons.new", bc);
+        out_ptr("bcons.it", (const void *)BASIC_CONSTRAINTS_it());
+        bc->ca = 1;
+        pl = ASN1_INTEGER_new();
+        ASN1_INTEGER_set(pl, 3);
+        bc->pathlen = pl;
+        len1 = i2d_BASIC_CONSTRAINTS(bc, &der1);
+        out_int("bcons.i2d.len", (long)len1);
+        q = der1;
+        bc2 = d2i_BASIC_CONSTRAINTS(NULL, &q, (long)len1);
+        out_ptr("bcons.d2i", bc2);
+        out_int("bcons.d2i.ca", (long)(bc2 != NULL ? bc2->ca : -2));
+        out_int("bcons.d2i.pathlen",
+                (long)(bc2 != NULL && bc2->pathlen != NULL ? ASN1_INTEGER_get(bc2->pathlen)
+                                                           : -2));
+        len2 = i2d_BASIC_CONSTRAINTS(bc2, &der2);
+        out_int("bcons.reequal",
+                (long)(len1 == len2 && len1 > 0 && der1 != NULL && der2 != NULL
+                       && memcmp(der1, der2, (size_t)len1) == 0));
+        BASIC_CONSTRAINTS_free(bc2);
+        BASIC_CONSTRAINTS_free(bc);
+        OPENSSL_free(der1);
+        OPENSSL_free(der2);
+    }
+}
+
+/* ---------------------------------------------------------------------------------------------
  * Phase 10.16 -- the `file` `OSSL_OP_STORE` provider row.
  *
  * `OSSL_STORE_LOADER_fetch(NULL, "file", NULL)` reaches `deflt_query`'s/`base_query`'s
@@ -2780,6 +2912,12 @@ int main(void)
 
     /* ----- Phase 10.14.3: the X.509v3 extension string/value utilities ----- */
     drive_x509_10_14_3_utl();
+
+    /* ----- Phase 10.14.5: the certificate/CRL extension accessors ----- */
+    drive_x509_10_14_5_ext();
+
+    /* ----- Phase 10.14.6: the CRL distribution point name binder ----- */
+    drive_x509_10_14_6_crld();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

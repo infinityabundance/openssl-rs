@@ -32552,3 +32552,46 @@ clean tree is a real defect and the entry that records it must chase it with the
 applied. **No retry, no skipped test, no deleted test, and no weakening of any assertion** -- the
 absence of a reproduction is evidence about the tree, never licence to hide the failure.
 
+## D463 -- the chain's non-table half lands, D461's count of six was seven, and the wall is named
+
+Twelfth pulled-forward slice. The keystone chain D461 measured is now landed **except its table
+half**: `x509_ext.c` (`src/x509/x509_ext.rs`, **21 of 27** containers), `ossl_x509_init_sig_info`
+(`x509_set.c:217-309`), `DIST_POINT_set_dpname` (`v3_crld.c`, with the `DIST_POINT_NAME` layout) and
+the `BASIC_CONSTRAINTS` item (`v3_bcons.c`). `RT-STORE` moves from 774 to **806** observations
+(the `x509_ext` accessor/search/add/delete arms and the empty-list collapse, `DIST_POINT_set_dpname`
+under its three type arms, and the `BASIC_CONSTRAINTS` build/encode/decode/re-encode/free round trip)
+and the total to **45,849** over 109 courts.
+
+**D461 was wrong by one, and the correction matters because it is the keystone's own signature.**
+`ossl_x509v3_cache_extensions` needs **seven** names, not six: the four `x509_ext.c` accessors,
+`ossl_x509_init_sig_info`, `DIST_POINT_set_dpname`, **and `BASIC_CONSTRAINTS_free` (`v3_bcons.c`)`,
+which D461's list omitted. Six are now landed, so the keystone is **one name away** --
+`X509_get_ext_d2i` -> `X509V3_get_d2i` -> the dispatch.
+
+**The wall is measured and it is not a loader.** `standard_exts.h:15-95` names **73 entries over 63
+distinct `ossl_v3_*` tables defined by 44 authority units / 9,948 lines**, and their collective
+closure adds **24 unlanded names from 17 further units** (`asn1_gen.c` 794, `t_x509.c` 559, the CT
+units, `http_lib.c`, `punycode.c`, ...). A partial array would silently change `OBJ_bsearch_ext`'s
+answer for every missing NID, so `X509V3_EXT_get_nid`, `_get`, `_add_alias`, `_EXT_d2i`, `_get_d2i`
+and `_add1_i2d` are withheld **together** (D456's rule), and `store_result.c`/`OSSL_STORE_load` stay
+unstarted behind `PKCS12_parse`. **No Phase-10 export could close this slice, and none is claimed.**
+
+The withholdings carry their blockers by name: `x509_ext.c`'s six `*_get_ext_d2i`/`*_add1_ext_i2d`
+containers; `v3_crld.c`'s six tables and their item groups and fifteen callbacks; and `v3_bcons.c`'s
+`ossl_v3_bcons`, `i2v_BASIC_CONSTRAINTS` and `v2i_BASIC_CONSTRAINTS`, each with a divergence row.
+A stale `forensics/prerequisites.json` row was retired (D453/D454) and `x509_set.c` joined
+`gen_err_raise_sites.py`.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1114 passed, 0 failed**; 109 courts and **45,849 observations**; `PIPELINE OK` exit 0 on two
+consecutive runs. Phase-10 counts are unchanged at `296 implemented / 2 open` exports and
+**`636 implemented / 0 open`** provider rows. Phase 11 still derives `not-started`.
+
+### The remaining distance
+
+**44 units / 9,948 authority lines** for `standard_exts[]` alone, plus its 24-name closure over 17
+further units -- the `v3_lib` <-> tables <-> `v3_utl`/`v3_conf`/`v3_san` component. Behind it: the
+keystone, then `PKCS12_parse`, then `store_result.c` and `OSSL_STORE_load`, then the seal.
+
