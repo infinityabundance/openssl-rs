@@ -32230,5 +32230,52 @@ observations**. Phase-10 counts are unchanged at `286 implemented / 12 open` exp
 tables and callbacks) -- **gated on the whole 30,711-line component**, because `standard_exts[]`
 names ~57 tables from units inside it. The honest number for "make the extension dispatch real" is
 therefore still 10.14's SCC, of which 10.13 has landed the `v3_lib` registration half and six of the
-63 tables. 10.12's remainder (~2,760 lines) is unchanged.
+the 63 tables. 10.12's remainder (~2,760 lines) is unchanged.
+
+## D457 -- 10.14 is decomposed into fifteen sub-subphases, and 10.14.1 lands
+
+Seventh pulled-forward slice, and the one that turns the remaining monolith into work. Section 6's
+`10.14` is the 75-unit certificate strongly-connected component; D451 proved it is a *unit-level* SCC
+rather than a function-level one, and 10.8 cut its object core out. This slice does that at the scale
+the rest of it needs: **10.14 is decomposed into 15 dependency-ordered sub-subphases, 10.14.1 through
+10.14.15**, plus the already-named 10.15 (PKCS#12 certificate layer) and 10.16 (STORE result and file
+loader), written into `docs/PHASE-10-SUBPHASES.md` as a new **section 7**, with section 6's `10.14`
+row pointing at it.
+
+**The decomposition was measured, not assumed, and it corrects section 6.** `nm --undefined-only`
+over the authority's objects, seeded from the nineteen blocked-row objects, each undefined name
+resolved to its *defining* unit and tested against the crate's compiled surface, gives a strict
+unlanded certificate subsystem of **100 units / 32,326 lines** before this landing. The dependency
+order was verified from the same joins rather than guessed -- `v3_purp.c` before `x509_cmp.c`'s
+comparison layer, `x509_vfy.c` after `x509_cmp.c`/`v3_purp.c`/`x509_vpm.c`/`x509cset.c` and the OCSP
+rows, `store_result.c`/`file_store.c` behind `PKCS12_parse` -- and it ends, as it must, with 10.15 and
+10.16, which are the two rows that close the 12 exports and 2 provider rows. One correction is
+recorded in the plan: 10.8 already closed `OSSL_STORE_INFO_get1_CERT` and `_get1_CRL`, so 10.16
+closes **one** export, not three.
+
+**10.14.1 lands ~913 authority lines**: `x509_cmp.c` (27 of 32 functions), `x509cset.c` (21 of 22) and
+`x509type.c` whole, in `src/x509/x509_cmp.rs`, `x509cset.rs` and `x509type.rs`, plus the un-withheld
+`X509_get_version`/`X509_set_version`/`ossl_x509_set1_time` in `x509_set.rs`. `RT-STORE` moves from
+437 to **531** observations (94 new `cmp.*` arms over the decoded certificate, CRL and name) and the
+total to **45,548** over 109 courts.
+
+**Withheld by name, one closure each**: `X509_cmp` (blocked by `X509_check_purpose`, `v3_purp.c`) and
+`ossl_x509_add_cert_new`/`X509_add_cert`/`X509_add_certs`/`ossl_x509_add_certs_new` (blocked by
+`X509_self_signed`, `x509_vfy.c`). No defect this slice -- the differential transcript matched on the
+first run -- and every arm pops its own error queue first (D455's lesson).
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1102 passed, 0 failed**; `PIPELINE OK` exit 0 on two consecutive runs, 109 courts and **45,548
+observations**. Phase-10 counts are unchanged at `286 implemented / 12 open` exports and
+`634 implemented / 2 open` provider rows; `implemented_surface` moves from 3,505 to **3,555** and all
+50 new symbols are Phase-11-headed and `not_yet_begun`. Phase 11 still derives `not-started`.
+
+### The remaining distance
+
+After 10.14.1 the strict unlanded frontier is **76 units / 27,335 lines**, in **16 more
+sub-subphases** (10.14.2-10.14.15, 10.15, 10.16). 10.14.12's `x509_vfy.c` alone is 3,984 lines and may
+need a function-level split of its own. The 12 open exports and 2 open rows are closed by the last two
+rows, 10.15 and 10.16.
 

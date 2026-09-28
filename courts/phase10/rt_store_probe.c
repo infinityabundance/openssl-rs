@@ -1409,6 +1409,235 @@ static void drive_x509_10_13_items(void)
     out_str("v3lib.cleanup", "ok");
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.14.1 -- `crypto/x509/x509_cmp.c`, `x509cset.c` and `x509type.c`.
+ *
+ * The certificate comparison and accessor surface. Both fixed documents are decoded twice, so
+ * the comparisons have a distinct-but-equal object and a self-argument; the name block from
+ * 10.10 supplies a second `X509_NAME`. The CRL carries fourteen revoked entries, so the
+ * `X509_REVOKED` accessors are reachable. Every arm pops its own error queue first (D455's
+ * lesson); the Suite-B arms pin the static `check_suite_b` through the two public entry points
+ * with a NULL key (the RSA leaf) and a real one.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_x509_cmp_surface(void)
+{
+    const unsigned char *p;
+    X509 *cert = NULL, *cert2 = NULL, *fresh = NULL;
+    X509_CRL *crl = NULL, *crl2 = NULL;
+    X509_NAME *name = NULL, *name2 = NULL;
+    EVP_PKEY *k0, *k1;
+    unsigned char *der = NULL;
+    int len, ok, depth;
+    STACK_OF(X509) *sk;
+    STACK_OF(X509) *up;
+    X509_REVOKED *rev;
+
+    p = RT_X509_CERT_DER;
+    cert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    p = RT_X509_CERT_DER;
+    cert2 = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    out_ptr("cmp.cert", cert);
+    out_ptr("cmp.cert2", cert2);
+
+    if (cert != NULL && cert2 != NULL) {
+        out_int("cmp.issuer_and_serial.self", (long)X509_issuer_and_serial_cmp(cert, cert));
+        out_int("cmp.issuer_and_serial.copy", (long)X509_issuer_and_serial_cmp(cert, cert2));
+        out_int("cmp.issuer_and_serial.null_b", (long)X509_issuer_and_serial_cmp(cert, NULL));
+        out_int("cmp.issuer_and_serial.null_a", (long)X509_issuer_and_serial_cmp(NULL, cert));
+        out_int("cmp.issuer_name.self", (long)X509_issuer_name_cmp(cert, cert));
+        out_int("cmp.issuer_name.copy", (long)X509_issuer_name_cmp(cert, cert2));
+        out_int("cmp.subject_name.self", (long)X509_subject_name_cmp(cert, cert));
+        out_int("cmp.subject_name.copy", (long)X509_subject_name_cmp(cert, cert2));
+
+        out_ptr("cmp.get_issuer_name", X509_get_issuer_name(cert));
+        out_ptr("cmp.get_subject_name", X509_get_subject_name(cert));
+        out_ptr("cmp.get_serialNumber", X509_get_serialNumber(cert));
+        out_int("cmp.get0_serialNumber.len",
+                (long)ASN1_STRING_length(X509_get0_serialNumber(cert)));
+        out_int("cmp.get_version", (long)X509_get_version(cert));
+        out_int("cmp.get_signature_nid", (long)X509_get_signature_nid(cert));
+        out_int("cmp.certificate_type", (long)X509_certificate_type(cert, NULL));
+        out_int("cmp.certificate_type.null_cert", (long)X509_certificate_type(NULL, NULL));
+
+        k0 = X509_get0_pubkey(cert);
+        k1 = X509_get_pubkey(cert);
+        out_ptr("cmp.get0_pubkey", k0);
+        out_ptr("cmp.get_pubkey", k1);
+        out_int("cmp.pubkey.same", k0 == k1);
+        EVP_PKEY_free(k1);
+        out_ptr("cmp.get0_pubkey.null", X509_get0_pubkey(NULL));
+        out_ptr("cmp.get_pubkey.null", X509_get_pubkey(NULL));
+
+        /* `check_private_key` against a NULL key: the certificate's own key path and its
+         * refusal coordinate. */
+        ERR_clear_error();
+        out_int("cmp.check_private_key.nullkey", (long)X509_check_private_key(cert, NULL));
+        out_err("cmp.check_private_key.nullkey.err");
+
+        /* The name hashes; `_old` is the pre-1.1.0 spelling. */
+        out_int("cmp.issuer_name_hash", (long)X509_issuer_name_hash(cert));
+        out_int("cmp.subject_name_hash", (long)X509_subject_name_hash(cert));
+        out_int("cmp.issuer_name_hash_old", (long)X509_issuer_name_hash_old(cert));
+        out_int("cmp.subject_name_hash_old", (long)X509_subject_name_hash_old(cert));
+        out_int("cmp.issuer_and_serial_hash", (long)X509_issuer_and_serial_hash(cert));
+
+        /* The find-by searches over a stack holding both copies. */
+        sk = sk_X509_new_null();
+        sk_X509_push(sk, cert);
+        sk_X509_push(sk, cert2);
+        out_ptr("cmp.find_by_subject",
+                X509_find_by_subject(sk, X509_get_subject_name(cert)));
+        out_int("cmp.find_by_subject.is_first",
+                X509_find_by_subject(sk, X509_get_subject_name(cert)) == cert);
+        out_ptr("cmp.find_by_issuer_and_serial",
+                X509_find_by_issuer_and_serial(sk, X509_get_issuer_name(cert),
+                                               X509_get0_serialNumber(cert)));
+        out_int("cmp.find_by_issuer_and_serial.is_first",
+                X509_find_by_issuer_and_serial(sk, X509_get_issuer_name(cert),
+                                               X509_get0_serialNumber(cert)) == cert);
+        out_ptr("cmp.find_by_subject.null_sk",
+                X509_find_by_subject(NULL, X509_get_subject_name(cert)));
+
+        /* The up-ref duplicates the stack and uppers every element. */
+        up = X509_chain_up_ref(sk);
+        out_ptr("cmp.chain_up_ref", up);
+        out_int("cmp.chain_up_ref.count", up != NULL ? (long)sk_X509_num(up) : -1);
+        out_int("cmp.chain_up_ref.same0", up != NULL && sk_X509_value(up, 0) == cert);
+        out_int("cmp.chain_up_ref.distinct", up != NULL && up != sk);
+        sk_X509_pop_free(up, X509_free);
+        sk_X509_free(sk);
+    }
+
+    /* The populated name compared with itself, a copy and NULL. */
+    p = RT_X509_NAME_DER;
+    name = d2i_X509_NAME(NULL, &p, (long)RT_X509_NAME_DER_LEN);
+    p = RT_X509_NAME_DER;
+    name2 = d2i_X509_NAME(NULL, &p, (long)RT_X509_NAME_DER_LEN);
+    out_ptr("cmp.name", name);
+    out_ptr("cmp.name2", name2);
+    if (name != NULL && name2 != NULL) {
+        out_int("cmp.name.self", (long)X509_NAME_cmp(name, name));
+        out_int("cmp.name.copy", (long)X509_NAME_cmp(name, name2));
+        out_int("cmp.name.null_b", (long)X509_NAME_cmp(name, NULL));
+        out_int("cmp.name.null_a", (long)X509_NAME_cmp(NULL, name));
+        ok = -1;
+        out_int("cmp.name_hash_ex", (long)X509_NAME_hash_ex(name, NULL, NULL, &ok));
+        out_int("cmp.name_hash_ex.ok", (long)ok);
+        out_int("cmp.name_hash_old", (long)X509_NAME_hash_old(name));
+        /* The certificate's issuer name and the standalone block are the same DN. */
+        out_int("cmp.name_vs_cert_issuer",
+                cert != NULL ? (long)X509_NAME_cmp(name, X509_get_issuer_name(cert)) : -9);
+    }
+
+    /* `X509_set_version`/`X509_get_version` round trip on a blank certificate. */
+    fresh = X509_new();
+    out_ptr("cmp.fresh", fresh);
+    if (fresh != NULL) {
+        out_int("cmp.set_version.initial", (long)X509_get_version(fresh));
+        out_int("cmp.set_version.to2", (long)X509_set_version(fresh, 2));
+        out_int("cmp.set_version.get2", (long)X509_get_version(fresh));
+        out_int("cmp.set_version.same", (long)X509_set_version(fresh, 2));
+        out_int("cmp.set_version.to0", (long)X509_set_version(fresh, 0));
+        out_int("cmp.set_version.get0", (long)X509_get_version(fresh));
+        X509_free(fresh);
+    }
+
+    /* ----- the CRL surface ----- */
+    p = RT_X509_CRL_DER;
+    crl = d2i_X509_CRL(NULL, &p, (long)RT_X509_CRL_DER_LEN);
+    p = RT_X509_CRL_DER;
+    crl2 = d2i_X509_CRL(NULL, &p, (long)RT_X509_CRL_DER_LEN);
+    out_ptr("cmp.crl", crl);
+    out_ptr("cmp.crl2", crl2);
+    if (crl != NULL && crl2 != NULL) {
+        out_int("cmp.crl_cmp.self", (long)X509_CRL_cmp(crl, crl));
+        out_int("cmp.crl_cmp.copy", (long)X509_CRL_cmp(crl, crl2));
+        out_int("cmp.crl_match.copy", (long)X509_CRL_match(crl, crl2));
+        out_int("cmp.crl.get_version", (long)X509_CRL_get_version(crl));
+        out_ptr("cmp.crl.get_issuer", X509_CRL_get_issuer(crl));
+        out_int("cmp.crl.get_signature_nid", (long)X509_CRL_get_signature_nid(crl));
+        out_ptr("cmp.crl.get0_lastUpdate", X509_CRL_get0_lastUpdate(crl));
+        out_ptr("cmp.crl.get0_nextUpdate", X509_CRL_get0_nextUpdate(crl));
+        out_ptr("cmp.crl.get_lastUpdate", X509_CRL_get_lastUpdate(crl));
+        out_ptr("cmp.crl.get_nextUpdate", X509_CRL_get_nextUpdate(crl));
+        out_ptr("cmp.crl.get0_tbs_sigalg", X509_CRL_get0_tbs_sigalg(crl));
+        out_ptr("cmp.crl.get0_extensions", X509_CRL_get0_extensions(crl));
+        {
+            const ASN1_BIT_STRING *psig = NULL;
+            const X509_ALGOR *palg = NULL;
+            X509_CRL_get0_signature(crl, &psig, &palg);
+            out_ptr("cmp.crl.get0_signature.sig", psig);
+            out_ptr("cmp.crl.get0_signature.alg", palg);
+        }
+
+        /* The revoked stack and its entries, all fourteen of them. */
+        {
+            STACK_OF(X509_REVOKED) *revoked = X509_CRL_get_REVOKED(crl);
+            STACK_OF(X509_REVOKED) *revoked2 = X509_CRL_get_REVOKED(crl2);
+            out_ptr("cmp.crl.revoked", revoked);
+            out_int("cmp.crl.revoked.count", revoked != NULL ? (long)sk_X509_REVOKED_num(revoked) : -1);
+            rev = revoked2 != NULL ? sk_X509_REVOKED_value(revoked2, 0) : NULL;
+            out_ptr("cmp.revoked0", rev);
+            if (rev != NULL) {
+                out_int("cmp.revoked0.serial.len",
+                        (long)ASN1_STRING_length(X509_REVOKED_get0_serialNumber(rev)));
+                out_ptr("cmp.revoked0.revocationDate", X509_REVOKED_get0_revocationDate(rev));
+                out_ptr("cmp.revoked0.extensions", X509_REVOKED_get0_extensions(rev));
+                out_int("cmp.revoked0.set_revocationDate",
+                        (long)X509_REVOKED_set_revocationDate(
+                            rev, (ASN1_TIME *)X509_REVOKED_get0_revocationDate(rev)));
+                out_int("cmp.revoked0.set_serialNumber",
+                        (long)X509_REVOKED_set_serialNumber(
+                            rev, (ASN1_INTEGER *)X509_REVOKED_get0_serialNumber(rev)));
+            }
+        }
+
+        /* The mutations, on the second decode: version, issuer, lastUpdate, sort. */
+        out_int("cmp.crl.set_version0", (long)X509_CRL_set_version(crl2, 0));
+        out_int("cmp.crl.get_version.after0", (long)X509_CRL_get_version(crl2));
+        out_int("cmp.crl.set_version1", (long)X509_CRL_set_version(crl2, 1));
+        out_int("cmp.crl.set_issuer_name",
+                (long)X509_CRL_set_issuer_name(crl2, name));
+        out_int("cmp.crl.set1_lastUpdate",
+                (long)X509_CRL_set1_lastUpdate(crl2, X509_CRL_get0_lastUpdate(crl2)));
+        out_int("cmp.crl.set1_nextUpdate",
+                (long)X509_CRL_set1_nextUpdate(crl2, X509_CRL_get0_nextUpdate(crl2)));
+        out_int("cmp.crl.sort", (long)X509_CRL_sort(crl2));
+
+        /* Re-encode the CRL body; both sides must agree on the length. */
+        len = i2d_re_X509_CRL_tbs(crl, &der);
+        out_int("cmp.i2d_re_crl_tbs.len", (long)len);
+        OPENSSL_free(der);
+        der = NULL;
+    }
+
+    /* The static `check_suite_b` through both public entry points. */
+    if (cert != NULL) {
+        depth = -999;
+        out_int("cmp.suiteb.off",
+                (long)X509_chain_check_suiteb(&depth, cert, NULL, 0));
+        out_int("cmp.suiteb.off.depth", (long)depth);
+        depth = -999;
+        out_int("cmp.suiteb.rsa_leaf",
+                (long)X509_chain_check_suiteb(&depth, cert, NULL,
+                                              X509_V_FLAG_SUITEB_128_LOS));
+        out_int("cmp.suiteb.rsa_leaf.depth", (long)depth);
+    }
+    if (crl != NULL) {
+        out_int("cmp.crl_suiteb.off", (long)X509_CRL_check_suiteb(crl, NULL, 0));
+        out_int("cmp.crl_suiteb.on",
+                (long)X509_CRL_check_suiteb(crl, NULL, X509_V_FLAG_SUITEB_128_LOS));
+    }
+
+    X509_free(cert);
+    X509_free(cert2);
+    X509_CRL_free(crl);
+    X509_CRL_free(crl2);
+    X509_NAME_free(name);
+    X509_NAME_free(name2);
+}
+
 int main(void)
 {
     OSSL_STORE_LOADER *loader;
@@ -1460,6 +1689,9 @@ int main(void)
 
     /* ----- Phase 10.13: the remaining leaf extension items and the v3_lib registration surface ----- */
     drive_x509_10_13_items();
+
+    /* ----- Phase 10.14.1: the certificate comparison and accessor surface ----- */
+    drive_x509_cmp_surface();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

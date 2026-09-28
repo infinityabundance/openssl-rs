@@ -28,6 +28,9 @@
 //! src/x509/v3_no_rev_avail.rs <- crypto/x509/v3_no_rev_avail.c (10.13)
 //! src/x509/v3_single_use.rs   <- crypto/x509/v3_single_use.c   (10.13)
 //! src/x509/v3_soa_id.rs       <- crypto/x509/v3_soa_id.c       (10.13)
+//! src/x509/x509_cmp.rs   <-  crypto/x509/x509_cmp.c     (10.14.1)
+//! src/x509/x509cset.rs   <-  crypto/x509/x509cset.c     (10.14.1)
+//! src/x509/x509type.rs   <-  crypto/x509/x509type.c     (10.14.1)
 //! ```
 //!
 //! ## Phase 8.8 — the accessor slices
@@ -93,6 +96,17 @@
 //! the unit's two public helpers and withholds only its table; `v3_no_rev_avail.rs`,
 //! `v3_single_use.rs` and `v3_soa_id.rs` are doc-only withholds. `v3_timespec.rs` and `v3_pku.rs`
 //! land their item groups (the i2r printers are reached only through the withheld tables).
+//!
+//! ## Phase 10.14.1 — the certificate comparison and accessor surface
+//!
+//! The first sub-subphase of section 6's 10.14, the certificate object graph. It lands the units
+//! the rest of the graph builds its comparisons on: `x509_cmp.rs` (`crypto/x509/x509_cmp.c`'s
+//! comparison and accessor surface, with `X509_cmp` and the four `X509_add_cert*` functions
+//! withheld by name on `X509_check_purpose` and `X509_self_signed`), `x509cset.rs`
+//! (`crypto/x509/x509cset.c` whole but for `X509_CRL_up_ref`, already in `x_crl.rs`), and
+//! `x509type.rs` (`crypto/x509/x509type.c`). `x509_set.rs` un-withholds `X509_get_version`,
+//! `X509_set_version` and `ossl_x509_set1_time`, which the CRL setters need. See the subphases
+//! document's section 6 for the decomposition this is the first piece of.
 //!
 //! ## The canonical structures
 //!
@@ -161,3 +175,10 @@ pub mod v3_single_use;
 pub mod v3_soa_id;
 pub mod v3_timespec;
 pub mod v3_utf8;
+// Phase 10.14.1's certificate comparison and accessor surface -- `crypto/x509/x509_cmp.c`,
+// `x509cset.c` and `x509type.c`. The two `_cmp`/`_cset` units build the comparators and CRL
+// mutators every other certificate unit calls; `x509_set.rs` completes the three helpers they
+// need. See the module docs.
+pub mod x509_cmp;
+pub mod x509cset;
+pub mod x509type;

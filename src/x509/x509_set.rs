@@ -5,11 +5,14 @@
 //! ## A partial unit, and the two exports this slice reaches
 //!
 //! `crypto/x509/x509_set.c` is the X.509 object's mutator layer: **21 exports**, of which this
-//! module lands **two** (`:120`, `:200`). The other nineteen -- the `X509_get_version`/
-//! `X509_set_version` pair, the four `X509_set_issuer_name`/`_subject_name`/`_pubkey`/
-//! `_serialNumber` setters, the six `notBefore`/`notAfter` accessors, `X509_get0_extensions`,
-//! `X509_get0_uids`, `X509_get0_tbs_sigalg`, `X509_get_X509_PUBKEY`,
-//! `X509_get_signature_info`, `X509_SIG_INFO_get` and `X509_get_signature_type` -- are the `X509`
+//! module lands **five**: `X509_SIG_INFO_set` (`:200`) and `X509_up_ref` (`:120`) from Phase 8.8
+//! and 10.8, plus the three that 10.14.1's comparison/accessor slice reaches -- `X509_get_version`
+//! (`:132-135`), `X509_set_version` (`:27-47`) and the `ossl_x509_set1_time` helper (`:78-92`)
+//! that `x509cset.c`'s CRL setters and this unit's own validity setters share. The other sixteen
+//! -- the four `X509_set_issuer_name`/`_subject_name`/`_pubkey`/`_serialNumber` setters, the six
+//! `notBefore`/`notAfter` accessors, `X509_get0_extensions`, `X509_get0_uids`,
+//! `X509_get0_tbs_sigalg`, `X509_get_X509_PUBKEY`, `X509_get_signature_info`,
+//! `X509_SIG_INFO_get`, `X509_get_signature_type` and `ossl_x509_init_sig_info` -- are the `X509`
 //! mutator layer proper. They are not this subphase's, and are withheld rather than stubbed.
 //!
 //! **`X509_up_ref` was withheld by D349 as "the `X509` object layer proper" and is landed here**,
@@ -18,12 +21,13 @@
 //! is the same count this function moves. Its defining unit is this file, which is why it lands
 //! here and not beside the `X509` struct in `src/x509/x_x509.rs`.
 //!
-//! The two internals of the unit, `ossl_x509_init_sig_info` (`:305-309`) and
-//! `ossl_x509_set1_time` (`:78-92`), are withheld with them and are the `covers` of this
-//! module's divergence row in `forensics/prerequisites.json`. `ossl_x509_init_sig_info` is a
-//! one-line delegation to the file-local `static x509_sig_info_init` (`:217`);
-//! `ossl_x509_set1_time` duplicates one `ASN1_TIME` with `ASN1_STRING_dup`, frees the old
-//! one and sets a caller's `modified` flag.
+//! The unit's one remaining internal, `ossl_x509_init_sig_info` (`:305-309`), is withheld with
+//! them and is one of the `covers` of this module's divergence row in
+//! `forensics/prerequisites.json`; it is a one-line delegation to the file-local
+//! `static x509_sig_info_init` (`:217`). `ossl_x509_set1_time` (`:78-92`) was withheld with the
+//! mutator layer until 10.14.1, and lands here: it duplicates one `ASN1_TIME` with
+//! `ASN1_STRING_dup`, frees the old one and sets a caller's `modified` flag (or, for the CRL
+//! paths, a NULL one).
 //!
 //! ## The `X509SigInfo` layout
 //!
@@ -49,8 +53,11 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_int, c_long};
 
+use crate::asn1::layout::Asn1String;
+use crate::asn1::prim::{ASN1_INTEGER_get, ASN1_INTEGER_set};
+use crate::asn1::string::{ASN1_INTEGER_free, ASN1_INTEGER_new, ASN1_STRING_dup, ASN1_TIME_free};
 use crate::x509::x_x509::X509;
 
 /// `struct x509_sig_info_st` — `X509_SIG_INFO`, from `include/crypto/x509.h:50-59`.
@@ -77,6 +84,103 @@ const _: () = {
     assert!(core::mem::offset_of!(X509SigInfo, secbits) == 8);
     assert!(core::mem::offset_of!(X509SigInfo, flags) == 12);
 };
+
+/// `int X509_set_version(X509 *x, long version)` — `crypto/x509/x509_set.c:27-47`.
+///
+/// A no-op that answers 1 when the requested version already holds; version 1 frees the version
+/// integer so the DER omits it (the `[ 0 ]` default); any other version allocates it on first
+/// use. Every success marks the cached encoding stale.
+///
+/// # Safety
+///
+/// `x` must be NULL or a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_set_version(x: *mut X509, version: c_long) -> c_int {
+    if x.is_null() {
+        return 0;
+    }
+    // SAFETY: `x` is live per the contract.
+    unsafe {
+        if version == X509_get_version(x) {
+            return 1;
+        }
+        if version == X509_VERSION_1 {
+            ASN1_INTEGER_free((*x).cert_info.version);
+            (*x).cert_info.version = core::ptr::null_mut();
+            (*x).cert_info.enc.modified = 1;
+            return 1;
+        }
+        if (*x).cert_info.version.is_null() {
+            (*x).cert_info.version = ASN1_INTEGER_new();
+            if (*x).cert_info.version.is_null() {
+                return 0;
+            }
+        }
+        if ASN1_INTEGER_set((*x).cert_info.version, version) == 0 {
+            return 0;
+        }
+        (*x).cert_info.enc.modified = 1;
+    }
+    1
+}
+
+/// `long X509_get_version(const X509 *x)` — `crypto/x509/x509_set.c:132-135`.
+///
+/// A NULL version pointer reads as 0 through `ASN1_INTEGER_get`, which is the authority's v1
+/// default. `X509_NAME_cmp`'s `X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT`-free callers and the
+/// Suite-B chain check reach it.
+///
+/// # Safety
+///
+/// `x` must be a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get_version(x: *const X509) -> c_long {
+    // SAFETY: `x` is live per the contract.
+    unsafe { ASN1_INTEGER_get((*x).cert_info.version) }
+}
+
+/// `int ossl_x509_set1_time(int *modified, ASN1_TIME **ptm, const ASN1_TIME *tm)` —
+/// `crypto/x509/x509_set.c:78-92`.
+///
+/// Duplicates `tm` into `*ptm`, frees the previous value and sets `*modified` (when non-NULL).
+/// A `tm` of NULL is the authority's "clear" case: it frees the old value, writes NULL and
+/// answers 1. Identity (`*ptm == tm`) is a no-op.
+///
+/// # Safety
+///
+/// `ptm` must be writable and `*ptm` must be NULL or a live `ASN1_TIME`; `tm` must be NULL or a
+/// live `ASN1_TIME`; `modified` must be NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_x509_set1_time(
+    modified: *mut c_int,
+    ptm: *mut *mut Asn1String,
+    tm: *const Asn1String,
+) -> c_int {
+    // SAFETY: `ptm` is writable per the contract.
+    if unsafe { *ptm == tm.cast_mut() } {
+        return 1;
+    }
+    // SAFETY: `tm` is NULL or live per the contract.
+    let new = unsafe { ASN1_STRING_dup(tm) };
+    if !tm.is_null() && new.is_null() {
+        return 0;
+    }
+    // SAFETY: `ptm` is writable and `*ptm` is NULL or live.
+    unsafe {
+        ASN1_TIME_free(*ptm);
+        *ptm = new;
+        if !modified.is_null() {
+            *modified = 1;
+        }
+    }
+    1
+}
+
+/// `X509_VERSION_1` — `include/openssl/x509.h:651`, the version `X509_set_version` omits from
+/// the encoding rather than writing.
+const X509_VERSION_1: c_long = 0;
 
 /// `void X509_SIG_INFO_set(X509_SIG_INFO *siginf, int mdnid, int pknid, int secbits,
 /// uint32_t flags)` — `crypto/x509/x509_set.c:200-207`.
