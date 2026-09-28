@@ -43782,6 +43782,96 @@ pub(crate) const V3_UTF8_57: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ossl_x509_add_cert_new` at `crypto/x509/x509_cmp.c:184` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_CMP_184: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_cmp.c",
+    line: 184,
+    func: c"ossl_x509_add_cert_new",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509_add_cert` at `crypto/x509/x509_cmp.c:193` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_CMP_193: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_cmp.c",
+    line: 193,
+    func: c"X509_add_cert",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_add_cert` at `crypto/x509/x509_cmp.c:222` (ERR_R_CRYPTO_LIB).
+pub(crate) const X509_CMP_222: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_cmp.c",
+    line: 222,
+    func: c"X509_add_cert",
+    lib: 11,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509_add_certs` at `crypto/x509/x509_cmp.c:232` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_CMP_232: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_cmp.c",
+    line: 232,
+    func: c"X509_add_certs",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `X509_check_private_key` at `crypto/x509/x509_cmp.c:397` (X509_R_UNABLE_TO_GET_CERTS_PUBLIC_KEY).
+pub(crate) const X509_CMP_397: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_cmp.c",
+    line: 397,
+    func: c"X509_check_private_key",
+    lib: 11,
+    reason: 108,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509_check_private_key` at `crypto/x509/x509_cmp.c:406` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const X509_CMP_406: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_cmp.c",
+    line: 406,
+    func: c"ossl_x509_check_private_key",
+    lib: 11,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509_check_private_key` at `crypto/x509/x509_cmp.c:413` (X509_R_KEY_VALUES_MISMATCH).
+pub(crate) const X509_CMP_413: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_cmp.c",
+    line: 413,
+    func: c"ossl_x509_check_private_key",
+    lib: 11,
+    reason: 116,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509_check_private_key` at `crypto/x509/x509_cmp.c:416` (X509_R_KEY_TYPE_MISMATCH).
+pub(crate) const X509_CMP_416: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_cmp.c",
+    line: 416,
+    func: c"ossl_x509_check_private_key",
+    lib: 11,
+    reason: 115,
+    dynamic_reason: false,
+};
+
+/// `ossl_x509_check_private_key` at `crypto/x509/x509_cmp.c:419` (X509_R_UNKNOWN_KEY_TYPE).
+pub(crate) const X509_CMP_419: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_cmp.c",
+    line: 419,
+    func: c"ossl_x509_check_private_key",
+    lib: 11,
+    reason: 117,
+    dynamic_reason: false,
+};
+
 /// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:116` (PROV_R_MISSING_KEY).
 pub(crate) const ECX_KEY_116: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
@@ -49208,6 +49298,15 @@ pub(crate) static ALL: &[ErrSite] = &[
     V3_UTF8_49,
     V3_UTF8_53,
     V3_UTF8_57,
+    X509_CMP_184,
+    X509_CMP_193,
+    X509_CMP_222,
+    X509_CMP_232,
+    X509_CMP_397,
+    X509_CMP_406,
+    X509_CMP_413,
+    X509_CMP_416,
+    X509_CMP_419,
     ECX_KEY_116,
     ECX_KEY_122,
     ECX_KEY_131,

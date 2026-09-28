@@ -403,7 +403,7 @@ cycle is the one D442 and D444 already recorded; this section is its size.
 | 10.11 | **The name, print and `v3` dispatch layer** | `x_name.c` (`X509_NAME_it`/`X509_NAME_ENTRY_it` and the `_new`/`_free`/`_dup`/`d2i_`/`i2d_` family), `x_exten.c` (`X509_EXTENSION_it`), `x_pubkey.c`, `x509_v3.c`, `x509name.c`, `x509rset.c`, `a_strex.c`, `a_verify.c`, `x_spki.c`, `evp/evp_pkey.c`; **10 units, 3,487 lines**. This is the first half of the brief's (a): `X509_NAME`'s item and its `i2d_X509_NAME`. | 10.10 | `RT-STORE` (later) |
 | 10.12 | **The leaf extension items and the policy graph** | `x_val.c` (`X509_VAL_it`), `x_x509a.c` (`X509_CERT_AUX_it`, the alias/keyid accessors), `x509_txt.c`, `pcy_lib.c`, `pcy_node.c`, `v3_audit_id.c`, `v3_group_ac.c`, `v3_ia5.c`, `v3_ind_iss.c`, `v3_ist.c`, `v3_no_ass.c`, `v3_pcia.c`, `v3_skid.c`; plus the `http`/`punycode` units `x_all.c` reaches; **16 units, 3,490 lines**. | 10.11 | — |
 | 10.13 | **The remaining leaf extension items** | `v3_timespec.c`, `v3_pku.c`, `v3_utf8.c`, `v3_no_rev_avail.c`, `v3_single_use.c`, `v3_soa_id.c`; **6 units, 875 lines**. | 10.11 | — |
-| 10.14 | **The certificate object graph (one SCC)** | the 75-unit, **30,711-line** strongly-connected component: `x_x509.c`/`x_crl.c` (`X509_it`/`X509_CRL_it` and lifecycle), `x509_cmp.c`, `x509_set.c`, `x509cset.c`, `t_x509.c`, `x_all.c`, `x509_vfy.c`, `x509_lu.c`, `x509_vpm.c`, `x509_trust.c`, `x509_acert.c`, `x509_req.c`, `x_attrib.c`, all `v3_*.c`, `pcy_cache.c`/`pcy_data.c`/`pcy_map.c`/`pcy_tree.c`, `pk7_*.c`, `ocsp/*`, `ct/*`, `asn1_gen.c`. **This is the second half of the brief's (a) and the whole of its (b).** | 10.9–10.13 | `RT-STORE`, `RT-PKCS12`, `RT-KEYFORMAT` |
+| 10.14 | **The certificate object graph (one SCC)** *(decomposed in §7; 10.14.1 landed)* | the 75-unit, **30,711-line** strongly-connected component: `x_x509.c`/`x_crl.c` (`X509_it`/`X509_CRL_it` and lifecycle), `x509_cmp.c`, `x509_set.c`, `x509cset.c`, `t_x509.c`, `x_all.c`, `x509_vfy.c`, `x509_lu.c`, `x509_vpm.c`, `x509_trust.c`, `x509_acert.c`, `x509_req.c`, `x_attrib.c`, all `v3_*.c`, `pcy_cache.c`/`pcy_data.c`/`pcy_map.c`/`pcy_tree.c`, `pk7_*.c`, `ocsp/*`, `ct/*`, `asn1_gen.c`. **This is the second half of the brief's (a) and the whole of its (b).** | 10.9–10.13 | `RT-STORE`, `RT-PKCS12`, `RT-KEYFORMAT` |
 | 10.15 | **The PKCS#12 certificate layer** | the fifteen `crypto/pkcs12/` units (`p12_add.c`'s `PKCS12_add_cert`, `p12_crt.c`'s `PKCS12_create(_ex/_ex2)`, `p12_sbag.c`'s `PKCS12_SAFEBAG_*`, `p12_kiss.c`'s `PKCS12_parse`, and the landed rest); **3,170 lines**. Closes the eleven `pkcs12.h` rows D447 left open. | 10.14 | `RT-PKCS12` |
 | 10.16 | **STORE result and the file loader** | `store_lib.c` (the carved CERT/CRL arms of `OSSL_STORE_INFO_free`/`_get1_CERT`/`_get1_CRL`/`OSSL_STORE_find`, and `OSSL_STORE_load`), `store_result.c`, `file_store.c`, `file_store_any2obj.c`; **4 units, 3,030 lines**. Closes `OSSL_STORE_load`, `OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the two `file` `OSSL_OP_STORE` rows. | 10.14 | `RT-STORE` |
 
@@ -431,8 +431,91 @@ needed code to **39 units and ~19,600 unit-lines**, but it does not change the o
 callback still names the seven `*_free` functions above — and it under-counts the ASN.1 item templates,
 which the compiler emits as local data, so it is a lower bound rather than a fourth row above.
 
-**The consequence for the ledger.** `forensics/phase10-obligations.json` stays at `284 implemented /
-14 open` and `forensics/atlas/provider-algorithms.json` at `634 implemented / 2 open`; no export, no
-row, no Phase-11 evidence, ledger, plan, seal or state row is created, and Phase 11 still derives
-`not-started`. This section is a measurement of what a future slice must take as one unit, not a
-deferral: the size is a number.
+**The consequence for the ledger.** `forensics/phase10-obligations.json` reads `286 implemented /
+12 open` (D451 closed the two `OSSL_STORE_INFO` readers) and `forensics/atlas/provider-algorithms.json`
+`634 implemented / 2 open`; no export, no row, no Phase-11 evidence, ledger, plan, seal or state row
+is created, and Phase 11 still derives `not-started`. This section is a measurement of what a future
+slice must take as one unit, not a deferral: the size is a number. **Its 10.14 row is decomposed in
+section 7 below**, one sub-subphase at a time.
+
+## 7. The decomposition of 10.14, sub-subphase by sub-subphase
+
+Section 6 measured 10.14 as the second half of the brief's `(a)` and the whole of its `(b)`: one
+strongly-connected component of **75 units and 30,711 authority lines**, which the plan left as a
+single row because no unit-level cut of it is dependency-complete. D451 proved the cut is at the
+**call graph**, not at the units, and 10.8–10.13 landed six slices of the surrounding leaves with it.
+This section is the measurement that turns the 10.14 row itself into a dependency-ordered list, and
+it is written the way the ledger is measured rather than estimated.
+
+**What was measured, and how.** `nm --undefined-only` over the authority's own
+`openssl-3.6.4-production` build objects, seeded from the objects that carry Phase 10's two remaining
+blockers — the 19 objects of `crypto/store/store_lib.o`, `crypto/store/store_result.o`, the fifteen
+`crypto/pkcs12/p12_*.o` and the two `providers/implementations/storemgmt/file_store*.o` — with each
+undefined name resolved to the translation unit that *defines* it (`nm --defined-only`) and tested
+against the crate's compiled surface (`forensics/atlas/implemented-surface.json`) **and** its
+transcribed units (`forensics/atlas/transcription-edges.json`), never against the bare word. The
+strict compiled-surface closure is **494 units / 152,091 lines**; excluding the units the crate has
+already transcribed leaves **318 units / 66,745 lines**, and scoped to the certificate subsystem
+(the four `crypto/x509`/`pkcs7`/`ocsp`/`ct` trees, the `pkcs12` and `store` residues, and
+`crypto/asn1/asn1_gen.c`/`x_spki.c`) the unlanded frontier is:
+
+| closure | authority units | authority lines |
+|---|---:|---:|
+| the blocked rows, strict compiled-surface closure | 494 | 152,091 |
+| the same minus already-transcribed units | 318 | 66,745 |
+| the certificate subsystem, unlanded and in scope, **before this session's 10.14.1 landing** | **100** | **32,326** |
+| the same **after** 10.14.1 | 76 | 27,335 |
+
+Section 6's 143-unit / 50,031-line row for the same seeds is smaller because its landed test was a
+definition-based **source** scan, which credits a partially-transcribed unit as whole; the compiled
+surface the brief specifies is the conservative test, and the sizes below use it. The 100 pre-landing
+units are the corpus. The order is read from the measured call edges rather than
+assumed: the nm joins show `v3_purp.c` naming `x509_cmp.c` (5 names), `x509_ext.c` (4) and
+`x509_set.c` (2); `x509_vfy.c` naming `x509_cmp.c` (12), `v3_purp.c` (9), `x509_vpm.c` (9),
+`x509cset.c` (8), the OCSP units (10) and `pcy_tree.c` (2); `x_all.c` naming the `X509_REQ`/
+`X509_ACERT` items and `x509_req.c`; and `store_result.c`/`file_store*.o` naming `PKCS12_parse`,
+the decoder context and `ossl_store_handle_load_result`. That is the expected order — comparison and
+accessors first, then the name/extension substrate, then the policy graph and the verify engine, then
+PKCS#7/OCSP/CT, then the two blockers — and it is confirmed rather than assumed.
+
+**The sub-subphases.** Each is dependency-complete at the function level, in the sense 10.8
+established: it lands every function whose closure is satisfied by its own units or an earlier
+sub-subphase, and withholds by name any function whose closure is not. Sizes are authority lines,
+read from `forensics/authorities/src/openssl-3.6.4/`.
+
+| # | Sub-subphase | Owns (authority units, lines) | Depends on | Closes |
+|---|---|---|---|---|
+| 10.14.1 | **The certificate comparison and accessor surface** *(landed, this session)* | `x509_cmp.c` (594, 27 of 32 fns), `x509cset.c` (185), `x509type.c` (84), and `x509_set.c`'s un-withheld `X509_get_version`/`X509_set_version`/`ossl_x509_set1_time` (~50); **~913** | — | none; unblocks 10.14.2–10.14.15 |
+| 10.14.2 | **The certificate encode/decode faces and the defaults** | `x_all.c` (881), `x509_meth.c` (157), `x509_def.c` (116), `x509spki.c` + `crypto/asn1/x_spki.c` (75 + 28), `x509rset.c` (42); **~1,299** | 10.14.1, 10.14.4 (`v3_genn`/`x509_req` items for `x_all`'s faces) | none |
+| 10.14.3 | **The extension value and string utilities** | `v3_utl.c` (1449), `v3_prn.c` (215); **~1,664** | 10.14.1 | none |
+| 10.14.4 | **The general names, constraints and configuration layer** | `v3_ncons.c` (862), `v3_conf.c` (599), `v3_genn.c` (269); **~1,730** | 10.14.3 | none |
+| 10.14.5 | **The purpose table, the extension cache and the dispatch** | `v3_purp.c` (1147) and `v3_lib.c`'s withheld lookup half (`X509V3_EXT_get_nid`/`_get`/`_add_alias`/`_EXT_d2i`/`_get_d2i`/`_add1_i2d`, ~150) over `standard_exts.h`'s 63 tables; **~1,300** | 10.14.3, 10.14.4, 10.14.6–10.14.8 (the tables it dispatches to) | none; **un-withholds 10.14.1's withheld `X509_cmp` and four `X509_add_cert*`** |
+| 10.14.6 | **The extension tables, part A: names, key usage and policy** | `v3_crld.c` (724), `v3_san.c` (689), `v3_cpols.c` (515), `v3_akid.c` (237), `v3_extku.c` (125), `v3_bitst.c` (100), `v3_pcons.c` (91), `v3_bcons.c` (85), `v3_akeya.c` (23); **~2,589** | 10.14.3, 10.14.7/10.14.8 (identity items), 10.13's `v3_pku`/`v3_timespec` | none |
+| 10.14.7 | **The extension tables, part B: address and identifier** | `v3_addr.c` (1359), `v3_asid.c` (871); **~2,230** | 10.14.3 | none |
+| 10.14.8 | **The extension tables, part C: the remainder** | `v3_admis.c` (355), `v3_pci.c` (323), `v3_sxnet.c` (259), `v3_ac_tgt.c` (253), `v3_aaa.c` (128), `v3_attrdesc.c` (178), `v3_attrmap.c` (116), `v3_authattid.c` (79), `v3_battcons.c` (86), `v3_rolespec.c` (95), `v3_sda.c` (88), `v3_tlsf.c` (137), `v3_usernotice.c` (96), `v3_enum.c` (53), `v3_int.c` (43), `v3_iobo.c` (32); **~2,321** | 10.14.3, 10.14.4 | none |
+| 10.14.9 | **The policy graph** | `pcy_tree.c` (726), `pcy_cache.c` (226), `pcy_data.c` (81), `pcy_map.c` (77); **~1,110** (with `pcy_node.c`'s 157 still withheld on D455's two-part blocker) | 10.14.5, 10.14.6 | none |
+| 10.14.10 | **The trust, verification-parameter and store-lookup layer** | `x509_lu.c` (958), `x509_vpm.c` (648), `by_dir.c` (448), `by_store.c` (293), `x509_trust.c` (298), `by_file.c` (284), `x509_d2.c` (117); **~3,046** | 10.14.1, 10.14.2, 10.14.5 | none |
+| 10.14.11 | **The printers and the request/attribute objects** | `t_x509.c` (559), `x509_req.c` (350), `x509_acert.c` (328), `t_acert.c` (289), `x_ietfatt.c` (239), `t_req.c` (216), `x509aset.c` (177), `x_req.c` (167), `t_crl.c` (99); **~2,424** | 10.14.3, 10.14.5, 10.14.6 | none; un-withholds 10.14.2's `x509rset.c` |
+| 10.14.12 | **The verification engine** | `x509_vfy.c` (3,984) | 10.14.9, 10.14.10, 10.14.5 | none; **un-withholds 10.14.1's withheld `X509_cmp`/`X509_add_cert*` for the last time** |
+| 10.14.13 | **PKCS#7** | `pk7_doit.c` (1299), `pk7_smime.c` (546), `pk7_attr.c` (137), `pk7_mime.c` (73), `bio_pk7.c` (19), `pk7_lib.c`'s remaining 20; **~2,094** | 10.14.10, 10.14.11 | none; **prerequisite of 10.15** |
+| 10.14.14 | **OCSP** | `ocsp_ext.c` (466), `ocsp_vfy.c` (438), `ocsp_cl.c` (368), `ocsp_srv.c` (326), `ocsp_prn.c` (251), `v3_ocsp.c` (234), `ocsp_asn.c` (135), `ocsp_lib.c` (113), `ocsp_http.c` (68); **~2,399** | 10.14.12, 10.14.13 | none |
+| 10.14.15 | **CT** | `ct_oct.c` (403), `ct_sct.c` (385), `ct_log.c` (335), `ct_sct_ctx.c` (274), `ct_b64.c` (174), `ct_vfy.c` (138), `ct_prn.c` (127), `ct_policy.c` (113), `ct_x509v3.c` (104); **~2,053** | 10.14.11, 10.14.12 | none |
+| 10.15 | **The PKCS#12 certificate layer** (section 6's row, unchanged) | the fifteen `crypto/pkcs12/` units' remaining halves: `p12_sbag.c` (292), `p12_add.c`/`p12_crt.c` (~400), `p12_mutl.c` (552), `p12_kiss.c` (274); **~1,518** | 10.14.13 (PKCS#7), 10.14.11 (the `X509` objects) | **the eleven `pkcs12.h` exports** (`PKCS12_SAFEBAG_create_cert`/`_crl`, `_get1_cert(_ex)`/`_get1_crl(_ex)`, `PKCS12_add_cert`, `PKCS12_create(_ex/_ex2)`, `PKCS12_parse`) |
+| 10.16 | **STORE result and the file loader** (section 6's row, unchanged) | `store_result.c` (667), `store_lib.c`'s carved `OSSL_STORE_load` half, `file_store.c` (828), `file_store_any2obj.c` (330); **~1,825** | 10.14.13 (the decoder chain `store_result` calls), 10.15 | **`OSSL_STORE_load` and the two `file` `OSSL_OP_STORE` rows** |
+
+**What each blocker a reader might expect does *not* close.** 10.8 already closed
+`OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the CERT/CRL arms of
+`OSSL_STORE_INFO_free`, so 10.16 closes **one** export, not three; the section 6 row that names all
+three is superseded by D451 and the corrected count is one. Every 10.14.x row closes no export and no
+provider row on its own — that is the expected shape for a dependency sub-subphase, exactly as 10.9's
+and 10.10's were — and the twelve exports and two rows are closed by 10.15 and 10.16 alone.
+
+**Why the first sub-subphase is the one that landed.** 10.14.1 is the smallest slice whose closure
+is wholly landed, and the six subphases D451–D456 landed had already put every one of its callees in
+place. It is **~913 authority lines**, under the ~3,500-line session budget, so it landed rather than
+being withheld a third time. Its dependency facts were verified by the same nm join that produced the
+table: its only unlanded callees were `ossl_x509_set1_time` (un-withheld here), `X509_check_purpose`
+(`v3_purp.c`, 10.14.5) and `X509_self_signed` (`x509_vfy.c`, 10.14.12), which is why `X509_cmp` and
+the four `X509_add_cert*` names are withheld by name with those blockers rather than stubbed. The
+`x509_cmp ↔ v3_purp ↔ x509_vfy` cycle the two withheld names sit in is the SCC section 6 described,
+and cutting it at the call graph is what makes 10.14.1 landable at all.

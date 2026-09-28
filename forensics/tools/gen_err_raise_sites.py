@@ -1349,6 +1349,17 @@ COVERED_FILES = [
     # with `ERR_R_PASSED_NULL_PARAMETER` (`:34`), `X509V3_R_INVALID_NULL_ARGUMENT` (`:49`) and
     # `ERR_R_ASN1_LIB` (`:53`, `:57`). The withheld `ossl_v3_utf8_list` table raises nothing.
     ("crypto/x509/v3_utf8.c", "V3_UTF8"),
+    # Phase 10.14.1's `crypto/x509/x509_cmp.c` -- the certificate comparison and accessor surface.
+    # Its nine sites are `ERR_LIB_X509`: four `ERR_R_*` generic codes in the withheld
+    # `X509_add_cert`/`ossl_x509_add_cert_new` pair (`:184`, `:193`, `:222`, `:232`) and the five
+    # reachable refusals of `X509_check_private_key`/`ossl_x509_check_private_key`
+    # (`X509_R_UNABLE_TO_GET_CERTS_PUBLIC_KEY` `:397`, `ERR_R_PASSED_NULL_PARAMETER` `:406`,
+    # `X509_R_KEY_VALUES_MISMATCH` `:413`, `X509_R_KEY_TYPE_MISMATCH` `:416`,
+    # `X509_R_UNKNOWN_KEY_TYPE` `:419`). The four unused coordinates are harmless until that half
+    # lands. Stem `X509_CMP`; `x509cset.c` and `x509type.c` raise nothing and are deliberately
+    # not listed, and `x509_set.c`'s three sites are all in the still-withheld mutator layer, so
+    # it stays unlisted too.
+    ("crypto/x509/x509_cmp.c", "X509_CMP"),
     # Phase 8.7's ECX key objects (D372): `crypto/ec/ecx_key.c` (the `ECX_KEY` object and
     # `ossl_ecx_compute_key`) and `crypto/ec/ecx_backend.c` (the backend the legacy methods and
     # the providers share). The first is `ERR_LIB_PROV` with the four `PROV_R_*` reasons on the
