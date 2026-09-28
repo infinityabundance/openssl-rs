@@ -1359,7 +1359,7 @@ COVERED_FILES = [
     # with `ERR_R_PASSED_NULL_PARAMETER` (`:34`), `X509V3_R_INVALID_NULL_ARGUMENT` (`:49`) and
     # `ERR_R_ASN1_LIB` (`:53`, `:57`). The withheld `ossl_v3_utf8_list` table raises nothing.
     ("crypto/x509/v3_utf8.c", "V3_UTF8"),
-    # Phase 10.14.1's `crypto/x509/x509_cmp.c` -- the certificate comparison and accessor surface.
+    # `crypto/x509/x509_cmp.c` -- the certificate comparison and accessor surface.
     # Its nine sites are `ERR_LIB_X509`: four `ERR_R_*` generic codes in the withheld
     # `X509_add_cert`/`ossl_x509_add_cert_new` pair (`:184`, `:193`, `:222`, `:232`) and the five
     # reachable refusals of `X509_check_private_key`/`ossl_x509_check_private_key`
@@ -1367,9 +1367,16 @@ COVERED_FILES = [
     # `X509_R_KEY_VALUES_MISMATCH` `:413`, `X509_R_KEY_TYPE_MISMATCH` `:416`,
     # `X509_R_UNKNOWN_KEY_TYPE` `:419`). The four unused coordinates are harmless until that half
     # lands. Stem `X509_CMP`; `x509cset.c` and `x509type.c` raise nothing and are deliberately
-    # not listed, and `x509_set.c`'s three sites are all in the still-withheld mutator layer, so
-    # it stays unlisted too.
+    # not listed.
     ("crypto/x509/x509_cmp.c", "X509_CMP"),
+    # Phase 10.14.5's `crypto/x509/x509_set.c` -- the signature-strength initialiser. Its three
+    # sites are `ERR_LIB_X509`: `X509_R_UNKNOWN_SIGID_ALGS` (`:230`) and
+    # `X509_R_ERROR_USING_SIGINF_SET` (`:252`) in `x509_sig_info_init`, and
+    # `X509_R_ERROR_GETTING_MD_BY_NID` (`:284`) in its `default:` branch, all reached by
+    # `ossl_x509_init_sig_info`. They are generated here rather than declared locally because the
+    # unit is covered like every other; they stay unused until the cache's caller lands. Stem
+    # `X509_SET`.
+    ("crypto/x509/x509_set.c", "X509_SET"),
     # Phase 10.14.2's `crypto/x509/x_all.c` -- the certificate encode/decode faces. Its twelve
     # sites are `ERR_LIB_X509`: the two NULL-certificate refusals in `X509_sign`/`X509_sign_ctx`
     # (`:80`, `:103`), the CRL twins (`:167`, `:179`), `X509_digest_sig`'s five refusals

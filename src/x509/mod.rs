@@ -216,3 +216,21 @@ pub mod v3_genn;
 // withheld by name (nine on an unlanded callee, eleven closure-complete but unreachable).
 // It is the keystone the forty-odd `v3_*` tables and `v3_prn.c` wait on. See the module docs.
 pub mod v3_utl;
+// Phase 10.14.5's `crypto/x509/x509_ext.c` -- the `X509`/`X509_CRL`/`X509_REVOKED` extension
+// accessors, landed at function granularity: 21 of the unit's 27 containers land and the six
+// `*_get_ext_d2i`/`*_add1_ext_i2d` functions are withheld by name behind `v3_lib.rs`'s
+// `standard_exts[]`-backed lookups. Three of its names are three of the six
+// `ossl_x509v3_cache_extensions` was measured to need. See the module docs.
+pub mod x509_ext;
+// Phase 10.14.6's `crypto/x509/v3_crld.c` -- landed at function granularity: the
+// `DIST_POINT_NAME` layout and one export, `DIST_POINT_set_dpname`, land; the five extension
+// tables and every section/printer callback are withheld by name behind the same
+// `standard_exts[]`/`v3_conf`/`v3_san` blockers. `DIST_POINT_set_dpname` is one of the two
+// non-`x509_ext.c` names `ossl_x509v3_cache_extensions` needs (`ossl_x509_init_sig_info` being
+// the other). See the module docs.
+pub mod v3_crld;
+// Phase 10.14.6's `crypto/x509/v3_bcons.c` -- the `BASIC_CONSTRAINTS` item group, landed so its
+// `BASIC_CONSTRAINTS_free` (the seventh name `ossl_x509v3_cache_extensions` was measured to need)
+// is real; `ossl_v3_bcons` and the two callbacks are withheld by name behind `standard_exts[]`.
+// See the module docs.
+pub mod v3_bcons;

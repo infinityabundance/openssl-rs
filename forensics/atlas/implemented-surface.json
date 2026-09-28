@@ -445,6 +445,7 @@
         "ossl_x448_public_from_private",
         "ossl_x509_check_private_key",
         "ossl_x509_crl_set0_libctx",
+        "ossl_x509_init_sig_info",
         "ossl_x509_set0_libctx",
         "ossl_x509_set1_time",
         "ossl_x509at_add1_attr",
@@ -485,7 +486,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 14028,
+      "compiler_emitted_count": 14014,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -493,7 +494,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 3701,
+        "implemented": 3728,
         "implemented_symbols": [
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
@@ -736,6 +737,9 @@
           "ASN1_tag2bit",
           "ASN1_tag2str",
           "ASN1_verify",
+          "BASIC_CONSTRAINTS_free",
+          "BASIC_CONSTRAINTS_it",
+          "BASIC_CONSTRAINTS_new",
           "BF_cbc_encrypt",
           "BF_cfb64_encrypt",
           "BF_decrypt",
@@ -1433,6 +1437,7 @@
           "DISPLAYTEXT_free",
           "DISPLAYTEXT_it",
           "DISPLAYTEXT_new",
+          "DIST_POINT_set_dpname",
           "DSA_OpenSSL",
           "DSA_SIG_free",
           "DSA_SIG_get0",
@@ -3699,8 +3704,10 @@
           "X509_CRL_INFO_free",
           "X509_CRL_INFO_it",
           "X509_CRL_INFO_new",
+          "X509_CRL_add_ext",
           "X509_CRL_check_suiteb",
           "X509_CRL_cmp",
+          "X509_CRL_delete_ext",
           "X509_CRL_digest",
           "X509_CRL_dup",
           "X509_CRL_free",
@@ -3710,6 +3717,11 @@
           "X509_CRL_get0_signature",
           "X509_CRL_get0_tbs_sigalg",
           "X509_CRL_get_REVOKED",
+          "X509_CRL_get_ext",
+          "X509_CRL_get_ext_by_NID",
+          "X509_CRL_get_ext_by_OBJ",
+          "X509_CRL_get_ext_by_critical",
+          "X509_CRL_get_ext_count",
           "X509_CRL_get_issuer",
           "X509_CRL_get_lastUpdate",
           "X509_CRL_get_nextUpdate",
@@ -3788,11 +3800,18 @@
           "X509_PUBKEY_set",
           "X509_PUBKEY_set0_param",
           "X509_PUBKEY_set0_public_key",
+          "X509_REVOKED_add_ext",
+          "X509_REVOKED_delete_ext",
           "X509_REVOKED_dup",
           "X509_REVOKED_free",
           "X509_REVOKED_get0_extensions",
           "X509_REVOKED_get0_revocationDate",
           "X509_REVOKED_get0_serialNumber",
+          "X509_REVOKED_get_ext",
+          "X509_REVOKED_get_ext_by_NID",
+          "X509_REVOKED_get_ext_by_OBJ",
+          "X509_REVOKED_get_ext_by_critical",
+          "X509_REVOKED_get_ext_count",
           "X509_REVOKED_it",
           "X509_REVOKED_new",
           "X509_REVOKED_set_revocationDate",
@@ -3808,12 +3827,14 @@
           "X509_VAL_new",
           "X509_add1_reject_object",
           "X509_add1_trust_object",
+          "X509_add_ext",
           "X509_alias_get0",
           "X509_alias_set1",
           "X509_certificate_type",
           "X509_chain_check_suiteb",
           "X509_chain_up_ref",
           "X509_check_private_key",
+          "X509_delete_ext",
           "X509_digest",
           "X509_digest_sig",
           "X509_dup",
@@ -3832,6 +3853,11 @@
           "X509_get_default_cert_dir_env",
           "X509_get_default_cert_file_env",
           "X509_get_ex_data",
+          "X509_get_ext",
+          "X509_get_ext_by_NID",
+          "X509_get_ext_by_OBJ",
+          "X509_get_ext_by_critical",
+          "X509_get_ext_count",
           "X509_get_issuer_name",
           "X509_get_pubkey",
           "X509_get_serialNumber",
@@ -3936,6 +3962,7 @@
           "d2i_ASN1_VISIBLESTRING",
           "d2i_AutoPrivateKey",
           "d2i_AutoPrivateKey_ex",
+          "d2i_BASIC_CONSTRAINTS",
           "d2i_DHparams",
           "d2i_DHxparams",
           "d2i_DIRECTORYSTRING",
@@ -4075,6 +4102,7 @@
           "i2d_ASN1_UTF8STRING",
           "i2d_ASN1_VISIBLESTRING",
           "i2d_ASN1_bio_stream",
+          "i2d_BASIC_CONSTRAINTS",
           "i2d_DHparams",
           "i2d_DHxparams",
           "i2d_DIRECTORYSTRING",
@@ -4197,7 +4225,7 @@
           "s2i_ASN1_OCTET_STRING",
           "s2i_ASN1_UTF8STRING"
         ],
-        "scaffolded": 2195
+        "scaffolded": 2168
       },
       "libssl": {
         "authority_exports": 603,
@@ -4208,18 +4236,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 3701,
-      "scaffolded": 2798
+      "implemented": 3728,
+      "scaffolded": 2771
     }
   },
-  "body_hash": "019428ff5c52f9c257db7d936f95e63e62c9b8968464ebd995e12f34d81bb8d8",
+  "body_hash": "9507f458d221ee87e07b6b0c42dcbc3f5364aa184b2717798fffe894fc70f91a",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "4bb3c335736d3bf64df7b711454d62b02097f5a1b68958f193a53e6ef0239f7d"
+      "sha256": "7b9042d6ae3b7d88e70a8a5c24b7183d061a1532d4e689d9bda6d944088c133f"
     },
     {
       "name": "authority-exports",

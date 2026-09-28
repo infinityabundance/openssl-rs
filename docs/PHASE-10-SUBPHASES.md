@@ -735,3 +735,59 @@ does not have, the pair landed: `crypto/evp/evp_cnf.c` is transcribed as `src/ev
 the `forensics/prerequisites.json` unit record are retired — the rule D453 and D454 used. Phase-10
 counts are unchanged at **`296 implemented / 2 open`** exports and **`636 implemented / 0 open`**
 provider rows, the expected shape for a dependency sub-subphase.
+
+**10.14.5 and 10.14.6 land the chain's non-table half, and the wall is measured to be the tables
+myself.** The slice's target was the call chain D461 named -- `PKCS12_parse` <-
+`ossl_x509_add_cert_new` <- `X509_self_signed` <- `ossl_x509v3_cache_extensions`. Before landing
+anything the same `nm --undefined-only` join was re-run over the authority's objects and one
+correction to D461 came out of it: `ossl_x509v3_cache_extensions` needs **seven** names, not six --
+the four `x509_ext.c` accessors, `ossl_x509_init_sig_info`, `DIST_POINT_set_dpname`, **and
+`BASIC_CONSTRAINTS_free`** (`v3_bcons.c`, which the four-name list missed). Six of the seven land
+here; the seventh is the wall:
+
+* **`src/x509/x509_ext.rs` (10.14.5)** transcribes 21 of the 27 containers in
+  `crypto/x509/x509_ext.c` (170 lines) -- the count/by-NID/by-OBJ/by-critical/get accessors and
+  the add/delete mutators over `X509`, `X509_CRL` and `X509_REVOKED`. Its closure is 10.11's
+  `x509_v3.rs` alone. **Six are withheld by name**, all behind `X509V3_get_d2i`/`X509V3_add1_i2d`
+  in `v3_lib.rs`: `X509_CRL_get_ext_d2i` (`:62-65`), `X509_CRL_add1_ext_i2d` (`:67-72`),
+  `X509_get_ext_d2i` (`:113-116`), `X509_add1_ext_i2d` (`:118-123`), `X509_REVOKED_get_ext_d2i`
+  (`:161-164`), `X509_REVOKED_add1_ext_i2d` (`:166-169`). Nothing was stubbed.
+* **`ossl_x509_init_sig_info` (`x509_set.c:305-309`) and its file-local `x509_sig_info_init`
+  (`:217-302`) land** in `src/x509/x509_set.rs`, the third of the seven names. Its three
+  `ERR_LIB_X509` sites (`:230` `X509_R_UNKNOWN_SIGID_ALGS`, `:252` `X509_R_ERROR_USING_SIGINF_SET`,
+  `:284` `X509_R_ERROR_GETTING_MD_BY_NID`) join `gen_err_raise_sites.py` as stem `X509_SET` — the
+  unit was previously unlisted — and the stale `forensics/prerequisites.json` row that covered the
+  internal is retired (D453/D454's rule). Its `default:` branch keeps the authority's
+  `EVP_get_digestbynid` call rather than substituting a fetched digest, so the Phase-13 legacy
+  `OBJ_NAME` divergence (D333/D343) stays where the crate records it; the function is unreachable
+  until the cache lands, so no court names it.
+* **`DIST_POINT_set_dpname` (`v3_crld.c:526-552`) lands** in `src/x509/v3_crld.rs` (10.14.6) with
+  the `DIST_POINT_NAME` layout; it is an export the admitted DSO carries, so the court drives it
+  directly. **The unit's six `ossl_v3_*` tables are withheld by name** (`ossl_v3_crld`:26-35,
+  `ossl_v3_freshest_crl`:36-45, `ossl_v3_idp`:360-370, `ossl_v3_crl_invdate`:487-495,
+  `ossl_v3_crl_hold`:496-504, `ossl_v3_aa_issuing_dist_point`:715-724) with their section/printer
+  behind the same `standard_exts[]`/`v3_conf`/`v3_san` blockers; the finding is a
+  `forensics/prerequisites.json` divergence row (D452's mechanism), not a loosened gate.
+* **`src/x509/v3_bcons.rs` (10.14.6) lands `BASIC_CONSTRAINTS` and its item group** -- the
+  `ASN1_SEQUENCE` template (`:38-41`) and the `IMPLEMENT_ASN1_FUNCTIONS` group (`:43`), so
+  `BASIC_CONSTRAINTS_free` (`crypto/x509/v3_bcons.c`), the seventh name the cache needs, is real.
+  `ossl_v3_bcons` and the two callbacks (`i2v_BASIC_CONSTRAINTS`:45-54,
+  `v2i_BASIC_CONSTRAINTS`:55-85) are **withheld by name** behind the same `standard_exts[]` /
+  `v3_lib.c` dispatch, with their own divergence row.
+
+**`standard_exts[]` is NOT complete, and is therefore not published.** `standard_exts.h:15-95`
+names **73 entries over 63 distinct `ossl_v3_*` tables, defined by 44 authority units totalling
+9,948 lines**, and their collective closure adds **24 unlanded names** from 17 further units
+(`asn1_gen.c` 794, `t_x509.c` 559, the three CT units, `http_lib.c` 318 and `punycode.c`
+316 among them). **`X509V3_EXT_get_nid`/`_get`/`_add_alias`/`_EXT_d2i`/`_get_d2i`/`_add1_i2d`
+stay withheld in `v3_lib.rs`**: a partial array would silently change `OBJ_bsearch_ext`'s answer
+for every missing NID (D456), so it is not half-landed. **`ossl_x509v3_cache_extensions` did not
+become reachable, but it is now one name from it**: all six of its other names are landed, and
+its only remaining blocker is `X509_get_ext_d2i` -> `X509V3_get_d2i` -> the dispatch. `PKCS12_parse`
+and `OSSL_STORE_load` therefore **stay open**; the ledger is unchanged at `296 implemented / 2 open`
+and the provider rows at `636 / 0`. `RT-STORE` moves from **774 to 806 observations** (32: the
+accessor/search arms over the fixed certificate and CRL, the add/delete pair and the empty-list
+collapse, `DIST_POINT_set_dpname`'s NULL/`type 0`/`type 1` shapes, and the `BASIC_CONSTRAINTS`
+item group's build/encode/decode/re-encode/free round trip). The remaining distance to the chain is
+the **44-unit / 9,948-line table layer** plus that 24-name closure — still the whole `v3_lib` ↔
+tables ↔ `v3_utl`/`v3_conf`/`v3_san` component, not a small loader.

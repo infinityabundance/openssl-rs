@@ -43922,6 +43922,36 @@ pub(crate) const X509_CMP_419: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `x509_sig_info_init` at `crypto/x509/x509_set.c:230` (X509_R_UNKNOWN_SIGID_ALGS).
+pub(crate) const X509_SET_230: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_set.c",
+    line: 230,
+    func: c"x509_sig_info_init",
+    lib: 11,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `x509_sig_info_init` at `crypto/x509/x509_set.c:252` (X509_R_ERROR_USING_SIGINF_SET).
+pub(crate) const X509_SET_252: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_set.c",
+    line: 252,
+    func: c"x509_sig_info_init",
+    lib: 11,
+    reason: 142,
+    dynamic_reason: false,
+};
+
+/// `x509_sig_info_init` at `crypto/x509/x509_set.c:284` (X509_R_ERROR_GETTING_MD_BY_NID).
+pub(crate) const X509_SET_284: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/x509_set.c",
+    line: 284,
+    func: c"x509_sig_info_init",
+    lib: 11,
+    reason: 141,
+    dynamic_reason: false,
+};
+
 /// `X509_REQ_verify_ex` at `crypto/x509/x_all.c:47` (X509_R_UNSUPPORTED_VERSION).
 pub(crate) const X509_ALL_47: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/x509/x_all.c",
@@ -49772,6 +49802,9 @@ pub(crate) static ALL: &[ErrSite] = &[
     X509_CMP_413,
     X509_CMP_416,
     X509_CMP_419,
+    X509_SET_230,
+    X509_SET_252,
+    X509_SET_284,
     X509_ALL_47,
     X509_ALL_80,
     X509_ALL_103,
