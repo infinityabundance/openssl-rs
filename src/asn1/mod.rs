@@ -36,13 +36,30 @@
 //! `asn1_d2i_ex_primitive`, and doing the wrappers first would mean writing that
 //! path by hand and drifting from it.
 //!
+//! ## Phase 10.10 — the ASN.1 digest/sign layer
+//!
+//! 10.10 lands `crypto/asn1/a_digest.c` ([`a_digest`]) and `crypto/asn1/a_sign.c` ([`a_sign`])
+//! whole, and **completes `crypto/asn1/asn1_lib.c`** — already transcribed as [`der`] (the header
+//! codec) and [`string`] (the string lifecycle) — with one exception: `ossl_sk_ASN1_UTF8STRING2text`
+//! (`asn1_lib.c:435-473`) is **withheld by name** because its only authority callers,
+//! `crypto/ts/ts_rsp_verify.c` and `crypto/cmp/cmp_client.c`, are unlanded; its own closure (the
+//! stack and `ASN1_STRING` accessors) is landed, so it can land the day a caller does.
+//! `crypto/evp/digest.c` — landed before as `src/evp/digest.rs` — gained `evp_md_ctx_new_ex` and
+//! withholds `evp_digest_fetch_from_prov` for the same no-caller reason, which its own doc records.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod a_d2i_fp;
+// Phase 10.10's `crypto/asn1/a_digest.c` -- `ASN1_item_digest`/`ASN1_digest` and the
+// `ossl_asn1_item_digest_ex` that `X509_digest` reaches.
+pub mod a_digest;
 pub mod a_dup;
 pub mod a_i2d_fp;
 pub mod a_mbstr;
 pub mod a_print;
+// Phase 10.10's `crypto/asn1/a_sign.c` -- `ASN1_item_sign(_ex/_ctx)` and the deprecated
+// `ASN1_sign`; the `evp_md_ctx_new_ex` it needs landed with the subphase in `src/evp/digest.rs`.
+pub mod a_sign;
 pub mod a_strex;
 pub mod a_strnid;
 pub mod a_type;

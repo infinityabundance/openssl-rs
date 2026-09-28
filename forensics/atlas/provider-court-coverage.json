@@ -14260,7 +14260,7 @@
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
       "path": "courts/phase8/rt_digest_probe.c",
-      "sha256": "efef1b982a99da1ea74f367d8f563f3c061bedc878996017039fe8d7bf9bfb3e"
+      "sha256": "dbae243915ff7f39b685a575a94bcf504234be4fd43273490cc3f34c59986fa1"
     },
     {
       "name": "court:RT-CIPHER:rt_cipher_probe.c",
@@ -14305,7 +14305,7 @@
     {
       "name": "court:RT-STORE:rt_store_probe.c",
       "path": "courts/phase10/rt_store_probe.c",
-      "sha256": "4fffa5b4ffb54e94abb9fd745b15cdbe2fd1020efde24e26355f9bba4e167556"
+      "sha256": "79960aeb8a9b9e81920990702cf2022498228d06217787c34f3e221c623fdbae"
     }
   ],
   "kind": "provider-court-coverage",

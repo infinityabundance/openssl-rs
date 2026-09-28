@@ -5,12 +5,11 @@
 //! uses it, lands**: the `X509_NAME_ENTRY` and `X509_NAME` structures, both item descriptors and
 //! the two template wrappers between them, the `X509_NAME` `ASN1_ITYPE_EXTERN` hooks that
 //! implement the authority's "internal form then cached external form" design, the four generated
-//! lifecycles, and `X509_NAME_get0_der`/`X509_NAME_set`. **One function is withheld**:
-//!
-//! * `X509_NAME_print` (`:502-539`) reaches `X509_NAME_oneline` (`crypto/x509/x509_obj.c`), which
-//!   is not landed, and the `asn1_ex_print` hook that would call `X509_NAME_print_ex` with it is
-//!   withheld with it. The extern block's `asn1_ex_print` slot is therefore **NULL**. Nothing in
-//!   10.8's closure prints a name.
+//! lifecycles, and `X509_NAME_get0_der`/`X509_NAME_set`. **Nothing of the unit is withheld** as of
+//! 10.10: `X509_NAME_print` (`:502-539`) was the one function 10.8 recorded as blocked, because it
+//! reaches `X509_NAME_oneline` (`crypto/x509/x509_obj.c`); 10.10 landed that printer, so
+//! `X509_NAME_print` is un-withheld here and the block is discharged. The `asn1_ex_print` hook
+//! still holds NULL: it is `X509_NAME_print_ex`, a different function this subphase does not own.
 //!
 //! ## Why the name is not a plain `ASN1_SEQUENCE`
 //!
@@ -35,9 +34,8 @@
 //! The landed functions raise, so `crypto/x509/x_name.c` **is** an entry in
 //! `gen_err_raise_sites.py`'s `COVERED_FILES` (stem `X509_NAME`): `ERR_LIB_ASN1` with
 //! `ERR_R_CRYPTO_LIB`/`ERR_R_BUF_LIB`/`ERR_R_NESTED_ASN1_ERROR` and `ERR_LIB_X509` with
-//! `ERR_R_CRYPTO_LIB`/`ERR_R_ASN1_LIB`/`ERR_R_OBJ_LIB`. The generated table also carries the one
-//! site in the withheld `X509_NAME_print`; an unused coordinate is harmless and is not evidence
-//! that the function landed.
+//! `ERR_R_CRYPTO_LIB`/`ERR_R_ASN1_LIB`/`ERR_R_OBJ_LIB`. 10.10 un-withholds `X509_NAME_print`, so
+//! the `X509_NAME_536` coordinate the table already carried now has a reader.
 //!
 //! ## The court
 //!
@@ -59,8 +57,11 @@ use crate::asn1::items::{ASN1_OBJECT_it, ASN1_PRINTABLE_it};
 use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
 use crate::asn1::string::ASN1_STRING_copy;
+use crate::runtime::bio::iolib::BIO_write;
+use crate::runtime::bio::Bio;
 use crate::runtime::buffer::{BUF_MEM_free, BUF_MEM_grow, BUF_MEM_new, BufMem};
-use crate::runtime::ctype::{ossl_isascii, ossl_isspace, ossl_tolower};
+use crate::runtime::ctype::{ossl_ctype_check, ossl_isascii, ossl_isspace, ossl_tolower};
+use crate::runtime::ctype_table::mask::MASK_UPPER;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_zalloc};
 use crate::runtime::obj::{Asn1Object, OBJ_dup};
@@ -68,6 +69,7 @@ use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
     OPENSSL_sk_set, OPENSSL_sk_value, OpenSslStack,
 };
+use crate::x509::x509_obj::X509_NAME_oneline;
 
 /// The `X509_NAME_MAX` bound `x509_name_ex_d2i` clamps a decode to (`:24`).
 const X509_NAME_MAX: c_long = 1024 * 1024;
@@ -97,6 +99,10 @@ const LINE_FREE_NAME: c_int = 127;
 const LINE_FREE_CANON_ENC_CANON: c_int = 319;
 /// `x509_name_canon`'s `OPENSSL_malloc(a->canon_enclen)` (`:369`).
 const LINE_CANON_MALLOC: c_int = 369;
+/// `X509_NAME_print`'s success `OPENSSL_free(b)` (`:533`).
+const LINE_FREE_PRINT: c_int = 533;
+/// `X509_NAME_print`'s error-path `OPENSSL_free(b)` (`:537`).
+const LINE_FREE_PRINT_ERR: c_int = 537;
 
 /// `struct X509_name_entry_st` — `X509_NAME_ENTRY`, from `include/crypto/x509.h:31-36`.
 #[repr(C)]
@@ -984,6 +990,90 @@ pub unsafe extern "C" fn X509_NAME_set(xn: *mut *mut X509Name, name: *const X509
         X509_NAME_free(*xn);
         *xn = name_copy;
     }
+    1
+}
+
+/// `int X509_NAME_print(BIO *bp, const X509_NAME *name, int obase)` — `crypto/x509/x_name.c:502-539`.
+///
+/// Renders a name through [`X509_NAME_oneline`] and writes it to `bp`, replacing the leading and
+/// inter-entry slashes with `", "` whenever the next component looks like the start of a new
+/// `TYPE=` pair. The `obase` argument is unused by this authority revision, exactly as it is here.
+/// 10.10 un-withholds this function: its only blocker was the printer.
+///
+/// # Safety
+///
+/// `bp` must be a live BIO; `name` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_NAME_print(
+    bp: *mut Bio,
+    name: *const X509Name,
+    _obase: c_int,
+) -> c_int {
+    // SAFETY: `name` is NULL or live; NULL `buf` asks the printer to allocate.
+    let b = unsafe { X509_NAME_oneline(name, ptr::null_mut(), 0) };
+    if b.is_null() {
+        return 0;
+    }
+    // SAFETY: `b` is a NUL-terminated string the printer returned.
+    if unsafe { *b } == 0 {
+        // SAFETY: `b` came from the printer's allocator and is not owned elsewhere.
+        unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PRINT) };
+        return 1;
+    }
+    // SAFETY: `b` is NUL-terminated, so the byte past the first slash exists.
+    let mut s: *mut c_char = unsafe { b.add(1) };
+    let mut c: *mut c_char = s;
+    loop {
+        // SAFETY: `s` walks a NUL-terminated string; the reads below are within its bounds
+        // whenever their guard tests hold (the authority reads `s[1]`..`s[3]` the same way).
+        let at_sep = unsafe {
+            let cur = *s;
+            let stop = cur == 0;
+            let mut hit = stop;
+            if !hit && cur == b'/' as c_char {
+                let s1 = *s.add(1);
+                if ossl_ctype_check(c_int::from(s1), MASK_UPPER) {
+                    let s2 = *s.add(2);
+                    hit = s2 == b'=' as c_char
+                        || (ossl_ctype_check(c_int::from(s2), MASK_UPPER)
+                            && *s.add(3) == b'=' as c_char);
+                }
+            }
+            hit
+        };
+        if at_sep {
+            let i = (s as usize).wrapping_sub(c as usize) as c_int;
+            // SAFETY: `bp` is live and `c`..`c + i` is readable.
+            if unsafe { BIO_write(bp, c.cast::<c_void>(), i) } != i {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&err_sites::X509_NAME_536) };
+                // SAFETY: `b` came from the printer and is not owned elsewhere.
+                unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PRINT_ERR) };
+                return 0;
+            }
+            // SAFETY: `s` is not past the terminator when `at_sep` held.
+            c = unsafe { s.add(1) };
+            // SAFETY: `s` is inside the string.
+            if unsafe { *s } != 0 {
+                // SAFETY: the two-byte literal is a static; `bp` is live.
+                if unsafe { BIO_write(bp, c", ".as_ptr().cast::<c_void>(), 2) } != 2 {
+                    // SAFETY: a compile-time-constant site.
+                    unsafe { raise_site(&err_sites::X509_NAME_536) };
+                    // SAFETY: `b` came from the printer and is not owned elsewhere.
+                    unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PRINT_ERR) };
+                    return 0;
+                }
+            }
+        }
+        // SAFETY: `s` is inside the string.
+        if unsafe { *s } == 0 {
+            break;
+        }
+        // SAFETY: `s` advances one byte, still inside the string until the terminator.
+        s = unsafe { s.add(1) };
+    }
+    // SAFETY: `b` came from the printer's allocator and is not owned elsewhere.
+    unsafe { CRYPTO_free(b.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_PRINT) };
     1
 }
 

@@ -216,7 +216,7 @@
       "verdict": "pass"
     },
     "RT-DIGEST": {
-      "observations": 654,
+      "observations": 670,
       "verdict": "pass"
     },
     "RT-DRBG": {
@@ -432,7 +432,7 @@
       "verdict": "pass"
     },
     "RT-STORE": {
-      "observations": 209,
+      "observations": 222,
       "verdict": "pass"
     },
     "RT-THREAD": {
@@ -454,12 +454,12 @@
     "phase4": 23,
     "phase5": 91,
     "phase6": 0,
-    "phase7": 217,
+    "phase7": 216,
     "phase8": 0,
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 3333,
+    "libcrypto": 3341,
     "libssl": 0
   },
   "open_obligations": {
@@ -507,10 +507,10 @@
     "9": "complete"
   },
   "prerequisites": {
-    "blocking_dependencies": 6,
+    "blocking_dependencies": 5,
     "divergence_names_covered": 41,
     "findings": 0,
-    "language_census": 5676,
+    "language_census": 5716,
     "sealed_census": 52
   },
   "provider_implemented": [
