@@ -43692,6 +43692,96 @@ pub(crate) const V3_SKID_103: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `X509V3_EXT_add` at `crypto/x509/v3_lib.c:29` (ERR_R_CRYPTO_LIB).
+pub(crate) const V3_LIB_29: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_lib.c",
+    line: 29,
+    func: c"X509V3_EXT_add",
+    lib: 34,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509V3_EXT_add` at `crypto/x509/v3_lib.c:33` (ERR_R_CRYPTO_LIB).
+pub(crate) const V3_LIB_33: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_lib.c",
+    line: 33,
+    func: c"X509V3_EXT_add",
+    lib: 34,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `X509V3_EXT_add_alias` at `crypto/x509/v3_lib.c:95` (X509V3_R_EXTENSION_NOT_FOUND).
+pub(crate) const V3_LIB_95: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_lib.c",
+    line: 95,
+    func: c"X509V3_EXT_add_alias",
+    lib: 34,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `X509V3_add1_i2d` at `crypto/x509/v3_lib.c:274` (X509V3_R_ERROR_CREATING_EXTENSION).
+pub(crate) const V3_LIB_274: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_lib.c",
+    line: 274,
+    func: c"X509V3_add1_i2d",
+    lib: 34,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `X509V3_add1_i2d` at `crypto/x509/v3_lib.c:306` (ERR_raise dynamic reason).
+pub(crate) const V3_LIB_306: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_lib.c",
+    line: 306,
+    func: c"X509V3_add1_i2d",
+    lib: 34,
+    reason: 0,
+    dynamic_reason: true,
+};
+
+/// `i2s_ASN1_UTF8STRING` at `crypto/x509/v3_utf8.c:34` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const V3_UTF8_34: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utf8.c",
+    line: 34,
+    func: c"i2s_ASN1_UTF8STRING",
+    lib: 34,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `s2i_ASN1_UTF8STRING` at `crypto/x509/v3_utf8.c:49` (X509V3_R_INVALID_NULL_ARGUMENT).
+pub(crate) const V3_UTF8_49: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utf8.c",
+    line: 49,
+    func: c"s2i_ASN1_UTF8STRING",
+    lib: 34,
+    reason: 107,
+    dynamic_reason: false,
+};
+
+/// `s2i_ASN1_UTF8STRING` at `crypto/x509/v3_utf8.c:53` (ERR_R_ASN1_LIB).
+pub(crate) const V3_UTF8_53: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utf8.c",
+    line: 53,
+    func: c"s2i_ASN1_UTF8STRING",
+    lib: 34,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `s2i_ASN1_UTF8STRING` at `crypto/x509/v3_utf8.c:57` (ERR_R_ASN1_LIB).
+pub(crate) const V3_UTF8_57: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/x509/v3_utf8.c",
+    line: 57,
+    func: c"s2i_ASN1_UTF8STRING",
+    lib: 34,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
 /// `ossl_ecx_compute_key` at `crypto/ec/ecx_key.c:116` (PROV_R_MISSING_KEY).
 pub(crate) const ECX_KEY_116: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/ec/ecx_key.c",
@@ -49109,6 +49199,15 @@ pub(crate) static ALL: &[ErrSite] = &[
     V3_SKID_40,
     V3_SKID_66,
     V3_SKID_103,
+    V3_LIB_29,
+    V3_LIB_33,
+    V3_LIB_95,
+    V3_LIB_274,
+    V3_LIB_306,
+    V3_UTF8_34,
+    V3_UTF8_49,
+    V3_UTF8_53,
+    V3_UTF8_57,
     ECX_KEY_116,
     ECX_KEY_122,
     ECX_KEY_131,

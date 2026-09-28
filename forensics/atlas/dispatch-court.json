@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 540,
+      "crate_files_read": 547,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,12 +12,12 @@
       "identities_authority_only": 45,
       "identities_checked": 232,
       "identities_mismatches": 0,
-      "links_convention": 243,
+      "links_convention": 251,
       "links_documented": 25,
       "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 343,
-      "signatures_checked": 294,
+      "signatures_authority_only": 335,
+      "signatures_checked": 302,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 204,
       "signatures_unlinked": 0,
@@ -1625,16 +1625,8 @@
         "TS_extension_cb",
         "TS_serial_cb",
         "TS_time_cb",
-        "X509V3_EXT_D2I",
         "X509V3_EXT_FREE",
-        "X509V3_EXT_I2D",
-        "X509V3_EXT_I2R",
-        "X509V3_EXT_I2S",
-        "X509V3_EXT_I2V",
-        "X509V3_EXT_NEW",
         "X509V3_EXT_R2I",
-        "X509V3_EXT_S2I",
-        "X509V3_EXT_V2I",
         "X509_LOOKUP_ctrl_ex_fn",
         "X509_LOOKUP_ctrl_fn",
         "X509_LOOKUP_get_by_alias_fn",
@@ -4210,6 +4202,70 @@
           "authority": "OSSL_STORE_post_process_info_fn",
           "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque))",
           "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509V3ExtNew",
+          "at": "src/x509/v3_lib.rs",
+          "authority": "X509V3_EXT_NEW",
+          "authority_signature": "fptr(ptr(opaque); )",
+          "crate_signature": "fptr(ptr(opaque); )",
+          "how": "convention"
+        },
+        {
+          "alias": "X509V3ExtD2i",
+          "at": "src/x509/v3_lib.rs",
+          "authority": "X509V3_EXT_D2I",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(ptr(const(int:1:u))), int:8:s)",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(ptr(const(int:1:u))), int:8:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "X509V3ExtI2d",
+          "at": "src/x509/v3_lib.rs",
+          "authority": "X509V3_EXT_I2D",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)))",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509V3ExtI2v",
+          "at": "src/x509/v3_lib.rs",
+          "authority": "X509V3_EXT_I2V",
+          "authority_signature": "fptr(ptr(opaque); ptr(const(opaque)), ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(const(opaque)), ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509V3ExtV2i",
+          "at": "src/x509/v3_lib.rs",
+          "authority": "X509V3_EXT_V2I",
+          "authority_signature": "fptr(ptr(opaque); ptr(const(opaque)), ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(const(opaque)), ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509V3ExtI2s",
+          "at": "src/x509/v3_lib.rs",
+          "authority": "X509V3_EXT_I2S",
+          "authority_signature": "fptr(ptr(int:1:s); ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(ptr(int:1:s); ptr(const(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509V3ExtS2i",
+          "at": "src/x509/v3_lib.rs",
+          "authority": "X509V3_EXT_S2I",
+          "authority_signature": "fptr(ptr(opaque); ptr(const(opaque)), ptr(opaque), ptr(const(int:1:s)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(const(opaque)), ptr(opaque), ptr(const(int:1:s)))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509V3ExtI2r",
+          "at": "src/x509/v3_lib.rs",
+          "authority": "X509V3_EXT_I2R",
+          "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque), ptr(opaque), int:4:s)",
+          "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque), ptr(opaque), int:4:s)",
           "how": "convention"
         }
       ],

@@ -211,6 +211,33 @@
         ],
         "note": "**Both withheld rather than stubbed.** `src/x509/v3_skid.rs` transcribes `crypto/x509/v3_skid.c`'s two public helpers, `i2s_ASN1_OCTET_STRING` (`:27-31`) and `s2i_ASN1_OCTET_STRING` (`:33-52`), which makes the unit's two unwired internals countable. `ossl_v3_skey_id` (`:18-25`) is the `NID_subject_key_identifier` table and `ossl_x509_pubkey_hash` (`:54-88`) is the SHA-1 public-key digest `s2i_skey_id` calls; both are unexported internals (`nm -D` shows no `ossl_v3_*` and the DSO hides `ossl_x509_pubkey_hash`). The table's only authority caller is `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`, Phase 11's), and the file-local `s2i_skey_id` (`:90-108`) that reaches the hash is itself reached only through the table, so all three land together with the caller. The record fail-closes both ways: if either name is built the gate reports the row stale until it is removed, and if `src/x509/v3_skid.rs` stopped owning the unit the record would stop matching.",
         "evidence": "docs/DECISIONS.md D452, D453; src/x509/v3_skid.rs's module documentation; crypto/x509/v3_skid.c:18-25 and :54-88 against :27-52; crypto/x509/v3_lib.c:127; courts/phase10/rt_store_probe.c (`skid.*` arms)"
+      },
+      {
+        "owner_module": "src/x509/v3_pku.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_v3_pkey_usage_period"
+        ],
+        "note": "**Withheld rather than stubbed.** `src/x509/v3_pku.rs` transcribes the `PKEY_USAGE_PERIOD` item -- the `ASN1_SEQUENCE` template (`:29-32`) and the `IMPLEMENT_ASN1_FUNCTIONS` group (`:34`) -- which is what makes the unit's one unwired internal countable (D327's rule). That internal is the `ossl_v3_pkey_usage_period` row (`:21-27`). It is internal and unexported (`nm -D` on the production prefix shows no `ossl_v3_*`), so no differential probe can name it. Its only authority caller is `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`), which lands in `src/x509/v3_lib.rs` but does not reach it: the dispatch that would -- `X509V3_EXT_get_nid` -- is withheld there because it searches `standard_exts[]` (`standard_exts.h:15-95`), which names ~63 `ossl_v3_*` tables from units this subphase does not own, so a partial table would silently change `OBJ_bsearch_ext`'s answers. The printer `i2r_PKEY_USAGE_PERIOD` (`:36-52`) is reached only through the table and is withheld with it. The record fail-closes both ways: if the table is built the gate reports the row stale until it is removed, and if `src/x509/v3_pku.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "docs/DECISIONS.md D455; src/x509/v3_pku.rs and src/x509/v3_lib.rs's module documentation; crypto/x509/v3_pku.c:21-27 against :29-34; crypto/x509/v3_lib.c:52-71 and crypto/x509/standard_exts.h:15-95; courts/phase10/rt_store_probe.c (`pku.*` arms)"
+      },
+      {
+        "owner_module": "src/x509/v3_timespec.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_v3_time_specification"
+        ],
+        "note": "**Withheld rather than stubbed.** `src/x509/v3_timespec.rs` transcribes the eleven `ASN1_SEQUENCE`/`ASN1_CHOICE` templates (`:49-113`) and the `IMPLEMENT_ASN1_FUNCTIONS` group over them (`:115-125`), which is what makes the unit's one unwired internal countable. That internal is the `ossl_v3_time_specification` row (`:589-599`), the ITU-T X.509 (2019) time-specification extension. It is internal and unexported (`nm -D` shows no `ossl_v3_*`), so no probe can name it; its only authority caller is `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`), and the dispatch that could reach it by NID -- `X509V3_EXT_get_nid` -- is withheld in `src/x509/v3_lib.rs` behind the ~63-row `standard_exts[]` table. Its twelve `static` printers (`:127-587`) are reached only through the table and are withheld with it, which is why the unit lands only its item groups. The record fail-closes both ways.",
+        "evidence": "docs/DECISIONS.md D455; src/x509/v3_timespec.rs and src/x509/v3_lib.rs's module documentation; crypto/x509/v3_timespec.c:589-599 against :49-125; crypto/x509/v3_lib.c:52-71 and crypto/x509/standard_exts.h:15-95; courts/phase10/rt_store_probe.c (`timespec.*` arms)"
+      },
+      {
+        "owner_module": "src/x509/v3_utf8.rs",
+        "class": "owned_by_a_later_stratum",
+        "covers": [
+          "ossl_v3_utf8_list"
+        ],
+        "note": "**Withheld rather than stubbed.** `src/x509/v3_utf8.rs` transcribes `crypto/x509/v3_utf8.c`'s two public string helpers, `i2s_ASN1_UTF8STRING` (`:28-42`) and `s2i_ASN1_UTF8STRING` (`:44-64`), which is what makes the unit's one unwired internal countable. That internal is the one-row `EXT_UTF8STRING` table `ossl_v3_utf8_list` (`:24-26`). Its closure is landed -- the two helpers and `ASN1_UTF8STRING_new`/`_free`/`ASN1_STRING_set` are all built -- but it is an internal symbol the admitted DSO does not export (`nm -D` shows no `ossl_v3_*`), so no differential probe can name it, and its only authority caller is `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`). The dispatch that could reach it by NID, `X509V3_EXT_get_nid`, is withheld in `src/x509/v3_lib.rs` behind the ~63-row `standard_exts[]`. The record fail-closes both ways: if the table is built the gate reports the row stale until it is removed, and if `src/x509/v3_utf8.rs` stopped owning the unit the record would stop matching.",
+        "evidence": "docs/DECISIONS.md D455; src/x509/v3_utf8.rs and src/x509/v3_lib.rs's module documentation; crypto/x509/v3_utf8.c:24-26 against :28-64; crypto/x509/v3_lib.c:52-71 and crypto/x509/standard_exts.h:15-95; courts/phase10/rt_store_probe.c (`utf8.*` arms)"
       }
     ],
     "units": [

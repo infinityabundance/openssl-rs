@@ -32181,3 +32181,54 @@ Section 6 gives 10.13 six units / 875 lines. Two are drivable through exported i
 `v3_lib.c` dispatch is pulled in with them. 10.12's own remainder is ~2,760 lines, all of it blocked
 on 10.14 or Phase 11 and named in `src/x509/mod.rs`'s 10.12 section.
 
+## D456 -- 10.13, the remaining leaf extension items: the scope increase was attempted, measured insufficient, and reported
+
+Sixth pulled-forward subphase, with one deliberate scope increase and an honest negative result.
+Section 6 gives 10.13 six units / 875 lines. D455 measured that only `v3_timespec.c` (599) and
+`v3_pku.c` (52) are drivable as they stand, because the four table-only leaves export no symbol from
+the admitted prefix, and proposed pulling `crypto/x509/v3_lib.c`'s dispatch in so they could land
+rather than be withheld a second time. **This subphase did that, and the measurement says it is not
+enough -- so the leaves stay withheld, with a sharper blocker than before.**
+
+`v3_lib.c` (308 lines) lands its **registration half**: `ext_cmp`, `ext_list_free`,
+`X509V3_EXT_add`/`_add_list`/`_cleanup`, `X509V3_add_standard_extensions` and the
+`X509V3_EXT_METHOD` layout (asserted with `offset_of!`/`size_of!`). `v3_timespec.c` lands its eleven
+`ASN1_SEQUENCE`/`CHOICE` item groups with `IMPLEMENT_ASN1_FUNCTIONS` (`:49-125`), `v3_pku.c` its
+`PKEY_USAGE_PERIOD` item, and `v3_utf8.c` its `i2s_`/`s2i_ASN1_UTF8STRING` helpers. `RT-STORE` moves
+from 362 to **437** observations and the total to **45,454** over 109 courts.
+
+**Why the leaves still cannot land, measured rather than asserted.** `v3_lib.c`'s dispatch is
+`X509V3_EXT_get_nid`, which searches `standard_exts[]` (`standard_exts.h:15-95`) -- **73 entries over
+63 distinct `ossl_v3_*` tables**. This subphase lands six of them; the other ~57 belong to units it
+does not own (`v3_bcons.c`, `v3_key_usage.c`, `v3_alt.c`, `v3_cpols.c`, the `crypto/ocsp/` rows,
+`v3_ncons.c`, ...). A partial `standard_exts[]` would **silently change `OBJ_bsearch_ext`'s answer for
+every missing NID**, so `X509V3_EXT_get_nid`, `_get`, `_add_alias`, `_EXT_d2i`, `_get_d2i` and
+`_add1_i2d` are withheld **together**, by name, and the four leaves stay withheld behind them. This is
+the opposite of a decreed deferral: the increase was tried, and the tool that would have to carry it
+would be a table with fifty-seven silent holes in it.
+
+**Two gate findings were fixed at the root rather than by loosening.** `prototype_court.py` refused
+`macro_rules!` groups that fill a *type* position (`X_new`/`d2i_X`/`i2d_X`) as unreadable
+declarations, so the 44 generated functions are written out explicitly; and `prerequisite_gate.py`
+reported three `unwired_function_in_the_current_stratum` findings for the withheld tables, which are
+now three `forensics/prerequisites.json` `owned_by_a_later_stratum` divergence records -- the D452
+mechanism. No runtime defect this slice: the differential transcript matched on the first run, and
+every new arm pops its error queue first (D455's lesson).
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1101 passed, 0 failed**; `PIPELINE OK` exit 0 on two consecutive runs, 109 courts and **45,454
+observations**. Phase-10 counts are unchanged at `286 implemented / 12 open` exports and
+`634 implemented / 2 open` provider rows; `implemented_surface` moves from 3,439 to **3,505** and all
+66 new symbols are `x509v3.h`/Phase-11-headed with no coverage obligation.
+
+### What 10.14 now needs
+
+10.13 leaves the extension dispatch a frontier of **~473 lines** (the six withheld `v3_lib.c` names,
+`X509V3_EXT_i2d`/`do_ext_i2d` in `v3_conf.c`, `standard_exts.h`'s 63 tables, and the four leaves'
+tables and callbacks) -- **gated on the whole 30,711-line component**, because `standard_exts[]`
+names ~57 tables from units inside it. The honest number for "make the extension dispatch real" is
+therefore still 10.14's SCC, of which 10.13 has landed the `v3_lib` registration half and six of the
+63 tables. 10.12's remainder (~2,760 lines) is unchanged.
+
