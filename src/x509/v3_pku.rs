@@ -1,24 +1,21 @@
-//! `crypto/x509/v3_pku.c` — the `PKEY_USAGE_PERIOD` item. Phase 10.13.
+//! `crypto/x509/v3_pku.c` — the `PKEY_USAGE_PERIOD` item and its table. Phase 10.13, table landed
+//! under 10.14's table layer.
 //!
-//! `crypto/x509/v3_pku.c` is 52 lines. **The item and its generated lifecycle land; the
-//! extension method and its printer are withheld by name**:
+//! `crypto/x509/v3_pku.c` is 52 lines and now transcribes whole:
 //!
 //! * `PKEY_USAGE_PERIOD ::= SEQUENCE { notBefore [0] GeneralizedTime OPTIONAL, notAfter [1]
 //!   GeneralizedTime OPTIONAL }` (`:29-32`) lands, with `PKEY_USAGE_PERIOD_it` and the
 //!   `_new`/`_free`/`d2i_`/`i2d_` group `IMPLEMENT_ASN1_FUNCTIONS` emits (`:34`). All five are
 //!   public exports (`x509v3.h`), so the differential plane can build one, encode it and decode
 //!   the bytes back.
-//! * `ossl_v3_pkey_usage_period` (`:21-27`) is **withheld by name**: internal, the admitted DSO
-//!   exports no `ossl_v3_*` (`nm -D`), and its only authority caller is
-//!   `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`). That caller lands in
-//!   [`crate::x509::v3_lib`], but the *dispatch* that would make the table observable --
-//!   `X509V3_EXT_get_nid` -- is itself withheld there: it searches `standard_exts[]`
-//!   (`standard_exts.h:15-95`), which names ~63 `ossl_v3_*` tables from units this subphase does
-//!   not own. See [`crate::x509::v3_lib`] for the whole blocker.
-//! * `i2r_PKEY_USAGE_PERIOD` (`:36-52`) is **withheld by name**: a `static` callback reached only
-//!   through the withheld table, so landing it would be dead code with no court.
+//! * `ossl_v3_pkey_usage_period` (`:21-27`) lands as a `pub static` row whose `i2r` is the
+//!   `static` printer `i2r_PKEY_USAGE_PERIOD` (`:36-52`). It was withheld through 10.13; D463
+//!   named it one of the 63 tables the published array needs.
 //!
-//! Nothing is stubbed: the two withheld names are named rather than declared.
+//! **Withheld by name**: `standard_exts[]` (`standard_exts.h:15-95`) and the six lookup names in
+//! `v3_lib.rs` it feeds. A partial array would silently change `OBJ_bsearch_ext` for every missing
+//! NID (D456). The row and its printer are unnameable from the admitted DSO; the item group is the
+//! drivable surface.
 //!
 //! ## The court
 //!
@@ -34,6 +31,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 
 use core::ffi::{c_int, c_long, c_uchar, c_void};
 use core::ptr;
@@ -44,6 +42,12 @@ use crate::asn1::i2d::ASN1_item_i2d;
 use crate::asn1::items::ASN1_GENERALIZEDTIME_it;
 use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
+use crate::asn1::time::ASN1_GENERALIZEDTIME_print;
+use crate::runtime::bio::iolib::BIO_write;
+use crate::runtime::bio::print::BIO_printf;
+use crate::runtime::bio::Bio;
+use crate::runtime::obj::NID_private_key_usage_period;
+use crate::x509::v3_lib::X509V3ExtMethod;
 
 /// `struct PKEY_USAGE_PERIOD_st` — from `include/openssl/x509v3.h:137-140`.
 #[repr(C)]
@@ -151,3 +155,56 @@ pub unsafe extern "C" fn i2d_PKEY_USAGE_PERIOD(
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
     unsafe { ASN1_item_i2d(a.cast(), out, PKEY_USAGE_PERIOD_it()) }
 }
+
+/// `static int i2r_PKEY_USAGE_PERIOD(X509V3_EXT_METHOD *method, PKEY_USAGE_PERIOD *usage,
+/// BIO *out, int indent)` — `crypto/x509/v3_pku.c:36-52`.
+///
+/// Brackets the two `ASN1_GENERALIZEDTIME` fields with the authority's labels; the indent is the
+/// caller's, and the separating `", "` appears only when a `notAfter` follows a `notBefore`.
+unsafe extern "C" fn i2r_PKEY_USAGE_PERIOD(
+    _method: *const X509V3ExtMethod,
+    usage: *mut c_void,
+    out: *mut Bio,
+    indent: c_int,
+) -> c_int {
+    // SAFETY: the caller's contract is a live `PKEY_USAGE_PERIOD`.
+    let usage = usage.cast::<PkeyUsagePeriod>();
+    // SAFETY: `out` is a live BIO; the format and its argument are compile-time constants.
+    unsafe { BIO_printf(out, c"%*s".as_ptr(), indent, c"".as_ptr()) };
+    // SAFETY: `usage` is live per the contract.
+    unsafe {
+        if !(*usage).notBefore.is_null() {
+            BIO_write(out, c"Not Before: ".as_ptr().cast(), 12);
+            ASN1_GENERALIZEDTIME_print(out, (*usage).notBefore);
+            if !(*usage).notAfter.is_null() {
+                BIO_write(out, c", ".as_ptr().cast(), 2);
+            }
+        }
+        if !(*usage).notAfter.is_null() {
+            BIO_write(out, c"Not After: ".as_ptr().cast(), 11);
+            ASN1_GENERALIZEDTIME_print(out, (*usage).notAfter);
+        }
+    }
+    1
+}
+
+/// `const X509V3_EXT_METHOD ossl_v3_pkey_usage_period` — `crypto/x509/v3_pku.c:21-27`.
+///
+/// Only `i2r` is set: the extension is printed from its item and has no `i2v`/`v2i` pair and no
+/// string form.
+pub static ossl_v3_pkey_usage_period: X509V3ExtMethod = X509V3ExtMethod {
+    ext_nid: NID_private_key_usage_period,
+    ext_flags: 0,
+    it: Some(PKEY_USAGE_PERIOD_it),
+    ext_new: None,
+    ext_free: None,
+    d2i: None,
+    i2d: None,
+    i2s: None,
+    s2i: None,
+    i2v: None,
+    v2i: None,
+    i2r: Some(i2r_PKEY_USAGE_PERIOD),
+    r2i: None,
+    usr_data: core::ptr::null_mut(),
+};

@@ -2980,6 +2980,13 @@
         "translation_unit": "crypto/x509/v3_crld.c"
       },
       {
+        "module": "src/x509/v3_enum.rs",
+        "phase": 11,
+        "phase_source": "export-ownership",
+        "share": "1/1",
+        "translation_unit": "crypto/x509/v3_enum.c"
+      },
+      {
         "module": "src/x509/v3_genn.rs",
         "phase": 11,
         "phase_source": "export-ownership",
@@ -59057,6 +59064,56 @@
           "src/x509/v3_crld.rs"
         ],
         "tu": "crypto/x509/v3_crld.c"
+      },
+      {
+        "identifiers": [
+          "ASN1_ENUMERATED",
+          "ASN1_ENUMERATED_get",
+          "ASN1_ITEM_ref",
+          "CRL_REASON_AA_COMPROMISE",
+          "CRL_REASON_AFFILIATION_CHANGED",
+          "CRL_REASON_CA_COMPROMISE",
+          "CRL_REASON_CERTIFICATE_HOLD",
+          "CRL_REASON_CESSATION_OF_OPERATION",
+          "CRL_REASON_KEY_COMPROMISE",
+          "CRL_REASON_PRIVILEGE_WITHDRAWN",
+          "CRL_REASON_REMOVE_FROM_CRL",
+          "CRL_REASON_SUPERSEDED",
+          "CRL_REASON_UNSPECIFIED",
+          "ENUMERATED_NAMES",
+          "NID_crl_reason",
+          "NULL",
+          "OPENSSL_strdup",
+          "X509V3_EXT_I2S",
+          "X509V3_EXT_METHOD",
+          "bitnum",
+          "char",
+          "const",
+          "crl_reasons",
+          "e",
+          "enam",
+          "for",
+          "h",
+          "i2s_ASN1_ENUMERATED",
+          "i2s_ASN1_ENUMERATED_TABLE",
+          "if",
+          "include",
+          "lname",
+          "long",
+          "method",
+          "openssl",
+          "ossl_v3_crl_reason",
+          "return",
+          "static",
+          "stdio",
+          "strval",
+          "usr_data",
+          "x509v3"
+        ],
+        "modules": [
+          "src/x509/v3_enum.rs"
+        ],
+        "tu": "crypto/x509/v3_enum.c"
       },
       {
         "identifiers": [

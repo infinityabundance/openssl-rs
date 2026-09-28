@@ -2612,6 +2612,37 @@ static void drive_x509_10_14_3_utl(void)
     OPENSSL_free(s);
     ASN1_ENUMERATED_free(aenum);
 
+    /* i2s_ASN1_ENUMERATED_TABLE (Phase 10.14, `v3_enum.c`): the `usr_data` name-table hit and the
+     * fallback miss. The row the machinery builds is `ossl_v3_crl_reason`, whose `usr_data` is the
+     * static `crl_reasons[]`; that array is not nameable from here, so this drives the *function*
+     * with a local table of the same shape (`bitnum`/`lname`/`sname`, terminated by a null
+     * `lname`). The hit answers the long name; the miss falls through to `i2s_ASN1_ENUMERATED`. */
+    {
+        BIT_STRING_BITNAME names[] = {
+            { 1, "One", "one" },
+            { 2, "Two", "two" },
+            { -1, NULL, NULL }
+        };
+        struct v3_ext_method meth;
+        ASN1_ENUMERATED *e2 = ASN1_ENUMERATED_new();
+
+        memset(&meth, 0, sizeof(meth));
+        meth.usr_data = names;
+        ASN1_ENUMERATED_set(e2, 2);
+        ERR_clear_error();
+        s = i2s_ASN1_ENUMERATED_TABLE(&meth, e2);
+        out_str("utl.enum_table.hit", s);
+        out_err("utl.enum_table.hit.err");
+        OPENSSL_free(s);
+        ASN1_ENUMERATED_set(e2, 7);
+        ERR_clear_error();
+        s = i2s_ASN1_ENUMERATED_TABLE(&meth, e2);
+        out_str("utl.enum_table.miss", s);
+        out_err("utl.enum_table.miss.err");
+        OPENSSL_free(s);
+        ASN1_ENUMERATED_free(e2);
+    }
+
     /* The address conversions, both forms and the refusals. */
     oct = a2i_IPADDRESS("192.0.2.1");
     out_ptr("utl.a2i.v4", oct);
