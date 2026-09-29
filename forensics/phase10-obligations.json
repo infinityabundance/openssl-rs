@@ -668,7 +668,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "1f447ef896d8f91914e6fc3d46cdeff9f6293aa33137b46530cabae9ff5a73a0"
+      "sha256": "4a2ef6209973b192c64a77343df2159c6d8c9460386587057958909886736d94"
     }
   ],
   "kind": "phase10-obligations",
