@@ -690,6 +690,8 @@ pub(crate) const V_ASN1_NUMERICSTRING: c_int = 18;
 pub(crate) const V_ASN1_PRINTABLESTRING: c_int = 19;
 /// `TeletexString`, also spelled `T61String`.
 pub(crate) const V_ASN1_T61STRING: c_int = 20;
+/// `VideotexString` — `include/openssl/asn1.h.in:214`.
+pub(crate) const V_ASN1_VIDEOTEXSTRING: c_int = 21;
 /// `IA5String`.
 pub(crate) const V_ASN1_IA5STRING: c_int = 22;
 /// `UTCTime`.

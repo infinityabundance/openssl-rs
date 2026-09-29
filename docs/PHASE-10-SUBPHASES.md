@@ -869,8 +869,76 @@ tables), `v3_san.c` (689), `v3_cpols.c` (515) and `v3_admis.c` (355), whose comm
   added and no test skipped. That is five more green runs since the single D458 failure and still
   **not** a reproduction, so the defect stays open and unnamed rather than closed by absence.
 
-The remaining distance is therefore **49 tables over 32 units / 9,336 authority lines**, minus the
-blockers that are themselves landable units (`x_attrib.c`'s `ossl_print_attribute_value`, the
-`v3_conf.c` config layer, `v3_san.c`'s general-name printers), plus the **24-name closure** D463
-measured over 17 further units. The next real move is unchanged: land the `v3_san.c`/`v3_conf.c`
-hubs that block the largest cluster, then the rest of the tables, then the array.
+**The three hubs land, and the wall they hid is `ASN1_generate_v3`.** The fourteenth pulled-forward
+slice is task 2 of the D464 hand-off: `ossl_print_attribute_value` (`x_attrib.c`, hub 3),
+`X509V3_get_section`/`_section_free` and the config-value layer (`v3_conf.c`, hub 2), and
+`GENERAL_NAME_print`/`i2v_GENERAL_NAME`/`i2v_GENERAL_NAMES` (`v3_san.c`, hub 1).
+
+* **`src/x509/x_attrib.rs` is now whole.** `ossl_print_attribute_value` (`:76-249`) and its
+  `static print_oid` (`:61-74`) land; the blockers D464 recorded -- `d2i_X509_NAME`,
+  `X509_NAME_print_ex`, `X509_NAME_free`, `ASN1_ENUMERATED_get_int64`, `ASN1_parse_dump`,
+  `ossl_bio_print_hex` -- all landed by 10.14.2/10.14.3. `V_ASN1_VIDEOTEXSTRING` (`asn1/layout.rs`)
+  and `XN_FLAG_ONELINE` (`a_strex.rs`) were added because the printer names them.
+* **`src/x509/v3_conf.rs` lands the config-value layer.** `X509V3_get_string`/`X509V3_get_section`/
+  `X509V3_string_free`/`X509V3_section_free` (`:396-432`), the `nconf`/`lhash` `X509V3_CONF_METHOD`
+  tables and their callbacks, and the four setters `X509V3_set_nconf`/`set_ctx`/`set_issuer_pkey`/
+  `set_conf_lhash`. The `X509V3_CTX` (`v3_ext_ctx`) and `X509V3_CONF_METHOD` layouts live here with
+  their offsets asserted. **Fourteen names are withheld behind `X509V3_EXT_get_nid`** (`v3_lib.rs`,
+  the withheld dispatch): `X509V3_EXT_i2d`, `do_ext_nconf`, `X509V3_EXT_nconf_int`,
+  `X509V3_EXT_nconf`, `X509V3_EXT_nconf_nid`, `X509V3_EXT_add_nconf_sk`, `X509V3_EXT_add_nconf`,
+  `X509V3_EXT_CRL_add_nconf`, `X509V3_EXT_conf`, `X509V3_EXT_conf_nid`, `X509V3_EXT_add_conf`,
+  `X509V3_EXT_CRL_add_conf`, `X509V3_EXT_REQ_add_conf` and `X509V3_EXT_REQ_add_nconf` (the last also
+  on `X509_REQ_add_extensions`, `x509_req.c`, 10.14.11). Six more -- `v3_check_critical`,
+  `v3_check_generic`, `do_ext_i2d`, `v3_generic_extension`, `generic_asn1`, `delete_ext` -- have a
+  landed closure but are withheld under D453's second reason (only withheld callers).
+* **`src/x509/v3_san.rs` lands the printers**, and **withholds the whole `v2i` cluster behind
+  `ASN1_generate_v3`** (`crypto/asn1/asn1_gen.c`): `a2i_GENERAL_NAME`, `v2i_GENERAL_NAME`,
+  `v2i_GENERAL_NAME_ex`, `v2i_GENERAL_NAMES`, `do_othername`, `do_dirname`, `v2i_subject_alt`,
+  `v2i_issuer_alt`, `copy_email`, `copy_issuer` and the `ossl_v3_alt` table (a `prerequisites.json`
+  `owned_by_a_later_stratum` divergence row, D452/D455/D456's mechanism -- not a loosened gate).
+  `a2i_GENERAL_NAME`'s `do_othername` calls `ASN1_generate_v3`, which is Phase 5's deferred pair
+  `ASN1_generate_v3`/`ASN1_generate_nconf`; landing it is the next real move, because every other
+  arrow in the cluster is a named caller of these ten.
+* **`src/x509/v3_utl.rs` un-withholds `OSSL_GENERAL_NAMES_print`** (`:1421-1432`), the tenth name on
+  its withhold table, now that `GENERAL_NAME_print` exists; the module lands 32 of its 51 functions.
+
+**The readiness re-measurement, and the tables the hubs unblock.** The same `nm --undefined-only`
+join (`court/table_units.py`) now reads **34 closure-ready table units** (from 24) and **10 blocked**
+(from 20). The ten newly-ready units the hubs unblocked are `v3_aaa.c`, `v3_ac_tgt.c`, `v3_admis.c`,
+`v3_attrdesc.c`, `v3_attrmap.c`, `v3_cpols.c`, `v3_iobo.c`, `v3_pci.c`, `v3_sda.c` and
+`v3_usernotice.c`; the ten still blocked carry their named blocker (`v3_crld.c`/`v3_info.c`/`v3_san.c`
+on the `v2i` cluster, `v3_ncons.c` on `http_lib.c`/`punycode.c` too, `v3_akid.c` on
+`AUTHORITY_KEYID_*`, `v3_authattid.c` on `OSSL_ISSUER_SERIAL_it`, `v3_rolespec.c` on
+`ossl_serial_number_print`, `v3_ocsp.c` on `ocsp_asn.c`, `ct_x509v3.c` on the CT units, and
+`v3_addr.c` on `ossl_asn1_string_set_bits_left`, which the crate defines as
+`asn1::bitstr::set_bits_left` under a different name). **No table unit was landed this slice** -- the
+hubs are the bite, and the 22 now-closure-ready units are the next one; **14 of the 63 tables are
+landed**.
+
+**The court grew where the surface did.** `RT-STORE` moves from **810 to 865 observations**: a new
+`drive_v3_hubs` block drives `GENERAL_NAME_print`/`i2v_GENERAL_NAME`/`i2v_GENERAL_NAMES`/
+`OSSL_GENERAL_NAMES_print` over hand-built general names of every kind (an `ossl_v3_alt`-independent
+surface), and the `X509V3_get_section`/`_get_string` layer over a real `NCONF` loaded from a memory
+BIO, with the no-database, `lhash`-NULL and `set_issuer_pkey` refusals as the refusal arms; every
+arm pops its error queue first (D455). The 109-court total moves from **45,853 to 45,908**.
+`implemented_surface` moves from 3,684 to **3,741** symbols (its C-style internal population 478 to
+479 -- `ossl_print_attribute_value` is now a crate `#[no_mangle]` internal, and `docs/CI.md` records
+479). `dispatch_court` gains a `NOT_A_DISPATCH` exemption for the `X509V3_CONF_METHOD` callback
+aliases, and one stale `prerequisites.json` row (`x_attrib.c`'s `ossl_print_attribute_value`) is
+retired; `prerequisite_gate.py` is clean at 18 divergence rows.
+
+**The D462 flake was not reproduced.** One full `cargo test --lib` run with `git status` captured at
+the moment of the run read **1114 passed, 0 failed** on a clean tree; the pipeline's two runs read
+**1114 passed, 0 failed** each (one serial, one parallel). No retry was added and no test skipped.
+
+**The chain did not move.** `standard_exts[]` is not published (49 tables missing), so
+`X509V3_EXT_get_nid`/`_get`/`_add_alias`/`_EXT_d2i`/`_get_d2i`/`_add1_i2d` stay withheld,
+`X509_get_ext_d2i` stays withheld, `ossl_x509v3_cache_extensions` stays unreachable, and
+`PKCS12_parse` and `OSSL_STORE_load` stay open. Phase-10 counts are unchanged at
+**`296 implemented / 2 open`** exports and **`636 implemented / 0 open`** provider rows.
+
+The remaining distance is therefore **49 tables over 32 units** -- 33 blocked over 20 units /
+6,622 lines, now 10 blocked over the units above, and the 16 closure-ready-but-deferred over 12
+units / 2,714 lines are now 22 closure-ready units -- plus the **24-name closure** D463 measured over
+17 further units. The next real move is two-bite: land **`ASN1_generate_v3`/`ASN1_generate_nconf`**
+(the `v2i` cluster's one blocker), then the now-closure-ready table units, then the array.

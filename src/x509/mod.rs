@@ -240,3 +240,13 @@ pub mod v3_bcons;
 // (D456/D463). See `docs/PHASE-10-SUBPHASES.md` section 7.
 pub mod v3_enum;
 pub mod v3_int;
+// Phase 10.14.4's `crypto/x509/v3_conf.c` -- the extension-configuration surface. This slice lands
+// its config-value layer (`X509V3_get_section`/`_section_free`, the `nconf`/`lhash` method tables
+// and the four setters) and withholds the extension-building chain by name behind
+// `X509V3_EXT_get_nid`. The `X509V3_CTX` and `X509V3_CONF_METHOD` layouts live here. See the
+// module docs.
+pub mod v3_conf;
+// Phase 10.14.6's `crypto/x509/v3_san.c` -- the general-name printers. This slice lands
+// `GENERAL_NAME_print`, `i2v_GENERAL_NAME` and `i2v_GENERAL_NAMES` (the widest hub D464 measured)
+// and withholds the `v2i` cluster by name behind `ASN1_generate_v3`. See the module docs.
+pub mod v3_san;

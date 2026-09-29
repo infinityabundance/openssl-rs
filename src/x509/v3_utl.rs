@@ -1,8 +1,8 @@
 //! Phase 10.14.3 — `crypto/x509/v3_utl.c`: the X.509v3 extension string/value utilities.
 //!
 //! `crypto/x509/v3_utl.c` is 1,449 lines and defines 51 hand-written functions. **This module lands
-//! 31 of them and withholds 20 by name** — the D451/D459 rule applied at function granularity.
-//! Nine are withheld because a callee is unlanded (the table below); eleven because their closure
+//! 32 of them and withholds 19 by name** — the D451/D459 rule applied at function granularity.
+//! Nine are withheld because a callee is unlanded (the table below); ten because their closure
 //! is *complete* but every caller is itself withheld, so they would be dead code. The split is
 //! measured, not read off the unit: the function-level closure (`court/v3utl_cut.py`, the same
 //! `nm --undefined-only` join over the authority object that D459 used) resolves every relocation
@@ -23,7 +23,10 @@
 //! | `X509_REQ_get1_email` | `:482-494` | `X509_REQ_get_extensions`/`_subject_name` (`x509_req.c`, 10.14.11) and `X509V3_get_d2i` (`v3_lib.c`, 10.14.5) |
 //! | `do_x509_check` | `:869-1000` | `X509_get_ext_d2i` (`x509_ext.c`) |
 //! | `X509_check_host`/`_email`/`_ip`/`_ip_asc` | `:1002-1059` | their only callee is the withheld `do_x509_check` |
-//! | `OSSL_GENERAL_NAMES_print` | `:1421-1432` | `GENERAL_NAME_print` (`v3_san.c`, 10.14.6) |
+//!
+//! `OSSL_GENERAL_NAMES_print` (`:1421-1432`) was the tenth name on this list; this slice lands it
+//! because `GENERAL_NAME_print` (`v3_san.rs`) now exists, so its closure is satisfied and the
+//! export is drivable from the admitted DSO (`OPENSSL_3.4.0`).
 //!
 //! The hostname-matching cluster (`skip_prefix`, `equal_nocase`, `equal_case`, `equal_email`,
 //! `wildcard_match`, `valid_star`, `equal_wildcard`, `do_check_string`) has a *complete* closure —
@@ -71,7 +74,7 @@ use crate::bn::bignum::{
     BN_bn2dec, BN_bn2hex, BN_dec2bn, BN_free, BN_hex2bn, BN_is_zero, BN_new, BN_num_bits, BigNum,
 };
 use crate::runtime::bio::iolib::BIO_puts;
-use crate::runtime::bio::print::BIO_snprintf;
+use crate::runtime::bio::print::{BIO_printf, BIO_snprintf};
 use crate::runtime::bio::sys::{memchr, memcpy, memset, strchr, strcmp, strlen, strncmp};
 use crate::runtime::bio::Bio;
 use crate::runtime::conf::modparse::CONF_parse_list;
@@ -87,6 +90,7 @@ use crate::runtime::str::{
     OPENSSL_buf2hexstr, OPENSSL_hexchar2int, OPENSSL_strlcat, OPENSSL_strlcpy,
 };
 use crate::x509::v3_lib::X509V3ExtMethod;
+use crate::x509::v3_san::GENERAL_NAME_print;
 use crate::x509::x509name::X509_NAME_add_entry_by_txt;
 use crate::x509::x_name::X509Name;
 
@@ -1457,6 +1461,39 @@ pub unsafe extern "C" fn X509_email_free(sk: *mut OpenSslStack) {
 unsafe extern "C" fn str_free(s: *mut c_void) {
     // SAFETY: `s` is NULL or a stack element this call owns.
     unsafe { CRYPTO_free(s, FILE.as_ptr(), 527) };
+}
+
+/// `int OSSL_GENERAL_NAMES_print(BIO *out, GENERAL_NAMES *gens, int indent)` —
+/// `crypto/x509/v3_utl.c:1421-1432`.
+///
+/// One general name per line, each indented by `indent + 2`; the newline is written *before* every
+/// name but the first. The authority answers 1 unconditionally (the per-name printer's result is
+/// discarded).
+///
+/// # Safety
+///
+/// `out` must be a live BIO; `gens` must be a live `GENERAL_NAMES`.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_GENERAL_NAMES_print(
+    out: *mut Bio,
+    gens: *mut OpenSslStack,
+    indent: c_int,
+) -> c_int {
+    // SAFETY: `gens` is a live `GENERAL_NAMES` per the contract.
+    let num = unsafe { OPENSSL_sk_num(gens) };
+    for i in 0..num {
+        if i > 0 {
+            // SAFETY: `out` is a live BIO and the literal is static NUL-terminated.
+            unsafe { BIO_puts(out, c"\n".as_ptr()) };
+        }
+        // SAFETY: `out` is a live BIO and the format is a static literal.
+        unsafe { BIO_printf(out, c"%*s".as_ptr(), indent + 2, c"".as_ptr()) };
+        // SAFETY: `gens` is live and `i` is within its count.
+        let gen = unsafe { OPENSSL_sk_value(gens, i) };
+        // SAFETY: `out` is live and `gen` is a live `GENERAL_NAME`.
+        unsafe { GENERAL_NAME_print(out, gen.cast()) };
+    }
+    1
 }
 
 /// `int ossl_bio_print_hex(BIO *out, unsigned char *buf, int len)` —
