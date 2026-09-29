@@ -1,13 +1,8 @@
-//! `crypto/x509/v3_lib.c` — the extension registration surface. Phase 10.13, **partial**.
+//! `crypto/x509/v3_lib.c` — the extension registration surface and the `standard_exts[]` dispatch.
+//! Phase 10.15, the endgame slice.
 //!
-//! This unit is the deliberate scope increase of 10.13: D455 withheld the four `ossl_v3_*`
-//! table-only leaves because their only caller, `X509V3_add_standard_extensions`, was unlanded,
-//! and recorded the plan's expectation that pulling `v3_lib.c` in would make them drivable. The
-//! measurement below shows that expectation is **wrong**, and says exactly where the wall is.
-//!
-//! ## What lands, and what the wall is
-//!
-//! The authority's `v3_lib.c` is 308 lines. Its **registration** half lands whole:
+//! `crypto/x509/v3_lib.c` is 308 lines and now lands whole. Its **registration** half was Phase
+//! 10.13's:
 //!
 //! * the `X509V3_EXT_METHOD` structure ([`X509V3ExtMethod`], `include/openssl/x509v3.h:65-85`),
 //!   with every field at the offset the header gives;
@@ -16,71 +11,74 @@
 //!   (`:110-114`), the process-global `ext_list` and its lifecycle;
 //! * `X509V3_add_standard_extensions` (`:127-130`), which returns 1 by design.
 //!
-//! Its **lookup** half is withheld **by name**, and the blocker is not any one unit's:
+//! This slice lands the **lookup** half that D455/D456 withheld until every table it names existed:
 //!
-//! * `X509V3_EXT_get_nid` (`:52-71`) — the whole function is a search over
-//!   `standard_exts[]` (`standard_exts.h:15-95`, `#include`d at `v3_lib.c:50`) with the dynamic
-//!   `ext_list` as a fallback. `standard_exts[]` names **63 `ossl_v3_*` tables**, of which this
-//!   subphase lands five (`ossl_v3_utf8_list`, `ossl_v3_pkey_usage_period`, `ossl_v3_time_specification`,
-//!   `ossl_v3_no_rev_avail`, `ossl_v3_single_use`, and `ossl_v3_soa_identifier` is the sixth) and
-//!   **the other ~57 belong to units this subphase does not own** (`v3_bcons.c`, `v3_key_usage.c`,
-//!   `v3_alt.c`, `v3_cpols.c`, `v3_addr.c`, `v3_asid.c`, the `crypto/ocsp/` rows, `v3_ncons.c`,
-//!   `v3_pmaps.c`, `v3_pcons.c`, `v3_crld.c`, `pcy_*`, …). A partial `standard_exts[]` would
-//!   change `OBJ_bsearch_ext`'s answers for every missing NID — a silent divergence, not a
-//!   frontier — so the whole function is withheld rather than half-landed. This is the measured
-//!   answer to D455's open question, and it is *sharper* than D455's: the four table-only leaves
-//!   are not merely unnameable, they sit behind a table whose dependency is the 10.14 SCC.
-//! * `X509V3_EXT_get` (`:73-79`) — calls the withheld `X509V3_EXT_get_nid`.
-//! * `X509V3_EXT_add_alias` (`:89-108`) — calls the withheld `X509V3_EXT_get_nid`.
-//! * `X509V3_EXT_d2i` (`:134-149`) — calls the withheld `X509V3_EXT_get`.
-//! * `X509V3_get_d2i` (`:167-215`) — calls the withheld `X509V3_EXT_d2i`.
-//! * `X509V3_add1_i2d` (`:223-308`) — calls `X509V3_EXT_i2d`, which lives in `v3_conf.c`
-//!   (`:191-200`) and is itself unlanded, and it calls `X509V3_EXT_get_nid` through it.
+//! * [`STANDARD_EXTS`] — `standard_exts[]` (`standard_exts.h:15-95`) transcribed entry for entry, in
+//!   order: **73 entries** over 63 distinct `ossl_v3_*` tables (`ossl_v3_ns_ia5_list[0..6]`,
+//!   `ossl_v3_alt[0..2]` and `ossl_v3_ct_scts[0..2]` are the array-backed ones). The array must stay
+//!   in `ext_nid` order, because [`X509V3_EXT_get_nid`] binary-searches it exactly as the authority's
+//!   `OBJ_bsearch_ext` does. It is held in a `Sync` newtype because a `static` array of raw pointers
+//!   is not `Sync`; every element is the address of a crate-owned, immutable row.
+//! * `X509V3_EXT_get_nid` (`:52-71`) — the binary search over [`STANDARD_EXTS`], with the dynamic
+//!   `ext_list` as a sorted fallback.
+//! * `X509V3_EXT_get` (`:73-79`), `X509V3_EXT_add_alias` (`:89-108`), `X509V3_EXT_d2i` (`:134-149`),
+//!   `X509V3_get_d2i` (`:167-215`) and `X509V3_add1_i2d` (`:223-308`).
+//! * `X509V3_EXT_i2d` (`crypto/x509/v3_conf.c:191-200`), which `X509V3_add1_i2d` calls, lands in
+//!   `src/x509/v3_conf.rs` together with the `do_ext_i2d` helper it wraps.
 //!
-//! No stub is written: the six names above are named, not declared, so the crate's surface is
-//! only what the registration half defines.
-//!
-//! ## Ownership and the four leaves
-//!
-//! Because `X509V3_EXT_get_nid` is withheld, the four table-only leaves 10.13 was asked to land
-//! (`ossl_v3_utf8_list`'s table, `ossl_v3_no_rev_avail`, `ossl_v3_single_use`,
-//! `ossl_v3_soa_identifier`) remain withheld by name — but with this precise blocker instead of
-//! D455's vaguer two-part one. `src/x509/v3_no_rev_avail.rs`, `v3_single_use.rs` and `v3_soa_id.rs`
-//! record it; `v3_utf8.rs` lands the unit's two public helpers and withholds only its table. This
-//! is the reverse of "land what you can": the *caller* landed, the *dispatch* did not.
+//! The four table-only leaves 10.13 withheld (`ossl_v3_utf8_list`, `ossl_v3_no_rev_avail`,
+//! `ossl_v3_single_use`, `ossl_v3_soa_identifier`) and every other `standard_exts[]` row now exist,
+//! so nothing is withheld from this unit any more.
 //!
 //! ## The raise sites
 //!
-//! `crypto/x509/v3_lib.c` joins `gen_err_raise_sites.py`'s covered set with this subphase, so the
-//! four reachable raises -- `X509V3_EXT_add`'s two `ERR_R_CRYPTO_LIB` sites (`:29`, `:33`) -- are
-//! the generated `V3_LIB_*` constants. The withheld functions' sites are generated too, unused
-//! until they land.
+//! `crypto/x509/v3_lib.c` is in `gen_err_raise_sites.py`'s covered set, so the registration raise
+//! sites are the generated `V3_LIB_29`/`V3_LIB_33` (`X509V3_EXT_add`) and the lookup raise sites the
+//! now-landed half makes reachable are `V3_LIB_95` (`X509V3_EXT_add_alias`),
+//! `V3_LIB_274` (`X509V3_add1_i2d`) and `V3_LIB_306` (`X509V3_add1_i2d`'s run-time reason).
 //!
 //! ## The court
 //!
 //! `RT-STORE`'s 10.13 arms call `X509V3_add_standard_extensions` (the legacy no-op), then
-//! `X509V3_EXT_add`/`_add_list` over a probe-declared method and `X509V3_EXT_cleanup`, observing
-//! the return values and the error queue (each arm pops first). `X509V3_EXT_get_nid`/`_get` are
-//! not driven -- they are withheld, so no arm names them.
+//! `X509V3_EXT_add`/`_add_list` over a probe-declared method and `X509V3_EXT_cleanup`, observing the
+//! return values and the error queue (each arm pops first). `X509V3_EXT_get_nid`/`_get` are still not
+//! driven by the probe, so no arm names them.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(non_snake_case)]
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
+use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::layout::Asn1Item;
+use crate::asn1::string::{ASN1_STRING_get0_data, ASN1_STRING_length};
 use crate::runtime::bio::Bio;
-use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::CRYPTO_free;
-use crate::runtime::stack::{OPENSSL_sk_new, OPENSSL_sk_pop_free, OPENSSL_sk_push, OpenSslStack};
+use crate::runtime::err::{err_sites, raise_site, raise_site_dynamic};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::obj::{NID_undef, OBJ_obj2nid};
+use crate::runtime::stack::{
+    OPENSSL_sk_delete, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new, OPENSSL_sk_new_null,
+    OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_set, OPENSSL_sk_sort,
+    OPENSSL_sk_value, OpenSslStack,
+};
+use crate::x509::v3_conf::X509V3_EXT_i2d;
+use crate::x509::x509_v3::{
+    X509_EXTENSION_get_critical, X509_EXTENSION_get_data, X509_EXTENSION_get_object,
+    X509v3_get_ext_by_NID,
+};
+use crate::x509::x_exten::{X509Extension, X509_EXTENSION_free};
 
-/// `OPENSSL_FILE` for this unit's `OPENSSL_free` expansion — `crypto/x509/v3_lib.c`.
+/// `OPENSSL_FILE` for this unit's `OPENSSL_free`/`OPENSSL_malloc` expansions — `crypto/x509/v3_lib.c`.
 const FILE: &core::ffi::CStr = c"crypto/x509/v3_lib.c";
 /// `ext_list_free`'s `OPENSSL_free(ext)` (`crypto/x509/v3_lib.c:119`).
 const LINE_FREE: c_int = 119;
+/// `X509V3_EXT_add_alias`'s `OPENSSL_malloc(sizeof(*tmpext))` (`crypto/x509/v3_lib.c:98`).
+const LINE_MALLOC_ALIAS: c_int = 98;
+/// `X509V3_EXT_add_alias`'s `OPENSSL_free(tmpext)` (`crypto/x509/v3_lib.c:104`).
+const LINE_FREE_ALIAS: c_int = 104;
 
 /// `X509V3_EXT_NEW` — `include/openssl/x509v3.h:45`.
 pub type X509V3ExtNew = Option<unsafe extern "C" fn() -> *mut c_void>;
@@ -191,6 +189,121 @@ pub(crate) const X509V3_EXT_DYNAMIC: c_int = 0x1;
 
 /// `#define X509V3_EXT_MULTILINE 0x4` — `include/openssl/x509v3.h:123`.
 pub(crate) const X509V3_EXT_MULTILINE: c_int = 0x4;
+
+/// `X509V3_ADD_OP_MASK` — `include/openssl/x509v3.h:794`.
+const X509V3_ADD_OP_MASK: c_ulong = 0xf;
+/// `X509V3_ADD_DEFAULT` — `include/openssl/x509v3.h:795`.
+const X509V3_ADD_DEFAULT: c_ulong = 0;
+/// `X509V3_ADD_APPEND` — `include/openssl/x509v3.h:796`.
+const X509V3_ADD_APPEND: c_ulong = 1;
+/// `X509V3_ADD_REPLACE_EXISTING` — `include/openssl/x509v3.h:798`.
+const X509V3_ADD_REPLACE_EXISTING: c_ulong = 3;
+/// `X509V3_ADD_KEEP_EXISTING` — `include/openssl/x509v3.h:799`.
+const X509V3_ADD_KEEP_EXISTING: c_ulong = 4;
+/// `X509V3_ADD_DELETE` — `include/openssl/x509v3.h:800`.
+const X509V3_ADD_DELETE: c_ulong = 5;
+/// `X509V3_ADD_SILENT` — `include/openssl/x509v3.h:801`.
+const X509V3_ADD_SILENT: c_ulong = 0x10;
+/// `X509V3_R_EXTENSION_EXISTS` — `include/openssl/x509v3err.h:36`.
+const X509V3_R_EXTENSION_EXISTS: c_int = 145;
+/// `X509V3_R_EXTENSION_NOT_FOUND` — `include/openssl/x509v3err.h:38`.
+const X509V3_R_EXTENSION_NOT_FOUND: c_int = 102;
+
+/// `#define STANDARD_EXTENSION_COUNT OSSL_NELEM(standard_exts)` — `standard_exts.h:99`.
+const STANDARD_EXTENSION_COUNT: usize = 73;
+
+/// `standard_exts[]` (`crypto/x509/standard_exts.h:15-95`) in a `Sync` newtype.
+///
+/// A `static` array of raw pointers is not `Sync` (the same reason [`X509V3ExtMethod`] claims
+/// `Sync`), so the table is wrapped. Every element is the address of a crate-owned, immutable
+/// `static` row or one element of such an array, so sharing the whole table between threads is
+/// sound: the authority's own `standard_exts[]` is `static const` and read-only.
+struct StandardExts([*const X509V3ExtMethod; STANDARD_EXTENSION_COUNT]);
+
+// SAFETY: the sole field is 73 pointers to immutable crate-owned rows (see the type doc); no writer
+// exists and no interior mutability is reachable through them.
+unsafe impl Sync for StandardExts {}
+
+/// `static const X509V3_EXT_METHOD *standard_exts[]` — `crypto/x509/standard_exts.h:15-95`.
+///
+/// Transcribed entry for entry, in order. The order is `ext_nid`-ascending because that is the
+/// invariant the authority's `OBJ_bsearch_ext` relies on and [`X509V3_EXT_get_nid`] preserves.
+#[rustfmt::skip]
+static STANDARD_EXTS: StandardExts = StandardExts([
+    &crate::x509::v3_bitst::ossl_v3_nscert,
+    &crate::x509::v3_ia5::ossl_v3_ns_ia5_list[0],
+    &crate::x509::v3_ia5::ossl_v3_ns_ia5_list[1],
+    &crate::x509::v3_ia5::ossl_v3_ns_ia5_list[2],
+    &crate::x509::v3_ia5::ossl_v3_ns_ia5_list[3],
+    &crate::x509::v3_ia5::ossl_v3_ns_ia5_list[4],
+    &crate::x509::v3_ia5::ossl_v3_ns_ia5_list[5],
+    &crate::x509::v3_ia5::ossl_v3_ns_ia5_list[6],
+    &crate::x509::v3_skid::ossl_v3_skey_id,
+    &crate::x509::v3_bitst::ossl_v3_key_usage,
+    &crate::x509::v3_pku::ossl_v3_pkey_usage_period,
+    &crate::x509::v3_san::ossl_v3_alt[0],
+    &crate::x509::v3_san::ossl_v3_alt[1],
+    &crate::x509::v3_bcons::ossl_v3_bcons,
+    &crate::x509::v3_int::ossl_v3_crl_num,
+    &crate::x509::v3_cpols::ossl_v3_cpols,
+    &crate::x509::v3_akid::ossl_v3_akey_id,
+    &crate::x509::v3_crld::ossl_v3_crld,
+    &crate::x509::v3_extku::ossl_v3_ext_ku,
+    &crate::x509::v3_int::ossl_v3_delta_crl,
+    &crate::x509::v3_enum::ossl_v3_crl_reason,
+    &crate::x509::v3_crld::ossl_v3_crl_invdate,
+    &crate::x509::v3_sxnet::ossl_v3_sxnet,
+    &crate::x509::v3_info::ossl_v3_info,
+    &crate::x509::v3_audit_id::ossl_v3_audit_identity,
+    &crate::x509::v3_addr::ossl_v3_addr,
+    &crate::x509::v3_asid::ossl_v3_asid,
+    &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nonce,
+    &crate::ocsp::v3_ocsp::ossl_v3_ocsp_crlid,
+    &crate::x509::v3_extku::ossl_v3_ocsp_accresp,
+    &crate::ocsp::v3_ocsp::ossl_v3_ocsp_nocheck,
+    &crate::ocsp::v3_ocsp::ossl_v3_ocsp_acutoff,
+    &crate::ocsp::v3_ocsp::ossl_v3_ocsp_serviceloc,
+    &crate::x509::v3_info::ossl_v3_sinfo,
+    &crate::x509::v3_pcons::ossl_v3_policy_constraints,
+    &crate::x509::v3_ac_tgt::ossl_v3_targeting_information,
+    &crate::x509::v3_no_rev_avail::ossl_v3_no_rev_avail,
+    &crate::x509::v3_crld::ossl_v3_crl_hold,
+    &crate::x509::v3_pci::ossl_v3_pci,
+    &crate::x509::v3_ncons::ossl_v3_name_constraints,
+    &crate::x509::v3_pmaps::ossl_v3_policy_mappings,
+    &crate::x509::v3_int::ossl_v3_inhibit_anyp,
+    &crate::x509::v3_sda::ossl_v3_subj_dir_attrs,
+    &crate::x509::v3_crld::ossl_v3_idp,
+    &crate::x509::v3_san::ossl_v3_alt[2],
+    &crate::x509::v3_crld::ossl_v3_freshest_crl,
+    &crate::ct::ct_x509v3::ossl_v3_ct_scts[0],
+    &crate::ct::ct_x509v3::ossl_v3_ct_scts[1],
+    &crate::ct::ct_x509v3::ossl_v3_ct_scts[2],
+    &crate::x509::v3_utf8::ossl_v3_utf8_list[0],
+    &crate::x509::v3_ist::ossl_v3_issuer_sign_tool,
+    &crate::x509::v3_tlsf::ossl_v3_tls_feature,
+    &crate::x509::v3_admis::ossl_v3_ext_admission,
+    &crate::x509::v3_authattid::ossl_v3_authority_attribute_identifier,
+    &crate::x509::v3_rolespec::ossl_v3_role_spec_cert_identifier,
+    &crate::x509::v3_battcons::ossl_v3_battcons,
+    &crate::x509::v3_ncons::ossl_v3_delegated_name_constraints,
+    &crate::x509::v3_timespec::ossl_v3_time_specification,
+    &crate::x509::v3_attrdesc::ossl_v3_attribute_descriptor,
+    &crate::x509::v3_usernotice::ossl_v3_user_notice,
+    &crate::x509::v3_soa_id::ossl_v3_soa_identifier,
+    &crate::x509::v3_extku::ossl_v3_acc_cert_policies,
+    &crate::x509::v3_extku::ossl_v3_acc_priv_policies,
+    &crate::x509::v3_ind_iss::ossl_v3_indirect_issuer,
+    &crate::x509::v3_no_ass::ossl_v3_no_assertion,
+    &crate::x509::v3_crld::ossl_v3_aa_issuing_dist_point,
+    &crate::x509::v3_iobo::ossl_v3_issued_on_behalf_of,
+    &crate::x509::v3_single_use::ossl_v3_single_use,
+    &crate::x509::v3_group_ac::ossl_v3_group_ac,
+    &crate::x509::v3_aaa::ossl_v3_allowed_attribute_assignments,
+    &crate::x509::v3_attrmap::ossl_v3_attribute_mappings,
+    &crate::x509::v3_ncons::ossl_v3_holder_name_constraints,
+    &crate::x509::v3_sda::ossl_v3_associated_info,
+]);
 
 /// `static STACK_OF(X509V3_EXT_METHOD) *ext_list = NULL` — `crypto/x509/v3_lib.c:19`.
 ///
@@ -304,5 +417,359 @@ pub unsafe extern "C" fn X509V3_EXT_cleanup() {
 /// more because they are now kept in `ext_dat.h`." It answers 1 and adds nothing.
 #[no_mangle]
 pub extern "C" fn X509V3_add_standard_extensions() -> c_int {
+    1
+}
+
+/// The `OBJ_bsearch_ext` equivalent over [`STANDARD_EXTS`]: the row whose `ext_nid == nid`.
+///
+/// The array is `ext_nid`-ascending, so a binary search is exactly the authority's
+/// `IMPLEMENT_OBJ_BSEARCH_CMP_FN` over the same table. Returns NULL when no row matches.
+fn standard_ext_lookup(nid: c_int) -> *const X509V3ExtMethod {
+    let exts = &STANDARD_EXTS.0;
+    let mut lo: usize = 0;
+    let mut hi: usize = exts.len();
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2;
+        let m = exts[mid];
+        // SAFETY: every entry is the address of a crate-owned static row.
+        let cmp = unsafe { (*m).ext_nid } - nid;
+        if cmp == 0 {
+            return m;
+        } else if cmp < 0 {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    ptr::null()
+}
+
+/// `const X509V3_EXT_METHOD *X509V3_EXT_get_nid(int nid)` — `crypto/x509/v3_lib.c:52-71`.
+///
+/// A negative `nid` answers NULL; otherwise the ordered `standard_exts[]` search answers first, and
+/// failing that the dynamic `ext_list` is sorted and binary-searched. A miss answers NULL.
+///
+/// # Safety
+///
+/// No pointer arguments. As in the authority, the dynamic `ext_list` fallback is not locked, so
+/// concurrent callers must not race a `X509V3_EXT_add`/`X509V3_EXT_cleanup`.
+#[no_mangle]
+pub unsafe extern "C" fn X509V3_EXT_get_nid(nid: c_int) -> *const X509V3ExtMethod {
+    if nid < 0 {
+        return ptr::null();
+    }
+    let found = standard_ext_lookup(nid);
+    if !found.is_null() {
+        return found;
+    }
+    let list = EXT_LIST.load(Ordering::Acquire);
+    if list.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `list` is the live global this module built.
+    unsafe { OPENSSL_sk_sort(list) };
+    // The comparator's key: a method whose only read field is `ext_nid`.
+    // SAFETY: an all-zero `X509V3ExtMethod` is a valid starting value (`ext_nid` 0, the rest
+    // null/None); `ext_nid` is set below.
+    let mut tmp: X509V3ExtMethod = unsafe { core::mem::zeroed() };
+    tmp.ext_nid = nid;
+    // SAFETY: `list` is live; `&tmp` is the key `ext_cmp` reads `ext_nid` from.
+    let idx = unsafe { OPENSSL_sk_find(list, (&raw const tmp).cast::<c_void>()) };
+    // SAFETY: `list` is live; an out-of-range `idx` (the miss) answers NULL.
+    unsafe { OPENSSL_sk_value(list, idx) }.cast::<X509V3ExtMethod>() as *const X509V3ExtMethod
+}
+
+/// `const X509V3_EXT_METHOD *X509V3_EXT_get(X509_EXTENSION *ext)` — `crypto/x509/v3_lib.c:73-79`.
+///
+/// # Safety
+///
+/// `ext` must be a live `X509_EXTENSION`.
+#[no_mangle]
+pub unsafe extern "C" fn X509V3_EXT_get(ext: *mut X509Extension) -> *const X509V3ExtMethod {
+    // SAFETY: `ext` is live per the contract.
+    let nid = unsafe { OBJ_obj2nid(X509_EXTENSION_get_object(ext)) };
+    if nid == NID_undef {
+        return ptr::null();
+    }
+    // SAFETY: no preconditions; `X509V3_EXT_get_nid` takes an integer NID.
+    unsafe { X509V3_EXT_get_nid(nid) }
+}
+
+/// `int X509V3_EXT_add_alias(int nid_to, int nid_from)` — `crypto/x509/v3_lib.c:89-108`.
+///
+/// Copies the `nid_from` row into a fresh `X509V3_EXT_DYNAMIC` allocation retagged `nid_to` and
+/// registers it. A missing `nid_from` raises `X509V3_R_EXTENSION_NOT_FOUND`; a failed `_add` frees
+/// the copy.
+///
+/// # Safety
+///
+/// No pointer arguments. As in the authority the global `ext_list` is not locked, so this must not
+/// race another `X509V3_EXT_add`/`X509V3_EXT_cleanup`.
+#[no_mangle]
+pub unsafe extern "C" fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) -> c_int {
+    // SAFETY: no preconditions; `nid_from` is an integer NID.
+    let ext = unsafe { X509V3_EXT_get_nid(nid_from) };
+    if ext.is_null() {
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&err_sites::V3_LIB_95) };
+        return 0;
+    }
+    // SAFETY: the allocator answers NULL or one `X509V3ExtMethod`-sized block.
+    let tmpext = CRYPTO_malloc(
+        core::mem::size_of::<X509V3ExtMethod>(),
+        FILE.as_ptr(),
+        LINE_MALLOC_ALIAS,
+    )
+    .cast::<X509V3ExtMethod>();
+    if tmpext.is_null() {
+        return 0;
+    }
+    // SAFETY: `tmpext` is a fresh, unaliased allocation of one row; `ext` is a live row.
+    unsafe {
+        ptr::write(tmpext, ptr::read(ext));
+        (*tmpext).ext_nid = nid_to;
+        (*tmpext).ext_flags |= X509V3_EXT_DYNAMIC;
+    }
+    // SAFETY: `tmpext` is this call's own row, so `X509V3_EXT_add`'s contract holds.
+    if unsafe { X509V3_EXT_add(tmpext) } == 0 {
+        // SAFETY: `tmpext` is this call's own allocation, not owned by the list on this path.
+        unsafe { CRYPTO_free(tmpext.cast(), FILE.as_ptr(), LINE_FREE_ALIAS) };
+        return 0;
+    }
+    1
+}
+
+/// `void *X509V3_EXT_d2i(X509_EXTENSION *ext)` — `crypto/x509/v3_lib.c:134-149`.
+///
+/// Decodes the extension's octet-string value through the method's `it` (an `ASN1_item_d2i`) when
+/// it is set, else through the method's old-style `d2i`.
+///
+/// # Safety
+///
+/// `ext` must be a live `X509_EXTENSION`.
+#[no_mangle]
+pub unsafe extern "C" fn X509V3_EXT_d2i(ext: *mut X509Extension) -> *mut c_void {
+    // SAFETY: `ext` is live per the contract.
+    let method = unsafe { X509V3_EXT_get(ext) };
+    if method.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `ext` is live.
+    let extvalue = unsafe { X509_EXTENSION_get_data(ext) };
+    // SAFETY: `extvalue` is the extension's embedded `ASN1_OCTET_STRING`.
+    let mut p = unsafe { ASN1_STRING_get0_data(extvalue) };
+    // SAFETY: `extvalue` is live.
+    let extlen = unsafe { ASN1_STRING_length(extvalue) };
+    // SAFETY: `method` is live.
+    if let Some(it) = unsafe { (*method).it } {
+        // SAFETY: `p` borrows the extension's value for `extlen` bytes; `it()` answers the item the
+        // `ASN1_ITEM_ref` macro names.
+        return unsafe { ASN1_item_d2i(ptr::null_mut(), &raw mut p, extlen as c_long, it()) };
+    }
+    // SAFETY: `method` is live.
+    let d2i = unsafe { (*method).d2i };
+    if let Some(f) = d2i {
+        // SAFETY: `f` is the live old-style decoder; `p` borrows the value for `extlen` bytes.
+        return unsafe { f(ptr::null_mut(), &raw mut p, extlen as c_long) };
+    }
+    ptr::null_mut()
+}
+
+/// `void *X509V3_get_d2i(const STACK_OF(X509_EXTENSION) *x, int nid, int *crit, int *idx)` —
+/// `crypto/x509/v3_lib.c:167-215`.
+///
+/// Searches `x` from `idx + 1` for the `nid` extension. `crit` reports `-1` for "not found", `-2`
+/// for "occurs more than once", else the found extension's critical value; a NULL `x` answers NULL
+/// with both out-parameters set to `-1`.
+///
+/// # Safety
+///
+/// `x` is NULL or a live extension stack; `crit`/`idx` are NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn X509V3_get_d2i(
+    x: *const OpenSslStack,
+    nid: c_int,
+    crit: *mut c_int,
+    idx: *mut c_int,
+) -> *mut c_void {
+    let mut found_ex: *mut X509Extension = ptr::null_mut();
+    if x.is_null() {
+        if !idx.is_null() {
+            // SAFETY: `idx` is writable per the contract.
+            unsafe { *idx = -1 };
+        }
+        if !crit.is_null() {
+            // SAFETY: `crit` is writable per the contract.
+            unsafe { *crit = -1 };
+        }
+        return ptr::null_mut();
+    }
+    let mut lastpos = if !idx.is_null() {
+        // SAFETY: `idx` is writable/readable per the contract.
+        (unsafe { *idx }) + 1
+    } else {
+        0
+    };
+    if lastpos < 0 {
+        lastpos = 0;
+    }
+    // SAFETY: `x` is live per the guard above.
+    let num = unsafe { OPENSSL_sk_num(x) };
+    let mut i = lastpos;
+    while i < num {
+        // SAFETY: `x` is live and `i` is within `0..num`.
+        let ex = unsafe { OPENSSL_sk_value(x, i) }.cast::<X509Extension>();
+        // SAFETY: `ex` is a live extension.
+        if unsafe { OBJ_obj2nid(X509_EXTENSION_get_object(ex)) } == nid {
+            if !idx.is_null() {
+                // SAFETY: `idx` is writable per the contract.
+                unsafe { *idx = i };
+                found_ex = ex;
+                break;
+            } else if !found_ex.is_null() {
+                /* Found more than one. */
+                if !crit.is_null() {
+                    // SAFETY: `crit` is writable per the contract.
+                    unsafe { *crit = -2 };
+                }
+                return ptr::null_mut();
+            }
+            found_ex = ex;
+        }
+        i += 1;
+    }
+    if !found_ex.is_null() {
+        /* Found it. */
+        if !crit.is_null() {
+            // SAFETY: `found_ex` is a live extension.
+            unsafe { *crit = X509_EXTENSION_get_critical(found_ex) };
+        }
+        // SAFETY: `found_ex` is a live extension.
+        return unsafe { X509V3_EXT_d2i(found_ex) };
+    }
+    /* Extension not found. */
+    if !idx.is_null() {
+        // SAFETY: `idx` is writable per the contract.
+        unsafe { *idx = -1 };
+    }
+    if !crit.is_null() {
+        // SAFETY: `crit` is writable per the contract.
+        unsafe { *crit = -1 };
+    }
+    ptr::null_mut()
+}
+
+/// `int X509V3_add1_i2d(STACK_OF(X509_EXTENSION) **x, int nid, void *value, int crit,
+/// unsigned long flags)` — `crypto/x509/v3_lib.c:223-308`.
+///
+/// The append/replace/delete utility: the low nibble of `flags` is the operation, `X509V3_ADD_SILENT`
+/// suppresses the two operation refusals' raises, and `value` is the internal structure
+/// [`X509V3_EXT_i2d`] encodes.
+///
+/// # Safety
+///
+/// `x` is a writable slot holding NULL or a live extension stack; `value` is the internal structure
+/// the `nid` method's `i2d` expects.
+#[no_mangle]
+pub unsafe extern "C" fn X509V3_add1_i2d(
+    x: *mut *mut OpenSslStack,
+    nid: c_int,
+    value: *mut c_void,
+    crit: c_int,
+    flags: c_ulong,
+) -> c_int {
+    let ext_op = flags & X509V3_ADD_OP_MASK;
+    let mut extidx: c_int = -1;
+
+    /* If appending we don't care if it exists, otherwise look for existing extension. */
+    if ext_op != X509V3_ADD_APPEND {
+        // SAFETY: `x` is a writable slot; `*x` is NULL or a live stack.
+        extidx = unsafe { X509v3_get_ext_by_NID(*x, nid, -1) };
+    }
+
+    if extidx >= 0 {
+        /* If keep existing, nothing to do. */
+        if ext_op == X509V3_ADD_KEEP_EXISTING {
+            return 1;
+        }
+        /* If default then its an error. */
+        if ext_op == X509V3_ADD_DEFAULT {
+            if flags & X509V3_ADD_SILENT == 0 {
+                // SAFETY: the site is a compiled-in constant; the reason is the run-time `errcode`.
+                unsafe { raise_site_dynamic(&err_sites::V3_LIB_306, X509V3_R_EXTENSION_EXISTS) };
+            }
+            return 0;
+        }
+        /* If delete, just delete it. */
+        if ext_op == X509V3_ADD_DELETE {
+            // SAFETY: `*x` is a live stack and `extidx` is in bounds.
+            let extmp = unsafe { OPENSSL_sk_delete(*x, extidx) }.cast::<X509Extension>();
+            if extmp.is_null() {
+                return -1;
+            }
+            // SAFETY: `extmp` is the removed extension, now this call's own.
+            unsafe { X509_EXTENSION_free(extmp) };
+            return 1;
+        }
+    } else if ext_op == X509V3_ADD_REPLACE_EXISTING || ext_op == X509V3_ADD_DELETE {
+        /*
+         * If replace existing or delete, error since extension must exist.
+         */
+        if flags & X509V3_ADD_SILENT == 0 {
+            // SAFETY: the site is a compiled-in constant; the reason is the run-time `errcode`.
+            unsafe { raise_site_dynamic(&err_sites::V3_LIB_306, X509V3_R_EXTENSION_NOT_FOUND) };
+        }
+        return 0;
+    }
+
+    /*
+     * If we get this far then we have to create an extension.
+     */
+    // SAFETY: `nid` names the method and `value` is the caller's internal structure.
+    let ext = unsafe { X509V3_EXT_i2d(nid, crit, value) };
+    if ext.is_null() {
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&err_sites::V3_LIB_274) };
+        return 0;
+    }
+
+    /* If extension exists replace it. */
+    if extidx >= 0 {
+        // SAFETY: `*x` is a live stack and `extidx` is in bounds.
+        let extmp = unsafe { OPENSSL_sk_value(*x, extidx) }.cast::<X509Extension>();
+        // SAFETY: `extmp` is the extension being replaced, this call's own.
+        unsafe { X509_EXTENSION_free(extmp) };
+        // SAFETY: `*x` is live, `extidx` is in bounds, and `ext` is this call's own extension.
+        if unsafe { OPENSSL_sk_set(*x, extidx, ext.cast::<c_void>()) }.is_null() {
+            return -1;
+        }
+        return 1;
+    }
+
+    // SAFETY: `x` is a writable slot; `*x` is NULL or a live stack.
+    let mut ret = unsafe { *x };
+    if ret.is_null() {
+        ret = OPENSSL_sk_new_null();
+        if ret.is_null() {
+            // `m_fail:` with `ret == *x` (both NULL): only `ext` is released.
+            // SAFETY: `ext` is this call's own extension.
+            unsafe { X509_EXTENSION_free(ext) };
+            return -1;
+        }
+    }
+    // SAFETY: `ret` is a live stack and `ext` is this call's own extension.
+    if unsafe { OPENSSL_sk_push(ret, ext.cast::<c_void>()) } == 0 {
+        // SAFETY: `x` is a writable slot per the contract.
+        if ret != unsafe { *x } {
+            // SAFETY: `ret` is the fresh stack this call built.
+            unsafe { OPENSSL_sk_free(ret) };
+        }
+        // SAFETY: `ext` is this call's own extension.
+        unsafe { X509_EXTENSION_free(ext) };
+        return -1;
+    }
+
+    // SAFETY: `x` is a writable slot per the contract.
+    unsafe { *x = ret };
     1
 }

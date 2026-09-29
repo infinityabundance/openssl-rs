@@ -129,15 +129,6 @@
         "owner_module": "src/x509/t_x509.rs"
       },
       {
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_v3_alt"
-        ],
-        "evidence": "docs/DECISIONS.md D464 (the three-hub measurement) and D456 (the partial-array rule); crypto/x509/v3_san.c:29-49 (the table), :497-629 (the withheld `v2i` cluster) and :631-662 (`do_othername`'s `ASN1_generate_v3` reach); src/x509/v3_san.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/v3_san.c` edge",
-        "note": "**Withheld rather than published with holes, and this row is what the prerequisite gate's `unwired_function_in_the_current_stratum` finding becomes once the omission is a decision (D452/D455/D456's mechanism).** `src/x509/v3_san.rs` lands the unit's three printers -- `GENERAL_NAME_print`, `i2v_GENERAL_NAME` and `i2v_GENERAL_NAMES` -- which makes the unit's remaining internals countable (D327's rule). `ossl_v3_alt` (`crypto/x509/v3_san.c:29-49`) is the unit's one table; its three rows carry `i2v_GENERAL_NAMES` and the two withheld `v2i` callbacks `v2i_subject_alt`/`v2i_issuer_alt`, so publishing it would put holes in the array the incomplete `standard_exts[]` already withholds (D456). The whole `v2i` cluster is withheld by name behind `ASN1_generate_v3` (`crypto/asn1/asn1_gen.c`, not landed), which `a2i_GENERAL_NAME`'s `do_othername` calls. The record fail-closes in both directions: if the table or its callbacks are ever built the gate reports it stale until the row is removed, and if `src/x509/v3_san.rs` stopped owning the unit the record would stop matching.",
-        "owner_module": "src/x509/v3_san.rs"
-      },
-      {
         "authority_units": [
           "crypto/ec/ecp_nistz256.c"
         ],
@@ -173,15 +164,6 @@
         "evidence": "src/engine/eng_lib.rs (module header; engine_cleanup_add_first/add_last/cb_free); src/runtime/init.rs:935",
         "note": "**Phase 10.9 withholds `engine_cleanup_int` by name.** Its closure is landed -- the cleanup stack, `engine_cleanup_cb_free` and `CRYPTO_THREAD_lock_free` are all built -- but the authority reaches it only from `OPENSSL_cleanup` (`crypto/init.c`), and this crate's landed `OPENSSL_cleanup` (`src/runtime/init.rs`) does not yet name it, exactly as the authority's own comment there (\"must be called before engine_cleanup_int()\") records. Landing the function without its caller would define a symbol nothing reaches and would let the crate claim the cleanup ran, so it is withheld until the init sequence names it; the unit's four other cleanup registrations (`engine_cleanup_add_first`/`_add_last` from `eng_table.c` and `eng_list.c`) are built and called. The record fail-closes both ways: if `engine_cleanup_int` is ever built the gate reports the row stale until it is removed, and if `src/engine/eng_lib.rs` stopped owning the unit the record would stop matching.",
         "owner_module": "src/engine/eng_lib.rs"
-      },
-      {
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_x509_pubkey_hash"
-        ],
-        "evidence": "docs/DECISIONS.md D452, D453, D468; src/x509/v3_skid.rs's module documentation; crypto/x509/v3_skid.c:54-88 and :90-108 (the withheld pair) against :18-52 (the landed table, callbacks and helpers); crypto/x509/x509_req.c (the `X509_REQ` type); courts/phase10/rt_store_probe.c (`skid.*` arms)",
-        "note": "**Narrowed at D468: the table landed, one internal is still withheld.** `src/x509/v3_skid.rs` transcribes `crypto/x509/v3_skid.c`'s two public helpers, `i2s_ASN1_OCTET_STRING` (`:27-31`) and `s2i_ASN1_OCTET_STRING` (`:33-52`), and as of D468 it also lands the `ossl_v3_skey_id` row (`:18-25`) with its `i2s` callback. What remains withheld is `ossl_x509_pubkey_hash` (`:54-88`), the SHA-1 public-key digest `s2i_skey_id` calls: it is an unexported internal (`nm -D` shows no `ossl_x509_pubkey_hash`), its only in-unit caller is the file-local `s2i_skey_id` (`:90-108`), and `s2i_skey_id` is itself withheld because its `hash` arm reads `ctx->subject_req->req_info.pubkey` and this crate has no `X509_REQ`/`X509_REQ_INFO` type (`crypto/x509/x509_req.c`, Phase 10.14.11). Withholding `s2i_skey_id` is why the row's `s2i` slot is `None`. The record fail-closes both ways: if `ossl_x509_pubkey_hash` is built the gate reports the row stale until it is removed, and if `src/x509/v3_skid.rs` stopped owning the unit the record would stop matching.",
-        "owner_module": "src/x509/v3_skid.rs"
       }
     ],
     "rule": [
