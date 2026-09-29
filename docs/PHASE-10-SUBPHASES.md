@@ -1090,3 +1090,70 @@ of environment dependence the court's own stability plane exists to surface.
 closure-ready over 14 units), plus D463's 24-name closure over 17 further units; then the array,
 then `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` /
 `OSSL_STORE_load` -> the seal.
+
+**The second table batch lands; forty-one of the sixty-three tables now exist.** The seventeenth
+pulled-forward slice took the remaining closure-ready table units. **Six units / 11 tables** landed,
+each with its item group(s), its callbacks and its `OSSL_V3_EXT_METHOD` row(s), nothing stubbed:
+
+* `v3_crld.c` (**6** tables: `ossl_v3_crld`, `ossl_v3_freshest_crl`, `ossl_v3_idp`,
+  `ossl_v3_crl_invdate`, `ossl_v3_crl_hold`, `ossl_v3_aa_issuing_dist_point`) -- `src/x509/v3_crld.rs`,
+  the four item groups (`DIST_POINT_NAME`'s `CHOICE` with its `dpn_cb` `ASN1_AUX`, `DIST_POINT`,
+  `CRL_DIST_POINTS`, `ISSUING_DIST_POINT`, `OSSL_AA_DIST_POINT`), the section callbacks and the six
+  rows. This also un-withholds nothing: `DIST_POINT_set_dpname` and its type were already landed at
+  function granularity (D455).
+* `v3_asid.c` (**1**: `ossl_v3_asid`, `ext_nid` `NID_sbgp_autonomousSysNum`) -- `src/x509/v3_asid.rs`,
+  the four RFC 3779 item groups and the canonicalisation routines. The IP-address half of RFC 3779
+  lives in `v3_addr.c`, which this subphase does not own, so the unit rows one table, not two.
+* `v3_timespec.c` (**1**: `ossl_v3_time_specification`) -- `src/x509/v3_timespec.rs`, which 10.13 had
+  left as the item groups plus a by-name withdrawal of the row and its twelve printers (D455); this
+  slice lands the row and the printers.
+* `v3_cpols.c` (1: `ossl_v3_cpols`), `v3_skid.c` (1: `ossl_v3_skey_id`), `v3_sxnet.c` (1:
+  `ossl_v3_sxnet`).
+
+**What is withheld, by name, with its blocker.** `v3_asid.c`'s three path-validation names
+(`asid_validate_path_internal`, `X509v3_asid_validate_path`, `X509v3_asid_validate_resource_set`) and
+its `validation_err` macro are withheld whole: they read an `X509_STORE_CTX` (`ctx->chain`,
+`ctx->error`, `ctx->error_depth`, `ctx->verify_cb`), and this crate has no layout for
+`struct x509_store_ctx_st` -- inventing one in a table unit would be a stub of a Phase-11 type.
+`v3_skid.c`'s `s2i_skey_id` is withheld because its `hash` arm reads
+`ctx->subject_req->req_info.pubkey` and there is no `X509_REQ`/`X509_REQ_INFO` type (10.14.11), so the
+row's `s2i` slot is `None` rather than filled with a hole; `ossl_x509_pubkey_hash` is withheld with
+it, since its only in-unit caller is `s2i_skey_id` and its external callers are unlanded (D453's
+second withholding reason). `v3_crld.c`, `v3_timespec.c`, `v3_cpols.c` and `v3_sxnet.c` withhold
+nothing beyond the array.
+
+**Three divergence rows move with the evidence, not against it.** `forensics/prerequisites.json`'s
+`v3_timespec.c` and `v3_crld.c` rows are **retired** (their tables and printers now exist) and its
+`v3_skid.c` row is **narrowed** to `ossl_x509_pubkey_hash` alone; the register goes from 17 rows to
+15. The prerequisite gate is what forced the edit: it reported all three as
+`divergence_record_does_not_match` on the first pipeline run of this slice, and a record that can keep
+covering a name the crate has since built is a record that can hide the next one.
+
+**`implemented_surface` moves from 3,784 to 3,878 symbols** (the ninety-four new exports: the
+`DIST_POINT_NAME`/`DIST_POINT`/`CRL_DIST_POINTS`/`ISSUING_DIST_POINT`/`OSSL_AA_DIST_POINT` lifecycles,
+the `ASRange`/`ASIdOrRange`/`ASIdentifierChoice`/`ASIdentifiers` lifecycles and the six
+`X509v3_asid_*` routines, the `CERTIFICATEPOLICIES`/`POLICYINFO`/`POLICYQUALINFO`/`USERNOTICE`/
+`NOTICEREF` lifecycles and `X509_POLICY_NODE_print`, the `SXNET`/`SXNETID` lifecycles and the seven
+`SXNET_*` routines, `i2s_ASN1_OCTET_STRING`/`s2i_ASN1_OCTET_STRING`, and the eleven `OSSL_*`
+time-specification lifecycles). `RT-STORE` stays at **46,024** observations across 109 courts: the
+rows are internal data the admitted DSO does not name, so no arm was added that could not name its
+subject.
+
+**One defect was introduced by a rewrite and caught by reading the authority back.** The three
+modules `v3_crld.rs`, `v3_skid.rs` and `v3_timespec.rs` already existed as tracked modules (the
+function-granularity landings of 10.13/10.14.6/D455); the slice's setup truncated them before the
+work began, and the transcriptions were then re-derived. `v3_skid.rs` and `v3_timespec.rs` came back
+verbatim against the committed text (zero and one non-comment lines respectively), but the
+`v3_crld.rs` re-derivation inverted `DIST_POINT_set_dpname`'s `set` argument -- it wrote
+`c_int::from(i != 0)` where the authority's `X509_NAME_add_entry(dpn->dpname, ne, -1, i ? 0 : 1)`
+(`v3_crld.c:541`) is `i == 0`. The differential court cannot name this row, so nothing but reading
+the authority back would have found it; it was found that way and corrected. The lesson is recorded
+rather than the mistake: the file was restored to a superset of its committed self with the one
+inverted bit fixed, and the `gens = NULL` dead assignment the authority writes is kept under the
+crate's existing `#[allow(unused_assignments)]` convention.
+
+**The remaining distance is a number: 22 of the 63 tables** (14 blocked over 8 units, 8
+closure-ready over 8 units -- `v3_admis.c`, `v3_pci.c`, `v3_ac_tgt.c`, `v3_attrdesc.c`,
+`v3_attrmap.c`, `v3_aaa.c`, `v3_ist.c`, `v3_usernotice.c`), plus D463's 24-name closure over 17
+further units; then the array, then `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` ->
+`PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.

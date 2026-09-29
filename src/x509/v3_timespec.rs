@@ -1,30 +1,32 @@
-//! `crypto/x509/v3_timespec.c` — the ITU-T X.509 (2019) time-specification items. Phase 10.13.
+//! `crypto/x509/v3_timespec.c` — the ITU-T X.509 (2019) time-specification items and their table
+//! row. Phase 10.13 landed the item groups; this slice (10.14's second batch) lands the row and
+//! the twelve printers.
 //!
-//! `crypto/x509/v3_timespec.c` is 599 lines. **The twelve ASN.1 item groups and their generated
-//! lifecycles land; the extension method and its twelve `static` printers are withheld by name**:
+//! `crypto/x509/v3_timespec.c` is 599 lines and transcribes whole:
 //!
 //! * the eleven `ASN1_SEQUENCE`/`ASN1_CHOICE` templates (`:49-113`) and the
-//!   `IMPLEMENT_ASN1_FUNCTIONS` group over them (`:115-125`) land. Every `*_it`/`_new`/`_free`/
-//!   `d2i_*`/`i2d_*` is a public export (`x509v3.h`), so the differential plane can build each
-//!   value, encode it and decode the bytes back.
-//! * `ossl_v3_time_specification` (`:589-599`) is **withheld by name**: internal, and the admitted
-//!   DSO exports no `ossl_v3_*` symbol (`nm -D`). Its only authority caller is
-//!   `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`), which lands in
-//!   [`crate::x509::v3_lib`]. The dispatch that could reach it by NID -- `X509V3_EXT_get_nid` --
-//!   is withheld there because it searches `standard_exts[]` (`standard_exts.h:15-95`), which
-//!   names ~63 `ossl_v3_*` tables from units this subphase does not own. See
-//!   [`crate::x509::v3_lib`].
-//! * the twelve printers -- `i2r_OSSL_TIME_SPEC_ABSOLUTE` (`:127-156`), `i2r_OSSL_DAY_TIME`
-//!   (`:158-175`), `i2r_OSSL_DAY_TIME_BAND` (`:177-196`), the seven `print_*` helpers
-//!   (`:198-336`), `i2r_OSSL_PERIOD` (`:338-535`), `i2r_OSSL_TIME_SPEC_TIME` (`:537-566`) and
-//!   `i2r_OSSL_TIME_SPEC` (`:568-587`) -- are **withheld by name**: `static` functions reached
-//!   only through the withheld table, so landing them would be dead code with no court.
+//!   `IMPLEMENT_ASN1_FUNCTIONS` group over them (`:115-125`) land. Every `*_it`/`*_new`/`*_free`/
+//!   `d2i_*`/`i2d_*` is a public export (`x509v3.h:1299-1309`), so the differential plane can
+//!   build each value, encode it and decode the bytes back.
+//! * the twelve printers land: `i2r_OSSL_TIME_SPEC_ABSOLUTE` (`:127-156`), `i2r_OSSL_DAY_TIME`
+//!   (`:158-175`), `i2r_OSSL_DAY_TIME_BAND` (`:177-196`), the seven `print_*` helpers (`:198-336`),
+//!   `i2r_OSSL_PERIOD` (`:338-535`), `i2r_OSSL_TIME_SPEC_TIME` (`:537-566`) and `i2r_OSSL_TIME_SPEC`
+//!   (`:568-587`).
+//! * the row [`ossl_v3_time_specification`] (`:589-599`) lands: `ext_nid` is
+//!   `NID_time_specification`, `ext_flags` is `X509V3_EXT_MULTILINE`, `it` is
+//!   `ASN1_ITEM_ref(OSSL_TIME_SPEC)` and `i2r` is `i2r_OSSL_TIME_SPEC`.
 //!
-//! Nothing is stubbed: the withheld names are named rather than declared. The generated
-//! lifecycle functions are written out one by one rather than produced by a `macro_rules!`
-//! group: `prototype_court.py` refuses a macro that fills a *type* position (the `X` in
-//! `X_new`/`d2i_X`/`i2d_X`), so the ABI of each would be uncheckable. That is why this file is
-//! explicit where `src/x509/v3_pcia.rs` and `v3_pku.rs` are.
+//! **Withheld by name**: `standard_exts[]` (`standard_exts.h:15-95`) and the six lookup names in
+//! `v3_lib.rs` it feeds (`X509V3_EXT_get_nid`/`_get`/`_add_alias`/`_EXT_d2i`/`_get_d2i`/
+//! `_add1_i2d`). A partial array would silently change `OBJ_bsearch_ext` for every missing NID
+//! (D456), so the array is the last thing to land, not the first; this unit contributes one of the
+//! 63 tables. The row is internal data the admitted DSO does not export (`nm -D` shows no
+//! `ossl_v3_*`), so no court can name it; the item groups are the drivable surface.
+//!
+//! Nothing is stubbed: the generated lifecycle functions are written out one by one rather than
+//! produced by a `macro_rules!` group: `prototype_court.py` refuses a macro that fills a *type*
+//! position (the `X` in `X_new`/`d2i_X`/`i2d_X`), so the ABI of each would be uncheckable. That is
+//! why this file is explicit where `src/x509/v3_pcia.rs` and `v3_pku.rs` are.
 //!
 //! ## The union member is one pointer
 //!
@@ -50,10 +52,12 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 
 use core::ffi::{c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
+use crate::asn1::bitstr::ASN1_BIT_STRING_get_bit;
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::fre::ASN1_item_free;
 use crate::asn1::i2d::ASN1_item_i2d;
@@ -63,7 +67,14 @@ use crate::asn1::items::{
 };
 use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
-use crate::runtime::stack::OpenSslStack;
+use crate::asn1::prim::ASN1_INTEGER_get_int64;
+use crate::asn1::time::ossl_asn1_time_print_ex;
+use crate::runtime::bio::iolib::BIO_puts;
+use crate::runtime::bio::print::BIO_printf;
+use crate::runtime::bio::Bio;
+use crate::runtime::obj::NID_time_specification;
+use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
+use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_EXT_MULTILINE};
 
 // ---------------------------------------------------------------------------------------------
 // The structures — `include/openssl/x509v3.h:1134-1297`. Every union arm is a pointer, so each
@@ -1184,3 +1195,891 @@ pub unsafe extern "C" fn i2d_OSSL_TIME_SPEC(
     // SAFETY: `a` is NULL or live; `out` is NULL or a writable cursor.
     unsafe { ASN1_item_i2d(a.cast(), out, OSSL_TIME_SPEC_it()) }
 }
+
+// ---------------------------------------------------------------------------------------------
+// The printers — `crypto/x509/v3_timespec.c:127-587`.
+// ---------------------------------------------------------------------------------------------
+
+// The `#define`s the printers switch on, read from `include/openssl/x509v3.h`. The selector and bit
+// numbers are `c_int` (they compare against `type_` fields and index bit strings); the day/month
+// numbers compared against the `int64_t` that `ASN1_INTEGER_get_int64` yields are `i64`.
+
+/// `#define OSSL_NAMED_DAY_TYPE_INT 0` — `include/openssl/x509v3.h:1150`.
+const OSSL_NAMED_DAY_TYPE_INT: c_int = 0;
+/// `#define OSSL_NAMED_DAY_TYPE_BIT 1` — `include/openssl/x509v3.h:1151`.
+const OSSL_NAMED_DAY_TYPE_BIT: c_int = 1;
+/// `#define OSSL_TIME_SPEC_X_DAY_OF_FIRST 0` — `include/openssl/x509v3.h:1175`.
+const OSSL_TIME_SPEC_X_DAY_OF_FIRST: c_int = 0;
+/// `#define OSSL_TIME_SPEC_X_DAY_OF_SECOND 1` — `include/openssl/x509v3.h:1176`.
+const OSSL_TIME_SPEC_X_DAY_OF_SECOND: c_int = 1;
+/// `#define OSSL_TIME_SPEC_X_DAY_OF_THIRD 2` — `include/openssl/x509v3.h:1177`.
+const OSSL_TIME_SPEC_X_DAY_OF_THIRD: c_int = 2;
+/// `#define OSSL_TIME_SPEC_X_DAY_OF_FOURTH 3` — `include/openssl/x509v3.h:1178`.
+const OSSL_TIME_SPEC_X_DAY_OF_FOURTH: c_int = 3;
+/// `#define OSSL_TIME_SPEC_X_DAY_OF_FIFTH 4` — `include/openssl/x509v3.h:1179`.
+const OSSL_TIME_SPEC_X_DAY_OF_FIFTH: c_int = 4;
+/// `#define OSSL_TIME_SPEC_DAY_TYPE_INT 0` — `include/openssl/x509v3.h:1192`.
+const OSSL_TIME_SPEC_DAY_TYPE_INT: c_int = 0;
+/// `#define OSSL_TIME_SPEC_DAY_TYPE_BIT 1` — `include/openssl/x509v3.h:1193`.
+const OSSL_TIME_SPEC_DAY_TYPE_BIT: c_int = 1;
+/// `#define OSSL_TIME_SPEC_DAY_TYPE_DAY_OF 2` — `include/openssl/x509v3.h:1194`.
+const OSSL_TIME_SPEC_DAY_TYPE_DAY_OF: c_int = 2;
+/// `#define OSSL_TIME_SPEC_DAY_BIT_SUN 0` — `include/openssl/x509v3.h:1195`.
+const OSSL_TIME_SPEC_DAY_BIT_SUN: c_int = 0;
+/// `#define OSSL_TIME_SPEC_DAY_BIT_SAT 6` — `include/openssl/x509v3.h:1201`.
+const OSSL_TIME_SPEC_DAY_BIT_SAT: c_int = 6;
+/// `#define OSSL_TIME_SPEC_WEEKS_TYPE_ALL 0` — `include/openssl/x509v3.h:1219`.
+const OSSL_TIME_SPEC_WEEKS_TYPE_ALL: c_int = 0;
+/// `#define OSSL_TIME_SPEC_WEEKS_TYPE_INT 1` — `include/openssl/x509v3.h:1220`.
+const OSSL_TIME_SPEC_WEEKS_TYPE_INT: c_int = 1;
+/// `#define OSSL_TIME_SPEC_WEEKS_TYPE_BIT 2` — `include/openssl/x509v3.h:1221`.
+const OSSL_TIME_SPEC_WEEKS_TYPE_BIT: c_int = 2;
+/// `#define OSSL_TIME_SPEC_BIT_WEEKS_1 0` — `include/openssl/x509v3.h:1222`.
+const OSSL_TIME_SPEC_BIT_WEEKS_1: c_int = 0;
+/// `#define OSSL_TIME_SPEC_BIT_WEEKS_5 4` — `include/openssl/x509v3.h:1226`.
+const OSSL_TIME_SPEC_BIT_WEEKS_5: c_int = 4;
+/// `#define OSSL_TIME_SPEC_MONTH_TYPE_ALL 0` — `include/openssl/x509v3.h:1237`.
+const OSSL_TIME_SPEC_MONTH_TYPE_ALL: c_int = 0;
+/// `#define OSSL_TIME_SPEC_MONTH_TYPE_INT 1` — `include/openssl/x509v3.h:1238`.
+const OSSL_TIME_SPEC_MONTH_TYPE_INT: c_int = 1;
+/// `#define OSSL_TIME_SPEC_MONTH_TYPE_BIT 2` — `include/openssl/x509v3.h:1239`.
+const OSSL_TIME_SPEC_MONTH_TYPE_BIT: c_int = 2;
+/// `#define OSSL_TIME_SPEC_BIT_MONTH_JAN 0` — `include/openssl/x509v3.h:1252`.
+const OSSL_TIME_SPEC_BIT_MONTH_JAN: c_int = 0;
+/// `#define OSSL_TIME_SPEC_BIT_MONTH_DEC 11` — `include/openssl/x509v3.h:1263`.
+const OSSL_TIME_SPEC_BIT_MONTH_DEC: c_int = 11;
+/// `#define OSSL_TIME_SPEC_TIME_TYPE_ABSOLUTE 0` — `include/openssl/x509v3.h:1282`.
+const OSSL_TIME_SPEC_TIME_TYPE_ABSOLUTE: c_int = 0;
+/// `#define OSSL_TIME_SPEC_TIME_TYPE_PERIODIC 1` — `include/openssl/x509v3.h:1283`.
+const OSSL_TIME_SPEC_TIME_TYPE_PERIODIC: c_int = 1;
+
+/// `#define OSSL_TIME_SPEC_INT_MONTH_JAN 1` — `include/openssl/x509v3.h:1240`.
+const OSSL_TIME_SPEC_INT_MONTH_JAN: i64 = 1;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_FEB 2` — `include/openssl/x509v3.h:1241`.
+const OSSL_TIME_SPEC_INT_MONTH_FEB: i64 = 2;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_MAR 3` — `include/openssl/x509v3.h:1242`.
+const OSSL_TIME_SPEC_INT_MONTH_MAR: i64 = 3;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_APR 4` — `include/openssl/x509v3.h:1243`.
+const OSSL_TIME_SPEC_INT_MONTH_APR: i64 = 4;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_MAY 5` — `include/openssl/x509v3.h:1244`.
+const OSSL_TIME_SPEC_INT_MONTH_MAY: i64 = 5;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_JUN 6` — `include/openssl/x509v3.h:1245`.
+const OSSL_TIME_SPEC_INT_MONTH_JUN: i64 = 6;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_JUL 7` — `include/openssl/x509v3.h:1246`.
+const OSSL_TIME_SPEC_INT_MONTH_JUL: i64 = 7;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_AUG 8` — `include/openssl/x509v3.h:1247`.
+const OSSL_TIME_SPEC_INT_MONTH_AUG: i64 = 8;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_SEP 9` — `include/openssl/x509v3.h:1248`.
+const OSSL_TIME_SPEC_INT_MONTH_SEP: i64 = 9;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_OCT 10` — `include/openssl/x509v3.h:1249`.
+const OSSL_TIME_SPEC_INT_MONTH_OCT: i64 = 10;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_NOV 11` — `include/openssl/x509v3.h:1250`.
+const OSSL_TIME_SPEC_INT_MONTH_NOV: i64 = 11;
+/// `#define OSSL_TIME_SPEC_INT_MONTH_DEC 12` — `include/openssl/x509v3.h:1251`.
+const OSSL_TIME_SPEC_INT_MONTH_DEC: i64 = 12;
+
+/// `#define OSSL_TIME_SPEC_DAY_INT_SUN 1` — `include/openssl/x509v3.h:1202`.
+const OSSL_TIME_SPEC_DAY_INT_SUN: i64 = 1;
+/// `#define OSSL_TIME_SPEC_DAY_INT_MON 2` — `include/openssl/x509v3.h:1203`.
+const OSSL_TIME_SPEC_DAY_INT_MON: i64 = 2;
+/// `#define OSSL_TIME_SPEC_DAY_INT_TUE 3` — `include/openssl/x509v3.h:1204`.
+const OSSL_TIME_SPEC_DAY_INT_TUE: i64 = 3;
+/// `#define OSSL_TIME_SPEC_DAY_INT_WED 4` — `include/openssl/x509v3.h:1205`.
+const OSSL_TIME_SPEC_DAY_INT_WED: i64 = 4;
+/// `#define OSSL_TIME_SPEC_DAY_INT_THU 5` — `include/openssl/x509v3.h:1206`.
+const OSSL_TIME_SPEC_DAY_INT_THU: i64 = 5;
+/// `#define OSSL_TIME_SPEC_DAY_INT_FRI 6` — `include/openssl/x509v3.h:1207`.
+const OSSL_TIME_SPEC_DAY_INT_FRI: i64 = 6;
+/// `#define OSSL_TIME_SPEC_DAY_INT_SAT 7` — `include/openssl/x509v3.h:1208`.
+const OSSL_TIME_SPEC_DAY_INT_SAT: i64 = 7;
+
+/// `#define OSSL_NAMED_DAY_INT_SUN 1` — `include/openssl/x509v3.h:1152`.
+const OSSL_NAMED_DAY_INT_SUN: i64 = 1;
+/// `#define OSSL_NAMED_DAY_INT_MON 2` — `include/openssl/x509v3.h:1153`.
+const OSSL_NAMED_DAY_INT_MON: i64 = 2;
+/// `#define OSSL_NAMED_DAY_INT_TUE 3` — `include/openssl/x509v3.h:1154`.
+const OSSL_NAMED_DAY_INT_TUE: i64 = 3;
+/// `#define OSSL_NAMED_DAY_INT_WED 4` — `include/openssl/x509v3.h:1155`.
+const OSSL_NAMED_DAY_INT_WED: i64 = 4;
+/// `#define OSSL_NAMED_DAY_INT_THU 5` — `include/openssl/x509v3.h:1156`.
+const OSSL_NAMED_DAY_INT_THU: i64 = 5;
+/// `#define OSSL_NAMED_DAY_INT_FRI 6` — `include/openssl/x509v3.h:1157`.
+const OSSL_NAMED_DAY_INT_FRI: i64 = 6;
+/// `#define OSSL_NAMED_DAY_INT_SAT 7` — `include/openssl/x509v3.h:1158`.
+const OSSL_NAMED_DAY_INT_SAT: i64 = 7;
+
+/// `static const char *WEEKDAY_NAMES[7]` — `crypto/x509/v3_timespec.c:16-24`.
+static WEEKDAY_NAMES: [&core::ffi::CStr; 7] =
+    [c"SUN", c"MON", c"TUE", c"WED", c"THU", c"FRI", c"SAT"];
+
+/// `static const char *WEEK_NAMES[5]` — `crypto/x509/v3_timespec.c:26-32`.
+static WEEK_NAMES: [&core::ffi::CStr; 5] = [c"first", c"second", c"third", c"fourth", c"final"];
+
+/// `static const char *MONTH_NAMES[12]` — `crypto/x509/v3_timespec.c:34-47`. Note `SEPT`, which
+/// differs from the `SEP` `print_int_month` spells.
+static MONTH_NAMES: [&core::ffi::CStr; 12] = [
+    c"JAN", c"FEB", c"MAR", c"APR", c"MAY", c"JUN", c"JUL", c"AUG", c"SEPT", c"OCT", c"NOV", c"DEC",
+];
+
+/// `static int i2r_OSSL_TIME_SPEC_ABSOLUTE(X509V3_EXT_METHOD *method, OSSL_TIME_SPEC_ABSOLUTE
+/// *time, BIO *out, int indent)` — `crypto/x509/v3_timespec.c:127-156`.
+unsafe fn i2r_OSSL_TIME_SPEC_ABSOLUTE(
+    _method: *const X509V3ExtMethod,
+    time: *mut OsslTimeSpecAbsolute,
+    out: *mut Bio,
+    _indent: c_int,
+) -> c_int {
+    // SAFETY: `time` is live per the caller's contract.
+    let (start, end) = unsafe { ((*time).startTime, (*time).endTime) };
+    if !start.is_null() && !end.is_null() {
+        // SAFETY: `out` is live; the literal is static.
+        if unsafe { BIO_puts(out, c"Any time between ".as_ptr()) } == 0 {
+            return 0;
+        }
+        // SAFETY: `out` is live; `start` is live.
+        if unsafe { ossl_asn1_time_print_ex(out, start, 0) } == 0 {
+            return 0;
+        }
+        // SAFETY: `out` is live; the literal is static.
+        if unsafe { BIO_puts(out, c" and ".as_ptr()) } == 0 {
+            return 0;
+        }
+        // SAFETY: `out` is live; `end` is live.
+        if unsafe { ossl_asn1_time_print_ex(out, end, 0) } == 0 {
+            return 0;
+        }
+    } else if !start.is_null() {
+        // SAFETY: `out` is live; the literal is static.
+        if unsafe { BIO_puts(out, c"Any time after ".as_ptr()) } == 0 {
+            return 0;
+        }
+        // SAFETY: `out` is live; `start` is live.
+        if unsafe { ossl_asn1_time_print_ex(out, start, 0) } == 0 {
+            return 0;
+        }
+        // SAFETY: `start` is live; `length`/`data` describe its bytes; the format matches.
+        if unsafe { BIO_printf(out, c"%.*s".as_ptr(), (*start).length, (*start).data) } <= 0 {
+            return 0;
+        }
+    } else if !end.is_null() {
+        // SAFETY: `out` is live; the literal is static.
+        if unsafe { BIO_puts(out, c"Any time until ".as_ptr()) } == 0 {
+            return 0;
+        }
+        // SAFETY: `out` is live; `end` is live.
+        if unsafe { ossl_asn1_time_print_ex(out, end, 0) } == 0 {
+            return 0;
+        }
+    } else {
+        // SAFETY: `out` is live; the literal is static.
+        return unsafe { BIO_puts(out, c"INVALID (EMPTY)".as_ptr()) };
+    }
+    1
+}
+
+/// `static int i2r_OSSL_DAY_TIME(X509V3_EXT_METHOD *method, OSSL_DAY_TIME *dt, BIO *out, int
+/// indent)` — `crypto/x509/v3_timespec.c:158-175`.
+unsafe fn i2r_OSSL_DAY_TIME(
+    _method: *const X509V3ExtMethod,
+    dt: *mut OsslDayTime,
+    out: *mut Bio,
+    _indent: c_int,
+) -> c_int {
+    let mut h: i64 = 0;
+    let mut m: i64 = 0;
+    let mut s: i64 = 0;
+    // SAFETY: `dt` is live per the caller's contract.
+    let (hour, minute, second) = unsafe { ((*dt).hour, (*dt).minute, (*dt).second) };
+    // SAFETY: `hour` is live;
+    if hour.is_null() || unsafe { ASN1_INTEGER_get_int64(&raw mut h, hour) } == 0 {
+        return 0;
+    }
+    // SAFETY: `minute` is live.
+    if !minute.is_null() && unsafe { ASN1_INTEGER_get_int64(&raw mut m, minute) } == 0 {
+        return 0;
+    }
+    // SAFETY: `second` is live.
+    if !second.is_null() && unsafe { ASN1_INTEGER_get_int64(&raw mut s, second) } == 0 {
+        return 0;
+    }
+    // SAFETY: `out` is live; the format and arguments are as declared.
+    c_int::from(unsafe { BIO_printf(out, c"%02lld:%02lld:%02lld".as_ptr(), h, m, s) } > 0)
+}
+
+/// `static int i2r_OSSL_DAY_TIME_BAND(X509V3_EXT_METHOD *method, OSSL_DAY_TIME_BAND *band, BIO
+/// *out, int indent)` — `crypto/x509/v3_timespec.c:177-196`.
+unsafe fn i2r_OSSL_DAY_TIME_BAND(
+    method: *const X509V3ExtMethod,
+    band: *mut OsslDayTimeBand,
+    out: *mut Bio,
+    indent: c_int,
+) -> c_int {
+    // SAFETY: `band` is live per the caller's contract.
+    let (start, end) = unsafe { ((*band).startDayTime, (*band).endDayTime) };
+    if !start.is_null() {
+        // SAFETY: `start` is live; `out` is live.
+        if unsafe { i2r_OSSL_DAY_TIME(method, start, out, indent) } == 0 {
+            return 0;
+        }
+    // SAFETY: `out` is live; the literal is static.
+    } else if unsafe { BIO_puts(out, c"00:00:00".as_ptr()) } == 0 {
+        return 0;
+    }
+    // SAFETY: `out` is live; the literal is static.
+    if unsafe { BIO_puts(out, c" - ".as_ptr()) } == 0 {
+        return 0;
+    }
+    if !end.is_null() {
+        // SAFETY: `end` is live; `out` is live.
+        if unsafe { i2r_OSSL_DAY_TIME(method, end, out, indent) } == 0 {
+            return 0;
+        }
+    // SAFETY: `out` is live; the literal is static.
+    } else if unsafe { BIO_puts(out, c"23:59:59".as_ptr()) } == 0 {
+        return 0;
+    }
+    1
+}
+
+/// `static int print_int_month(BIO *out, int64_t month)` — `crypto/x509/v3_timespec.c:198-229`.
+/// `SEP`, not the `SEPT` of [`MONTH_NAMES`].
+unsafe fn print_int_month(out: *mut Bio, month: i64) -> c_int {
+    // SAFETY: `out` is live per the caller's contract; each literal is static.
+    unsafe {
+        match month {
+            OSSL_TIME_SPEC_INT_MONTH_JAN => BIO_puts(out, c"JAN".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_FEB => BIO_puts(out, c"FEB".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_MAR => BIO_puts(out, c"MAR".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_APR => BIO_puts(out, c"APR".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_MAY => BIO_puts(out, c"MAY".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_JUN => BIO_puts(out, c"JUN".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_JUL => BIO_puts(out, c"JUL".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_AUG => BIO_puts(out, c"AUG".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_SEP => BIO_puts(out, c"SEP".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_OCT => BIO_puts(out, c"OCT".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_NOV => BIO_puts(out, c"NOV".as_ptr()),
+            OSSL_TIME_SPEC_INT_MONTH_DEC => BIO_puts(out, c"DEC".as_ptr()),
+            _ => 0,
+        }
+    }
+}
+
+/// `static int print_bit_month(BIO *out, ASN1_BIT_STRING *bs)` — `crypto/x509/v3_timespec.c:231-246`.
+unsafe fn print_bit_month(out: *mut Bio, bs: *mut Asn1String) -> c_int {
+    let mut i = OSSL_TIME_SPEC_BIT_MONTH_JAN;
+    let mut j = 0;
+    while i <= OSSL_TIME_SPEC_BIT_MONTH_DEC {
+        // SAFETY: `bs` is live per the caller's contract.
+        if unsafe { ASN1_BIT_STRING_get_bit(bs, i) } != 0 {
+            // SAFETY: `out` is live; the literal is static.
+            if j > 0 && unsafe { BIO_puts(out, c", ".as_ptr()) } == 0 {
+                return 0;
+            }
+            j += 1;
+            // SAFETY: `out` is live; the name is a static literal.
+            if unsafe { BIO_puts(out, MONTH_NAMES[i as usize].as_ptr()) } == 0 {
+                return 0;
+            }
+        }
+        i += 1;
+    }
+    1
+}
+
+/// `static int print_bit_week(BIO *out, ASN1_BIT_STRING *bs)` — `crypto/x509/v3_timespec.c:253-268`.
+/// The fifth bit means "the final week", hence [`WEEK_NAMES`] rather than a numeric render.
+unsafe fn print_bit_week(out: *mut Bio, bs: *mut Asn1String) -> c_int {
+    let mut i = OSSL_TIME_SPEC_BIT_WEEKS_1;
+    let mut j = 0;
+    while i <= OSSL_TIME_SPEC_BIT_WEEKS_5 {
+        // SAFETY: `bs` is live per the caller's contract.
+        if unsafe { ASN1_BIT_STRING_get_bit(bs, i) } != 0 {
+            // SAFETY: `out` is live; the literal is static.
+            if j > 0 && unsafe { BIO_puts(out, c", ".as_ptr()) } == 0 {
+                return 0;
+            }
+            j += 1;
+            // SAFETY: `out` is live; the name is a static literal.
+            if unsafe { BIO_puts(out, WEEK_NAMES[i as usize].as_ptr()) } == 0 {
+                return 0;
+            }
+        }
+        i += 1;
+    }
+    1
+}
+
+/// `static int print_day_of_week(BIO *out, ASN1_BIT_STRING *bs)` —
+/// `crypto/x509/v3_timespec.c:270-285`.
+unsafe fn print_day_of_week(out: *mut Bio, bs: *mut Asn1String) -> c_int {
+    let mut i = OSSL_TIME_SPEC_DAY_BIT_SUN;
+    let mut j = 0;
+    while i <= OSSL_TIME_SPEC_DAY_BIT_SAT {
+        // SAFETY: `bs` is live per the caller's contract.
+        if unsafe { ASN1_BIT_STRING_get_bit(bs, i) } != 0 {
+            // SAFETY: `out` is live; the literal is static.
+            if j > 0 && unsafe { BIO_puts(out, c", ".as_ptr()) } == 0 {
+                return 0;
+            }
+            j += 1;
+            // SAFETY: `out` is live; the name is a static literal.
+            if unsafe { BIO_puts(out, WEEKDAY_NAMES[i as usize].as_ptr()) } == 0 {
+                return 0;
+            }
+        }
+        i += 1;
+    }
+    1
+}
+
+/// `static int print_int_day_of_week(BIO *out, int64_t dow)` —
+/// `crypto/x509/v3_timespec.c:287-308`.
+unsafe fn print_int_day_of_week(out: *mut Bio, dow: i64) -> c_int {
+    // SAFETY: `out` is live per the caller's contract; each literal is static.
+    unsafe {
+        match dow {
+            OSSL_TIME_SPEC_DAY_INT_SUN => BIO_puts(out, c"SUN".as_ptr()),
+            OSSL_TIME_SPEC_DAY_INT_MON => BIO_puts(out, c"MON".as_ptr()),
+            OSSL_TIME_SPEC_DAY_INT_TUE => BIO_puts(out, c"TUE".as_ptr()),
+            OSSL_TIME_SPEC_DAY_INT_WED => BIO_puts(out, c"WED".as_ptr()),
+            OSSL_TIME_SPEC_DAY_INT_THU => BIO_puts(out, c"THU".as_ptr()),
+            OSSL_TIME_SPEC_DAY_INT_FRI => BIO_puts(out, c"FRI".as_ptr()),
+            OSSL_TIME_SPEC_DAY_INT_SAT => BIO_puts(out, c"SAT".as_ptr()),
+            _ => 0,
+        }
+    }
+}
+
+/// `static int print_int_named_day(BIO *out, int64_t nd)` — `crypto/x509/v3_timespec.c:310-331`.
+unsafe fn print_int_named_day(out: *mut Bio, nd: i64) -> c_int {
+    // SAFETY: `out` is live per the caller's contract; each literal is static.
+    unsafe {
+        match nd {
+            OSSL_NAMED_DAY_INT_SUN => BIO_puts(out, c"SUN".as_ptr()),
+            OSSL_NAMED_DAY_INT_MON => BIO_puts(out, c"MON".as_ptr()),
+            OSSL_NAMED_DAY_INT_TUE => BIO_puts(out, c"TUE".as_ptr()),
+            OSSL_NAMED_DAY_INT_WED => BIO_puts(out, c"WED".as_ptr()),
+            OSSL_NAMED_DAY_INT_THU => BIO_puts(out, c"THU".as_ptr()),
+            OSSL_NAMED_DAY_INT_FRI => BIO_puts(out, c"FRI".as_ptr()),
+            OSSL_NAMED_DAY_INT_SAT => BIO_puts(out, c"SAT".as_ptr()),
+            _ => 0,
+        }
+    }
+}
+
+/// `static int print_bit_named_day(BIO *out, ASN1_BIT_STRING *bs)` —
+/// `crypto/x509/v3_timespec.c:333-336`.
+unsafe fn print_bit_named_day(out: *mut Bio, bs: *mut Asn1String) -> c_int {
+    // SAFETY: `out` and `bs` are live per the caller's contract.
+    unsafe { print_day_of_week(out, bs) }
+}
+
+/// `static int i2r_OSSL_PERIOD(X509V3_EXT_METHOD *method, OSSL_TIME_PERIOD *p, BIO *out, int
+/// indent)` — `crypto/x509/v3_timespec.c:338-535`.
+unsafe fn i2r_OSSL_PERIOD(
+    method: *const X509V3ExtMethod,
+    p: *mut OsslTimePeriod,
+    out: *mut Bio,
+    indent: c_int,
+) -> c_int {
+    // SAFETY: `p` is live per the caller's contract.
+    let (times_of_day, days, weeks, months, years) = unsafe {
+        (
+            (*p).timesOfDay,
+            (*p).days,
+            (*p).weeks,
+            (*p).months,
+            (*p).years,
+        )
+    };
+    // SAFETY: `out` is live; the format and arguments are as declared.
+    if unsafe { BIO_printf(out, c"%*sPeriod:\n".as_ptr(), indent, c"".as_ptr()) } <= 0 {
+        return 0;
+    }
+    if !times_of_day.is_null() {
+        // SAFETY: `out` is live; the format and arguments are as declared.
+        if unsafe {
+            BIO_printf(
+                out,
+                c"%*sDaytime bands:\n".as_ptr(),
+                indent + 4,
+                c"".as_ptr(),
+            )
+        } <= 0
+        {
+            return 0;
+        }
+        // SAFETY: `times_of_day` is a live stack.
+        let num = unsafe { OPENSSL_sk_num(times_of_day) };
+        let mut i = 0;
+        while i < num {
+            // SAFETY: `i` is in bounds.
+            let band = unsafe { OPENSSL_sk_value(times_of_day, i) }.cast::<OsslDayTimeBand>();
+            // SAFETY: `out` is live; the format and arguments are as declared.
+            if unsafe { BIO_printf(out, c"%*s".as_ptr(), indent + 8, c"".as_ptr()) } <= 0 {
+                return 0;
+            }
+            // SAFETY: `band` is live; `out` is live.
+            if unsafe { i2r_OSSL_DAY_TIME_BAND(method, band, out, indent + 8) } == 0 {
+                return 0;
+            }
+            // SAFETY: `out` is live; the literal is static.
+            if unsafe { BIO_puts(out, c"\n".as_ptr()) } == 0 {
+                return 0;
+            }
+            i += 1;
+        }
+    }
+    if !days.is_null() {
+        // SAFETY: `days` is live.
+        if unsafe { (*days).type_ } == OSSL_TIME_SPEC_DAY_TYPE_INT {
+            if !weeks.is_null() {
+                // SAFETY: `out` is live; the format and arguments are as declared.
+                if unsafe {
+                    BIO_printf(
+                        out,
+                        c"%*sDays of the week: ".as_ptr(),
+                        indent + 4,
+                        c"".as_ptr(),
+                    )
+                } <= 0
+                {
+                    return 0;
+                }
+            } else if !months.is_null() {
+                // SAFETY: `out` is live; the format and arguments are as declared.
+                if unsafe {
+                    BIO_printf(
+                        out,
+                        c"%*sDays of the month: ".as_ptr(),
+                        indent + 4,
+                        c"".as_ptr(),
+                    )
+                } <= 0
+                {
+                    return 0;
+                }
+            } else if !years.is_null() {
+                // SAFETY: `out` is live; the format and arguments are as declared.
+                if unsafe {
+                    BIO_printf(
+                        out,
+                        c"%*sDays of the year: ".as_ptr(),
+                        indent + 4,
+                        c"".as_ptr(),
+                    )
+                } <= 0
+                {
+                    return 0;
+                }
+            }
+        // SAFETY: `out` is live; the format and arguments are as declared.
+        } else if unsafe { BIO_printf(out, c"%*sDays: ".as_ptr(), indent + 4, c"".as_ptr()) } <= 0 {
+            return 0;
+        }
+        // SAFETY: `days` is live.
+        match unsafe { (*days).type_ } {
+            OSSL_TIME_SPEC_DAY_TYPE_INT => {
+                // SAFETY: the `intDay` arm is live under this selector.
+                let ints = unsafe { (*days).choice.cast::<OpenSslStack>() };
+                // SAFETY: `ints` is a live stack.
+                let n = unsafe { OPENSSL_sk_num(ints) };
+                let mut i = 0;
+                while i < n {
+                    // SAFETY: `i` is in bounds.
+                    let big = unsafe { OPENSSL_sk_value(ints, i) }.cast::<Asn1String>();
+                    let mut small: i64 = 0;
+                    // SAFETY: `big` is live; `small` is a writable local.
+                    if unsafe { ASN1_INTEGER_get_int64(&raw mut small, big) } == 0 {
+                        return 0;
+                    }
+                    // SAFETY: `out` is live; the literal is static.
+                    if i > 0 && unsafe { BIO_puts(out, c", ".as_ptr()) } == 0 {
+                        return 0;
+                    }
+                    if !weeks.is_null() {
+                        // SAFETY: `out` is live; `small` is a value.
+                        if unsafe { print_int_day_of_week(out, small) } == 0 {
+                            return 0;
+                        }
+                    // SAFETY: `out` is live; the format and argument are as declared.
+                    } else if unsafe { BIO_printf(out, c"%lld".as_ptr(), small) } <= 0 {
+                        return 0;
+                    }
+                    i += 1;
+                }
+            }
+            OSSL_TIME_SPEC_DAY_TYPE_BIT => {
+                // SAFETY: the `bitDay` arm is live under this selector.
+                let bs = unsafe { (*days).choice.cast::<Asn1String>() };
+                // SAFETY: `bs` is live; `out` is live.
+                if unsafe { print_day_of_week(out, bs) } == 0 {
+                    return 0;
+                }
+            }
+            OSSL_TIME_SPEC_DAY_TYPE_DAY_OF => {
+                // SAFETY: the `dayOf` arm is live under this selector.
+                let day_of = unsafe { (*days).choice.cast::<OsslTimeSpecXDayOf>() };
+                // SAFETY: `day_of` is live.
+                let nd: *mut OsslNamedDay = match unsafe { (*day_of).type_ } {
+                    // SAFETY: `out` is live; each literal is static; the arm is live under its tag.
+                    OSSL_TIME_SPEC_X_DAY_OF_FIRST => {
+                        // SAFETY: `out` is live; the literal is static.
+                        if unsafe { BIO_puts(out, c"FIRST ".as_ptr()) } == 0 {
+                            return 0;
+                        }
+                        // SAFETY: this arm's tag selects the live `OsslNamedDay` in `day_of.choice`.
+                        unsafe { (*day_of).choice.cast::<OsslNamedDay>() }
+                    }
+                    OSSL_TIME_SPEC_X_DAY_OF_SECOND => {
+                        // SAFETY: `out` is live; the literal is static.
+                        if unsafe { BIO_puts(out, c"SECOND ".as_ptr()) } == 0 {
+                            return 0;
+                        }
+                        // SAFETY: this arm's tag selects the live `OsslNamedDay` in `day_of.choice`.
+                        unsafe { (*day_of).choice.cast::<OsslNamedDay>() }
+                    }
+                    OSSL_TIME_SPEC_X_DAY_OF_THIRD => {
+                        // SAFETY: `out` is live; the literal is static.
+                        if unsafe { BIO_puts(out, c"THIRD ".as_ptr()) } == 0 {
+                            return 0;
+                        }
+                        // SAFETY: this arm's tag selects the live `OsslNamedDay` in `day_of.choice`.
+                        unsafe { (*day_of).choice.cast::<OsslNamedDay>() }
+                    }
+                    OSSL_TIME_SPEC_X_DAY_OF_FOURTH => {
+                        // SAFETY: `out` is live; the literal is static.
+                        if unsafe { BIO_puts(out, c"FOURTH ".as_ptr()) } == 0 {
+                            return 0;
+                        }
+                        // SAFETY: this arm's tag selects the live `OsslNamedDay` in `day_of.choice`.
+                        unsafe { (*day_of).choice.cast::<OsslNamedDay>() }
+                    }
+                    OSSL_TIME_SPEC_X_DAY_OF_FIFTH => {
+                        // SAFETY: `out` is live; the literal is static.
+                        if unsafe { BIO_puts(out, c"FIFTH ".as_ptr()) } == 0 {
+                            return 0;
+                        }
+                        // SAFETY: this arm's tag selects the live `OsslNamedDay` in `day_of.choice`.
+                        unsafe { (*day_of).choice.cast::<OsslNamedDay>() }
+                    }
+                    _ => return 0,
+                };
+                // SAFETY: `nd` is live.
+                match unsafe { (*nd).type_ } {
+                    OSSL_NAMED_DAY_TYPE_INT => {
+                        // SAFETY: the `intNamedDays` arm is live under this selector.
+                        let iv = unsafe { (*nd).choice.cast::<Asn1String>() };
+                        let mut small: i64 = 0;
+                        // SAFETY: `iv` is live; `small` is a writable local.
+                        if unsafe { ASN1_INTEGER_get_int64(&raw mut small, iv) } == 0 {
+                            return 0;
+                        }
+                        // SAFETY: `out` is live; `small` is a value.
+                        if unsafe { print_int_named_day(out, small) } == 0 {
+                            return 0;
+                        }
+                    }
+                    OSSL_NAMED_DAY_TYPE_BIT => {
+                        // SAFETY: the `bitNamedDays` arm is live under this selector.
+                        let bs = unsafe { (*nd).choice.cast::<Asn1String>() };
+                        // SAFETY: `bs` is live; `out` is live.
+                        if unsafe { print_bit_named_day(out, bs) } == 0 {
+                            return 0;
+                        }
+                    }
+                    _ => return 0,
+                }
+            }
+            _ => return 0,
+        }
+        // SAFETY: `out` is live; the literal is static.
+        if unsafe { BIO_puts(out, c"\n".as_ptr()) } == 0 {
+            return 0;
+        }
+    }
+    if !weeks.is_null() {
+        // SAFETY: `weeks` is live.
+        if unsafe { (*weeks).type_ } == OSSL_TIME_SPEC_WEEKS_TYPE_INT {
+            if !months.is_null() {
+                // SAFETY: `out` is live; the format and arguments are as declared.
+                if unsafe {
+                    BIO_printf(
+                        out,
+                        c"%*sWeeks of the month: ".as_ptr(),
+                        indent + 4,
+                        c"".as_ptr(),
+                    )
+                } <= 0
+                {
+                    return 0;
+                }
+            } else if !years.is_null() {
+                // SAFETY: `out` is live; the format and arguments are as declared.
+                if unsafe {
+                    BIO_printf(
+                        out,
+                        c"%*sWeeks of the year: ".as_ptr(),
+                        indent + 4,
+                        c"".as_ptr(),
+                    )
+                } <= 0
+                {
+                    return 0;
+                }
+            }
+        // SAFETY: `out` is live; the format and arguments are as declared.
+        } else if unsafe { BIO_printf(out, c"%*sWeeks: ".as_ptr(), indent + 4, c"".as_ptr()) } <= 0
+        {
+            return 0;
+        }
+        // SAFETY: `weeks` is live.
+        match unsafe { (*weeks).type_ } {
+            OSSL_TIME_SPEC_WEEKS_TYPE_ALL => {
+                // SAFETY: `out` is live; the literal is static.
+                if unsafe { BIO_puts(out, c"ALL".as_ptr()) } == 0 {
+                    return 0;
+                }
+            }
+            OSSL_TIME_SPEC_WEEKS_TYPE_INT => {
+                // SAFETY: the `intWeek` arm is live under this selector.
+                let ints = unsafe { (*weeks).choice.cast::<OpenSslStack>() };
+                // SAFETY: `ints` is a live stack.
+                let n = unsafe { OPENSSL_sk_num(ints) };
+                let mut i = 0;
+                while i < n {
+                    // SAFETY: `i` is in bounds.
+                    let big = unsafe { OPENSSL_sk_value(ints, i) }.cast::<Asn1String>();
+                    let mut small: i64 = 0;
+                    // SAFETY: `big` is live; `small` is a writable local.
+                    if unsafe { ASN1_INTEGER_get_int64(&raw mut small, big) } == 0 {
+                        return 0;
+                    }
+                    // SAFETY: `out` is live; the literal is static.
+                    if i > 0 && unsafe { BIO_puts(out, c", ".as_ptr()) } == 0 {
+                        return 0;
+                    }
+                    // SAFETY: `out` is live; the format and argument are as declared.
+                    if unsafe { BIO_printf(out, c"%lld".as_ptr(), small) } == 0 {
+                        return 0;
+                    }
+                    i += 1;
+                }
+            }
+            OSSL_TIME_SPEC_WEEKS_TYPE_BIT => {
+                // SAFETY: the `bitWeek` arm is live under this selector.
+                let bs = unsafe { (*weeks).choice.cast::<Asn1String>() };
+                // SAFETY: `bs` is live; `out` is live.
+                if unsafe { print_bit_week(out, bs) } == 0 {
+                    return 0;
+                }
+            }
+            _ => return 0,
+        }
+        // SAFETY: `out` is live; the literal is static.
+        if unsafe { BIO_puts(out, c"\n".as_ptr()) } == 0 {
+            return 0;
+        }
+    }
+    if !months.is_null() {
+        // SAFETY: `out` is live; the format and arguments are as declared.
+        if unsafe { BIO_printf(out, c"%*sMonths: ".as_ptr(), indent + 4, c"".as_ptr()) } <= 0 {
+            return 0;
+        }
+        // SAFETY: `months` is live.
+        match unsafe { (*months).type_ } {
+            OSSL_TIME_SPEC_MONTH_TYPE_ALL => {
+                // SAFETY: `out` is live; the literal is static.
+                if unsafe { BIO_puts(out, c"ALL".as_ptr()) } == 0 {
+                    return 0;
+                }
+            }
+            OSSL_TIME_SPEC_MONTH_TYPE_INT => {
+                // SAFETY: the `intMonth` arm is live under this selector.
+                let ints = unsafe { (*months).choice.cast::<OpenSslStack>() };
+                // SAFETY: `ints` is a live stack.
+                let n = unsafe { OPENSSL_sk_num(ints) };
+                let mut i = 0;
+                while i < n {
+                    // SAFETY: `i` is in bounds.
+                    let big = unsafe { OPENSSL_sk_value(ints, i) }.cast::<Asn1String>();
+                    let mut small: i64 = 0;
+                    // SAFETY: `big` is live; `small` is a writable local.
+                    if unsafe { ASN1_INTEGER_get_int64(&raw mut small, big) } == 0 {
+                        return 0;
+                    }
+                    // SAFETY: `out` is live; the literal is static.
+                    if i > 0 && unsafe { BIO_puts(out, c", ".as_ptr()) } == 0 {
+                        return 0;
+                    }
+                    // SAFETY: `out` is live; `small` is a value.
+                    if unsafe { print_int_month(out, small) } == 0 {
+                        return 0;
+                    }
+                    i += 1;
+                }
+            }
+            OSSL_TIME_SPEC_MONTH_TYPE_BIT => {
+                // SAFETY: the `bitMonth` arm is live under this selector.
+                let bs = unsafe { (*months).choice.cast::<Asn1String>() };
+                // SAFETY: `bs` is live; `out` is live.
+                if unsafe { print_bit_month(out, bs) } == 0 {
+                    return 0;
+                }
+            }
+            _ => return 0,
+        }
+        // SAFETY: `out` is live; the literal is static.
+        if unsafe { BIO_puts(out, c"\n".as_ptr()) } == 0 {
+            return 0;
+        }
+    }
+    if !years.is_null() {
+        // SAFETY: `out` is live; the format and arguments are as declared.
+        if unsafe { BIO_printf(out, c"%*sYears: ".as_ptr(), indent + 4, c"".as_ptr()) } <= 0 {
+            return 0;
+        }
+        // SAFETY: `years` is a live stack.
+        let n = unsafe { OPENSSL_sk_num(years) };
+        let mut i = 0;
+        while i < n {
+            // SAFETY: `i` is in bounds.
+            let big = unsafe { OPENSSL_sk_value(years, i) }.cast::<Asn1String>();
+            let mut small: i64 = 0;
+            // SAFETY: `big` is live; `small` is a writable local.
+            if unsafe { ASN1_INTEGER_get_int64(&raw mut small, big) } == 0 {
+                return 0;
+            }
+            // SAFETY: `out` is live; the literal is static.
+            if i > 0 && unsafe { BIO_puts(out, c", ".as_ptr()) } == 0 {
+                return 0;
+            }
+            // SAFETY: `out` is live; the format and argument are as declared.
+            if unsafe { BIO_printf(out, c"%04lld".as_ptr(), small) } <= 0 {
+                return 0;
+            }
+            i += 1;
+        }
+    }
+    1
+}
+
+/// `static int i2r_OSSL_TIME_SPEC_TIME(X509V3_EXT_METHOD *method, OSSL_TIME_SPEC_TIME *time, BIO
+/// *out, int indent)` — `crypto/x509/v3_timespec.c:537-566`.
+unsafe fn i2r_OSSL_TIME_SPEC_TIME(
+    method: *const X509V3ExtMethod,
+    time: *mut OsslTimeSpecTime,
+    out: *mut Bio,
+    indent: c_int,
+) -> c_int {
+    // SAFETY: `time` is live per the caller's contract.
+    match unsafe { (*time).type_ } {
+        OSSL_TIME_SPEC_TIME_TYPE_ABSOLUTE => {
+            // SAFETY: `out` is live; the format and arguments are as declared.
+            if unsafe { BIO_printf(out, c"%*sAbsolute: ".as_ptr(), indent, c"".as_ptr()) } <= 0 {
+                return 0;
+            }
+            // SAFETY: the `absolute` arm is live under this selector.
+            let abs = unsafe { (*time).choice.cast::<OsslTimeSpecAbsolute>() };
+            // SAFETY: `abs` is live; `out` is live.
+            if unsafe { i2r_OSSL_TIME_SPEC_ABSOLUTE(method, abs, out, indent + 4) } <= 0 {
+                return 0;
+            }
+            // SAFETY: `out` is live; the literal is static.
+            unsafe { BIO_puts(out, c"\n".as_ptr()) }
+        }
+        OSSL_TIME_SPEC_TIME_TYPE_PERIODIC => {
+            // SAFETY: `out` is live; the format and arguments are as declared.
+            if unsafe { BIO_printf(out, c"%*sPeriodic:\n".as_ptr(), indent, c"".as_ptr()) } <= 0 {
+                return 0;
+            }
+            // SAFETY: the `periodic` arm is live under this selector.
+            let list = unsafe { (*time).choice.cast::<OpenSslStack>() };
+            // SAFETY: `list` is a live stack.
+            let n = unsafe { OPENSSL_sk_num(list) };
+            let mut i = 0;
+            while i < n {
+                // SAFETY: `out` is live; the literal is static.
+                if i > 0 && unsafe { BIO_puts(out, c"\n".as_ptr()) } == 0 {
+                    return 0;
+                }
+                // SAFETY: `i` is in bounds.
+                let tp = unsafe { OPENSSL_sk_value(list, i) }.cast::<OsslTimePeriod>();
+                // SAFETY: `tp` is live; `out` is live.
+                if unsafe { i2r_OSSL_PERIOD(method, tp, out, indent + 4) } == 0 {
+                    return 0;
+                }
+                i += 1;
+            }
+            // SAFETY: `out` is live; the literal is static.
+            unsafe { BIO_puts(out, c"\n".as_ptr()) }
+        }
+        _ => 0,
+    }
+}
+
+/// `static int i2r_OSSL_TIME_SPEC(X509V3_EXT_METHOD *method, OSSL_TIME_SPEC *time, BIO *out, int
+/// indent)` — `crypto/x509/v3_timespec.c:568-587`. The row's `i2r` callback.
+unsafe extern "C" fn i2r_OSSL_TIME_SPEC(
+    method: *const X509V3ExtMethod,
+    time: *mut c_void,
+    out: *mut Bio,
+    indent: c_int,
+) -> c_int {
+    let ts = time.cast::<OsslTimeSpec>();
+    // SAFETY: `ts` is live per the caller's contract.
+    let time_zone = unsafe { (*ts).timeZone };
+    if !time_zone.is_null() {
+        let mut tz: i64 = 0;
+        // SAFETY: `time_zone` is live; `tz` is a writable local.
+        if unsafe { ASN1_INTEGER_get_int64(&raw mut tz, time_zone) } != 1 {
+            return 0;
+        }
+        // SAFETY: `out` is live; the format and arguments are as declared.
+        if unsafe {
+            BIO_printf(
+                out,
+                c"%*sTimezone: UTC%+03lld:00\n".as_ptr(),
+                indent,
+                c"".as_ptr(),
+                tz,
+            )
+        } <= 0
+        {
+            return 0;
+        }
+    }
+    // SAFETY: `ts` is live.
+    if unsafe { (*ts).notThisTime } > 0 {
+        // SAFETY: `out` is live; the format and arguments are as declared.
+        if unsafe { BIO_printf(out, c"%*sNOT this time:\n".as_ptr(), indent, c"".as_ptr()) } <= 0 {
+            return 0;
+        }
+    // SAFETY: `out` is live; the format and arguments are as declared.
+    } else if unsafe { BIO_printf(out, c"%*sTime:\n".as_ptr(), indent, c"".as_ptr()) } <= 0 {
+        return 0;
+    }
+    // SAFETY: `ts` is live; its `time` is a live value; `out` is live.
+    unsafe { i2r_OSSL_TIME_SPEC_TIME(method, (*ts).time, out, indent + 4) }
+}
+
+/// `const X509V3_EXT_METHOD ossl_v3_time_specification` — `crypto/x509/v3_timespec.c:589-599`.
+///
+/// `ext_nid` is `NID_time_specification`, `ext_flags` is `X509V3_EXT_MULTILINE`, `it` is
+/// `ASN1_ITEM_ref(OSSL_TIME_SPEC)` and `i2r` is `i2r_OSSL_TIME_SPEC`; every other slot is zero.
+pub static ossl_v3_time_specification: X509V3ExtMethod = X509V3ExtMethod {
+    ext_nid: NID_time_specification,
+    ext_flags: X509V3_EXT_MULTILINE,
+    it: Some(OSSL_TIME_SPEC_it),
+    ext_new: None,
+    ext_free: None,
+    d2i: None,
+    i2d: None,
+    i2s: None,
+    s2i: None,
+    i2v: None,
+    v2i: None,
+    i2r: Some(i2r_OSSL_TIME_SPEC),
+    r2i: None,
+    usr_data: ptr::null_mut(),
+};
