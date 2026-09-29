@@ -124,6 +124,10 @@ pub(crate) mod ml_kem;
 pub(crate) mod ml_dsa;
 pub mod modes;
 pub mod params;
+// Phase 10 (10.14.14) — `crypto/ocsp/`: the OCSP object model and its ASN.1, the first unit of
+// the OCSP sub-subphase. `ocsp_asn.c`'s item groups are landed here; the request/response/lookup
+// surface is 10.14.14's remaining work. The directory is new here. See `src/ocsp/mod.rs`.
+pub mod ocsp;
 // Phase 8.7's `crypto/param_build_set.c`: the two-way key-management writers a provider's
 // `export()` and `get_params()` methods share. `crypto/ec/ec_backend.c` is the first caller the
 // crate reaches; `crypto/ffc/ffc_backend.c`'s withheld `ossl_ffc_params_todata` reaches the same

@@ -290,3 +290,18 @@ pub mod v3_attrdesc;
 pub mod v3_attrmap;
 pub mod v3_pci;
 pub mod v3_usernotice;
+
+// The 10.14 blocked-unit pivots, first batch: `crypto/x509/v3_addr.c` (whose only blocker is the
+// naming shim `ossl_asn1_string_set_bits_left`, landed as `asn1::bitstr::set_bits_left`) and
+// `crypto/x509/v3_rolespec.c` (blocked on `ossl_serial_number_print`, landed alongside it in
+// `src/x509/t_x509.rs`). Each withholds only the published `standard_exts[]` and the six
+// `v3_lib.rs` lookup names (D456). See the module docs and docs/PHASE-10-SUBPHASES.md section 7.
+pub mod v3_addr;
+pub mod v3_rolespec;
+
+// The 10.14 blocked-unit pivots, second batch: `crypto/x509/v3_akeya.c` (the `AUTHORITY_KEYID`
+// item group, the blocker `crypto/x509/v3_akid.c` names) and `crypto/x509/v3_authattid.c` (whose
+// one blocker is `OSSL_ISSUER_SERIAL_it`, defined in `v3_ac_tgt.rs`). Each withholds only the
+// published `standard_exts[]` and the six `v3_lib.rs` lookup names (D456).
+pub mod v3_akeya;
+pub mod v3_authattid;

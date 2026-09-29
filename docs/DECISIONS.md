@@ -32979,3 +32979,53 @@ were written with their `// SAFETY:` comments, so no clippy cleanup pass was nee
 **14 of the 63 tables**, all blocked, over the eight blocked units named above, plus D463's 24-name
 closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
 `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+## D470 -- the blocked-unit pivots begin; 57 of 63 tables exist and exactly six are left
+
+**The two blocked units whose closure was one landed name away, plus the five-table OCSP unit the new
+`ocsp_asn` unblocked, landed.** Tables go from **49 to 57 of 63** and `implemented_surface` from 4,009
+to **4,133** symbols (+124).
+
+* `v3_addr.c` -- the RFC 3779 IP-address unit, 1,359 lines, transcribed whole except its three
+  path-validation names. Its only measured blocker, `ossl_asn1_string_set_bits_left`, is a **naming
+  difference only**: it is landed as `crate::asn1::bitstr::set_bits_left`, the shim D463 named. The
+  three withheld names have the same blocker `v3_asid.c`'s three have -- no `X509_STORE_CTX` layout.
+* `v3_rolespec.c` -- blocked on `ossl_serial_number_print` (`t_x509.c:519-559`), which landed into the
+  existing `src/x509/t_x509.rs` (its `X509_signature_dump` byte-for-byte unchanged). `v3_rolespec`'s
+  printer is that function's first caller, which is what turns the record from "no caller" into a
+  landed function.
+* `v3_ocsp.c` -- **five** tables, in the new `src/ocsp/` tree whose first unit `ocsp_asn.c` (135 lines,
+  fifteen item groups, seventy-five exports, landed whole) is the only reason `OCSP_CRLID_it` and
+  `OCSP_SERVICELOC_it` exist.
+* `v3_akeya.c` -- the `AUTHORITY_KEYID` item group. `AUTHORITY_KEYID_dup` is deliberately **not**
+  defined: the authority's `IMPLEMENT_ASN1_FUNCTIONS` emits only the `_it`/`_new`/`_free`/`d2i_`/
+  `i2d_` quintet and the admitted DSO exports no `_dup`, so defining one would invent an export.
+* `v3_authattid.c` -- one blocker, `OSSL_ISSUER_SERIAL_it`; the file-local accessor in `v3_ac_tgt.rs`
+  became `pub(crate)` and is reached by Rust path, which is the whole of that file's change.
+
+**One divergence row narrowed, the register held at 14.** `t_x509.rs`'s row covered
+`ossl_serial_number_print` and `ossl_x509_print_ex_brief`; the first is now built, so the row is
+narrowed to the second with its Phase-11 object-layer blocker. The gate did not have to force this
+one -- the narrowing was made before the run, because the change that landed the name is the change
+that makes the record wrong.
+
+### Counts, and what did not close
+
+**57 of 63 tables landed; exactly six remain, over four units**: `v3_akid.c` and `v3_san.c`'s
+`ossl_v3_alt` (blocked on `X509V3_EXT_d2i`, the `v3_lib.c` dispatch, and for `v3_san`
+`X509_REQ_get_subject_name`), `v3_ncons.c`'s three (on `OSSL_parse_url` in `http_lib.c` and
+`ossl_a2ulabel` in `punycode.c`), and `ct_x509v3.c` (on `SCT_LIST_free`/`_print`, `SCT_set_source`,
+`d2i_SCT_LIST`/`i2d_SCT_LIST`). Phase-10 counts are unchanged at **`296 implemented / 2 open`**
+exports and **`636 implemented / 0 open`** provider rows. `RT-STORE` stays at **46,024** observations
+across **109** courts. Phase 11 still derives `not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean. The 109-court pipeline
+prints `PIPELINE OK` exit 0 on the first run; `probe_hygiene.py` read clean.
+
+### The remaining distance
+
+**Six of the 63 tables** over the four units named above, plus D463's 24-name closure over 17 further
+units; then the array, then `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse`
+-> `store_result.c` / `OSSL_STORE_load` -> the seal.
