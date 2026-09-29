@@ -487,7 +487,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 14381,
+      "compiler_emitted_count": 14503,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -495,8 +495,11 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 3749,
+        "implemented": 3784,
         "implemented_symbols": [
+          "ACCESS_DESCRIPTION_free",
+          "ACCESS_DESCRIPTION_it",
+          "ACCESS_DESCRIPTION_new",
           "AES_bi_ige_encrypt",
           "AES_cbc_encrypt",
           "AES_cfb128_encrypt",
@@ -740,6 +743,9 @@
           "ASN1_tag2bit",
           "ASN1_tag2str",
           "ASN1_verify",
+          "AUTHORITY_INFO_ACCESS_free",
+          "AUTHORITY_INFO_ACCESS_it",
+          "AUTHORITY_INFO_ACCESS_new",
           "BASIC_CONSTRAINTS_free",
           "BASIC_CONSTRAINTS_it",
           "BASIC_CONSTRAINTS_new",
@@ -2612,6 +2618,9 @@
           "EVP_sha512_256",
           "EVP_shake128",
           "EVP_shake256",
+          "EXTENDED_KEY_USAGE_free",
+          "EXTENDED_KEY_USAGE_it",
+          "EXTENDED_KEY_USAGE_new",
           "GENERAL_NAMES_free",
           "GENERAL_NAMES_it",
           "GENERAL_NAMES_new",
@@ -2818,6 +2827,12 @@
           "OPENSSL_version_minor",
           "OPENSSL_version_patch",
           "OPENSSL_version_pre_release",
+          "OSSL_ATTRIBUTES_SYNTAX_free",
+          "OSSL_ATTRIBUTES_SYNTAX_it",
+          "OSSL_ATTRIBUTES_SYNTAX_new",
+          "OSSL_BASIC_ATTR_CONSTRAINTS_free",
+          "OSSL_BASIC_ATTR_CONSTRAINTS_it",
+          "OSSL_BASIC_ATTR_CONSTRAINTS_new",
           "OSSL_DAY_TIME_BAND_free",
           "OSSL_DAY_TIME_BAND_it",
           "OSSL_DAY_TIME_BAND_new",
@@ -3392,6 +3407,13 @@
           "PKEY_USAGE_PERIOD_free",
           "PKEY_USAGE_PERIOD_it",
           "PKEY_USAGE_PERIOD_new",
+          "POLICY_CONSTRAINTS_free",
+          "POLICY_CONSTRAINTS_it",
+          "POLICY_CONSTRAINTS_new",
+          "POLICY_MAPPINGS_it",
+          "POLICY_MAPPING_free",
+          "POLICY_MAPPING_it",
+          "POLICY_MAPPING_new",
           "PROXY_CERT_INFO_EXTENSION_free",
           "PROXY_CERT_INFO_EXTENSION_it",
           "PROXY_CERT_INFO_EXTENSION_new",
@@ -3591,6 +3613,8 @@
           "SHA512_Transform",
           "SHA512_Update",
           "SMIME_crlf_copy",
+          "TLS_FEATURE_free",
+          "TLS_FEATURE_new",
           "UINT32_it",
           "UINT64_it",
           "UI_OpenSSL",
@@ -3952,6 +3976,7 @@
           "conf_ssl_get",
           "conf_ssl_get_cmd",
           "conf_ssl_name_find",
+          "d2i_ACCESS_DESCRIPTION",
           "d2i_ASN1_BIT_STRING",
           "d2i_ASN1_BMPSTRING",
           "d2i_ASN1_ENUMERATED",
@@ -3974,6 +3999,7 @@
           "d2i_ASN1_UTCTIME",
           "d2i_ASN1_UTF8STRING",
           "d2i_ASN1_VISIBLESTRING",
+          "d2i_AUTHORITY_INFO_ACCESS",
           "d2i_AutoPrivateKey",
           "d2i_AutoPrivateKey_ex",
           "d2i_BASIC_CONSTRAINTS",
@@ -4000,6 +4026,7 @@
           "d2i_EC_PUBKEY_bio",
           "d2i_EC_PUBKEY_fp",
           "d2i_EDIPARTYNAME",
+          "d2i_EXTENDED_KEY_USAGE",
           "d2i_GENERAL_NAME",
           "d2i_GENERAL_NAMES",
           "d2i_ISSUER_SIGN_TOOL",
@@ -4007,6 +4034,8 @@
           "d2i_KeyParams_bio",
           "d2i_NETSCAPE_SPKAC",
           "d2i_NETSCAPE_SPKI",
+          "d2i_OSSL_ATTRIBUTES_SYNTAX",
+          "d2i_OSSL_BASIC_ATTR_CONSTRAINTS",
           "d2i_OSSL_DAY_TIME",
           "d2i_OSSL_DAY_TIME_BAND",
           "d2i_OSSL_NAMED_DAY",
@@ -4086,6 +4115,7 @@
           "d2i_X509_bio",
           "d2i_X509_fp",
           "err_free_strings_int",
+          "i2a_ACCESS_DESCRIPTION",
           "i2a_ASN1_ENUMERATED",
           "i2a_ASN1_INTEGER",
           "i2a_ASN1_OBJECT",
@@ -4094,6 +4124,7 @@
           "i2b_PVK_bio_ex",
           "i2b_PrivateKey_bio",
           "i2b_PublicKey_bio",
+          "i2d_ACCESS_DESCRIPTION",
           "i2d_ASN1_BIT_STRING",
           "i2d_ASN1_BMPSTRING",
           "i2d_ASN1_ENUMERATED",
@@ -4116,6 +4147,7 @@
           "i2d_ASN1_UTF8STRING",
           "i2d_ASN1_VISIBLESTRING",
           "i2d_ASN1_bio_stream",
+          "i2d_AUTHORITY_INFO_ACCESS",
           "i2d_BASIC_CONSTRAINTS",
           "i2d_DHparams",
           "i2d_DHxparams",
@@ -4140,6 +4172,7 @@
           "i2d_EC_PUBKEY_bio",
           "i2d_EC_PUBKEY_fp",
           "i2d_EDIPARTYNAME",
+          "i2d_EXTENDED_KEY_USAGE",
           "i2d_GENERAL_NAME",
           "i2d_GENERAL_NAMES",
           "i2d_ISSUER_SIGN_TOOL",
@@ -4147,6 +4180,8 @@
           "i2d_KeyParams_bio",
           "i2d_NETSCAPE_SPKAC",
           "i2d_NETSCAPE_SPKI",
+          "i2d_OSSL_ATTRIBUTES_SYNTAX",
+          "i2d_OSSL_BASIC_ATTR_CONSTRAINTS",
           "i2d_OSSL_DAY_TIME",
           "i2d_OSSL_DAY_TIME_BAND",
           "i2d_OSSL_NAMED_DAY",
@@ -4247,7 +4282,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 2147
+        "scaffolded": 2112
       },
       "libssl": {
         "authority_exports": 603,
@@ -4258,18 +4293,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 3749,
-      "scaffolded": 2750
+      "implemented": 3784,
+      "scaffolded": 2715
     }
   },
-  "body_hash": "a7f75440029dc0e0e7938342b62d37ed2afa508589944fa5684977fee8d1a5e6",
+  "body_hash": "d6372ccb515c703d7e9799e2ac8ce0714e382b39cd5403cbc18b37cef1ae8614",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "a29a6bfcc82b502a84b93db172402dffb497d829aaeaa12d8f5fc0ca5cbbadb9"
+      "sha256": "4f3f5b82eacb79edfdc3f6a47e95fb4e653a1fc25bbeeff995f325b3a80fab83"
     },
     {
       "name": "authority-exports",

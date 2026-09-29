@@ -32777,3 +32777,84 @@ closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
 Named shims are identified too: `v3_addr`'s `ossl_asn1_string_set_bits_left` is already landed as
 `asn1::bitstr::set_bits_left`.
 
+## D467 -- the closure-ready table units land; thirty of sixty-three tables exist, and the array stays withheld
+
+**The sixteenth pulled-forward slice took D466's list directly, and the list was re-measured before
+it was taken.** The same `nm --undefined-only` join over the admitted prefix was re-run first and
+reproduced D466 exactly: **36 closure-ready table units, 8 blocked**, **16 of 63 tables landed**, 23
+closure-ready units unlanded. Only then did the work start. That order is the property D451 asks
+for: the frontier is recomputed, not inherited, so a table that moved into closure between sessions
+cannot be missed and a table that left it cannot be silently claimed.
+
+**Nine units / 14 tables land, nothing stubbed.** `v3_extku.c` (4 tables: `ossl_v3_ext_ku`,
+`ossl_v3_ocsp_accresp`, `ossl_v3_acc_cert_policies`, `ossl_v3_acc_priv_policies`), `v3_info.c` (2:
+`ossl_v3_info`, `ossl_v3_sinfo`), `v3_sda.c` (2: `ossl_v3_subj_dir_attrs`,
+`ossl_v3_associated_info`), `v3_pmaps.c`, `v3_pcons.c`, `v3_battcons.c`, `v3_tlsf.c`, `v3_iobo.c` and
+the table half of `v3_bcons.c`. Each carries its item group(s), its
+`i2s_`/`s2i_`/`i2v_`/`v2i_`/`i2r_`/`r2i_` callbacks and its `OSSL_V3_EXT_METHOD` row(s). No table row
+is published with a hole in it; the withholding is done by name and the blocker recorded, which is
+the D459 rule.
+
+**The table layer is taken incrementally and the array is the one thing not taken (D464 option 1,
+D456).** `standard_exts[]` (`standard_exts.h:15-95`) stays withheld, and so do the six `v3_lib.rs`
+lookup names and `X509_get_ext_d2i`. Thirty of sixty-three tables is a partial array, and a partial
+array does not fail loudly -- it silently changes what `OBJ_bsearch_ext` finds for every missing NID,
+so publishing it now would be a behavior change disguised as progress. The array is published once,
+when the sixty-third table exists.
+
+**A divergence row retired rather than rewritten.** `forensics/prerequisites.json` carried a row for
+the `v3_bcons.c` table that was withheld; the table now exists, so the row was **retired** and the
+register goes from 18 rows to 17. A divergence register that only ever grows is a register nobody
+reads (D453/D454).
+
+**Raise coordinates read from the headers, not typed.** Each new unit declares its coordinates
+locally with the `err_sites::ErrSite` shape -- none of these files is in `gen_err_raise_sites.py`'s
+covered set -- and every reason value was read out of the authority's `err.h`/`x509v3err.h` rather
+than transcribed: `v3_info`'s five, `v3_pcons`'s three, `v3_pmaps`'s four, `v3_battcons`'s two,
+`v3_bcons`'s two and `v3_tlsf`'s three. `v3_sda.c` and `v3_iobo.c` raise nothing. D466 is what
+established the cost of the local-declaration allowance: three wrong numbers were found by reading
+the headers back, so the reading is now part of the write.
+
+**The output surface moves, the court surface does not.** `implemented_surface` moves from 3,749 to
+**3,784** symbols -- the thirty-five new exports (five `EXTENDED_KEY_USAGE_*`, five
+`OSSL_BASIC_ATTR_CONSTRAINTS_*`, five `ACCESS_DESCRIPTION_*`, five `AUTHORITY_INFO_ACCESS_*`, five
+`OSSL_ATTRIBUTES_SYNTAX_*`, three `POLICY_CONSTRAINTS_*`, three `POLICY_MAPPING_*`, one
+`POLICY_MAPPINGS_it`, two `TLS_FEATURE_*` and the exported `i2a_ACCESS_DESCRIPTION`). `RT-STORE` stays
+at **981** observations and the total at **46,024** across **109** courts: these rows are internal
+data the admitted DSO does not name, so they are unnamed by the built artifact rather than unwatched
+by intent, and no arm was added that could not name its subject.
+
+### Counts, and what did not close
+
+**30 of 63 tables landed, 33 withheld** -- 14 blocked tables over the 8 blocked units, 19
+closure-ready tables over the 14 closure-ready units still unlanded. Closure-ready units stay at
+**36** and blocked units at **8** (both sets existed before this slice; what changed is how much of
+the closure-ready set is now real). `standard_exts[]` was **not** published, so `X509_get_ext_d2i`
+stays withheld, `ossl_x509v3_cache_extensions` stays unreachable, and **`PKCS12_parse` and
+`OSSL_STORE_load` stay open**. Phase-10 counts are unchanged at **`296 implemented / 2 open`**
+exports and **`636 implemented / 0 open`** provider rows. Phase 11 still derives `not-started`.
+
+### Verification
+
+D462's protocol was followed first: `cargo test --lib` with `git --no-optional-locks status --short`
+read at the moment of the run gave **1117 passed, 0 failed** on a clean tree -- D466's fix holds and
+no test was retried, skipped or weakened. `cargo fmt --all -- --check` and `cargo clippy
+--all-targets -- -D warnings` are clean. The 109-court pipeline reads **1117 passed, 0 failed** on
+both the serial and the parallel half and prints `PIPELINE OK` exit 0 on two consecutive runs. One
+intermediate run failed `probe_hygiene.py` with `rt_bio_resolve_probe.c` `UNSTABLE` -- its
+`getaddrinfo` failure text differed between `-O0` (`Name or service not known`) and `-O1` (`No
+address associated with hostname`) -- which is a host DNS/environment divergence in the container,
+not a source change: the same probe read `clean` in the runs either side of it and neither this
+slice's source nor its evidence touches `crypto/bio/b_addr.c`. It is recorded rather than smoothed.
+
+### The remaining distance
+
+**33 of the 63 tables** -- 14 blocked over 8 units (`v3_addr`'s `ossl_v3_addr` is a naming shim since
+`ossl_asn1_string_set_bits_left` is already landed as `asn1::bitstr::set_bits_left`; the rest blocked
+on `ct_x509v3.c`, `ocsp_asn.c`, `AUTHORITY_KEYID_*` in `v3_akeya.c`, `OSSL_ISSUER_SERIAL_it` in
+`x509_acert.c`, `http_lib.c`/`punycode.c`, `ossl_serial_number_print` in `t_x509.c`, and
+`X509V3_EXT_d2i`/`X509_REQ_get_subject_name`), 19 closure-ready over 14 units (`v3_crld.c`'s six,
+`v3_asid.c`, `v3_timespec.c`, `v3_cpols.c`, `v3_admis.c`, `v3_pci.c`, `v3_sxnet.c`, `v3_skid.c`,
+`v3_ac_tgt.c`, `v3_attrdesc.c`, `v3_attrmap.c`, `v3_aaa.c`, `v3_ist.c`, `v3_usernotice.c`) -- plus
+D463's 24-name closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
+`ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.

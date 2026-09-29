@@ -588,7 +588,7 @@ pub unsafe extern "C" fn X509V3_add_value_int(
 /// # Safety
 ///
 /// `val` must be a live `CONF_VALUE`.
-unsafe fn conf_add_error_name_value(val: *const ConfValue) {
+pub(crate) unsafe fn conf_add_error_name_value(val: *const ConfValue) {
     let mut buf: Vec<u8> = b"name=".to_vec();
     // SAFETY: `val` is live per the contract.
     unsafe { push_cstr_or_null(&mut buf, (*val).name) };

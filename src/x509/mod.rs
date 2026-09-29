@@ -253,3 +253,16 @@ pub mod v3_conf;
 // `GENERAL_NAME_print`, `i2v_GENERAL_NAME` and `i2v_GENERAL_NAMES` (the widest hub D464 measured)
 // and withholds the `v2i` cluster by name behind `ASN1_generate_v3`. See the module docs.
 pub mod v3_san;
+// The 10.14 closure-ready table units this slice lands: `v3_extku.c` (four rows),
+// `v3_pmaps.c`, `v3_pcons.c`, `v3_battcons.c`, `v3_tlsf.c` and `v3_iobo.c`; and the table half of
+// `v3_bcons.c`. Each lands its item group(s), callbacks and `OSSL_V3_EXT_METHOD` row, and
+// withholds only the published `standard_exts[]` and the six `v3_lib.rs` lookup names (D456). See
+// the module docs and `docs/PHASE-10-SUBPHASES.md` section 7.
+pub mod v3_battcons;
+pub mod v3_extku;
+pub mod v3_info;
+pub mod v3_iobo;
+pub mod v3_pcons;
+pub mod v3_pmaps;
+pub mod v3_sda;
+pub mod v3_tlsf;
