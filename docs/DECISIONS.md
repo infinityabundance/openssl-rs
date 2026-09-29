@@ -32930,3 +32930,52 @@ recorded did not recur.
 **22 of the 63 tables** (14 blocked over 8 units, 8 closure-ready over 8 units), plus D463's 24-name
 closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
 `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+## D469 -- the closure-ready table set empties; 49 of 63 tables exist and every remaining table is blocked on a named unit
+
+**The last eight closure-ready units landed, one table each**: `v3_admis.c` (`ossl_v3_ext_admission`),
+`v3_pci.c` (`ossl_v3_pci`), `v3_ac_tgt.c` (`ossl_v3_targeting_information`), `v3_attrdesc.c`
+(`ossl_v3_attribute_descriptor`), `v3_attrmap.c` (`ossl_v3_attribute_mappings`), `v3_aaa.c`
+(`ossl_v3_allowed_attribute_assignments`), `v3_usernotice.c` (`ossl_v3_user_notice`) and `v3_ist.c`
+(`ossl_v3_issuer_sign_tool`). Tables go from **41 to 49 of 63** and `implemented_surface` from 3,878
+to **4,009** symbols (+131). `v3_ist.rs` was **extended, not rewritten**: it was an existing tracked
+module (10.12's item-group landing), so the row and its two callbacks were added and its doc
+corrected while every pre-existing line survived.
+
+**Nothing beyond the array is withheld in these eight.** They transcribe whole; the only withheld
+names are `standard_exts[]` and the six `v3_lib.rs` lookup names (D456), cited in each module doc.
+The `v3_ist.c` divergence row was retired -- the prerequisite gate reported
+`divergence_record_does_not_match` for `ossl_v3_issuer_sign_tool` on the first run -- taking the
+register from 15 rows to **14**. This is the third consecutive slice in which the gate, not a
+reviewer, is what moved the register, which is the direction it was built to fail in.
+
+**Every closure-ready table unit is now landed, which is the fact that changes the shape of the
+remaining work.** The 14 withheld tables are exactly the 14 blocked tables over the eight blocked
+units, and each is blocked on a name *outside* the table layer: `v3_addr.c` on the naming shim
+`ossl_asn1_string_set_bits_left` (landed as `asn1::bitstr::set_bits_left`); `v3_akid.c` on
+`AUTHORITY_KEYID_*` (`v3_akeya.c`) and `X509V3_EXT_d2i`; `v3_san.c`'s `ossl_v3_alt` on
+`X509V3_EXT_d2i`/`X509_REQ_get_subject_name`; `v3_authattid.c` on `OSSL_ISSUER_SERIAL_it`
+(`x509_acert.c`); `v3_ncons.c`'s three on `OSSL_parse_url` (`http_lib.c`)/`ossl_a2ulabel`
+(`punycode.c`); `v3_ocsp.c`'s five on `ocsp_asn.c`; and `v3_rolespec.c` on `ossl_serial_number_print`
+(`t_x509.c`). The next slice is the pivot to those dependencies. Until they land, `standard_exts[]`
+cannot be published, so `X509_get_ext_d2i` stays withheld, `ossl_x509v3_cache_extensions` stays
+unreachable, and **`PKCS12_parse` and `OSSL_STORE_load` stay open**.
+
+### Counts, and what did not close
+
+**49 of 63 tables landed, 14 withheld** -- all 14 over the eight blocked units. Phase-10 counts are
+unchanged at **`296 implemented / 2 open`** exports and **`636 implemented / 0 open`** provider rows.
+`RT-STORE` stays at **46,024** observations across **109** courts. Phase 11 still derives
+`not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean (the three transcriptions
+were written with their `// SAFETY:` comments, so no clippy cleanup pass was needed this time). The
+109-court pipeline prints `PIPELINE OK` exit 0; `probe_hygiene.py` read clean.
+
+### The remaining distance
+
+**14 of the 63 tables**, all blocked, over the eight blocked units named above, plus D463's 24-name
+closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
+`ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.

@@ -290,6 +290,7 @@
       "src/x509/v3_iobo.rs",
       "src/x509/v3_no_ass.rs",
       "src/x509/v3_no_rev_avail.rs",
+      "src/x509/v3_pci.rs",
       "src/x509/v3_single_use.rs",
       "src/x509/v3_soa_id.rs"
     ],

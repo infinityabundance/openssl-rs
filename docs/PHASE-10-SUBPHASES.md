@@ -1157,3 +1157,44 @@ closure-ready over 8 units -- `v3_admis.c`, `v3_pci.c`, `v3_ac_tgt.c`, `v3_attrd
 `v3_attrmap.c`, `v3_aaa.c`, `v3_ist.c`, `v3_usernotice.c`), plus D463's 24-name closure over 17
 further units; then the array, then `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` ->
 `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+
+**The closure-ready table set empties; forty-nine of the sixty-three tables now exist.** The
+eighteenth pulled-forward slice took the last eight closure-ready units, one table each, and landed
+them whole:
+
+* `v3_admis.c` (`ossl_v3_ext_admission`) -- `src/x509/v3_admis.rs`, four item groups
+  (`NAMING_AUTHORITY`, `PROFESSION_INFO`, `ADMISSIONS`, `ADMISSION_SYNTAX`), the two printers and the
+  full `get0`/`set0` accessor surface.
+* `v3_pci.c` (`ossl_v3_pci`) -- `src/x509/v3_pci.rs`, the `i2r_pci`/`r2i_pci` callbacks and the
+  `process_pci_value` helper; the item it rows lives in `v3_pcia.rs`, already landed.
+* `v3_ac_tgt.c` (`ossl_v3_targeting_information`) -- `src/x509/v3_ac_tgt.rs`, the six
+  `OSSL_*` item groups and the five printers.
+* `v3_attrdesc.c` (`ossl_v3_attribute_descriptor`) and `v3_attrmap.c`
+  (`ossl_v3_attribute_mappings`) -- twenty-five exports each.
+* `v3_aaa.c` (`ossl_v3_allowed_attribute_assignments`) and `v3_usernotice.c`
+  (`ossl_v3_user_notice`).
+* `v3_ist.c` (`ossl_v3_issuer_sign_tool`) -- an **extension** of the module 10.12 left as the item
+  group plus a by-name withdrawal of the row and its two callbacks: this slice lands the row,
+  `v2i_issuer_sign_tool` and `i2r_issuer_sign_tool`, and no pre-existing line is removed.
+
+**Nothing beyond the array is withheld, and one divergence row is retired.** These units are
+transcribed whole; the only withheld names are `standard_exts[]` and the six `v3_lib.rs` lookup
+names (D456). The `v3_ist.c` divergence row in `forensics/prerequisites.json` is retired, taking the
+register from 15 rows to **14** -- again the prerequisite gate forced the edit, reporting
+`divergence_record_does_not_match` for `ossl_v3_issuer_sign_tool` on the first run.
+
+**`implemented_surface` moves from 3,878 to 4,009 symbols** (+131: forty-six from `v3_admis`'s
+accessors and lifecycles, twenty-five each from `v3_attrdesc` and `v3_attrmap`, fifteen each from
+`v3_ac_tgt` and `v3_aaa`, five from `v3_usernotice`; `v3_pci` and `v3_ist` add none). `RT-STORE`
+stays at **46,024** observations across 109 courts.
+
+**Every closure-ready table unit is now landed, so the next move is the blocked eight.** The 14
+remaining withheld tables are exactly the 14 blocked tables over the eight blocked units, and each
+is blocked on a name outside the table layer: `v3_addr.c`'s `ossl_v3_addr` on the naming shim
+`ossl_asn1_string_set_bits_left` (already landed as `asn1::bitstr::set_bits_left`); `v3_akid.c` on
+`AUTHORITY_KEYID_*` (`v3_akeya.c`) and `X509V3_EXT_d2i`; `v3_san.c`'s `ossl_v3_alt` on
+`X509V3_EXT_d2i`/`X509_REQ_get_subject_name`; `v3_authattid.c` on `OSSL_ISSUER_SERIAL_it`
+(`x509_acert.c`); `v3_ncons.c`'s three on `OSSL_parse_url` (`http_lib.c`)/`ossl_a2ulabel`
+(`punycode.c`); `v3_ocsp.c`'s five on `ocsp_asn.c`; and `v3_rolespec.c` on `ossl_serial_number_print`
+(`t_x509.c`). The pivot to those dependencies is the remaining work before the array can be
+published, and with it `X509_get_ext_d2i`, `PKCS12_parse` and `OSSL_STORE_load`.
