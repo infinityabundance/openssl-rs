@@ -1278,3 +1278,49 @@ they are the two that need `X509V3_EXT_d2i` -- the `v3_lib.c` dispatch, which se
 `X509_REQ_get_subject_name`. The order is therefore forced and is the endgame: the array and the six
 lookup names land with these two tables and the dispatch, and then `X509_get_ext_d2i`,
 `ossl_x509v3_cache_extensions`, `PKCS12_parse` and `OSSL_STORE_load` follow.
+
+**The table layer closes: `standard_exts[]` is published, all sixty-three tables exist, and the
+dispatch is implemented.** The twenty-first pulled-forward slice landed the endgame as one unit,
+because the array names every table and the last two tables call the dispatch, so no earlier split
+compiles green:
+
+* `src/x509/v3_lib.rs` -- `STANDARD_EXTS`, the **seventy-three-entry** array transcribed entry for
+  entry from `standard_exts.h:15-95` (73 entries over 63 tables: `ossl_v3_ns_ia5_list[0..6]`,
+  `ossl_v3_alt[0..2]` and `ossl_v3_ct_scts[0..2]` are multi-row), plus `STANDARD_EXTENSION_COUNT` and
+  the six lookup names `X509V3_EXT_get_nid`, `X509V3_EXT_get`, `X509V3_EXT_add_alias`,
+  `X509V3_EXT_d2i`, `X509V3_get_d2i`, `X509V3_add1_i2d`. The array is a `static [*const
+  X509V3_EXT_METHOD; 73]` that is not `Sync` as a bare array, so it is held in a small `Sync`
+  newtype whose elements are the same crate-owned rows; `X509V3_EXT_get_nid` binary-searches it, and
+  a partial array would silently change `OBJ_bsearch_ext` (D456), which is why this landed as one
+  slice.
+* `src/x509/v3_conf.rs` -- `X509V3_EXT_i2d` (`:191-200`) and its body `do_ext_i2d` (`:137-187`),
+  needed by `X509V3_add1_i2d`. Nothing else in that file changed.
+* `src/x509/v3_akid.rs` (new) -- the `ossl_v3_akey_id` table, both callbacks.
+* `src/x509/v3_san.rs` -- `v2i_subject_alt`, `copy_email`, `v2i_issuer_alt`, `copy_issuer`, and the
+  three-row `ossl_v3_alt` table. Three rows, no holes.
+* `src/x509/x509_req.rs` (new, a pulled-forward Phase-11 subset) -- the `X509_REQ_INFO`/`X509_REQ`
+  layouts (56 and 120 bytes, with offset asserts), `X509_REQ_get_subject_name`, `X509_REQ_get_version`
+  and `X509_REQ_get0_signature`. `X509_REQ_get_subject_name` is `v2i_subject_alt`'s blocker, which is
+  why the subset was pulled forward. The rest of `x509_req.c` is withheld by name with its blocker.
+  With the type in place, `src/x509/x509rset.rs`'s three setters were **un-withheld** -- their only
+  blocker was the missing type, and `X509_NAME_set`/`X509_PUBKEY_set` were already landed.
+
+**A placement error was found and corrected in the same slice.** The endgame's first pass transcribed
+`ossl_x509_pubkey_hash` inside `v3_akid.rs` -- the module that reaches it -- rather than in
+`crypto/x509/v3_skid.c`, its authority unit and its `prerequisites.json` `owner_module`. The
+placement avoided a 72-entry partial array but at the cost of putting a unit's function in another
+unit's module. The follow-up moved it to `src/x509/v3_skid.rs`, landed `s2i_skey_id` there too
+(possible now that `X509_REQ` exists), and set the `ossl_v3_skey_id` row's **`s2i` slot to
+`s2i_skey_id`** instead of the `None` D468 had to publish. `v3_skid.c` now transcribes whole.
+
+**Two divergence rows retired, the register from 14 to 12.** The `v3_san.rs` row covered
+`ossl_v3_alt` and the `v3_skid.rs` row covered `ossl_x509_pubkey_hash`; both names are now built. The
+gate reported both as `divergence_record_does_not_match` before the retirement, which is the
+closure the register's own rule requires.
+
+**`implemented_surface` moves from 4,201 to 4,214 symbols** and the table count from 61 to **63 of
+63**. `RT-STORE` stays at **46,024** observations across 109 courts. Phase-10 counts stay at
+**`296 implemented / 2 open`**: the array and the dispatch are the prerequisite of
+`X509_get_ext_d2i` (`x509_ext.c`), `ossl_x509v3_cache_extensions` (`v3_purp.c`), `ossl_x509_add_cert_new`
+(`x509_cmp.c`), `PKCS12_parse` and `OSSL_STORE_load`, which come next and are what close the two open
+exports.

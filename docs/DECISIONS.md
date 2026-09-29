@@ -33077,3 +33077,57 @@ prints `PIPELINE OK` exit 0; `probe_hygiene.py` read clean.
 **Two of the 63 tables**, both needing the dispatch; then the array and the dispatch; then
 `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` /
 `OSSL_STORE_load` -> the seal.
+## D472 -- the table layer closes: the array is published, 63 of 63 tables exist, and the dispatch is implemented
+
+**The endgame landed as one unit, because it has to be one unit.** `standard_exts[]` names all 63
+tables and the last two tables call `X509V3_EXT_d2i`, so any earlier split either publishes a
+partial array -- a silent `OBJ_bsearch_ext` divergence (D456) -- or leaves the last two tables
+unlandable. The slice therefore carried, together:
+
+* `src/x509/v3_lib.rs`: `STANDARD_EXTS`, the **seventy-three-entry** array transcribed entry for
+  entry from `standard_exts.h:15-95`, `STANDARD_EXTENSION_COUNT`, and the six lookup names
+  (`X509V3_EXT_get_nid`, `_get`, `_add_alias`, `_EXT_d2i`, `_get_d2i`, `_add1_i2d`).
+* `src/x509/v3_conf.rs`: `X509V3_EXT_i2d` and its body `do_ext_i2d`, which `X509V3_add1_i2d` needs.
+* `src/x509/v3_akid.rs` (new): the `ossl_v3_akey_id` table.
+* `src/x509/v3_san.rs`: `v2i_subject_alt`, `copy_email`, `v2i_issuer_alt`, `copy_issuer` and the
+  three-row `ossl_v3_alt` table.
+* `src/x509/x509_req.rs` (new, a pulled-forward Phase-11 subset): the `X509_REQ_INFO`/`X509_REQ`
+  layouts, `X509_REQ_get_subject_name` (the `v2i_subject_alt` blocker), `X509_REQ_get_version` and
+  `X509_REQ_get0_signature`. With the type in place, `src/x509/x509rset.rs`'s three setters were
+  **un-withheld** -- their only blocker was the missing type and their callees were already landed.
+
+**A placement error was made and corrected in the same slice, and the correction is the point.** The
+endgame's first pass transcribed `ossl_x509_pubkey_hash` inside `v3_akid.rs`, the module that reaches
+it, rather than inside `crypto/x509/v3_skid.c`, its authority unit and its `prerequisites.json`
+`owner_module`. The intent was sound -- it avoided a 72-entry partial array -- but the result put one
+unit's function in another unit's module, which is exactly the placement the divergence register's
+`owner_module` fields exist to make checkable. The follow-up moved the function to
+`src/x509/v3_skid.rs`, landed `s2i_skey_id` there as well (now that `X509_REQ` exists), and set the
+`ossl_v3_skey_id` row's `s2i` slot to `s2i_skey_id` rather than the `None` D468 had to publish.
+`crypto/x509/v3_skid.c` now transcribes **whole**, and the `None` slot D468's own doc called out as
+non-faithful is gone.
+
+**Two divergence rows retired, 14 to 12.** The `v3_san.rs` row covered `ossl_v3_alt` and the
+`v3_skid.rs` row covered `ossl_x509_pubkey_hash`; both are now built and the gate reported both as
+`divergence_record_does_not_match` before the retirement.
+
+### Counts, and what did not close
+
+**63 of 63 tables landed.** `implemented_surface` moves from 4,201 to **4,214** symbols. Phase-10
+counts are unchanged at **`296 implemented / 2 open`**: the array and the dispatch are the
+*prerequisite* of the five names that close the stratum -- `X509_get_ext_d2i` (`x509_ext.c`),
+`ossl_x509v3_cache_extensions` (`v3_purp.c`), `ossl_x509_add_cert_new` (`x509_cmp.c`),
+`PKCS12_parse` (`p12_kiss.c`) and `OSSL_STORE_load` (`store_lib.c`) -- and those five are the next
+slice. `RT-STORE` stays at **46,024** observations across **109** courts. Phase 11 still derives
+`not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean. The 109-court pipeline
+prints `PIPELINE OK` exit 0; `probe_hygiene.py` read clean.
+
+### The remaining distance
+
+The five names named above, then the seal. `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` ->
+`ossl_x509_add_cert_new` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load`.

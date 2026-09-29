@@ -17,21 +17,30 @@
 //! * the context setters [`X509V3_set_nconf`] (`:451-459`), [`X509V3_set_ctx`] (`:461-476`),
 //!   [`X509V3_set_issuer_pkey`] (`:479-491`) and [`X509V3_set_conf_lhash`] (`:542-550`).
 //!
-//! ## What is withheld, and the one blocker
+//! ## The endgame addition: `X509V3_EXT_i2d`
 //!
-//! The whole extension-building chain is withheld by name behind `X509V3_EXT_get_nid`
-//! (`v3_lib.rs`): `X509V3_EXT_i2d` (`:191`), `do_ext_nconf` (`:79`), `X509V3_EXT_nconf_int`
-//! (`:34`), `X509V3_EXT_nconf` (`:58`), `X509V3_EXT_nconf_nid` (`:64`), `X509V3_EXT_add_nconf_sk`
-//! (`:309`), `X509V3_EXT_add_nconf` (`:356`), `X509V3_EXT_CRL_add_nconf` (`:369`),
-//! `X509V3_EXT_conf` (`:495`), `X509V3_EXT_conf_nid` (`:510`), `X509V3_EXT_add_conf` (`:552`),
-//! `X509V3_EXT_CRL_add_conf` (`:569`) and `X509V3_EXT_REQ_add_conf` (`:586`). `X509V3_EXT_REQ_add_nconf`
-//! (`:382`) additionally needs `X509_REQ_add_extensions` (`x509_req.c`, 10.14.11).
+//! `X509V3_EXT_i2d` (`:191-200`) and the static `do_ext_i2d` (`:137-187`) it wraps land here now
+//! that `X509V3_EXT_get_nid` (`v3_lib.rs`, this slice) exists: they are the encoder
+//! `X509V3_add1_i2d` (`v3_lib.c:271`) calls. `X509V3_EXT_i2d` raises
+//! `X509V3_R_UNKNOWN_EXTENSION` (`:196`), and `do_ext_i2d` raises `ERR_R_ASN1_LIB` at
+//! `:150`/`:158`/`:167` and `ERR_R_X509V3_LIB` at `:176`; all are declared locally below.
 //!
-//! Six more are withheld under D453's second reason — closure complete, but every caller is itself
+//! ## What is still withheld, and the one blocker
+//!
+//! The rest of the extension-building chain is withheld by name: `do_ext_nconf` (`:79`),
+//! `X509V3_EXT_nconf_int` (`:34`), `X509V3_EXT_nconf` (`:58`), `X509V3_EXT_nconf_nid` (`:64`),
+//! `X509V3_EXT_add_nconf_sk` (`:309`), `X509V3_EXT_add_nconf` (`:356`), `X509V3_EXT_CRL_add_nconf`
+//! (`:369`), `X509V3_EXT_conf` (`:495`), `X509V3_EXT_conf_nid` (`:510`), `X509V3_EXT_add_conf`
+//! (`:552`), `X509V3_EXT_CRL_add_conf` (`:569`) and `X509V3_EXT_REQ_add_conf` (`:586`).
+//! `X509V3_EXT_REQ_add_nconf` (`:382`) additionally needs `X509_REQ_add_extensions` (`x509_req.c`,
+//! 10.14.11).
+//!
+//! Five more are withheld under D453's second reason — closure complete, but every caller is itself
 //! withheld, so the function would be dead code: `v3_check_critical` (`:203`), `v3_check_generic`
-//! (`:216`), `do_ext_i2d` (`:137`), `v3_generic_extension` (`:235`), `generic_asn1` (`:280`) and
-//! `delete_ext` (`:294`). Their own closures are landed (or, for `v3_generic_extension`/
-//! `generic_asn1`, land with `ASN1_generate_v3`); only their callers block them.
+//! (`:216`), `v3_generic_extension` (`:235`), `generic_asn1` (`:280`) and `delete_ext` (`:294`).
+//! Their own closures are landed (or, for `v3_generic_extension`/`generic_asn1`, land with
+//! `ASN1_generate_v3`); only their callers block them. (`do_ext_i2d` left this list with this
+//! slice, because `X509V3_EXT_i2d` is now its reachable caller.)
 //!
 //! ## The `X509V3_CTX` structure
 //!
@@ -60,9 +69,12 @@
 
 #![allow(non_snake_case)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_uchar, c_void};
 use core::ptr;
 
+use crate::asn1::i2d::ASN1_item_i2d;
+use crate::asn1::layout::Asn1String;
+use crate::asn1::string::{ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new};
 use crate::evp::pkey::EvpPkey;
 use crate::runtime::conf::lib::{
     CONF_get_section, CONF_get_string, NCONF_get_section, NCONF_get_string,
@@ -70,8 +82,12 @@ use crate::runtime::conf::lib::{
 use crate::runtime::conf::types::Conf;
 use crate::runtime::err::raise_site;
 use crate::runtime::lhash::OpenSslLhash;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::stack::OpenSslStack;
+use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_EXT_get_nid};
+use crate::x509::x509_v3::X509_EXTENSION_create_by_NID;
 use crate::x509::x_crl::X509Crl;
+use crate::x509::x_exten::X509Extension;
 use crate::x509::x_x509::X509;
 
 /// `ERR_LIB_X509V3` — `include/openssl/err.h.in:99`.
@@ -82,6 +98,20 @@ const X509V3_R_OPERATION_NOT_DEFINED: c_int = 148;
 const ERR_R_PASSED_NULL_PARAMETER: c_int = 786690;
 /// `ERR_R_PASSED_INVALID_ARGUMENT` — `err.h.in:360`, `262 | ERR_RFLAG_COMMON`.
 const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 524550;
+/// `ERR_R_ASN1_LIB` — `include/openssl/err.h`, `ERR_LIB_ASN1 | ERR_RFLAG_COMMON`.
+const ERR_R_ASN1_LIB: c_int = 524301;
+/// `ERR_R_X509V3_LIB` — `include/openssl/err.h`, `ERR_LIB_X509V3 | ERR_RFLAG_COMMON`.
+const ERR_R_X509V3_LIB: c_int = 524322;
+/// `X509V3_R_UNKNOWN_EXTENSION` — `include/openssl/x509v3err.h:87`.
+const X509V3_R_UNKNOWN_EXTENSION: c_int = 129;
+
+/// `OPENSSL_FILE` for this unit's `OPENSSL_malloc`/`OPENSSL_free` expansions —
+/// `crypto/x509/v3_conf.c`.
+const FILE: &core::ffi::CStr = c"crypto/x509/v3_conf.c";
+/// `do_ext_i2d`'s `OPENSSL_malloc(ext_len)` — `crypto/x509/v3_conf.c:161`.
+const LINE_MALLOC_DER: c_int = 161;
+/// `do_ext_i2d`'s `err:` `OPENSSL_free(ext_der)` — `crypto/x509/v3_conf.c:184`.
+const LINE_FREE_DER: c_int = 184;
 
 /// One `v3_conf.c` raise coordinate: the authority file's own line and function.
 ///
@@ -126,6 +156,21 @@ const V3_CONF_486: crate::runtime::err::err_sites::ErrSite = v3_conf_site(
 /// `X509V3_set_conf_lhash`'s NULL-context refusal at `v3_conf.c:545`.
 const V3_CONF_545: crate::runtime::err::err_sites::ErrSite =
     v3_conf_site(545, c"X509V3_set_conf_lhash", ERR_R_PASSED_NULL_PARAMETER);
+/// `do_ext_i2d`'s ASN1-item encode failure at `v3_conf.c:150` (`ERR_R_ASN1_LIB`).
+const V3_CONF_150: crate::runtime::err::err_sites::ErrSite =
+    v3_conf_site(150, c"do_ext_i2d", ERR_R_ASN1_LIB);
+/// `do_ext_i2d`'s old-style encode failure at `v3_conf.c:158` (`ERR_R_ASN1_LIB`).
+const V3_CONF_158: crate::runtime::err::err_sites::ErrSite =
+    v3_conf_site(158, c"do_ext_i2d", ERR_R_ASN1_LIB);
+/// `do_ext_i2d`'s failed `ASN1_OCTET_STRING_new` at `v3_conf.c:167` (`ERR_R_ASN1_LIB`).
+const V3_CONF_167: crate::runtime::err::err_sites::ErrSite =
+    v3_conf_site(167, c"do_ext_i2d", ERR_R_ASN1_LIB);
+/// `do_ext_i2d`'s failed `X509_EXTENSION_create_by_NID` at `v3_conf.c:176` (`ERR_R_X509V3_LIB`).
+const V3_CONF_176: crate::runtime::err::err_sites::ErrSite =
+    v3_conf_site(176, c"do_ext_i2d", ERR_R_X509V3_LIB);
+/// `X509V3_EXT_i2d`'s unknown-extension refusal at `v3_conf.c:196`.
+const V3_CONF_196: crate::runtime::err::err_sites::ErrSite =
+    v3_conf_site(196, c"X509V3_EXT_i2d", X509V3_R_UNKNOWN_EXTENSION);
 
 /// `X509V3_CTX_TEST` — `include/openssl/x509v3.h.in:96`.
 pub const X509V3_CTX_TEST: c_int = 0x1;
@@ -458,4 +503,137 @@ pub unsafe extern "C" fn X509V3_set_conf_lhash(ctx: *mut X509V3Ctx, lhash: *mut 
         (*ctx).db_meth = core::ptr::addr_of!(CONF_LHASH_METHOD).cast_mut();
         (*ctx).db = lhash.cast::<c_void>();
     }
+}
+
+/// `static X509_EXTENSION *do_ext_i2d(const X509V3_EXT_METHOD *method, int ext_nid, int crit,
+/// void *ext_struc)` — `crypto/x509/v3_conf.c:137-187`.
+///
+/// DER-encodes `ext_struc` (through the method's `it` when set, else its old-style `i2d`), wraps
+/// the octets in an `ASN1_OCTET_STRING` and builds the extension with `X509_EXTENSION_create_by_NID`.
+///
+/// # Safety
+///
+/// `method` must be a live `X509V3_EXT_METHOD`; `ext_struc` is the internal structure that method's
+/// `it`/`i2d` encodes.
+unsafe fn do_ext_i2d(
+    method: *const X509V3ExtMethod,
+    ext_nid: c_int,
+    crit: c_int,
+    ext_struc: *mut c_void,
+) -> *mut X509Extension {
+    let mut ext_der: *mut c_uchar = ptr::null_mut();
+    let mut ext_oct: *mut Asn1String = ptr::null_mut();
+
+    /* Convert internal representation to DER. */
+    // SAFETY: `method` is live.
+    let it = unsafe { (*method).it };
+    // SAFETY: `method` is live.
+    let i2d = unsafe { (*method).i2d };
+    let ext_len = if let Some(it) = it {
+        // SAFETY: `ext_struc` is the value `it()` describes; `&mut ext_der` is a writable slot that
+        // starts NULL, so the encoder allocates.
+        let len = unsafe { ASN1_item_i2d(ext_struc, &mut ext_der, it()) };
+        if len < 0 {
+            // SAFETY: the site is a declared constant.
+            unsafe { raise_site(&V3_CONF_150) };
+            // SAFETY: `ext_der`/`ext_oct` are NULL or this call's own values.
+            return unsafe { do_ext_i2d_err(ext_der, ext_oct) };
+        }
+        len
+    } else {
+        // SAFETY: `i2d` is the method's old-style encoder; a NULL destination sizes the output.
+        let len = if let Some(f) = i2d {
+            // SAFETY: `f` is the live old-style encoder; a NULL destination sizes the output.
+            unsafe { f(ext_struc, ptr::null_mut()) }
+        } else {
+            0
+        };
+        if len <= 0 {
+            // SAFETY: the site is a declared constant.
+            unsafe { raise_site(&V3_CONF_158) };
+            // SAFETY: `ext_der`/`ext_oct` are NULL or this call's own values.
+            return unsafe { do_ext_i2d_err(ext_der, ext_oct) };
+        }
+        // SAFETY: the allocator answers NULL or `len` bytes.
+        let buf = CRYPTO_malloc(len as usize, FILE.as_ptr(), LINE_MALLOC_DER).cast::<c_uchar>();
+        if buf.is_null() {
+            // SAFETY: `ext_der`/`ext_oct` are NULL or this call's own values.
+            return unsafe { do_ext_i2d_err(ext_der, ext_oct) };
+        }
+        ext_der = buf;
+        let mut p = ext_der;
+        if let Some(f) = i2d {
+            // SAFETY: `f` is the live old-style encoder; `p` points into `ext_der`'s `len` bytes.
+            unsafe { f(ext_struc, &mut p) };
+        }
+        len
+    };
+
+    // SAFETY: the item allocator answers NULL or a live `ASN1_OCTET_STRING`.
+    ext_oct = ASN1_OCTET_STRING_new();
+    if ext_oct.is_null() {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_CONF_167) };
+        // SAFETY: `ext_der`/`ext_oct` are NULL or this call's own values.
+        return unsafe { do_ext_i2d_err(ext_der, ext_oct) };
+    }
+    // SAFETY: `ext_oct` is live and owns `ext_der` from here on (`ext_der` is nulled).
+    unsafe {
+        (*ext_oct).data = ext_der;
+        ext_der = ptr::null_mut();
+        (*ext_oct).length = ext_len;
+    }
+
+    // SAFETY: `ext_oct` is live; the creator duplicates its octets.
+    let ext = unsafe { X509_EXTENSION_create_by_NID(ptr::null_mut(), ext_nid, crit, ext_oct) };
+    if ext.is_null() {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_CONF_176) };
+        // SAFETY: `ext_der`/`ext_oct` are NULL or this call's own values.
+        return unsafe { do_ext_i2d_err(ext_der, ext_oct) };
+    }
+    // SAFETY: `ext_oct` is this call's own string.
+    unsafe { ASN1_OCTET_STRING_free(ext_oct) };
+    ext
+}
+
+/// The authority's `err:` tail of [`do_ext_i2d`].
+///
+/// # Safety
+///
+/// `ext_der` is NULL or this call's own allocation; `ext_oct` is NULL or this call's own string.
+unsafe fn do_ext_i2d_err(ext_der: *mut c_uchar, ext_oct: *mut Asn1String) -> *mut X509Extension {
+    // SAFETY: each is NULL or this call's own value (`CRYPTO_free` and `ASN1_OCTET_STRING_free`
+    // both tolerate NULL).
+    unsafe {
+        CRYPTO_free(ext_der.cast(), FILE.as_ptr(), LINE_FREE_DER);
+        ASN1_OCTET_STRING_free(ext_oct);
+    }
+    ptr::null_mut()
+}
+
+/// `X509_EXTENSION *X509V3_EXT_i2d(int ext_nid, int crit, void *ext_struc)` —
+/// `crypto/x509/v3_conf.c:191-200`.
+///
+/// Looks the `ext_nid` method up through the [`crate::x509::v3_lib`] dispatch and encodes through
+/// [`do_ext_i2d`]; an unknown NID raises `X509V3_R_UNKNOWN_EXTENSION` and answers NULL.
+///
+/// # Safety
+///
+/// `ext_struc` is NULL or the internal structure the `ext_nid` method's `it`/`i2d` encodes.
+#[no_mangle]
+pub unsafe extern "C" fn X509V3_EXT_i2d(
+    ext_nid: c_int,
+    crit: c_int,
+    ext_struc: *mut c_void,
+) -> *mut X509Extension {
+    // SAFETY: `ext_nid` is an integer NID.
+    let method = unsafe { X509V3_EXT_get_nid(ext_nid) };
+    if method.is_null() {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_CONF_196) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `method` is live; `ext_struc` is the value its `it`/`i2d` encodes.
+    unsafe { do_ext_i2d(method, ext_nid, crit, ext_struc) }
 }

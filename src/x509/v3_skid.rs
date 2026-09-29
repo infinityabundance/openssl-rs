@@ -1,33 +1,30 @@
 //! `crypto/x509/v3_skid.c` — the subject-key-identifier helpers and their row. Phase 10.12's
 //! helpers, 10.14's table layer.
 //!
-//! `crypto/x509/v3_skid.c` is 108 lines. **Three names land and two are withheld**:
+//! `crypto/x509/v3_skid.c` is 108 lines and it now transcribes **whole** -- the unit's own five
+//! names all land (D468 landed the row and the two helpers; D472 landed the two the row's `s2i` slot
+//! and its `hash` arm needed):
 //!
-//! * `i2s_ASN1_OCTET_STRING` (`:27-31`) and `s2i_ASN1_OCTET_STRING` (`:33-52`) land. Both are
-//!   public exports (`x509v3.h`) and are the octet-string pair every extension method that carries
-//!   an `OCTET STRING` shares; `s2i_ASN1_OCTET_STRING` raises `ERR_R_ASN1_LIB` (`:40`), whose
-//!   coordinate is the generated `V3_SKID_40`.
-//! * The row [`ossl_v3_skey_id`] (`:18-25`) lands. Its `it` is `ASN1_ITEM_ref(ASN1_OCTET_STRING)`,
-//!   its `i2s` is `i2s_ASN1_OCTET_STRING`, and its `ext_nid` is `NID_subject_key_identifier`. The
-//!   row's **`s2i` slot is `None`**: the authority's `s2i` is `s2i_skey_id`, which is withheld (see
-//!   below), so this one slot is not byte-faithful to the authority.
-//!
-//! **Withheld by name, with its blocker**:
-//!
-//! * `s2i_skey_id` (`:90-108`) — the authority's `s2i` callback and the reason for the row's NULL
-//!   `s2i` slot above. Its `hash` arm reads `ctx->subject_req->req_info.pubkey`, and the crate has
-//!   **no `X509_REQ`/`X509_REQ_INFO` type to name** (`crypto/x509/x509_req.c` is 10.14.11, and
-//!   `X509V3Ctx.subject_req` is an opaque `*mut c_void` slot). Landing it piecewise would be a
-//!   partial body, so it is withheld whole (rule 1: never stub). It raises
+//! * `i2s_ASN1_OCTET_STRING` (`:27-31`) and `s2i_ASN1_OCTET_STRING` (`:33-52`) -- the octet-string
+//!   pair every extension method that carries an `OCTET STRING` shares; `s2i_ASN1_OCTET_STRING`
+//!   raises `ERR_R_ASN1_LIB` (`:40`, the generated `V3_SKID_40`).
+//! * `ossl_x509_pubkey_hash` (`:54-88`) -- the SHA-1 digest of the public key's subjectPublicKey
+//!   bits, the `keyid` the authority synthesises for a self-signed issuer carrying no
+//!   subject-key-identifier extension. It raises `X509V3_R_NO_PUBLIC_KEY` (`:66`, the generated
+//!   `V3_SKID_66`). **It belongs to this unit** (`crypto/x509/v3_skid.c`), and it was first landed
+//!   inside `v3_akid.rs`'s module in D472 to avoid publishing a 72-entry partial array; D472's
+//!   follow-up moved it here, where its authority unit and its `prerequisites.json` `owner_module`
+//!   both say it lives.
+//! * `s2i_skey_id` (`:90-108`) -- the row's `s2i` callback, landed now that the crate models
+//!   `X509_REQ`/`X509_REQ_INFO` (`src/x509/x509_req.rs`, D472's pulled-forward subset), which was
+//!   the one blocker: its `hash` arm reads `ctx->subject_req->req_info.pubkey`. It raises
 //!   `X509V3_R_NO_SUBJECT_DETAILS` (`:103`, the generated `V3_SKID_103`).
-//! * `ossl_x509_pubkey_hash` (`:54-88`) — D453's second reason: its closure is complete (every
-//!   callee is landed: `EVP_MD_fetch`/`EVP_Digest`/`EVP_MD_free`, `X509_PUBKEY_get0_param`,
-//!   `ossl_x509_PUBKEY_get0_libctx`, `ASN1_OCTET_STRING_new`/`_set`/`_free`) but it has **no
-//!   reachable caller**: its only in-unit caller `s2i_skey_id` is itself withheld, and its other
-//!   authority callers are unlanded. It raises `X509V3_R_NO_PUBLIC_KEY` (`:66`, the generated
-//!   `V3_SKID_66`). One coordinate per withheld raise site is already generated.
+//! * The row [`ossl_v3_skey_id`] (`:18-25`) lands with **every slot faithful to the authority**:
+//!   `it` is `ASN1_ITEM_ref(ASN1_OCTET_STRING)`, `i2s` is `i2s_ASN1_OCTET_STRING`, `s2i` is now
+//!   `s2i_skey_id` rather than the `None` D468 had to publish, and `ext_nid` is
+//!   `NID_subject_key_identifier`.
 //!
-//! Nothing is stubbed: the two withheld names are named rather than declared.
+//! Nothing is withheld from this unit.
 //!
 //! **Withheld by name**: `standard_exts[]` (`standard_exts.h:15-95`) and the six lookup names in
 //! `v3_lib.rs` it feeds (`X509V3_EXT_get_nid`/`_get`/`_add_alias`/`_EXT_d2i`/`_get_d2i`/`_add1_i2d`).
@@ -46,16 +43,22 @@
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
 
-use core::ffi::{c_char, c_int, c_long, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::items::ASN1_OCTET_STRING_it;
 use crate::asn1::layout::Asn1String;
+use crate::asn1::string::ASN1_OCTET_STRING_set;
 use crate::asn1::string::{ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new};
+use crate::evp::digest::{EVP_Digest, EVP_MD_fetch, EVP_MD_free};
+use crate::runtime::bio::sys::strcmp;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::obj::NID_subject_key_identifier;
 use crate::runtime::str::{OPENSSL_buf2hexstr, OPENSSL_hexstr2buf};
+use crate::x509::v3_conf::{X509V3Ctx, X509V3_CTX_TEST};
 use crate::x509::v3_lib::{X509V3ExtI2s, X509V3ExtMethod};
+use crate::x509::x509_req::X509Req;
+use crate::x509::x_pubkey::{ossl_x509_PUBKEY_get0_libctx, X509Pubkey, X509_PUBKEY_get0_param};
 
 /// `char *i2s_ASN1_OCTET_STRING(X509V3_EXT_METHOD *method, const ASN1_OCTET_STRING *oct)` —
 /// `crypto/x509/v3_skid.c:27-31`.
@@ -111,7 +114,135 @@ pub unsafe extern "C" fn s2i_ASN1_OCTET_STRING(
     oct
 }
 
-/// `(X509V3_EXT_I2S)i2s_ASN1_OCTET_STRING` — the cast the row's initialiser writes.
+/// `EVP_MAX_MD_SIZE` — `include/openssl/evp.h:34`, the digest buffer's maximum.
+const EVP_MAX_MD_SIZE: usize = 64;
+/// `SN_sha1` — `include/openssl/obj_mac.h`, the short name the fetch asks for.
+const SN_SHA1: *const c_char = c"SHA1".as_ptr();
+
+/// `ASN1_OCTET_STRING *ossl_x509_pubkey_hash(X509_PUBKEY *pubkey)` —
+/// `crypto/x509/v3_skid.c:54-88`.
+///
+/// The SHA-1 digest of the public key's `subjectPublicKey` bits, the `keyid` the authority
+/// synthesises for a self-signed issuer carrying no subject-key-identifier extension.
+///
+/// # Safety
+///
+/// `pubkey` is NULL or a live `X509_PUBKEY`.
+pub(crate) unsafe fn ossl_x509_pubkey_hash(pubkey: *mut X509Pubkey) -> *mut Asn1String {
+    if pubkey.is_null() {
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&err_sites::V3_SKID_66) };
+        return ptr::null_mut();
+    }
+    let mut libctx: *mut c_void = ptr::null_mut();
+    let mut propq: *const c_char = ptr::null();
+    // SAFETY: `pubkey` is live; both out-pointers are writable locals.
+    if unsafe { ossl_x509_PUBKEY_get0_libctx(&mut libctx, &mut propq, pubkey) } == 0 {
+        return ptr::null_mut();
+    }
+    // SAFETY: `libctx`/`propq` come from the getter; the fetch answers NULL or a live `EVP_MD`.
+    let md = unsafe { EVP_MD_fetch(libctx, SN_SHA1, propq) };
+    if md.is_null() {
+        return ptr::null_mut();
+    }
+    let oct = ASN1_OCTET_STRING_new();
+    if oct.is_null() {
+        // SAFETY: `md` is this call's own fetched method.
+        unsafe { EVP_MD_free(md) };
+        return ptr::null_mut();
+    }
+
+    let mut pk: *const c_uchar = ptr::null();
+    let mut pklen: c_int = 0;
+    // SAFETY: `pubkey` is live; the two out-pointers are writable locals and the rest are NULL.
+    unsafe {
+        X509_PUBKEY_get0_param(
+            ptr::null_mut(),
+            &mut pk,
+            &mut pklen,
+            ptr::null_mut(),
+            pubkey,
+        )
+    };
+
+    let mut pkey_dig = [0 as c_uchar; EVP_MAX_MD_SIZE];
+    let mut diglen: c_uint = 0;
+    // SAFETY: `pk` is borrowed for `pklen` bytes, `pkey_dig` is `EVP_MAX_MD_SIZE` writable bytes,
+    // `diglen` is writable, and `md` is the fetched method.
+    let ok = unsafe {
+        EVP_Digest(
+            pk.cast(),
+            pklen as usize,
+            pkey_dig.as_mut_ptr(),
+            &mut diglen,
+            md,
+            ptr::null_mut(),
+        )
+    } != 0
+        // SAFETY: `oct` is live; `pkey_dig` holds `diglen` bytes.
+        && unsafe { ASN1_OCTET_STRING_set(oct, pkey_dig.as_ptr(), diglen as c_int) } != 0;
+    // SAFETY: `md` is this call's own fetched method.
+    unsafe { EVP_MD_free(md) };
+    if ok {
+        return oct;
+    }
+    // SAFETY: `oct` is this call's own string.
+    unsafe { ASN1_OCTET_STRING_free(oct) };
+    ptr::null_mut()
+}
+
+/// `static ASN1_OCTET_STRING *s2i_skey_id(X509V3_EXT_METHOD *method, X509V3_CTX *ctx, char *str)` —
+/// `crypto/x509/v3_skid.c:90-108`.
+///
+/// `"none"` answers a fresh empty string, any other non-`"hash"` text is handed to
+/// [`s2i_ASN1_OCTET_STRING`], and `"hash"` answers the SHA-1 public-key digest of the context's
+/// subject certificate or request — or, with neither, raises and answers NULL.
+///
+/// # Safety
+///
+/// `str` is NULL or NUL-terminated; `ctx` is NULL or a live `X509V3_CTX`.
+unsafe extern "C" fn s2i_skey_id(
+    method: *const X509V3ExtMethod,
+    ctx: *mut c_void,
+    str_: *const c_char,
+) -> *mut c_void {
+    // SAFETY: `str_` is NULL or NUL-terminated per the contract; both literals are static.
+    if unsafe { strcmp(str_, c"none".as_ptr()) } == 0 {
+        return ASN1_OCTET_STRING_new().cast::<c_void>(); /* dummy */
+    }
+    // SAFETY: as above.
+    if unsafe { strcmp(str_, c"hash".as_ptr()) } != 0 {
+        // SAFETY: `method`/`ctx`/`str_` are the caller's, per this function's contract.
+        return unsafe { s2i_ASN1_OCTET_STRING(method.cast_mut().cast(), ctx, str_) }
+            .cast::<c_void>();
+    }
+    let ctx_v3 = ctx.cast::<X509V3Ctx>();
+    // SAFETY: `ctx` is NULL or a live `X509V3_CTX` per the contract.
+    if !ctx.is_null() && unsafe { (*ctx_v3).flags } & X509V3_CTX_TEST != 0 {
+        return ASN1_OCTET_STRING_new().cast::<c_void>();
+    }
+    if ctx.is_null() {
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&err_sites::V3_SKID_103) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `ctx` is live per the contract; both fields are its own pointers.
+    let (subject_cert, subject_req) = unsafe { ((*ctx_v3).subject_cert, (*ctx_v3).subject_req) };
+    if subject_cert.is_null() && subject_req.is_null() {
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&err_sites::V3_SKID_103) };
+        return ptr::null_mut();
+    }
+    let pubkey = if !subject_cert.is_null() {
+        // SAFETY: `subject_cert` is a live `X509`; its embedded `cert_info.key` is the public key.
+        unsafe { (*subject_cert).cert_info.key }
+    } else {
+        // SAFETY: `subject_req` is a live `X509_REQ` (the authority's `else` arm says so).
+        unsafe { (*subject_req.cast::<X509Req>()).req_info.pubkey }
+    };
+    // SAFETY: `pubkey` is the live key the branch above read, or NULL; the callee accepts NULL.
+    unsafe { ossl_x509_pubkey_hash(pubkey) }.cast::<c_void>()
+}
 const fn as_i2s(
     f: unsafe extern "C" fn(*mut c_void, *const Asn1String) -> *mut c_char,
 ) -> X509V3ExtI2s {
@@ -138,7 +269,7 @@ pub static ossl_v3_skey_id: X509V3ExtMethod = X509V3ExtMethod {
     d2i: None,
     i2d: None,
     i2s: as_i2s(i2s_ASN1_OCTET_STRING),
-    s2i: None,
+    s2i: Some(s2i_skey_id),
     i2v: None,
     v2i: None,
     i2r: None,

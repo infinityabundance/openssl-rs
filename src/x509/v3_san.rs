@@ -1,32 +1,35 @@
-//! `crypto/x509/v3_san.c` — the general-name printers and the `v2i` cluster. Phase 10.14.6,
-//! **partial at function granularity**.
+//! `crypto/x509/v3_san.c` — the general-name printers, the `v2i` cluster and the `ossl_v3_alt`
+//! table. Phase 10.15, the endgame slice; the unit now lands whole.
 //!
-//! `crypto/x509/v3_san.c` is 689 lines. The previous slice landed the **printers**
-//! (`GENERAL_NAME_print` `:207-299`, `i2v_GENERAL_NAME` `:79-205`, `i2v_GENERAL_NAMES` `:51-77`).
-//! This slice lands the `v2i` half that `ASN1_generate_v3` was the one blocker of: `do_othername`
-//! (`:631-662`) and `do_dirname` (`:664-689`), the exported builders `a2i_GENERAL_NAME`
-//! (`:503-590`), `v2i_GENERAL_NAME_ex` (`:592-629`), `v2i_GENERAL_NAME` (`:497-501`) and
-//! `v2i_GENERAL_NAMES` (`:470-495`), plus the `GENERAL_NAME_free` thunk the stack pop uses.
+//! `crypto/x509/v3_san.c` is 689 lines. Earlier slices landed the **printers** (`GENERAL_NAME_print`
+//! `:207-299`, `i2v_GENERAL_NAME` `:79-205`, `i2v_GENERAL_NAMES` `:51-77`) and the `v2i` half whose
+//! one blocker was `ASN1_generate_v3`: `do_othername` (`:631-662`), `do_dirname` (`:664-689`), the
+//! exported builders `a2i_GENERAL_NAME` (`:503-590`), `v2i_GENERAL_NAME_ex` (`:592-629`),
+//! `v2i_GENERAL_NAME` (`:497-501`) and `v2i_GENERAL_NAMES` (`:470-495`), plus the
+//! `GENERAL_NAME_free` thunk the stack pop uses.
 //!
-//! ## What is still withheld, and each name's blocker
+//! This slice lands the four names those slices withheld, and the unit's one table:
 //!
-//! Four names stay withheld **by name**: `v2i_subject_alt` (`:377-413`) and `copy_email`
-//! (`:419-468`) need `X509_REQ_get_subject_name` (`x509_req.c`, 10.14.11) and the now-landed
-//! `v2i_GENERAL_NAME`; `v2i_issuer_alt` (`:301-332`) and `copy_issuer` (`:336-375`) need the
-//! withheld dispatch `X509V3_EXT_d2i` (`v3_lib.rs`). `ossl_v3_alt` (`:29-49`) is the unit's one
-//! table; two of its three rows name `v2i_subject_alt`/`v2i_issuer_alt`, so the table is withheld
-//! with them rather than published with holes -- a `prerequisites.json` divergence row.
+//! * `v2i_subject_alt` (`:377-413`) and `copy_email` (`:419-468`) -- `X509_REQ_get_subject_name`
+//!   (`x509_req.rs`) is now landed.
+//! * `v2i_issuer_alt` (`:301-332`) and `copy_issuer` (`:336-375`) -- `X509V3_EXT_d2i` (`v3_lib.rs`)
+//!   is now landed.
+//! * [`ossl_v3_alt`] (`:29-49`), the three-row table (`ossl_v3_alt[0]` subject alt name,
+//!   `[1]` issuer alt name, `[2]` certificate issuer). Two rows name the two `v2i` callbacks above,
+//!   so the table could only land now; every row is the authority's, with no hole.
 //!
-//! ## Why the `v2i` cluster alone is worth landing
+//! Nothing is withheld from this unit any more.
+//!
+//! ## Why the `v2i` cluster alone was worth landing
 //!
 //! `v2i_GENERAL_NAME`/`v2i_GENERAL_NAME_ex`/`v2i_GENERAL_NAMES` are the blockers D465 measured
-//! for `v3_crld.c` and `v3_info.c`, so landing them turns those two table units closure-ready.
+//! for `v3_crld.c` and `v3_info.c`, so landing them turned those two table units closure-ready.
 //!
 //! ## The raise sites
 //!
 //! `crypto/x509/v3_san.c` is not in `gen_err_raise_sites.py`'s covered set, so its coordinates are
 //! declared locally (see `v3_conf.rs`'s note). Every landed `ERR_raise*` is now reachable through
-//! the `v2i` builders, so most of the declared constants are live.
+//! the `v2i` builders, so all the declared constants are live.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -42,35 +45,46 @@ use crate::asn1::a_strex::{X509_NAME_print_ex, XN_FLAG_ONELINE};
 use crate::asn1::a_type::ASN1_TYPE_free;
 use crate::asn1::asn1_gen::ASN1_generate_v3;
 use crate::asn1::layout::{Asn1String, MBSTRING_ASC, V_ASN1_IA5STRING, V_ASN1_UTF8STRING};
-use crate::asn1::string::{ASN1_IA5STRING_free, ASN1_IA5STRING_new, ASN1_STRING_set};
+use crate::asn1::string::{
+    ASN1_IA5STRING_free, ASN1_IA5STRING_new, ASN1_STRING_dup, ASN1_STRING_set,
+};
 use crate::asn1::text::{i2a_ASN1_OBJECT, i2t_ASN1_OBJECT};
 use crate::runtime::bio::print::{BIO_printf, BIO_snprintf};
-use crate::runtime::bio::sys::{strchr, strlen};
+use crate::runtime::bio::sys::{strchr, strcmp, strlen};
 use crate::runtime::bio::Bio;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
 use crate::runtime::obj::{
-    NID_NAIRealm, NID_SRVName, NID_XmppAddr, NID_id_on_SmtpUTF8Mailbox, NID_ms_upn, OBJ_obj2nid,
+    NID_NAIRealm, NID_SRVName, NID_XmppAddr, NID_certificate_issuer, NID_id_on_SmtpUTF8Mailbox,
+    NID_issuer_alt_name, NID_ms_upn, NID_pkcs9_emailAddress, NID_subject_alt_name, OBJ_obj2nid,
     OBJ_obj2txt, OBJ_txt2obj,
 };
 use crate::runtime::stack::{
-    OPENSSL_sk_new_null, OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_pop_free,
-    OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_new_reserve, OPENSSL_sk_num,
+    OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_reserve, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::str::OPENSSL_strlcpy;
-use crate::x509::v3_conf::{X509V3Ctx, X509V3_get_section, X509V3_section_free};
+use crate::x509::v3_conf::{X509V3Ctx, X509V3_get_section, X509V3_section_free, X509V3_CTX_TEST};
 use crate::x509::v3_genn::{
-    GENERAL_NAME_free, GENERAL_NAME_new, GeneralName, OTHERNAME_free, OTHERNAME_new, GEN_DIRNAME,
-    GEN_DNS, GEN_EDIPARTY, GEN_EMAIL, GEN_IPADD, GEN_OTHERNAME, GEN_RID, GEN_URI, GEN_X400,
+    GENERAL_NAMES_it, GENERAL_NAME_free, GENERAL_NAME_new, GeneralName, OTHERNAME_free,
+    OTHERNAME_new, GEN_DIRNAME, GEN_DNS, GEN_EDIPARTY, GEN_EMAIL, GEN_IPADD, GEN_OTHERNAME,
+    GEN_RID, GEN_URI, GEN_X400,
 };
-use crate::x509::v3_lib::X509V3ExtMethod;
+use crate::x509::v3_lib::{X509V3ExtI2v, X509V3ExtMethod, X509V3ExtV2i, X509V3_EXT_d2i};
 use crate::x509::v3_utl::{
     a2i_IPADDRESS, a2i_IPADDRESS_NC, ossl_ipaddr_to_asc, ossl_v3_name_cmp,
     x509v3_add_len_value_uchar, X509V3_NAME_from_section, X509V3_add_value,
 };
+use crate::x509::x509_cmp::X509_get_subject_name;
+use crate::x509::x509_ext::{X509_get_ext, X509_get_ext_by_NID};
 use crate::x509::x509_obj::X509_NAME_oneline;
-use crate::x509::x_name::{X509_NAME_free, X509_NAME_new};
+use crate::x509::x509_req::{X509Req, X509_REQ_get_subject_name};
+use crate::x509::x509name::{
+    X509_NAME_ENTRY_get_data, X509_NAME_delete_entry, X509_NAME_get_entry,
+    X509_NAME_get_index_by_NID,
+};
+use crate::x509::x_name::{X509_NAME_ENTRY_free, X509_NAME_free, X509_NAME_new};
 
 /// The authority file path this module's raises name.
 const FILE: &CStr = c"crypto/x509/v3_san.c";
@@ -1103,4 +1117,366 @@ pub unsafe extern "C" fn v2i_GENERAL_NAMES(
         i += 1;
     }
     gens
+}
+
+/// `(X509V3_EXT_I2V)i2v_GENERAL_NAMES` — the cast the `ossl_v3_alt` initialiser writes.
+const fn as_i2v(
+    f: unsafe extern "C" fn(
+        *mut X509V3ExtMethod,
+        *mut OpenSslStack,
+        *mut OpenSslStack,
+    ) -> *mut OpenSslStack,
+) -> X509V3ExtI2v {
+    // SAFETY: both function types take three pointer arguments and answer a pointer; the authority
+    // writes exactly this cast in the row.
+    Some(unsafe {
+        core::mem::transmute::<
+            unsafe extern "C" fn(
+                *mut X509V3ExtMethod,
+                *mut OpenSslStack,
+                *mut OpenSslStack,
+            ) -> *mut OpenSslStack,
+            unsafe extern "C" fn(
+                *const X509V3ExtMethod,
+                *mut c_void,
+                *mut OpenSslStack,
+            ) -> *mut OpenSslStack,
+        >(f)
+    })
+}
+
+/// `(X509V3_EXT_V2I)v2i_*` — the cast the `ossl_v3_alt` initialiser writes.
+const fn as_v2i(
+    f: unsafe extern "C" fn(
+        *mut X509V3ExtMethod,
+        *mut X509V3Ctx,
+        *mut OpenSslStack,
+    ) -> *mut OpenSslStack,
+) -> X509V3ExtV2i {
+    // SAFETY: both function types take three pointer arguments and answer a pointer; the authority
+    // writes exactly this cast in the row.
+    Some(unsafe {
+        core::mem::transmute::<
+            unsafe extern "C" fn(
+                *mut X509V3ExtMethod,
+                *mut X509V3Ctx,
+                *mut OpenSslStack,
+            ) -> *mut OpenSslStack,
+            unsafe extern "C" fn(
+                *const X509V3ExtMethod,
+                *mut c_void,
+                *mut OpenSslStack,
+            ) -> *mut c_void,
+        >(f)
+    })
+}
+
+/// One `ossl_v3_alt` row, all three identical except for `ext_nid` and `v2i`.
+const fn alt_row(ext_nid: c_int, v2i: X509V3ExtV2i) -> X509V3ExtMethod {
+    X509V3ExtMethod {
+        ext_nid,
+        ext_flags: 0,
+        it: Some(GENERAL_NAMES_it),
+        ext_new: None,
+        ext_free: None,
+        d2i: None,
+        i2d: None,
+        i2s: None,
+        s2i: None,
+        i2v: as_i2v(i2v_GENERAL_NAMES),
+        v2i,
+        i2r: None,
+        r2i: None,
+        usr_data: core::ptr::null_mut(),
+    }
+}
+
+/// `const X509V3_EXT_METHOD ossl_v3_alt[3]` — `crypto/x509/v3_san.c:29-49`.
+///
+/// `[0]` `NID_subject_alt_name` (`i2v_GENERAL_NAMES`/`v2i_subject_alt`), `[1]`
+/// `NID_issuer_alt_name` (`i2v_GENERAL_NAMES`/`v2i_issuer_alt`) and `[2]` `NID_certificate_issuer`
+/// (`i2v_GENERAL_NAMES`, no `v2i`). Every row names `GENERAL_NAMES_it`; every other slot is the
+/// authority's zero, and no row has a hole.
+pub static ossl_v3_alt: [X509V3ExtMethod; 3] = [
+    alt_row(NID_subject_alt_name, as_v2i(v2i_subject_alt)),
+    alt_row(NID_issuer_alt_name, as_v2i(v2i_issuer_alt)),
+    alt_row(NID_certificate_issuer, None),
+];
+
+/// `static GENERAL_NAMES *v2i_issuer_alt(X509V3_EXT_METHOD *method, X509V3_CTX *ctx,
+/// STACK_OF(CONF_VALUE) *nval)` — `crypto/x509/v3_san.c:301-332`.
+///
+/// # Safety
+///
+/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers.
+unsafe extern "C" fn v2i_issuer_alt(
+    method: *mut X509V3ExtMethod,
+    ctx: *mut X509V3Ctx,
+    nval: *mut OpenSslStack,
+) -> *mut OpenSslStack {
+    // SAFETY: `nval` is live per the contract.
+    let num = unsafe { OPENSSL_sk_num(nval) };
+    let gens = OPENSSL_sk_new_reserve(None, num);
+    if gens.is_null() {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_SAN_310) };
+        return core::ptr::null_mut();
+    }
+    // The authority's `err:` tail: pop and free the stack built so far.
+    macro_rules! err {
+        () => {{
+            // SAFETY: `gens` is this call's own stack; the thunk frees each element.
+            unsafe { OPENSSL_sk_pop_free(gens, Some(general_name_free_thunk)) };
+            return core::ptr::null_mut();
+        }};
+    }
+    let mut i = 0;
+    while i < num {
+        // SAFETY: `nval` is live and `i` is in bounds.
+        let cnf = unsafe { OPENSSL_sk_value(nval, i) }.cast::<ConfValue>();
+        // SAFETY: `cnf` is live.
+        let (name, value) = unsafe { ((*cnf).name, (*cnf).value) };
+        // SAFETY: `name`/`value` are NUL-terminated when non-NULL.
+        let is_issuer_copy = unsafe {
+            !value.is_null()
+                && ossl_v3_name_cmp(name, c"issuer".as_ptr()) == 0
+                && strcmp(value, c"copy".as_ptr()) == 0
+        };
+        if is_issuer_copy {
+            // SAFETY: `ctx` is NULL or live and `gens` is this call's own reserved stack.
+            if unsafe { copy_issuer(ctx, gens) } == 0 {
+                err!();
+            }
+        } else {
+            // SAFETY: `cnf` is a live `CONF_VALUE`; `ctx` is NULL or live.
+            let gen = unsafe { v2i_GENERAL_NAME(method, ctx, cnf) };
+            if gen.is_null() {
+                err!();
+            }
+            // SAFETY: `gens` was reserved for `num`, so the push cannot fail.
+            unsafe { OPENSSL_sk_push(gens, gen.cast::<c_void>()) };
+        }
+        i += 1;
+    }
+    gens
+}
+
+/// `static int copy_issuer(X509V3_CTX *ctx, GENERAL_NAMES *gens)` —
+/// `crypto/x509/v3_san.c:336-375`.
+///
+/// Appends the issuer certificate's subject-alt-name entries to `gens` (moving them, not copying).
+///
+/// # Safety
+///
+/// `ctx` is NULL or live; `gens` must be a live `GENERAL_NAMES` with room for the additions.
+unsafe extern "C" fn copy_issuer(ctx: *mut X509V3Ctx, gens: *mut OpenSslStack) -> c_int {
+    let mut ialt: *mut OpenSslStack = core::ptr::null_mut();
+    // SAFETY: `ctx` is NULL or live per the contract.
+    if !ctx.is_null() && unsafe { (*ctx).flags } & X509V3_CTX_TEST != 0 {
+        return 1;
+    }
+    // SAFETY: `ctx` is live in the second clause, so the field read is valid.
+    if ctx.is_null() || unsafe { (*ctx).issuer_cert.is_null() } {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_SAN_346) };
+        // SAFETY: `ialt` is NULL or this call's own stack.
+        unsafe { OPENSSL_sk_free(ialt) };
+        return 0;
+    }
+    // SAFETY: `ctx` is live and `issuer_cert` is non-NULL per the guard above.
+    let idx = unsafe { X509_get_ext_by_NID((*ctx).issuer_cert, NID_subject_alt_name, -1) };
+    if idx < 0 {
+        return 1;
+    }
+    // SAFETY: `issuer_cert` is live and `idx` is a valid extension index.
+    let ext = unsafe { X509_get_ext((*ctx).issuer_cert, idx) };
+    if !ext.is_null() {
+        // SAFETY: `ext` is live and its NID is `NID_subject_alt_name`, whose `ossl_v3_alt[0]` row sets
+        // `it = GENERAL_NAMES_it`, so the decode answers a `GENERAL_NAMES`.
+        ialt = unsafe { X509V3_EXT_d2i(ext) }.cast::<OpenSslStack>();
+    }
+    if ialt.is_null() {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_SAN_354) };
+        // SAFETY: `ialt` is NULL or this call's own stack.
+        unsafe { OPENSSL_sk_free(ialt) };
+        return 0;
+    }
+
+    // SAFETY: `ialt` is live.
+    let num = unsafe { OPENSSL_sk_num(ialt) };
+    // SAFETY: `gens` is live and `num` is non-negative.
+    if unsafe { OPENSSL_sk_reserve(gens, num) } == 0 {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_SAN_360) };
+        // SAFETY: `ialt` is this call's own stack.
+        unsafe { OPENSSL_sk_free(ialt) };
+        return 0;
+    }
+
+    let mut i = 0;
+    while i < num {
+        // SAFETY: `ialt` is live and `i` is in bounds.
+        let gen = unsafe { OPENSSL_sk_value(ialt, i) };
+        // SAFETY: `gens` was reserved for `num`, so the push cannot fail.
+        unsafe { OPENSSL_sk_push(gens, gen) };
+        i += 1;
+    }
+    // SAFETY: `ialt` is this call's own stack (its elements now live in `gens`).
+    unsafe { OPENSSL_sk_free(ialt) };
+    1
+}
+
+/// `static GENERAL_NAMES *v2i_subject_alt(X509V3_EXT_METHOD *method, X509V3_CTX *ctx,
+/// STACK_OF(CONF_VALUE) *nval)` — `crypto/x509/v3_san.c:377-413`.
+///
+/// # Safety
+///
+/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers.
+unsafe extern "C" fn v2i_subject_alt(
+    method: *mut X509V3ExtMethod,
+    ctx: *mut X509V3Ctx,
+    nval: *mut OpenSslStack,
+) -> *mut OpenSslStack {
+    // SAFETY: `nval` is live per the contract.
+    let num = unsafe { OPENSSL_sk_num(nval) };
+    let gens = OPENSSL_sk_new_reserve(None, num);
+    if gens.is_null() {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_SAN_388) };
+        return core::ptr::null_mut();
+    }
+    // The authority's `err:` tail: pop and free the stack built so far.
+    macro_rules! err {
+        () => {{
+            // SAFETY: `gens` is this call's own stack; the thunk frees each element.
+            unsafe { OPENSSL_sk_pop_free(gens, Some(general_name_free_thunk)) };
+            return core::ptr::null_mut();
+        }};
+    }
+    let mut i = 0;
+    while i < num {
+        // SAFETY: `nval` is live and `i` is in bounds.
+        let cnf = unsafe { OPENSSL_sk_value(nval, i) }.cast::<ConfValue>();
+        // SAFETY: `cnf` is live.
+        let (name, value) = unsafe { ((*cnf).name, (*cnf).value) };
+        // SAFETY: `name`/`value` are NUL-terminated when non-NULL.
+        let (is_email, is_copy, is_move) = unsafe {
+            (
+                ossl_v3_name_cmp(name, c"email".as_ptr()) == 0,
+                !value.is_null() && strcmp(value, c"copy".as_ptr()) == 0,
+                !value.is_null() && strcmp(value, c"move".as_ptr()) == 0,
+            )
+        };
+        if is_email && is_copy {
+            // SAFETY: `ctx` is NULL or live and `gens` is this call's own reserved stack.
+            if unsafe { copy_email(ctx, gens, 0) } == 0 {
+                err!();
+            }
+        } else if is_email && is_move {
+            // SAFETY: `ctx` is NULL or live and `gens` is this call's own reserved stack.
+            if unsafe { copy_email(ctx, gens, 1) } == 0 {
+                err!();
+            }
+        } else {
+            // SAFETY: `cnf` is a live `CONF_VALUE`; `ctx` is NULL or live.
+            let gen = unsafe { v2i_GENERAL_NAME(method, ctx, cnf) };
+            if gen.is_null() {
+                err!();
+            }
+            // SAFETY: `gens` was reserved for `num`, so the push cannot fail.
+            unsafe { OPENSSL_sk_push(gens, gen.cast::<c_void>()) };
+        }
+        i += 1;
+    }
+    gens
+}
+
+/// `static int copy_email(X509V3_CTX *ctx, GENERAL_NAMES *gens, int move_p)` —
+/// `crypto/x509/v3_san.c:419-468`.
+///
+/// Appends the subject certificate's (or request's) email-address entries to `gens`; `move_p`
+/// deletes each from the subject as it is taken.
+///
+/// # Safety
+///
+/// `ctx` is NULL or live; `gens` must be a live `GENERAL_NAMES`.
+unsafe extern "C" fn copy_email(
+    ctx: *mut X509V3Ctx,
+    gens: *mut OpenSslStack,
+    move_p: c_int,
+) -> c_int {
+    // SAFETY: `ctx` is NULL or live per the contract.
+    if !ctx.is_null() && unsafe { (*ctx).flags } & X509V3_CTX_TEST != 0 {
+        return 1;
+    }
+    // SAFETY: `ctx` is live here.
+    if ctx.is_null() || unsafe { (*ctx).subject_cert.is_null() && (*ctx).subject_req.is_null() } {
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_SAN_431) };
+        return 0;
+    }
+    /* Find the subject name. */
+    // SAFETY: `ctx` is live.
+    let has_cert = unsafe { !(*ctx).subject_cert.is_null() };
+    let nm = if has_cert {
+        // SAFETY: `ctx` is live and `subject_cert` is non-NULL per the guard above.
+        unsafe { X509_get_subject_name((*ctx).subject_cert) }
+    } else {
+        // SAFETY: `subject_req` is non-NULL and is an `X509_REQ`.
+        unsafe { X509_REQ_get_subject_name((*ctx).subject_req.cast::<X509Req>()) }
+    };
+
+    let mut i: c_int = -1;
+    /* Now add any email address(es) to STACK. */
+    loop {
+        // SAFETY: `nm` is live; `i` is the previous index.
+        i = unsafe { X509_NAME_get_index_by_NID(nm, NID_pkcs9_emailAddress, i) };
+        if i < 0 {
+            break;
+        }
+        // SAFETY: `nm` is live and `i` is a valid entry index.
+        let ne = unsafe { X509_NAME_get_entry(nm, i) };
+        // SAFETY: `ne` is live; its data is a live `ASN1_STRING`.
+        let mut email = unsafe { ASN1_STRING_dup(X509_NAME_ENTRY_get_data(ne)) };
+        if move_p != 0 {
+            // SAFETY: `nm` is live and `i` is a valid entry index.
+            unsafe { X509_NAME_delete_entry(nm, i) };
+            // SAFETY: `ne` is the entry just removed; this call owns it now.
+            unsafe { X509_NAME_ENTRY_free(ne) };
+            i -= 1;
+        }
+        // SAFETY: the allocator answers NULL or a live `GENERAL_NAME`.
+        let gen = GENERAL_NAME_new();
+        if email.is_null() || gen.is_null() {
+            // SAFETY: the site is a declared constant.
+            unsafe { raise_site(&V3_SAN_449) };
+            // SAFETY: each is NULL or this call's own value.
+            unsafe {
+                GENERAL_NAME_free(gen);
+                ASN1_IA5STRING_free(email);
+            }
+            return 0;
+        }
+        // SAFETY: `gen` is live; the `ia5` arm is the selected one, and it takes ownership of
+        // `email` (nulled so the failure path below cannot double-free it).
+        unsafe {
+            (*gen).d.ia5 = email;
+            email = core::ptr::null_mut();
+            (*gen).type_ = GEN_EMAIL;
+        }
+        // SAFETY: `gens` is live and `gen` is this call's own value.
+        if unsafe { OPENSSL_sk_push(gens, gen.cast::<c_void>()) } == 0 {
+            // SAFETY: the site is a declared constant.
+            unsafe { raise_site(&V3_SAN_456) };
+            // SAFETY: each is NULL or this call's own value.
+            unsafe {
+                GENERAL_NAME_free(gen);
+                ASN1_IA5STRING_free(email);
+            }
+            return 0;
+        }
+    }
+
+    1
 }

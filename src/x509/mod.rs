@@ -306,9 +306,19 @@ pub mod v3_rolespec;
 pub mod v3_akeya;
 pub mod v3_authattid;
 
+// `crypto/x509/v3_akid.c` -- the `ossl_v3_akey_id` table and its `i2v`/`v2i` callbacks. It lands
+// with the endgame slice, once `X509V3_EXT_d2i` (`v3_lib.rs`) and the `standard_exts[]` array exist.
+pub mod v3_akid;
+
 // `crypto/x509/v3_ncons.c` -- the three RFC 5280 name-constraint tables (`ossl_v3_name_constraints`,
 // `ossl_v3_holder_name_constraints`, `ossl_v3_delegated_name_constraints`). Its two blockers,
 // `OSSL_parse_url` (`crypto/http/http_lib.c`) and `ossl_a2ulabel` (`crypto/punycode.c`), landed in
 // this slice, which is what makes it closure-ready. It withholds only the published
 // `standard_exts[]` and the six `v3_lib.rs` lookup names (D456).
 pub mod v3_ncons;
+
+// `crypto/x509/x509_req.c`'s pulled-forward subset (Phase 11's unit, pulled forward for
+// `v3_san.c`'s `ossl_v3_alt`, exactly as D442 permits): the `X509_REQ`/`X509_REQ_INFO` layouts and
+// `X509_REQ_get_subject_name`, the one name `v2i_subject_alt` reads. The rest of the unit is
+// withheld by name with its blocker in the module doc.
+pub mod x509_req;
