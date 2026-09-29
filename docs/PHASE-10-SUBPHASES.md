@@ -1243,3 +1243,38 @@ the published array) and, for `v3_san`, `X509_REQ_get_subject_name` (`x509_req.c
 three on `OSSL_parse_url` (`http_lib.c`)/`ossl_a2ulabel` (`punycode.c`); and `ct_x509v3.c` on the
 `SCT_LIST_*`/`SCT_set_source` CT units. The next slices are those dependencies; the array and
 `X509_get_ext_d2i` come after them, and `PKCS12_parse`/`OSSL_STORE_load` after that.
+
+**The last dependencies land and the name-constraint tables close; sixty-one of the sixty-three
+tables now exist.** The twentieth pulled-forward slice took the units the last four unlanded tables
+were blocked on, and three of those tables with them:
+
+* `crypto/punycode.c` (316 lines) landed whole into `src/punycode.rs`
+  (`ossl_punycode_decode`, `ossl_a2ulabel` and the four `static` helpers) -- the `ossl_a2ulabel`
+  `v3_ncons.c` names.
+* `crypto/http/http_lib.c`'s **`OSSL_parse_url`** landed into `src/http/http_lib.rs` with its four
+  `static` helpers. The rest of the unit is withheld **by name** with its reason: `OSSL_HTTP_parse_url`
+  (its only callers are the HTTP transport entry points this crate does not fabricate),
+  `use_proxy` and `OSSL_HTTP_adapt_proxy` (a proxy resolved from the process environment for that
+  same transport). This crate does not invent a network stack to make a table land.
+* `crypto/ct/` -- the whole Certificate Transparency tree, nine units (2,053 lines), landed into the
+  new `src/ct/`: `ct_b64.c`, `ct_log.c`, `ct_oct.c`, `ct_policy.c`, `ct_prn.c`, `ct_sct.c`,
+  `ct_sct_ctx.c`, `ct_vfy.c` and `ct_x509v3.c` (the `ossl_v3_ct_scts` table, three rows). Fifty-nine
+  exports, forty-four raise sites all read from `cterr.h`. One export is withheld with its blocker:
+  `CTLOG_STORE_load_default_file`, whose default path is built from the admitted build's **forensic**
+  `OPENSSLDIR` and so belongs to Phase 16, exactly as the four withheld `x509_def.c` names do.
+* `crypto/x509/v3_ncons.c` (`ossl_v3_name_constraints`, `ossl_v3_holder_name_constraints`,
+  `ossl_v3_delegated_name_constraints`) -- `src/x509/v3_ncons.rs`, transcribed whole now that
+  `OSSL_parse_url` and `ossl_a2ulabel` exist. It has no `X509_STORE_CTX` surface, so nothing else
+  waits.
+
+**`implemented_surface` moves from 4,133 to 4,201 symbols** (+68) and the docs gate caught one stale
+count: `docs/CI.md`'s `internal_symbols.c_style` figure was tied to the live atlas, so it moved from
+479 to 481 and was corrected rather than exempted. `RT-STORE` stays at **46,024** observations across
+109 courts.
+
+**Exactly two tables are left, `ossl_v3_akey_id` (`v3_akid.c`) and `ossl_v3_alt` (`v3_san.c`)**, and
+they are the two that need `X509V3_EXT_d2i` -- the `v3_lib.c` dispatch, which searches the
+`standard_exts[]` array this whole layer exists to publish. `v3_san.c` additionally needs
+`X509_REQ_get_subject_name`. The order is therefore forced and is the endgame: the array and the six
+lookup names land with these two tables and the dispatch, and then `X509_get_ext_d2i`,
+`ossl_x509v3_cache_extensions`, `PKCS12_parse` and `OSSL_STORE_load` follow.

@@ -76,6 +76,9 @@ pub mod chacha;
 // structure.
 pub(crate) mod cipher_tables;
 pub mod context;
+// Phase 10.14.15 — `crypto/ct/`: Certificate Transparency. The directory is new here; it lands
+// the units `crypto/x509/v3_x509v3`/`ct_x509v3.c`'s table is blocked on. See `src/ct/mod.rs`.
+pub mod ct;
 pub(crate) mod der_writer;
 pub mod des;
 pub mod dh;
@@ -112,6 +115,9 @@ pub mod evp;
 pub(crate) mod ffc;
 pub mod ffi;
 pub mod hpke;
+// Phase 10.14's dependency — `crypto/http/`'s `OSSL_parse_url`, the one name `v3_ncons.c` needs
+// from the HTTP tree. See `src/http/mod.rs`.
+pub mod http;
 pub mod idea;
 pub mod mac;
 // Phase 8's `crypto/ml_kem/` (FIPS 203): the single translation unit the six keymgmt and KEM rows
@@ -156,7 +162,10 @@ pub mod pkcs12;
 // container's `authsafes` column is, on the closure D441 measured. See `src/pkcs7/mod.rs`.
 pub mod pkcs7;
 pub mod property;
+// Phase 10.14's dependency — `crypto/punycode.c`'s `ossl_a2ulabel`, the one name `v3_ncons.c`
+// needs from the punycode unit.
 pub mod provider;
+pub mod punycode;
 // Phase 8's `crypto/quic_vlint.c`: the QUIC variable-length integer codec, transcribed whole
 // because `crypto/packet.c`'s QUIC half calls it and `OPENSSL_NO_QUIC` is absent from the admitted
 // profile (D342).

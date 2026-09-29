@@ -9,7 +9,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 80,
-      "language_surface_not_modelled_by_name": 6705,
+      "language_surface_not_modelled_by_name": 6855,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -120,7 +120,7 @@
         "crypto/bio/bss_bio.c": 15,
         "crypto/bio/bss_conn.c": 43,
         "crypto/bio/bss_core.c": 16,
-        "crypto/bio/bss_dgram.c": 33,
+        "crypto/bio/bss_dgram.c": 32,
         "crypto/bio/bss_dgram_pair.c": 22,
         "crypto/bio/bss_fd.c": 15,
         "crypto/bio/bss_file.c": 24,
@@ -160,6 +160,14 @@
         "crypto/core_fetch.c": 8,
         "crypto/core_namemap.c": 41,
         "crypto/cryptlib.c": 5,
+        "crypto/ct/ct_b64.c": 9,
+        "crypto/ct/ct_log.c": 21,
+        "crypto/ct/ct_oct.c": 12,
+        "crypto/ct/ct_policy.c": 8,
+        "crypto/ct/ct_prn.c": 9,
+        "crypto/ct/ct_sct.c": 19,
+        "crypto/ct/ct_sct_ctx.c": 14,
+        "crypto/ct/ct_vfy.c": 4,
         "crypto/cversion.c": 13,
         "crypto/defaults.c": 9,
         "crypto/der_writer.c": 4,
@@ -233,7 +241,7 @@
         "crypto/engine/tb_asnmth.c": 13,
         "crypto/engine/tb_digest.c": 10,
         "crypto/engine/tb_pkmeth.c": 10,
-        "crypto/err/err.c": 75,
+        "crypto/err/err.c": 73,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 20,
@@ -287,6 +295,7 @@
         "crypto/getenv.c": 2,
         "crypto/hmac/hmac.c": 6,
         "crypto/hpke/hpke.c": 21,
+        "crypto/http/http_lib.c": 17,
         "crypto/idea/i_cbc.c": 4,
         "crypto/indicator_core.c": 5,
         "crypto/initthread.c": 18,
@@ -354,6 +363,7 @@
         "crypto/provider_child.c": 19,
         "crypto/provider_conf.c": 28,
         "crypto/provider_core.c": 141,
+        "crypto/punycode.c": 3,
         "crypto/quic_vlint.c": 1,
         "crypto/rand/prov_seed.c": 11,
         "crypto/rand/rand_lib.c": 34,
@@ -437,6 +447,7 @@
         "crypto/x509/v3_info.c": 32,
         "crypto/x509/v3_ist.c": 16,
         "crypto/x509/v3_lib.c": 39,
+        "crypto/x509/v3_ncons.c": 38,
         "crypto/x509/v3_pcia.c": 8,
         "crypto/x509/v3_pcons.c": 15,
         "crypto/x509/v3_pku.c": 9,
@@ -468,7 +479,7 @@
         "crypto/x509/x_exten.c": 13,
         "crypto/x509/x_name.c": 39,
         "crypto/x509/x_pubkey.c": 41,
-        "crypto/x509/x_x509.c": 29,
+        "crypto/x509/x_x509.c": 28,
         "crypto/x509/x_x509a.c": 14,
         "providers/baseprov.c": 25
       },
@@ -575,8 +586,8 @@
       ]
     },
     "checked": {
-      "authority_units": 417,
-      "crate_modules": 593,
+      "authority_units": 428,
+      "crate_modules": 607,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 4,
       "divergence_names_covered": 41,
@@ -689,13 +700,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "cf94d722ce7986913305528ea20d02452ff4875d0bcf4a046bee0689a42bb2d2",
+  "body_hash": "7f20c911416cb0c532a345c4685c437655ed99fa46343023bb246793ea969cb8",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "0ce742ea00c51bf2fb8107928b1107863a9c5e79219254d1c75ada37295ba202"
+      "sha256": "43ab3cd7e889a6d6ae82fed98bde66fceb66b3afbc592fa22f3fd5572ead32b6"
     },
     {
       "name": "macro-owners",
@@ -710,7 +721,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "6e502d9b4b9478d64bf5e1804858e30eba60f6946f5a6da25abd88a30e130d5b"
+      "sha256": "b556479d808ee1fb547e1be0ef1811a372279ed79060857c349cb1912c0be08a"
     },
     {
       "name": "symbol-ownership",
@@ -725,7 +736,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "040bbc9868ee35030b0bba4cbd06e4f26afd396f98d69b27e8001007e9bab6be"
+      "sha256": "70d87c48c28f412c1e331cfe687cf518277366ff2d95ca407244b90980aee0b4"
     },
     {
       "name": "phase-state",
