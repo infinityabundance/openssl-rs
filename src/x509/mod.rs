@@ -305,3 +305,10 @@ pub mod v3_rolespec;
 // published `standard_exts[]` and the six `v3_lib.rs` lookup names (D456).
 pub mod v3_akeya;
 pub mod v3_authattid;
+
+// `crypto/x509/v3_ncons.c` -- the three RFC 5280 name-constraint tables (`ossl_v3_name_constraints`,
+// `ossl_v3_holder_name_constraints`, `ossl_v3_delegated_name_constraints`). Its two blockers,
+// `OSSL_parse_url` (`crypto/http/http_lib.c`) and `ossl_a2ulabel` (`crypto/punycode.c`), landed in
+// this slice, which is what makes it closure-ready. It withholds only the published
+// `standard_exts[]` and the six `v3_lib.rs` lookup names (D456).
+pub mod v3_ncons;

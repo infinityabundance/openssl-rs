@@ -33029,3 +33029,51 @@ prints `PIPELINE OK` exit 0 on the first run; `probe_hygiene.py` read clean.
 **Six of the 63 tables** over the four units named above, plus D463's 24-name closure over 17 further
 units; then the array, then `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse`
 -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+## D471 -- the last dependencies land; 61 of 63 tables exist and the two that remain need the dispatch
+
+**The units the last four unlanded tables were blocked on landed, and three of those tables with
+them.** Tables go from **57 to 61 of 63** and `implemented_surface` from 4,133 to **4,201** (+68).
+
+* `crypto/punycode.c` landed whole into `src/punycode.rs` -- `ossl_a2ulabel` is the name
+  `v3_ncons.c` needed.
+* `crypto/http/http_lib.c`'s `OSSL_parse_url` landed into the new `src/http/` tree, with the rest of
+  the unit withheld **by name** and its reason: `OSSL_HTTP_parse_url` and `OSSL_HTTP_adapt_proxy`
+  serve the HTTP transport entry points this crate deliberately does not fabricate. Withholding them
+  is the correct disposition; a network stack invented to make a table land would be the opposite.
+* `crypto/ct/` landed whole -- nine units, 2,053 lines, fifty-nine exports, forty-four raise sites --
+  into the new `src/ct/`, including `ct_x509v3.c`'s `ossl_v3_ct_scts` table. One export is withheld
+  with its blocker: `CTLOG_STORE_load_default_file` reads a path built from the admitted build's
+  **forensic** `OPENSSLDIR`, which is Phase 16's, exactly as `x509_def.c`'s four withheld names are.
+* `crypto/x509/v3_ncons.c` landed whole (`ossl_v3_name_constraints`, `ossl_v3_holder_name_constraints`,
+  `ossl_v3_delegated_name_constraints`) now that its two blockers exist. Unlike `v3_asid.c` and
+  `v3_addr.c`, it has no `X509_STORE_CTX` surface, so nothing in it waits.
+
+**The docs gate caught a count, and the count was wrong, so the count was fixed.** `docs/CI.md`
+binds the `internal_symbols.c_style` figure to the live atlas exact; the new modules added two plain
+C identifiers (`ossl_a2ulabel` and one CT helper), so it moved 479 -> 481. The record is corrected
+rather than exempted, because the quantity is a live property of the build and the gate is how a
+reader learns that it changed.
+
+### Counts, and what did not close
+
+**61 of 63 tables landed; exactly two remain**, `ossl_v3_akey_id` (`v3_akid.c`) and `ossl_v3_alt`
+(`v3_san.c`). Both need `X509V3_EXT_d2i` -- the `v3_lib.c` dispatch, which searches the
+`standard_exts[]` array this layer exists to publish -- and `v3_san.c` also needs
+`X509_REQ_get_subject_name`. That is why the remaining order is forced rather than chosen: the array,
+the six `v3_lib.rs` lookup names, `X509V3_EXT_d2i`, these two tables and `X509_REQ_get_subject_name`
+land in one slice, because any earlier split would publish a dispatch that silently answers NULL for
+a NID whose table is simply not there yet (D456). Phase-10 counts are unchanged at **`296
+implemented / 2 open`** exports and **`636 implemented / 0 open`** provider rows. `RT-STORE` stays at
+**46,024** observations across **109** courts. Phase 11 still derives `not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean. The 109-court pipeline
+prints `PIPELINE OK` exit 0; `probe_hygiene.py` read clean.
+
+### The remaining distance
+
+**Two of the 63 tables**, both needing the dispatch; then the array and the dispatch; then
+`X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` /
+`OSSL_STORE_load` -> the seal.
