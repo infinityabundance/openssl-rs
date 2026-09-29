@@ -277,3 +277,16 @@ pub mod v3_tlsf;
 pub mod v3_asid;
 pub mod v3_cpols;
 pub mod v3_sxnet;
+
+// The 10.14 closure-ready table units, third batch: `v3_admis.c`, `v3_pci.c`, `v3_ac_tgt.c`,
+// `v3_attrdesc.c`, `v3_attrmap.c`, `v3_aaa.c` and `v3_usernotice.c` (each one table), plus the
+// table and the two callbacks of `v3_ist.c` (whose item groups landed at 10.12). Each withholds
+// only the published `standard_exts[]` and the six `v3_lib.rs` lookup names (D456). See the module
+// docs and docs/PHASE-10-SUBPHASES.md section 7.
+pub mod v3_aaa;
+pub mod v3_ac_tgt;
+pub mod v3_admis;
+pub mod v3_attrdesc;
+pub mod v3_attrmap;
+pub mod v3_pci;
+pub mod v3_usernotice;

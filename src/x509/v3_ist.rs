@@ -1,31 +1,40 @@
-//! `crypto/x509/v3_ist.c` — the Issuer Sign Tool item. Phase 10.12.
+//! `crypto/x509/v3_ist.c` — the Issuer Sign Tool item and its row. Phase 10.12's item group plus
+//! the 10.14 table layer, landed whole.
 //!
-//! `crypto/x509/v3_ist.c` is 144 lines. **The item and its generated lifecycle land; the
-//! extension method and its two callbacks are withheld by name**:
+//! `crypto/x509/v3_ist.c` is 144 lines and now transcribes whole:
 //!
 //! * `ISSUER_SIGN_TOOL ::= SEQUENCE { signTool UTF8String, cATool UTF8String, signToolCert
 //!   UTF8String, cAToolCert UTF8String }` (`:25-30`) lands, with `ISSUER_SIGN_TOOL_it` and the
 //!   `_new`/`_free`/`d2i_`/`i2d_` group `IMPLEMENT_ASN1_FUNCTIONS` emits (`:32`). All five are
-//!   public exports (`x509v3.h`), so the differential plane can build one, encode it and decode
+//!   public exports (`x509v3.h:809`), so the differential plane can build one, encode it and decode
 //!   the bytes back.
-//! * `ossl_v3_issuer_sign_tool` (`:132-144`) is **withheld by name**: internal, not exported by
-//!   the admitted DSO, its only authority caller being `X509V3_add_standard_extensions`
-//!   (`crypto/x509/v3_lib.c:127`, 10.14). It is the row the OpenSSL 3.6.4 change added for the
-//!   RFC 4491-bis `1.2.643.100.112` Russian qualified-certificate extension.
-//! * `v2i_issuer_sign_tool` (`:34-88`) and `i2r_issuer_sign_tool` (`:90-130`) are **withheld by
-//!   name**: `static` callbacks reached only through the withheld table, so landing them would be
-//!   dead code. `v2i_issuer_sign_tool` raises `ERR_LIB_X509V3`'s `ERR_R_ASN1_LIB` and
-//!   `ERR_R_PASSED_INVALID_ARGUMENT`, and `i2r_issuer_sign_tool` raises the latter; both land with
-//!   the table, and `crypto/x509/v3_ist.c` is deliberately **not** in
-//!   `gen_err_raise_sites.py`'s `COVERED_FILES` until then.
+//! * `v2i_issuer_sign_tool` (`:34-88`) lands: it builds a fresh item and fills each of the four
+//!   UTF-8 members from the matching `CONF_VALUE` name, raising `ERR_R_ASN1_LIB` on an allocation or
+//!   `ASN1_STRING_set` failure and `ERR_R_PASSED_INVALID_ARGUMENT` on an unknown name.
+//! * `i2r_issuer_sign_tool` (`:90-130`) lands: it prints each non-NULL member on its own line,
+//!   raising `ERR_R_PASSED_INVALID_ARGUMENT` for a NULL item.
+//! * The row [`ossl_v3_issuer_sign_tool`] (`:132-144`) lands, `NID_issuerSignTool` (`obj_mac.h:5000`),
+//!   `X509V3_EXT_MULTILINE`, `v2i`/`i2r` set. It is the row the OpenSSL 3.6.4 change added for the
+//!   RFC 4491-bis `1.2.643.100.112` Russian qualified-certificate extension. It is internal data
+//!   the admitted DSO does not export (`nm -D` shows no `ossl_v3_*`); its only authority caller is
+//!   `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`).
 //!
-//! Nothing is stubbed: the three withheld names are named rather than declared.
+//! **Withheld by name**: `standard_exts[]` (`standard_exts.h:15-95`) and the six lookup names in
+//! `v3_lib.rs` it feeds. A partial array would silently change `OBJ_bsearch_ext` for every missing
+//! NID (D456). This unit contributes one of the 63.
+//!
+//! ## The raise sites
+//!
+//! `crypto/x509/v3_ist.c` is not an entry in `gen_err_raise_sites.py`'s `COVERED_FILES`, so its
+//! seven coordinates are **declared locally**, their reason values read from the authority's
+//! `err.h` (not typed from memory), as `v3_pcons.rs` does.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 
-use core::ffi::{c_int, c_long, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
 use crate::asn1::d2i::ASN1_item_d2i;
@@ -34,6 +43,16 @@ use crate::asn1::i2d::ASN1_item_i2d;
 use crate::asn1::items::ASN1_UTF8STRING_it;
 use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
+use crate::asn1::string::ASN1_STRING_set;
+use crate::runtime::bio::iolib::BIO_write;
+use crate::runtime::bio::print::BIO_printf;
+use crate::runtime::bio::sys::{strcmp, strlen};
+use crate::runtime::bio::Bio;
+use crate::runtime::conf::types::ConfValue;
+use crate::runtime::err::raise_site;
+use crate::runtime::obj::NID_issuerSignTool;
+use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
+use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_EXT_MULTILINE};
 
 /// `struct ISSUER_SIGN_TOOL_st` — `ISSUER_SIGN_TOOL`, from `include/openssl/x509v3.h:417-422`.
 ///
@@ -159,3 +178,253 @@ pub unsafe extern "C" fn i2d_ISSUER_SIGN_TOOL(
     // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
     unsafe { ASN1_item_i2d(a.cast(), out, ISSUER_SIGN_TOOL_it()) }
 }
+
+/// `ERR_LIB_X509V3` — `include/openssl/err.h:97`.
+const ERR_LIB_X509V3: c_int = 34;
+/// `ERR_R_ASN1_LIB` — `include/openssl/err.h:328`, `(ERR_LIB_ASN1 | ERR_RFLAG_COMMON)`.
+const ERR_R_ASN1_LIB: c_int = 524301;
+/// `ERR_R_PASSED_INVALID_ARGUMENT` — `include/openssl/err.h:358`, `(262 | ERR_RFLAG_COMMON)`.
+const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 524550;
+
+/// One `v3_ist.c` raise coordinate, declared locally (see the module doc).
+const fn v3_ist_site(
+    line: c_int,
+    func: &'static core::ffi::CStr,
+    reason: c_int,
+) -> crate::runtime::err::err_sites::ErrSite {
+    crate::runtime::err::err_sites::ErrSite {
+        file: c"../../src/openssl-3.6.4/crypto/x509/v3_ist.c",
+        line,
+        func,
+        lib: ERR_LIB_X509V3,
+        reason,
+        dynamic_reason: false,
+    }
+}
+
+/// `v2i_issuer_sign_tool`'s failed `ISSUER_SIGN_TOOL_new` at `v3_ist.c:41`.
+const V3_IST_41: crate::runtime::err::err_sites::ErrSite =
+    v3_ist_site(41, c"v2i_issuer_sign_tool", ERR_R_ASN1_LIB);
+/// `v2i_issuer_sign_tool`'s failed `signTool` fill at `v3_ist.c:54`.
+const V3_IST_54: crate::runtime::err::err_sites::ErrSite =
+    v3_ist_site(54, c"v2i_issuer_sign_tool", ERR_R_ASN1_LIB);
+/// `v2i_issuer_sign_tool`'s failed `cATool` fill at `v3_ist.c:61`.
+const V3_IST_61: crate::runtime::err::err_sites::ErrSite =
+    v3_ist_site(61, c"v2i_issuer_sign_tool", ERR_R_ASN1_LIB);
+/// `v2i_issuer_sign_tool`'s failed `signToolCert` fill at `v3_ist.c:68`.
+const V3_IST_68: crate::runtime::err::err_sites::ErrSite =
+    v3_ist_site(68, c"v2i_issuer_sign_tool", ERR_R_ASN1_LIB);
+/// `v2i_issuer_sign_tool`'s failed `cAToolCert` fill at `v3_ist.c:75`.
+const V3_IST_75: crate::runtime::err::err_sites::ErrSite =
+    v3_ist_site(75, c"v2i_issuer_sign_tool", ERR_R_ASN1_LIB);
+/// `v2i_issuer_sign_tool`'s unknown name at `v3_ist.c:79`.
+const V3_IST_79: crate::runtime::err::err_sites::ErrSite =
+    v3_ist_site(79, c"v2i_issuer_sign_tool", ERR_R_PASSED_INVALID_ARGUMENT);
+/// `i2r_issuer_sign_tool`'s NULL item at `v3_ist.c:97`.
+const V3_IST_97: crate::runtime::err::err_sites::ErrSite =
+    v3_ist_site(97, c"i2r_issuer_sign_tool", ERR_R_PASSED_INVALID_ARGUMENT);
+
+/// The `member == NULL || value == NULL || !ASN1_STRING_set(member, value, (int)strlen(value))`
+/// guard `v2i_issuer_sign_tool` repeats for each of its four members. Answers nonzero when the fill
+/// succeeded.
+///
+/// # Safety
+///
+/// `member` is NULL or a live `ASN1_UTF8STRING`; `value` is NULL or a live NUL-terminated C string.
+unsafe fn ist_member_guard(member: *mut Asn1String, value: *mut c_char) -> c_int {
+    if member.is_null() || value.is_null() {
+        return 0;
+    }
+    // SAFETY: `value` is NUL-terminated per the contract.
+    let len = unsafe { strlen(value) };
+    // SAFETY: `member` is live; `value` is readable for `len` bytes.
+    unsafe { ASN1_STRING_set(member, value.cast::<c_void>(), len as c_int) }
+}
+
+/// `static ISSUER_SIGN_TOOL *v2i_issuer_sign_tool(X509V3_EXT_METHOD *method, X509V3_CTX *ctx,
+/// STACK_OF(CONF_VALUE) *nval)` — `crypto/x509/v3_ist.c:34-88`.
+unsafe extern "C" fn v2i_issuer_sign_tool(
+    _method: *const X509V3ExtMethod,
+    _ctx: *mut c_void,
+    nval: *mut OpenSslStack,
+) -> *mut c_void {
+    let ist = ISSUER_SIGN_TOOL_new();
+    if ist.is_null() {
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&V3_IST_41) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `nval` is a live `STACK_OF(CONF_VALUE)` per the caller's contract.
+    let num = unsafe { OPENSSL_sk_num(nval) };
+    let mut i = 0;
+    while i < num {
+        // SAFETY: `nval` is live and `i` is in bounds.
+        let cnf = unsafe { OPENSSL_sk_value(nval, i) }.cast::<ConfValue>();
+        if cnf.is_null() {
+            i += 1;
+            continue;
+        }
+        // SAFETY: `cnf` is live per the stack contract; each literal is static.
+        let name = unsafe { (*cnf).name };
+        // SAFETY: `name` is NUL-terminated; the literal is static.
+        let is_signtool = unsafe { strcmp(name, c"signTool".as_ptr()) } == 0;
+        // SAFETY: as above.
+        let is_catool = unsafe { strcmp(name, c"cATool".as_ptr()) } == 0;
+        // SAFETY: as above.
+        let is_signtoolcert = unsafe { strcmp(name, c"signToolCert".as_ptr()) } == 0;
+        // SAFETY: as above.
+        let is_catoolcert = unsafe { strcmp(name, c"cAToolCert".as_ptr()) } == 0;
+        if is_signtool {
+            // SAFETY: `ist` and `cnf` are live; the guard short-circuits as the authority's does.
+            let ok = unsafe { ist_member_guard((*ist).signTool, (*cnf).value) };
+            if ok == 0 {
+                // SAFETY: the site is a compiled-in constant.
+                unsafe { raise_site(&V3_IST_54) };
+                // SAFETY: `ist` is a live value this call owns.
+                unsafe { ISSUER_SIGN_TOOL_free(ist) };
+                return ptr::null_mut();
+            }
+        } else if is_catool {
+            // SAFETY: `ist` and `cnf` are live; the guard short-circuits as the authority's does.
+            let ok = unsafe { ist_member_guard((*ist).cATool, (*cnf).value) };
+            if ok == 0 {
+                // SAFETY: the site is a compiled-in constant.
+                unsafe { raise_site(&V3_IST_61) };
+                // SAFETY: `ist` is a live value this call owns.
+                unsafe { ISSUER_SIGN_TOOL_free(ist) };
+                return ptr::null_mut();
+            }
+        } else if is_signtoolcert {
+            // SAFETY: `ist` and `cnf` are live; the guard short-circuits as the authority's does.
+            let ok = unsafe { ist_member_guard((*ist).signToolCert, (*cnf).value) };
+            if ok == 0 {
+                // SAFETY: the site is a compiled-in constant.
+                unsafe { raise_site(&V3_IST_68) };
+                // SAFETY: `ist` is a live value this call owns.
+                unsafe { ISSUER_SIGN_TOOL_free(ist) };
+                return ptr::null_mut();
+            }
+        } else if is_catoolcert {
+            // SAFETY: `ist` and `cnf` are live; the guard short-circuits as the authority's does.
+            let ok = unsafe { ist_member_guard((*ist).cAToolCert, (*cnf).value) };
+            if ok == 0 {
+                // SAFETY: the site is a compiled-in constant.
+                unsafe { raise_site(&V3_IST_75) };
+                // SAFETY: `ist` is a live value this call owns.
+                unsafe { ISSUER_SIGN_TOOL_free(ist) };
+                return ptr::null_mut();
+            }
+        } else {
+            // SAFETY: the site is a compiled-in constant.
+            unsafe { raise_site(&V3_IST_79) };
+            // SAFETY: `ist` is a live value this call owns.
+            unsafe { ISSUER_SIGN_TOOL_free(ist) };
+            return ptr::null_mut();
+        }
+        i += 1;
+    }
+    ist.cast::<c_void>()
+}
+
+/// `static int i2r_issuer_sign_tool(X509V3_EXT_METHOD *method, ISSUER_SIGN_TOOL *ist, BIO *out,
+/// int indent)` — `crypto/x509/v3_ist.c:90-130`.
+unsafe extern "C" fn i2r_issuer_sign_tool(
+    _method: *const X509V3ExtMethod,
+    ist: *mut c_void,
+    out: *mut Bio,
+    indent: c_int,
+) -> c_int {
+    if ist.is_null() {
+        // SAFETY: the site is a compiled-in constant.
+        unsafe { raise_site(&V3_IST_97) };
+        return 0;
+    }
+    let ist = ist.cast::<IssuerSignTool>();
+    let mut new_line = 0;
+    // SAFETY: `ist` is live per the caller's contract.
+    if !unsafe { (*ist).signTool }.is_null() {
+        // SAFETY: `out` is live; the format and its argument are constants.
+        unsafe { BIO_printf(out, c"%*ssignTool    : ".as_ptr(), indent, c"".as_ptr()) };
+        // SAFETY: `out` is live; `ist->signTool` is its live string.
+        unsafe {
+            BIO_write(
+                out,
+                (*(*ist).signTool).data.cast::<c_void>(),
+                (*(*ist).signTool).length,
+            )
+        };
+        new_line = 1;
+    }
+    // SAFETY: `ist` is live per the caller's contract.
+    if !unsafe { (*ist).cATool }.is_null() {
+        if new_line == 1 {
+            // SAFETY: `out` is live; the literal is static.
+            unsafe { BIO_write(out, c"\n".as_ptr().cast::<c_void>(), 1) };
+        }
+        // SAFETY: `out` is live; the format and its argument are constants.
+        unsafe { BIO_printf(out, c"%*scATool      : ".as_ptr(), indent, c"".as_ptr()) };
+        // SAFETY: `out` is live; `ist->cATool` is its live string.
+        unsafe {
+            BIO_write(
+                out,
+                (*(*ist).cATool).data.cast::<c_void>(),
+                (*(*ist).cATool).length,
+            )
+        };
+        new_line = 1;
+    }
+    // SAFETY: `ist` is live per the caller's contract.
+    if !unsafe { (*ist).signToolCert }.is_null() {
+        if new_line == 1 {
+            // SAFETY: `out` is live; the literal is static.
+            unsafe { BIO_write(out, c"\n".as_ptr().cast::<c_void>(), 1) };
+        }
+        // SAFETY: `out` is live; the format and its argument are constants.
+        unsafe { BIO_printf(out, c"%*ssignToolCert: ".as_ptr(), indent, c"".as_ptr()) };
+        // SAFETY: `out` is live; `ist->signToolCert` is its live string.
+        unsafe {
+            BIO_write(
+                out,
+                (*(*ist).signToolCert).data.cast::<c_void>(),
+                (*(*ist).signToolCert).length,
+            )
+        };
+        new_line = 1;
+    }
+    // SAFETY: `ist` is live per the caller's contract.
+    if !unsafe { (*ist).cAToolCert }.is_null() {
+        if new_line == 1 {
+            // SAFETY: `out` is live; the literal is static.
+            unsafe { BIO_write(out, c"\n".as_ptr().cast::<c_void>(), 1) };
+        }
+        // SAFETY: `out` is live; the format and its argument are constants.
+        unsafe { BIO_printf(out, c"%*scAToolCert  : ".as_ptr(), indent, c"".as_ptr()) };
+        // SAFETY: `out` is live; `ist->cAToolCert` is its live string.
+        unsafe {
+            BIO_write(
+                out,
+                (*(*ist).cAToolCert).data.cast::<c_void>(),
+                (*(*ist).cAToolCert).length,
+            )
+        };
+    }
+    1
+}
+
+/// `const X509V3_EXT_METHOD ossl_v3_issuer_sign_tool` — `crypto/x509/v3_ist.c:132-144`.
+pub static ossl_v3_issuer_sign_tool: X509V3ExtMethod = X509V3ExtMethod {
+    ext_nid: NID_issuerSignTool,
+    ext_flags: X509V3_EXT_MULTILINE,
+    it: Some(ISSUER_SIGN_TOOL_it),
+    ext_new: None,
+    ext_free: None,
+    d2i: None,
+    i2d: None,
+    i2s: None,
+    s2i: None,
+    i2v: None,
+    v2i: Some(v2i_issuer_sign_tool),
+    i2r: Some(i2r_issuer_sign_tool),
+    r2i: None,
+    usr_data: ptr::null_mut(),
+};

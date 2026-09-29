@@ -178,15 +178,6 @@
       {
         "class": "owned_by_a_later_stratum",
         "covers": [
-          "ossl_v3_issuer_sign_tool"
-        ],
-        "evidence": "docs/DECISIONS.md D452, D453; src/x509/v3_ist.rs's module documentation; crypto/x509/v3_ist.c:132-144 against :25-32; crypto/x509/v3_lib.c:127; courts/phase10/rt_store_probe.c (`ist.*` arms)",
-        "note": "**Withheld rather than stubbed.** `src/x509/v3_ist.rs` transcribes the `ISSUER_SIGN_TOOL` item -- the `ASN1_SEQUENCE` template (`:25-30`) and the `IMPLEMENT_ASN1_FUNCTIONS` group (`:32`) -- which is what makes the unit's one unwired internal countable. That internal is the `ossl_v3_issuer_sign_tool` row (`:132-144`), the RFC 4491-bis `1.2.643.100.112` extension OpenSSL 3.6.4 added. It is internal and unexported (`nm -D` shows no `ossl_v3_*`), so no probe can name it, and its only authority caller is `X509V3_add_standard_extensions` (`crypto/x509/v3_lib.c:127`, Phase 11's). Its two `static` callbacks (`v2i_issuer_sign_tool` `:34-88`, `i2r_issuer_sign_tool` `:90-130`) are reached only through the table and are withheld with it, which is also why `crypto/x509/v3_ist.c` is not yet in `gen_err_raise_sites.py`'s `COVERED_FILES`. The record fail-closes both ways.",
-        "owner_module": "src/x509/v3_ist.rs"
-      },
-      {
-        "class": "owned_by_a_later_stratum",
-        "covers": [
           "ossl_x509_pubkey_hash"
         ],
         "evidence": "docs/DECISIONS.md D452, D453, D468; src/x509/v3_skid.rs's module documentation; crypto/x509/v3_skid.c:54-88 and :90-108 (the withheld pair) against :18-52 (the landed table, callbacks and helpers); crypto/x509/x509_req.c (the `X509_REQ` type); courts/phase10/rt_store_probe.c (`skid.*` arms)",
