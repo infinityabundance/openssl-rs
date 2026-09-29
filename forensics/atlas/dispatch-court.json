@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 609,
+      "crate_files_read": 613,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 334,
       "signatures_checked": 303,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 206,
+      "signatures_not_a_dispatch": 208,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -5274,6 +5274,11 @@
           "why": "not a provider dispatch: declared in `include/internal/thread_arch.h:57`, which is not installed, so the atlas has no record of it"
         },
         {
+          "alias": "StoreInfoNewFn",
+          "at": "src/store/store_result.rs",
+          "why": "not a provider dispatch: the authority declares this `typedef` inside `store_result.c` itself (`:317`), not in an installed header, so the typedefs atlas has no record of it"
+        },
+        {
           "alias": "UiOpenSessionFn",
           "at": "src/ui/ui_lib.rs",
           "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
@@ -5307,6 +5312,11 @@
           "alias": "X509V3GetSection",
           "at": "src/x509/v3_conf.rs",
           "why": "not a provider dispatch: a member of `X509V3_CONF_METHOD` (`include/openssl/x509v3.h.in:79-85`), declared inline as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "CheckPurpose",
+          "at": "src/x509/v3_purp.rs",
+          "why": "not a provider dispatch: `struct x509_purpose_st`'s `check_purpose` member (`include/openssl/x509v3.h.in:489`), declared inline as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
         }
       ],
       "unlinked": [],

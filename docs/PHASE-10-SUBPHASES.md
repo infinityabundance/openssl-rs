@@ -167,7 +167,7 @@ carries its own engine, so a row over it is new code, not a table entry.
 | # | Subphase | Owns | Depends on | Courts |
 |---|---|---|---|---|
 | 10.0 | **The plan and the census** | `docs/PHASE-10-SUBPHASES.md`, and the measurement in §1. The ledger (`forensics/phase10-obligations.json`) and its generator land with it; **the runner and the reference-basis probe do not, and §4.3 is why they cannot**: `run_courts.py` refuses a stratum in `in-progress` with no runner and `court_coverage.py` refuses the 87 inherited `implemented` exports until a reference probe covers them, and neither can be satisfied by this subphase's files. | 8.8–8.9 (the codec framework and the readers), `phase-state.json` | — |
-| 10.1 | **The codec rows** | the `OSSL_OP_ENCODER`/`OSSL_OP_DECODER` registration rows the census gives this stratum (241 and 76, one per provider), which measurement (§1a) resolves to **eleven row-publishing units, not 636 rows**: `encode_key2any.c` (412 rows), `decode_der2key.c` (138), `encode_key2text.c` (58), `encode_key2ms.c` (8), `encode_key2blob.c`/`decode_msblob2key.c`/`decode_pvk2key.c` (4 each) and `decode_spki2typespki.c`/`decode_pem2der.c`/`decode_epki2pki.c` (2 each). **The 79 `encoder.h`/`decoder.h` exports and the `crypto/encode_decode/` framework are already landed** (8.8's D362–D367 chain), so this subphase adds rows rather than symbols. **The first slice is `encode_key2text.c`** — 58 rows over one unit, the biggest mover whose dependency closure is landed — which publishes 22 of its rows and leaves its eighteen PQC tables `pending` (§3.5). `D-DECODER-ABSENT-1` (`forensics/divergence-obligations.json`) is **not** retired by this slice: it names "the DER/PEM decoder rows and the keymgmt rows they construct into", and those decoders wait on 10.6's `ossl_d2i_*` hand-offs (§1a). | 8.8 | `RT-CODEC` |
+| 10.1 | **The codec rows** | the `OSSL_OP_ENCODER`/`OSSL_OP_DECODER` registration rows the census gives this stratum (241 and 76, one per provider), which measurement (§1a) resolves to **eleven row-publishing units, not 636 rows**: `encode_key2any.c.in` (412 rows), `decode_der2key.c.in` (138), `encode_key2text.c` (58), `encode_key2ms.c.in` (8), `encode_key2blob.c`/`decode_msblob2key.c`/`decode_pvk2key.c.in` (4 each) and `decode_spki2typespki.c.in`/`decode_pem2der.c.in`/`decode_epki2pki.c.in` (2 each). **The 79 `encoder.h`/`decoder.h` exports and the `crypto/encode_decode/` framework are already landed** (8.8's D362–D367 chain), so this subphase adds rows rather than symbols. **The first slice is `encode_key2text.c`** — 58 rows over one unit, the biggest mover whose dependency closure is landed — which publishes 22 of its rows and leaves its eighteen PQC tables `pending` (§3.5). `D-DECODER-ABSENT-1` (`forensics/divergence-obligations.json`) is **not** retired by this slice: it names "the DER/PEM decoder rows and the keymgmt rows they construct into", and those decoders wait on 10.6's `ossl_d2i_*` hand-offs (§1a). | 8.8 | `RT-CODEC` |
 | 10.2 | **The PKCS#12 object and its ASN.1** | `crypto/pkcs12/p12_asn.c` (22 exports), `p12_sbag.c` (22), `p12_attr.c` (12) and `p12_utl.c` (8): the `PKCS12`/`PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups, the SafeBag accessors and the attribute helpers. Sixty-four of the ledger's open rows. | 10.0 | `RT-PKCS12` |
 | 10.3 | **The PKCS#12 container construction** | `p12_add.c` (10), `p12_crt.c` (11), `p12_mutl.c` (7), `p12_init.c` (2) and `p12_npas.c` (1): `PKCS12_create(_ex/_ex2)`, the `PKCS12_add_*` family and the MAC setup. Thirty-one rows. | 10.2 | `RT-PKCS12` (shared) |
 | 10.4 | **The PKCS#12 key derivation and PBE pair** | `p12_key.c` (6), `p12_crpt.c` (3), `p12_decr.c` (6), `p12_p8d.c` (2), `p12_p8e.c` (4) and `p12_kiss.c` (1): `PKCS12_key_gen_*`, `PKCS12_pbe_crypt(_ex)`, the `PKCS12_item_*` pair and `PKCS8_encrypt`/`decrypt`. Twenty-two exports of which eight are landed (all of `p12_decr.c` and `p12_p8d.c`, D368), so fourteen are open; **`p12_crpt.c`'s landing retires `D-PBE-PKCS12-KEYGEN-1`** — the six `builtin_pbe[]` rows whose keygen columns are NULL until it exists (D192). | 10.2 | `CT-PKCS12` (the KDF and PBE vectors) |
@@ -399,13 +399,13 @@ cycle is the one D442 and D444 already recorded; this section is its size.
 |---|---|---|---|---|
 | 10.8 | **The X.509 object core** *(landed, D451)* | `x_x509.c` (310), `x_name.c` (552), `x_crl.c` (542)'s object half, `x_exten.c`, `crypto/asn1/x_val.c`: the `X509`/`X509_CINF`/`X509_NAME`/`X509_NAME_ENTRY`/`X509_CRL`/`X509_CRL_INFO`/`X509_REVOKED`/`X509_EXTENSION`/`X509_VAL` items and their lifecycles, `d2i_X509`/`i2d_X509`/`d2i_X509_CRL`/`i2d_X509_CRL`, the `ASN1_ITYPE_EXTERN` name hooks and `i2d_re_X509_tbs`. Closed `OSSL_STORE_INFO_get1_CERT`, `_get1_CRL` and the CERT/CRL arms of `OSSL_STORE_INFO_free`. | — | `RT-STORE` |
 | 10.9 | **The digest substrate** | the engine table `X509_digest` reaches through `ossl_asn1_item_digest_ex` (`crypto/engine/`'s nine built units — `eng_all`, `eng_ctrl`, `eng_init`, `eng_lib`, `eng_list`, `eng_table`, `tb_asnmth`, `tb_digest`, `tb_pkmeth`), `crypto/o_str.c`, `crypto/ctype.c`, `crypto/defaults.c`; **12 units, 2,975 lines**. Closes no Phase-10 export or row. | — | — |
-| 10.10 | **The ASN.1 digest/sign/verify layer** | `a_digest.c`, `a_sign.c`, `asn1_lib.c`, `evp/digest.c`, and the `X509_NAME_oneline` half of `x509_obj.c`; **5 units, 2,293 lines**. Closes no export or row. | 10.9 | — |
-| 10.11 | **The name, print and `v3` dispatch layer** | `x_name.c` (`X509_NAME_it`/`X509_NAME_ENTRY_it` and the `_new`/`_free`/`_dup`/`d2i_`/`i2d_` family), `x_exten.c` (`X509_EXTENSION_it`), `x_pubkey.c`, `x509_v3.c`, `x509name.c`, `x509rset.c`, `a_strex.c`, `a_verify.c`, `x_spki.c`, `evp/evp_pkey.c`; **10 units, 3,487 lines**. This is the first half of the brief's (a): `X509_NAME`'s item and its `i2d_X509_NAME`. | 10.10 | `RT-STORE` (later) |
+| 10.10 | **The ASN.1 digest/sign/verify layer** | `a_digest.c`, `a_sign.c`, `asn1_lib.c`, `crypto/evp/digest.c`, and the `X509_NAME_oneline` half of `x509_obj.c`; **5 units, 2,293 lines**. Closes no export or row. | 10.9 | — |
+| 10.11 | **The name, print and `v3` dispatch layer** | `x_name.c` (`X509_NAME_it`/`X509_NAME_ENTRY_it` and the `_new`/`_free`/`_dup`/`d2i_`/`i2d_` family), `x_exten.c` (`X509_EXTENSION_it`), `x_pubkey.c`, `x509_v3.c`, `x509name.c`, `x509rset.c`, `a_strex.c`, `a_verify.c`, `x_spki.c`, `crypto/evp/evp_pkey.c`; **10 units, 3,487 lines**. This is the first half of the brief's (a): `X509_NAME`'s item and its `i2d_X509_NAME`. | 10.10 | `RT-STORE` (later) |
 | 10.12 | **The leaf extension items and the policy graph** | `x_val.c` (`X509_VAL_it`), `x_x509a.c` (`X509_CERT_AUX_it`, the alias/keyid accessors), `x509_txt.c`, `pcy_lib.c`, `pcy_node.c`, `v3_audit_id.c`, `v3_group_ac.c`, `v3_ia5.c`, `v3_ind_iss.c`, `v3_ist.c`, `v3_no_ass.c`, `v3_pcia.c`, `v3_skid.c`; plus the `http`/`punycode` units `x_all.c` reaches; **16 units, 3,490 lines**. | 10.11 | — |
 | 10.13 | **The remaining leaf extension items** | `v3_timespec.c`, `v3_pku.c`, `v3_utf8.c`, `v3_no_rev_avail.c`, `v3_single_use.c`, `v3_soa_id.c`; **6 units, 875 lines**. | 10.11 | — |
 | 10.14 | **The certificate object graph (one SCC)** *(decomposed in §7; 10.14.1–10.14.2 landed)* | the 75-unit, **30,711-line** strongly-connected component: `x_x509.c`/`x_crl.c` (`X509_it`/`X509_CRL_it` and lifecycle), `x509_cmp.c`, `x509_set.c`, `x509cset.c`, `t_x509.c`, `x_all.c`, `x509_vfy.c`, `x509_lu.c`, `x509_vpm.c`, `x509_trust.c`, `x509_acert.c`, `x509_req.c`, `x_attrib.c`, all `v3_*.c`, `pcy_cache.c`/`pcy_data.c`/`pcy_map.c`/`pcy_tree.c`, `pk7_*.c`, `ocsp/*`, `ct/*`, `asn1_gen.c`. **This is the second half of the brief's (a) and the whole of its (b).** | 10.9–10.13 | `RT-STORE`, `RT-PKCS12`, `RT-KEYFORMAT` |
 | 10.15 | **The PKCS#12 certificate layer** | the fifteen `crypto/pkcs12/` units (`p12_add.c`'s `PKCS12_add_cert`, `p12_crt.c`'s `PKCS12_create(_ex/_ex2)`, `p12_sbag.c`'s `PKCS12_SAFEBAG_*`, `p12_kiss.c`'s `PKCS12_parse`, and the landed rest); **3,170 lines**. Closes the eleven `pkcs12.h` rows D447 left open. | 10.14 | `RT-PKCS12` |
-| 10.16 | **STORE result and the file loader** | `store_lib.c` (the carved CERT/CRL arms of `OSSL_STORE_INFO_free`/`_get1_CERT`/`_get1_CRL`/`OSSL_STORE_find`, and `OSSL_STORE_load`), `store_result.c`, `file_store.c`, `file_store_any2obj.c`; **4 units, 3,030 lines**. Closes `OSSL_STORE_load`, `OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the two `file` `OSSL_OP_STORE` rows. | 10.14 | `RT-STORE` |
+| 10.16 | **STORE result and the file loader** | `store_lib.c` (the carved CERT/CRL arms of `OSSL_STORE_INFO_free`/`_get1_CERT`/`_get1_CRL`/`OSSL_STORE_find`, and `OSSL_STORE_load`), `store_result.c`, `file_store.c.in`, `file_store_any2obj.c.in`; **4 units, 3,030 lines**. Closes `OSSL_STORE_load`, `OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the two `file` `OSSL_OP_STORE` rows. | 10.14 | `RT-STORE` |
 
 **The unit-level SCC is not a function-level one, and 10.8 is the proof.** This section first
 concluded that no subphase could land because the 30,711-line component "cannot be cut at unit
@@ -501,7 +501,7 @@ read from `forensics/authorities/src/openssl-3.6.4/`.
 | 10.14.14 | **OCSP** | `ocsp_ext.c` (466), `ocsp_vfy.c` (438), `ocsp_cl.c` (368), `ocsp_srv.c` (326), `ocsp_prn.c` (251), `v3_ocsp.c` (234), `ocsp_asn.c` (135), `ocsp_lib.c` (113), `ocsp_http.c` (68); **~2,399** | 10.14.12, 10.14.13 | none |
 | 10.14.15 | **CT** | `ct_oct.c` (403), `ct_sct.c` (385), `ct_log.c` (335), `ct_sct_ctx.c` (274), `ct_b64.c` (174), `ct_vfy.c` (138), `ct_prn.c` (127), `ct_policy.c` (113), `ct_x509v3.c` (104); **~2,053** | 10.14.11, 10.14.12 | none |
 | 10.15 | **The PKCS#12 certificate layer** (section 6's row, unchanged) | the fifteen `crypto/pkcs12/` units' remaining halves: `p12_sbag.c` (292), `p12_add.c`/`p12_crt.c` (~400), `p12_mutl.c` (552), `p12_kiss.c` (274); **~1,518** | 10.14.13 (PKCS#7), 10.14.11 (the `X509` objects) | **the eleven `pkcs12.h` exports** (`PKCS12_SAFEBAG_create_cert`/`_crl`, `_get1_cert(_ex)`/`_get1_crl(_ex)`, `PKCS12_add_cert`, `PKCS12_create(_ex/_ex2)`, `PKCS12_parse`) |
-| 10.16 | **STORE result and the file loader** (section 6's row, unchanged) | `store_result.c` (667), `store_lib.c`'s carved `OSSL_STORE_load` half, `file_store.c` (828), `file_store_any2obj.c` (330); **~1,825** | 10.14.13 (the decoder chain `store_result` calls), 10.15 | **`OSSL_STORE_load` and the two `file` `OSSL_OP_STORE` rows** |
+| 10.16 | **STORE result and the file loader** (section 6's row, unchanged) | `store_result.c` (667), `store_lib.c`'s carved `OSSL_STORE_load` half, `file_store.c.in` (828), `file_store_any2obj.c.in` (330); **~1,825** | 10.14.13 (the decoder chain `store_result` calls), 10.15 | **`OSSL_STORE_load` and the two `file` `OSSL_OP_STORE` rows** |
 
 **10.14.2 landed, and what it leaves.** The second sub-subphase, and the first whose section 7
 dependency is partly **forward** (10.14.4's `v3_genn`/`x509_req` items for `x_all`'s faces).
@@ -1324,3 +1324,45 @@ closure the register's own rule requires.
 `X509_get_ext_d2i` (`x509_ext.c`), `ossl_x509v3_cache_extensions` (`v3_purp.c`), `ossl_x509_add_cert_new`
 (`x509_cmp.c`), `PKCS12_parse` and `OSSL_STORE_load`, which come next and are what close the two open
 exports.
+
+**Phase 10 is complete: the last five names land, both open exports close, and the stratum derives
+`complete`.** The twenty-second pulled-forward slice carried the chain the published dispatch made
+reachable:
+
+* `X509_get_ext_d2i` and its five siblings (`X509_CRL_get_ext_d2i`, `X509_add1_ext_i2d`,
+  `X509_CRL_add1_ext_i2d`, `X509_REVOKED_get_ext_d2i`, `X509_REVOKED_add1_ext_i2d`) -- `x509_ext.c`
+  now transcribes **whole**, nothing withheld.
+* `ossl_x509v3_cache_extensions` and `X509_check_purpose` plus 29 more names -- `src/x509/v3_purp.rs`,
+  the purpose table, the issuer/CA checks and the extension cache, landed whole.
+* `X509_self_signed` (`src/x509/x509_vfy.rs`, the rest of the 3,984-line verify unit withheld by name
+  with its `X509_STORE_CTX` blocker) and the add-cert family `x509_cmp.rs` withheld behind it
+  (`X509_cmp`, `X509_add_cert`, `X509_add_certs`, `ossl_x509_add_cert_new`, `ossl_x509_add_certs_new`)
+  -- `x509_cmp.c` now transcribes whole.
+* `PKCS12_parse` -- `crypto/pkcs12/p12_kiss.c` whole in `src/pkcs12/p12_kiss.rs`, nothing withheld.
+* `OSSL_STORE_load` and `crypto/store/store_result.c` -- `src/store/store_result.rs` plus the
+  `store_lib.c` half, nothing withheld.
+
+**Both courts are real and both sides agree.** `RT-PKCS12` gains a `PKCS12_parse` arm built from a
+fixed, matching certificate/key pair, a fixed-salt MAC and 37 observations including two refusal
+coordinates (`35.113` MAC verify failure, `35.105` invalid NULL pointer) -- **317 to 353
+observations**, transcripts byte-identical. `RT-STORE` gains an `OSSL_STORE_load` arm over the
+fetched `file:` loader: a fixed PEM certificate, its DER form, a fixed PKCS#8 key, an absent path and
+a malformed file, five arms and 58 observations, plus the removal of the `pending.` placeholder --
+**981 to 1038 observations**, transcripts byte-identical. The pipeline reads **109 courts and 46,117
+observations**.
+
+**The books were brought level with the code, item by item.** `dispatch_court.py` gained two
+`NOT_A_DISPATCH` entries with their reasons (`CheckPurpose` is declared inline in `x509v3.h` with no
+typedef; `StoreInfoNewFn` is a `.c`-local typedef the atlas never records), and the sensitivity
+control still fires. The `x509_cmp.rs` divergence row was retired -- the five names it covered are
+now built. `ossl_x509_check_cert_time` is recorded as a divergence with its blocker rather than
+landed: it reads `X509_VERIFY_PARAM`, `X509_STORE_CTX` and `X509_cmp_time`, none of which this crate
+models, so landing it would invent an out-of-unit type. The plan's parsed table rows were corrected
+to the authority's real paths (`encode_key2any.c**.**in`, `decode_der2key.c**.**in`, ... -- the
+authority ships generated `.c.in` sources), and `forensics/prerequisites.json` gained the unit
+records those corrections need. `docs/CI.md`'s live `c_style` count moved to 484.
+
+**`implemented_surface` moves from 4,214 to 4,254 symbols**, `libcrypto` is at **4,254 of 5,896**
+exports, and Phase-10's ledger reads **`298 implemented / 0 open`** with **`636 implemented / 0 open`**
+provider rows. `phase_state.py` derives **phase 10 `complete`** and leaves phase 11 `not-started`.
+The next and last subphase is **10.7, the seal**.

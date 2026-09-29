@@ -288,6 +288,7 @@
       "src/runtime/getenv.rs",
       "src/runtime/obj_table.rs",
       "src/status.rs",
+      "src/store/store_result.rs",
       "src/test_support.rs",
       "src/x509/mod.rs",
       "src/x509/v3_akid.rs",

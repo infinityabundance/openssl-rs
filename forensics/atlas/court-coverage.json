@@ -10,12 +10,11 @@
       6,
       7,
       8,
-      9
-    ],
-    "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
-    "in_progress": [
+      9,
       10
     ],
+    "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
+    "in_progress": [],
     "not_yet_begun": [
       {
         "owing_phase": 11,
@@ -3225,6 +3224,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_CRL_add1_ext_i2d"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_CRL_add_ext"
       },
       {
@@ -3311,6 +3315,11 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_CRL_get_ext_count"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_CRL_get_ext_d2i"
       },
       {
         "owing_phase": 11,
@@ -3710,6 +3719,66 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_PURPOSE_add"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_cleanup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_get0"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_get0_name"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_get0_sname"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_get_by_id"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_get_by_sname"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_get_count"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_get_id"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_get_trust"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_get_unused_id"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_PURPOSE_set"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_REQ_get0_signature"
       },
       {
@@ -3736,6 +3805,11 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_REQ_set_version"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_REVOKED_add1_ext_i2d"
       },
       {
         "owing_phase": 11,
@@ -3796,6 +3870,11 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_REVOKED_get_ext_count"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_REVOKED_get_ext_d2i"
       },
       {
         "owing_phase": 11,
@@ -3865,12 +3944,27 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_add1_ext_i2d"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_add1_reject_object"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_add1_trust_object"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_add_cert"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_add_certs"
       },
       {
         "owing_phase": 11,
@@ -3905,7 +3999,32 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_check_akid"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_check_ca"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_check_issued"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_check_private_key"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_check_purpose"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_cmp"
       },
       {
         "owing_phase": 11,
@@ -3950,6 +4069,21 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_get0_authority_issuer"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get0_authority_key_id"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get0_authority_serial"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_get0_distinguishing_id"
       },
       {
@@ -3981,6 +4115,11 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_get0_signature"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get0_subject_key_id"
       },
       {
         "owing_phase": 11,
@@ -4030,7 +4169,37 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_get_ext_d2i"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get_extended_key_usage"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get_extension_flags"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_get_issuer_name"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get_key_usage"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get_pathlen"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_get_proxy_pathlen"
       },
       {
         "owing_phase": 11,
@@ -4165,12 +4334,27 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_self_signed"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_set0_distinguishing_id"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_set_ex_data"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_set_proxy_flag"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_set_proxy_pathlen"
       },
       {
         "owing_phase": 11,
@@ -4206,6 +4390,11 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509_subject_name_hash_old"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509_supported_extension"
       },
       {
         "owing_phase": 11,
@@ -7704,6 +7893,7 @@
             "courts": [
               "RT-CONF",
               "RT-ERR",
+              "RT-PKCS12",
               "RT-STACK",
               "RT-STORE"
             ],
@@ -18789,7 +18979,8 @@
             "courts": [
               "RT-CODEC",
               "RT-EVP-PKEY-OPS",
-              "RT-EVP-REF"
+              "RT-EVP-REF",
+              "RT-PKCS12"
             ],
             "symbol": "EVP_PKEY_get0_type_name"
           },
@@ -18868,7 +19059,8 @@
               "RT-EVP-PKEY",
               "RT-KEYFORMAT",
               "RT-PKCS12",
-              "RT-PUBKEY"
+              "RT-PUBKEY",
+              "RT-STORE"
             ],
             "symbol": "EVP_PKEY_get_id"
           },
@@ -27057,12 +27249,12 @@
         "staged_candidate_probes": 4
       },
       {
-        "completed": false,
+        "completed": true,
         "counts": {
-          "directly_courted": 296,
-          "directly_courted_called": 235,
+          "directly_courted": 298,
+          "directly_courted_called": 237,
           "directly_courted_referenced": 61,
-          "implemented": 296,
+          "implemented": 298,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -28163,6 +28355,13 @@
             "courts": [
               "RT-STORE"
             ],
+            "symbol": "OSSL_STORE_load"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-STORE"
+            ],
             "symbol": "OSSL_STORE_open"
           },
           {
@@ -28789,6 +28988,13 @@
             "symbol": "PKCS12_pack_p7encdata_ex"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS12_parse"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-KEYFORMAT-REF"
@@ -29176,10 +29382,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 3014,
-      "directly_courted_called": 2688,
+      "directly_courted": 3016,
+      "directly_courted_called": 2690,
       "directly_courted_referenced": 326,
-      "implemented": 3022,
+      "implemented": 3024,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -29190,7 +29396,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d5fecdff5eafd5e24eb3b8d26e44007ce8a159d7420789de56d97fb233c88bec"
+      "sha256": "7063df9c6228f4bf0438d65925190df3c5b4c33dc12d3086ac60b4be20222153"
     },
     {
       "name": "symbol-ownership",
@@ -29205,7 +29411,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "c699184abb2e1177a7cf602c121bf0c8445623f58aafd9e010396365ef29aa02"
+      "sha256": "ea502117bd0a2ea34af24beb8915927c4f9f4daa819afab46f028eafcdffafef"
     },
     {
       "name": "phase3-courts",
@@ -29215,7 +29421,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "d754610b631f9fae6627f1754c0debf3472ba5e364e9d26dbd1a547cdf33b3d3"
+      "sha256": "5d732922c7e5a7d53906eed0d40df81abaf3136dd92d0254d2f3a4a4d2306442"
     },
     {
       "name": "phase4-courts",
@@ -29225,7 +29431,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "6d9e48475990df157c641aca4da42bbb0710c26bbb1cefe8474db92dc6cdbf5a"
+      "sha256": "c8b3b7f46cc135e6d21f79931758ceb4deb8ecd959d8101d62ba6851ba83bd25"
     },
     {
       "name": "phase5-courts",
@@ -29235,7 +29441,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "866d361fcf90b8dfd69bccd8dc55aaf53d6b63d3c6fb8cdd5b29cb3bf1b9cf6c"
+      "sha256": "11c867989e72c2dd364cc9ed6c3582b46116eddf33db5db72e1197b62e2f0146"
     },
     {
       "name": "phase6-courts",
@@ -29245,7 +29451,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "2c3181438f5b523e31da8663feb8fc261fa3780e41202c2b29e5e46eb48d3ebb"
+      "sha256": "73d223bd9351600bb3fc3d159b918d0d38195a4d07a13917dfc72d3f06d2b9b8"
     },
     {
       "name": "phase7-courts",
@@ -29255,7 +29461,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "e2aeb49c595c489bf86068d0051a546cf386a708f8e5d689959d1d274a97c54e"
+      "sha256": "eaf9fa15a14c37c19747bc9af7c6b6a08f2b37def2876b9ac88c387c267617ba"
     },
     {
       "name": "phase8-courts",
@@ -29265,7 +29471,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "f997b370c3a77f03ed5a12fa71266eb89e9888483d27d9ad27d4b633bfdd0036"
+      "sha256": "15250588ff5fb2c8004d6bc937e549296dbb0939d8724cd365d50f2ba1944faa"
     },
     {
       "name": "phase9-courts",
@@ -29275,12 +29481,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "6ac748babe317e37a7d5f11448b3941d9cea786abea49afdd88d8c18f34360bf"
+      "sha256": "159d07948e5f8ac6c011c9802460131ce53ce19c8b8cd551bb4e05bf38d6c900"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "faba83f7435a09a24d1638446340329a83d54b31c4b353b834f8077f5453b7ee"
+      "sha256": "288f589d3a19cb8d7cd2f58dcfd31cb267cdca3df5ebaa537c88dba122bae900"
     }
   ],
   "kind": "court-coverage",

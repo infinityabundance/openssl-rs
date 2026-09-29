@@ -1,23 +1,19 @@
 //! Phase 10.14.1 — `crypto/x509/x509_cmp.c`: the certificate comparison and accessor surface.
 //!
 //! `crypto/x509/x509_cmp.c` is 594 lines and publishes thirty-two functions. **This module lands
-//! twenty-seven of them**: the issuer-and-serial / issuer / subject comparators, the two `X509`
+//! all thirty-two**: the issuer-and-serial / issuer / subject comparators, the two `X509`
 //! name hashes and their `X509_NAME` lower halves, the two `X509_find_by_*` searches, the
 //! `X509_get0_pubkey`/`X509_get_pubkey` pair and `X509_check_private_key` with its `ossl_`
-//! helper, the Suite-B checks and `X509_chain_up_ref`.
+//! helper, the Suite-B checks, `X509_chain_up_ref`, and — landed once their closure closed —
+//! `X509_cmp` (`:152-179`) together with the four-name add family: `ossl_x509_add_cert_new`
+//! (`:181-188`), `X509_add_cert` (`:190-226`), `X509_add_certs` (`:228-236`) and
+//! `ossl_x509_add_certs_new` (`:238-253`). Nothing is withheld.
 //!
-//! **The other five are withheld by name, each with its blocker** — the D451 rule, applied at
-//! function granularity rather than at unit granularity:
-//!
-//! | withheld | blocker |
-//! |---|---|
-//! | `X509_cmp` (`:152-176`) | `X509_check_purpose` (`v3_purp.c`) — the extension cache is 10.14's, not this slice's |
-//! | `ossl_x509_add_cert_new` (`:178-185`), `X509_add_cert` (`:187-223`), `X509_add_certs` (`:225-234`), `ossl_x509_add_certs_new` (`:236-249`) | `X509_cmp` and `X509_self_signed` (`x509_vfy.c`) — the whole add family is one closure |
-//!
-//! The withheld group is a single strongly-connected closure: `X509_add_cert` calls `X509_cmp`
-//! and `X509_self_signed`, `X509_cmp` calls `X509_check_purpose`, and nothing landed calls any of
-//! the five (measured: no `src/` symbol references them), so withholding the closure by name
-//! leaves no dangling caller.
+//! The add family was the last to land because it is a single strongly-connected closure:
+//! `X509_add_cert` calls `X509_cmp` and `X509_self_signed`, and `X509_cmp` calls
+//! `X509_check_purpose`. With `X509_check_purpose` (`v3_purp.c`, 10.14) and `X509_self_signed`
+//! (`x509_vfy.rs`, 10.14.12) now landed, the closure is complete, so the five names are
+//! transcribed rather than withheld.
 //!
 //! ## The comparison result is not the `memcmp` value
 //!
@@ -42,13 +38,13 @@
 //!
 //! ## The raise sites
 //!
-//! Nine `ERR_raise*` sites in the unit; five are reachable from this slice — the four
-//! `ossl_x509_check_private_key` refusals (`:406`, `:413`, `:416`, `:419`) and
-//! `X509_check_private_key`'s "no public key" (`:397`) — and are the generated `X509_CMP_*`
-//! constants in [`crate::runtime::err::err_sites`]. The other four (`:184`, `:193`, `:222`,
-//! `:232`) are in the withheld add family; their coordinates are generated too and are harmless
-//! until that half lands. `crypto/x509/x509_cmp.c` therefore joins `gen_err_raise_sites.py`'s
-//! covered set with this subphase.
+//! Nine `ERR_raise*` sites in the unit, all now reachable: the four
+//! `ossl_x509_check_private_key` refusals (`:406`, `:413`, `:416`, `:419`),
+//! `X509_check_private_key`'s "no public key" (`:397`), and the four in the add family —
+//! `ossl_x509_add_cert_new`'s failed stack (`:184`), `X509_add_cert`'s NULL stack (`:193`) and
+//! failed insert (`:222`), and `X509_add_certs`'s NULL stack (`:232`). All nine are the generated
+//! `X509_CMP_*` constants in [`crate::runtime::err::err_sites`]; `crypto/x509/x509_cmp.c` joins
+//! `gen_err_raise_sites.py`'s covered set.
 //!
 //! ## The two Suite-B constants
 //!
@@ -78,10 +74,13 @@ use crate::runtime::obj::{
     OBJ_txt2nid,
 };
 use crate::runtime::stack::{
-    OPENSSL_sk_dup, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_dup, OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null, OPENSSL_sk_num,
+    OPENSSL_sk_value, OpenSslStack,
 };
+use crate::x509::v3_purp::X509_check_purpose;
 use crate::x509::x509_obj::X509_NAME_oneline;
 use crate::x509::x509_set::{X509_get_version, X509_up_ref};
+use crate::x509::x509_vfy::X509_self_signed;
 use crate::x509::x_crl::X509Crl;
 use crate::x509::x_name::{i2d_X509_NAME, X509Name};
 use crate::x509::x_pubkey::{X509_PUBKEY_get, X509_PUBKEY_get0};
@@ -90,6 +89,17 @@ use crate::x509::x_x509::{X509_free, X509_get_signature_nid, X509};
 /// `EXFLAG_NO_FINGERPRINT` — `include/openssl/x509v3.h:450`, the word `X509_CRL_match` and
 /// `X509_cmp` test before trusting the cached `sha1_hash`.
 const EXFLAG_NO_FINGERPRINT: c_uint = 0x100000;
+
+/// `X509_ADD_FLAG_UP_REF` — `include/openssl/x509.h:995`, the word `X509_add_cert` up-refs each
+/// certificate it accepts.
+const X509_ADD_FLAG_UP_REF: c_int = 0x1;
+/// `X509_ADD_FLAG_PREPEND` — `include/openssl/x509.h:996`, the word selecting the stack end.
+const X509_ADD_FLAG_PREPEND: c_int = 0x2;
+/// `X509_ADD_FLAG_NO_DUP` — `include/openssl/x509.h:997`, the word that suppresses duplicates.
+const X509_ADD_FLAG_NO_DUP: c_int = 0x4;
+/// `X509_ADD_FLAG_NO_SS` — `include/openssl/x509.h:998`, the word that rejects self-signed
+/// certificates.
+const X509_ADD_FLAG_NO_SS: c_int = 0x8;
 
 /// `X509_VERSION_3` — `include/openssl/x509.h:651`'s `2`, the version `X509_chain_check_suiteb`
 /// requires of every certificate in a Suite-B chain.
@@ -969,4 +979,243 @@ pub unsafe extern "C" fn X509_chain_up_ref(chain: *mut OpenSslStack) -> *mut Ope
         i += 1;
     }
     ret
+}
+
+/// `int X509_cmp(const X509 *a, const X509 *b)` — `crypto/x509/x509_cmp.c:152-179`.
+///
+/// Identical certificates compare equal. The two `const` certificates are cast to mutable: the
+/// pointer-identity fast path comes first, then `X509_check_purpose` (which caches the extension
+/// flags `X509_ADD_FLAG_NO_SS` and the fingerprint below read), then the cached SHA-1
+/// fingerprints, then the stored DER encodings. The result is normalised to `-1`/`0`/`1`; a
+/// certificate with `EXFLAG_NO_FINGERPRINT` skips the fingerprint step.
+///
+/// # Safety
+///
+/// `a` and `b` must be live `X509` values (the authority's documented "evil cast" is the reason
+/// the contract is `live`, not `const`).
+#[no_mangle]
+pub unsafe extern "C" fn X509_cmp(a: *const X509, b: *const X509) -> c_int {
+    if a == b {
+        return 0;
+    }
+    // The authority casts the two `const` certificates to non-const to refresh their caches.
+    // SAFETY: `a` and `b` are live per the contract.
+    unsafe {
+        let _ = X509_check_purpose(a.cast_mut(), -1, 0);
+        let _ = X509_check_purpose(b.cast_mut(), -1, 0);
+    }
+    let mut rv = 0;
+    // SAFETY: both are live per the contract.
+    let (fa, fb) = unsafe { ((*a).ex_flags, (*b).ex_flags) };
+    if (fa & EXFLAG_NO_FINGERPRINT) == 0 && (fb & EXFLAG_NO_FINGERPRINT) == 0 {
+        // SAFETY: both certificates are live and each `sha1_hash` is `SHA_DIGEST_LENGTH` bytes.
+        let ra = unsafe { core::slice::from_raw_parts((*a).sha1_hash.as_ptr(), SHA_DIGEST_LENGTH) };
+        // SAFETY: as above.
+        let rb = unsafe { core::slice::from_raw_parts((*b).sha1_hash.as_ptr(), SHA_DIGEST_LENGTH) };
+        rv = match ra.cmp(rb) {
+            core::cmp::Ordering::Less => -1,
+            core::cmp::Ordering::Equal => 0,
+            core::cmp::Ordering::Greater => 1,
+        };
+    }
+    if rv != 0 {
+        return if rv < 0 { -1 } else { 1 };
+    }
+    // Check for a match against the stored encoding too.
+    // SAFETY: both are live per the contract.
+    let (ma, mb) = unsafe { ((*a).cert_info.enc.modified, (*b).cert_info.enc.modified) };
+    if ma == 0 && mb == 0 {
+        // SAFETY: both are live per the contract.
+        let (la, lb) = unsafe { ((*a).cert_info.enc.len, (*b).cert_info.enc.len) };
+        if la < lb {
+            return -1;
+        }
+        if la > lb {
+            return 1;
+        }
+        // SAFETY: both encodings are current and each buffer holds at least `la` bytes.
+        let sa = unsafe { core::slice::from_raw_parts((*a).cert_info.enc.enc, la as usize) };
+        // SAFETY: as above.
+        let sb = unsafe { core::slice::from_raw_parts((*b).cert_info.enc.enc, lb as usize) };
+        rv = match sa.cmp(sb) {
+            core::cmp::Ordering::Less => -1,
+            core::cmp::Ordering::Equal => 0,
+            core::cmp::Ordering::Greater => 1,
+        };
+    }
+    if rv < 0 {
+        -1
+    } else {
+        c_int::from(rv > 0)
+    }
+}
+
+/// `int ossl_x509_add_cert_new(STACK_OF(X509) **p_sk, X509 *cert, int flags)` —
+/// `crypto/x509/x509_cmp.c:181-188`.
+///
+/// Creates the stack when `*p_sk` is NULL, then delegates to [`X509_add_cert`]. A failed stack
+/// allocation raises `ERR_R_CRYPTO_LIB` at `:184`.
+///
+/// # Safety
+///
+/// `p_sk` must point to a writable `*mut OpenSslStack` slot; `cert` must be a live `X509`.
+/// Internal to the crate (not exported by the authority's DSO), so no `#[no_mangle]`.
+pub unsafe extern "C" fn ossl_x509_add_cert_new(
+    p_sk: *mut *mut OpenSslStack,
+    cert: *mut X509,
+    flags: c_int,
+) -> c_int {
+    // SAFETY: `p_sk` is a live out-pointer per the contract.
+    if unsafe { (*p_sk).is_null() } {
+        let sk = OPENSSL_sk_new_null();
+        // SAFETY: `p_sk` is writable per the contract.
+        unsafe { *p_sk = sk };
+        if sk.is_null() {
+            // SAFETY: the site's pointers are static.
+            unsafe { raise_site(&err_sites::X509_CMP_184) };
+            return 0;
+        }
+    }
+    // SAFETY: `*p_sk` is now non-NULL and `cert` is live per the contract.
+    unsafe { X509_add_cert(*p_sk, cert, flags) }
+}
+
+/// `int X509_add_cert(STACK_OF(X509) *sk, X509 *cert, int flags)` —
+/// `crypto/x509/x509_cmp.c:190-226`.
+///
+/// Adds `cert` to `sk` under `flags`. `NO_DUP` scans with [`X509_cmp`] and answers 1 on a duplicate
+/// without reordering the stack; `NO_SS` refuses a self-signed certificate via
+/// [`X509_self_signed`]; `UP_REF` moves an owned reference in (and is undone if the insert fails);
+/// `PREPEND` inserts at index 0 rather than appending. A NULL stack raises
+/// `ERR_R_PASSED_NULL_PARAMETER` (`:193`) and a failed insert raises `ERR_R_CRYPTO_LIB` (`:222`).
+///
+/// # Safety
+///
+/// `sk` must be NULL or a live stack of `X509`; `cert` must be NULL or a live `X509`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_add_cert(
+    sk: *mut OpenSslStack,
+    cert: *mut X509,
+    flags: c_int,
+) -> c_int {
+    if sk.is_null() {
+        // SAFETY: the site's pointers are static.
+        unsafe { raise_site(&err_sites::X509_CMP_193) };
+        return 0;
+    }
+    if cert.is_null() {
+        return 0;
+    }
+    if (flags & X509_ADD_FLAG_NO_DUP) != 0 {
+        // The authority deliberately avoids the stack's own comparator and `find`, because that
+        // would reorder the stack.
+        // SAFETY: `sk` is live per the contract.
+        let n = unsafe { OPENSSL_sk_num(sk) };
+        for i in 0..n {
+            // SAFETY: `i` is within `0..n`.
+            let xi = unsafe { OPENSSL_sk_value(sk, i).cast::<X509>() };
+            // SAFETY: `xi` and `cert` are live certificates.
+            if unsafe { X509_cmp(xi, cert) } == 0 {
+                return 1;
+            }
+        }
+    }
+    if (flags & X509_ADD_FLAG_NO_SS) != 0 {
+        // SAFETY: `cert` is live per the contract.
+        let ret = unsafe { X509_self_signed(cert, 0) };
+        if ret != 0 {
+            return c_int::from(ret > 0);
+        }
+    }
+    if (flags & X509_ADD_FLAG_UP_REF) != 0 {
+        // SAFETY: `cert` is live per the contract.
+        if unsafe { X509_up_ref(cert) } == 0 {
+            return 0;
+        }
+    }
+    // SAFETY: `sk` is live and `cert` is live per the contract.
+    if unsafe {
+        OPENSSL_sk_insert(
+            sk,
+            cert.cast::<c_void>(),
+            if (flags & X509_ADD_FLAG_PREPEND) != 0 {
+                0
+            } else {
+                -1
+            },
+        )
+    } == 0
+    {
+        if (flags & X509_ADD_FLAG_UP_REF) != 0 {
+            // SAFETY: the up-ref above succeeded, so this releases the reference we took.
+            unsafe { X509_free(cert) };
+        }
+        // SAFETY: the site's pointers are static.
+        unsafe { raise_site(&err_sites::X509_CMP_222) };
+        return 0;
+    }
+    1
+}
+
+/// `int X509_add_certs(STACK_OF(X509) *sk, STACK_OF(X509) *certs, int flags)` —
+/// `crypto/x509/x509_cmp.c:228-236`.
+///
+/// Adds every certificate of `certs` to `sk`. A NULL `sk` raises `ERR_R_PASSED_NULL_PARAMETER`
+/// (`:232`) and answers 0; otherwise the work is the `ossl_` helper's. A NULL `certs` is treated
+/// as an empty stack (the helper's `num` returns `-1`).
+///
+/// # Safety
+///
+/// `sk` must be NULL or a live stack of `X509`; `certs` must be NULL or a live stack of `X509`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_add_certs(
+    sk: *mut OpenSslStack,
+    certs: *mut OpenSslStack,
+    flags: c_int,
+) -> c_int {
+    if sk.is_null() {
+        // SAFETY: the site's pointers are static.
+        unsafe { raise_site(&err_sites::X509_CMP_232) };
+        return 0;
+    }
+    let mut p_sk = sk;
+    // SAFETY: `p_sk` is the non-NULL stack's address; `certs` is NULL or live per the contract.
+    unsafe { ossl_x509_add_certs_new(&raw mut p_sk, certs, flags) }
+}
+
+/// `int ossl_x509_add_certs_new(STACK_OF(X509) **p_sk, STACK_OF(X509) *certs, int flags)` —
+/// `crypto/x509/x509_cmp.c:238-253`.
+///
+/// Walks `certs` (NULL counts as empty) in forward order, or reverse order when `PREPEND` is set so
+/// the original order is preserved on a prepend stack, delegating each element to
+/// [`ossl_x509_add_cert_new`]. Answers 0 as soon as one add fails, else 1.
+///
+/// # Safety
+///
+/// `p_sk` must point to a writable `*mut OpenSslStack` slot; `certs` must be NULL or a live stack
+/// of `X509`. Internal to the crate (not exported by the authority's DSO), so no `#[no_mangle]`.
+pub unsafe extern "C" fn ossl_x509_add_certs_new(
+    p_sk: *mut *mut OpenSslStack,
+    certs: *mut OpenSslStack,
+    flags: c_int,
+) -> c_int {
+    // SAFETY: `certs` is NULL or live per the contract; `OPENSSL_sk_num` handles NULL (answering
+    // -1, which makes the loop below run zero times).
+    let n = unsafe { OPENSSL_sk_num(certs) };
+    let mut i = 0;
+    while i < n {
+        let j = if (flags & X509_ADD_FLAG_PREPEND) == 0 {
+            i
+        } else {
+            n - 1 - i
+        };
+        // SAFETY: `certs` is live and `j` is within `0..n`.
+        let cert = unsafe { OPENSSL_sk_value(certs, j).cast::<X509>() };
+        // SAFETY: `p_sk` is a live out-pointer and `cert` is live.
+        if unsafe { ossl_x509_add_cert_new(p_sk, cert, flags) } == 0 {
+            return 0;
+        }
+        i += 1;
+    }
+    1
 }

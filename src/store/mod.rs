@@ -6,8 +6,8 @@
 //! (`forensics/phase10-obligations.json`) maps all seventy-six `store.h` exports of the
 //! stratum to `src/store/mod.rs`. **All four export-bearing units are landable, and the
 //! whole 76 is measured per function rather than per unit** — 10.16 published the two
-//! `OSSL_OP_STORE` provider rows (`file_store.c`) and left only [`store_lib`]'s
-//! `OSSL_STORE_load` open.
+//! `OSSL_OP_STORE` provider rows (`file_store.c`), and the last open export,
+//! [`store_lib::OSSL_STORE_load`], lands here beside its result handler [`store_result`].
 //!
 //! # What landed, unit by unit
 //!
@@ -21,35 +21,29 @@
 //!   method object, the `OSSL_OP_STORE` dispatch scan, the fetch machinery over the
 //!   store-loader method store (slot 15) and the by-name accessors.
 //! * [`store_lib`] — `store_lib.c` (1,102 lines, forty-nine exports): the
-//!   `OSSL_STORE_CTX` state machine (`open`/`open_ex`/`eof`/`error`/`expect`/`close`/
-//!   `attach`/`delete`/`supports_search`/`find` and the two deprecated control entry
-//!   points) and the `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object model. Forty-six of
-//!   the 49 land; see that module's doc for the three withheld with their measured
-//!   blockers and the two carved arms.
+//!   `OSSL_STORE_CTX` state machine (`open`/`open_ex`/`load`/`eof`/`error`/`expect`/
+//!   `close`/`attach`/`delete`/`supports_search`/`find` and the two deprecated control
+//!   entry points) and the `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object model. All
+//!   forty-nine land; the names D448 named as blockers closed in 10.8, and
+//!   `OSSL_STORE_load` closes here.
+//! * [`store_result`] — `store_result.c` (667 lines, no export): the provider
+//!   object-abstraction result handler `ossl_store_handle_load_result`, threaded through a
+//!   fetched loader's `p_load` as a callback. Nothing is withheld: `d2i_X509_AUX`
+//!   (10.12) and `PKCS12_parse` (10.3) closed its last two blockers, so the handler lands
+//!   whole and [`store_lib::OSSL_STORE_load`]'s fetched branch lands with it.
 //!
 //! # What is withheld, and its measured blocker
 //!
-//! * **Three `store_lib.c` exports** — `OSSL_STORE_load` (its fetched branch
-//!   calls `store_result.c`'s `ossl_store_handle_load_result`, whose closure reaches
-//!   `d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL` and `PKCS12_parse`),
-//!   `OSSL_STORE_INFO_get1_CERT` (`X509_up_ref`) and
-//!   `OSSL_STORE_INFO_get1_CRL` (`X509_CRL_up_ref`). Two arms inside
-//!   functions that otherwise land are carved: `OSSL_STORE_INFO_free`'s CERT/CRL arms
-//!   (`X509_free`/`X509_CRL_free`) and `OSSL_STORE_find`'s BY_NAME/BY_ISSUER_SERIAL arms
-//!   (`i2d_X509_NAME`). Every one of those names is Phase 11's `X509` object graph, except
-//!   `ossl_store_handle_load_result`'s `PKCS12_parse` arm, which 10.3 withholds.
-//!   `docs/PHASE-10-SUBPHASES.md` section 4.2 records the same finding for the PKCS#12 unit:
-//!   `X509_it` is Phase 11's.
-//! * **The two `OSSL_OP_STORE` provider rows** (`forensics/atlas/provider-algorithms.json`:
-//!   `default` and `base`, `algorithm_names` `file`, dispatch `ossl_file_store_functions`).
-//!   **10.16 publishes them**: [`crate::provider::file_store`] transcribes `file_store.c` (and
-//!   its private last-resort decoder `file_store_any2obj.c`), and `deflt_query`/`base_query`
-//!   answer `DEFLT_STORES`/`BASE_STORES` on `OSSL_OP_STORE` (22). The row resolves through its
+//! * **Nothing in `crypto/store/`.** The two `OSSL_OP_STORE` provider rows
+//!   (`forensics/atlas/provider-algorithms.json`: `default` and `base`, `algorithm_names`
+//!   `file`, dispatch `ossl_file_store_functions`) are published by **10.16**:
+//!   [`crate::provider::file_store`] transcribes `file_store.c` (and its private last-resort
+//!   decoder `file_store_any2obj.c`), and `deflt_query`/`base_query` answer
+//!   `DEFLT_STORES`/`BASE_STORES` on `OSSL_OP_STORE` (22). The row resolves through its
 //!   open/attach/load/eof/close callbacks, so `OSSL_STORE_LOADER_fetch`/`do_all_provided` and
-//!   the fetched `OSSL_STORE_find` arms are called by `RT-STORE` rather than reference-taken.
-//!   The engine's *result* path — [`store_lib::OSSL_STORE_load`] through `store_result.c`'s
-//!   `ossl_store_handle_load_result` — stays withheld on `PKCS12_parse`, which is the same
-//!   Phase 11 blocker; a loader that opens, loads and closes is not a result handler.
+//!   the fetched `OSSL_STORE_find` arms are called by `RT-STORE` rather than reference-taken;
+//!   the engine's *result* path now runs through [`store_lib::OSSL_STORE_load`] and
+//!   [`store_result::ossl_store_handle_load_result`].
 //!
 //! # The loader object, and where each field comes from
 //!
@@ -80,6 +74,7 @@ use crate::provider::OsslProvider;
 pub(crate) mod store_lib;
 pub(crate) mod store_meth;
 pub(crate) mod store_register;
+pub(crate) mod store_result;
 pub(crate) mod store_strings;
 
 // ---------------------------------------------------------------------------

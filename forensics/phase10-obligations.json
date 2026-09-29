@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 272,
       "deferred_to_later_phase": 0,
-      "implemented": 296,
-      "open_in_this_stratum": 2,
+      "implemented": 298,
+      "open_in_this_stratum": 0,
       "owned": 298,
       "received_by_handoff": 26
     },
@@ -379,6 +379,7 @@
       "OSSL_STORE_error",
       "OSSL_STORE_expect",
       "OSSL_STORE_find",
+      "OSSL_STORE_load",
       "OSSL_STORE_open",
       "OSSL_STORE_open_ex",
       "OSSL_STORE_register_loader",
@@ -469,6 +470,7 @@
       "PKCS12_pack_p7data",
       "PKCS12_pack_p7encdata",
       "PKCS12_pack_p7encdata_ex",
+      "PKCS12_parse",
       "PKCS12_pbe_crypt",
       "PKCS12_pbe_crypt_ex",
       "PKCS12_set_mac",
@@ -603,20 +605,7 @@
       }
     ],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation this ledger does not start with the whole working set open: eighty-seven of the atlas-owned exports were landed by Phase 8's 8.8 chain before this stratum was activated, and the ledger reports them as `implemented` because `implemented-surface.json` does -- docs/PHASE-10-SUBPHASES.md section 4 is the measurement. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-10-SUBPHASES.md section 4 decides when the stratum may be called complete.",
-    "open": [
-      {
-        "declaring_header": "store.h",
-        "module": "src/store/mod.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_STORE_load"
-      },
-      {
-        "declaring_header": "pkcs12.h",
-        "module": "src/pkcs12/mod.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS12_parse"
-      }
-    ],
+    "open": [],
     "owned_by_header": {
       "decoder.h": 41,
       "encoder.h": 38,
@@ -658,17 +647,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "cbc77877e14eea0a308218e46c2a6b53975ec5e11b6d07d4ea8dc39eb4527e9d"
+      "sha256": "9613da262c1681c6baaf93ad119d40ed3e177dd924dd8977b0552e574870c0e5"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "4b438135b275e7395878e26631ccb4b58a7f871ae6c5b19ca0d534ae615876f8"
+      "sha256": "c8b3b7f46cc135e6d21f79931758ceb4deb8ecd959d8101d62ba6851ba83bd25"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "7c3b5f7d546d3649429765c0ed8769a956e33d696344e6898b17a7523eae628b"
+      "sha256": "73d223bd9351600bb3fc3d159b918d0d38195a4d07a13917dfc72d3f06d2b9b8"
     }
   ],
   "kind": "phase10-obligations",

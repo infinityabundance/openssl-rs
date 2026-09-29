@@ -13,9 +13,9 @@
 //! because the two items and the two `set0_libctx` helpers were **not landed**. 10.8 (`X509_it`,
 //! `ossl_x509_set0_libctx`) and 10.8's CRL object (`X509_CRL_it`, `ossl_x509_crl_set0_libctx`)
 //! then landed them, and 10.3 landed `PKCS12_item_pack_safebag`: the frontier moved and the six
-//! are transcribed here rather than withheld a second time (D451's rule). What remains `open` in
-//! `p12_kiss.c`'s `PKCS12_parse` is `ossl_x509_add_cert_new` (`x509_cmp.c`, 10.14.1), which is
-//! still withheld.
+//! are transcribed here rather than withheld a second time (D451's rule). The one name that kept
+//! `p12_kiss.c`'s `PKCS12_parse` `open` — `ossl_x509_add_cert_new` (`x509_cmp.c`, 10.14.1) — has
+//! since landed with the Phase 11 slice, and that unit is transcribed in [`crate::pkcs12::p12_kiss`].
 //!
 //! `PKCS12_SAFEBAG_create_pkcs8_encrypt`/`_ex` call `PKCS8_encrypt[_ex]`
 //! (`crypto/pkcs12/p12_p8e.c`, 10.4) and `EVP_CIPHER_fetch`; with the PBE pull-forward (D443)

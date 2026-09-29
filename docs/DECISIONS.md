@@ -33131,3 +33131,58 @@ prints `PIPELINE OK` exit 0; `probe_hygiene.py` read clean.
 
 The five names named above, then the seal. `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` ->
 `ossl_x509_add_cert_new` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load`.
+## D473 -- Phase 10 is complete: the last five names land, both open exports close, and the stratum derives complete
+
+**The chain the published dispatch made reachable landed whole**, and with it the stratum's last two
+open exports:
+
+* `X509_get_ext_d2i` and its five siblings -- `x509_ext.c` transcribes **whole**, nothing withheld.
+* `ossl_x509v3_cache_extensions`, `X509_check_purpose` and 29 more names -- `src/x509/v3_purp.rs`,
+  the purpose table, the issuer/CA checks and the extension cache.
+* `X509_self_signed` (`src/x509/x509_vfy.rs`; the other 67 names of the 3,984-line verify unit are
+  withheld by name with their `X509_STORE_CTX` blocker) and the add-cert family `x509_cmp.rs`
+  withheld behind it (`X509_cmp`, `X509_add_cert`, `X509_add_certs`, `ossl_x509_add_cert_new`,
+  `ossl_x509_add_certs_new`) -- `x509_cmp.c` transcribes **whole**.
+* `PKCS12_parse` -- `p12_kiss.c` whole.
+* `OSSL_STORE_load` and `store_result.c` -- `src/store/store_result.rs` plus the `store_lib.c` half.
+
+**Both courts are real, and both sides agree byte for byte.** `RT-PKCS12` gains a `PKCS12_parse` arm
+over a fixed, matching certificate/key pair and a fixed-salt MAC: 37 observations, including the two
+refusal coordinates `35.113` (MAC verify failure) and `35.105` (invalid NULL pointer) -- **317 to
+353 observations**. `RT-STORE` gains an `OSSL_STORE_load` arm over the fetched `file:` loader -- a
+fixed PEM certificate, its DER form, a fixed PKCS#8 key, an absent path and a malformed file, five
+arms and 58 observations, plus the removal of the `pending.` placeholder -- **981 to 1038
+observations**. The pipeline reads **109 courts and 46,117 observations**.
+
+**Every bookkeeping gate the landings made stale was brought level with the code, not silenced.**
+`dispatch_court.py` gained two `NOT_A_DISPATCH` entries with their reasons (`CheckPurpose` is
+declared inline in `x509v3.h.in:489` with no typedef; `StoreInfoNewFn` is a `.c`-local typedef at
+`store_result.c:317` the atlas never records), and the unlinked-typo sensitivity control still
+fires. The `x509_cmp.rs` divergence row was retired because the five names it covered are now built.
+`ossl_x509_check_cert_time` was **recorded as a divergence with its blocker rather than landed**: it
+reads `X509_VERIFY_PARAM`, `X509_STORE_CTX` and `X509_cmp_time`, none of which this crate models, so
+landing it would invent an out-of-unit type -- exactly what the surrounding withholds avoid. The
+plan's parsed table rows were corrected to the authority's real paths (the authority ships
+generated `.c.in` sources: `encode_key2any.c.in`, `decode_der2key.c.in`, `file_store.c.in`, ...) and
+`forensics/prerequisites.json` gained the unit records those corrections need; no plan row was
+deleted to silence the tool. `docs/CI.md`'s live `c_style` count moved to 484.
+
+### Counts, and what closed
+
+`implemented_surface` moves from 4,214 to **4,254** symbols; `libcrypto` is at **4,254 of 5,896**
+exports. Phase-10's ledger reads **`298 implemented / 0 open`** exports and **`636 implemented / 0
+open`** provider rows, so `phase_state.py` derives **phase 10 `complete`**, and phase 11 still
+derives `not-started`. The two exports this stratum was opened against -- `PKCS12_parse` and
+`OSSL_STORE_load` -- are both landed and both directly courted.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean. The pipeline prints
+`PIPELINE OK` exit 0 on **two consecutive runs**, with `evidence_determinism`, `docs_consistency` and
+`regression_guard --require-current` all green.
+
+### What remains in Phase 10
+
+**10.7, the seal** -- `docs/PHASE-10-KEYFORMATS-SEAL.md`, its `seal_sha256` and its
+`phase_state.py` `STRATUM_EVIDENCE` row. Then Phase 10 is ready to merge into `main`.

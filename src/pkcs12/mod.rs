@@ -22,22 +22,26 @@
 //! the rest of 10.3 lands too: `p12_mutl`'s four MAC names, `p12_add`'s two `p7encdata` writers,
 //! `p12_crt`'s `PKCS12_add_key(_ex)`/`PKCS12_add_safe(_ex)`, and `p12_npas`'s `PKCS12_newpass`.
 //!
-//! **The rows still `open` are withheld on Phase 11's `X509` object graph, measured rather than
-//! assumed** (`nm --undefined-only` over the authority's `crypto/pkcs12/` objects):
-//! `PKCS12_create(_ex/_ex2)` and `PKCS12_add_cert` reach
-//! `X509_check_private_key`/`X509_digest`/`X509_alias_get0`/`X509_keyid_get0`;
-//! `PKCS12_SAFEBAG_create_cert`/`_crl` and `PKCS12_SAFEBAG_get1_cert(_ex)`/`_get1_crl(_ex)` reach
-//! `X509_it`/`X509_CRL_it`/`ossl_x509*_set0_libctx`; and `PKCS12_parse` reaches
-//! `PKCS12_SAFEBAG_get1_cert_ex` and `ossl_x509_add_cert_new`. None of those names is landed and
-//! none is stubbed.
+//! **The `X509`-graph rows this substream once withheld have all landed.** The
+//! `nm --undefined-only` closure over the authority's `crypto/pkcs12/` objects named
+//! `X509_check_private_key`/`X509_digest`/`X509_alias_get0`/`X509_keyid_get0` (the
+//! `PKCS12_create(_ex/_ex2)`/`PKCS12_add_cert` builder), `X509_it`/`X509_CRL_it`/
+//! `ossl_x509*_set0_libctx` (the `PKCS12_SAFEBAG_create_cert`/`_crl` and `get1_*` pair) and
+//! `ossl_x509_add_cert_new` (for `PKCS12_parse`). Each has since landed — the last of them, the
+//! `x509_cmp.c` add family, with the Phase 11 slice — so no `crypto/pkcs12/` export is withheld
+//! on the `X509` graph any longer.
 //!
 //! 10.4 adds [`p12_key`] (the six `PKCS12_key_gen_*` spellings over the provider `PKCS12KDF` row),
 //! [`p12_crpt`] (the two `PKCS12_PBE_keyivgen` spellings and the empty `PKCS12_PBE_add`, which is
 //! what retires D-PBE-PKCS12-KEYGEN-1) and [`p12_p8e`] (`PKCS8_set0_pbe`/`_ex`; D444's pulled-forward
 //! subset landed `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex`, so the `PKCS8_encrypt`/`_ex` pair lands
 //! too — all four of that unit's exports).
-//! [`p12_kiss`] was measured and is **not** landable: `PKCS12_parse` reads cert bags through
-//! `PKCS12_SAFEBAG_get1_cert_ex` and `ossl_x509_add_cert_new`, which are Phase 11's.
+//!
+//! **10.15 opened 10.3's last withheld unit**: [`p12_kiss`] (`PKCS12_parse` and its three
+//! `static` workers) is now landable whole. Its former blockers — `PKCS12_SAFEBAG_get1_cert_ex`
+//! (landed in 10.15) and `ossl_x509_add_cert_new` (`crypto/x509/x509_cmp.c`, landed by the
+//! Phase 11 slice) — are both present, so the read path that closes the `PKCS12_parse` export
+//! is transcribed here rather than deferred a second time.
 //!
 //! `PKCS8_decrypt` is the name `pem_read_bio_key_legacy` (`crypto/pem/pem_pkey.c:165`) reaches
 //! for a `PEM_STRING_PKCS8` block, and `PKCS12_item_decrypt_d2i_ex` is what it decrypts
@@ -53,6 +57,7 @@ pub mod p12_crt;
 pub mod p12_decr;
 pub mod p12_init;
 pub mod p12_key;
+pub mod p12_kiss;
 pub mod p12_mutl;
 pub mod p12_npas;
 pub mod p12_p8d;

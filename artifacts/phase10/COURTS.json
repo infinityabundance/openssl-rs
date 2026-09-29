@@ -58,9 +58,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 317,
+        "authority_observations": 353,
         "candidate_exit_code": 0,
-        "candidate_observations": 317,
+        "candidate_observations": 353,
         "candidate_stderr_tail": [],
         "court": "RT-PKCS12",
         "crashed": false,
@@ -75,9 +75,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 981,
+        "authority_observations": 1038,
         "candidate_exit_code": 0,
-        "candidate_observations": 981,
+        "candidate_observations": 1038,
         "candidate_stderr_tail": [],
         "court": "RT-STORE",
         "crashed": false,
@@ -183,12 +183,12 @@
     {
       "name": "probe",
       "path": "courts/phase10/rt_pkcs12_probe.c",
-      "sha256": "10834a676843ad8f3915830ac7111511e84c50bfdfc1dad48a712719174caef4"
+      "sha256": "e0f997c8febf198ee3e73cd53efde1f46cc6bb6228a334c3601e487b2bc8b277"
     },
     {
       "name": "probe",
       "path": "courts/phase10/rt_store_probe.c",
-      "sha256": "0b5ae11cd0622fe780bdaf3e4332c124e18e1dc1c6f62695c2650c0eb5410597"
+      "sha256": "c8ccc7b9438428bd5326d076e8295367242995d20adc8c41c63b8075fe1c4db7"
     },
     {
       "name": "pkcs12-correctness-probe",

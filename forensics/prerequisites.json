@@ -112,12 +112,11 @@
       {
         "class": "owned_by_a_later_stratum",
         "covers": [
-          "ossl_x509_add_cert_new",
-          "ossl_x509_add_certs_new"
+          "ossl_x509_check_cert_time"
         ],
-        "evidence": "docs/DECISIONS.md D451 (the withhold-by-name rule) and the Phase 10.14.1 landing; crypto/x509/x509_cmp.c:178-185 and :236-249 (the two internals) against :19-575 (the landed slice); crypto/x509/x509_cmp.c:152-176 (`X509_cmp`), :187-223 (`X509_add_cert`) and :225-234 (`X509_add_certs`) for the withheld closure; crypto/x509/v3_purp.c:88 and crypto/x509/x509_vfy.c:100 (the two blockers); src/x509/x509_cmp.rs's module documentation; forensics/atlas/transcription-edges.json's `crypto/x509/x509_cmp.c` edge; courts/phase10/rt_store_probe.c (`cmp.*` arms)",
-        "note": "**Withheld rather than stubbed, and this row is what the prerequisite gate's `unwired_function_in_the_current_stratum` findings become once the omission is a decision rather than an oversight.** Phase 10.14.1 transcribes `crypto/x509/x509_cmp.c`'s comparison and accessor surface -- twenty-seven of the unit's thirty-two functions -- which makes the unit's unwired internals countable (D327's rule). These two are the ones the lexical scan sees. `ossl_x509_add_cert_new` (`:178-185`) allocates a `STACK_OF(X509)` and appends through `X509_add_cert`, and `ossl_x509_add_certs_new` (`:236-249`) loops it over a source stack. Their published spellings, `X509_add_cert`/`X509_add_certs`, are withheld with them: `X509_add_cert` calls `X509_cmp` and `X509_self_signed`, `X509_cmp` calls `X509_check_purpose` (`crypto/x509/v3_purp.c:88`, 10.14.5) and `X509_self_signed` lives in `crypto/x509/x509_vfy.c:100` (10.14.12), so the whole five-name family is one closure gated on two unlanded units. `crypto/pkcs7/pk7_lib.c` also references `ossl_x509_add_cert_new`, which is why the gate reports it twice. Nothing landed calls any of the five, so withholding them leaves no dangling caller. The row fail-closes both ways: if either name is built the gate reports the row stale until it is removed, and if `src/x509/x509_cmp.rs` stopped owning the unit the record would stop matching.",
-        "owner_module": "src/x509/x509_cmp.rs"
+        "evidence": "crypto/x509/x509_vfy.c:2084-2106 (the helper), :429, :470 and :2212 (its three in-unit callers) and crypto/x509/x509_local.h:42 (its declaration); src/x509/x509_vfy.rs's module documentation, which withholds the unit's remainder behind the missing X509_STORE_CTX; docs/DECISIONS.md D451 (the withhold-by-name rule) and D327 (the countable-unit rule)",
+        "note": "**The one name of `crypto/x509/x509_vfy.c` the crate neither lands nor can land is withheld because its closure is unmet, not overlooked.** Phase 10 lands `X509_self_signed` (`:100-115`), whose closure is whole (`ossl_x509v3_cache_extensions` from `v3_purp.c`, `X509_get0_pubkey` from `x509_cmp.c` and `X509_verify` from `x_all.rs`). The unit's other names, `ossl_x509_check_cert_time` among them, read `ctx->param->flags` (`X509_V_FLAG_USE_CHECK_TIME`/`X509_V_FLAG_NO_CHECK_TIME`) and `ctx->param->check_time`, call `X509_cmp_time` on `X509_get0_notBefore`/`X509_get0_notAfter`, and fail through `CB_FAIL_IF` -> `verify_cb_cert` -> `ctx->verify_cb`. The crate models no `struct x509_store_ctx_st` (`X509_STORE_CTX`), no `X509_VERIFY_PARAM` and no `X509_cmp_time`, so every dependency of this helper is unlanded and its stratum, Phase 11, owns it with the rest of the file. This row is what the prerequisite gate's `unwired_function_in_the_current_stratum` finding becomes once the omission is a decision rather than an oversight, and it fail-closes: land the helper and the gate reports the row stale until it is removed.",
+        "owner_module": "src/x509/x509_vfy.rs"
       },
       {
         "class": "owned_by_a_later_stratum",
@@ -973,6 +972,181 @@
         "guard": "`providers/implementations/rands/build.info:7` puts the unit under `SOURCE[../../libfips.a]` alone -- `:6` sends `seed_src.c` and `seed_src_jitter.c` to `libdefault.a` and this one nowhere else -- and this profile builds no FIPS module.",
         "reason": "docs/PHASE-9-SUBPHASES.md row 9.5 names it for the same reason as `fipsprov.c`: it is the continuous random number generator test (`RCT_test`/`APT_test`, dispatch symbol `ossl_crng_test_functions`), it is compiled into `libfips.a` alone, and its single authority row is `fipsprov.c:445`'s `CRNG-TEST`, which is not in an admitted provider -- so the provider census has no observable for it. D287 named the wrong file (`crngt.c`) and §4.1 is the correction; that correction is the `does_not_exist_in_this_authority` record above, and this is the record for the unit that really exists.",
         "unit": "providers/implementations/rands/fips_crng_test.c.in"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/encode_key2any.rs",
+        "evidence": "docs/PHASE-10-SUBPHASES.md row 10.1 and section 1a; src/provider/encode_key2any.rs; forensics/atlas/internal-symbols.json (`.../libdefault-lib-encode_key2any.c`); forensics/atlas/transcription-edges.json (no edge: the unit publishes tables, not functions)",
+        "names": [
+          "key_to_p8info",
+          "key_to_encp8",
+          "key_to_pubkey",
+          "key_to_epki_der_priv_bio"
+        ],
+        "reason": "Its authority-internal symbols are 208 `ossl_*_encoder_functions` dispatch tables (one per key type and output structure), declared `static` in the `.c.in`, so `internal-symbols.json` records them as data the crate does not define under those names and no `transcription-edges.json` edge forms. The unit is transcribed whole in `src/provider/encode_key2any.rs` (its `key_to_*`/`p8info_to_*` serialisers and the `MAKE_ENCODER`-equivalent table builder), which `docs/PHASE-10-SUBPHASES.md` row 10.1 and section 1a both name.",
+        "unit": "providers/implementations/encode_decode/encode_key2any.c.in"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/decode_der2key.rs",
+        "evidence": "docs/PHASE-10-SUBPHASES.md row 10.1 and section 1a; src/provider/decode_der2key.rs; forensics/atlas/internal-symbols.json (`.../libdefault-lib-decode_der2key.c`)",
+        "names": [
+          "der2key_newctx",
+          "der2key_freectx",
+          "der2key_decode_p8"
+        ],
+        "reason": "`decode_der2key.c.in`'s `MAKE_DECODER` expansion produces 69 per-key-type `ossl_*_decoder_functions` dispatch tables, declared `static` in the `.c.in`, so `internal-symbols.json` records data symbols the crate does not define under those names and no edge forms. The unit is transcribed in `src/provider/decode_der2key.rs` (`Der2keyCtx`, its `keytype_desc` table and the `der2key_*` engine), which row 10.1 and section 1a name.",
+        "unit": "providers/implementations/encode_decode/decode_der2key.c.in"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/encode_key2ms.rs",
+        "evidence": "docs/PHASE-10-SUBPHASES.md row 10.1 and section 1a; src/provider/encode_key2ms.rs; forensics/atlas/internal-symbols.json (`.../libdefault-lib-encode_key2ms.c`)",
+        "names": [
+          "key2msblob_encode",
+          "key2pvk_encode",
+          "write_msblob",
+          "write_pvk"
+        ],
+        "reason": "Its four internal symbols are the `ossl_*_to_msblob`/`ossl_*_to_pvk` encoder tables, declared `static` in the `.c.in`, so the atlas records no function the crate defines under those names. The unit is transcribed in `src/provider/encode_key2ms.rs` (the `key2msblob_`/`key2pvk_` engine and the MSBLOB/PVK writers), which row 10.1 and section 1a name.",
+        "unit": "providers/implementations/encode_decode/encode_key2ms.c.in"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/decode_pvk2key.rs",
+        "evidence": "docs/PHASE-10-SUBPHASES.md row 10.1 and section 1a; src/provider/decode_pvk2key.rs; forensics/atlas/internal-symbols.json (`.../libdefault-lib-decode_pvk2key.c`)",
+        "names": [
+          "pvk2key_newctx",
+          "pvk2key_freectx",
+          "pvk2key_decode"
+        ],
+        "reason": "Its two internal symbols are the RSA and DSA `ossl_*_decoder_functions` tables, declared `static`, so the atlas records no function name. The unit is transcribed in `src/provider/decode_pvk2key.rs` (`Pvk2keyCtx` and the `keytype_desc` callbacks the 10.6 hand-off landed), which row 10.1 and section 1a name.",
+        "unit": "providers/implementations/encode_decode/decode_pvk2key.c.in"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/decode_pem2der.rs",
+        "evidence": "docs/PHASE-10-SUBPHASES.md row 10.1 and section 1a; src/provider/decode_pem2der.rs; forensics/atlas/internal-symbols.json (`.../libdefault-lib-decode_pem2der.c`)",
+        "names": [
+          "pem2der_decode",
+          "pem2der_newctx",
+          "read_pem"
+        ],
+        "reason": "Its one internal symbol is the `ossl_pem_to_der_decoder_functions` table, declared `static`, so the atlas records no function name. The unit is transcribed whole in `src/provider/decode_pem2der.rs` (the eighteen-row `PEM_NAME_MAP` and the `pem2der_*` engine), which row 10.1 and section 1a name.",
+        "unit": "providers/implementations/encode_decode/decode_pem2der.c.in"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/encode_key2text.rs",
+        "evidence": "docs/PHASE-10-SUBPHASES.md row 10.1 and section 1a; src/provider/encode_key2text.rs; forensics/atlas/internal-symbols.json (`.../libdefault-lib-encode_key2text.c`)",
+        "names": [
+          "key2text_encode",
+          "dh_to_text",
+          "ec_to_text",
+          "ml_kem_to_text"
+        ],
+        "reason": "Its twenty-nine internal symbols are the `ossl_*_to_text_encoder_functions` tables, declared `static` in the unit, so the atlas records data the crate does not define under those names. The unit is transcribed in `src/provider/encode_key2text.rs` (the `key2text_*` engine and the `*_to_text` printers), the first publisher row 10.1 names.",
+        "unit": "providers/implementations/encode_decode/encode_key2text.c"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/encode_key2blob.rs",
+        "evidence": "docs/PHASE-10-SUBPHASES.md row 10.1 and section 1a; src/provider/encode_key2blob.rs; forensics/atlas/internal-symbols.json (`.../libdefault-lib-encode_key2blob.c`)",
+        "names": [
+          "key2blob_encode",
+          "write_blob",
+          "key2blob_check_selection"
+        ],
+        "reason": "Its two internal symbols are the EC and SM2 `ossl_*_to_blob_encoder_functions` tables, declared `static`, so the atlas records no function name. The unit is transcribed in `src/provider/encode_key2blob.rs` (the `key2blob_*` engine and the point writer), which row 10.1 and section 1a name.",
+        "unit": "providers/implementations/encode_decode/encode_key2blob.c"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/decode_msblob2key.rs",
+        "evidence": "docs/PHASE-10-SUBPHASES.md row 10.1 and section 1a; src/provider/decode_msblob2key.rs; forensics/atlas/internal-symbols.json (`.../libdefault-lib-decode_msblob2key.c`)",
+        "names": [
+          "msblob2key_decode",
+          "msblob2key_newctx",
+          "msblob2key_export_object"
+        ],
+        "reason": "Its two internal symbols are the RSA and DSA `ossl_*_decoder_functions` tables, declared `static`, so the atlas records no function name. The unit is transcribed in `src/provider/decode_msblob2key.rs` (`Msblob2keyCtx` and the `keytype_desc` callbacks), which row 10.1 and section 1a name.",
+        "unit": "providers/implementations/encode_decode/decode_msblob2key.c"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/runtime/ctype.rs",
+        "evidence": "docs/PHASE-10-SUBPHASES.md row 10.9; src/runtime/ctype.rs and src/runtime/ctype_table.rs; forensics/atlas/internal-symbols.json (`crypto/legacy-dso-ctype.c`); forensics/tools/plan_reconciliation.py `source_of_build` (the `lib<goal>-lib-` join)",
+        "names": [
+          "ossl_ctype_check",
+          "ossl_isdigit",
+          "ossl_tolower",
+          "ossl_isasn1print"
+        ],
+        "reason": "The unit is reached and none of the three signals sees it because of the **object name**, not the code: this profile compiles `crypto/ctype.c` into the legacy provider's build object, so `internal-symbols.json` files its seven functions under `crypto/legacy-dso-ctype.c`. `plan_reconciliation.py`'s build-object join only restores the source path for the `lib<goal>-lib-<stem>` shape (`plan_reconciliation.py` `source_of_build`), so the legacy object's names stay keyed under the compiled name and the unit reads unreached. `src/runtime/ctype.rs` defines all seven (`ossl_ctype_check`, `ossl_isdigit`/`_xdigit`/`_alpha`/`_alnum`/`_print`/`_space`, `ossl_isascii`, `ossl_isasn1print`, `ossl_tolower`/`_toupper`) and the generated 128-entry table, which row 10.9 names.",
+        "unit": "crypto/ctype.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
+        "owner_phase": 11,
+        "reason": "Section 7's 10.14.9 owns the policy graph -- `pcy_tree.c`, `pcy_cache.c`, `pcy_data.c` and `pcy_map.c` -- and it did not land: the crate has no module for any of the four, and their exports (`X509_policy_tree_*`, `X509_policy_level_*`, `X509_policy_node_*`) are `owner_phase` 11 in `symbol-ownership.json`. Phase 11 is the X.509 stratum and is `not-started`, so the work is deferred to it rather than missing from Phase 10.",
+        "unit": "crypto/x509/pcy_tree.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
+        "owner_phase": 11,
+        "reason": "The policy graph's cache half, owned by section 7's 10.14.9 alongside `pcy_tree.c`. Same deferral: no crate module, exports `owner_phase` 11, Phase 11 `not-started`.",
+        "unit": "crypto/x509/pcy_cache.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
+        "owner_phase": 11,
+        "reason": "The policy graph's data half, owned by section 7's 10.14.9 alongside `pcy_tree.c`. Same deferral: no crate module, exports `owner_phase` 11, Phase 11 `not-started`.",
+        "unit": "crypto/x509/pcy_data.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
+        "owner_phase": 11,
+        "reason": "The policy graph's mapping half, owned by section 7's 10.14.9 alongside `pcy_tree.c`. Same deferral: no crate module, exports `owner_phase` 11, Phase 11 `not-started`.",
+        "unit": "crypto/x509/pcy_map.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
+        "owner_phase": 11,
+        "reason": "Section 7's 10.14.9 names it as still withheld on D455's two-part blocker. `src/x509/pcy_node.rs` is a doc-and-withholds module: it builds none of the unit's six `ossl_policy_*` functions, so the unit is genuinely unreached. Its policy-node helpers belong to the policy graph, whose exports are `owner_phase` 11, and Phase 11 is `not-started`.",
+        "unit": "crypto/x509/pcy_node.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
+        "owner_phase": 11,
+        "reason": "Section 7's 10.14.11 owns the printers and the request/attribute objects, `x509_acert.c` among them. Its five internal symbols are the `X509_ACERT`/`OSSL_ISSUER_SERIAL`/`OSSL_OBJECT_DIGEST_INFO`/`X509_HOLDER` item templates, none of which the crate defines, and its exports (`X509_ACERT_sign`/`_verify`/...) are `owner_phase` 11. Phase 11 is `not-started`.",
+        "unit": "crypto/x509/x509_acert.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
+        "owner_phase": 11,
+        "reason": "Section 7's 10.14.10 owns the trust, verification-parameter and store-lookup layer -- `x509_lu.c`, `x509_vpm.c`, `x509_trust.c` and the `by_*` backends -- and it did not land. `x509_lu.c`'s two internal symbols (`ossl_x509_store_ctx_get_by_subject`, `ossl_x509_store_read_lock`) are unbuilt and its exports (`X509_STORE_get1_*`) are `owner_phase` 11. Phase 11 is `not-started`.",
+        "unit": "crypto/x509/x509_lu.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
+        "owner_phase": 11,
+        "reason": "The verification-parameter half of section 7's 10.14.10. `X509_VERIFY_PARAM_new`, `X509_VERIFY_PARAM_set_flags` and the unit's other exports are `owner_phase` 11, the crate has no module for the unit, and Phase 11 is `not-started`.",
+        "unit": "crypto/x509/x509_vpm.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
+        "owner_phase": 11,
+        "reason": "The trust-store half of section 7's 10.14.10. `internal-symbols.json` records no function for the unit at all, its exports are `owner_phase` 11, and Phase 11 is `not-started`.",
+        "unit": "crypto/x509/x509_trust.c"
       }
     ]
   },

@@ -4,47 +4,10 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "names_a_file_the_authority_does_not_have": 11,
-      "units_not_reached": 16
-    },
-    "census_by_stratum": {
-      "10": 27
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "names_a_file_the_authority_does_not_have": [
-        "docs/PHASE-10-SUBPHASES.md:10:10.10:evp/digest.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.11:evp/evp_pkey.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.16:file_store.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.16:file_store_any2obj.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_der2key.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_epki2pki.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_pem2der.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_pvk2key.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.1:decode_spki2typespki.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.1:encode_key2any.c",
-        "docs/PHASE-10-SUBPHASES.md:10:10.1:encode_key2ms.c"
-      ],
-      "units_not_reached": [
-        "crypto/ctype.c",
-        "crypto/pkcs12/p12_kiss.c",
-        "crypto/store/store_result.c",
-        "crypto/x509/pcy_cache.c",
-        "crypto/x509/pcy_data.c",
-        "crypto/x509/pcy_map.c",
-        "crypto/x509/pcy_node.c",
-        "crypto/x509/pcy_tree.c",
-        "crypto/x509/x509_acert.c",
-        "crypto/x509/x509_lu.c",
-        "crypto/x509/x509_trust.c",
-        "crypto/x509/x509_vfy.c",
-        "crypto/x509/x509_vpm.c",
-        "providers/implementations/encode_decode/decode_msblob2key.c",
-        "providers/implementations/encode_decode/encode_key2blob.c",
-        "providers/implementations/encode_decode/encode_key2text.c"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -57,10 +20,10 @@
       "rows_judged": 102,
       "symbols_named_by_a_row": 108,
       "symbols_reached": 108,
-      "unit_records": 78,
-      "units_named_by_a_record": 80,
-      "units_named_by_a_row": 339,
-      "units_reached": 323
+      "unit_records": 96,
+      "units_named_by_a_record": 98,
+      "units_named_by_a_row": 348,
+      "units_reached": 348
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -548,7 +511,7 @@
       },
       "crypto/ctype.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/ctype.c",
         "subphases": [
           "10:10.9"
         ],
@@ -1657,6 +1620,7 @@
         ],
         "recorded_by": null,
         "subphases": [
+          "10:10.10",
           "7:7.3",
           "7:7.3a",
           "7:7.3d"
@@ -2004,6 +1968,7 @@
         ],
         "recorded_by": "units:crypto/evp/evp_pkey.c",
         "subphases": [
+          "10:10.11",
           "7:7.4"
         ],
         "transcribed_by": [
@@ -2939,7 +2904,9 @@
           "10:10.15",
           "10:10.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/pkcs12/p12_kiss.rs"
+        ]
       },
       "crypto/pkcs12/p12_mutl.c": {
         "defines": [],
@@ -3452,7 +3419,9 @@
         "subphases": [
           "10:10.16"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/store/store_result.rs"
+        ]
       },
       "crypto/store/store_strings.c": {
         "defines": [],
@@ -3536,7 +3505,7 @@
           "ossl_policy_cache_free",
           "ossl_policy_cache_set"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/x509/pcy_cache.c",
         "subphases": [
           "10:10.14"
         ],
@@ -3547,7 +3516,7 @@
           "ossl_policy_data_free",
           "ossl_policy_data_new"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/x509/pcy_data.c",
         "subphases": [
           "10:10.14"
         ],
@@ -3567,7 +3536,7 @@
         "defines": [
           "ossl_policy_cache_set_mapping"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/x509/pcy_map.c",
         "subphases": [
           "10:10.14"
         ],
@@ -3582,7 +3551,7 @@
           "ossl_policy_node_match",
           "ossl_policy_tree_find_sk"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/x509/pcy_node.c",
         "subphases": [
           "10:10.12"
         ],
@@ -3590,7 +3559,7 @@
       },
       "crypto/x509/pcy_tree.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/x509/pcy_tree.c",
         "subphases": [
           "10:10.14"
         ],
@@ -3771,7 +3740,7 @@
           "X509_ACERT_ISSUER_it",
           "X509_HOLDER_it"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/x509/x509_acert.c",
         "subphases": [
           "10:10.14"
         ],
@@ -3812,7 +3781,7 @@
           "ossl_x509_store_ctx_get_by_subject",
           "ossl_x509_store_read_lock"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/x509/x509_lu.c",
         "subphases": [
           "10:10.14"
         ],
@@ -3854,7 +3823,7 @@
       },
       "crypto/x509/x509_trust.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/x509/x509_trust.c",
         "subphases": [
           "10:10.14"
         ],
@@ -3888,11 +3857,13 @@
         "subphases": [
           "10:10.14"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/x509_vfy.rs"
+        ]
       },
       "crypto/x509/x509_vpm.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:crypto/x509/x509_vpm.c",
         "subphases": [
           "10:10.14"
         ],
@@ -4419,12 +4390,113 @@
         ],
         "transcribed_by": []
       },
+      "providers/implementations/encode_decode/decode_der2key.c.in": {
+        "defines": [
+          "ossl_DHX_der_to_dhx_decoder_functions",
+          "ossl_DH_der_to_dh_decoder_functions",
+          "ossl_DSA_der_to_dsa_decoder_functions",
+          "ossl_EC_der_to_ec_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_dh_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_dhx_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_dsa_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_ec_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_ed25519_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_ed448_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_ml_dsa_44_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_ml_dsa_65_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_ml_dsa_87_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_ml_kem_1024_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_ml_kem_512_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_ml_kem_768_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_rsa_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_rsapss_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_slh_dsa_sha2_128f_decoder_functions",
+          "ossl_PrivateKeyInfo_der_to_slh_dsa_sha2_128s_decoder_functions"
+        ],
+        "recorded_by": "units:providers/implementations/encode_decode/decode_der2key.c.in",
+        "subphases": [
+          "10:10.1"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/encode_decode/decode_epki2pki.c.in": {
+        "defines": [
+          "ossl_EncryptedPrivateKeyInfo_der_to_der_decoder_functions",
+          "ossl_epki2pki_der_decode"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:10.1"
+        ],
+        "transcribed_by": []
+      },
       "providers/implementations/encode_decode/decode_msblob2key.c": {
         "defines": [
           "ossl_msblob_to_dsa_decoder_functions",
           "ossl_msblob_to_rsa_decoder_functions"
         ],
+        "recorded_by": "units:providers/implementations/encode_decode/decode_msblob2key.c",
+        "subphases": [
+          "10:10.1"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/encode_decode/decode_pem2der.c.in": {
+        "defines": [
+          "ossl_pem_to_der_decoder_functions"
+        ],
+        "recorded_by": "units:providers/implementations/encode_decode/decode_pem2der.c.in",
+        "subphases": [
+          "10:10.1"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/encode_decode/decode_pvk2key.c.in": {
+        "defines": [
+          "ossl_pvk_to_dsa_decoder_functions",
+          "ossl_pvk_to_rsa_decoder_functions"
+        ],
+        "recorded_by": "units:providers/implementations/encode_decode/decode_pvk2key.c.in",
+        "subphases": [
+          "10:10.1"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/encode_decode/decode_spki2typespki.c.in": {
+        "defines": [
+          "ossl_SubjectPublicKeyInfo_der_to_der_decoder_functions",
+          "ossl_spki2typespki_der_decode"
+        ],
         "recorded_by": null,
+        "subphases": [
+          "10:10.1"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/encode_decode/encode_key2any.c.in": {
+        "defines": [
+          "ossl_dh_to_DH_der_encoder_functions",
+          "ossl_dh_to_DH_pem_encoder_functions",
+          "ossl_dh_to_EncryptedPrivateKeyInfo_der_encoder_functions",
+          "ossl_dh_to_EncryptedPrivateKeyInfo_pem_encoder_functions",
+          "ossl_dh_to_PKCS3_der_encoder_functions",
+          "ossl_dh_to_PKCS3_pem_encoder_functions",
+          "ossl_dh_to_PrivateKeyInfo_der_encoder_functions",
+          "ossl_dh_to_PrivateKeyInfo_pem_encoder_functions",
+          "ossl_dh_to_SubjectPublicKeyInfo_der_encoder_functions",
+          "ossl_dh_to_SubjectPublicKeyInfo_pem_encoder_functions",
+          "ossl_dh_to_type_specific_params_der_encoder_functions",
+          "ossl_dh_to_type_specific_params_pem_encoder_functions",
+          "ossl_dhx_to_DHX_der_encoder_functions",
+          "ossl_dhx_to_DHX_pem_encoder_functions",
+          "ossl_dhx_to_EncryptedPrivateKeyInfo_der_encoder_functions",
+          "ossl_dhx_to_EncryptedPrivateKeyInfo_pem_encoder_functions",
+          "ossl_dhx_to_PrivateKeyInfo_der_encoder_functions",
+          "ossl_dhx_to_PrivateKeyInfo_pem_encoder_functions",
+          "ossl_dhx_to_SubjectPublicKeyInfo_der_encoder_functions",
+          "ossl_dhx_to_SubjectPublicKeyInfo_pem_encoder_functions"
+        ],
+        "recorded_by": "units:providers/implementations/encode_decode/encode_key2any.c.in",
         "subphases": [
           "10:10.1"
         ],
@@ -4435,7 +4507,20 @@
           "ossl_ec_to_blob_encoder_functions",
           "ossl_sm2_to_blob_encoder_functions"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/encode_decode/encode_key2blob.c",
+        "subphases": [
+          "10:10.1"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/encode_decode/encode_key2ms.c.in": {
+        "defines": [
+          "ossl_dsa_to_msblob_encoder_functions",
+          "ossl_dsa_to_pvk_encoder_functions",
+          "ossl_rsa_to_msblob_encoder_functions",
+          "ossl_rsa_to_pvk_encoder_functions"
+        ],
+        "recorded_by": "units:providers/implementations/encode_decode/encode_key2ms.c.in",
         "subphases": [
           "10:10.1"
         ],
@@ -4464,7 +4549,7 @@
           "ossl_slh_dsa_sha2_256f_to_text_encoder_functions",
           "ossl_slh_dsa_sha2_256s_to_text_encoder_functions"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:providers/implementations/encode_decode/encode_key2text.c",
         "subphases": [
           "10:10.1"
         ],
@@ -4587,6 +4672,26 @@
           "9:9.5"
         ],
         "transcribed_by": []
+      },
+      "providers/implementations/storemgmt/file_store.c.in": {
+        "defines": [
+          "ossl_file_store_functions"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:10.16"
+        ],
+        "transcribed_by": []
+      },
+      "providers/implementations/storemgmt/file_store_any2obj.c.in": {
+        "defines": [
+          "ossl_any_to_obj_algorithm"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "10:10.16"
+        ],
+        "transcribed_by": []
       }
     },
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
@@ -4614,6 +4719,11 @@
       "crypto/conf/conf_mall.c": {
         "class": "reached_by_a_named_construct",
         "crate_module": "src/runtime/confmod/mod.rs",
+        "owner_phase": null
+      },
+      "crypto/ctype.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/runtime/ctype.rs",
         "owner_phase": null
       },
       "crypto/dsa/dsa_ctrl.c": {
@@ -4896,6 +5006,51 @@
         "crate_module": "src/context/thread_data.rs",
         "owner_phase": null
       },
+      "crypto/x509/pcy_cache.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 11
+      },
+      "crypto/x509/pcy_data.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 11
+      },
+      "crypto/x509/pcy_map.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 11
+      },
+      "crypto/x509/pcy_node.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 11
+      },
+      "crypto/x509/pcy_tree.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 11
+      },
+      "crypto/x509/x509_acert.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 11
+      },
+      "crypto/x509/x509_lu.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 11
+      },
+      "crypto/x509/x509_trust.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 11
+      },
+      "crypto/x509/x509_vpm.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 11
+      },
       "pkey_derive.c": {
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
@@ -4971,6 +5126,46 @@
         "crate_module": "src/provider/cipher.rs",
         "owner_phase": null
       },
+      "providers/implementations/encode_decode/decode_der2key.c.in": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/decode_der2key.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/encode_decode/decode_msblob2key.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/decode_msblob2key.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/encode_decode/decode_pem2der.c.in": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/decode_pem2der.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/encode_decode/decode_pvk2key.c.in": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/decode_pvk2key.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/encode_decode/encode_key2any.c.in": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/encode_key2any.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/encode_decode/encode_key2blob.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/encode_key2blob.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/encode_decode/encode_key2ms.c.in": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/encode_key2ms.rs",
+        "owner_phase": null
+      },
+      "providers/implementations/encode_decode/encode_key2text.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/encode_key2text.rs",
+        "owner_phase": null
+      },
       "providers/implementations/rands/crngt.c": {
         "class": "does_not_exist_in_this_authority",
         "crate_module": null,
@@ -4985,36 +5180,36 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 430
+      "transcribed_units": 434
     }
   },
-  "body_hash": "ec6e1253f1f6c1bb02f66a808b4ba5b379cd8e2616d8b1fa9129252c7739d9e9",
+  "body_hash": "1c290406d49d2745ba22201dc80dbc9111918b216acfacb8dbdafa95f8fc4821",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "29a1ed3fd4708e4277f84c1a489948287b16c6601cb8d3ad803903cef70917d0"
+      "sha256": "c78da2f1604cab793d50cdea67c828a066403ce79e788ec9d2a0a299a3cb10c4"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "a71d00e2f966b324c786b7cbee0f98f290f4e60d8d92f2e3166406e888d76496"
+      "sha256": "b2cde4dbf71fa0e3f522621abd6ca16577c5d102613d848dccf8ea84b2ddc6d9"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d5fecdff5eafd5e24eb3b8d26e44007ce8a159d7420789de56d97fb233c88bec"
+      "sha256": "7063df9c6228f4bf0438d65925190df3c5b4c33dc12d3086ac60b4be20222153"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d4d0b4a2e5f554ad3d205c53139227224fd7abfb587be2b2aa54d9c8dde3b9cb"
+      "sha256": "14673b85c04674ebf5e13d61a5eca19798f5c19a926ee2dc43ec8e7a41283244"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "d4aedadf091ec1ceeef4b233f813d9969e33f5f28aa8664630cf8fad5ca189d1"
+      "sha256": "c89e00332148cd1ca272bda20f03d19cea821697b535ce2e90b6d74541942995"
     },
     {
       "name": "source-manifest",
@@ -5024,7 +5219,7 @@
     {
       "name": "plan-PHASE-10-SUBPHASES",
       "path": "docs/PHASE-10-SUBPHASES.md",
-      "sha256": "053a8ed49513177c1f979d4430e8efae1823fbc388c65e3d24f5bd3fdb4bc613"
+      "sha256": "ed94b474a11593e2b595e196219202ebf066443e6d756ab03d65a3e17bc6ef2f"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

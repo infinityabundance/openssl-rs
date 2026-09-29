@@ -9,8 +9,8 @@
  * What it establishes, and what it does not
  * -----------------------------------------
  * STORE's identity is a fetch and a loader contract (docs/PHASE-10-SUBPHASES.md section 3.3).
- * This probe drives the part of 10.5 whose closure is landed, and after the second pass that is
- * every export of the four units except three:
+ * This probe drives every export of the four 10.5 units, and after 10.16 and 10.17 that now
+ * includes `OSSL_STORE_load`'s fetched result path over the `file:` provider loader:
  *
  *  * the `OSSL_STORE_LOADER` object and its process-global scheme registry (`store_register.c`,
  *    `store_meth.c`), driven by name and through `OSSL_STORE_do_all_loaders`;
@@ -18,27 +18,32 @@
  *  * the whole `OSSL_STORE_INFO` object model (`new`/`new_NAME`/`new_PARAMS`/`new_PUBKEY`/
  *    `new_PKEY`/`new_CERT`/`new_CRL`/`set0_NAME_description`, `get_type`, the `get0_*` and
  *    `get1_*` accessors, and `free`) and the whole `OSSL_STORE_SEARCH` object;
- *  * the `OSSL_STORE_CTX` state machine (`open`/`open_ex`/`attach`/`eof`/`error`/`expect`/
+ *  * the `OSSL_STORE_CTX` state machine (`open`/`open_ex`/`attach`/`load`/`eof`/`error`/`expect`/
  *    `find`/`delete`/`close`/`supports_search`, plus the two deprecated control entry points
- *    `OSSL_STORE_ctrl`/`OSSL_STORE_vctrl`) over an **in-process registered legacy loader**, which
- *    is what makes the refusal arms reachable without either `file` provider row.
+ *    `OSSL_STORE_ctrl`/`OSSL_STORE_vctrl`) over an **in-process registered legacy loader** -- which
+ *    is what makes the refusal arms reachable without either `file` provider row -- and,
+ *    through `drive_store_load` below, over the **fetched `file:` loader**;
+ *  * the two published `OSSL_OP_STORE` provider rows (`file`), fetched and swept by
+ *    `drive_file_store_row`.
  *
  * The refusal arms are the ones section 3.3 names -- an unknown scheme, a NULL URI, a loader
  * whose registration omits `load` -- each with its error queue coordinate, plus the CTX state
- * transitions (`eof`, `error`, `expect`, `find`, `close`).
+ * transitions (`eof`, `error`, `expect`, `find`, `close`) and `drive_store_load`'s absent-path and
+ * malformed-file refusals.
  *
- * What it cannot drive, and prints as `pending.`
- * ----------------------------------------------
- * The blockage is **per function** (docs/DECISIONS.md D448, corrected by the second 10.5 pass and
- * again by 10.8), and what this probe does not call is named below with its measured blocker:
+ * What it prints without driving, and why
+ * ---------------------------------------
+ * Nothing of the four units is withheld any more. 10.16 published the two `OSSL_OP_STORE` provider
+ * rows (`file`) and 10.17 landed `store_result.c` with `store_lib.c`'s `OSSL_STORE_load` half, so
+ * `drive_store_load` drives the fetched loader's whole result path -- a fixed certificate or key
+ * artifact written by the probe, a `file:` URI opened over it, and `OSSL_STORE_load`'s fetched
+ * branch through `store_result.c`'s `ossl_store_handle_load_result`.
  *
- *  * `OSSL_STORE_load` -- its fetched branch calls `store_result.c`'s
- *    `ossl_store_handle_load_result`, which needs `PKCS12_parse` (10.3-withheld) now that 10.12
- *    landed `d2i_X509_AUX`. 10.8 landed `d2i_X509`/`d2i_X509_CRL`, so only `PKCS12_parse`
- *    remains.
- *  * the two `OSSL_OP_STORE` provider rows (`file`) were withheld through 10.15. **10.16 publishes
- *    them**, so `OSSL_STORE_LOADER_fetch`/`do_all_provided` and the fetched `OSSL_STORE_find`
- *    arms are now **driven** at the end of `main` rather than named pending.
+ * The one `pending.` line left is a **named divergence rather than a withheld export**: the
+ * classical RSA path of `X509_verify`/`NETSCAPE_SPKI_verify` resolves its digest by name through
+ * `EVP_get_digestbyname`, which this crate answers NULL for every built-in name -- the Phase 13
+ * legacy-`OBJ_NAME` divergence D333/D343 record -- so that path is not comparable and the probe
+ * drives `X509_verify` over an Ed25519 signature instead.
  *
  * 10.8 lands the `X509`/`X509_CRL` object core, so `OSSL_STORE_INFO_get1_CERT`/`_get1_CRL`, the
  * `CERT`/`CRL` arms of `OSSL_STORE_INFO_free`, and a decode/re-encode/dup/free of a fixed
@@ -839,7 +844,6 @@ static void drive_x509v3_extensions(void)
 
 static void out_pending(void)
 {
-    printf("pending.OSSL_STORE_load=store_result_ossl_store_handle_load_result\n");
     /* 10.14.2: the classical RSA verify path (`X509_verify`/`NETSCAPE_SPKI_verify` over an
      * RSA-signed object) resolves its digest by name through `EVP_get_digestbyname`, which this
      * crate answers NULL for every built-in name -- the Phase 13 legacy-`OBJ_NAME` divergence
@@ -2883,6 +2887,180 @@ static void drive_file_store_row(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * Phase 10.17 -- `store_lib.c`'s `OSSL_STORE_load` over the fetched `file:` loader.
+ *
+ * `OSSL_STORE_LOADER_fetch` (10.16) resolves the two `file` `OSSL_OP_STORE` rows; this drives the
+ * *result* path 10.17 lands: `OSSL_STORE_load`'s fetched branch hands `store_result.c`'s
+ * `ossl_store_handle_load_result` to the loader's `p_load`, which decodes the artifact and builds
+ * an `OSSL_STORE_INFO`. The probe writes each fixed artifact itself -- from the committed DER
+ * fixtures, and a hand-built PEM so no scaffolded `PEM_*` encoder is called -- opens a `file:` URI
+ * over it, and prints address-free observations: the returned object's type, a certificate's
+ * serial and SHA-256, a key's `EVP_PKEY_id`, the `eof`/`error` flags, a second `OSSL_STORE_load`
+ * that shows EOF, and the close. Every arm pops the error queue first (D455's lesson); the fixed
+ * artifacts are removed before they are written and again at the end; and the two refusal arms --
+ * an absent path and a malformed file -- carry their error coordinates.
+ * --------------------------------------------------------------------------------------------- */
+
+/* `store.load.<arm>.<field>` -- one key builder, so every arm names its observations the same way. */
+static const char *load_key(char *buf, size_t n, const char *arm, const char *field)
+{
+    snprintf(buf, n, "store.load.%s.%s", arm, field);
+    return buf;
+}
+
+/* Write `len` bytes of `bytes` to `path`, overwriting anything already there. */
+static void write_fixed_bytes(const char *path, const void *bytes, size_t len)
+{
+    FILE *f = fopen(path, "wb");
+
+    if (f == NULL)
+        return;
+    fwrite(bytes, 1, len, f);
+    fclose(f);
+}
+
+/* Write the fixed certificate as a PEM "CERTIFICATE" block. The base64 is done here rather than
+ * with a `PEM_*` writer because the candidate shells several of those; a scaffolded call would
+ * abort rather than observe. The label and the DER are the authority document's own. */
+static const char g_b64[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static void write_fixed_pem(const char *path)
+{
+    FILE *f = fopen(path, "wb");
+    size_t i;
+
+    if (f == NULL)
+        return;
+    fputs("-----BEGIN CERTIFICATE-----\n", f);
+    for (i = 0; i < (size_t)RT_X509_CERT_DER_LEN; i += 3) {
+        unsigned int v = (unsigned int)RT_X509_CERT_DER[i] << 16;
+        size_t rem = (size_t)RT_X509_CERT_DER_LEN - i;
+        int n = rem >= 3 ? 3 : (int)rem;
+        char out[4];
+
+        if (n >= 2)
+            v |= (unsigned int)RT_X509_CERT_DER[i + 1] << 8;
+        if (n >= 3)
+            v |= (unsigned int)RT_X509_CERT_DER[i + 2];
+        out[0] = g_b64[(v >> 18) & 0x3f];
+        out[1] = g_b64[(v >> 12) & 0x3f];
+        out[2] = n >= 2 ? g_b64[(v >> 6) & 0x3f] : '=';
+        out[3] = n >= 3 ? g_b64[v & 0x3f] : '=';
+        fwrite(out, 1, 4, f);
+        if ((i / 3 + 1) % 16 == 0)
+            fputc('\n', f);
+    }
+    if ((i / 3) % 16 != 0)
+        fputc('\n', f);
+    fputs("-----END CERTIFICATE-----\n", f);
+    fclose(f);
+}
+
+/* One arm: open `file:<path>`, load once, describe the object, load again to reach EOF, close.
+ * `arm` is the middle `store.load.<arm>.<field>` component. */
+static void store_load_file_arm(const char *arm, const char *path)
+{
+    OSSL_STORE_CTX *ctx;
+    OSSL_STORE_INFO *info;
+    char key[128];
+    char uri[512];
+
+    ERR_clear_error();
+    snprintf(uri, sizeof(uri), "file:%s", path);
+    ctx = OSSL_STORE_open(uri, NULL, NULL, NULL, NULL);
+    out_ptr(load_key(key, sizeof(key), arm, "open"), ctx);
+    out_err(load_key(key, sizeof(key), arm, "open.err"));
+    if (ctx == NULL)
+        return;
+
+    ERR_clear_error();
+    info = OSSL_STORE_load(ctx);
+    out_ptr(load_key(key, sizeof(key), arm, "load"), info);
+    out_err(load_key(key, sizeof(key), arm, "load.err"));
+    if (info != NULL) {
+        int type = OSSL_STORE_INFO_get_type(info);
+
+        out_int(load_key(key, sizeof(key), arm, "type"), type);
+        if (type == OSSL_STORE_INFO_CERT) {
+            X509 *cert = OSSL_STORE_INFO_get0_CERT(info);
+            unsigned char md[EVP_MAX_MD_SIZE];
+            unsigned int mdlen = 0;
+
+            out_int(load_key(key, sizeof(key), arm, "serial"),
+                    ASN1_INTEGER_get(X509_get0_serialNumber(cert)));
+            if (X509_digest(cert, EVP_sha256(), md, &mdlen) != 0)
+                out_hex(load_key(key, sizeof(key), arm, "sha256"), md, (long)mdlen);
+        } else if (type == OSSL_STORE_INFO_PKEY || type == OSSL_STORE_INFO_PUBKEY
+                   || type == OSSL_STORE_INFO_PARAMS) {
+            EVP_PKEY *pk;
+
+            if (type == OSSL_STORE_INFO_PKEY)
+                pk = OSSL_STORE_INFO_get0_PKEY(info);
+            else if (type == OSSL_STORE_INFO_PUBKEY)
+                pk = OSSL_STORE_INFO_get0_PUBKEY(info);
+            else
+                pk = OSSL_STORE_INFO_get0_PARAMS(info);
+            out_int(load_key(key, sizeof(key), arm, "pkey_id"),
+                    pk != NULL ? EVP_PKEY_id(pk) : -1);
+        }
+        OSSL_STORE_INFO_free(info);
+    }
+
+    out_int(load_key(key, sizeof(key), arm, "eof"), OSSL_STORE_eof(ctx));
+    out_int(load_key(key, sizeof(key), arm, "error"), OSSL_STORE_error(ctx));
+
+    /* A second load reaches the end of the single-object artifact. */
+    ERR_clear_error();
+    info = OSSL_STORE_load(ctx);
+    out_ptr(load_key(key, sizeof(key), arm, "second"), info);
+    out_err(load_key(key, sizeof(key), arm, "second.err"));
+    if (info != NULL)
+        OSSL_STORE_INFO_free(info);
+
+    out_int(load_key(key, sizeof(key), arm, "eof.after"), OSSL_STORE_eof(ctx));
+    out_int(load_key(key, sizeof(key), arm, "error.after"), OSSL_STORE_error(ctx));
+
+    ERR_clear_error();
+    out_int(load_key(key, sizeof(key), arm, "close"), OSSL_STORE_close(ctx));
+    out_err(load_key(key, sizeof(key), arm, "close.err"));
+}
+
+static void drive_store_load(void)
+{
+    static const char *const cert_pem = "rt_store_load.cert.pem";
+    static const char *const cert_der = "rt_store_load.cert.der";
+    static const char *const key_der = "rt_store_load.key.der";
+    static const char *const malformed = "rt_store_load.malformed.pem";
+    static const char *const absent = "rt_store_load.absent.pem";
+    static const char malformed_bytes[] = "not a certificate\n";
+
+    ERR_clear_error();
+    remove(cert_pem);
+    remove(cert_der);
+    remove(key_der);
+    remove(malformed);
+    remove(absent);
+
+    write_fixed_pem(cert_pem);
+    write_fixed_bytes(cert_der, RT_X509_CERT_DER, (size_t)RT_X509_CERT_DER_LEN);
+    write_fixed_bytes(key_der, rsa_pkcs8_der, sizeof(rsa_pkcs8_der));
+    write_fixed_bytes(malformed, malformed_bytes, sizeof(malformed_bytes) - 1);
+
+    store_load_file_arm("cert.pem", cert_pem);
+    store_load_file_arm("cert.der", cert_der);
+    store_load_file_arm("key.der", key_der);
+    store_load_file_arm("absent", absent);
+    store_load_file_arm("malformed", malformed);
+
+    remove(cert_pem);
+    remove(cert_der);
+    remove(key_der);
+    remove(malformed);
+    remove(absent);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * Phase 10.14's three hubs -- the general-name printers (`v3_san.c`), the extension-configuration
  * value/section layer (`v3_conf.c`) and, through them, the attribute-value printer
  * (`x_attrib.c`).
@@ -3597,6 +3775,8 @@ int main(void)
     drive_engine_registry();
 
     drive_file_store_row();
+
+    drive_store_load();
 
     out_pending();
     return 0;
