@@ -32707,3 +32707,73 @@ divergence row retired with the `v3_san` row added). `implemented_surface` moves
 then `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> **`PKCS12_parse`** -> `store_result.c`
 / **`OSSL_STORE_load`** -> the seal.
 
+## D466 -- the flake is reproduced, named, root-caused and fixed; D462's hypothesis is falsified and corrected
+
+**This is the entry D462 said would be owed if its hypothesis failed, and it failed.** D462 recorded the
+unreproduced `cargo test --lib` failure as most likely a mid-edit run and wrote down its own
+falsification criterion: *a failure on a committed, clean tree*. That criterion fired.
+
+**The failure, captured in full this time.** `evp::algorithm::tests::a_refused_precondition_is_success_and_skips_the_map`,
+`assertion left == right failed  left: 2  right: 1`, at `src/evp/algorithm.rs:576`. It fired in the
+**parallel** run inside `pipeline.sh` (the serial `--test-threads=1` run immediately before it was
+green), on a tree carrying this session's source edits and **no mid-edit window** -- which is what
+falsifies D462 rather than merely being inconvenient for it.
+
+**The cause.** Five sibling tests in `evp::algorithm` share the **process-global** `SAW` array and the
+`PRE_RESULT`/`PRE_ERRORS`/`POST_RESULT` statics **without** `test_support::lock_global_state`. Two
+interleaved and `pre` was counted twice. That is precisely the cross-module coupling the parallel gate
+exists to catch, and the project's documented remedy is the crate-wide lock.
+
+**The fix, and what was not done to it.** The five tests now take
+`crate::test_support::lock_global_state()`. **No test was skipped, deleted or weakened and no
+assertion was relaxed.** Verified by six focused parallel runs of `evp::algorithm::tests`, four full
+parallel suite runs, and this slice's two pipeline runs (each containing a serial and a parallel
+half) -- all **1117 passed, 0 failed**.
+
+**Why this matters more than the fix.** D462 wrote a hypothesis with a criterion that could kill it,
+kept the defect open rather than closing it by absence, and refused to add a retry. The criterion
+fired, and the response is to correct the record instead of defending the hypothesis -- which is the
+whole difference between this project's evidence model and a green checkmark. The mid-edit story was
+*reasonable*; it was also *wrong*, and only a written falsification criterion made that visible.
+
+**A second defect, found by the court rather than the compiler.** The previous slice declared its
+`v3_san.c` raise coordinates locally (the D445 allowance). The differential court read them back and
+found three wrong: `V3_SAN_604` read reason `109` where `X509V3_R_MISSING_VALUE` is **124**,
+`V3_SAN_623` read `110` where `X509V3_R_UNSUPPORTED_OPTION` is **117**, and `ERR_R_ASN1_LIB` was
+typed `524557` instead of **524301**. All three are corrected from `x509v3err.h`/`err.h` and both
+reachable sites are now pinned by refusal arms. The allowance to declare coordinates locally is what
+made that possible; the court is what made it *visible*, and that is the cost of the allowance being
+paid rather than hidden.
+
+**Three landings.** `crypto/asn1/asn1_gen.c` lands **whole** (`src/asn1/asn1_gen.rs`:
+`ASN1_generate_v3`/`ASN1_generate_nconf`, `generate_v3`, `asn1_cb`, `parse_tagging`, `asn1_multi`,
+`append_exp`, `asn1_str2type`, `bitstr_cb`) -- nothing withheld -- which is the one function that
+closed the `v2i` cluster; the cluster itself lands (`do_othername`, `do_dirname`, `a2i_GENERAL_NAME`,
+`v2i_GENERAL_NAME(_ex)`, `v2i_GENERAL_NAMES`), with `v2i_subject_alt`/`copy_email` withheld on
+`X509_REQ_get_subject_name` (10.14.11), `v2i_issuer_alt`/`copy_issuer` on `X509V3_EXT_d2i` (the
+dispatch) and `ossl_v3_alt` withheld whole rather than published with holes; and `v3_bitst.c` lands
+whole. `RT-STORE` moves from 865 to **981** observations and the total to **46,024** over 109 courts.
+
+### Counts, and what did not close
+
+**16 of 63 tables landed, 47 withheld**; closure-ready table units go from 34 to **36** and blocked
+units from 10 to **8**. `standard_exts[]` was **not** published -- 47 tables are missing, so the six
+`v3_lib.rs` lookup names and `X509_get_ext_d2i` stay withheld (D456) -- and therefore **the keystone,
+`PKCS12_parse` and `OSSL_STORE_load` did not close.** Phase-10 counts are unchanged at
+**`296 implemented / 2 open`** exports and **`636 implemented / 0 open`** provider rows.
+`implemented_surface` moves from 3,741 to 3,749.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1117 passed, 0 failed** on both the serial and parallel halves; 109 courts and **46,024
+observations**; `PIPELINE OK` exit 0 twice. Phase 11 still derives `not-started`.
+
+### The remaining distance
+
+**47 of 63 tables** (8 blocked units + 36 closure-ready units, 23 unlanded), plus D463's 24-name
+closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
+`ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+Named shims are identified too: `v3_addr`'s `ossl_asn1_string_set_bits_left` is already landed as
+`asn1::bitstr::set_bits_left`.
+

@@ -9,7 +9,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 91,
-      "language_surface_not_modelled_by_name": 6256,
+      "language_surface_not_modelled_by_name": 6257,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -84,7 +84,7 @@
         "crypto/asn1/a_type.c": 7,
         "crypto/asn1/a_verify.c": 18,
         "crypto/asn1/ameth_lib.c": 24,
-        "crypto/asn1/asn1_gen.c": 21,
+        "crypto/asn1/asn1_gen.c": 19,
         "crypto/asn1/asn1_lib.c": 12,
         "crypto/asn1/asn_mime.c": 41,
         "crypto/asn1/asn_moid.c": 11,
@@ -426,8 +426,9 @@
         "crypto/x509/pcy_lib.c": 8,
         "crypto/x509/t_x509.c": 72,
         "crypto/x509/v3_bcons.c": 16,
-        "crypto/x509/v3_conf.c": 40,
-        "crypto/x509/v3_crld.c": 63,
+        "crypto/x509/v3_bitst.c": 11,
+        "crypto/x509/v3_conf.c": 39,
+        "crypto/x509/v3_crld.c": 61,
         "crypto/x509/v3_enum.c": 6,
         "crypto/x509/v3_genn.c": 23,
         "crypto/x509/v3_ia5.c": 8,
@@ -435,7 +436,7 @@
         "crypto/x509/v3_lib.c": 39,
         "crypto/x509/v3_pcia.c": 8,
         "crypto/x509/v3_pku.c": 9,
-        "crypto/x509/v3_san.c": 38,
+        "crypto/x509/v3_san.c": 33,
         "crypto/x509/v3_skid.c": 11,
         "crypto/x509/v3_timespec.c": 87,
         "crypto/x509/v3_utf8.c": 8,
@@ -564,8 +565,8 @@
       ]
     },
     "checked": {
-      "authority_units": 395,
-      "crate_modules": 567,
+      "authority_units": 396,
+      "crate_modules": 568,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 4,
       "divergence_names_covered": 52,
@@ -678,7 +679,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "65bd3978dc5c934f8ecf22e0f3733f47566325585e0b91c99f8a8c127fb0c1d5",
+  "body_hash": "be64bcff548a2ddb29a5f8ee38e151f22acfe5da1433f751f19427840ea1cc29",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -699,7 +700,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "1b2890e2cb26bbe7d9eecdc9cada4cb55301cf57d5aa2a2d9d2a3ad345d708be"
+      "sha256": "27bb2c1c9674ec45253cf22d30c43a03df08391b74899a4ec7f7b05c86e4c406"
     },
     {
       "name": "symbol-ownership",
@@ -714,7 +715,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "2729e62cf8b78d25a00bdc7aad8dabab4fc4a42dc8ce7a151f5830f6356a7c44"
+      "sha256": "0b3fee9d298180e01969457b14c617ae07ad9c77217fd7204e09901ebb80f11d"
     },
     {
       "name": "phase-state",

@@ -3091,6 +3091,336 @@ static void drive_v3_hubs(void)
     sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
 }
 
+/* `crypto/asn1/asn1_gen.c`'s `ASN1_generate_v3`/`ASN1_generate_nconf` -- the generator every
+ * `v2i` callback of the general-name tables depends on, and Phase 5's deferred pair. Driving it
+ * directly is what makes the `v2i` cluster's one blocker observable rather than named pending.
+ * The scalars and the two tagging modifiers are compared byte for byte; the config-backed
+ * `SEQUENCE` exercises `asn1_multi`'s `X509V3_get_section` recursion; the two refusal paths are
+ * compared by their error coordinates (each arm pops the queue first, D455). */
+static void drive_asn1_generate(void)
+{
+    static const char seq_cfg[] = "[sec]\na=INT:1\nb=UTF8:x\n";
+    static const char *const scalars[] = {
+        "NULL", "INT:42", "ENUM:7", "UTF8:hello", "IA5:probe@example.com",
+        "OID:1.2.3.4", "BOOL:TRUE", "BOOL:FALSE", "FORMAT:HEX,OCT:deadbeef",
+        "IMP:2,INT:5", "EXP:0,UTF8:x", "EXP:0,IMP:1,UTF8:y"
+    };
+    CONF *conf;
+    BIO *cb;
+    long eline = 0;
+    ASN1_TYPE *v;
+    unsigned char *der;
+    int i, n;
+
+    for (i = 0; i < (int)(sizeof(scalars) / sizeof(scalars[0])); i++) {
+        char key[64];
+
+        ERR_clear_error();
+        v = ASN1_generate_v3(scalars[i], NULL);
+        snprintf(key, sizeof(key), "asn1gen.%d.ptr", i);
+        out_ptr(key, v);
+        if (v != NULL) {
+            snprintf(key, sizeof(key), "asn1gen.%d.type", i);
+            out_int(key, (long)ASN1_TYPE_get(v));
+            der = NULL;
+            n = i2d_ASN1_TYPE(v, &der);
+            snprintf(key, sizeof(key), "asn1gen.%d.der", i);
+            out_hex(key, der, n > 0 ? n : 0);
+            OPENSSL_free(der);
+            ASN1_TYPE_free(v);
+        }
+        snprintf(key, sizeof(key), "asn1gen.%d.err", i);
+        out_err(key);
+    }
+
+    /* A real config: `SEQUENCE:sec` recurses through `asn1_multi`, and `ASN1_generate_nconf`
+     * synthesises the missing `X509V3_CTX` through `X509V3_set_nconf`. */
+    conf = NCONF_new(NULL);
+    out_ptr("asn1gen.conf", conf);
+    cb = BIO_new_mem_buf(seq_cfg, -1);
+    out_int("asn1gen.conf.load", (long)NCONF_load_bio(conf, cb, &eline));
+    out_err("asn1gen.conf.load.err");
+    BIO_free(cb);
+
+    ERR_clear_error();
+    v = ASN1_generate_nconf("SEQUENCE:sec", conf);
+    out_ptr("asn1gen.seq.ptr", v);
+    if (v != NULL) {
+        out_int("asn1gen.seq.type", (long)ASN1_TYPE_get(v));
+        der = NULL;
+        n = i2d_ASN1_TYPE(v, &der);
+        out_hex("asn1gen.seq.der", der, n > 0 ? n : 0);
+        OPENSSL_free(der);
+        ASN1_TYPE_free(v);
+    }
+    out_err("asn1gen.seq.err");
+
+    /* A NULL config goes straight to `ASN1_generate_v3` with a NULL context. */
+    ERR_clear_error();
+    v = ASN1_generate_nconf("UTF8:hi", NULL);
+    out_ptr("asn1gen.nconfnull.ptr", v);
+    if (v != NULL) {
+        der = NULL;
+        n = i2d_ASN1_TYPE(v, &der);
+        out_hex("asn1gen.nconfnull.der", der, n > 0 ? n : 0);
+        OPENSSL_free(der);
+        ASN1_TYPE_free(v);
+    }
+    out_err("asn1gen.nconfnull.err");
+    NCONF_free(conf);
+
+    /* ----- the two refusals, each with the queue popped first ----- */
+    ERR_clear_error();
+    v = ASN1_generate_v3("NOSUCH:1", NULL);
+    out_ptr("asn1gen.unknown.ptr", v);
+    out_err("asn1gen.unknown.err");
+    if (v != NULL)
+        ASN1_TYPE_free(v);
+
+    ERR_clear_error();
+    v = ASN1_generate_v3("SEQUENCE:sec", NULL);
+    out_ptr("asn1gen.noconf.ptr", v);
+    out_err("asn1gen.noconf.err");
+    if (v != NULL)
+        ASN1_TYPE_free(v);
+}
+
+/* The `v3_san.c` `v2i` cluster -- the names `ASN1_generate_v3` was the one blocker of. Each arm
+ * builds a `GENERAL_NAME` from a `CONF_VALUE` and prints its `i2d` DER, so the comparison is of
+ * the authority's own encoding; the refusals print their error coordinates (queue popped first). */
+static void drive_v2i_cluster(void)
+{
+    static const char cfg[] = "[sec]\nC=US\nO=Example\n";
+    CONF_VALUE cnf;
+    X509V3_CTX ctx;
+    CONF *conf;
+    BIO *cb;
+    long eline = 0;
+    GENERAL_NAME *g;
+    GENERAL_NAMES *gens;
+    STACK_OF(CONF_VALUE) *nval;
+    unsigned char *der;
+    int n;
+
+    /* The IA5/RID/IP arms need no config context. */
+    static const struct { const char *name; const char *value; } arms[] = {
+        { "email", "probe@example.com" },
+        { "URI", "http://example.com/" },
+        { "DNS", "www.example.com" },
+        { "RID", "1.2.3.4" },
+        { "IP", "10.0.0.1" },
+    };
+    int i;
+
+    for (i = 0; i < (int)(sizeof(arms) / sizeof(arms[0])); i++) {
+        char key[64];
+
+        cnf.section = NULL;
+        cnf.name = (char *)arms[i].name;
+        cnf.value = (char *)arms[i].value;
+        ERR_clear_error();
+        g = v2i_GENERAL_NAME(NULL, NULL, &cnf);
+        snprintf(key, sizeof(key), "v2i.%d.ptr", i);
+        out_ptr(key, g);
+        if (g != NULL) {
+            der = NULL;
+            n = i2d_GENERAL_NAME(g, &der);
+            snprintf(key, sizeof(key), "v2i.%d.der", i);
+            out_hex(key, der, n > 0 ? n : 0);
+            OPENSSL_free(der);
+            GENERAL_NAME_free(g);
+        }
+        snprintf(key, sizeof(key), "v2i.%d.err", i);
+        out_err(key);
+    }
+
+    /* `a2i_GENERAL_NAME` directly, the exported builder every other arrow funnels through. */
+    ERR_clear_error();
+    g = a2i_GENERAL_NAME(NULL, NULL, NULL, GEN_EMAIL, "direct@example.com", 0);
+    out_ptr("a2i.direct.ptr", g);
+    if (g != NULL) {
+        der = NULL;
+        n = i2d_GENERAL_NAME(g, &der);
+        out_hex("a2i.direct.der", der, n > 0 ? n : 0);
+        OPENSSL_free(der);
+        GENERAL_NAME_free(g);
+    }
+    out_err("a2i.direct.err");
+
+    /* The two config-backed arms: `dirName` and `otherName`. */
+    conf = NCONF_new(NULL);
+    out_ptr("v2i.conf", conf);
+    cb = BIO_new_mem_buf(cfg, -1);
+    out_int("v2i.conf.load", (long)NCONF_load_bio(conf, cb, &eline));
+    out_err("v2i.conf.load.err");
+    BIO_free(cb);
+    X509V3_set_nconf(&ctx, conf);
+
+    cnf.section = NULL;
+    cnf.name = (char *)"dirName";
+    cnf.value = (char *)"sec";
+    ERR_clear_error();
+    g = v2i_GENERAL_NAME(NULL, &ctx, &cnf);
+    out_ptr("v2i.dirname.ptr", g);
+    if (g != NULL) {
+        der = NULL;
+        n = i2d_GENERAL_NAME(g, &der);
+        out_hex("v2i.dirname.der", der, n > 0 ? n : 0);
+        OPENSSL_free(der);
+        GENERAL_NAME_free(g);
+    }
+    out_err("v2i.dirname.err");
+
+    cnf.name = (char *)"otherName";
+    cnf.value = (char *)"1.2.3.4;UTF8:hi";
+    ERR_clear_error();
+    g = v2i_GENERAL_NAME(NULL, &ctx, &cnf);
+    out_ptr("v2i.othername.ptr", g);
+    if (g != NULL) {
+        der = NULL;
+        n = i2d_GENERAL_NAME(g, &der);
+        out_hex("v2i.othername.der", der, n > 0 ? n : 0);
+        OPENSSL_free(der);
+        GENERAL_NAME_free(g);
+    }
+    out_err("v2i.othername.err");
+
+    /* `v2i_GENERAL_NAMES` over a two-entry stack. */
+    nval = sk_CONF_VALUE_new_null();
+    cnf.name = (char *)"email";
+    cnf.value = (char *)"a@b";
+    sk_CONF_VALUE_push(nval, &cnf);
+    cnf.name = (char *)"DNS";
+    cnf.value = (char *)"example.com";
+    sk_CONF_VALUE_push(nval, &cnf);
+    ERR_clear_error();
+    gens = v2i_GENERAL_NAMES(NULL, &ctx, nval);
+    out_ptr("v2i.names.ptr", gens);
+    if (gens != NULL) {
+        der = NULL;
+        n = i2d_GENERAL_NAMES(gens, &der);
+        out_hex("v2i.names.der", der, n > 0 ? n : 0);
+        OPENSSL_free(der);
+        GENERAL_NAMES_free(gens);
+    }
+    out_err("v2i.names.err");
+    sk_CONF_VALUE_free(nval);
+
+    /* The two refusals: a missing value and an unknown option name. */
+    cnf.name = (char *)"email";
+    cnf.value = NULL;
+    ERR_clear_error();
+    out_ptr("v2i.novalue.ptr", v2i_GENERAL_NAME(NULL, NULL, &cnf));
+    out_err("v2i.novalue.err");
+    cnf.name = (char *)"bogus";
+    cnf.value = (char *)"x";
+    ERR_clear_error();
+    out_ptr("v2i.badoption.ptr", v2i_GENERAL_NAME(NULL, NULL, &cnf));
+    out_err("v2i.badoption.err");
+
+    /* The per-type refusals, each pinning one `X509V3_R_*` reason. */
+    cnf.name = (char *)"RID";
+    cnf.value = (char *)"not-an-oid";
+    ERR_clear_error();
+    out_ptr("v2i.badrid.ptr", v2i_GENERAL_NAME(NULL, NULL, &cnf));
+    out_err("v2i.badrid.err");
+    cnf.name = (char *)"IP";
+    cnf.value = (char *)"not-an-ip";
+    ERR_clear_error();
+    out_ptr("v2i.badip.ptr", v2i_GENERAL_NAME(NULL, NULL, &cnf));
+    out_err("v2i.badip.err");
+    cnf.name = (char *)"dirName";
+    cnf.value = (char *)"nosuchsec";
+    ERR_clear_error();
+    out_ptr("v2i.baddirname.ptr", v2i_GENERAL_NAME(NULL, &ctx, &cnf));
+    out_err("v2i.baddirname.err");
+    cnf.name = (char *)"otherName";
+    cnf.value = (char *)"no-semicolon";
+    ERR_clear_error();
+    out_ptr("v2i.badothername.ptr", v2i_GENERAL_NAME(NULL, &ctx, &cnf));
+    out_err("v2i.badothername.err");
+    ERR_clear_error();
+    out_ptr("a2i.missingvalue.ptr",
+            a2i_GENERAL_NAME(NULL, NULL, NULL, GEN_EMAIL, NULL, 0));
+    out_err("a2i.missingvalue.err");
+    ERR_clear_error();
+    out_ptr("a2i.unsupported.ptr",
+            a2i_GENERAL_NAME(NULL, NULL, NULL, GEN_X400, "x", 0));
+    out_err("a2i.unsupported.err");
+
+    NCONF_free(conf);
+}
+
+/* `v3_bitst.c`'s two exported callbacks, driven over a probe-declared method row whose
+ * `usr_data` is a `BIT_STRING_BITNAME` table. The rows themselves are Rust-only statics the
+ * admitted DSO does not export, so the probe brings its own table: the callbacks read it back
+ * through `method->usr_data`, and the observation is their answer. */
+static void drive_v3_bitst(void)
+{
+    static BIT_STRING_BITNAME bits[] = {
+        { 0, "Digital Signature", "digitalSignature" },
+        { 1, "Non Repudiation", "nonRepudiation" },
+        { 1, "Content Commitment", "contentCommitment" },
+        { 2, "Key Encipherment", "keyEncipherment" },
+        { -1, NULL, NULL }
+    };
+    X509V3_EXT_METHOD m;
+    ASN1_BIT_STRING *bs;
+    CONF_VALUE cnf;
+    STACK_OF(CONF_VALUE) *nval, *st;
+    unsigned char *der;
+    int n;
+
+    memset(&m, 0, sizeof(m));
+    m.ext_nid = NID_key_usage;
+    m.usr_data = bits;
+
+    /* `i2v`: bits 0 and 1 set, so the canonical `Non Repudiation` appears and its bit-1 alias
+     * `Content Commitment` is skipped by the `last_seen_bit` test. */
+    bs = ASN1_BIT_STRING_new();
+    ASN1_BIT_STRING_set_bit(bs, 0, 1);
+    ASN1_BIT_STRING_set_bit(bs, 1, 1);
+    ERR_clear_error();
+    st = i2v_ASN1_BIT_STRING(&m, bs, NULL);
+    out_conf_stack("bitst.i2v", st);
+    out_err("bitst.i2v.err");
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+    ASN1_BIT_STRING_free(bs);
+
+    /* `v2i`: one short name and one long name. */
+    nval = sk_CONF_VALUE_new_null();
+    cnf.section = NULL;
+    cnf.value = NULL;
+    cnf.name = (char *)"digitalSignature";
+    sk_CONF_VALUE_push(nval, &cnf);
+    cnf.name = (char *)"CRL Sign";
+    sk_CONF_VALUE_push(nval, &cnf);
+    ERR_clear_error();
+    bs = v2i_ASN1_BIT_STRING(&m, NULL, nval);
+    out_ptr("bitst.v2i.ptr", bs);
+    if (bs != NULL) {
+        der = NULL;
+        n = i2d_ASN1_BIT_STRING(bs, &der);
+        out_hex("bitst.v2i.der", der, n > 0 ? n : 0);
+        OPENSSL_free(der);
+        ASN1_BIT_STRING_free(bs);
+    }
+    out_err("bitst.v2i.err");
+    sk_CONF_VALUE_free(nval);
+
+    /* The unknown-name refusal. */
+    nval = sk_CONF_VALUE_new_null();
+    cnf.name = (char *)"notABit";
+    sk_CONF_VALUE_push(nval, &cnf);
+    ERR_clear_error();
+    bs = v2i_ASN1_BIT_STRING(&m, NULL, nval);
+    out_ptr("bitst.badname.ptr", bs);
+    out_err("bitst.badname.err");
+    if (bs != NULL)
+        ASN1_BIT_STRING_free(bs);
+    sk_CONF_VALUE_free(nval);
+}
+
 int main(void)
 {
     OSSL_STORE_LOADER *loader;
@@ -3161,6 +3491,15 @@ int main(void)
     drive_x509_10_14_6_crld();
 
     drive_v3_hubs();
+
+    /* ----- Phase 10.14.4's generator: `ASN1_generate_v3`/`ASN1_generate_nconf` ----- */
+    drive_asn1_generate();
+
+    /* ----- Phase 10.14.6's `v2i` cluster: the generator's first consumer ----- */
+    drive_v2i_cluster();
+
+    /* ----- Phase 10.14.6's `v3_bitst.c` tables and their two exported callbacks ----- */
+    drive_v3_bitst();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

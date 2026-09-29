@@ -126,8 +126,8 @@
       {
         "module": "src/asn1/asn1_gen.rs",
         "phase": 5,
-        "phase_source": "module-declaration",
-        "share": "1/1",
+        "phase_source": "export-ownership",
+        "share": "3/3",
         "translation_unit": "crypto/asn1/asn1_gen.c"
       },
       {
@@ -2973,6 +2973,13 @@
         "translation_unit": "crypto/x509/v3_bcons.c"
       },
       {
+        "module": "src/x509/v3_bitst.rs",
+        "phase": 11,
+        "phase_source": "export-ownership",
+        "share": "2/2",
+        "translation_unit": "crypto/x509/v3_bitst.c"
+      },
+      {
         "module": "src/x509/v3_conf.rs",
         "phase": 11,
         "phase_source": "export-ownership",
@@ -3039,7 +3046,7 @@
         "module": "src/x509/v3_san.rs",
         "phase": 11,
         "phase_source": "export-ownership",
-        "share": "3/3",
+        "share": "7/7",
         "translation_unit": "crypto/x509/v3_san.c"
       },
       {
@@ -58842,6 +58849,72 @@
           "src/x509/v3_bcons.rs"
         ],
         "tu": "crypto/x509/v3_bcons.c"
+      },
+      {
+        "identifiers": [
+          "ASN1_BIT_STRING",
+          "ASN1_BIT_STRING_free",
+          "ASN1_BIT_STRING_get_bit",
+          "ASN1_BIT_STRING_new",
+          "ASN1_BIT_STRING_set_bit",
+          "BIT_STRING_BITNAME",
+          "CONF_VALUE",
+          "ERR_LIB_X509V3",
+          "ERR_R_ASN1_LIB",
+          "ERR_raise",
+          "ERR_raise_data",
+          "EXT_BITSTRING",
+          "NID_key_usage",
+          "NID_netscape_cert_type",
+          "NULL",
+          "STACK_OF",
+          "X509V3_CTX",
+          "X509V3_EXT_METHOD",
+          "X509V3_R_UNKNOWN_BIT_STRING_ARGUMENT",
+          "X509V3_add_value",
+          "bitnum",
+          "bits",
+          "bnam",
+          "break",
+          "bs",
+          "conf",
+          "const",
+          "continue",
+          "ctx",
+          "for",
+          "h",
+          "i",
+          "i2v_ASN1_BIT_STRING",
+          "if",
+          "include",
+          "int",
+          "key_usage_type_table",
+          "last_seen_bit",
+          "lname",
+          "method",
+          "name",
+          "ns_cert_type_table",
+          "nval",
+          "openssl",
+          "ossl_v3_key_usage",
+          "ossl_v3_nscert",
+          "ret",
+          "return",
+          "sk_CONF_VALUE_num",
+          "sk_CONF_VALUE_value",
+          "sname",
+          "static",
+          "stdio",
+          "strcmp",
+          "usr_data",
+          "v2i_ASN1_BIT_STRING",
+          "val",
+          "x509v3"
+        ],
+        "modules": [
+          "src/x509/v3_bitst.rs"
+        ],
+        "tu": "crypto/x509/v3_bitst.c"
       },
       {
         "identifiers": [

@@ -942,3 +942,83 @@ The remaining distance is therefore **49 tables over 32 units** -- 33 blocked ov
 units / 2,714 lines are now 22 closure-ready units -- plus the **24-name closure** D463 measured over
 17 further units. The next real move is two-bite: land **`ASN1_generate_v3`/`ASN1_generate_nconf`**
 (the `v2i` cluster's one blocker), then the now-closure-ready table units, then the array.
+
+**`ASN1_generate_v3` lands, and it is the `v2i` cluster's one name.** The fifteenth pulled-forward
+slice is task 1 of the D465 hand-off. `crypto/asn1/asn1_gen.c` (794 lines) now transcribes whole
+into `src/asn1/asn1_gen.rs`: `ASN1_generate_v3` (`:90-97`) and `ASN1_generate_nconf`
+(`:79-88`), the generator core `generate_v3` (`:99-247`), its parse callback `asn1_cb` (`:249-352`),
+`parse_tagging` (`:354-402`), `asn1_multi` (`:406-467`), `append_exp` (`:469-503`),
+`asn1_str2type` (`:583-748`) and `bitstr_cb` (`:750-768`), with the `ASN1_str2mask` table Phase 5
+already landed. The `X509V3_CTX` the pair takes is `src/x509/v3_conf.rs`'s (10.14.4), which is why
+Phase 5 could not land them and this slice can.
+
+**The `v2i` cluster lands with it.** `src/x509/v3_san.rs` now transcribes `do_othername`
+(`:631-662`), `do_dirname` (`:664-689`), `a2i_GENERAL_NAME` (`:503-590`), `v2i_GENERAL_NAME_ex`
+(`:592-629`), `v2i_GENERAL_NAME` (`:497-501`) and `v2i_GENERAL_NAMES` (`:470-495`). **Four names
+stay withheld**, each with its blocker, and `ossl_v3_alt` with them: `v2i_subject_alt` (`:377-413`)
+and `copy_email` (`:419-468`) need `X509_REQ_get_subject_name` (`x509_req.c`, 10.14.11);
+`v2i_issuer_alt` (`:301-332`) and `copy_issuer` (`:336-375`) need the withheld dispatch
+`X509V3_EXT_d2i` (`v3_lib.rs`); the one table's two rows name two of those, so it is withheld whole
+(`prerequisites.json` divergence row, unchanged). **The readiness re-measurement moves closure-ready
+table units from 34 to 36** (`v3_crld.c` and `v3_info.c` are now READY) and blocked from 10 to 8.
+
+**The differential court found the previous slice's declared reason codes were wrong, and they were
+fixed at the root.** `crypto/x509/v3_san.c` is not in `gen_err_raise_sites.py`, so the `V3_SAN_*`
+coordinates are declared locally. Their reason values had been transcribed against the wrong
+header and were off by everything: `v2i_GENERAL_NAME_ex`'s missing-value raise read `109` where
+`X509V3_R_MISSING_VALUE` is `124`, and its unsupported-option raise read `110` where
+`X509V3_R_UNSUPPORTED_OPTION` is `117`, with `ERR_R_ASN1_LIB` typed `524557` against its own
+`524301`. The first `RT-STORE` run of the new arms reported exactly those two coordinates as
+residuals, so the constants were re-read from `x509v3err.h` and `err.h`, both reachable ones pinned
+by new refusal arms (bad RID, bad IP, missing section, malformed othername, unsupported type, missing
+value). `v3_info.c` did **not** land: its `i2v` callback's `BIO_snprintf` and its `v2i`'s
+never-assigned `acc->location` make it a separate bite, and it is named withheld rather than half
+landed.
+
+**`v3_bitst.c` lands whole, the first table unit of the 22.** `src/x509/v3_bitst.rs` transcribes the
+100-line unit: `ns_cert_type_table` (`:16-26`), `key_usage_type_table` (`:28-40`), the two
+`EXT_BITSTRING` rows `ossl_v3_nscert`/`ossl_v3_key_usage` (`:42-43`) and the two exported callbacks
+`i2v_ASN1_BIT_STRING` (`:45-65`) and `v2i_ASN1_BIT_STRING` (`:67-100`), each row's `usr_data`
+pointing at its Rust table. `v3_bitst.c`'s three raise coordinates are declared locally. The
+prototype court caught a `*const`/`*mut` mismatch on the two callbacks' method parameter against the
+authority's own prototypes, so both are `*mut` and the rows cast through a `const fn`, the pattern
+`v3_ia5.rs` set. **The crate now defines 16 of the 63 tables.**
+
+**The D462 flake was REPRODUCED, and it is a real parallel-safety defect.** The second full
+`cargo test --lib` of this slice's group-2 verification failed **1116 passed, 1 failed**:
+`evp::algorithm::tests::a_refused_precondition_is_success_and_skips_the_map`, panicking at
+`src/evp/algorithm.rs:576` with `assertion left == right failed  left: 2  right: 1`, on the
+**parallel** run (the serial `--test-threads=1` run just before it passed 1117). The tree at the
+moment of the run carried only this session's source edits and regenerated evidence -- no mid-edit
+window, which is D462's leading explanation and is therefore **falsified**. The cause is on the
+face of the test: five sibling tests in `evp::algorithm` share the process-global `SAW` array and
+the `PRE_RESULT`/`PRE_ERRORS`/`POST_RESULT` statics with no `test_support::lock_global_state`, so
+two of them interleaved and `pre` was counted twice. That is precisely the hazard the parallel gate
+exists to catch (D462's stated policy: "a test that touches a global is supposed to take
+`lock_global_state`"), so the five tests now take the crate lock; six parallel module runs and
+three more full parallel suite runs are green. No test was skipped, deleted or weakened, and no
+assertion was relaxed.
+
+**The court grew where the surface did.** `RT-STORE` moves from **865 to 981 observations**: the
+62 generator arms (twelve scalars, the tags, the config-backed `SEQUENCE`, the two refusals), the
+`v2i` cluster (five `CONF_VALUE` types, `dirName`/`otherName` under a real `NCONF`, a two-entry
+`v2i_GENERAL_NAMES`, and six per-type refusals) and the four `v3_bitst` arms, each popping its own
+error queue first (D455). The 109-court total moves from **45,908 to 46,024**. `implemented_surface`
+moves from 3,741 to **3,749** symbols (the eight new exports). Phase 5's ledger is **unchanged** at
+`implemented 474 / deferred 91`: the two generator exports were never Phase-5 rows but Phase-11's
+(`phase5-obligations.json` carries them at `owning_phase: 11`), so landing them moves the surface
+and not that ledger -- and no Phase-11 row is created, which is why Phase 11 still derives
+`not-started`.
+
+**The chain did not move.** `standard_exts[]` is still not published (47 tables missing), so
+`X509V3_EXT_get_nid`/`_get`/`_add_alias`/`_EXT_d2i`/`_get_d2i`/`_add1_i2d` stay withheld,
+`X509_get_ext_d2i` stays withheld, `ossl_x509v3_cache_extensions` stays unreachable, and
+`PKCS12_parse` and `OSSL_STORE_load` stay open. Phase-10 counts are unchanged at
+**`296 implemented / 2 open`** exports and **`636 implemented / 0 open`** provider rows, and Phase 11
+still derives `not-started`.
+
+The remaining distance is **47 of the 63 tables** -- 16 are landed -- over the 8 blocked units and
+the 36 closure-ready units (13 of which already carry landed tables), plus D463's 24-name closure
+over 17 further units. The next real move is the closure-ready table units -- starting with
+`v3_crld.c` and `v3_info.c`, now unblocked by the `v2i` cluster -- then the array, then
+`PKCS12_parse` and `OSSL_STORE_load`.

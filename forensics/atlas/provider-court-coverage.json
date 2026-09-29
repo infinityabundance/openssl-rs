@@ -6660,7 +6660,8 @@
         ],
         "courts": [
           "RT-DIGEST",
-          "RT-CIPHER"
+          "RT-CIPHER",
+          "RT-STORE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_CIPHER",
@@ -8056,7 +8057,8 @@
         ],
         "courts": [
           "RT-DIGEST",
-          "RT-CIPHER"
+          "RT-CIPHER",
+          "RT-STORE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_DIGEST",
@@ -14331,7 +14333,7 @@
     {
       "name": "court:RT-STORE:rt_store_probe.c",
       "path": "courts/phase10/rt_store_probe.c",
-      "sha256": "546c42a6958cd3f96d14231185feaaccfbde39be8e2a67df70c97ed72f54063f"
+      "sha256": "0b5ae11cd0622fe780bdaf3e4332c124e18e1dc1c6f62695c2650c0eb5410597"
     }
   ],
   "kind": "provider-court-coverage",
