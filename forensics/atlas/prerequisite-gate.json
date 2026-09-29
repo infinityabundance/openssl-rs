@@ -8,8 +8,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 90,
-      "language_surface_not_modelled_by_name": 6399,
+      "covered_by_a_divergence": 82,
+      "language_surface_not_modelled_by_name": 6454,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -38,16 +38,8 @@
         "ossl_lib_ctx_write_lock": 2,
         "ossl_release_default_drbg_ctx": 2,
         "ossl_serial_number_print": 1,
-        "ossl_v3_aa_issuing_dist_point": 1,
         "ossl_v3_alt": 1,
-        "ossl_v3_crl_hold": 1,
-        "ossl_v3_crl_invdate": 1,
-        "ossl_v3_crld": 1,
-        "ossl_v3_freshest_crl": 1,
-        "ossl_v3_idp": 1,
         "ossl_v3_issuer_sign_tool": 1,
-        "ossl_v3_skey_id": 1,
-        "ossl_v3_time_specification": 1,
         "ossl_x509_add_cert_new": 2,
         "ossl_x509_add_certs_new": 1,
         "ossl_x509_print_ex_brief": 1,
@@ -243,7 +235,7 @@
         "crypto/engine/tb_asnmth.c": 13,
         "crypto/engine/tb_digest.c": 10,
         "crypto/engine/tb_pkmeth.c": 10,
-        "crypto/err/err.c": 78,
+        "crypto/err/err.c": 77,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 20,
@@ -424,11 +416,13 @@
         "crypto/whrlpool/wp_dgst.c": 3,
         "crypto/x509/pcy_lib.c": 8,
         "crypto/x509/t_x509.c": 72,
+        "crypto/x509/v3_asid.c": 40,
         "crypto/x509/v3_battcons.c": 16,
         "crypto/x509/v3_bcons.c": 16,
         "crypto/x509/v3_bitst.c": 11,
-        "crypto/x509/v3_conf.c": 39,
-        "crypto/x509/v3_crld.c": 60,
+        "crypto/x509/v3_conf.c": 38,
+        "crypto/x509/v3_cpols.c": 56,
+        "crypto/x509/v3_crld.c": 53,
         "crypto/x509/v3_enum.c": 6,
         "crypto/x509/v3_extku.c": 22,
         "crypto/x509/v3_genn.c": 23,
@@ -443,10 +437,11 @@
         "crypto/x509/v3_san.c": 33,
         "crypto/x509/v3_sda.c": 14,
         "crypto/x509/v3_skid.c": 11,
-        "crypto/x509/v3_timespec.c": 86,
+        "crypto/x509/v3_sxnet.c": 22,
+        "crypto/x509/v3_timespec.c": 36,
         "crypto/x509/v3_tlsf.c": 23,
         "crypto/x509/v3_utf8.c": 8,
-        "crypto/x509/v3_utl.c": 63,
+        "crypto/x509/v3_utl.c": 62,
         "crypto/x509/x509_att.c": 20,
         "crypto/x509/x509_cmp.c": 29,
         "crypto/x509/x509_def.c": 13,
@@ -460,11 +455,11 @@
         "crypto/x509/x509type.c": 1,
         "crypto/x509/x_all.c": 71,
         "crypto/x509/x_attrib.c": 14,
-        "crypto/x509/x_crl.c": 81,
+        "crypto/x509/x_crl.c": 80,
         "crypto/x509/x_exten.c": 13,
         "crypto/x509/x_name.c": 40,
         "crypto/x509/x_pubkey.c": 42,
-        "crypto/x509/x_x509.c": 33,
+        "crypto/x509/x_x509.c": 31,
         "crypto/x509/x_x509a.c": 14,
         "providers/baseprov.c": 25
       },
@@ -571,12 +566,12 @@
       ]
     },
     "checked": {
-      "authority_units": 403,
-      "crate_modules": 576,
+      "authority_units": 406,
+      "crate_modules": 579,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 4,
-      "divergence_names_covered": 51,
-      "divergence_rows": 17,
+      "divergence_names_covered": 43,
+      "divergence_rows": 15,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -685,7 +680,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "c87cc445ae6c8c326d6349f194cf8ab4ca1c884207695811f57c270cf3a6b3e0",
+  "body_hash": "be4dd4a1b3d7c683234f92b41313c653cb8a4a6ede934ae800e40d72c7215217",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -706,7 +701,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "a6309ab745a76b61f5d68ad50ac4a842458aaa7d754090d5b3da40b79b41f7c1"
+      "sha256": "914229d512738adcef254180a6675f6d953613b65927e522f78f0c246d82063f"
     },
     {
       "name": "symbol-ownership",
@@ -721,7 +716,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9057c6396e5b0d2e7cd108a6d01598068684718ea5f60a47c4d2e6c7fcd275b4"
+      "sha256": "41bfc61a48c6146420cabb24c560ebdef60edd50ec5d9d412e56efa6dc539f48"
     },
     {
       "name": "phase-state",
@@ -731,7 +726,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "e75894389d5e26967398377bbbc004a10e5c595ede399a15307f675bf2bf1b26"
+      "sha256": "ec9b3dd3d95e5113ba61fb347a9fd9364b4cd5caee506f9ed453706ffdbb075a"
     },
     {
       "name": "crate-source-tree",

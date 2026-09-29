@@ -266,3 +266,14 @@ pub mod v3_pcons;
 pub mod v3_pmaps;
 pub mod v3_sda;
 pub mod v3_tlsf;
+
+// The 10.14 closure-ready table units, second batch: `v3_crld.c` (six rows), `v3_asid.c`,
+// `v3_timespec.c`, `v3_cpols.c`, `v3_skid.c` and `v3_sxnet.c`. Each lands its item group(s),
+// callbacks and `OSSL_V3_EXT_METHOD` row(s), and withholds only the published `standard_exts[]` and
+// the six `v3_lib.rs` lookup names (D456). See the module docs and docs/PHASE-10-SUBPHASES.md section 7.
+//
+// `v3_crld`, `v3_skid` and `v3_timespec` already had declarations above (their 10.13/10.14.6
+// blocks); only the three units whose files are new to this batch are declared here.
+pub mod v3_asid;
+pub mod v3_cpols;
+pub mod v3_sxnet;

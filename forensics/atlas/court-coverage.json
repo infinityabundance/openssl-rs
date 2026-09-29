@@ -35,6 +35,51 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "ASIdOrRange_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASIdOrRange_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASIdOrRange_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASIdentifierChoice_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASIdentifierChoice_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASIdentifierChoice_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASIdentifiers_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASIdentifiers_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASIdentifiers_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "ASN1_digest"
       },
       {
@@ -85,6 +130,21 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "ASRange_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASRange_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ASRange_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "AUTHORITY_INFO_ACCESS_free"
       },
       {
@@ -111,6 +171,71 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "BASIC_CONSTRAINTS_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "CERTIFICATEPOLICIES_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "CERTIFICATEPOLICIES_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "CERTIFICATEPOLICIES_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "CRL_DIST_POINTS_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "CRL_DIST_POINTS_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "CRL_DIST_POINTS_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "DIST_POINT_NAME_dup"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "DIST_POINT_NAME_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "DIST_POINT_NAME_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "DIST_POINT_NAME_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "DIST_POINT_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "DIST_POINT_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "DIST_POINT_new"
       },
       {
         "owing_phase": 11,
@@ -595,6 +720,21 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "ISSUING_DIST_POINT_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ISSUING_DIST_POINT_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ISSUING_DIST_POINT_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "NETSCAPE_SPKAC_free"
       },
       {
@@ -651,6 +791,36 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "NETSCAPE_SPKI_verify"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NOTICEREF_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NOTICEREF_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "NOTICEREF_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_AA_DIST_POINT_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_AA_DIST_POINT_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_AA_DIST_POINT_new"
       },
       {
         "owing_phase": 11,
@@ -1155,6 +1325,36 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "POLICYINFO_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICYINFO_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICYINFO_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICYQUALINFO_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICYQUALINFO_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICYQUALINFO_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "POLICY_CONSTRAINTS_free"
       },
       {
@@ -1216,6 +1416,66 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PROXY_POLICY_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNETID_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNETID_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNETID_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNET_add_id_INTEGER"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNET_add_id_asc"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNET_add_id_ulong"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNET_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNET_get_id_INTEGER"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNET_get_id_asc"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNET_get_id_ulong"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNET_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "SXNET_new"
       },
       {
         "owing_phase": 11,
@@ -1536,6 +1796,21 @@
         "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_set_result_ex"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "USERNOTICE_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "USERNOTICE_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "USERNOTICE_new"
       },
       {
         "owing_phase": 11,
@@ -2235,6 +2510,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509_POLICY_NODE_print"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509_PUBKEY_dup"
       },
       {
@@ -2850,6 +3130,36 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509v3_asid_add_id_or_range"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_asid_add_inherit"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_asid_canonize"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_asid_inherits"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_asid_is_canonical"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509v3_asid_subset"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509v3_delete_ext"
       },
       {
@@ -2900,12 +3210,52 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_ASIdOrRange"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_ASIdentifierChoice"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_ASIdentifiers"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_ASRange"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_AUTHORITY_INFO_ACCESS"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "d2i_BASIC_CONSTRAINTS"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_CERTIFICATEPOLICIES"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_CRL_DIST_POINTS"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_DIST_POINT"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_DIST_POINT_NAME"
       },
       {
         "owing_phase": 11,
@@ -2985,12 +3335,27 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_ISSUING_DIST_POINT"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_NETSCAPE_SPKAC"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "d2i_NETSCAPE_SPKI"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_NOTICEREF"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_OSSL_AA_DIST_POINT"
       },
       {
         "owing_phase": 11,
@@ -3115,6 +3480,16 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_POLICYINFO"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_POLICYQUALINFO"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_PROXY_CERT_INFO_EXTENSION"
       },
       {
@@ -3206,6 +3581,21 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "d2i_RSA_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_SXNET"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_SXNETID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_USERNOTICE"
       },
       {
         "owing_phase": 11,
@@ -3330,12 +3720,52 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_ASIdOrRange"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_ASIdentifierChoice"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_ASIdentifiers"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_ASRange"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_AUTHORITY_INFO_ACCESS"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_BASIC_CONSTRAINTS"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_CERTIFICATEPOLICIES"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_CRL_DIST_POINTS"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_DIST_POINT"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_DIST_POINT_NAME"
       },
       {
         "owing_phase": 11,
@@ -3415,12 +3845,27 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_ISSUING_DIST_POINT"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_NETSCAPE_SPKAC"
       },
       {
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_NETSCAPE_SPKI"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_NOTICEREF"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_OSSL_AA_DIST_POINT"
       },
       {
         "owing_phase": 11,
@@ -3555,6 +4000,16 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_POLICYINFO"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_POLICYQUALINFO"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_PROXY_CERT_INFO_EXTENSION"
       },
       {
@@ -3621,6 +4076,21 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_RSA_PUBKEY_fp"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_SXNET"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_SXNETID"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_USERNOTICE"
       },
       {
         "owing_phase": 11,
@@ -27040,7 +27510,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9057c6396e5b0d2e7cd108a6d01598068684718ea5f60a47c4d2e6c7fcd275b4"
+      "sha256": "41bfc61a48c6146420cabb24c560ebdef60edd50ec5d9d412e56efa6dc539f48"
     },
     {
       "name": "symbol-ownership",
@@ -27055,7 +27525,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "1fab1d6883e6ac12e35c496c60c82fcc3e96836a4b11923951928323c10aac2b"
+      "sha256": "68931df37c09fd079b7a06db8a8c6ae33acd74da80e8848bf51813267fe82cac"
     },
     {
       "name": "phase3-courts",
@@ -27065,7 +27535,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "a73d961be0078a983a9968c3889d049c3fd42a38fa4c15b19f928b0d8361c071"
+      "sha256": "402441624ecfe2f4cec27e1227a0ecd364f85d6492c1572cc042fa15177218e4"
     },
     {
       "name": "phase4-courts",
@@ -27075,7 +27545,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "e7dd657a027af42e54cc5d3149641d8616254c8fde119d2d1e0fc3309292b66e"
+      "sha256": "ea210898e50fb93b092d9bbd3ebe2613509f82bb81b1c1d5b0060b8e171accb0"
     },
     {
       "name": "phase5-courts",
@@ -27085,7 +27555,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "ad91ffcb83a98e60c599f40f035cf235deba772a6aff9d01630df8a2bd05a24e"
+      "sha256": "d1f3e8c246a57f7c809bbde7a765fc3e91816c1eb3cb52a9afab9c3204a72b9c"
     },
     {
       "name": "phase6-courts",
@@ -27095,7 +27565,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "6b6dfdaa556f67779be7a8e6de3c73cee3d7ef83f882c8e6b2e5f22fe5c7f50f"
+      "sha256": "4a2ef6209973b192c64a77343df2159c6d8c9460386587057958909886736d94"
     },
     {
       "name": "phase7-courts",
@@ -27105,7 +27575,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "177964daf54f64824710244e48000a217ca60be955ca1d3c1f713e9102634bd2"
+      "sha256": "b9a427e955fa804a931554930f05c7ee60363cdb58eb4708c8fbaaaf50bbaac3"
     },
     {
       "name": "phase8-courts",
@@ -27115,7 +27585,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "a808c5a7f58d8174d40babf83481cc450935ceea5ec75d788d8600958cb2674f"
+      "sha256": "dadc291ef476fdc8f7c46940545362608f1d0fa3ab9335c6758a19ad904d100f"
     },
     {
       "name": "phase9-courts",
@@ -27125,7 +27595,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "e890def6af789cb734dd9f77b34eea85f1357a8aba8e789172144e254cb0d9d0"
+      "sha256": "f3a3ed4d790c24dc554a30ba6a7e34f886c7d0faa9ca8262172e2ad9cd94d4f5"
     },
     {
       "name": "phase10-courts",

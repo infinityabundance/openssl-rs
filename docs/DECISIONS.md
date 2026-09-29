@@ -32858,3 +32858,75 @@ on `ct_x509v3.c`, `ocsp_asn.c`, `AUTHORITY_KEYID_*` in `v3_akeya.c`, `OSSL_ISSUE
 `v3_ac_tgt.c`, `v3_attrdesc.c`, `v3_attrmap.c`, `v3_aaa.c`, `v3_ist.c`, `v3_usernotice.c`) -- plus
 D463's 24-name closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
 `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+## D468 -- the second table batch lands; 41 of 63 tables exist, and a rewrite hazard is caught by reading the authority back
+
+**Six units and eleven tables landed**, each whole: `v3_crld.c` (six rows), `v3_asid.c`,
+`v3_timespec.c`, `v3_cpols.c`, `v3_skid.c` and `v3_sxnet.c`. Tables go from **30 to 41 of 63** and
+`implemented_surface` from 3,749/3,784 to **3,878** symbols. `standard_exts[]` stays withheld, as do
+the six `v3_lib.rs` lookup names and `X509_get_ext_d2i`, so **`PKCS12_parse` and `OSSL_STORE_load`
+stay open** and Phase-10 counts are unchanged at **`296 implemented / 2 open`** exports and **`636
+implemented / 0 open`** provider rows.
+
+**The withholding is by name with its blocker, in both cases a missing type, not a missing effort.**
+`v3_asid.c`'s three path-validation names and its `validation_err` macro are withheld whole because
+they read an `X509_STORE_CTX` and this crate has no `struct x509_store_ctx_st` layout; inventing one
+inside a table unit would be a stub of a Phase-11 type. `v3_skid.c`'s `s2i_skey_id` is withheld
+because its `hash` arm reads `ctx->subject_req->req_info.pubkey` and there is no `X509_REQ` type
+(10.14.11), which is also why the `ossl_v3_skey_id` row's `s2i` slot is `None` rather than a hole;
+`ossl_x509_pubkey_hash` is withheld with it (D453's second reason: closure complete, no reachable
+caller). `v3_crld.c`, `v3_timespec.c`, `v3_cpols.c` and `v3_sxnet.c` withhold nothing beyond the
+array.
+
+**The divergence register moved with the evidence, because the gate forced it to.** The first
+pipeline run of this slice failed at the prerequisite gate with `divergence_record_does_not_match`
+for `ossl_v3_skey_id`, `ossl_v3_time_specification` and `ossl_v3_aa_issuing_dist_point`: the register
+still claimed to cover names the crate had just built. The `v3_timespec.c` and `v3_crld.c` rows are
+retired and the `v3_skid.c` row is narrowed to `ossl_x509_pubkey_hash`; the register goes from 17
+rows to **15**. That is the gate working in the direction it was built for: a record that can keep
+covering a name the crate has since fixed is a record that can hide the next one.
+
+### A rewrite hazard, found by reading the authority back
+
+**The three modules `v3_crld.rs`, `v3_skid.rs` and `v3_timespec.rs` already existed as tracked
+modules** -- the function-granularity landings of 10.13, 10.14.6 and D455. This slice's setup
+truncated them before the work began, on the wrong assumption that they were new files, and the
+transcriptions were then re-derived rather than extended. Two came back whole against the committed
+text (`v3_skid.rs`) or one unused import short of it (`v3_timespec.rs`), verified by diffing the
+non-comment lines. **The third did not.** The `v3_crld.rs` re-derivation inverted
+`DIST_POINT_set_dpname`'s `set` argument, writing `c_int::from(i != 0)` where the authority's
+`X509_NAME_add_entry(dpn->dpname, ne, -1, i ? 0 : 1)` (`crypto/x509/v3_crld.c:541`) is `i == 0`. No
+court can name this row -- it is an internal the admitted DSO does not export -- so nothing but
+reading the authority back would have found it, and that is what found it.
+
+The response is the project's: the file is a superset of its committed self with the one inverted
+bit corrected, the diff against HEAD is recorded here rather than hidden, and the slice adds a
+verification step for the next one -- a re-derived module is checked against both the authority and
+its own committed self. The truncation was avoidable and the honest disposition is to name it as
+this session's error, not as a property of the work: `git ls-files` would have shown the three files
+were tracked. The `gens = NULL` dead assignment the authority writes in `v2i_aaidp` is kept under the
+crate's existing `#[allow(unused_assignments)]` convention (`dsa/check.rs`), not removed to quiet the
+lint.
+
+### Counts, and what did not close
+
+**41 of 63 tables landed, 22 withheld** -- 14 blocked over 8 units and 8 closure-ready over 8 units
+(`v3_admis.c`, `v3_pci.c`, `v3_ac_tgt.c`, `v3_attrdesc.c`, `v3_attrmap.c`, `v3_aaa.c`, `v3_ist.c`,
+`v3_usernotice.c`). `standard_exts[]` was **not** published, so `X509_get_ext_d2i` stays withheld,
+`ossl_x509v3_cache_extensions` stays unreachable, and `PKCS12_parse` and `OSSL_STORE_load` stay open.
+`RT-STORE` stays at **46,024** observations across **109** courts: the rows are internal data the
+admitted DSO does not name. Phase 11 still derives `not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves (no test was
+retried, skipped or weakened). `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D
+warnings` are clean; the first clippy pass over the new modules found 50 lints, 9 applied by
+`clippy --fix` and 41 `undocumented_unsafe_blocks` fixed by hand. The 109-court pipeline prints
+`PIPELINE OK` exit 0; `probe_hygiene.py` read clean, so the `rt_bio_resolve_probe.c` `UNSTABLE` D467
+recorded did not recur.
+
+### The remaining distance
+
+**22 of the 63 tables** (14 blocked over 8 units, 8 closure-ready over 8 units), plus D463's 24-name
+closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
+`ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
