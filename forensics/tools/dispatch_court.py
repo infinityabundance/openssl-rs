@@ -144,6 +144,13 @@ CONF_INT = ("not a provider dispatch: a member of the `CONF_METHOD` vtable, whic
 X509V3_CONF_METHOD_VTABLE = ("not a provider dispatch: a member of `X509V3_CONF_METHOD` "
                              "(`include/openssl/x509v3.h.in:79-85`), declared inline as a plain "
                              "function pointer rather than through `OSSL_CORE_MAKE_FUNC`")
+# `include/openssl/x509v3.h.in:489` -- `struct x509_purpose_st`'s `check_purpose` member (Phase
+# 10's `v3_purp.c`). Like the `X509V3_CONF_METHOD` vtable above, the struct declares it inline as a
+# plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`, so the atlas records no
+# `typedef` for it and the convention rule has no authority name for the crate's alias to join on.
+CHECK_PURPOSE = ("not a provider dispatch: `struct x509_purpose_st`'s `check_purpose` member "
+                 "(`include/openssl/x509v3.h.in:489`), declared inline as a plain function "
+                 "pointer rather than through `OSSL_CORE_MAKE_FUNC`")
 EVP_LEGACY = ("not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback "
               "list in `evp.h`, declared as a plain function pointer rather than through "
               "`OSSL_CORE_MAKE_FUNC`")
@@ -235,6 +242,13 @@ CRATE_LOCAL = "not an authority type: a crate-local callback shape with no heade
 ENCODE_KEY2ANY_TYPEDEF = (
     "not a provider dispatch: the authority declares this `typedef` inside `encode_key2any.c` "
     "itself (`:67-72`), not in an installed header, so the typedefs atlas has no record of it"
+)
+# `crypto/store/store_result.c:317` -- `store_info_new_fn`, the constructor `try_key` settles on.
+# A `.c`-local typedef like `encode_key2any.c`'s pair above, so the typedefs atlas -- whose
+# universe is the installed public surface -- records no name for it.
+STORE_RESULT_TYPEDEF = (
+    "not a provider dispatch: the authority declares this `typedef` inside `store_result.c` "
+    "itself (`:317`), not in an installed header, so the typedefs atlas has no record of it"
 )
 # `providers/implementations/include/prov/drbg.h:59-165` -- `struct prov_drbg_st`'s cached virtual
 # functions (`instantiate`, `uninstantiate`, `reseed`, `generate`) and its two `dnew`/`dfree`
@@ -386,6 +400,8 @@ NOT_A_DISPATCH: dict[str, str] = {
     # --- `X509V3_CONF_METHOD` (`include/openssl/x509v3.h.in:79-85`, Phase 10.14.4) ----------
     "X509V3GetString": X509V3_CONF_METHOD_VTABLE,
     "X509V3GetSection": X509V3_CONF_METHOD_VTABLE,
+    # `struct x509_purpose_st`'s checker (Phase 10's `v3_purp.c`).
+    "CheckPurpose": CHECK_PURPOSE,
     # --- `EVP_CIPHER` / `EVP_MD` legacy callback lists (`evp.h`) -----------------------------
     "CipherDoAllFn": EVP_LEGACY,
     "MdDoAllFn": EVP_LEGACY,
@@ -564,6 +580,8 @@ NOT_A_DISPATCH: dict[str, str] = {
     # typedefs atlas cannot name them and no link can resolve. Landed with the engine (D445).
     "KeyToParamstringFn": ENCODE_KEY2ANY_TYPEDEF,
     "KeyToDerFn": ENCODE_KEY2ANY_TYPEDEF,
+    # `store_result.c`'s `store_info_new_fn` (Phase 10's `OSSL_STORE_load` slice).
+    "StoreInfoNewFn": STORE_RESULT_TYPEDEF,
     "OsslXtsStreamFn": PROV_CIPHER_FUNC_TYPE,
     # The same macro-generated typedef one header over. `cipher_sm4_xts.h:14-17` invokes
     # `PROV_CIPHER_FUNC(void, xts_stream, ...)` with `SM4_KEY` parameters and a trailing `enc` where

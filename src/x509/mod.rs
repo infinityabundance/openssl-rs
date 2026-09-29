@@ -317,8 +317,17 @@ pub mod v3_akid;
 // `standard_exts[]` and the six `v3_lib.rs` lookup names (D456).
 pub mod v3_ncons;
 
+// `crypto/x509/v3_purp.c` -- the X.509 purpose table and the extension cache (`ossl_x509v3_cache_extensions`
+// and `X509_check_purpose`), landed whole now that `x509_ext.c`'s four accessors,
+// `ossl_x509_init_sig_info` and `DIST_POINT_set_dpname` exist.
+pub mod v3_purp;
+
 // `crypto/x509/x509_req.c`'s pulled-forward subset (Phase 11's unit, pulled forward for
 // `v3_san.c`'s `ossl_v3_alt`, exactly as D442 permits): the `X509_REQ`/`X509_REQ_INFO` layouts and
 // `X509_REQ_get_subject_name`, the one name `v2i_subject_alt` reads. The rest of the unit is
 // withheld by name with its blocker in the module doc.
 pub mod x509_req;
+
+// Phase 10.14.12's `crypto/x509/x509_vfy.c` slice -- `X509_self_signed`, the one name the
+// `X509_add_cert` closure waits on; the rest of the verify engine is withheld by name (Phase 11).
+pub mod x509_vfy;

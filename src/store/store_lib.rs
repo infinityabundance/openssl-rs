@@ -9,7 +9,7 @@
 //!
 //! # What lands, and what the measurement says about each
 //!
-//! **Forty-eight of the 49 land.** Every one of their closures is inside the crate:
+//! **All forty-nine land.** Every one of their closures is inside the crate:
 //! the `OSSL_STORE_CTX` state machine (`open`/`open_ex`/`eof`/`error`/`expect`/
 //! `close`/`attach`/`delete`/`supports_search`/`find`), the `OSSL_STORE_INFO`
 //! constructor and accessor family (`new`, `new_NAME`/`new_PARAMS`/`new_PUBKEY`/
@@ -25,30 +25,24 @@
 //! `X509_CRL_up_ref` close [`OSSL_STORE_INFO_get1_CERT`]/[`OSSL_STORE_INFO_get1_CRL`],
 //! `X509_free`/`X509_CRL_free` close the CERT and CRL arms of
 //! [`OSSL_STORE_INFO_free`], and `i2d_X509_NAME` closes the `BY_NAME` and
-//! `BY_ISSUER_SERIAL` arms of [`OSSL_STORE_find`]. The one remaining unlanded name the
-//! authority's object needs is `ossl_store_handle_load_result` (`store_result.c`, whose
-//! `try_cert`/`try_crl`/`try_pkcs12` reach `d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL` —
-//! `d2i_X509`/`d2i_X509_CRL` landed in 10.8, but `d2i_X509_AUX` did not — and
-//! `PKCS12_parse`, withheld by 10.3).
+//! `BY_ISSUER_SERIAL` arms of [`OSSL_STORE_find`].
 //!
-//! # What is withheld, with each one's measured blocker
+//! # The last export lands, with its result handler
 //!
-//! * **[`OSSL_STORE_load`] is withheld whole.** Its fetched branch calls
-//!   `ossl_store_handle_load_result` (`store_result.c`), which is **not defined in
-//!   this crate**; the unit and its `d2i_X509_AUX`/`PKCS12_parse` closure are Phase
-//!   11's and 10.3's. The branch is the function's central fetched path rather than a
-//!   `switch` arm, so it is withheld whole rather than carved; a transcription of only
-//!   its legacy branch would answer `NULL` for every fetched loader, which is a
-//!   behaviour change and not a withheld arm.
+//! [`OSSL_STORE_load`] was the one name left open: its fetched branch calls
+//! `store_result.c`'s `ossl_store_handle_load_result`, whose `try_cert`/`try_crl`/`try_pkcs12`
+//! reach `d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL` and `PKCS12_parse`. `d2i_X509`/`d2i_X509_CRL`
+//! landed in 10.8, `d2i_X509_AUX` in 10.12 (with the `X509_CERT_AUX` item), and `PKCS12_parse`
+//! in 10.3, so the whole `store_result.c` unit now lands in [`super::store_result`] and this
+//! function lands with it. **All forty-nine exports are landed.**
 //!
-//! # The `file` provider rows are published, but this module still does not reach them
+//! # The `file` provider rows are published, and this module now reaches them
 //!
 //! 10.16 publishes both `file` `OSSL_OP_STORE` rows (`src/provider/file_store.rs`), so
-//! `OSSL_STORE_LOADER_fetch`/`do_all_provided` resolve a loader and `RT-STORE` calls them. This
-//! module's [`OSSL_STORE_load`] is still withheld: its fetched branch would drive that loader
-//! through `store_result.c`'s `ossl_store_handle_load_result`, which is not defined here. The two
-//! are independent — a row that resolves is exactly the precondition the fetch needed, and this
-//! function is the remaining consumer that is not yet landed.
+//! `OSSL_STORE_LOADER_fetch`/`do_all_provided` resolve a loader and `RT-STORE` calls them.
+//! [`OSSL_STORE_load`]'s fetched branch now drives that loader through
+//! `store_result.c`'s `ossl_store_handle_load_result`, landed in [`super::store_result`];
+//! the row that resolves is exactly the loader this function consumes.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -83,7 +77,9 @@ use crate::runtime::err::{
     err_sites, raise_site, raise_site_data, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
-use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_pop_free, OpenSslStack};
+use crate::runtime::stack::{
+    OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_shift, OpenSslStack,
+};
 use crate::runtime::str::{OPENSSL_strcasecmp, OPENSSL_strlcpy};
 use crate::ui::ui_lib::UiMethod;
 use crate::x509::x509_set::X509_up_ref;
@@ -95,6 +91,7 @@ use super::store_meth::{
     OSSL_STORE_LOADER_fetch, OSSL_STORE_LOADER_free, OSSL_STORE_LOADER_get0_provider,
 };
 use super::store_register::ossl_store_get0_loader_int;
+use super::store_result::{ossl_store_handle_load_result, OsslStoreLoadResultData};
 use super::{
     OsslStoreLoader, OsslStoreLoaderCtx, OSSL_STORE_INFO_CERT, OSSL_STORE_INFO_CRL,
     OSSL_STORE_INFO_NAME, OSSL_STORE_INFO_PARAMS, OSSL_STORE_INFO_PKEY, OSSL_STORE_INFO_PUBKEY,
@@ -442,16 +439,13 @@ pub struct OsslStoreCtx {
     /// `OSSL_STORE_LOADER_CTX *loader_ctx`.
     pub(crate) loader_ctx: *mut OsslStoreLoaderCtx,
     /// `OSSL_STORE_post_process_info_fn post_process`.
-    #[allow(dead_code)]
-    // written by `OSSL_STORE_open_ex`; read by the withheld `OSSL_STORE_load`
+    // written by `OSSL_STORE_open_ex`; read by `OSSL_STORE_load`
     pub(crate) post_process: Option<OsslStorePostProcessInfoFn>,
     /// `void *post_process_data`.
-    #[allow(dead_code)]
-    // written by `OSSL_STORE_open_ex`; read by the withheld `OSSL_STORE_load`
+    // written by `OSSL_STORE_open_ex`; read by `OSSL_STORE_load`
     pub(crate) post_process_data: *mut c_void,
     /// `int expected_type` — written by `OSSL_STORE_expect`.
-    #[allow(dead_code)]
-    // written by `OSSL_STORE_expect`; read by the withheld `OSSL_STORE_load`
+    // written by `OSSL_STORE_expect`; read by `OSSL_STORE_load`
     pub(crate) expected_type: c_int,
     /// `char *properties` — the owned copy of the property query.
     pub(crate) properties: *mut c_char,
@@ -1119,6 +1113,124 @@ pub unsafe extern "C" fn OSSL_STORE_find(
     }
 
     ret
+}
+
+/// `OSSL_STORE_INFO *OSSL_STORE_load(OSSL_STORE_CTX *ctx)` — `store_lib.c:420-490`.
+///
+/// The unit's last export, and the crate's `src/store/mod.rs` doc named it as the one name
+/// withheld. Its fetched branch hands `store_result.c`'s `ossl_store_handle_load_result` — now
+/// landed in [`super::store_result`] — to the loader's `p_load`, and its legacy branch calls
+/// the loader's own `load`. Both branches then run the context's post-process callback, clear
+/// the internally cached passphrase, and drop any object whose type the caller did not expect.
+///
+/// # Safety
+/// `ctx` must be NULL or a live `OsslStoreCtx`; the loader's `p_load`/`load` and the
+/// post-process callback must tolerate the arguments supplied here.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_STORE_load(ctx: *mut OsslStoreCtx) -> *mut OsslStoreInfo {
+    let mut v: *mut OsslStoreInfo = ptr::null_mut();
+
+    // SAFETY: `ctx` is live per the contract.
+    unsafe { (*ctx).loading = 1 };
+    'again: loop {
+        // SAFETY: `ctx` is live per the contract.
+        if unsafe { OSSL_STORE_eof(ctx) } != 0 {
+            return ptr::null_mut();
+        }
+
+        // SAFETY: `ctx` is live per the contract; `cached_info` is NULL or a live stack.
+        if !unsafe { (*ctx).cached_info }.is_null() {
+            // SAFETY: `cached_info` is a live stack of `OSSL_STORE_INFO`.
+            v = unsafe { OPENSSL_sk_shift((*ctx).cached_info) }.cast::<OsslStoreInfo>();
+        } else {
+            // SAFETY: `ctx` is live per the contract.
+            if !unsafe { (*ctx).fetched_loader }.is_null() {
+                let mut load_data = OsslStoreLoadResultData {
+                    v: ptr::null_mut(),
+                    ctx,
+                };
+                // SAFETY: `ctx` is live per the contract.
+                unsafe { (*ctx).error_flag = 0 };
+
+                // SAFETY: `loader_ctx` is the fetched loader's own context; the object callback
+                // and its argument are this frame's, and the passphrase callback and the context's
+                // passphrase data are live and owned here.
+                let loaded = unsafe {
+                    if let Some(p_load) = (*(*ctx).fetched_loader).p_load {
+                        p_load(
+                            (*ctx).loader_ctx.cast::<c_void>(),
+                            Some(ossl_store_handle_load_result),
+                            ptr::addr_of_mut!(load_data).cast::<c_void>(),
+                            Some(ossl_pw_passphrase_callback_dec),
+                            ptr::addr_of_mut!((*ctx).pwdata).cast::<c_void>(),
+                        )
+                    } else {
+                        0
+                    }
+                };
+                if loaded == 0 {
+                    // SAFETY: `ctx` is live per the contract.
+                    unsafe { (*ctx).error_flag = 1 };
+                    return ptr::null_mut();
+                }
+                v = load_data.v;
+            }
+            // SAFETY: `ctx` is live per the contract.
+            if unsafe { (*ctx).fetched_loader }.is_null() {
+                // SAFETY: `loader_ctx` is the legacy loader's own context; the UI method and its
+                // data are the passphrase data's own union member.
+                v = unsafe {
+                    if let Some(load) = (*(*ctx).loader).load {
+                        load(
+                            (*ctx).loader_ctx,
+                            (*ctx).pwdata.payload.ui_method.ui_method.cast::<c_void>(),
+                            (*ctx).pwdata.payload.ui_method.ui_method_data,
+                        )
+                        .cast::<OsslStoreInfo>()
+                    } else {
+                        ptr::null_mut()
+                    }
+                };
+            }
+        }
+
+        // SAFETY: `ctx` is live per the contract.
+        if let Some(post_process) = unsafe { (*ctx).post_process } {
+            if !v.is_null() {
+                // SAFETY: `v` is a live object; the callback and its data are the caller's.
+                v = unsafe { post_process(v, (*ctx).post_process_data) };
+
+                /*
+                 * By returning NULL, the callback decides that this object should
+                 * be ignored.
+                 */
+                if v.is_null() {
+                    continue 'again;
+                }
+            }
+        }
+
+        /* Clear any internally cached passphrase */
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { ossl_pw_clear_passphrase_cache(&mut (*ctx).pwdata) };
+
+        // SAFETY: `ctx` is live per the contract; `expected_type` is its own.
+        if !v.is_null() && unsafe { (*ctx).expected_type } != 0 {
+            // SAFETY: `v` is live per the guard above.
+            let returned_type = unsafe { OSSL_STORE_INFO_get_type(v) };
+
+            if returned_type != OSSL_STORE_INFO_NAME && returned_type != 0 {
+                // SAFETY: `ctx` is live per the contract.
+                if unsafe { (*ctx).expected_type } != returned_type {
+                    // SAFETY: `v` is a live object this frame owns.
+                    unsafe { OSSL_STORE_INFO_free(v) };
+                    continue 'again;
+                }
+            }
+        }
+
+        return v;
+    }
 }
 
 /// `int OSSL_STORE_delete(const char *uri, OSSL_LIB_CTX *libctx, const char *propq,

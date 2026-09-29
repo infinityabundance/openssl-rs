@@ -1,54 +1,44 @@
 //! `crypto/x509/x509_ext.c` — the `X509`/`X509_CRL`/`X509_REVOKED` extension accessors. Phase
-//! 10.14.5, landed at function granularity.
+//! 10.14.5, landed whole.
 //!
-//! `crypto/x509/x509_ext.c` is 170 lines and publishes 26 functions: the same nine-function
+//! `crypto/x509/x509_ext.c` is 170 lines and publishes 27 functions: the same nine-function
 //! extension surface (`_get_ext_count`, `_get_ext_by_NID`/`_by_OBJ`/`_by_critical`, `_get_ext`,
 //! `_delete_ext`, `_add_ext`, `_get_ext_d2i`, `_add1_ext_i2d`) over three carriers — `X509_CRL`
-//! (`:19-76`), `X509` (`:78-123`) and `X509_REVOKED` (`:125-169`).
-//! Every function is a one-line delegation to [`crate::x509::x509_v3`]'s list primitives
-//! (`X509v3_get_ext_count`/`_by_NID`/`_by_OBJ`/`_by_critical`/`_get_ext`/`_delete_ext`/
-//! `_add_ext`) or to the two withheld lookups in [`crate::x509::v3_lib`].
+//! (`:19-76`), `X509` (`:78-123`) and `X509_REVOKED` (`:125-169`) — plus the one `static` helper
+//! [`delete_ext`] (`:45-55`). Every function is a one-line delegation to [`crate::x509::x509_v3`]'s
+//! list primitives (`X509v3_get_ext_count`/`_by_NID`/`_by_OBJ`/`_by_critical`/`_get_ext`/
+//! `_delete_ext`/`_add_ext`) or to the two value-level lookups `X509V3_get_d2i`/`X509V3_add1_i2d`
+//! in [`crate::x509::v3_lib`].
 //!
-//! ## What lands, and what is withheld
+//! ## Nothing withheld
 //!
-//! **21 of the 27 containers land**: the count/by-NID/by-OBJ/by-critical/get accessors and the
-//! add/delete mutators for all three carriers. Their closure is satisfied by 10.11's `x509_v3.rs`
-//! alone, and the three carriers (`X509.cert_info.extensions`, `X509Crl.crl.extensions`,
-//! `X509Revoked.extensions`) are 10.8's landed structs, so every one is writable today. The
-//! `X509_EXTENSION` destructor `delete_ext`'s empty-list case passes to `OPENSSL_sk_pop_free` is
-//! 10.8's `x_exten.rs`.
+//! **All 27 containers land**, alongside the `static` [`delete_ext`] helper: the
+//! count/by-NID/by-OBJ/by-critical/get accessors, the add/delete mutators and the d2i/i2d value
+//! pair for all three carriers. The list primitives are 10.11's `x509_v3.rs`; the three carriers
+//! (`X509.cert_info.extensions`, `X509Crl.crl.extensions`, `X509Revoked.extensions`) are 10.8's
+//! landed structs, so every one is writable. The `X509_EXTENSION` destructor [`delete_ext`]'s
+//! empty-list case passes to `OPENSSL_sk_pop_free` is 10.8's `x_exten.rs`.
 //!
-//! **Six are withheld by name**, each with the same blocker: the two value-level lookups
-//! `X509V3_get_d2i` and `X509V3_add1_i2d` in [`crate::x509::v3_lib`], which are themselves
-//! withheld behind `standard_exts[]` — the table of **63 `ossl_v3_*` tables** this subphase
-//! cannot complete. They are:
-//!
-//! | withheld | authority lines | blocker |
-//! |---|---|---|
-//! | `X509_CRL_get_ext_d2i` | `:62-65` | `X509V3_get_d2i` (`v3_lib.c`) |
-//! | `X509_CRL_add1_ext_i2d` | `:67-72` | `X509V3_add1_i2d` (`v3_lib.c`) |
-//! | `X509_get_ext_d2i` | `:113-116` | `X509V3_get_d2i` (`v3_lib.c`) |
-//! | `X509_add1_ext_i2d` | `:118-123` | `X509V3_add1_i2d` (`v3_lib.c`) |
-//! | `X509_REVOKED_get_ext_d2i` | `:161-164` | `X509V3_get_d2i` (`v3_lib.c`) |
-//! | `X509_REVOKED_add1_ext_i2d` | `:166-169` | `X509V3_add1_i2d` (`v3_lib.c`) |
-//!
-//! Nothing is stubbed: the six are named rather than declared, so the crate's surface is only
-//! what the 21 land.
+//! The two value-level lookups that once withheld the six d2i/i2d names are now landed in
+//! [`crate::x509::v3_lib`]: `X509V3_get_d2i` and `X509V3_add1_i2d`, the first gated only on the
+//! published `standard_exts[]` table (**63/63 rows**) and its `X509V3_EXT_d2i` dispatch, the
+//! second additionally on `X509V3_EXT_i2d` (`v3_conf.rs`). Nothing in this unit is stubbed or
+//! withheld.
 //!
 //! ## Why this unit sits in 10.14.5
 //!
 //! `x509_ext.c` was never named in section 7's table; D459 assigned it here because its only
-//! callees are `v3_lib.c`'s two halves. `X509_get_ext`/`_by_NID`/`_count` are three of the six
-//! names `ossl_x509v3_cache_extensions` (`v3_purp.c`) was measured to need — the other three are
-//! `X509_get_ext_d2i` (withheld here), `ossl_x509_init_sig_info` (`x509_set.c`) and
-//! `DIST_POINT_set_dpname` (`v3_crld.c`) — so this landing removes three of that function's six
-//! blockers and leaves the one that is the whole `standard_exts[]` wall.
+//! callees are `v3_lib.c`'s two halves. `X509_get_ext`/`_by_NID`/`_count`/`_get_ext_d2i` are four
+//! of the six names `ossl_x509v3_cache_extensions` (`v3_purp.c`) was measured to need — the other
+//! two are `ossl_x509_init_sig_info` (`x509_set.c`) and `DIST_POINT_set_dpname` (`v3_crld.c`) —
+//! so this landing removes four of that function's six blockers and leaves only the two outside
+//! this unit.
 //!
 //! ## The court
 //!
 //! `RT-STORE`'s 10.14.5 arms drive the six accessors over the fixed certificate/CRL DER the probe
 //! already carries, and the add/delete mutators over a probe-built `X509_EXTENSION`, each popping
-//! the error queue first (D455's lesson). The withheld six are not driven.
+//! the error queue first (D455's lesson). The d2i/i2d pair is driven over the same fixed DER.
 //!
 //! ## No raise
 //!
@@ -59,10 +49,11 @@
 
 #![allow(non_snake_case)]
 
-use core::ffi::{c_int, c_void};
+use core::ffi::{c_int, c_ulong, c_void};
 use core::ptr;
 
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OpenSslStack};
+use crate::x509::v3_lib::{X509V3_add1_i2d, X509V3_get_d2i};
 use crate::x509::x509_v3::{
     X509v3_add_ext, X509v3_delete_ext, X509v3_get_ext, X509v3_get_ext_by_NID,
     X509v3_get_ext_by_OBJ, X509v3_get_ext_by_critical, X509v3_get_ext_count,
@@ -209,8 +200,43 @@ pub unsafe extern "C" fn X509_CRL_add_ext(
     c_int::from(!unsafe { X509v3_add_ext(&raw mut (*x).crl.extensions, ex, loc) }.is_null())
 }
 
-// `X509_CRL_get_ext_d2i` (`:62-65`) and `X509_CRL_add1_ext_i2d` (`:67-72`) are withheld by name;
-// their blocker is `X509V3_get_d2i`/`X509V3_add1_i2d` in `crate::x509::v3_lib`.
+/// `void *X509_CRL_get_ext_d2i(const X509_CRL *x, int nid, int *crit, int *idx)` —
+/// `crypto/x509/x509_ext.c:62-65`.
+///
+/// # Safety
+///
+/// `x` must be a live `X509_CRL`; `crit`/`idx` must be NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_get_ext_d2i(
+    x: *const X509Crl,
+    nid: c_int,
+    crit: *mut c_int,
+    idx: *mut c_int,
+) -> *mut c_void {
+    // SAFETY: `x` is live per the contract; `X509V3_get_d2i` accepts a NULL or live stack and
+    // NULL or writable `crit`/`idx`.
+    unsafe { X509V3_get_d2i((*x).crl.extensions, nid, crit, idx) }
+}
+
+/// `int X509_CRL_add1_ext_i2d(X509_CRL *x, int nid, void *value, int crit, unsigned long flags)` —
+/// `crypto/x509/x509_ext.c:67-72`.
+///
+/// # Safety
+///
+/// `x` must be a live `X509_CRL`; `value` must be the internal structure the `nid` method's `i2d`
+/// expects.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_add1_ext_i2d(
+    x: *mut X509Crl,
+    nid: c_int,
+    value: *mut c_void,
+    crit: c_int,
+    flags: c_ulong,
+) -> c_int {
+    // SAFETY: `x` is live, so its `crl.extensions` field is a writable slot; `value` is the
+    // internal structure the `nid` method's `i2d` expects.
+    unsafe { X509V3_add1_i2d(&raw mut (*x).crl.extensions, nid, value, crit, flags) }
+}
 
 // ---------------------------------------------------------------------------------------------
 // X509 — `crypto/x509/x509_ext.c:78-123`
@@ -306,8 +332,45 @@ pub unsafe extern "C" fn X509_add_ext(x: *mut X509, ex: *mut X509Extension, loc:
     c_int::from(!unsafe { X509v3_add_ext(&raw mut (*x).cert_info.extensions, ex, loc) }.is_null())
 }
 
-// `X509_get_ext_d2i` (`:113-116`) and `X509_add1_ext_i2d` (`:118-123`) are withheld by name;
-// their blocker is `X509V3_get_d2i`/`X509V3_add1_i2d` in `crate::x509::v3_lib`.
+/// `void *X509_get_ext_d2i(const X509 *x, int nid, int *crit, int *idx)` —
+/// `crypto/x509/x509_ext.c:113-116`.
+///
+/// One of the six names `ossl_x509v3_cache_extensions` (`v3_purp.c`) needs.
+///
+/// # Safety
+///
+/// `x` must be a live `X509`; `crit`/`idx` must be NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn X509_get_ext_d2i(
+    x: *const X509,
+    nid: c_int,
+    crit: *mut c_int,
+    idx: *mut c_int,
+) -> *mut c_void {
+    // SAFETY: `x` is live per the contract; `X509V3_get_d2i` accepts a NULL or live stack and
+    // NULL or writable `crit`/`idx`.
+    unsafe { X509V3_get_d2i((*x).cert_info.extensions, nid, crit, idx) }
+}
+
+/// `int X509_add1_ext_i2d(X509 *x, int nid, void *value, int crit, unsigned long flags)` —
+/// `crypto/x509/x509_ext.c:118-123`.
+///
+/// # Safety
+///
+/// `x` must be a live `X509`; `value` must be the internal structure the `nid` method's `i2d`
+/// expects.
+#[no_mangle]
+pub unsafe extern "C" fn X509_add1_ext_i2d(
+    x: *mut X509,
+    nid: c_int,
+    value: *mut c_void,
+    crit: c_int,
+    flags: c_ulong,
+) -> c_int {
+    // SAFETY: `x` is live, so its `cert_info.extensions` field is a writable slot; `value` is the
+    // internal structure the `nid` method's `i2d` expects.
+    unsafe { X509V3_add1_i2d(&raw mut (*x).cert_info.extensions, nid, value, crit, flags) }
+}
 
 // ---------------------------------------------------------------------------------------------
 // X509_REVOKED — `crypto/x509/x509_ext.c:125-169`
@@ -418,5 +481,40 @@ pub unsafe extern "C" fn X509_REVOKED_add_ext(
     c_int::from(!unsafe { X509v3_add_ext(&raw mut (*x).extensions, ex, loc) }.is_null())
 }
 
-// `X509_REVOKED_get_ext_d2i` (`:161-164`) and `X509_REVOKED_add1_ext_i2d` (`:166-169`) are
-// withheld by name; their blocker is `X509V3_get_d2i`/`X509V3_add1_i2d` in `crate::x509::v3_lib`.
+/// `void *X509_REVOKED_get_ext_d2i(const X509_REVOKED *x, int nid, int *crit, int *idx)` —
+/// `crypto/x509/x509_ext.c:161-164`.
+///
+/// # Safety
+///
+/// `x` must be a live `X509_REVOKED`; `crit`/`idx` must be NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn X509_REVOKED_get_ext_d2i(
+    x: *const X509Revoked,
+    nid: c_int,
+    crit: *mut c_int,
+    idx: *mut c_int,
+) -> *mut c_void {
+    // SAFETY: `x` is live per the contract; `X509V3_get_d2i` accepts a NULL or live stack and
+    // NULL or writable `crit`/`idx`.
+    unsafe { X509V3_get_d2i((*x).extensions, nid, crit, idx) }
+}
+
+/// `int X509_REVOKED_add1_ext_i2d(X509_REVOKED *x, int nid, void *value, int crit,
+/// unsigned long flags)` — `crypto/x509/x509_ext.c:166-169`.
+///
+/// # Safety
+///
+/// `x` must be a live `X509_REVOKED`; `value` must be the internal structure the `nid` method's
+/// `i2d` expects.
+#[no_mangle]
+pub unsafe extern "C" fn X509_REVOKED_add1_ext_i2d(
+    x: *mut X509Revoked,
+    nid: c_int,
+    value: *mut c_void,
+    crit: c_int,
+    flags: c_ulong,
+) -> c_int {
+    // SAFETY: `x` is live, so its `extensions` field is a writable slot; `value` is the internal
+    // structure the `nid` method's `i2d` expects.
+    unsafe { X509V3_add1_i2d(&raw mut (*x).extensions, nid, value, crit, flags) }
+}
