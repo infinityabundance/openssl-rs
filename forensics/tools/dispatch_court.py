@@ -137,6 +137,13 @@ CONF_METHOD = ("not a provider dispatch: a member of `include/openssl/conftypes.
                "`OSSL_CORE_MAKE_FUNC` declaration")
 CONF_INT = ("not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas "
             "records as a struct of plain function pointers rather than as typedefs")
+# `include/openssl/x509v3.h.in:79-85` -- the `X509V3_CONF_METHOD` members (Phase 10.14.4). Like
+# `conftypes.h`'s `CONF_METHOD`, the struct declares four plain function pointers inline rather than
+# through `OSSL_CORE_MAKE_FUNC`, so the atlas records no `typedef` for any of them and the crate's
+# four aliases have no authority name to link to.
+X509V3_CONF_METHOD_VTABLE = ("not a provider dispatch: a member of `X509V3_CONF_METHOD` "
+                             "(`include/openssl/x509v3.h.in:79-85`), declared inline as a plain "
+                             "function pointer rather than through `OSSL_CORE_MAKE_FUNC`")
 EVP_LEGACY = ("not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback "
               "list in `evp.h`, declared as a plain function pointer rather than through "
               "`OSSL_CORE_MAKE_FUNC`")
@@ -376,6 +383,9 @@ NOT_A_DISPATCH: dict[str, str] = {
     "McmLockStoreFn": MCM,
     "McmUnlockStoreFn": MCM,
     "MethodFromAlgorithmFn": MCM,
+    # --- `X509V3_CONF_METHOD` (`include/openssl/x509v3.h.in:79-85`, Phase 10.14.4) ----------
+    "X509V3GetString": X509V3_CONF_METHOD_VTABLE,
+    "X509V3GetSection": X509V3_CONF_METHOD_VTABLE,
     # --- `EVP_CIPHER` / `EVP_MD` legacy callback lists (`evp.h`) -----------------------------
     "CipherDoAllFn": EVP_LEGACY,
     "MdDoAllFn": EVP_LEGACY,

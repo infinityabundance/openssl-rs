@@ -64,6 +64,7 @@
 
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
+#include <openssl/conf.h>
 #include <openssl/crypto.h>
 #include <openssl/dsa.h>
 #include <openssl/ec.h>
@@ -2881,6 +2882,215 @@ static void drive_file_store_row(void)
     }
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 10.14's three hubs -- the general-name printers (`v3_san.c`), the extension-configuration
+ * value/section layer (`v3_conf.c`) and, through them, the attribute-value printer
+ * (`x_attrib.c`).
+ *
+ * `GENERAL_NAME_print`/`i2v_GENERAL_NAME`/`i2v_GENERAL_NAMES`/`OSSL_GENERAL_NAMES_print` are
+ * driven over hand-built general names of every payload-free and payload-bearing kind; the
+ * `X509V3_get_section`/`_get_string` layer is driven over a real `NCONF` loaded from a memory BIO,
+ * with the no-database, `lhash`-NULL and `set_issuer_pkey` refusals as the refusal arms. Every arm
+ * clears the error queue first (D455).
+ * --------------------------------------------------------------------------------------------- */
+
+/* A `STACK_OF(CONF_VALUE)` as `name|value` per element. */
+static void out_conf_stack(const char *key, STACK_OF(CONF_VALUE) *st)
+{
+    int i, n = st != NULL ? sk_CONF_VALUE_num(st) : -1;
+
+    out_int(key, (long)n);
+    for (i = 0; i < n; i++) {
+        const CONF_VALUE *v = sk_CONF_VALUE_value(st, i);
+        printf("%s.%d=%s|%s\n", key, i, v->name != NULL ? v->name : "null",
+               v->value != NULL ? v->value : "null");
+    }
+}
+
+/* `GENERAL_NAME_print` into a memory BIO, printed as `key.ret` and `key.text`. */
+static void out_gen_print(const char *key, GENERAL_NAME *g)
+{
+    BIO *b = BIO_new(BIO_s_mem());
+    char text[256];
+    int n, r;
+
+    if (b == NULL)
+        return;
+    memset(text, 0, sizeof(text));
+    n = GENERAL_NAME_print(b, g);
+    r = BIO_read(b, text, (int)sizeof(text) - 1);
+    text[r > 0 ? r : 0] = 0;
+    printf("%s.ret=%d\n", key, n);
+    printf("%s.text=%s\n", key, text);
+    BIO_free(b);
+}
+
+static GENERAL_NAME *make_ia5_gen(int type, const char *value)
+{
+    GENERAL_NAME *g = GENERAL_NAME_new();
+
+    if (g == NULL)
+        return NULL;
+    g->type = type;
+    g->d.ia5 = ASN1_IA5STRING_new();
+    if (g->d.ia5 == NULL || !ASN1_STRING_set(g->d.ia5, value, -1)) {
+        GENERAL_NAME_free(g);
+        return NULL;
+    }
+    return g;
+}
+
+static void drive_v3_hubs(void)
+{
+    static const unsigned char ip4[4] = { 10, 0, 0, 1 };
+    static const char cfg[] = "[sec]\nkey=value\n";
+    X509V3_CTX ctx;
+    CONF *conf;
+    BIO *cb, *b;
+    long eline = 0;
+    GENERAL_NAME *email, *dns, *uri, *ip, *rid, *dn, *x400, *edi;
+    GENERAL_NAMES *gens;
+    STACK_OF(CONF_VALUE) *st;
+    char *s;
+    const unsigned char *p;
+    char text[256];
+    int n, r;
+
+    /* ----- the general-name printers over hand-built names ----- */
+    email = make_ia5_gen(GEN_EMAIL, "probe@example.com");
+    dns = make_ia5_gen(GEN_DNS, "www.example.com");
+    uri = make_ia5_gen(GEN_URI, "http://example.com/");
+    out_ptr("gen.email.new", email);
+    out_gen_print("gen.email.print", email);
+    out_gen_print("gen.dns.print", dns);
+    out_gen_print("gen.uri.print", uri);
+
+    ip = GENERAL_NAME_new();
+    if (ip != NULL) {
+        ip->type = GEN_IPADD;
+        ip->d.iPAddress = ASN1_OCTET_STRING_new();
+        ASN1_OCTET_STRING_set(ip->d.iPAddress, ip4, 4);
+    }
+    out_gen_print("gen.ip.print", ip);
+
+    rid = GENERAL_NAME_new();
+    if (rid != NULL) {
+        rid->type = GEN_RID;
+        rid->d.registeredID = OBJ_txt2obj("1.2.3.4", 0);
+    }
+    out_gen_print("gen.rid.print", rid);
+
+    p = RT_X509_NAME_DER;
+    dn = GENERAL_NAME_new();
+    if (dn != NULL) {
+        dn->type = GEN_DIRNAME;
+        dn->d.directoryName = d2i_X509_NAME(NULL, &p, (long)RT_X509_NAME_DER_LEN);
+    }
+    out_gen_print("gen.dirname.print", dn);
+
+    x400 = GENERAL_NAME_new();
+    if (x400 != NULL)
+        x400->type = GEN_X400;
+    edi = GENERAL_NAME_new();
+    if (edi != NULL)
+        edi->type = GEN_EDIPARTY;
+    out_gen_print("gen.x400.print", x400);
+    out_gen_print("gen.edi.print", edi);
+
+    /* ----- the `i2v` printers, each answering a fresh CONF_VALUE stack ----- */
+    st = i2v_GENERAL_NAME(NULL, email, NULL);
+    out_conf_stack("gen.email.i2v", st);
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+    st = i2v_GENERAL_NAME(NULL, dns, NULL);
+    out_conf_stack("gen.dns.i2v", st);
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+    st = i2v_GENERAL_NAME(NULL, uri, NULL);
+    out_conf_stack("gen.uri.i2v", st);
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+    st = i2v_GENERAL_NAME(NULL, ip, NULL);
+    out_conf_stack("gen.ip.i2v", st);
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+    st = i2v_GENERAL_NAME(NULL, rid, NULL);
+    out_conf_stack("gen.rid.i2v", st);
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+    st = i2v_GENERAL_NAME(NULL, dn, NULL);
+    out_conf_stack("gen.dirname.i2v", st);
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+    st = i2v_GENERAL_NAME(NULL, x400, NULL);
+    out_conf_stack("gen.x400.i2v", st);
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+    st = i2v_GENERAL_NAME(NULL, edi, NULL);
+    out_conf_stack("gen.edi.i2v", st);
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+
+    /* ----- `i2v_GENERAL_NAMES` and `OSSL_GENERAL_NAMES_print` over a two-element stack ----- */
+    gens = sk_GENERAL_NAME_new_null();
+    sk_GENERAL_NAME_push(gens, email);
+    sk_GENERAL_NAME_push(gens, dns);
+    st = i2v_GENERAL_NAMES(NULL, gens, NULL);
+    out_conf_stack("gen.multi.i2v", st);
+    sk_CONF_VALUE_pop_free(st, X509V3_conf_free);
+    b = BIO_new(BIO_s_mem());
+    memset(text, 0, sizeof(text));
+    n = OSSL_GENERAL_NAMES_print(b, gens, 0);
+    r = BIO_read(b, text, (int)sizeof(text) - 1);
+    text[r > 0 ? r : 0] = 0;
+    out_int("gen.names.print.ret", (long)n);
+    out_str("gen.names.print.text", text);
+    BIO_free(b);
+
+    /* ----- the `v3_conf.c` config-value layer ----- */
+    ERR_clear_error();
+    conf = NCONF_new(NULL);
+    out_ptr("v3conf.conf", conf);
+    cb = BIO_new_mem_buf(cfg, -1);
+    out_int("v3conf.load", (long)NCONF_load_bio(conf, cb, &eline));
+    out_err("v3conf.load.err");
+    BIO_free(cb);
+
+    /* No database: `X509V3_set_ctx` clears `db`/`db_meth`, so both accessors refuse. */
+    X509V3_set_ctx(&ctx, NULL, NULL, NULL, NULL, 0);
+    ERR_clear_error();
+    out_ptr("v3conf.section.nodb", X509V3_get_section(&ctx, "sec"));
+    out_err("v3conf.section.nodb.err");
+    ERR_clear_error();
+    out_ptr("v3conf.string.nodb", X509V3_get_string(&ctx, "sec", "key"));
+    out_err("v3conf.string.nodb.err");
+
+    /* The nconf method: a real section and a real string. */
+    X509V3_set_nconf(&ctx, conf);
+    ERR_clear_error();
+    st = X509V3_get_section(&ctx, "sec");
+    out_ptr("v3conf.section", st);
+    out_err("v3conf.section.err");
+    X509V3_section_free(&ctx, st);
+    ERR_clear_error();
+    s = X509V3_get_string(&ctx, "sec", "key");
+    out_str("v3conf.string", s);
+    out_err("v3conf.string.err");
+    X509V3_string_free(&ctx, s);
+
+    /* The lhash method with a NULL database refuses identically. */
+    X509V3_set_conf_lhash(&ctx, NULL);
+    ERR_clear_error();
+    out_ptr("v3conf.section.lhashnull", X509V3_get_section(&ctx, "sec"));
+    out_err("v3conf.section.lhashnull.err");
+
+    /* `set_issuer_pkey`: a NULL key is accepted; a key with no subject refuses. */
+    X509V3_set_ctx(&ctx, NULL, NULL, NULL, NULL, 0);
+    ERR_clear_error();
+    out_int("v3conf.issuer_pkey.null", (long)X509V3_set_issuer_pkey(&ctx, NULL));
+    out_err("v3conf.issuer_pkey.null.err");
+    ERR_clear_error();
+    out_int("v3conf.issuer_pkey.nosubject",
+            (long)X509V3_set_issuer_pkey(&ctx, (EVP_PKEY *)&eline));
+    out_err("v3conf.issuer_pkey.nosubject.err");
+
+    NCONF_free(conf);
+
+    sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free);
+}
+
 int main(void)
 {
     OSSL_STORE_LOADER *loader;
@@ -2949,6 +3159,8 @@ int main(void)
 
     /* ----- Phase 10.14.6: the CRL distribution point name binder ----- */
     drive_x509_10_14_6_crld();
+
+    drive_v3_hubs();
 
     /* ----- OSSL_STORE_LOADER_new, including the NULL-scheme refusal ----- */
     out_ptr("loader.new.null_scheme", OSSL_STORE_LOADER_new(NULL, NULL));

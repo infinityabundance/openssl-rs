@@ -4983,10 +4983,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 393
+      "transcribed_units": 395
     }
   },
-  "body_hash": "d1029ac5b04bfc55affabc75acd0e6efa70ba5cf51f2bb97d28e95f870240fcd",
+  "body_hash": "094b04186345448b2a194e663eb4efc8cbde82517e8ad5881d76540a66cc3bef",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -4997,12 +4997,12 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "c4bba9039bad4d8c05eea87f26498e735e1d9741583f0e7a0ee1055fdbaa2a7c"
+      "sha256": "1b2890e2cb26bbe7d9eecdc9cada4cb55301cf57d5aa2a2d9d2a3ad345d708be"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "22c6200a7f96ede7706cee7f35194571f3302a351d9946e1e5e235893f3ae7da"
+      "sha256": "2729e62cf8b78d25a00bdc7aad8dabab4fc4a42dc8ce7a151f5830f6356a7c44"
     },
     {
       "name": "phase-state",
@@ -5012,7 +5012,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "b5b8387e3e9823da1f52bb27396b4f5a732f1b681c8b1728df40a5c8ea3a8010"
+      "sha256": "ecd1519e7d3197e90a76d7280050aa80ebbe179ca6f76dfa4f830c1fa9a52aa6"
     },
     {
       "name": "source-manifest",
@@ -5022,7 +5022,7 @@
     {
       "name": "plan-PHASE-10-SUBPHASES",
       "path": "docs/PHASE-10-SUBPHASES.md",
-      "sha256": "c82d9bb5193189c756606a50b095397fb507a045893519af1e02b8f0f56d8738"
+      "sha256": "dff2b582c3058d275da7225286e22df690f4b8aaeec67893805ad65e3f707de2"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

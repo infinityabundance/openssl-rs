@@ -749,7 +749,10 @@ const XN_FLAG_COMPAT: c_ulong = 0;
 /// `XN_FLAG_SEP_COMMA_PLUS` — `:160`; RFC 2253's `,`/`+` with no spaces.
 const XN_FLAG_SEP_COMMA_PLUS: c_ulong = 1 << 16;
 /// `XN_FLAG_SEP_CPLUS_SPC` — `:161`; `, `/` + `.
-const XN_FLAG_SEP_CPLUS_SPC: c_ulong = 2 << 16;
+///
+/// `crate::x509::x_attrib`'s `ossl_print_attribute_value` reads it (`x_attrib.c:181`), so it is
+/// crate-visible rather than file-local.
+pub(crate) const XN_FLAG_SEP_CPLUS_SPC: c_ulong = 2 << 16;
 /// `XN_FLAG_SEP_SPLUS_SPC` — `:162`; `; `/` + `.
 const XN_FLAG_SEP_SPLUS_SPC: c_ulong = 3 << 16;
 /// `XN_FLAG_SEP_MULTILINE` — `:163`; one field per line.
@@ -772,6 +775,16 @@ const XN_FLAG_SPC_EQ: c_ulong = 1 << 23;
 const XN_FLAG_DUMP_UNKNOWN_FIELDS: c_ulong = 1 << 24;
 /// `XN_FLAG_FN_ALIGN` — `:185`; pad short field names to the long-name width.
 const XN_FLAG_FN_ALIGN: c_ulong = 1 << 25;
+
+/// `XN_FLAG_ONELINE` — `include/openssl/x509.h.in:194`, the one-line spelling.
+///
+/// `ASN1_STRFLGS_RFC2253 | ASN1_STRFLGS_ESC_QUOTE | XN_FLAG_SEP_CPLUS_SPC | XN_FLAG_SPC_EQ |
+/// XN_FLAG_FN_SN`; `crate::x509::v3_san`'s `GENERAL_NAME_print` reads it for its `DirName` arm.
+pub(crate) const XN_FLAG_ONELINE: c_ulong = ASN1_STRFLGS_RFC2253
+    | ASN1_STRFLGS_ESC_QUOTE
+    | XN_FLAG_SEP_CPLUS_SPC
+    | XN_FLAG_SPC_EQ
+    | XN_FLAG_FN_SN;
 
 /// `FN_WIDTH_LN` — `crypto/asn1/a_strex.c:417`.
 const FN_WIDTH_LN: c_int = 25;

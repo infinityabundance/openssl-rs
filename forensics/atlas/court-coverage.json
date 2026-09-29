@@ -505,6 +505,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "GENERAL_NAME_print"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "GENERAL_NAME_set0_othername"
       },
       {
@@ -621,6 +626,11 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "OSSL_DAY_TIME_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_GENERAL_NAMES_print"
       },
       {
         "owing_phase": 11,
@@ -1455,6 +1465,16 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "X509V3_get_section"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509V3_get_string"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "X509V3_get_value_bool"
       },
       {
@@ -1466,6 +1486,36 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "X509V3_parse_list"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509V3_section_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509V3_set_conf_lhash"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509V3_set_ctx"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509V3_set_issuer_pkey"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509V3_set_nconf"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "X509V3_string_free"
       },
       {
         "owing_phase": 11,
@@ -3531,6 +3581,16 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2s_ASN1_UTF8STRING"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2v_GENERAL_NAME"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2v_GENERAL_NAMES"
       },
       {
         "owing_phase": 11,
@@ -6680,7 +6740,8 @@
               "RT-KEYFORMAT",
               "RT-OBJ-STREAM",
               "RT-PEM-KEY",
-              "RT-PUBKEY"
+              "RT-PUBKEY",
+              "RT-STORE"
             ],
             "symbol": "BIO_new_mem_buf"
           },
@@ -7490,7 +7551,8 @@
             "basis": "called",
             "courts": [
               "RT-CONF",
-              "RT-CONF-MOD"
+              "RT-CONF-MOD",
+              "RT-STORE"
             ],
             "symbol": "NCONF_free"
           },
@@ -7547,7 +7609,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-CONF"
+              "RT-CONF",
+              "RT-STORE"
             ],
             "symbol": "NCONF_load_bio"
           },
@@ -7562,7 +7625,8 @@
             "basis": "called",
             "courts": [
               "RT-CONF",
-              "RT-CONF-MOD"
+              "RT-CONF-MOD",
+              "RT-STORE"
             ],
             "symbol": "NCONF_new"
           },
@@ -26756,7 +26820,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "22c6200a7f96ede7706cee7f35194571f3302a351d9946e1e5e235893f3ae7da"
+      "sha256": "2729e62cf8b78d25a00bdc7aad8dabab4fc4a42dc8ce7a151f5830f6356a7c44"
     },
     {
       "name": "symbol-ownership",
@@ -26771,7 +26835,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "41e00d892d7ea73d92338abde82a4cc27fbf831d866d47966f6839c5f143a3d4"
+      "sha256": "7d482c074b86a00d70ba05c96030d5a15a829cb031e2ff0cc97e18cd5d5953a8"
     },
     {
       "name": "phase3-courts",
@@ -26781,7 +26845,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "d74470fe586ecbcafab70d2339a2be89dbd13e03bfc54cfff37efe1d062662bd"
+      "sha256": "0e2aecb4cf2af5a3e191f00dbcc763b4f3c217649ba9241cdd31822cbf162487"
     },
     {
       "name": "phase4-courts",
@@ -26791,7 +26855,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "fc6fe5852bf4cefb0de1a084ed01bee9081729498d1a02e6518a27ca0e9fc7a9"
+      "sha256": "caf173fa6ea6d1b291004a10da9fd3a27159de097cb1ec285129c780a22532b8"
     },
     {
       "name": "phase5-courts",
@@ -26801,7 +26865,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "dfbdc35dd1c38b4a13dffd0eb47a2693d940f60490a104fc0288dc3caf3baa8b"
+      "sha256": "459796777509fcab7097ab0a370aba1d5cb470db341652a5f289fba9a4e6e58f"
     },
     {
       "name": "phase6-courts",
@@ -26811,7 +26875,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "9edcffa1eba90ba6de946178999e0b75062352fe655e1ecb644cb0f919788e96"
+      "sha256": "9c576dabdc1a946b8cb616120a4260a688656be7ddebffd727193c1e9825cda7"
     },
     {
       "name": "phase7-courts",
@@ -26821,7 +26885,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "9cad91d8406243d33c8b53e524a507f7120c60360903077f94564558deb3151e"
+      "sha256": "21368269eb4716938c9010cb447ccb80059991162b7aabf582da8e1d4cbeb542"
     },
     {
       "name": "phase8-courts",
@@ -26831,7 +26895,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "f842f122f93ee91dab55972058026759bfdabfe6fc39a2303584c62c08b24229"
+      "sha256": "c4cc23597c910333558d41e6ffaf5e8b4bff0920571359e6b467c9a281f0d1ad"
     },
     {
       "name": "phase9-courts",
@@ -26841,12 +26905,12 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "5102df151fc7af74d392e4a01683a0182db1b275112dc404abdc93a93c96c67e"
+      "sha256": "6a5106dc3f73e9b9dfe449d609785da3105028bed0533a9d5bac508f1b382f0a"
     },
     {
       "name": "phase10-courts",
       "path": "artifacts/phase10/COURTS.json",
-      "sha256": "c8619dbcac46cec3403d836eebc01a13217b132cf7fc2b7a4c9086a43947e6a0"
+      "sha256": "12292c9fbacf35981ef37c4219970ad34c4bb649d8f85a79630a3f5ccb50934e"
     }
   ],
   "kind": "court-coverage",

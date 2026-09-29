@@ -32650,3 +32650,60 @@ of its 63 tables are missing.
 `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` /
 `OSSL_STORE_load` -> the seal.
 
+## D465 -- the three hubs land, and the `v2i` cluster is one name from `ASN1_generate_v3`
+
+Fourteenth pulled-forward slice, aimed at D464's finding rather than at the table list. **All three
+hubs land**: `crypto/x509/x_attrib.c` **whole** (`print_oid` `:61-74` and
+`ossl_print_attribute_value` `:76-249`, 188 lines -- it needed `V_ASN1_VIDEOTEXSTRING` and
+`XN_FLAG_ONELINE` to be named, so both were added); `crypto/x509/v3_conf.c`'s config-value layer
+(~109 lines: `X509V3_get_string`, `X509V3_get_section`, the two `free`s, the `nconf` and
+`conf_lhash` method pairs, `X509V3_set_nconf`/`_set_ctx`/`_set_issuer_pkey`/`_set_conf_lhash`, with
+the `X509V3_CTX` and `X509V3_CONF_METHOD` layouts asserted); and `crypto/x509/v3_san.c`'s printers
+(`i2v_GENERAL_NAMES`, `i2v_GENERAL_NAME`, `GENERAL_NAME_print`, 247 lines). `v3_utl.c`
+**un-withholds `OSSL_GENERAL_NAMES_print`** now that `GENERAL_NAME_print` exists, and lands 32 of its
+51 functions. `RT-STORE` moves from 810 to **865** observations and the total to **45,908** over 109
+courts.
+
+**The hub selection was right, and the re-measurement proves it: closure-ready table units go from
+24 to 34** and blocked units from 20 to 10. The hubs unblocked `v3_aaa`, `v3_ac_tgt`, `v3_admis`,
+`v3_attrdesc`, `v3_attrmap`, `v3_cpols`, `v3_iobo`, `v3_pci`, `v3_sda` and `v3_usernotice`
+(~2,084 lines) -- **ten table units bought by three units of hub**, which is the leverage D464
+predicted and is now measured rather than assumed.
+
+**The next blocker is a single function, and it is Phase 5's deferred pair.** Hub 1's `v2i` half
+(`a2i_GENERAL_NAME`, `v2i_GENERAL_NAME_ex`, `v2i_GENERAL_NAME(S)`, `do_othername`, `do_dirname`,
+`v2i_subject_alt`, `copy_email`, `v2i_issuer_alt`, `copy_issuer`) is withheld on **one** name:
+**`ASN1_generate_v3`** (`crypto/asn1/asn1_gen.c`, Phase 5's deferred pair, ~500 lines). `ossl_v3_alt`
+is withheld whole rather than published with holes -- two of its three rows name withheld `v2i`
+callbacks -- and that is recorded as a `prerequisites.json` `owned_by_a_later_stratum` divergence row
+rather than a loosened gate. The remaining blockage is otherwise named: `v3_ncons` additionally on
+`http_lib.c`/`punycode.c`, `v3_akid` on `AUTHORITY_KEYID_*` (`v3_akeya.c`), `v3_authattid` on
+`OSSL_ISSUER_SERIAL_it`, `v3_rolespec` on `ossl_serial_number_print`, `v3_ocsp` on `ocsp_asn.c`,
+`ct_x509v3` on the CT units, and `v3_addr` on `ossl_asn1_string_set_bits_left` -- **which is already
+landed under the name `asn1::bitstr::set_bits_left`**, so that one is a naming shim rather than
+work.
+
+**The array was not published and nothing closed.** 49 of 63 tables are still missing, so
+`standard_exts[]` and the six `v3_lib.rs` lookup names stay withheld (D456), the keystone stays shut,
+and Phase-10 counts are unchanged at `296 implemented / 2 open` exports and **`636 implemented / 0
+open`** provider rows. Fourteen tables landed, fourteen claimed -- no more.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1114 passed, 0 failed**; 109 courts and **45,908 observations**; `PIPELINE OK` exit 0 twice. The
+D462 flake protocol was followed: the run's tree was **clean** and the suite green, and both pipeline
+runs agreed -- no reproduction, so the defect stays open and unnamed. Two gate findings became
+decisions (a `NOT_A_DISPATCH` exemption for the `X509V3_CONF_METHOD` aliases, and the `x_attrib`
+divergence row retired with the `v3_san` row added). `implemented_surface` moves from 3,684 to
+**3,741**.
+
+### The remaining distance
+
+**49 tables over 32 units / 9,336 lines** (10 blocked units / 4,538 lines, 22 closure-ready units /
+4,798 lines), plus D463's 24-name closure over 17 further units. The immediate next move is
+**`ASN1_generate_v3`/`ASN1_generate_nconf`** -- one function closing the `v2i` cluster and, with it,
+`v3_info`, `v3_crld` and `v3_san`'s tables -- then the 22 closure-ready table units, then the array,
+then `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> **`PKCS12_parse`** -> `store_result.c`
+/ **`OSSL_STORE_load`** -> the seal.
+

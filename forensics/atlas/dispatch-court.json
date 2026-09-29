@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 565,
+      "crate_files_read": 567,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 334,
       "signatures_checked": 303,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 204,
+      "signatures_not_a_dispatch": 206,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -5297,6 +5297,16 @@
           "alias": "UiConstructPromptFn",
           "at": "src/ui/ui_lib.rs",
           "why": "not a provider dispatch: a member of `UI_METHOD`'s vtable, declared inline in `crypto/ui/ui_local.h:20-59` as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`; the header is internal, so the atlas records no typedef for it"
+        },
+        {
+          "alias": "X509V3GetString",
+          "at": "src/x509/v3_conf.rs",
+          "why": "not a provider dispatch: a member of `X509V3_CONF_METHOD` (`include/openssl/x509v3.h.in:79-85`), declared inline as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "X509V3GetSection",
+          "at": "src/x509/v3_conf.rs",
+          "why": "not a provider dispatch: a member of `X509V3_CONF_METHOD` (`include/openssl/x509v3.h.in:79-85`), declared inline as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
         }
       ],
       "unlinked": [],
