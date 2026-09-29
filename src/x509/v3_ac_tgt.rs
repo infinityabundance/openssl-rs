@@ -171,7 +171,11 @@ static OSSL_ISSUER_SERIAL_ITEM: Asn1Item = Asn1Item {
 
 /// The file-local `static const ASN1_ITEM *OSSL_ISSUER_SERIAL_it(void)` — `static_ASN1_ITEM_start` at
 /// `crypto/x509/v3_ac_tgt.c:47`. No `#[no_mangle]`: the C accessor is `static`.
-fn ossl_issuer_serial_it() -> *const Asn1Item {
+///
+/// `pub(crate)` because `crypto/x509/v3_authattid.c`'s `OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX`
+/// `SEQUENCE OF` template names this item, exactly as the authority's `DECLARE_ASN1_ITEM` at
+/// `v3_authattid.c:17` does. Its own accessor has no external linkage.
+pub(crate) fn ossl_issuer_serial_it() -> *const Asn1Item {
     &OSSL_ISSUER_SERIAL_ITEM
 }
 

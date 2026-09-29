@@ -1198,3 +1198,48 @@ is blocked on a name outside the table layer: `v3_addr.c`'s `ossl_v3_addr` on th
 (`punycode.c`); `v3_ocsp.c`'s five on `ocsp_asn.c`; and `v3_rolespec.c` on `ossl_serial_number_print`
 (`t_x509.c`). The pivot to those dependencies is the remaining work before the array can be
 published, and with it `X509_get_ext_d2i`, `PKCS12_parse` and `OSSL_STORE_load`.
+
+**The blocked-unit pivots begin; fifty-seven of the sixty-three tables now exist and exactly six are
+left.** The nineteenth pulled-forward slice took the two blocked units whose closure was one landed
+name away, and the five-table OCSP unit `ocsp_asn.c` unblocked:
+
+* `v3_addr.c` (`ossl_v3_addr`) -- `src/x509/v3_addr.rs`, the RFC 3779 IP-address unit: the four item
+  groups (`IPAddressRange`, `IPAddressOrRange`, `IPAddressChoice`, `IPAddressFamily`), the
+  canonicalisation routines and the `X509v3_addr_*` API. Its only measured blocker,
+  `ossl_asn1_string_set_bits_left`, is a **naming difference only** -- it is landed as
+  `crate::asn1::bitstr::set_bits_left`, and D463 named this shim. Its three path-validation names
+  (`addr_validate_path_internal`, `X509v3_addr_validate_path`, `X509v3_addr_validate_resource_set`)
+  are withheld whole with the same blocker `v3_asid.c`'s three have: no `X509_STORE_CTX` layout.
+* `v3_rolespec.c` (`ossl_v3_role_spec_cert_identifier`) -- `src/x509/v3_rolespec.rs`, whose blocker
+  `ossl_serial_number_print` (`t_x509.c:519-559`) landed alongside it in the existing
+  `src/x509/t_x509.rs` (an extension: the file's `X509_signature_dump` is byte-for-byte unchanged).
+  `v3_rolespec`'s printer `i2r_OSSL_ROLE_SPEC_CERT_ID` is that blocker's first caller, which is what
+  turns the record from "no caller" into a landed function.
+* `v3_ocsp.c` (**5** tables: `ossl_v3_ocsp_nonce`, `ossl_v3_ocsp_crlid`, `ossl_v3_ocsp_acutoff`,
+  `ossl_v3_ocsp_serviceloc`, `ossl_v3_ocsp_nocheck`) -- `src/ocsp/v3_ocsp.rs`, in the new
+  `src/ocsp/` tree whose first unit, `ocsp_asn.c`, landed in this slice too. That unit (135 lines,
+  fifteen item groups, seventy-five exports) is the only reason `OCSP_CRLID_it`/`OCSP_SERVICELOC_it`
+  exist, and it is what made `v3_ocsp.c` closure-ready.
+* `v3_akeya.c` (`AUTHORITY_KEYID_*`) -- `src/x509/v3_akeya.rs`, the item group `v3_akid.c` names.
+  Its `AUTHORITY_KEYID_dup` is **not** defined: the authority's `IMPLEMENT_ASN1_FUNCTIONS` emits
+  only the `_it`/`_new`/`_free`/`d2i_`/`i2d_` quintet, and the admitted DSO exports no `_dup`.
+* `v3_authattid.c` (`ossl_v3_authority_attribute_identifier`) -- `src/x509/v3_authattid.rs`, whose
+  one blocker is `OSSL_ISSUER_SERIAL_it`. That accessor is the file-local one in `v3_ac_tgt.rs`
+  (the authority's `static_ASN1_SEQUENCE_END`); it was made `pub(crate)` and reached by Rust path,
+  which is the whole of the change to that file.
+
+**`implemented_surface` moves from 4,009 to 4,133 symbols** (+124: the `ocsp_asn.c` seventy-five, the
+`v3_addr` item groups and `X509v3_addr_*` API, the `AUTHORITY_KEYID_*` five, the
+`OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX` five and the `v3_rolespec` ten). `RT-STORE` stays at **46,024**
+observations across 109 courts; the new rows are internal data the admitted DSO does not name.
+
+**One divergence row is narrowed, not retired.** `t_x509.rs`'s row covered
+`ossl_serial_number_print` and `ossl_x509_print_ex_brief`; the first is now built, so the row is
+narrowed to the second with its blocker (the Phase-11 object layer). The register stays at 14 rows.
+
+**Exactly six tables are left, over four units**, and each is blocked on a unit rather than a table:
+`v3_akid.c` and `v3_san.c`'s `ossl_v3_alt` on `X509V3_EXT_d2i` (the `v3_lib.c` dispatch, which needs
+the published array) and, for `v3_san`, `X509_REQ_get_subject_name` (`x509_req.c`); `v3_ncons.c`'s
+three on `OSSL_parse_url` (`http_lib.c`)/`ossl_a2ulabel` (`punycode.c`); and `ct_x509v3.c` on the
+`SCT_LIST_*`/`SCT_set_source` CT units. The next slices are those dependencies; the array and
+`X509_get_ext_d2i` come after them, and `PKCS12_parse`/`OSSL_STORE_load` after that.

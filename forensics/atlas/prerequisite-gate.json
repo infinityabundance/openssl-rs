@@ -8,8 +8,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 81,
-      "language_surface_not_modelled_by_name": 6579,
+      "covered_by_a_divergence": 80,
+      "language_surface_not_modelled_by_name": 6705,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -37,7 +37,6 @@
         "ossl_lib_ctx_unlock": 2,
         "ossl_lib_ctx_write_lock": 2,
         "ossl_release_default_drbg_ctx": 2,
-        "ossl_serial_number_print": 1,
         "ossl_v3_alt": 1,
         "ossl_x509_add_cert_new": 2,
         "ossl_x509_add_certs_new": 1,
@@ -234,7 +233,7 @@
         "crypto/engine/tb_asnmth.c": 13,
         "crypto/engine/tb_digest.c": 10,
         "crypto/engine/tb_pkmeth.c": 10,
-        "crypto/err/err.c": 76,
+        "crypto/err/err.c": 75,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 20,
@@ -316,6 +315,7 @@
         "crypto/o_str.c": 8,
         "crypto/o_time.c": 2,
         "crypto/objects/obj_dat.c": 24,
+        "crypto/ocsp/ocsp_asn.c": 38,
         "crypto/packet.c": 6,
         "crypto/param_build.c": 17,
         "crypto/param_build_set.c": 5,
@@ -417,10 +417,13 @@
         "crypto/x509/t_x509.c": 72,
         "crypto/x509/v3_aaa.c": 26,
         "crypto/x509/v3_ac_tgt.c": 38,
+        "crypto/x509/v3_addr.c": 54,
         "crypto/x509/v3_admis.c": 34,
+        "crypto/x509/v3_akeya.c": 7,
         "crypto/x509/v3_asid.c": 40,
         "crypto/x509/v3_attrdesc.c": 22,
         "crypto/x509/v3_attrmap.c": 23,
+        "crypto/x509/v3_authattid.c": 13,
         "crypto/x509/v3_battcons.c": 16,
         "crypto/x509/v3_bcons.c": 16,
         "crypto/x509/v3_bitst.c": 11,
@@ -438,6 +441,7 @@
         "crypto/x509/v3_pcons.c": 15,
         "crypto/x509/v3_pku.c": 9,
         "crypto/x509/v3_pmaps.c": 24,
+        "crypto/x509/v3_rolespec.c": 18,
         "crypto/x509/v3_san.c": 33,
         "crypto/x509/v3_sda.c": 14,
         "crypto/x509/v3_skid.c": 11,
@@ -460,11 +464,11 @@
         "crypto/x509/x509type.c": 1,
         "crypto/x509/x_all.c": 71,
         "crypto/x509/x_attrib.c": 14,
-        "crypto/x509/x_crl.c": 79,
+        "crypto/x509/x_crl.c": 78,
         "crypto/x509/x_exten.c": 13,
         "crypto/x509/x_name.c": 39,
         "crypto/x509/x_pubkey.c": 41,
-        "crypto/x509/x_x509.c": 31,
+        "crypto/x509/x_x509.c": 29,
         "crypto/x509/x_x509a.c": 14,
         "providers/baseprov.c": 25
       },
@@ -571,11 +575,11 @@
       ]
     },
     "checked": {
-      "authority_units": 412,
-      "crate_modules": 586,
+      "authority_units": 417,
+      "crate_modules": 593,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 4,
-      "divergence_names_covered": 42,
+      "divergence_names_covered": 41,
       "divergence_rows": 14,
       "names_referenced_and_not_built": 19
     },
@@ -685,13 +689,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "66be3e95b6fe6a0c14270ebe1aca9f466828e441a5ba603ad8b73a9160b1f14e",
+  "body_hash": "cf94d722ce7986913305528ea20d02452ff4875d0bcf4a046bee0689a42bb2d2",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "8f2ce734b20761d7533195ac247f2ac12d5d99b38c2b037558fcc78b8b8ce847"
+      "sha256": "0ce742ea00c51bf2fb8107928b1107863a9c5e79219254d1c75ada37295ba202"
     },
     {
       "name": "macro-owners",
@@ -706,7 +710,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "56b4859ea53087cb3c3ab5d903687df2637eb9f548f58e1f259f3b65b6dd30ed"
+      "sha256": "6e502d9b4b9478d64bf5e1804858e30eba60f6946f5a6da25abd88a30e130d5b"
     },
     {
       "name": "symbol-ownership",
@@ -721,7 +725,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8c4516bdd204984961dfbb5e3a54a218eb5defd323eb775d817d37d021518777"
+      "sha256": "040bbc9868ee35030b0bba4cbd06e4f26afd396f98d69b27e8001007e9bab6be"
     },
     {
       "name": "phase-state",
@@ -731,7 +735,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "666f4fa355756541dc96ef5c20aaeeeb4becec2c66c2ae2b2873e805bca6e4e7"
+      "sha256": "a938fcb33179725d8989aea522b2cd20a46e9dcc00a9a668a419350c03396aa6"
     },
     {
       "name": "crate-source-tree",
