@@ -189,6 +189,9 @@ unsafe impl Sync for X509V3ExtMethod {}
 /// `#define X509V3_EXT_DYNAMIC 0x1` — `include/openssl/x509v3.h:121`.
 pub(crate) const X509V3_EXT_DYNAMIC: c_int = 0x1;
 
+/// `#define X509V3_EXT_MULTILINE 0x4` — `include/openssl/x509v3.h:123`.
+pub(crate) const X509V3_EXT_MULTILINE: c_int = 0x4;
+
 /// `static STACK_OF(X509V3_EXT_METHOD) *ext_list = NULL` — `crypto/x509/v3_lib.c:19`.
 ///
 /// The authority's plain static; held as an atomic pointer only so a `static` in Rust is sound.

@@ -20,6 +20,21 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "ACCESS_DESCRIPTION_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ACCESS_DESCRIPTION_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "ACCESS_DESCRIPTION_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "ASN1_digest"
       },
       {
@@ -66,6 +81,21 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "ASN1_verify"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "AUTHORITY_INFO_ACCESS_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "AUTHORITY_INFO_ACCESS_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "AUTHORITY_INFO_ACCESS_new"
       },
       {
         "owing_phase": 11,
@@ -465,6 +495,21 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "EXTENDED_KEY_USAGE_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EXTENDED_KEY_USAGE_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "EXTENDED_KEY_USAGE_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "GENERAL_NAMES_free"
       },
       {
@@ -606,6 +651,36 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "NETSCAPE_SPKI_verify"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_ATTRIBUTES_SYNTAX_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_ATTRIBUTES_SYNTAX_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_ATTRIBUTES_SYNTAX_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_BASIC_ATTR_CONSTRAINTS_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_BASIC_ATTR_CONSTRAINTS_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "OSSL_BASIC_ATTR_CONSTRAINTS_new"
       },
       {
         "owing_phase": 11,
@@ -1080,6 +1155,41 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "POLICY_CONSTRAINTS_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICY_CONSTRAINTS_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICY_CONSTRAINTS_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICY_MAPPINGS_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICY_MAPPING_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICY_MAPPING_it"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "POLICY_MAPPING_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "PROXY_CERT_INFO_EXTENSION_free"
       },
       {
@@ -1106,6 +1216,16 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "PROXY_POLICY_new"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "TLS_FEATURE_free"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "TLS_FEATURE_new"
       },
       {
         "owing_phase": 13,
@@ -2775,6 +2895,16 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_ACCESS_DESCRIPTION"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_AUTHORITY_INFO_ACCESS"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_BASIC_CONSTRAINTS"
       },
       {
@@ -2835,6 +2965,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "d2i_EXTENDED_KEY_USAGE"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "d2i_GENERAL_NAME"
       },
       {
@@ -2856,6 +2991,16 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "d2i_NETSCAPE_SPKI"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_OSSL_ATTRIBUTES_SYNTAX"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "d2i_OSSL_BASIC_ATTR_CONSTRAINTS"
       },
       {
         "owing_phase": 11,
@@ -3175,6 +3320,21 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2a_ACCESS_DESCRIPTION"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_ACCESS_DESCRIPTION"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_AUTHORITY_INFO_ACCESS"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_BASIC_CONSTRAINTS"
       },
       {
@@ -3235,6 +3395,11 @@
       {
         "owing_phase": 11,
         "owner_phase": 11,
+        "symbol": "i2d_EXTENDED_KEY_USAGE"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
         "symbol": "i2d_GENERAL_NAME"
       },
       {
@@ -3256,6 +3421,16 @@
         "owing_phase": 11,
         "owner_phase": 11,
         "symbol": "i2d_NETSCAPE_SPKI"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_OSSL_ATTRIBUTES_SYNTAX"
+      },
+      {
+        "owing_phase": 11,
+        "owner_phase": 11,
+        "symbol": "i2d_OSSL_BASIC_ATTR_CONSTRAINTS"
       },
       {
         "owing_phase": 11,
@@ -26865,7 +27040,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0b3fee9d298180e01969457b14c617ae07ad9c77217fd7204e09901ebb80f11d"
+      "sha256": "9057c6396e5b0d2e7cd108a6d01598068684718ea5f60a47c4d2e6c7fcd275b4"
     },
     {
       "name": "symbol-ownership",
@@ -26880,7 +27055,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "7aee8c91cb883afb5ae4a218b6ee2d08d350c7a8864e93614d4156543daebb85"
+      "sha256": "1fab1d6883e6ac12e35c496c60c82fcc3e96836a4b11923951928323c10aac2b"
     },
     {
       "name": "phase3-courts",
@@ -26890,7 +27065,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "23a5be78bf07ab2a6948a7af554dd153cd6706d5488c97ac704bf69398d2b9c8"
+      "sha256": "a73d961be0078a983a9968c3889d049c3fd42a38fa4c15b19f928b0d8361c071"
     },
     {
       "name": "phase4-courts",
@@ -26900,7 +27075,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "922e9ed22c0d039ad7fa9fceb651b686f8ee50cdfbf382b45f33c9826bd78125"
+      "sha256": "e7dd657a027af42e54cc5d3149641d8616254c8fde119d2d1e0fc3309292b66e"
     },
     {
       "name": "phase5-courts",
@@ -26910,7 +27085,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "89e19a50ed68dff23363c9046cfb2b604550b71713d2c1715cadabf0cc1c0ab1"
+      "sha256": "ad91ffcb83a98e60c599f40f035cf235deba772a6aff9d01630df8a2bd05a24e"
     },
     {
       "name": "phase6-courts",
@@ -26920,7 +27095,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "88b71a054a4ac32171af3dc9587c61ed608eb5c70cb594d9b90797e9d96cec34"
+      "sha256": "6b6dfdaa556f67779be7a8e6de3c73cee3d7ef83f882c8e6b2e5f22fe5c7f50f"
     },
     {
       "name": "phase7-courts",
@@ -26930,7 +27105,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "fe86b6fe72f464e73911da3d78792a1dd81325f1fa2bdfb1e1af0a7b2a45f45d"
+      "sha256": "177964daf54f64824710244e48000a217ca60be955ca1d3c1f713e9102634bd2"
     },
     {
       "name": "phase8-courts",
@@ -26940,7 +27115,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "b31c8119ffecba397210b37d828b30d012934dcb691c93c3f7b2d0532e714e73"
+      "sha256": "a808c5a7f58d8174d40babf83481cc450935ceea5ec75d788d8600958cb2674f"
     },
     {
       "name": "phase9-courts",
@@ -26950,7 +27125,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "2e0385d26a30ea4f513a2bfd17200093298e02ad305e495010ce423162f74843"
+      "sha256": "e890def6af789cb734dd9f77b34eea85f1357a8aba8e789172144e254cb0d9d0"
     },
     {
       "name": "phase10-courts",
