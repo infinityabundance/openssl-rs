@@ -493,7 +493,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 14622,
+      "compiler_emitted_count": 14854,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -501,7 +501,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 4423,
+        "implemented": 4432,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -3971,6 +3971,8 @@
           "WHIRLPOOL_Update",
           "X509V3_EXT_CRL_add_conf",
           "X509V3_EXT_CRL_add_nconf",
+          "X509V3_EXT_REQ_add_conf",
+          "X509V3_EXT_REQ_add_nconf",
           "X509V3_EXT_add",
           "X509V3_EXT_add_alias",
           "X509V3_EXT_add_conf",
@@ -4081,6 +4083,7 @@
           "X509_CRL_sign_ctx",
           "X509_CRL_sort",
           "X509_CRL_up_ref",
+          "X509_EXTENSIONS_it",
           "X509_EXTENSION_create_by_NID",
           "X509_EXTENSION_create_by_OBJ",
           "X509_EXTENSION_dup",
@@ -4208,6 +4211,8 @@
           "X509_REQ_add1_attr_by_NID",
           "X509_REQ_add1_attr_by_OBJ",
           "X509_REQ_add1_attr_by_txt",
+          "X509_REQ_add_extensions",
+          "X509_REQ_add_extensions_nid",
           "X509_REQ_check_private_key",
           "X509_REQ_delete_attr",
           "X509_REQ_dup",
@@ -4216,12 +4221,14 @@
           "X509_REQ_get0_distinguishing_id",
           "X509_REQ_get0_pubkey",
           "X509_REQ_get0_signature",
+          "X509_REQ_get1_email",
           "X509_REQ_get_X509_PUBKEY",
           "X509_REQ_get_attr",
           "X509_REQ_get_attr_by_NID",
           "X509_REQ_get_attr_by_OBJ",
           "X509_REQ_get_attr_count",
           "X509_REQ_get_extension_nids",
+          "X509_REQ_get_extensions",
           "X509_REQ_get_pubkey",
           "X509_REQ_get_signature_nid",
           "X509_REQ_get_subject_name",
@@ -4679,6 +4686,7 @@
           "d2i_X509_CRL_bio",
           "d2i_X509_CRL_fp",
           "d2i_X509_EXTENSION",
+          "d2i_X509_EXTENSIONS",
           "d2i_X509_NAME",
           "d2i_X509_NAME_ENTRY",
           "d2i_X509_PUBKEY",
@@ -4887,6 +4895,7 @@
           "i2d_X509_CRL_bio",
           "i2d_X509_CRL_fp",
           "i2d_X509_EXTENSION",
+          "i2d_X509_EXTENSIONS",
           "i2d_X509_NAME",
           "i2d_X509_NAME_ENTRY",
           "i2d_X509_PUBKEY",
@@ -4927,7 +4936,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 1473
+        "scaffolded": 1464
       },
       "libssl": {
         "authority_exports": 603,
@@ -4938,18 +4947,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 4423,
-      "scaffolded": 2076
+      "implemented": 4432,
+      "scaffolded": 2067
     }
   },
-  "body_hash": "667af65beff97221d9eef92e4c2c8ebe16d661a354e7471762f43b89303b1fc9",
+  "body_hash": "960b863ca98255d7b3eb1446ce4443eb87693cf5b61540e4a89a6ff812332ccc",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "95045ca2ff2f910faa26ef6f98e37e28e96fc9e802fe326c2d1a7a91b0c25735"
+      "sha256": "1599fd06ce613cf473e450cb32392dbc857f5c9ab544c7a1f3388c5a8976b307"
     },
     {
       "name": "authority-exports",

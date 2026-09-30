@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1455,
       "deferred_to_later_phase": 0,
-      "implemented": 1123,
-      "open_in_this_stratum": 344,
+      "implemented": 1132,
+      "open_in_this_stratum": 335,
       "owned": 1467,
       "received_by_handoff": 12
     },
@@ -454,6 +454,8 @@
       "USERNOTICE_new",
       "X509V3_EXT_CRL_add_conf",
       "X509V3_EXT_CRL_add_nconf",
+      "X509V3_EXT_REQ_add_conf",
+      "X509V3_EXT_REQ_add_nconf",
       "X509V3_EXT_add",
       "X509V3_EXT_add_alias",
       "X509V3_EXT_add_conf",
@@ -564,6 +566,7 @@
       "X509_CRL_sign_ctx",
       "X509_CRL_sort",
       "X509_CRL_up_ref",
+      "X509_EXTENSIONS_it",
       "X509_EXTENSION_create_by_NID",
       "X509_EXTENSION_create_by_OBJ",
       "X509_EXTENSION_dup",
@@ -691,6 +694,8 @@
       "X509_REQ_add1_attr_by_NID",
       "X509_REQ_add1_attr_by_OBJ",
       "X509_REQ_add1_attr_by_txt",
+      "X509_REQ_add_extensions",
+      "X509_REQ_add_extensions_nid",
       "X509_REQ_check_private_key",
       "X509_REQ_delete_attr",
       "X509_REQ_dup",
@@ -699,12 +704,14 @@
       "X509_REQ_get0_distinguishing_id",
       "X509_REQ_get0_pubkey",
       "X509_REQ_get0_signature",
+      "X509_REQ_get1_email",
       "X509_REQ_get_X509_PUBKEY",
       "X509_REQ_get_attr",
       "X509_REQ_get_attr_by_NID",
       "X509_REQ_get_attr_by_OBJ",
       "X509_REQ_get_attr_count",
       "X509_REQ_get_extension_nids",
+      "X509_REQ_get_extensions",
       "X509_REQ_get_pubkey",
       "X509_REQ_get_signature_nid",
       "X509_REQ_get_subject_name",
@@ -1074,6 +1081,7 @@
       "d2i_X509_CRL_bio",
       "d2i_X509_CRL_fp",
       "d2i_X509_EXTENSION",
+      "d2i_X509_EXTENSIONS",
       "d2i_X509_NAME",
       "d2i_X509_NAME_ENTRY",
       "d2i_X509_PUBKEY",
@@ -1204,6 +1212,7 @@
       "i2d_X509_CRL_bio",
       "i2d_X509_CRL_fp",
       "i2d_X509_EXTENSION",
+      "i2d_X509_EXTENSIONS",
       "i2d_X509_NAME",
       "i2d_X509_NAME_ENTRY",
       "i2d_X509_PUBKEY",
@@ -1818,18 +1827,6 @@
         "symbol": "SCRYPT_PARAMS_new"
       },
       {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_REQ_add_conf"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_REQ_add_nconf"
-      },
-      {
         "declaring_header": "x509_acert.h",
         "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
@@ -2197,12 +2194,6 @@
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/x509/x_exten.rs",
-        "received_from_phase": null,
-        "symbol": "X509_EXTENSIONS_it"
-      },
-      {
-        "declaring_header": "x509.h",
         "module": "src/asn1/x_info.rs",
         "received_from_phase": null,
         "symbol": "X509_INFO_free"
@@ -2239,33 +2230,9 @@
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/x509/x509_req.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_add_extensions"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_req.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_add_extensions_nid"
-      },
-      {
-        "declaring_header": "x509.h",
         "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_digest"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_utl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_get1_email"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_req.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_get_extensions"
       },
       {
         "declaring_header": "x509.h",
@@ -3235,12 +3202,6 @@
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/x509/x_exten.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_X509_EXTENSIONS"
-      },
-      {
-        "declaring_header": "x509.h",
         "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_REQ_bio"
@@ -3286,12 +3247,6 @@
         "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "i2d_X509_ACERT_fp"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_exten.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_X509_EXTENSIONS"
       },
       {
         "declaring_header": "x509.h",
@@ -3458,17 +3413,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "667af65beff97221d9eef92e4c2c8ebe16d661a354e7471762f43b89303b1fc9"
+      "sha256": "960b863ca98255d7b3eb1446ce4443eb87693cf5b61540e4a89a6ff812332ccc"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "28f6889f55682193af679f4298bfd198d478acca20ed324152cc7ecc3d090f19"
+      "sha256": "9b374b42b72d0be875dd626e2d62d3730287407b353984db2b6a755b8a71010d"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "1da359c9b9fc7b3d80ac39528aeadfa63a06d630bfda9d7e1979e25094db2cb1"
+      "sha256": "15fde599a49f67e34cc48dc40cbdcc8540ee6a456ca89aaef94ff09b15819b58"
     }
   ],
   "kind": "phase11-obligations",

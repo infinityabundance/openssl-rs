@@ -3151,7 +3151,7 @@
         "module": "src/x509/v3_conf.rs",
         "phase": 11,
         "phase_source": "export-ownership",
-        "share": "18/18",
+        "share": "20/20",
         "translation_unit": "crypto/x509/v3_conf.c"
       },
       {
@@ -3333,7 +3333,7 @@
         "module": "src/x509/v3_utl.rs",
         "phase": 10,
         "phase_source": "module-declaration",
-        "share": "28/28",
+        "share": "29/29",
         "translation_unit": "crypto/x509/v3_utl.c"
       },
       {
@@ -3396,7 +3396,7 @@
         "module": "src/x509/x509_req.rs",
         "phase": 11,
         "phase_source": "export-ownership",
-        "share": "23/23",
+        "share": "26/26",
         "translation_unit": "crypto/x509/x509_req.c"
       },
       {
@@ -3494,7 +3494,7 @@
         "module": "src/x509/x_exten.rs",
         "phase": 11,
         "phase_source": "export-ownership",
-        "share": "6/6",
+        "share": "9/9",
         "translation_unit": "crypto/x509/x_exten.c"
       },
       {

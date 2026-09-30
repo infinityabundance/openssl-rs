@@ -13,9 +13,10 @@
 //! * the five construction entry points [`X509V3_EXT_nconf`] (`:58-62`),
 //!   [`X509V3_EXT_nconf_nid`] (`:64-75`), [`X509V3_EXT_conf`] (`:495-508`),
 //!   [`X509V3_EXT_conf_nid`] (`:510-523`) and [`X509V3_EXT_add_nconf_sk`] (`:309-350`);
-//! * the four add-to-carrier wrappers [`X509V3_EXT_add_nconf`] (`:356-363`),
-//!   [`X509V3_EXT_CRL_add_nconf`] (`:369-376`), [`X509V3_EXT_add_conf`] (`:552-565`) and
-//!   [`X509V3_EXT_CRL_add_conf`] (`:569-582`).
+//! * the six add-to-carrier wrappers [`X509V3_EXT_add_nconf`] (`:356-363`),
+//!   [`X509V3_EXT_CRL_add_nconf`] (`:369-376`), [`X509V3_EXT_REQ_add_nconf`] (`:382-392`),
+//!   [`X509V3_EXT_add_conf`] (`:552-565`), [`X509V3_EXT_CRL_add_conf`] (`:569-582`) and
+//!   [`X509V3_EXT_REQ_add_conf`] (`:586-599`).
 //!
 //! ## What lands
 //!
@@ -35,14 +36,13 @@
 //! `X509V3_EXT_i2d` raises `X509V3_R_UNKNOWN_EXTENSION` (`:196`), and `do_ext_i2d` raises
 //! `ERR_R_ASN1_LIB` at `:150`/`:158`/`:167` and `ERR_R_X509V3_LIB` at `:176`.
 //!
-//! ## What is still withheld, and the blocker
+//! ## The request wrappers, and why 11.4b lands them
 //!
-//! `X509V3_EXT_REQ_add_nconf` (`:382-392`) and `X509V3_EXT_REQ_add_conf` (`:586-599`) are withheld
-//! by name. `X509V3_EXT_REQ_add_nconf` calls `X509_REQ_add_extensions` (`crypto/x509/x509_req.c`),
-//! which that unit withholds because the `X509_EXTENSIONS` item is absent from
-//! `src/x509/x_exten.rs` (a sibling Phase 11.4 unit this slice may not edit);
-//! `X509V3_EXT_REQ_add_conf` funnels through its withheld sibling. Both names are named, not
-//! declared.
+//! `X509V3_EXT_REQ_add_nconf` (`:382-392`) and `X509V3_EXT_REQ_add_conf` (`:586-599`) were withheld
+//! through 11.5 because the first calls `X509_REQ_add_extensions` (`crypto/x509/x509_req.c`), which
+//! that unit withheld while the `X509_EXTENSIONS` item was absent from `src/x509/x_exten.rs`, and
+//! the second funnels through the first. 11.4b landed that item and the request functions over it,
+//! so both wrappers land with them.
 //!
 //! ## The `X509V3_CTX` structure
 //!
@@ -103,6 +103,7 @@ use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_valu
 use crate::runtime::str::OPENSSL_hexstr2buf;
 use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_EXT_get_nid};
 use crate::x509::v3_utl::{X509V3_conf_free, X509V3_parse_list};
+use crate::x509::x509_req::{X509Req, X509_REQ_add_extensions};
 use crate::x509::x509_v3::{
     X509_EXTENSION_create_by_NID, X509_EXTENSION_create_by_OBJ, X509_EXTENSION_get_object,
     X509v3_add_ext, X509v3_delete_ext, X509v3_get_ext_by_OBJ,
@@ -1294,6 +1295,47 @@ pub unsafe extern "C" fn X509V3_EXT_CRL_add_nconf(
     unsafe { X509V3_EXT_add_nconf_sk(conf, ctx, section, sk) }
 }
 
+/// The `void (*)(void *)` thunk `sk_X509_EXTENSION_pop_free(exts, X509_EXTENSION_free)` installs —
+/// `crypto/x509/v3_conf.c:391`.
+///
+/// # Safety
+///
+/// `p` must be NULL or a live `X509_EXTENSION` (the stack contract).
+unsafe extern "C" fn x509_extension_free_thunk(p: *mut c_void) {
+    // SAFETY: the stack holds `X509_EXTENSION` pointers per the contract.
+    unsafe { X509_EXTENSION_free(p.cast::<X509Extension>()) };
+}
+
+/// `int X509V3_EXT_REQ_add_nconf(CONF *conf, X509V3_CTX *ctx, const char *section,
+/// X509_REQ *req)` — `crypto/x509/v3_conf.c:382-392`.
+///
+/// The section's extensions are built into a fresh stack; when that succeeds and `req` is non-NULL
+/// and non-empty the stack is added to the request through `X509_REQ_add_extensions`, and the
+/// stack is released either way (`:389-391`).
+///
+/// # Safety
+///
+/// `conf` NULL or live; `ctx` NULL or live; `section` NUL-terminated; `req` NULL or live.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509V3_EXT_REQ_add_nconf(
+    conf: *mut Conf,
+    ctx: *mut X509V3Ctx,
+    section: *const c_char,
+    req: *mut X509Req,
+) -> c_int {
+    let mut exts: *mut OpenSslStack = ptr::null_mut();
+    // SAFETY: `&mut exts` is a writable slot; the remaining arguments are the caller's contract.
+    let mut ret = unsafe { X509V3_EXT_add_nconf_sk(conf, ctx, section, &raw mut exts) };
+    if ret != 0 && !req.is_null() && !exts.is_null() {
+        // SAFETY: `req` is live and `exts` is this call's own live stack.
+        ret = unsafe { X509_REQ_add_extensions(req, exts) };
+    }
+    // SAFETY: `exts` is NULL or this call's own stack of extensions.
+    unsafe { OPENSSL_sk_pop_free(exts, Some(x509_extension_free_thunk)) };
+    ret
+}
+
 /// `X509_EXTENSION *X509V3_EXT_conf(LHASH_OF(CONF_VALUE) *conf, X509V3_CTX *ctx,
 /// const char *name, const char *value)` — `crypto/x509/v3_conf.c:495-508`.
 ///
@@ -1406,6 +1448,36 @@ pub unsafe extern "C" fn X509V3_EXT_CRL_add_conf(
     unsafe { CONF_set_nconf(ctmp, conf) };
     // SAFETY: `ctmp` is live; `ctx` NULL or live; `section` NUL-terminated; `crl` NULL or live.
     let ret = unsafe { X509V3_EXT_CRL_add_nconf(ctmp, ctx, section, crl) };
+    // SAFETY: `ctmp` is live.
+    unsafe { CONF_set_nconf(ctmp, ptr::null_mut()) };
+    // SAFETY: `ctmp` is this call's own.
+    unsafe { NCONF_free(ctmp) };
+    ret
+}
+
+/// `int X509V3_EXT_REQ_add_conf(LHASH_OF(CONF_VALUE) *conf, X509V3_CTX *ctx,
+/// const char *section, X509_REQ *req)` — `crypto/x509/v3_conf.c:586-599`.
+///
+/// # Safety
+///
+/// `conf` NULL or a live lhash; `ctx` NULL or live; `section` NUL-terminated; `req` NULL or live.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509V3_EXT_REQ_add_conf(
+    conf: *mut OpenSslLhash,
+    ctx: *mut X509V3Ctx,
+    section: *const c_char,
+    req: *mut X509Req,
+) -> c_int {
+    // SAFETY: `NCONF_new` accepts a NULL method.
+    let ctmp = unsafe { NCONF_new(ptr::null_mut()) };
+    if ctmp.is_null() {
+        return 0;
+    }
+    // SAFETY: `ctmp` is live; `conf` NULL or a live lhash.
+    unsafe { CONF_set_nconf(ctmp, conf) };
+    // SAFETY: `ctmp` is live; `ctx` NULL or live; `section` NUL-terminated; `req` NULL or live.
+    let ret = unsafe { X509V3_EXT_REQ_add_nconf(ctmp, ctx, section, req) };
     // SAFETY: `ctmp` is live.
     unsafe { CONF_set_nconf(ctmp, ptr::null_mut()) };
     // SAFETY: `ctmp` is this call's own.

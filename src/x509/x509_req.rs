@@ -3,14 +3,16 @@
 //! `crypto/x509/v3_san.c`'s `v2i_subject_alt` reaches: `X509_REQ_get_subject_name`,
 //! `X509_REQ_get_version` and `X509_REQ_get0_signature`); **Phase 11.4 lands the rest**.
 //!
-//! `crypto/x509/x509_req.c` is 350 lines. This slice lands **twenty of its twenty-four remaining
-//! exports**: the public-key accessors (`X509_REQ_get_pubkey`/`_get0_pubkey`/`_get_X509_PUBKEY`),
-//! `X509_REQ_check_private_key`, the three extension-NID table functions
+//! `crypto/x509/x509_req.c` is 350 lines. This unit lands **twenty-three of its twenty-four
+//! remaining exports**: the public-key accessors (`X509_REQ_get_pubkey`/`_get0_pubkey`/
+//! `_get_X509_PUBKEY`), `X509_REQ_check_private_key`, the three extension-NID table functions
 //! (`X509_REQ_extension_nid`/`_get_extension_nids`/`_set_extension_nids`), the attribute surface
 //! (`X509_REQ_get_attr_count`/`_get_attr_by_NID`/`_get_attr_by_OBJ`/`_get_attr`/`_delete_attr` and
 //! the four `_add1_attr*` spellings), the signature setters (`X509_REQ_set0_signature`,
-//! `X509_REQ_set1_signature_algo`, `X509_REQ_get_signature_nid`) and `i2d_re_X509_REQ_tbs`.
-//! **Four are withheld by name, each with its blocker, below.**
+//! `X509_REQ_set1_signature_algo`, `X509_REQ_get_signature_nid`), `i2d_re_X509_REQ_tbs` and --
+//! 11.4b's addition, on the `X509_EXTENSIONS` item `crate::x509::x_exten` lands --
+//! `X509_REQ_get_extensions`, `X509_REQ_add_extensions_nid` and `X509_REQ_add_extensions`.
+//! **One is withheld by name, with its blocker, below.**
 //!
 //! The `X509_REQ` object's lifecycle and its `ASN1_ITEM` descriptors -- `X509_REQ_new_ex`,
 //! `X509_REQ_free`, `X509_REQ_INFO_it`, `d2i_X509_REQ`, `i2d_X509_REQ`, ... -- are
@@ -55,21 +57,19 @@
 //! **56** bytes and `X509_REQ` is **120**, the interesting one being `references`, four bytes at
 //! 80, so 84..88 is padding before the pointer `lock` at 88.
 //!
-//! ## Withheld by name, with each name's blocker
+//! ## Withheld by name, with the name's blocker
 //!
-//! Four of the twenty-four open exports this unit still owes:
+//! One of the twenty-four open exports this unit still owes:
 //!
 //! * `X509_to_X509_REQ` (`crypto/x509/x509_req.c:22-61`) -- calls `X509_REQ_sign`
 //!   (`crypto/x509/x_all.c`), withheld by name in `src/x509/x_all.rs` as a Phase 11.7 face. Every
 //!   other callee it names (`X509_REQ_new_ex`, `X509_REQ_set_subject_name`, `X509_get_subject_name`,
 //!   `X509_get0_pubkey`, `X509_REQ_set_pubkey`, `X509_REQ_free`) is landed.
-//! * `get_extensions_by_nid` (`:120-140`, static), `X509_REQ_get_extensions` (`:142-159`),
-//!   `X509_REQ_add_extensions_nid` (`:165-204`) and `X509_REQ_add_extensions` (`:207-210`) -- all
-//!   four decode through `ASN1_ITEM_rptr(X509_EXTENSIONS)`, and the `X509_EXTENSIONS` item is
-//!   withheld in `src/x509/x_exten.rs` (`crypto/x509/x_exten.c`, a sibling Phase 11.4 unit this
-//!   slice may not edit). `get_extensions_by_nid` also raises `X509_R_WRONG_TYPE`
-//!   (`include/openssl/x509err.h:67`, `122`) at `:133`, but it is reachable only through the three
-//!   withheld callers, so its coordinate is not declared either.
+//!
+//! The four extension functions 11.4b lands depend on `X509_EXTENSIONS`, which
+//! `crate::x509::x_exten` withheld through Phase 10.8 and now publishes; `get_extensions_by_nid`
+//! raises `X509_R_WRONG_TYPE` (`include/openssl/x509err.h:67`, `122`) at `:133`, and that
+//! coordinate is declared here as `X509_REQ_133` because 11.4b makes it reachable.
 //!
 //! The extension-NID functions themselves need no item and land: `NID_ext_req`, `NID_ms_ext_req`
 //! and the `NID_undef` terminator (all landed) build the file-static `ext_nid_list`/`ext_nids` pair
@@ -80,21 +80,29 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
-use crate::asn1::layout::{Asn1Encoding, Asn1String};
+use crate::asn1::d2i::ASN1_item_d2i;
+use crate::asn1::i2d::ASN1_item_i2d;
+use crate::asn1::layout::{Asn1Encoding, Asn1String, V_ASN1_SEQUENCE};
 use crate::asn1::prim::ASN1_INTEGER_get;
 use crate::asn1::string::ASN1_BIT_STRING_free;
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_copy};
 use crate::evp::pkey::EvpPkey;
+use crate::runtime::err::err_reasons::X509_R_WRONG_TYPE;
 use crate::runtime::err::{err_sites::ErrSite, raise_site};
+use crate::runtime::mem::CRYPTO_free;
 use crate::runtime::obj::{Asn1Object, NID_ext_req, NID_ms_ext_req, NID_undef, OBJ_obj2nid};
-use crate::runtime::stack::OpenSslStack;
+use crate::runtime::stack::{
+    OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OpenSslStack,
+};
 use crate::x509::x509_att::{
-    X509at_add1_attr, X509at_add1_attr_by_NID, X509at_add1_attr_by_OBJ, X509at_add1_attr_by_txt,
-    X509at_delete_attr, X509at_get_attr, X509at_get_attr_by_NID, X509at_get_attr_by_OBJ,
-    X509at_get_attr_count,
+    X509_ATTRIBUTE_get0_type, X509at_add1_attr, X509at_add1_attr_by_NID, X509at_add1_attr_by_OBJ,
+    X509at_add1_attr_by_txt, X509at_delete_attr, X509at_get_attr, X509at_get_attr_by_NID,
+    X509at_get_attr_by_OBJ, X509at_get_attr_count,
 };
 use crate::x509::x509_cmp::ossl_x509_check_private_key;
-use crate::x509::x_attrib::X509Attribute;
+use crate::x509::x509_v3::X509v3_add_extensions;
+use crate::x509::x_attrib::{X509Attribute, X509_ATTRIBUTE_free};
+use crate::x509::x_exten::{X509_EXTENSIONS_it, X509_EXTENSION_free};
 use crate::x509::x_name::X509Name;
 use crate::x509::x_pubkey::{X509Pubkey, X509_PUBKEY_get, X509_PUBKEY_get0};
 use crate::x509::x_req::i2d_X509_REQ_INFO;
@@ -236,15 +244,24 @@ const ERR_R_PASSED_NULL_PARAMETER: c_int = 786690;
 
 /// One `x509_req.c` raise coordinate, declared locally because the unit is not in
 /// `gen_err_raise_sites.py`'s covered set (see the module doc).
-const fn x509_req_site(line: c_int, func: &'static core::ffi::CStr) -> ErrSite {
+const fn x509_req_site_reason(
+    line: c_int,
+    func: &'static core::ffi::CStr,
+    reason: c_int,
+) -> ErrSite {
     ErrSite {
         file: c"../../src/openssl-3.6.4/crypto/x509/x509_req.c",
         line,
         func,
         lib: ERR_LIB_X509,
-        reason: ERR_R_PASSED_NULL_PARAMETER,
+        reason,
         dynamic_reason: false,
     }
+}
+
+/// A `x509_req.c` `ERR_R_PASSED_NULL_PARAMETER` site, the reason most of the file's raises carry.
+const fn x509_req_site(line: c_int, func: &'static core::ffi::CStr) -> ErrSite {
+    x509_req_site_reason(line, func, ERR_R_PASSED_NULL_PARAMETER)
 }
 
 /// `X509_REQ_delete_attr`'s NULL-request refusal at `crypto/x509/x509_req.c:240`.
@@ -259,6 +276,16 @@ const X509_REQ_282: ErrSite = x509_req_site(282, c"X509_REQ_add1_attr_by_NID");
 const X509_REQ_297: ErrSite = x509_req_site(297, c"X509_REQ_add1_attr_by_txt");
 /// `i2d_re_X509_REQ_tbs`'s NULL-request refusal at `crypto/x509/x509_req.c:345`.
 const X509_REQ_345: ErrSite = x509_req_site(345, c"i2d_re_X509_REQ_tbs");
+/// `get_extensions_by_nid`'s wrong-type refusal at `crypto/x509/x509_req.c:133`,
+/// `X509_R_WRONG_TYPE`.
+const X509_REQ_133: ErrSite =
+    x509_req_site_reason(133, c"get_extensions_by_nid", X509_R_WRONG_TYPE);
+
+/// `crypto/x509/x509_req.c` — the file the one allocator release below names.
+const FILE: &core::ffi::CStr = c"crypto/x509/x509_req.c";
+/// The authority's `OPENSSL_free(ext)` in `X509_REQ_add_extensions_nid`, at
+/// `crypto/x509/x509_req.c:199`.
+const LINE_FREE_EXT: c_int = 199;
 
 /// `EVP_PKEY *X509_REQ_get_pubkey(X509_REQ *req)` — `crypto/x509/x509_req.c:63-68`.
 ///
@@ -388,6 +415,217 @@ pub unsafe extern "C" fn X509_REQ_get_extension_nids() -> *mut c_int {
 pub unsafe extern "C" fn X509_REQ_set_extension_nids(nids: *mut c_int) {
     // SAFETY: writes this unit's own `ext_nids` global.
     unsafe { EXT_NIDS = nids };
+}
+
+/// The `X509_EXTENSION` destructor in the shape `OPENSSL_sk_pop_free` takes.
+///
+/// # Safety
+///
+/// `p` is NULL or a live `X509_EXTENSION` this call owns.
+unsafe extern "C" fn x509_extension_free_void(p: *mut c_void) {
+    // SAFETY: `p` is NULL or owned per the contract; the item layer accepts NULL.
+    unsafe { X509_EXTENSION_free(p.cast()) }
+}
+
+/// `static STACK_OF(X509_EXTENSION) *get_extensions_by_nid(const X509_REQ *req, int nid)` —
+/// `crypto/x509/x509_req.c:120-140`.
+///
+/// The request's attribute named by `nid` is decoded as an `X509_EXTENSIONS` stack. A missing
+/// attribute is an empty stack (`:126-127`, "no extensions is not an error"); an attribute whose
+/// first `ASN1_TYPE` is not a `SEQUENCE` raises `X509_R_WRONG_TYPE` (`X509_REQ_133`) and answers
+/// NULL (`:131-134`).
+///
+/// # Safety
+///
+/// `req` is a live `X509_REQ`.
+unsafe fn get_extensions_by_nid(req: *const X509Req, nid: c_int) -> *mut OpenSslStack {
+    // SAFETY: `req` is live per the contract.
+    let idx = unsafe { X509_REQ_get_attr_by_NID(req, nid, -1) };
+    if idx < 0 {
+        return OPENSSL_sk_new_null();
+    }
+    // SAFETY: `req` is live per the contract and `idx >= 0` is a live attribute index.
+    let attr = unsafe { X509_REQ_get_attr(req, idx) };
+    // SAFETY: `attr` is NULL or live per the item layer's own contract.
+    let ext = unsafe { X509_ATTRIBUTE_get0_type(attr, 0) };
+    if ext.is_null() {
+        // SAFETY: a compiled-in site coordinate.
+        unsafe { raise_site(&X509_REQ_133) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `ext` is non-NULL per the guard above, so it is a live `ASN1_TYPE`.
+    if unsafe { (*ext).type_ } != V_ASN1_SEQUENCE {
+        // SAFETY: a compiled-in site coordinate.
+        unsafe { raise_site(&X509_REQ_133) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `ext` is non-NULL and of type `V_ASN1_SEQUENCE`, so its union holds an
+    // `ASN1_STRING *`.
+    let seq = unsafe { (*ext).value.ptr }.cast::<Asn1String>();
+    // SAFETY: a `SEQUENCE`-typed `ASN1_TYPE` carries a live `ASN1_STRING`; `data` is its buffer.
+    let mut p: *const c_uchar = unsafe { (*seq).data };
+    // SAFETY: `p` and `seq.length` describe the value's own bytes; `pval` is NULL, so the item
+    // layer allocates the answer rather than writing through the caller's slot.
+    unsafe {
+        ASN1_item_d2i(
+            ptr::null_mut(),
+            &raw mut p,
+            (*seq).length as c_long,
+            X509_EXTENSIONS_it(),
+        )
+        .cast::<OpenSslStack>()
+    }
+}
+
+/// `STACK_OF(X509_EXTENSION) *X509_REQ_get_extensions(X509_REQ *req)` —
+/// `crypto/x509/x509_req.c:142-159`.
+///
+/// Walks the configured extension OIDs and answers the first attribute that decodes to a non-empty
+/// stack. A NULL request or a NULL `ext_nids` table answers NULL (`:145-146`); no matching
+/// attribute at all is an empty stack (`:158`).
+///
+/// # Safety
+///
+/// `req` is NULL or a live `X509_REQ`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_REQ_get_extensions(req: *mut X509Req) -> *mut OpenSslStack {
+    // SAFETY: reads this unit's own `ext_nids` global.
+    let nids = unsafe { EXT_NIDS };
+    if req.is_null() || nids.is_null() {
+        return ptr::null_mut();
+    }
+    let mut i: isize = 0;
+    loop {
+        // SAFETY: `nids` is non-NULL and `NID_undef`-terminated per this module's contract.
+        let nid = unsafe { *nids.offset(i) };
+        if nid == NID_undef {
+            break;
+        }
+        // SAFETY: `req` is live per the contract.
+        let exts = unsafe { get_extensions_by_nid(req, nid) };
+        if exts.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `exts` is a live stack.
+        if unsafe { OPENSSL_sk_num(exts) } > 0 {
+            return exts;
+        }
+        // SAFETY: `exts` is a live stack this call owns.
+        unsafe { OPENSSL_sk_free(exts) };
+        i += 1;
+    }
+    OPENSSL_sk_new_null()
+}
+
+/// The tail of `X509_REQ_add_extensions_nid` from the authority's `:186` to its `end:` label
+/// (`:201-203`), kept apart so `mod_exts` is released exactly once on every path.
+///
+/// # Safety
+///
+/// `req` is a live `X509_REQ`; `exts` is a live stack; `mod_exts` is NULL or a live stack this
+/// call owns; `loc` is the attribute index `X509at_get_attr_by_NID` answered when `mod_exts` is
+/// non-NULL and is unused otherwise.
+unsafe fn add_extensions_nid_tail(
+    req: *mut X509Req,
+    exts: *const OpenSslStack,
+    nid: c_int,
+    loc: c_int,
+    mod_exts: *const OpenSslStack,
+) -> c_int {
+    let mut ext: *mut c_uchar = ptr::null_mut();
+    // SAFETY: the stack encoded is `mod_exts` when the attribute existed, else `exts`; both are
+    // live stacks of extensions, and `ext` is the writable cursor the item layer fills.
+    let extlen = unsafe {
+        ASN1_item_i2d(
+            (if mod_exts.is_null() { exts } else { mod_exts }).cast(),
+            &raw mut ext,
+            X509_EXTENSIONS_it(),
+        )
+    };
+    if extlen <= 0 {
+        return 0;
+    }
+    if !mod_exts.is_null() {
+        // SAFETY: `req` is live per the contract; `loc` is a live attribute index.
+        let att = unsafe { X509at_delete_attr((*req).req_info.attributes, loc) };
+        if att.is_null() {
+            // SAFETY: `ext` was allocated by the item layer above.
+            unsafe { CRYPTO_free(ext.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_EXT) };
+            return 0;
+        }
+        // SAFETY: `att` is a live attribute this call owns.
+        unsafe { X509_ATTRIBUTE_free(att) };
+    }
+    // SAFETY: `req` is live per the contract; the remaining arguments are the caller's contract,
+    // and `ext`/`extlen` are the encoding built above.
+    let rv = unsafe { X509_REQ_add1_attr_by_NID(req, nid, V_ASN1_SEQUENCE, ext, extlen) };
+    // SAFETY: `ext` was allocated by the item layer above.
+    unsafe { CRYPTO_free(ext.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_EXT) };
+    rv
+}
+
+/// `int X509_REQ_add_extensions_nid(X509_REQ *req, const STACK_OF(X509_EXTENSION) *exts, int nid)`
+/// — `crypto/x509/x509_req.c:165-204`.
+///
+/// An empty or NULL `exts` is a no-op answering 1 (`:175-176`). When the attribute already exists
+/// its extensions and the new ones are merged through `X509v3_add_extensions` (a batch add
+/// replaces by OID) and the old attribute is deleted.
+///
+/// # Safety
+///
+/// `req` is a live `X509_REQ`; `exts` is NULL or a live stack of extensions.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_REQ_add_extensions_nid(
+    req: *mut X509Req,
+    exts: *const OpenSslStack,
+    nid: c_int,
+) -> c_int {
+    // SAFETY: `exts` is NULL or a live stack per the contract.
+    if unsafe { OPENSSL_sk_num(exts) } <= 0 {
+        return 1;
+    }
+    // SAFETY: `req` is live per the contract; `attributes` is its own stack or NULL.
+    let loc = unsafe { X509at_get_attr_by_NID((*req).req_info.attributes, nid, -1) };
+    let mut mod_exts: *mut OpenSslStack = ptr::null_mut();
+    if loc != -1 {
+        // SAFETY: `req` is live per the contract.
+        mod_exts = unsafe { get_extensions_by_nid(req, nid) };
+        if mod_exts.is_null() {
+            return 0;
+        }
+        // SAFETY: `mod_exts` is a live stack this call owns and `exts` is live; both hold
+        // extensions, and `X509v3_add_extensions` may replace `mod_exts` in place.
+        if unsafe { X509v3_add_extensions(&raw mut mod_exts, exts) }.is_null() {
+            // SAFETY: `mod_exts` is a live stack this call owns.
+            unsafe { OPENSSL_sk_pop_free(mod_exts, Some(x509_extension_free_void)) };
+            return 0;
+        }
+    }
+    // SAFETY: the tail's contract; `mod_exts` is NULL or a live stack this call owns.
+    let rv = unsafe { add_extensions_nid_tail(req, exts, nid, loc, mod_exts) };
+    // SAFETY: `mod_exts` is NULL or a live stack this call owns (the authority's `end:` label).
+    unsafe { OPENSSL_sk_pop_free(mod_exts, Some(x509_extension_free_void)) };
+    rv
+}
+
+/// `int X509_REQ_add_extensions(X509_REQ *req, const STACK_OF(X509_EXTENSION) *exts)` —
+/// `crypto/x509/x509_req.c:207-210`.
+///
+/// The "official" OID is `NID_ext_req`.
+///
+/// # Safety
+///
+/// `req` is a live `X509_REQ`; `exts` is NULL or a live stack of extensions.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_REQ_add_extensions(
+    req: *mut X509Req,
+    exts: *const OpenSslStack,
+) -> c_int {
+    // SAFETY: the callee's contract is this function's contract.
+    unsafe { X509_REQ_add_extensions_nid(req, exts, NID_ext_req) }
 }
 
 /// `int X509_REQ_get_attr_count(const X509_REQ *req)` — `crypto/x509/x509_req.c:214-217`.
@@ -689,6 +927,7 @@ pub unsafe extern "C" fn i2d_re_X509_REQ_tbs(req: *mut X509Req, pp: *mut *mut c_
 mod tests {
     use super::*;
     use crate::asn1::string::ASN1_BIT_STRING_new;
+    use crate::x509::x_exten::{d2i_X509_EXTENSIONS, i2d_X509_EXTENSIONS};
     use crate::x509::x_req::{X509_REQ_free, X509_REQ_new};
 
     /// A blank request reads back with an empty attribute stack, and the signature `set0` installs
@@ -710,6 +949,67 @@ mod tests {
             X509_REQ_get0_signature(req, &raw mut out, ptr::null_mut());
             assert_eq!(out, sig);
 
+            X509_REQ_free(req);
+        }
+    }
+
+    /// An empty `SEQUENCE OF Extension` decodes to an empty stack and re-encodes to the same
+    /// bytes: the `X509_EXTENSIONS` wrapper 11.4b lands in `crate::x509::x_exten`.
+    #[test]
+    fn an_empty_extensions_sequence_round_trips() {
+        let der = [0x30u8, 0x00];
+        // SAFETY: every pointer is a local's, and the item layer only reads the slice `p` points
+        // into; `out` is filled and released with the item layer's own allocator.
+        unsafe {
+            let mut p: *const c_uchar = der.as_ptr();
+            let stack = d2i_X509_EXTENSIONS(ptr::null_mut(), &raw mut p, 2);
+            assert!(!stack.is_null());
+            assert_eq!(OPENSSL_sk_num(stack), 0);
+
+            let mut out: *mut c_uchar = ptr::null_mut();
+            let n = i2d_X509_EXTENSIONS(stack, &raw mut out);
+            assert_eq!(n, 2);
+            assert_eq!(core::slice::from_raw_parts(out, 2), &der[..]);
+            CRYPTO_free(out.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_EXT);
+            OPENSSL_sk_free(stack);
+        }
+    }
+
+    /// A request's extension attribute survives `X509_REQ_add_extensions` and
+    /// `X509_REQ_get_extensions`: both sides of the round trip are the `X509_EXTENSIONS` encoding of
+    /// one `basicConstraints` extension.
+    #[test]
+    fn a_request_extension_attribute_round_trips() {
+        // `SEQUENCE OF Extension` holding `basicConstraints = SEQUENCE {}` (OID 2.5.29.19):
+        // 30 0B { 30 09 { 06 03 55 1D 13 , 04 02 30 00 } }.
+        let der: [u8; 13] = [
+            0x30, 0x0B, 0x30, 0x09, 0x06, 0x03, 0x55, 0x1D, 0x13, 0x04, 0x02, 0x30, 0x00,
+        ];
+        // SAFETY: the request, the two stacks and the encoded buffer are all locals owned here;
+        // each is released exactly once with the destructor that matches its element type.
+        unsafe {
+            let mut p: *const c_uchar = der.as_ptr();
+            let exts = d2i_X509_EXTENSIONS(ptr::null_mut(), &raw mut p, der.len() as c_long);
+            assert!(!exts.is_null());
+            assert_eq!(OPENSSL_sk_num(exts), 1);
+
+            let req = X509_REQ_new();
+            // `X509_REQ_add_extensions` borrows the stack; the caller keeps it.
+            assert_eq!(X509_REQ_add_extensions(req, exts), 1);
+            assert_eq!(X509_REQ_get_attr_count(req), 1);
+
+            let back = X509_REQ_get_extensions(req);
+            assert!(!back.is_null());
+            assert_eq!(OPENSSL_sk_num(back), 1);
+
+            let mut out: *mut c_uchar = ptr::null_mut();
+            let n = i2d_X509_EXTENSIONS(back, &raw mut out);
+            assert_eq!(n, der.len() as c_int);
+            assert_eq!(core::slice::from_raw_parts(out, der.len()), &der[..]);
+
+            CRYPTO_free(out.cast::<c_void>(), FILE.as_ptr(), LINE_FREE_EXT);
+            OPENSSL_sk_pop_free(back, Some(x509_extension_free_void));
+            OPENSSL_sk_pop_free(exts, Some(x509_extension_free_void));
             X509_REQ_free(req);
         }
     }
