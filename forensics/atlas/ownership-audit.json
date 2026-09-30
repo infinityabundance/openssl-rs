@@ -3203,12 +3203,12 @@
     {
       "name": "ledger-10",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "ff852a110984a0d6a2a6be3493492195f67f0be82cb68c80d1ba623205bbd682"
+      "sha256": "a03a3670326ba4dcc7fda6549535c8dd2eb92d5d455a2994fbcf62a5c46bc306"
     },
     {
       "name": "ledger-11",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "2b4eae976ae48816bcfce5b5cc3ad6345489cc081e83e2af850a9bf8f8d9ba46"
+      "sha256": "29fd03bcf87ec6bd89edf4e27df41036a421b34dd066182cec23395f51d9b629"
     }
   ],
   "kind": "ownership-audit",

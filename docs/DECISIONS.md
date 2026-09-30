@@ -33548,3 +33548,47 @@ ledger disposition they match.
 --all`, `cargo build --release`, both `cargo test --lib` runs (serial and parallel-safety) and
 `cargo clippy --all-targets -- -D warnings` are green, with **1,119 unit tests passed**;
 `probe_hygiene` stable across `-O0/-O1/-O2` on both sides.
+
+## D483 -- the active-stratum clause gate was empty; it binds symbols again, and it proves it
+
+`docs_consistency.py`'s D208 check ties the active stratum's plan status clauses to its obligation
+ledger, per symbol: a name in the "Landed exports (checked against the ledger)" clause must be in
+the ledger's `implemented` list, and a name in the "Open exports" clause must be in its `open`
+list. It is the gate that caught Phase 8's stale "Still open" prose.
+
+**It has checked nothing since Phase 9.** `_clause_symbols` read the text from the end of the
+heading to the first `\n\n`. Phase 8's plan begins the clause paragraph on the heading's own line,
+so that was the paragraph. Phases 9, 10 and 11 write the heading on a line of its own with a blank
+line beneath it, so the first `\n\n` is that blank line, the segment is empty, and the function
+returned `[]`. The gate found the heading, iterated over no symbol, and reported ok -- which is why
+phase 11's section 5 could name `X509V3_EXT_nconf` and `X509_OBJECT_free` as still open while the
+ledger recorded both implemented. D482 surfaced it sideways: rewording the heading produced a
+`ClaimMissing`, because the heading string was the only part doing any work.
+
+**Three changes give it its teeth back.**
+* `_clause_symbols` strips leading newlines, so a heading and its paragraph are one clause however
+they are laid out.
+* `verify` reports a clause that names no symbol while its pool is non-empty. That is the exact
+shape the blank line produced, and it is now a finding rather than a pass. The D203 exemption is
+the only way to bind a clause to a past moment, never an empty clause.
+* `--self-test` reconstructs three shapes against the live ledger -- a blank line then an open
+symbol claimed landed (must fail), a blank line then no symbol (must fail), and a blank line then a
+landed symbol claimed landed (must pass) -- and `pipeline.sh` runs it before the gate.
+
+The check's effect is real rather than cosmetic: it made phase 11's section 5 clauses name only
+symbols whose ledger disposition they match, which D482 rewrote for exactly this reason. No other
+stratum is in-progress, so no other plan is re-read.
+
+### The chain settles one generation behind its first run
+This commit also carries four regenerated artefacts whose only change is a recorded input hash:
+`forensics/phase10-obligations.json` and `forensics/phase11-obligations.json` (and the two atlases
+that record those ledgers' hashes). The pipeline globs `forensics/tools/phase*_obligations.py`
+lexicographically, so `phase10` and `phase11` run **before** `phase7`; the phase-7 ledger a run
+records is the previous generation's. The hash therefore trails by one run and reaches its fixed
+point on the next, which is why `forensics/tools/pipeline.sh`'s own header says the chain needs two
+to four runs to settle. The settled values are the ones here. The ordering is left as it is --
+D96's ordering rule is load-bearing and the lag is recorded rather than repaired -- but this entry
+is where a reader finds it named.
+
+`PIPELINE OK` exit 0 with 111 courts and 47,545 observations; `docs-consistency --self-test`
+passes its three cases.
