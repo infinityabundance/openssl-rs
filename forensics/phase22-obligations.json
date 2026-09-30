@@ -4,23 +4,19 @@
     "counts": {
       "atlas_owned": 18,
       "deferred_to_later_phase": 0,
-      "implemented": 2,
-      "open_in_this_stratum": 16,
+      "implemented": 3,
+      "open_in_this_stratum": 15,
       "owned": 18,
       "received_by_handoff": 0
     },
     "deferred": [],
     "implemented": [
       "22.0",
-      "22.1"
+      "22.1",
+      "22.2"
     ],
     "note": "`open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
     "open": [
-      {
-        "artefact": "forensics/atlas/phase22/doxygen-entities.json",
-        "plane": "The pinned Doxygen corpus and its entity graph",
-        "subphase": "22.2"
-      },
       {
         "artefact": "forensics/atlas/phase22/tu-ast.json",
         "plane": "Every active translation unit's Clang AST and the declaration/definition graph",
@@ -105,7 +101,7 @@
     {
       "name": "phase-22-plan",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "831c9863252c68c31c961c582603bec10ffd2a48e0dadd76aecb30618a9e0489"
+      "sha256": "ed4af2df27639b451535d13ecb801a27860b36f21f5ca7e6aa83e358350efc24"
     }
   ],
   "kind": "phase22-obligations",

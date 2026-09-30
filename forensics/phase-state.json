@@ -627,7 +627,7 @@
         "stratum": "Maintenance delta machinery"
       },
       {
-        "blocking": "16 unresolved atlas residual(s) recorded in forensics/phase22-obligations.json; the Phase-22 seal is refused while any UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7). `open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
+        "blocking": "15 unresolved atlas residual(s) recorded in forensics/phase22-obligations.json; the Phase-22 seal is refused while any UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7). `open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
         "deferred": [],
         "evidence_absent": [
           "docs/PHASE-22-ATLAS-SEAL.md"
@@ -652,7 +652,7 @@
       "not_started": 10
     }
   },
-  "body_hash": "1d14f49a278411583edfd2afe2cd87df9223da3f0ed02ef81d4cfa72581a0fe7",
+  "body_hash": "8c85f408da4c59e2f354c8e3346df13dd606e21e2a98c803931996c0e23fc9b7",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

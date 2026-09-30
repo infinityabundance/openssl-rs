@@ -377,6 +377,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-PHASE22-DOXYGEN": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-PKCS12": {
       "observations": 353,
       "verdict": "pass"
@@ -481,7 +485,7 @@
   "open_obligations": {
     "phase10": 0,
     "phase11": 335,
-    "phase22": 16,
+    "phase22": 15,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
