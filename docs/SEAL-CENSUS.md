@@ -333,7 +333,7 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 10 — Key formats + PKCS + STORE
 
 * state: `complete`
-* seal: none written yet (`unnamed`)
+* seal: `docs/PHASE-10-KEYFORMATS-SEAL.md`
 * ledger: `forensics/phase10-obligations.json`
 * atlas-owned: 272
 * owned working set: 298

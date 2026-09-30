@@ -33186,3 +33186,62 @@ derives `not-started`. The two exports this stratum was opened against -- `PKCS1
 
 **10.7, the seal** -- `docs/PHASE-10-KEYFORMATS-SEAL.md`, its `seal_sha256` and its
 `phase_state.py` `STRATUM_EVIDENCE` row. Then Phase 10 is ready to merge into `main`.
+## D474 -- the Phase 10 seal: complete with its seal in place, and the FRF chain named as the remaining gate
+
+**10.7 wrote `docs/PHASE-10-KEYFORMATS-SEAL.md`** (763 lines), mirroring
+`docs/PHASE-9-RAND-DRBG-SEAL.md`'s ten sections, and registered it the way phase 9's is registered:
+`atlas_common.SEAL_DOCS[10]` and `phase_state.PHASE10_MODULES`. The registration is part of the same
+commit deliberately -- without it a stratum could reach `complete` with no seal, which is the hole
+the phase-9 comment names -- so `forensics/phase-state.json` now reports phase 10 `complete` with a
+**non-null `seal_sha256`**, `evidence_absent` empty, and phase 11 still `not-started`.
+
+**The seal cites rather than restates.** Every count in it comes from
+`docs/SEAL-CENSUS.md` / `forensics/phase10-obligations.json` / `artifacts/phase10/COURTS.json` (the
+one table it copies is §3's court list, and it says so), because a number typed into a seal is a
+number that can drift from the evidence it summarises. Its §6 non-claims are the vocabulary
+`docs/PARITY_MODEL.md` defines: `libssl` remains entirely `SCAFFOLDED`, X.509 verification is Phase
+11's, and no symbol is `PARITY_VERIFIED`.
+
+### What the seal records, including what contradicts it
+
+The seal's §10 and §5 record defects and staleness rather than smoothing them:
+
+* **Phase 10 has not joined the FRF chain.** `gen_frf_courts.py`'s table ends at phase 9, so
+  `docs/RELEASE_GATES.md` §2 items **6, 8 and 10 are not met** (7 is not applicable). That is
+  recorded as the next move, not as a satisfied gate.
+* **`D-DECODER-ABSENT-1`'s machine row is stale.** D450 measured its trigger satisfied and called it
+  a retirement candidate; the row still reads `trigger_satisfied: false, open`. Recorded, not
+  quietly retired.
+* **Two claim strings in `artifacts/phase10/COURTS.json` are stale**: they still say the
+  `i2d_PKCS8PrivateKey_nid_*` writers are held pending and that `OSSL_STORE_load` remains the one
+  `pending.` name, both falsified by D445/D473.
+* **The plan's §5/§6 ledger lines are historical** (`87`/`211`, `286/12`, `634/2`) against the
+  ledger's `298/0` and `636/0`.
+* **The prerequisite register moved 18 rows to 12**, and four of the five edits were forced by the
+  gate rather than made in anticipation; D470's narrowing was made before the run that would have
+  forced it.
+* **The hash-chain lag fired on this seal's own registration** and needed four runs, not two, to
+  settle: registering the seal changes `phase-state.json`'s `seal_sha256`, which cascades
+  `phase-state.json -> phase 7/8/9 ledgers -> phase 10 ledger -> court-coverage / ownership-audit /
+  divergence-obligations`. Both the step order and the `phase10`-before-`phase7` glob order
+  contribute; the fixed point is reached when the recorded hashes stop moving.
+* **A pre-existing Phase-8 test flaked once**: `sm2::crypt::tests::the_ciphertext_size_matches_and_a_round_trip_holds`
+  (`src/sm2/crypt.rs:851`) failed a DER-length lower-bound assertion on a random encryption. It is
+  Phase 8's, it is recorded, and it is not fixed here.
+* **One pipeline failure was seen once and not reproduced**: the provider census read 55 of 241
+  `DEFLT_ENCODERS` rows during a batch of four back-to-back runs; every direct run before and since
+  read all 241. Recorded as an unreproduced instrument observation (the container was later found
+  SIGKILLed, `exit 137`, `oom=false`, a plausible environmental cause).
+
+### Verification
+
+The pipeline prints `PIPELINE OK` exit 0 with **109 courts and 46,117 observations**, and
+`evidence_determinism`, `docs_consistency` and `regression_guard --require-current` are green; the
+regenerated artefacts are byte-identical across settled runs. `cargo test --lib` is 1117 passed on
+both halves.
+
+### What remains
+
+Phase 10 is complete by its ledger, its courts and its seal. What is **not** done is joining the FRF
+chain (`gen_frf_courts.py`) that `docs/RELEASE_GATES.md` §2 items 6 and 8 require, after which the
+staging branch merges into `main`.
