@@ -287,6 +287,8 @@ extern void EVP_SIGNATURE_settable_ctx_params(void);
 extern void EVP_SIGNATURE_up_ref(void);
 extern void EVP_SKEYMGMT_up_ref(void);
 extern void EVP_SKEY_export(void);
+/* Landed by the 10.14.3 slice once `X509V3_get_value_bool` closed its only blocker. */
+extern void EVP_add_alg_module(void);
 extern void EVP_get_pw_prompt(void);
 extern void EVP_set_pw_prompt(void);
 
@@ -553,6 +555,7 @@ static const void *volatile refs[] = {
     (const void *) EVP_SIGNATURE_up_ref,
     (const void *) EVP_SKEYMGMT_up_ref,
     (const void *) EVP_SKEY_export,
+    (const void *) EVP_add_alg_module,
     (const void *) EVP_get_pw_prompt,
     (const void *) EVP_set_pw_prompt,
 };

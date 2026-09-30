@@ -98,6 +98,62 @@ pub(crate) mod der_slh_dsa_key;
 // Phase 8's `providers/common/der/der_sm2_sig.c` (D406): the SM2 `WITH MD` AlgorithmIdentifier
 // writer the signature unit's setup builds.
 pub(crate) mod der_sm2_sig;
+// Phase 10's `providers/implementations/encode_decode/endecoder_common.c`: the keymgmt pilfers and
+// the import/free/read-DER helpers every provider codec unit stands on. It lands with the first of
+// them (`encode_key2text.rs`), because all of them call it.
+pub(crate) mod endecoder_common;
+// Phase 10.1's first provider codec unit: `providers/implementations/encode_decode/
+// encode_key2text.c`, the eleven text-encoder tables and their five printers. It is the caller
+// the three `ossl_bio_print_*` helpers in `src/encoder_lib.rs` were withheld for.
+pub(crate) mod encode_key2any;
+pub(crate) mod encode_key2text;
+// Phase 10.1's second provider codec unit: `providers/implementations/encode_decode/
+// encode_key2blob.c`, the `EC`/`SM2` public-point blob encoder tables. Its only closure is
+// `i2o_ECPublicKey`, landed with Phase 8.7.
+pub(crate) mod encode_key2blob;
+// Phase 10.1's first provider codec *decoder* unit: `providers/implementations/encode_decode/
+// decode_epki2pki.c`, the `EncryptedPrivateKeyInfo`-to-`PrivateKeyInfo` DER engine. Its dispatch
+// table is referenced by `decode_der2key.rs`'s combined `deflt_decoder[]`/`base_decoder[]`.
+pub(crate) mod decode_epki2pki;
+// Phase 10.1's largest provider codec unit: `providers/implementations/encode_decode/
+// decode_der2key.c`, the 69 DER-to-key decoder tables and the shared engine behind them. It is the
+// crate's `deflt_decoder[]`/`base_decoder[]` home, since it publishes 69 of the 76 rows landed.
+pub(crate) mod decode_der2key;
+// Phase 10.1/10.6's PVK/MSBLOB provider codecs: `encode_key2ms.c` (the four `i2b_*`-backed
+// MSBLOB/PVK encoders), `decode_msblob2key.c` (the two MSBLOB decoders) and
+// `decode_pvk2key.c` (the two PVK decoders). D435 held all three `pending` for
+// `crypto/pem/pvkfmt.c`, which 10.6 lands; the decoder tables are referenced by
+// `decode_der2key.rs`'s combined `deflt_decoder[]`/`base_decoder[]`.
+pub(crate) mod decode_msblob2key;
+pub(crate) mod decode_pvk2key;
+// Phase 10.5's two provider codec decoder units: `decode_spki2typespki.c` (the
+// `SubjectPublicKeyInfo`-to-type-specific-SPKI engine that fronts the DER-to-key chain) and
+// `decode_pem2der.c` (the PEM-to-DER front door that names a PEM block and routes it to the two
+// engines). Both are referenced by `decode_der2key.rs`'s combined `deflt_decoder[]`/`base_decoder[]`,
+// and the SPKI one is what makes `crypto/ec/ec_backend.c`'s `ossl_x509_algor_is_sm2` reached.
+pub(crate) mod decode_pem2der;
+pub(crate) mod decode_spki2typespki;
+pub(crate) mod encode_key2ms;
+// Phase 10.16's `providers/implementations/storemgmt/file_store.c`: the `file:` STORE LOADER
+// the `default` and `base` providers publish as their one `OSSL_OP_STORE` row, and the two
+// `DEFLT_STORES`/`BASE_STORES` tables those providers' query arms return. Its private
+// last-resort decoder is `file_store_any2obj.c`, transcribed beside it because
+// `file_setup_decoders` is the table's only reader.
+pub(crate) mod file_store;
+pub(crate) mod file_store_any2obj;
+// Phase 10.1's first PQC codec *closure* unit: `providers/implementations/encode_decode/
+// ml_common_codecs.c`, the shared ASN.1 SPKI/PKCS#8 format tables and the one
+// `ossl_ml_common_pkcs8_fmt_order` helper the two PQC codec units stand on. It publishes no row;
+// `ml_kem_codecs.c` and `ml_dsa_codecs.c` are its callers.
+pub(crate) mod ml_common_codecs;
+// Phase 10.1's second PQC codec closure unit: `providers/implementations/encode_decode/
+// ml_kem_codecs.c`, the ML-KEM d2i/i2d PKCS#8 and PUBKEY codecs and the `ossl_ml_kem_key_to_text`
+// printer. The primitives it drives landed with Phase 8's `crypto/ml_kem/`.
+pub(crate) mod ml_kem_codecs;
+// Phase 10.1's third PQC codec closure unit: `providers/implementations/encode_decode/
+// ml_dsa_codecs.c`, the ML-DSA d2i/i2d PKCS#8 and PUBKEY codecs and the `ossl_ml_dsa_key_to_text`
+// printer. The primitives it drives landed with Phase 8's `crypto/ml_dsa/`.
+pub(crate) mod ml_dsa_codecs;
 // Phase 8's `providers/implementations/asymciphers/sm2_enc.c` (D406): the `SM2` asym-cipher row,
 // the encryption face of the `SM2` key object.
 pub(crate) mod digest_to_nid;

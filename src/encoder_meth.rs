@@ -947,8 +947,9 @@ unsafe extern "C" fn do_one(_id: c_int, method: *mut c_void, arg: *mut c_void) {
 ///
 /// The **fetch runs first** (`:549`), which is what fills the temporary store, and only then are
 /// both the temporary store's methods and the permanent store's walked. The temporary store is
-/// released last. In this crate the walk finds nothing -- all 482 `OSSL_OP_ENCODER` rows are
-/// `unimplemented` -- so no callback is invoked, but the code path is the authority's.
+/// released last. In this crate the walk finds the rows 10.1 has published -- the eleven text
+/// encoders and the two blob encoders, in the default and base providers -- and no others, because
+/// every other `OSSL_OP_ENCODER` provider row is still `unimplemented`.
 ///
 /// # Safety
 /// `libctx` NULL or live; `user_fn` a valid callback; `user_arg` opaque to this file.

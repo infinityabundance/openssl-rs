@@ -1,25 +1,35 @@
-//! `crypto/x509/x509_set.c`'s `X509_SIG_INFO_set`, the one setter of the signature-info
-//! structure that the `rsa_ameth.c` and `ecx_meth.c` method objects call by name (`:771`
-//! and `:586`/`:602` respectively). Phase 8.8 (D349).
+//! `crypto/x509/x509_set.c`'s `X509_SIG_INFO_set`, `X509_up_ref` and `ossl_x509_init_sig_info`.
+//! Phase 8.8 (D349) landed the first; Phase 10.8 added the second; **Phase 10.14.5 adds the
+//! third**, the signature-strength initialiser `ossl_x509v3_cache_extensions` (`v3_purp.c`) calls
+//! at the end of its cache pass.
 //!
-//! ## A partial unit, and the one export this slice reaches
+//! ## A partial unit, and the two exports this slice reaches
 //!
-//! `crypto/x509/x509_set.c` is the X.509 object's mutator layer: **21 exports**, of which
-//! this module lands **one** (`:200`). The other twenty — the `X509_get_version`/
-//! `X509_set_version` pair, the four `X509_set_issuer_name`/`_subject_name`/`_pubkey`/
-//! `_serialNumber` setters, the six `notBefore`/`notAfter` accessors, `X509_get0_extensions`,
-//! `X509_get0_uids`, `X509_get0_tbs_sigalg`, `X509_get_X509_PUBKEY`,
-//! `X509_get_signature_info`, `X509_SIG_INFO_get`, `X509_up_ref` and
-//! `X509_get_signature_type` — are the `X509` object layer proper. They are not this
-//! subphase's and none of the five ASN.1 method objects calls any of them; they are
-//! withheld with the rest of the object layer, not stubbed.
+//! `crypto/x509/x509_set.c` is the X.509 object's mutator layer: **21 exports**, of which this
+//! module lands **five**: `X509_SIG_INFO_set` (`:200`) and `X509_up_ref` (`:120`) from Phase 8.8
+//! and 10.8, plus the three that 10.14.1's comparison/accessor slice reaches -- `X509_get_version`
+//! (`:132-135`), `X509_set_version` (`:27-47`) and the `ossl_x509_set1_time` helper (`:78-92`)
+//! that `x509cset.c`'s CRL setters and this unit's own validity setters share. **10.14.5 lands
+//! a sixth and seventh: the static `x509_sig_info_init` (`:217-302`) and its one-line wrapper
+//! `ossl_x509_init_sig_info` (`:305-309).** The other fourteen -- the four
+//! `X509_set_issuer_name`/`_subject_name`/`_pubkey`/`_serialNumber` setters, the six
+//! `notBefore`/`notAfter` accessors, `X509_get0_extensions`, `X509_get0_uids`,
+//! `X509_get0_tbs_sigalg`, `X509_get_X509_PUBKEY`, `X509_get_signature_info`,
+//! `X509_SIG_INFO_get` and `X509_get_signature_type` -- are the `X509` mutator layer proper.
+//! They are not this subphase's, and are withheld rather than stubbed.
 //!
-//! The two internals of the unit, `ossl_x509_init_sig_info` (`:305-309`) and
-//! `ossl_x509_set1_time` (`:78-92`), are withheld with them and are the `covers` of this
-//! module's divergence row in `forensics/prerequisites.json`. `ossl_x509_init_sig_info` is a
-//! one-line delegation to the file-local `static x509_sig_info_init` (`:217`);
-//! `ossl_x509_set1_time` duplicates one `ASN1_TIME` with `ASN1_STRING_dup`, frees the old
-//! one and sets a caller's `modified` flag.
+//! **`ossl_x509_init_sig_info` is landed because `ossl_x509v3_cache_extensions` names it**, and
+//! it is the third of the three non-`x509_ext.c` names that function was measured to need (D461).
+//! Both of its authority callers are themselves withheld -- `X509_get_signature_info` (`:209-214`,
+//! blocked on `X509_check_purpose`) and `ossl_x509v3_cache_extensions` -- so it is **unreachable
+//! until 10.14.5 lands the cache**, and its `default:` branch routes through
+//! `EVP_get_digestbynid`/`EVP_get_digestbyname`, the crate's recorded legacy-`OBJ_NAME` divergence
+//! (D333/D343); the transcription reproduces that path rather than papering over it. Neither fact
+//! is observable while the function has no landed caller, so no court names it.
+//!
+//! **`ossl_x509_set1_time` (`:78-92`) was withheld with the mutator layer until 10.14.1**, and
+//! lands here: it duplicates one `ASN1_TIME` with `ASN1_STRING_dup`, frees the old one and sets a
+//! caller's `modified` flag (or, for the CRL paths, a NULL one).
 //!
 //! ## The `X509SigInfo` layout
 //!
@@ -45,7 +55,25 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::c_int;
+use core::ffi::{c_int, c_long};
+use core::ptr;
+
+use crate::asn1::layout::Asn1String;
+use crate::asn1::prim::{ASN1_INTEGER_get, ASN1_INTEGER_set};
+use crate::asn1::string::{ASN1_INTEGER_free, ASN1_INTEGER_new, ASN1_STRING_dup, ASN1_TIME_free};
+use crate::asn1::x_algor::X509Algor;
+use crate::evp::digest::{EVP_MD_get_size, EvpMd};
+use crate::evp::legacy_evp::EVP_get_digestbyname;
+use crate::evp::pkey::EVP_PKEY_get_security_bits;
+use crate::evp::pkey_asn1::EVP_PKEY_asn1_find;
+use crate::runtime::err::{err_sites, raise_site};
+use crate::runtime::obj::{
+    NID_id_GostR3411_94, NID_md5, NID_sha1, NID_sha256, NID_sha384, NID_sha512, NID_undef,
+    OBJ_find_sigid_algs, OBJ_nid2sn, OBJ_obj2nid,
+};
+use crate::runtime::stack::OpenSslStack;
+use crate::x509::x_pubkey::X509_PUBKEY_get0;
+use crate::x509::x_x509::X509;
 
 /// `struct x509_sig_info_st` — `X509_SIG_INFO`, from `include/crypto/x509.h:50-59`.
 ///
@@ -72,6 +100,122 @@ const _: () = {
     assert!(core::mem::offset_of!(X509SigInfo, flags) == 12);
 };
 
+/// `int X509_set_version(X509 *x, long version)` — `crypto/x509/x509_set.c:27-47`.
+///
+/// A no-op that answers 1 when the requested version already holds; version 1 frees the version
+/// integer so the DER omits it (the `[ 0 ]` default); any other version allocates it on first
+/// use. Every success marks the cached encoding stale.
+///
+/// # Safety
+///
+/// `x` must be NULL or a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_set_version(x: *mut X509, version: c_long) -> c_int {
+    if x.is_null() {
+        return 0;
+    }
+    // SAFETY: `x` is live per the contract.
+    unsafe {
+        if version == X509_get_version(x) {
+            return 1;
+        }
+        if version == X509_VERSION_1 {
+            ASN1_INTEGER_free((*x).cert_info.version);
+            (*x).cert_info.version = core::ptr::null_mut();
+            (*x).cert_info.enc.modified = 1;
+            return 1;
+        }
+        if (*x).cert_info.version.is_null() {
+            (*x).cert_info.version = ASN1_INTEGER_new();
+            if (*x).cert_info.version.is_null() {
+                return 0;
+            }
+        }
+        if ASN1_INTEGER_set((*x).cert_info.version, version) == 0 {
+            return 0;
+        }
+        (*x).cert_info.enc.modified = 1;
+    }
+    1
+}
+
+/// `long X509_get_version(const X509 *x)` — `crypto/x509/x509_set.c:132-135`.
+///
+/// A NULL version pointer reads as 0 through `ASN1_INTEGER_get`, which is the authority's v1
+/// default. `X509_NAME_cmp`'s `X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT`-free callers and the
+/// Suite-B chain check reach it.
+///
+/// # Safety
+///
+/// `x` must be a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get_version(x: *const X509) -> c_long {
+    // SAFETY: `x` is live per the contract.
+    unsafe { ASN1_INTEGER_get((*x).cert_info.version) }
+}
+
+/// `int ossl_x509_set1_time(int *modified, ASN1_TIME **ptm, const ASN1_TIME *tm)` —
+/// `crypto/x509/x509_set.c:78-92`.
+///
+/// Duplicates `tm` into `*ptm`, frees the previous value and sets `*modified` (when non-NULL).
+/// A `tm` of NULL is the authority's "clear" case: it frees the old value, writes NULL and
+/// answers 1. Identity (`*ptm == tm`) is a no-op.
+///
+/// # Safety
+///
+/// `ptm` must be writable and `*ptm` must be NULL or a live `ASN1_TIME`; `tm` must be NULL or a
+/// live `ASN1_TIME`; `modified` must be NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_x509_set1_time(
+    modified: *mut c_int,
+    ptm: *mut *mut Asn1String,
+    tm: *const Asn1String,
+) -> c_int {
+    // SAFETY: `ptm` is writable per the contract.
+    if unsafe { *ptm == tm.cast_mut() } {
+        return 1;
+    }
+    // SAFETY: `tm` is NULL or live per the contract.
+    let new = unsafe { ASN1_STRING_dup(tm) };
+    if !tm.is_null() && new.is_null() {
+        return 0;
+    }
+    // SAFETY: `ptm` is writable and `*ptm` is NULL or live.
+    unsafe {
+        ASN1_TIME_free(*ptm);
+        *ptm = new;
+        if !modified.is_null() {
+            *modified = 1;
+        }
+    }
+    1
+}
+
+/// `const STACK_OF(X509_EXTENSION) *X509_get0_extensions(const X509 *x)` —
+/// `crypto/x509/x509_set.c:167-170`.
+///
+/// The certificate's extension stack, borrowed. **Landed by 10.14.2**, un-withheld from the
+/// mutator layer because `X509_sign`/`X509_sign_ctx` (`crypto/x509/x_all.c`) test its length to
+/// decide whether to force version 3, and the `X509` object 10.8 landed makes the one-field read
+/// writable. The stack is `OpenSslStack`; only its length and elements are read, by the signer
+/// and by the `X509v3_*` surface `x509_v3.c` (10.11) owns.
+///
+/// # Safety
+///
+/// `x` must be a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get0_extensions(x: *const X509) -> *const OpenSslStack {
+    // SAFETY: `x` is live per the contract.
+    unsafe { (*x).cert_info.extensions }
+}
+
+/// `X509_VERSION_1` — `include/openssl/x509.h:651`, the version `X509_set_version` omits from
+/// the encoding rather than writing.
+const X509_VERSION_1: c_long = 0;
+
 /// `void X509_SIG_INFO_set(X509_SIG_INFO *siginf, int mdnid, int pknid, int secbits,
 /// uint32_t flags)` — `crypto/x509/x509_set.c:200-207`.
 ///
@@ -96,6 +240,168 @@ pub unsafe extern "C" fn X509_SIG_INFO_set(
         (*siginf).pknid = pknid;
         (*siginf).secbits = secbits;
         (*siginf).flags = flags;
+    }
+}
+
+/// `int X509_up_ref(X509 *x)` — `crypto/x509/x509_set.c:120-130`.
+///
+/// `CRYPTO_UP_REF` followed by the authority's `i > 1` test. The count is the same field
+/// `X509_it`'s `ASN1_AFLG_REFCOUNT` initialises to 1 and `X509_free` decrements.
+///
+/// # Safety
+///
+/// `x` is a live `X509`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_up_ref(x: *mut X509) -> c_int {
+    // SAFETY: `x` is live per the contract.
+    let i = unsafe { (*x).references.wrapping_add(1) };
+    // SAFETY: `x` is live and writable.
+    unsafe { (*x).references = i };
+    c_int::from(i > 1)
+}
+
+/// `X509_SIG_INFO_VALID` — `include/openssl/x509.h.in:66`, the "`siginf` was filled" bit.
+const X509_SIG_INFO_VALID: u32 = 0x1;
+/// `X509_SIG_INFO_TLS` — `include/openssl/x509.h.in:68`, set for the four TLS-legal digests.
+const X509_SIG_INFO_TLS: u32 = 0x2;
+
+/// `static int x509_sig_info_init(X509_SIG_INFO *siginf, const X509_ALGOR *alg, const ASN1_STRING
+/// *sig, const EVP_PKEY *pubkey)` — `crypto/x509/x509_set.c:217-302`.
+///
+/// Resolves the signature algorithm's digest and public-key NIDs through `OBJ_find_sigid_algs`,
+/// then fills the four `siginf` fields: `mdnid`/`pknid` always, `secbits` by the digest's own
+/// strength (with the three historical overrides for SHA-1, MD5 and GOST R 34.11-94), and the
+/// `X509_SIG_INFO_VALID`/`_TLS` bits. A custom `siginf_set` method on the key's ASN.1 method wins
+/// when the digest NID is `NID_undef`; otherwise the public key's security bits are tried.
+///
+/// The `default:` branch is `EVP_get_digestbynid(mdnid)` — the macro
+/// `EVP_get_digestbyname(OBJ_nid2sn(mdnid))` — which the crate's legacy `OBJ_NAME` tables answer
+/// NULL for (D333/D343); the transcription keeps the authority's call rather than substituting a
+/// fetched digest, so the divergence stays where the crate records it rather than being hidden
+/// here.
+///
+/// # Safety
+///
+/// `siginf` must be writable; `alg` must be a live `X509_ALGOR`; `sig` must be NULL or a live
+/// `ASN1_STRING`; `pubkey` must be NULL or a live `EVP_PKEY`.
+unsafe fn x509_sig_info_init(
+    siginf: *mut X509SigInfo,
+    alg: *const X509Algor,
+    sig: *const Asn1String,
+    pubkey: *const crate::evp::pkey::EvpPkey,
+) -> c_int {
+    // SAFETY: `siginf` is writable per the contract.
+    unsafe {
+        (*siginf).mdnid = NID_undef;
+        (*siginf).pknid = NID_undef;
+        (*siginf).secbits = -1;
+        (*siginf).flags = 0;
+    }
+    let mut mdnid: c_int = 0;
+    let mut pknid: c_int = 0;
+    // SAFETY: `alg` is live per the contract; the two out-parameters are locals.
+    let found = unsafe {
+        OBJ_find_sigid_algs(
+            OBJ_obj2nid((*alg).algorithm),
+            &raw mut mdnid,
+            &raw mut pknid,
+        )
+    };
+    if found == 0 || pknid == NID_undef {
+        // SAFETY: a compiled-in site coordinate.
+        unsafe { raise_site(&err_sites::X509_SET_230) };
+        return 0;
+    }
+    // SAFETY: `siginf` is writable per the contract.
+    unsafe {
+        (*siginf).mdnid = mdnid;
+        (*siginf).pknid = pknid;
+    }
+
+    if mdnid == NID_undef {
+        // SAFETY: `EVP_PKEY_asn1_find` takes a NULL engine slot and an integer NID.
+        let ameth = unsafe { EVP_PKEY_asn1_find(ptr::null_mut(), pknid) };
+        let mut handled = false;
+        if !ameth.is_null() {
+            // SAFETY: `ameth` is non-NULL and live.
+            if let Some(f) = unsafe { (*ameth).siginf_set } {
+                // SAFETY: `f` is the method's callback, called with the authority's arguments.
+                if unsafe { f(siginf, alg, sig) } != 0 {
+                    handled = true;
+                }
+            }
+        }
+        if !handled && !pubkey.is_null() {
+            // SAFETY: `pubkey` is non-NULL and live per the contract.
+            let secbits = unsafe { EVP_PKEY_get_security_bits(pubkey) };
+            if secbits != 0 {
+                // SAFETY: `siginf` is writable per the contract.
+                unsafe { (*siginf).secbits = secbits };
+                handled = true;
+            }
+        }
+        if !handled {
+            // SAFETY: a compiled-in site coordinate.
+            unsafe { raise_site(&err_sites::X509_SET_252) };
+            return 0;
+        }
+    } else if mdnid == NID_sha1 {
+        // SAFETY: `siginf` is writable per the contract.
+        unsafe { (*siginf).secbits = 63 }
+    } else if mdnid == NID_md5 {
+        // SAFETY: `siginf` is writable per the contract.
+        unsafe { (*siginf).secbits = 39 }
+    } else if mdnid == NID_id_GostR3411_94 {
+        // SAFETY: `siginf` is writable per the contract.
+        unsafe { (*siginf).secbits = 105 }
+    } else {
+        // `EVP_get_digestbynid(mdnid)` — `include/openssl/evp.h`, the macro
+        // `EVP_get_digestbyname(OBJ_nid2sn(nid))`.
+        // SAFETY: `OBJ_nid2sn` takes an integer NID and `EVP_get_digestbyname` a NUL-terminated
+        // name; both are the authority's own calls.
+        let md: *const EvpMd = unsafe { EVP_get_digestbyname(OBJ_nid2sn(mdnid)) };
+        if md.is_null() {
+            // SAFETY: a compiled-in site coordinate.
+            unsafe { raise_site(&err_sites::X509_SET_284) };
+            return 0;
+        }
+        // SAFETY: `md` is a live digest per the guard above.
+        let md_size = unsafe { EVP_MD_get_size(md) };
+        if md_size <= 0 {
+            return 0;
+        }
+        // SAFETY: `siginf` is writable per the contract.
+        unsafe { (*siginf).secbits = md_size * 4 }
+    }
+
+    if mdnid == NID_sha1 || mdnid == NID_sha256 || mdnid == NID_sha384 || mdnid == NID_sha512 {
+        // SAFETY: `siginf` is writable per the contract.
+        unsafe { (*siginf).flags |= X509_SIG_INFO_TLS }
+    }
+    // SAFETY: `siginf` is writable per the contract.
+    unsafe { (*siginf).flags |= X509_SIG_INFO_VALID }
+    1
+}
+
+/// `int ossl_x509_init_sig_info(X509 *x)` — `crypto/x509/x509_set.c:305-309`.
+///
+/// The one-line delegation [`ossl_x509v3_cache_extensions`] calls last. `X509_PUBKEY_get0`
+/// answers NULL for a certificate with no public key, which the initialiser's `pubkey` branch is
+/// written to accept.
+///
+/// # Safety
+///
+/// `x` must be a live `X509`.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_x509_init_sig_info(x: *mut X509) -> c_int {
+    // SAFETY: `x` is live per the contract; the three field addresses and the key are its own.
+    unsafe {
+        x509_sig_info_init(
+            &raw mut (*x).siginf,
+            &raw const (*x).sig_alg,
+            &raw const (*x).signature,
+            X509_PUBKEY_get0((*x).cert_info.key),
+        )
     }
 }
 

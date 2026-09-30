@@ -160,6 +160,12 @@ pub struct BitStringBitname {
     pub(crate) sname: *const c_char,
 }
 
+// SAFETY: a name row borrows compile-time constant strings and is never written; the authority's
+// `crl_reasons[]`/`key_usage[]`/`ns_cert_type[]` tables are immutable data. Claiming `Sync` is what
+// lets `v3_enum.rs` hold one as a `static` for `X509V3_EXT_METHOD.usr_data`, the same reason
+// `Asn1Item` and `Asn1Template` claim it.
+unsafe impl Sync for BitStringBitname {}
+
 /// `ASN1_TEMPLATE` — one field of a `SEQUENCE`/`CHOICE` template.
 ///
 /// `item` is declared as a pointer to `ASN1_ITEM_EXP`, which is
@@ -684,6 +690,8 @@ pub(crate) const V_ASN1_NUMERICSTRING: c_int = 18;
 pub(crate) const V_ASN1_PRINTABLESTRING: c_int = 19;
 /// `TeletexString`, also spelled `T61String`.
 pub(crate) const V_ASN1_T61STRING: c_int = 20;
+/// `VideotexString` — `include/openssl/asn1.h.in:214`.
+pub(crate) const V_ASN1_VIDEOTEXSTRING: c_int = 21;
 /// `IA5String`.
 pub(crate) const V_ASN1_IA5STRING: c_int = 22;
 /// `UTCTime`.

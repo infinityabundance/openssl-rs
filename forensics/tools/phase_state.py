@@ -747,6 +747,12 @@ PHASE10_OBLIGATIONS = "forensics/phase10-obligations.json"
 PHASE10_MODULES = [
     "docs/PHASE-10-SUBPHASES.md",
     "forensics/tools/phase10_obligations.py",
+    # 10.7 -- the seal. A stratum may only report `complete` with its seal in place, which is the
+    # rule phases 3 through 9 already follow and which is the reason this line is added in the
+    # commit that writes the document rather than after it. Without it phase 10 could reach
+    # `complete` with no seal at all, and `phase_state.py`'s own claim -- "a stratum may only
+    # report `complete` with its seal in place" -- would be false for exactly one stratum.
+    "docs/PHASE-10-KEYFORMATS-SEAL.md",
 ]
 
 

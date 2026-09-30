@@ -175,6 +175,12 @@ COVERED_FILES = [
     # the exclusion is visible rather than implied. (`a_object.c` is already
     # covered: Phase 4's `OBJ_create` reaches it through `a2d_ASN1_OBJECT`.)
     ("crypto/asn1/a_bitstr.c", "A_BITSTR"),
+    # Phase 10.10 lands `crypto/asn1/a_digest.c` (`ASN1_item_digest`/`ASN1_digest` and the
+    # `ossl_asn1_item_digest_ex` `X509_digest` reaches). It was on the "deliberately not covered"
+    # list below as Phase 7/11 surface; the subphase that owns its call site now owns the
+    # coordinate, so the file is covered here. Its one site is `ASN1_digest`'s
+    # `ERR_LIB_ASN1`/`ERR_R_INTERNAL_ERROR` at `:36`.
+    ("crypto/asn1/a_digest.c", "A_DIGEST"),
     ("crypto/asn1/a_d2i_fp.c", "A_D2I_FP"),
     ("crypto/asn1/a_dup.c", "A_DUP"),
     ("crypto/asn1/a_gentm.c", "A_GENTM"),
@@ -183,9 +189,22 @@ COVERED_FILES = [
     ("crypto/asn1/a_mbstr.c", "A_MBSTR"),
     ("crypto/asn1/a_octet.c", "A_OCTET"),
     ("crypto/asn1/a_print.c", "A_PRINT"),
+    # Phase 10.10 lands `crypto/asn1/a_sign.c` (`ASN1_item_sign(_ex/_ctx)` and the deprecated
+    # `ASN1_sign`). Its eighteen sites are `ERR_LIB_ASN1` with the generic `ERR_R_*` codes and
+    # the `ASN1_R_*` reasons of the algorithm-identifier arms (`UNKNOWN_OBJECT_TYPE`,
+    # `THE_ASN1_OBJECT_IDENTIFIER_IS_NOT_KNOWN_FOR_THIS_MD`, `CONTEXT_NOT_INITIALISED`,
+    # `DIGEST_AND_KEY_TYPE_NOT_SUPPORTED`).
+    ("crypto/asn1/a_sign.c", "A_SIGN"),
     ("crypto/asn1/a_strnid.c", "A_STRNID"),
     ("crypto/asn1/a_strex.c", "A_STREX"),
     ("crypto/asn1/a_time.c", "A_TIME"),
+    # Phase 10.11 lands `crypto/asn1/a_verify.c` (`ASN1_item_verify(_ex/_ctx)` and the deprecated
+    # `ASN1_verify`). It was on the "deliberately not covered" list below as Phase 11 surface; the
+    # subphase that lands its call site now owns the coordinate, exactly as 10.10 did for
+    # `a_digest.c`/`a_sign.c`. Its nineteen sites are `ERR_LIB_ASN1` with the generic `ERR_R_*`
+    # codes and the four `ASN1_R_*` reasons (`UNKNOWN_MESSAGE_DIGEST_ALGORITHM`,
+    # `INVALID_BIT_STRING_BITS_LEFT`, `UNKNOWN_SIGNATURE_ALGORITHM`, `WRONG_PUBLIC_KEY_TYPE`).
+    ("crypto/asn1/a_verify.c", "A_VERIFY"),
     ("crypto/asn1/a_type.c", "A_TYPE"),
     ("crypto/asn1/a_utf8.c", "A_UTF8"),
     ("crypto/asn1/a_utctm.c", "A_UTCTM"),
@@ -228,10 +247,10 @@ COVERED_FILES = [
     # is covered for the coordinates a Phase 5 export can raise, exactly as
     # `a_object.c` is covered by Phase 4 for `a2d_ASN1_OBJECT` (D49).
     ("crypto/asn1/asn_mime.c", "ASN_MIME"),
-    # Deliberately *not* covered, with the stratum that owns each: `a_digest.c`,
-    # `ameth_lib.c` (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
-    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `a_sign.c`,
-    # `a_verify.c`, `x_pkey.c` (Phase 11); the rest of `asn_mime.c`
+    # Deliberately *not* covered, with the stratum that owns each: `ameth_lib.c`
+    # (Phase 7); `d2i_param.c`, `d2i_pr.c`, `d2i_pu.c`, `i2d_evp.c`,
+    # `n_pkey.c`, `p5_pbe.c`, `p5_pbev2.c` (Phase 10 or 11 as their exports say); `x_pkey.c`
+    # (Phase 11); the rest of `asn_mime.c`
     # (Phase 12; the file is covered above for the two coordinates a Phase 5 export
     # raises);
     # `nsseq.c` (Phase 13). Their raises are visible as uncovered sites in
@@ -410,6 +429,11 @@ COVERED_FILES = [
     ("crypto/pem/pem_oth.c", "PEM_OTH"),
     ("crypto/pem/pem_pkey.c", "PEM_PKEY"),
     ("crypto/pem/pem_pk8.c", "PEM_PK8"),
+    # Phase 10.6: the PVK/MSBLOB unit. `pvkfmt.c` was on Phase 7's exclusion note by name ("the
+    # `pem_pkey.c` and `pem_pk8.c` hand-offs Phase 5 recorded") and is the one file of the five
+    # the twenty-six symbols come from that had no block; its raises are observable through the
+    # ten exports `crypto/pem/pvkfmt.c` publishes and are added here with them.
+    ("crypto/pem/pvkfmt.c", "PVKFMT"),
     # Phase 8: the providers' own translation units. Until this block existed the
     # `PROV_R_*` family had exactly one covered file (`crypto/hpke/hpke_util.c`, added
     # by 7.6 for the shared helpers), so the provider half of the cipher and digest
@@ -782,6 +806,12 @@ COVERED_FILES = [
     # destination-size guard, the `PROV_R_MISSING_KEY` "no private key" and "no public key"
     # guards, and the named field of the oversize-message refusal.
     ("crypto/slh_dsa/slh_dsa.c", "SLH_DSA"),
+    # Phase 10.1's SLH-DSA key unit. `crypto/slh_dsa/slh_dsa_key.c` is a plain `.c`, so its
+    # `__FILE__` carries the source-tree prefix. The unit's whole body raises nothing but the three
+    # `#ifndef FIPS_MODULE` arms of `ossl_slh_dsa_key_to_text` (`:494` `ERR_R_PASSED_NULL_PARAMETER`,
+    # `:500`/`:507` the `PROV_R_MISSING_KEY` "no %s key material available" guards), which land with
+    # the text-encoder caller the printer's own divergence row named (D398).
+    ("crypto/slh_dsa/slh_dsa_key.c", "SLH_DSA_KEY"),
     # This pass's ML-KEM core. `crypto/ml_kem/ml_kem.c` is a plain `.c`, so its `__FILE__` carries
     # the source-tree prefix. It raises nine times, each with the algorithm name interpolated: the
     # three `PROV_R_INVALID_KEY` refusals of `parse_pubkey`/`parse_prvkey` (the `t` vector, the `s`
@@ -916,6 +946,14 @@ COVERED_FILES = [
     # `ASN1_R_UNKNOWN_DIGEST` at `:165`, the coordinate a caller sees when an OID
     # resolves to no digest method.
     ("crypto/asn1/x_algor.c", "X_ALGOR"),
+    # D443's pull-forward: `crypto/asn1/p5_pbe.c` and `crypto/asn1/p5_pbev2.c` are Phase 11's
+    # `x509.h` units that Phase 10 lands early (they are `PKCS8_encrypt_ex`'s closure and the
+    # MAC setters' blocker). The subsystem rule applies unchanged: every raise in each file is
+    # a coordinate, including the sites of the accessors this slice lands and of the `_set`
+    # façades it does not (`PKCS5_pbe_set0_algor`, `PKCS5_pbe2_set`, ...). The stems are
+    # `P5_PBE` and `P5_PBEV2`.
+    ("crypto/asn1/p5_pbe.c", "P5_PBE"),
+    ("crypto/asn1/p5_pbev2.c", "P5_PBEV2"),
     # Phase 8.5's `crypto/ffc` subsystem. The same rule as `crypto/rsa` above: these are the
     # units of the stratum that **raise**, and a coordinate's `file` string is part of the
     # observable error record. `ffc_params_validate.c` raises the DH
@@ -1113,6 +1151,72 @@ COVERED_FILES = [
     # Phase 10's `crypto/encode_decode/decoder_pkey.c` -- the decoder cache, the pkey half that
     # `OSSL_DECODER_CTX_new_for_pkey` builds, and the four passphrase setters.
     ("crypto/encode_decode/decoder_pkey.c", "DECODER_PKEY"),
+    # Phase 10.1's first provider codec unit: `providers/implementations/encode_decode/
+    # encode_key2text.c` -- the text-encoder tables and the six per-key-type printers behind them.
+    # It is a plain `.c`, so its `__FILE__` carries the source-tree prefix. Its raises are the
+    # null-argument guards of the six printers and the `PROV_R_NOT_A_PRIVATE_KEY`,
+    # `PROV_R_NOT_A_PUBLIC_KEY`, `PROV_R_NOT_PARAMETERS` and `PROV_R_INVALID_KEY` refusals they
+    # carry, plus `ERR_R_CRYPTO_LIB` in `rsa_to_text`; the `ERR_R_PASSED_INVALID_ARGUMENT` in the
+    # `MAKE_TEXT_ENCODER` body is a preprocessor macro's and is not attributed, the same rule
+    # `encode_key2any.c`'s `MAKE_ENCODER` is under.
+    ("providers/implementations/encode_decode/encode_key2text.c", "PROV_ENCODE_KEY2TEXT"),
+    # Phase 10.1's second provider codec unit: `providers/implementations/encode_decode/
+    # encode_key2blob.c` -- the `EC`/`SM2` public-point blob encoders. It is a plain `.c`, so its
+    # `__FILE__` carries the source-tree prefix. Its one raise is the
+    # `ERR_R_PASSED_INVALID_ARGUMENT` in the `MAKE_BLOB_ENCODER` body, and a local raise macro is
+    # attributed to each invocation line (`:175`, `:177`) -- the same rule `MAKE_TEXT_ENCODER` is
+    # under above.
+    ("providers/implementations/encode_decode/encode_key2blob.c", "PROV_ENCODE_KEY2BLOB"),
+    # Phase 10.1's first provider codec *decoder* unit: `providers/implementations/encode_decode/
+    # decode_epki2pki.c` -- the `EncryptedPrivateKeyInfo`-to-`PrivateKeyInfo` engine. It is a
+    # generated `.c.in`, so its `__FILE__` carries only the build-relative path. Its two raises are
+    # the machine-generated `set_ctx_params` parser's `PROV_R_REPEATED_PARAMETER` (`:87`) and the
+    # passphrase refusal's `PROV_R_UNABLE_TO_GET_PASSPHRASE` (`:179`).
+    ("providers/implementations/encode_decode/decode_epki2pki.c", "PROV_DECODE_EPKI2PKI"),
+    # Phase 10.1's largest provider codec unit: `providers/implementations/encode_decode/
+    # decode_der2key.c` -- the 69 DER-to-key decoder tables and the shared engine. It is a generated
+    # `.c.in`, so its `__FILE__` carries only the build-relative path. Its eight raises are the
+    # machine-generated `set_ctx_params` parser's `PROV_R_REPEATED_PARAMETER` (`:202`), the engine's
+    # own `ERR_R_PASSED_INVALID_ARGUMENT` selection refusal (`:300`), and the SLH-DSA arms'
+    # `PROV_R_UNEXPECTED_KEY_PARAMETERS` (`:699`) and five `PROV_R_BAD_ENCODING` refusals
+    # (`:751`, `:765`, `:773`, `:779`, `:786`).
+    ("providers/implementations/encode_decode/decode_der2key.c", "PROV_DECODE_DER2KEY"),
+    # Phase 10.1/10.6's PVK/MSBLOB encoders and decoders. `encode_key2ms.c` and
+    # `decode_pvk2key.c` are `.c.in`-generated (their `__FILE__` is the build-relative spelling,
+    # like `ciphercommon.c`'s), `decode_msblob2key.c` is a plain source file. D435 named the first
+    # `encode_key2ms.c` a pending unit because its writers are `pvkfmt.c`'s; 10.6 lands both sides.
+    ("providers/implementations/encode_decode/encode_key2ms.c", "PROV_ENCODE_KEY2MS"),
+    ("providers/implementations/encode_decode/decode_msblob2key.c", "PROV_DECODE_MSBLOB2KEY"),
+    ("providers/implementations/encode_decode/decode_pvk2key.c", "PROV_DECODE_PVK2KEY"),
+    # Phase 10.5's `providers/implementations/encode_decode/decode_spki2typespki.c` -- the
+    # `SubjectPublicKeyInfo`-to-type-specific-SPKI decoder that feeds the DER-to-key chain. It is a
+    # generated `.c.in`, so its `__FILE__` carries only the build-relative path (like
+    # `decode_epki2pki.c` above). Its one raise is the machine-generated `set_ctx_params` parser's
+    # `PROV_R_REPEATED_PARAMETER` for `properties`.
+    ("providers/implementations/encode_decode/decode_spki2typespki.c", "PROV_DECODE_SPKI2TYPESPKI"),
+    # Phase 10.5's `providers/implementations/encode_decode/decode_pem2der.c` -- the PEM-to-DER
+    # decoder that names the PEM block and hands its DER to the two engines above. A generated
+    # `.c.in`, so its `__FILE__` is the build-relative path. Its two raises are the parser's
+    # `PROV_R_REPEATED_PARAMETER`, one for `data-structure` and one for `properties`.
+    ("providers/implementations/encode_decode/decode_pem2der.c", "PROV_DECODE_PEM2DER"),
+    # Phase 10.1's PQC codec closure units (D435). The first is
+    # `providers/implementations/encode_decode/ml_common_codecs.c`, the shared SPKI/PKCS#8 format
+    # tables and `ossl_ml_common_pkcs8_fmt_order`: its one raise is the `PROV_R_ML_DSA_NO_FORMAT`
+    # "no %s private key %s formats are enabled" refusal (`:83`). It is a plain `.c`, so its
+    # `__FILE__` carries the source-tree prefix.
+    ("providers/implementations/encode_decode/ml_common_codecs.c", "ML_COMMON_CODECS"),
+    # The second is `providers/implementations/encode_decode/ml_kem_codecs.c`, the ML-KEM d2i/i2d
+    # PKCS#8 and PUBKEY codecs and the text printer. It is a plain `.c`. Its raises are the
+    # `PROV_R_BAD_ENCODING`/`PROV_R_UNEXPECTED_KEY_PARAMETERS`/`PROV_R_ML_KEM_NO_FORMAT`/
+    # `PROV_R_INVALID_KEY`/`PROV_R_NOT_A_PUBLIC_KEY`/`PROV_R_NOT_A_PRIVATE_KEY` decoders, the
+    # `ERR_LIB_OSSL_DECODER`/`ERR_LIB_OSSL_ENCODER` `ERR_R_INTERNAL_ERROR` encode paths, the
+    # `ERR_LIB_PROV` `ERR_R_INTERNAL_ERROR` output-format arms, the `ERR_R_PASSED_NULL_PARAMETER`
+    # null guard of the printer and its `PROV_R_MISSING_KEY` "no %s key material available" arm.
+    ("providers/implementations/encode_decode/ml_kem_codecs.c", "ML_KEM_CODECS"),
+    # The third is `providers/implementations/encode_decode/ml_dsa_codecs.c`, the ML-DSA sibling:
+    # the same decoder and encoder raises, `PROV_R_ML_DSA_NO_FORMAT` in place of ML-KEM's, and the
+    # printer's `ERR_LIB_PROV` `ERR_R_PASSED_NULL_PARAMETER` guard and two `PROV_R_MISSING_KEY` arms.
+    ("providers/implementations/encode_decode/ml_dsa_codecs.c", "ML_DSA_CODECS"),
     # Phase 10 staging: `crypto/pkcs12/p12_decr.c`, the PBE buffer crypt and the ASN.1 decrypt/
     # encrypt pair `PKCS8_decrypt` reads an `EncryptedPrivateKeyInfo` through (D368). Its
     # thirteen sites are `ERR_LIB_PKCS12` with `ERR_R_EVP_LIB`, `ERR_R_PASSED_NULL_PARAMETER`,
@@ -1121,6 +1225,71 @@ COVERED_FILES = [
     # **not** covered: `PKCS8_decrypt`/`PKCS8_decrypt_ex` raise nothing, so an entry for it would
     # read as coverage that does not exist -- the reasoning `mdc2_prov.c` is named under above.
     ("crypto/pkcs12/p12_decr.c", "PKCS12"),
+    # Phase 10's 10.2: `crypto/pkcs12/p12_sbag.c`, the `SafeBag` accessors and constructors. Its
+    # eight sites are `ERR_LIB_PKCS12` with `ERR_R_ASN1_LIB` (the five allocation failures),
+    # `PKCS12_R_ENCODE_ERROR` (the octet-string pack) and `PKCS12_R_INVALID_TYPE` (the
+    # unsupported `vtype` in `create_secret`), so covering the unit gives the constructors their
+    # coordinates. `p12_asn.c`, `p12_attr.c` and `p12_utl.c` are **not** covered: none of the
+    # three raises -- the item templates add none, the attribute helpers return their callees'
+    # status, and the conversions only answer NULL -- so an entry for any of them would read as
+    # coverage that does not exist. This is the same reasoning `mdc2_prov.c` and `p12_p8d.c` are
+    # named under above.
+    ("crypto/pkcs12/p12_sbag.c", "PKCS12"),
+    # Phase 10's 10.3: `crypto/pkcs12/p12_add.c`, the `SafeBag` packer
+    # `PKCS12_item_pack_safebag` (and the read-only halves of the unit that raise nothing of
+    # their own). Its fifteen sites are `ERR_LIB_PKCS12` with `ERR_R_ASN1_LIB` and the five
+    # container reasons (`PKCS12_R_CANT_PACK_STRUCTURE`, `_CONTENT_TYPE_NOT_DATA`, `_DECODE_ERROR`,
+    # `_ERROR_SETTING_ENCRYPTED_DATA_TYPE`, `_ENCRYPT_ERROR`). The stem is `PKCS12_ADD` rather than
+    # `PKCS12`: `p12_decr.c` and `p12_sbag.c` already carry `PKCS12` and their line numbers
+    # collide with this file's (32, 202), which would emit two different coordinates under one
+    # constant name. `p12_crt.c` is covered separately below, under the stem `PKCS12_CRT`.
+    ("crypto/pkcs12/p12_add.c", "PKCS12_ADD"),
+    # Phase 10's 10.15: `crypto/pkcs12/p12_crt.c`'s `PKCS12_create(_ex/_ex2)`, `PKCS12_add_cert`
+    # and the three static bag helpers. The container builder's four raise sites are
+    # `PKCS12_R_INVALID_NULL_ARGUMENT` (line 63, all of `pkey`/`cert`/`ca` absent) and
+    # `PKCS12_R_CALLBACK_FAILED` (lines 88, 103 and 136, the three `cb` refusals); the earlier
+    # `add_*` half of the unit raises nothing, so those four are the whole coverage. The stem is
+    # `PKCS12_CRT` so it cannot collide with `PKCS12` (carried by `p12_decr.c`/`p12_sbag.c`) or
+    # `PKCS12_ADD`.
+    ("crypto/pkcs12/p12_crt.c", "PKCS12_CRT"),
+    # Phase 10's 10.3, re-opened: `crypto/pkcs12/p12_init.c`, the `PKCS12_init(_ex)` pair. The
+    # `PKCS7` subset pulled forward from Phase 12 lets `PKCS12_new` build at last, so the four
+    # sites in this unit (`ERR_R_ASN1_LIB` twice, `ERR_R_PKCS7_LIB` and
+    # `PKCS12_R_UNSUPPORTED_PKCS12_MODE`) become reachable and are covered rather than
+    # reconstructed. It is the file `PKCS12_add_safes_ex` seeds a container through.
+    ("crypto/pkcs12/p12_init.c", "PKCS12_INIT"),
+    # Phase 10's 10.3, re-opened: `crypto/pkcs12/p12_mutl.c`, of which this slice lands
+    # `PKCS12_mac_present`, `PKCS12_get0_mac` and `PKCS12_setup_mac`. `setup_mac`'s three
+    # `ERR_R_ASN1_LIB` arms (the iter allocation, the iteration set and the algorithm set) are
+    # where the covered coordinates come from; the file's `gen_mac`/`set_mac`/`set_pbmac1_pbkdf2`
+    # sites land with 10.4's KDF. The stem is `PKCS12_MUTL` so it cannot collide with `PKCS12`
+    # (carried by `p12_decr.c`/`p12_sbag.c`) or `PKCS12_ADD`.
+    ("crypto/pkcs12/p12_mutl.c", "PKCS12_MUTL"),
+    # Phase 10's 10.4: `crypto/pkcs12/p12_key.c`, the six `PKCS12_key_gen_*` spellings over the
+    # provider `PKCS12KDF` row. Its two sites are the two conversions' `ERR_R_PKCS12_LIB` raises
+    # (`:32` in `PKCS12_key_gen_asc_ex`, `:62` in `PKCS12_key_gen_utf8_ex`); `PKCS12_key_gen_uni_ex`
+    # itself raises nothing of its own, so the rest of the unit is not a site. The stem is
+    # `PKCS12_KEY` because the `PKCS12` stem's line numbers collide with this file's `32`.
+    ("crypto/pkcs12/p12_key.c", "PKCS12_KEY"),
+    # Phase 10's 10.4: `crypto/pkcs12/p12_crpt.c`, the two `PKCS12_PBE_keyivgen` spellings and the
+    # empty `PKCS12_PBE_add`. Its three sites are the parameter decode's `PKCS12_R_DECODE_ERROR`
+    # (`:41`) and the two derivation failures (`PKCS12_R_KEY_GEN_ERROR` `:55`,
+    # `PKCS12_R_IV_GEN_ERROR` `:64`). The stem is `PKCS12_CRPT` so it cannot collide with `PKCS12`,
+    # `PKCS12_ADD`, `PKCS12_INIT`, `PKCS12_MUTL` or `PKCS12_KEY`.
+    ("crypto/pkcs12/p12_crpt.c", "PKCS12_CRPT"),
+    # Phase 10's 10.4: `crypto/pkcs12/p12_p8e.c`, of which this slice lands the
+    # `PKCS8_set0_pbe(_ex)` pair. Its four sites are three in the held-open `PKCS8_encrypt_ex`
+    # (`ERR_R_PASSED_NULL_PARAMETER` twice and `ERR_R_ASN1_LIB`) and the landed
+    # `PKCS8_set0_pbe_ex`'s `PKCS12_R_ENCRYPT_ERROR` (`:79`). The file raises, so it belongs to the
+    # subsystem's obligation set even though two of its exports stay open; the stem is `PKCS12_P8E`.
+    ("crypto/pkcs12/p12_p8e.c", "PKCS12_P8E"),
+    # Phase 10's pulled-forward `PKCS7` subset (the PKCS#12 landing D441 blocked):
+    # `crypto/pkcs7/pk7_lib.c`'s `PKCS7_set_type`. Its arm for the three content types this
+    # subset does not carry reaches the authority's own `default:`, which raises
+    # `PKCS7_R_UNSUPPORTED_CONTENT_TYPE` at `:179` under `ERR_LIB_PKCS7`, so the coordinate is
+    # generated from the unit rather than transcribed. `pk7_asn1.c` raises nothing and is
+    # deliberately not listed.
+    ("crypto/pkcs7/pk7_lib.c", "PKCS7_LIB"),
     # Phase 11 staging: `crypto/x509/x509_att.c`, the `X509at_add1_attr*` family
     # `PKCS8_pkey_add1_attr*` is one call each to (D368). Its twenty-six sites are
     # `ERR_LIB_X509`, mostly `ERR_R_PASSED_NULL_PARAMETER`, `ERR_R_CRYPTO_LIB` and
@@ -1135,6 +1304,92 @@ COVERED_FILES = [
     # D349 had the unit deliberately absent because the four functions then landed raised
     # nothing; the completion is what changes that.
     ("crypto/x509/x_pubkey.c", "X509_PUBKEY"),
+    # Phase 10.8's object core (D451): `crypto/x509/x_name.c`, the `X509_NAME` object and its
+    # extern item. The landed hooks raise `ERR_LIB_ASN1` with
+    # `ERR_R_CRYPTO_LIB`/`ERR_R_BUF_LIB`/`ERR_R_NESTED_ASN1_ERROR` (`x509_name_ex_new`,
+    # `x509_name_ex_d2i`, `x509_name_encode`) and `ERR_LIB_X509` with
+    # `ERR_R_CRYPTO_LIB`/`ERR_R_ASN1_LIB`/`ERR_R_OBJ_LIB` (`x509_name_canon`). The table also
+    # carries the one site in the withheld `X509_NAME_print`; an unused coordinate is harmless.
+    # `x_x509.c`, `x_crl.c`, `x_exten.c` and `asn1/x_val.c` raise nothing in the landed subset
+    # and are deliberately not listed.
+    ("crypto/x509/x_name.c", "X509_NAME"),
+    # Phase 10.11's `crypto/x509/x509name.c` -- the `X509_NAME` convenience entry points. The
+    # stem is `X509NAME` (not `X509_NAME`) so a line number cannot collide with `x_name.c`'s
+    # constants; the generator is keyed on the stem. Its four sites are `ERR_LIB_X509` with
+    # `ERR_R_CRYPTO_LIB` (`X509_NAME_add_entry`), `ERR_R_PASSED_NULL_PARAMETER`
+    # (`X509_NAME_ENTRY_set_object`), `X509_R_INVALID_FIELD_NAME` through `ERR_raise_data`
+    # (`X509_NAME_ENTRY_create_by_txt`) and `X509_R_UNKNOWN_NID`
+    # (`X509_NAME_ENTRY_create_by_NID`).
+    ("crypto/x509/x509name.c", "X509NAME"),
+    # Phase 10.11's `crypto/x509/x509_v3.c` -- the X.509v3 extension add/get/count/delete
+    # surface. Its six sites are `ERR_LIB_X509` with `ERR_R_PASSED_NULL_PARAMETER` (the two
+    # NULL-argument refusals), `ERR_R_CRYPTO_LIB` and `ERR_R_ASN1_LIB` (`X509v3_add_ext`'s
+    # insert/duplicate failures) and `X509_R_UNKNOWN_NID`
+    # (`X509_EXTENSION_create_by_NID`).
+    ("crypto/x509/x509_v3.c", "X509_V3"),
+    # Phase 10.10 lands `crypto/x509/x509_obj.c` (`X509_NAME_oneline`), the printer 10.8's
+    # `x_name.c` withheld `X509_NAME_print` behind. Its two sites are `ERR_LIB_X509` with
+    # `X509_R_NAME_TOO_LONG` (`:75`, and again through the length guard) and `ERR_R_BUF_LIB`
+    # (`:175`).
+    ("crypto/x509/x509_obj.c", "X509_OBJ"),
+    # Phase 10.12's `crypto/x509/v3_ia5.c` -- the two `i2s_`/`s2i_ASN1_IA5STRING` helpers the
+    # Netscape IA5 extension table shares. Its two sites are `ERR_LIB_X509V3` with
+    # `X509V3_R_INVALID_NULL_ARGUMENT` (`:46`, the NULL-string refusal) and `ERR_R_ASN1_LIB`
+    # (`:50`, the `ASN1_IA5STRING_new` failure). The withheld `ossl_v3_ns_ia5_list` table raises
+    # nothing.
+    ("crypto/x509/v3_ia5.c", "V3_IA5"),
+    # Phase 10.12's `crypto/x509/v3_skid.c` -- the `i2s_`/`s2i_ASN1_OCTET_STRING` helpers. Its
+    # three sites are `ERR_LIB_X509V3`: `ERR_R_ASN1_LIB` (`:40`, the `ASN1_OCTET_STRING_new`
+    # failure, in the landed `s2i_ASN1_OCTET_STRING`), `X509V3_R_NO_PUBLIC_KEY` (`:66`) and
+    # `X509V3_R_NO_SUBJECT_DETAILS` (`:103`, both in withheld functions). The two unused
+    # coordinates are harmless; the stem is `V3_SKID` so it cannot collide with `V3_IA5`.
+    ("crypto/x509/v3_skid.c", "V3_SKID"),
+    # Phase 10.13's `crypto/x509/v3_lib.c` -- the extension registration surface. Only the two
+    # reachable raises are transcribed (`X509V3_EXT_add`'s `ERR_R_CRYPTO_LIB` at `:29`/`:33`); the
+    # withheld lookup half's sites (`X509V3_R_EXTENSION_NOT_FOUND` `:95`, `X509V3_R_EXTENSION_EXISTS`
+    # `:245`, `X509V3_R_EXTENSION_NOT_FOUND` `:261`, `X509V3_R_ERROR_CREATING_EXTENSION` `:274` and
+    # the `:306` site) are generated too, unused until that half lands. Stem `V3_LIB`.
+    ("crypto/x509/v3_lib.c", "V3_LIB"),
+    # Phase 10.14.4's `crypto/x509/v3_genn.c` -- the `GENERAL_NAME`/`GENERAL_NAMES` items and
+    # accessors. Its one site is `ERR_LIB_X509V3` with `X509V3_R_INVALID_NULL_ARGUMENT` (`:65`),
+    # the NULL-`tgt` refusal in `GENERAL_NAME_set1_X509_NAME`; the generated item functions raise
+    # only through the item layer, not from this unit. Stem `V3_GENN`.
+    ("crypto/x509/v3_genn.c", "V3_GENN"),
+    # Phase 10.13's `crypto/x509/v3_utf8.c` -- the UTF-8 pair. Its four sites are `ERR_LIB_X509V3`
+    # with `ERR_R_PASSED_NULL_PARAMETER` (`:34`), `X509V3_R_INVALID_NULL_ARGUMENT` (`:49`) and
+    # `ERR_R_ASN1_LIB` (`:53`, `:57`). The withheld `ossl_v3_utf8_list` table raises nothing.
+    ("crypto/x509/v3_utf8.c", "V3_UTF8"),
+    # `crypto/x509/x509_cmp.c` -- the certificate comparison and accessor surface.
+    # Its nine sites are `ERR_LIB_X509`: four `ERR_R_*` generic codes in the withheld
+    # `X509_add_cert`/`ossl_x509_add_cert_new` pair (`:184`, `:193`, `:222`, `:232`) and the five
+    # reachable refusals of `X509_check_private_key`/`ossl_x509_check_private_key`
+    # (`X509_R_UNABLE_TO_GET_CERTS_PUBLIC_KEY` `:397`, `ERR_R_PASSED_NULL_PARAMETER` `:406`,
+    # `X509_R_KEY_VALUES_MISMATCH` `:413`, `X509_R_KEY_TYPE_MISMATCH` `:416`,
+    # `X509_R_UNKNOWN_KEY_TYPE` `:419`). The four unused coordinates are harmless until that half
+    # lands. Stem `X509_CMP`; `x509cset.c` and `x509type.c` raise nothing and are deliberately
+    # not listed.
+    ("crypto/x509/x509_cmp.c", "X509_CMP"),
+    # Phase 10.14.5's `crypto/x509/x509_set.c` -- the signature-strength initialiser. Its three
+    # sites are `ERR_LIB_X509`: `X509_R_UNKNOWN_SIGID_ALGS` (`:230`) and
+    # `X509_R_ERROR_USING_SIGINF_SET` (`:252`) in `x509_sig_info_init`, and
+    # `X509_R_ERROR_GETTING_MD_BY_NID` (`:284`) in its `default:` branch, all reached by
+    # `ossl_x509_init_sig_info`. They are generated here rather than declared locally because the
+    # unit is covered like every other; they stay unused until the cache's caller lands. Stem
+    # `X509_SET`.
+    ("crypto/x509/x509_set.c", "X509_SET"),
+    # Phase 10.14.2's `crypto/x509/x_all.c` -- the certificate encode/decode faces. Its twelve
+    # sites are `ERR_LIB_X509`: the two NULL-certificate refusals in `X509_sign`/`X509_sign_ctx`
+    # (`:80`, `:103`), the CRL twins (`:167`, `:179`), `X509_digest_sig`'s five refusals
+    # (`:530` `ERR_R_PASSED_NULL_PARAMETER`, `:535` `X509_R_UNKNOWN_SIGID_ALGS`, `:551`/`:582`/`:589`
+    # `X509_R_UNSUPPORTED_ALGORITHM`), `X509_CRL_digest`'s NULL method (`:612`) and the two
+    # `_ex_fp` BIO-new failures (`:740`, `:761`, `ERR_R_BUF_LIB`), plus the three withheld
+    # `X509_REQ` sites (`:47`, `:143`, `:155`) whose coordinates are generated unused until
+    # 10.14.11 lands that object. Stem `X509_ALL`.
+    ("crypto/x509/x_all.c", "X509_ALL"),
+    # Phase 10.14.2's `crypto/x509/x509spki.c` -- the Netscape SPKI surface. Its one site is
+    # `ERR_LIB_X509` with `X509_R_BASE64_DECODE_ERROR` (`:42`), the base64 refusal in
+    # `NETSCAPE_SPKI_b64_decode`. Stem `X509_SPKI`.
+    ("crypto/x509/x509spki.c", "X509_SPKI"),
     # Phase 8.7's ECX key objects (D372): `crypto/ec/ecx_key.c` (the `ECX_KEY` object and
     # `ossl_ecx_compute_key`) and `crypto/ec/ecx_backend.c` (the backend the legacy methods and
     # the providers share). The first is `ERR_LIB_PROV` with the four `PROV_R_*` reasons on the
@@ -1147,6 +1402,40 @@ COVERED_FILES = [
     # `ERR_LIB_EC`, `ERR_LIB_DH` and `ERR_LIB_ASN1` with the `EC_R_*`/`ERR_R_*` reasons the two
     # tables' decode, sign and key-generation arms carry.
     ("crypto/ec/ecx_meth.c", "ECX_METH"),
+    # Phase 10.9's digest substrate (D452): the `crypto/engine/` registry core that
+    # `X509_digest` reaches through `ossl_asn1_item_digest_ex` -- the engine object
+    # (`eng_lib.c`), the linked list (`eng_list.c`), the implementation table
+    # (`eng_table.c`), the init/finish pair (`eng_init.c`), the control-command surface
+    # (`eng_ctrl.c`) and the three algorithm tables this slice carries (`tb_digest.c`,
+    # `tb_pkmeth.c`, `tb_asnmth.c`). Each stem is the unit's own name so a line number
+    # cannot collide with another unit's, and the whole file is listed rather than the
+    # landed subset: an unused coordinate is harmless, a missing one is not. `eng_all.c`
+    # is deliberately **not** listed -- it raises nothing (its one function is the
+    # `OPENSSL_init_crypto` call).
+    ("crypto/engine/eng_ctrl.c", "ENG_CTRL"),
+    ("crypto/engine/eng_init.c", "ENG_INIT"),
+    ("crypto/engine/eng_lib.c", "ENG_LIB"),
+    ("crypto/engine/eng_list.c", "ENG_LIST"),
+    ("crypto/engine/eng_table.c", "ENG_TABLE"),
+    ("crypto/engine/tb_asnmth.c", "TB_ASNMTH"),
+    ("crypto/engine/tb_digest.c", "TB_DIGEST"),
+    ("crypto/engine/tb_pkmeth.c", "TB_PKMETH"),
+    # Phase 10.16's `providers/implementations/storemgmt/file_store.c` -- the `file:` STORE LOADER
+    # the `default` and `base` providers publish as their one `OSSL_OP_STORE` row. It is a `.c.in`
+    # template the build expands into the build tree, so its `__FILE__` is the bare build-relative
+    # path and the coordinates are read from the expanded `.c`, exactly as `ciphercommon.c`'s are.
+    # Its twenty sites are `ERR_LIB_PROV` with `ERR_R_PROV_LIB`/`ERR_R_OSSL_DECODER_LIB` and the
+    # four container reasons (`PROV_R_URI_AUTHORITY_UNSUPPORTED`, `PROV_R_REPEATED_PARAMETER`,
+    # `PROV_R_SEARCH_ONLY_SUPPORTED_FOR_DIRECTORIES`), plus the three `ERR_LIB_SYS` errno sites
+    # (`:187` `OPENSSL_DIR_read`, `:254` `stat`, `:765` the directory walk) whose reasons are
+    # computed and are therefore dynamic. The stem is `PROV_FILE_STORE` so it cannot collide with
+    # `file_store_any2obj.c`'s.
+    ("providers/implementations/storemgmt/file_store.c", "PROV_FILE_STORE"),
+    # Phase 10.16's `providers/implementations/storemgmt/file_store_any2obj.c` -- the `file:`
+    # store's private last-resort decoder. A `.c.in` template like its sibling. Its five sites are
+    # the `PROV_R_REPEATED_PARAMETER` refusal of the `data-structure` decoder (`:100`) and the four
+    # `ERR_LIB_PEM` `ERR_R_BUF_LIB` allocation failures (`:217`, `:242`, `:289`, `:310`).
+    ("providers/implementations/storemgmt/file_store_any2obj.c", "PROV_FILE_STORE_ANY2OBJ"),
 ]
 
 # Raise macros, in the forms the authority actually spells them. `ERR_raise`
@@ -1695,6 +1984,10 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
     # refusals D368 transcribes. `pkcs12err.h` is an installed header, so this is `ecerr.h`'s
     # case again.
     "#include <openssl/pkcs12err.h>",
+    # Phase 10's pulled-forward `PKCS7` subset: `PKCS7_R_UNSUPPORTED_CONTENT_TYPE` for
+    # `crypto/pkcs7/pk7_lib.c`'s `PKCS7_set_type` default arm. `pkcs7err.h` is an installed
+    # header, so this is `pkcs12err.h`'s case again.
+    "#include <openssl/pkcs7err.h>",
         # `PROP_R_*` is the first reason family this table needs that lives in an
         # *internal* header rather than an installed one: `internal/propertyerr.h`,
         # which the property grammar raises from. It is resolveable because the
@@ -1709,6 +2002,10 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         # `crypto/sm2err.h` is not installed either, so it is the same fallthrough case as
         # `internal/propertyerr.h`; it carries the `crypto/` prefix rather than `internal/`.
         "#include <crypto/sm2err.h>",
+        # Phase 10.9's digest substrate: `ENGINE_R_*` for the `crypto/engine/` registry core.
+        # `engineerr.h` is an installed header (it ships beside `engine.h`), so this is
+        # `ecerr.h`'s fallthrough-free case again.
+        "#include <openssl/engineerr.h>",
         "#include <stdio.h>",
         "",
     ]

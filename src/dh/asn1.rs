@@ -80,7 +80,7 @@ const DH_FLAG_TYPE_MASK: c_int = 0xF000;
 /// `DH_FLAG_TYPE_DH` — `include/openssl/dh.h:111`. The zero word: a PKCS#3 parameter set.
 const DH_FLAG_TYPE_DH: c_int = 0x0000;
 /// `DH_FLAG_TYPE_DHX` — `include/openssl/dh.h:112`. X9.42, which `d2i_DHxparams` sets itself.
-const DH_FLAG_TYPE_DHX: c_int = 0x1000;
+pub(crate) const DH_FLAG_TYPE_DHX: c_int = 0x1000;
 
 /// `ASN1_STRING_FLAG_BITS_LEFT` — `include/openssl/asn1.h`. In the low three bits of an
 /// `ASN1_STRING`'s `flags`, and the value `i2d_DHxparams` gives the seed it encodes.

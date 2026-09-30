@@ -37,23 +37,15 @@
 //! and `IMPLEMENT_OBJ_BSEARCH_CMP_FN`) are what generate the `_ex`-looking spelling, not a
 //! difference in the key set.
 //!
-//! ## The six `PKCS12_PBE_keyivgen` rows, and why they are `None` here
+//! ## The six `PKCS12_PBE_keyivgen` rows take their addresses, and D-PBE-PKCS12-KEYGEN-1 is retired
 //!
 //! Six of the fourteen OUTER rows name `PKCS12_PBE_keyivgen` and `&PKCS12_PBE_keyivgen_ex`, which
 //! are `crypto/pkcs12/p12_crpt.c`'s and are **`owner_phase: 10`** in
-//! `forensics/atlas/symbol-ownership.json`. A Rust `static` is fully initialised or it does not
-//! exist, so those two slots are `None` in this build, the rows stay *in* the table — which keeps
-//! `EVP_PBE_find`'s return value and both NID out-parameters exactly the authority's for all six —
-//! and the two presence answers differ. That is
-//! `docs/SECURITY_DIVERGENCE_POLICY.md` **D-PBE-PKCS12-KEYGEN-1**, which names all six NIDs, the
-//! exact answers that change, and Phase 10 as the stratum that retires it.
-//!
-//! The deferral alternative was measured and cannot be built: `EVP_PBE_find_ex` and `EVP_PBE_find`
-//! are called by this slice's *own* `PKCS5_v2_PBE_keyivgen_ex` (`p5_crpt2.c:133`) and
-//! `PKCS5_v2_PBKDF2_keyivgen_ex` (`p5_crpt2.c:230`), so withholding them would take four of this
-//! slice's mandated exports with them and leave the court unable to observe the thirty-four rows
-//! at all — which is the observation this court exists to make. `docs/DECISIONS.md` D192 carries
-//! the argument and the cost.
+//! `forensics/atlas/symbol-ownership.json`. 10.4 landed that unit, so the six rows now carry both
+//! addresses and `EVP_PBE_find`/`_ex` answer 1 with both keygen out-parameters non-NULL — which is
+//! the trigger `docs/SECURITY_DIVERGENCE_POLICY.md` **D-PBE-PKCS12-KEYGEN-1** named for the row's
+//! removal. The row is retired with this change; the two presence answers that used to differ do
+//! not any more, and `EVP_PBE_CipherInit_ex` on one of the six now reaches the keygen.
 //!
 //! ## What the authority does that this crate cannot, and one guard
 //!
@@ -62,8 +54,8 @@
 //! eighteen of, the PRF rows — `EVP_PBE_find` answers 1 and the call faults. This crate returns 0
 //! there instead, with no raise: the same guard that keeps a crash out of the harness, and the
 //! reason it is safe is that no *derivation* was ever reachable through those rows on either side.
-//! It is named at the site and is part of D-PBE-PKCS12-KEYGEN-1's record rather than a second one,
-//! because after Phase 10 the six PKCS12 rows stop taking it.
+//! After 10.4 the six PKCS12 rows no longer take it; only the eighteen PRF rows and any row a
+//! caller adds with `EVP_PBE_alg_add_type` (which leaves `keygen_ex` empty) do.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -155,8 +147,8 @@ pub(crate) struct EvpPbeCtl {
 /// `static const EVP_PBE_CTL builtin_pbe[]` — `crypto/evp/evp_pbe.c:35-94`.
 ///
 /// Thirty-four rows, in source order, with `-1` spelled as `-1` and the authority's `0` spelled
-/// where it appears. The six rows whose keygen is `PKCS12_PBE_keyivgen` carry `None` for both
-/// slots; see the module doc and D-PBE-PKCS12-KEYGEN-1.
+/// where it appears. The six rows whose keygen is `PKCS12_PBE_keyivgen` carry both addresses since
+/// 10.4 landed `crypto/pkcs12/p12_crpt.c`, which is what retires D-PBE-PKCS12-KEYGEN-1.
 pub(crate) static BUILTIN_PBE: [EvpPbeCtl; 34] = [
     EvpPbeCtl {
         pbe_type: EVP_PBE_TYPE_OUTER,
@@ -191,55 +183,55 @@ pub(crate) static BUILTIN_PBE: [EvpPbeCtl; 34] = [
         keygen_ex: Some(crate::evp::p5_crpt2::PKCS5_v2_PBKDF2_keyivgen_ex),
     },
     /* The six PKCS12 rows: `PKCS12_PBE_keyivgen` and `&PKCS12_PBE_keyivgen_ex` in the authority,
-     * `None` here because both are `crypto/pkcs12/p12_crpt.c`'s and Phase 10's
-     * (`docs/SECURITY_DIVERGENCE_POLICY.md` D-PBE-PKCS12-KEYGEN-1). */
+     * and both addresses here since 10.4 landed `crypto/pkcs12/p12_crpt.c`
+     * (`docs/SECURITY_DIVERGENCE_POLICY.md` D-PBE-PKCS12-KEYGEN-1, retired with it). */
     EvpPbeCtl {
         pbe_type: EVP_PBE_TYPE_OUTER,
         pbe_nid: NID_pbe_WithSHA1And128BitRC4,
         cipher_nid: NID_rc4,
         md_nid: NID_sha1,
-        keygen: None,
-        keygen_ex: None,
+        keygen: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen),
+        keygen_ex: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen_ex),
     },
     EvpPbeCtl {
         pbe_type: EVP_PBE_TYPE_OUTER,
         pbe_nid: NID_pbe_WithSHA1And40BitRC4,
         cipher_nid: NID_rc4_40,
         md_nid: NID_sha1,
-        keygen: None,
-        keygen_ex: None,
+        keygen: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen),
+        keygen_ex: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen_ex),
     },
     EvpPbeCtl {
         pbe_type: EVP_PBE_TYPE_OUTER,
         pbe_nid: NID_pbe_WithSHA1And3_Key_TripleDES_CBC,
         cipher_nid: NID_des_ede3_cbc,
         md_nid: NID_sha1,
-        keygen: None,
-        keygen_ex: None,
+        keygen: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen),
+        keygen_ex: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen_ex),
     },
     EvpPbeCtl {
         pbe_type: EVP_PBE_TYPE_OUTER,
         pbe_nid: NID_pbe_WithSHA1And2_Key_TripleDES_CBC,
         cipher_nid: NID_des_ede_cbc,
         md_nid: NID_sha1,
-        keygen: None,
-        keygen_ex: None,
+        keygen: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen),
+        keygen_ex: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen_ex),
     },
     EvpPbeCtl {
         pbe_type: EVP_PBE_TYPE_OUTER,
         pbe_nid: NID_pbe_WithSHA1And128BitRC2_CBC,
         cipher_nid: NID_rc2_cbc,
         md_nid: NID_sha1,
-        keygen: None,
-        keygen_ex: None,
+        keygen: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen),
+        keygen_ex: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen_ex),
     },
     EvpPbeCtl {
         pbe_type: EVP_PBE_TYPE_OUTER,
         pbe_nid: NID_pbe_WithSHA1And40BitRC2_CBC,
         cipher_nid: NID_rc2_40_cbc,
         md_nid: NID_sha1,
-        keygen: None,
-        keygen_ex: None,
+        keygen: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen),
+        keygen_ex: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen_ex),
     },
     EvpPbeCtl {
         pbe_type: EVP_PBE_TYPE_OUTER,
@@ -981,9 +973,9 @@ mod tests {
         assert_eq!(nulls, 1);
     }
 
-    /// `EVP_PBE_find` reaches the builtin table when the application registry is empty, and the
-    /// six PKCS12 rows answer 1 with the right NIDs and empty keygens — the recorded divergence,
-    /// pinned here so its shape cannot change silently.
+    /// `EVP_PBE_find` reaches the builtin table when the application registry is empty. Since 10.4
+    /// landed `p12_crpt.c`, the PKCS12 row carries **both** keygen addresses — D-PBE-PKCS12-KEYGEN-1's
+    /// closure — which is pinned here so the shape cannot change silently.
     #[test]
     fn find_reads_the_builtin_rows() {
         let mut cn: c_int = 0;
@@ -1004,7 +996,7 @@ mod tests {
         assert_eq!(r, 1);
         assert_eq!((cn, mn), (NID_des_cbc, NID_md5));
         assert!(kg.is_some() && kge.is_some());
-        // SAFETY: four live locals.
+        /* SAFETY: four live locals. */
         let r = unsafe {
             EVP_PBE_find_ex(
                 EVP_PBE_TYPE_OUTER,
@@ -1017,8 +1009,8 @@ mod tests {
         };
         assert_eq!(r, 1);
         assert_eq!((cn, mn), (NID_des_ede3_cbc, NID_sha1));
-        assert!(kg.is_none() && kge.is_none());
-        // SAFETY: `NID_undef` is refused before either registry.
+        assert!(kg.is_some() && kge.is_some());
+        /* SAFETY: `NID_undef` is refused before either registry. */
         let undef =
             unsafe { EVP_PBE_find(EVP_PBE_TYPE_OUTER, NID_undef, &mut cn, &mut mn, &mut kg) };
         assert_eq!(undef, 0);

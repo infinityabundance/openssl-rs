@@ -68,6 +68,7 @@ SEAL_DOCS: dict[int, str] = {
     7: "docs/PHASE-7-EVP-SEAL.md",
     8: "docs/PHASE-8-CRYPTO-SEAL.md",
     9: "docs/PHASE-9-RAND-DRBG-SEAL.md",
+    10: "docs/PHASE-10-KEYFORMATS-SEAL.md",
 }
 
 

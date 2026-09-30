@@ -1,0 +1,85 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "algorithm": "pkcs12-kdf",
+    "court": "CT-PKCS12",
+    "primary_source": "PKCS#12 (RFC 7292) Appendix B -- the key/IV derivation; mirrored from the pinned authority's own test/recipes/30-test_evp_data/evppbe_pkcs12.txt (Title = `PKCS12 tests`)",
+    "provenance": {
+      "corpus": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt",
+      "corpus_sha256": "cabbba1e5e9e3f172d3b1933893e016b12bcf6c8b8daf6189c02c08503614c06",
+      "note": "One value per stanza: `pkcs12.NN` is `Key`, the lowercase hex of `PKCS12_key_gen_uni`'s `key_len`-byte output for the stanza's own Password/Salt/id/iter/MD. The inputs are re-read from forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt by the probe, so they are not typed twice. Excluded: forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt's sibling `evppbe_pbkdf2.txt` (PBE = pbkdf2, a different unit) and the `80-test_pkcs12.t` container recipe (PKCS7/X509, not this unit). All six `PBE = pkcs12` stanzas are mirrored."
+    },
+    "vectors": [
+      {
+        "expected": "8aaae6297b6cb04642ab5b077851284eb7128f1a2a7fbca3",
+        "id": 1,
+        "iter": 1,
+        "label": "pkcs12.00",
+        "md": "SHA1",
+        "note": "Key = lowercase hex of PKCS12_key_gen_uni's output; mirror forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt line 16, Title 'PKCS12 tests'"
+      },
+      {
+        "expected": "79993dfe048d3b76",
+        "id": 2,
+        "iter": 1,
+        "label": "pkcs12.01",
+        "md": "SHA1",
+        "note": "Key = lowercase hex of PKCS12_key_gen_uni's output; mirror forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt line 24, Title 'PKCS12 tests'"
+      },
+      {
+        "expected": "8d967d88f6caa9d714800ab3d48051d63f73a312",
+        "id": 3,
+        "iter": 1,
+        "label": "pkcs12.02",
+        "md": "SHA1",
+        "note": "Key = lowercase hex of PKCS12_key_gen_uni's output; mirror forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt line 32, Title 'PKCS12 tests'"
+      },
+      {
+        "expected": "483dd6e919d7de2e8e648ba8f862f3fbfbdc2bcb2c02957f",
+        "id": 1,
+        "iter": 1000,
+        "label": "pkcs12.03",
+        "md": "SHA1",
+        "note": "Key = lowercase hex of PKCS12_key_gen_uni's output; mirror forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt line 40, Title 'PKCS12 tests'"
+      },
+      {
+        "expected": "9d461d1b00355c50",
+        "id": 2,
+        "iter": 1000,
+        "label": "pkcs12.04",
+        "md": "SHA1",
+        "note": "Key = lowercase hex of PKCS12_key_gen_uni's output; mirror forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt line 48, Title 'PKCS12 tests'"
+      },
+      {
+        "expected": "5ec4c7a80df652294c3925b6489a7ab857c83476",
+        "id": 3,
+        "iter": 1000,
+        "label": "pkcs12.05",
+        "md": "SHA1",
+        "note": "Key = lowercase hex of PKCS12_key_gen_uni's output; mirror forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt line 56, Title 'PKCS12 tests'"
+      }
+    ]
+  },
+  "generator": "forensics/tools/gen_pkcs12_vectors.py",
+  "inputs": [
+    {
+      "name": "authority-evp-pkcs12-vector-file",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pkcs12.txt",
+      "sha256": "cabbba1e5e9e3f172d3b1933893e016b12bcf6c8b8daf6189c02c08503614c06"
+    },
+    {
+      "name": "declined-pbkdf2-vector-file",
+      "note": "declined: PBE = pbkdf2 drives PKCS5_PBKDF2_HMAC (Phase 7), not PKCS12KDF",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/30-test_evp_data/evppbe_pbkdf2.txt",
+      "sha256": "2959628d522bae052ec40501fb03636df5c78bdc6ff0db6957219e261e1d2c4e"
+    },
+    {
+      "name": "declined-pkcs12-container-recipe",
+      "note": "declined: the PFX container reads/writes through PKCS7/X509 (Phases 12/11)",
+      "path": "forensics/authorities/src/openssl-3.6.4/test/recipes/80-test_pkcs12.t",
+      "sha256": "3e7c545be2d0e8790005d3cc995857aa16bc9a9fdd211eaac42b4a531f057cb6"
+    }
+  ],
+  "kind": "correctness-vectors",
+  "schema": "openssl-rs/correctness-vectors/v1"
+}

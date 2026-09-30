@@ -542,6 +542,7 @@ mod tests {
     /// would pass a naive test and produce one method where the provider published two.
     #[test]
     fn the_map_walks_every_entry_and_reserves_around_them() {
+        let _guard = crate::test_support::lock_global_state();
         reset();
         let map = two_algorithms();
         let (ret, _) = run_map(map.as_ptr(), None, None);
@@ -567,6 +568,7 @@ mod tests {
     /// failure, and the difference is invisible unless the test asserts the *answer*.
     #[test]
     fn a_refused_precondition_is_success_and_skips_the_map() {
+        let _guard = crate::test_support::lock_global_state();
         reset();
         PRE_RESULT.store(0, Ordering::SeqCst);
         PRE_ERRORS.store(0, Ordering::SeqCst);
@@ -586,6 +588,7 @@ mod tests {
     /// authority jumps straight to the unreserve.
     #[test]
     fn an_erroring_precondition_bails_out_with_minus_one() {
+        let _guard = crate::test_support::lock_global_state();
         reset();
         PRE_ERRORS.store(1, Ordering::SeqCst);
         let map = two_algorithms();
@@ -609,6 +612,7 @@ mod tests {
     /// left `ret` at its old value — which is the assertion that found the difference.
     #[test]
     fn the_postcondition_overwrites_ret_when_it_refuses() {
+        let _guard = crate::test_support::lock_global_state();
         reset();
         PRE_RESULT.store(1, Ordering::SeqCst);
         POST_RESULT.store(0, Ordering::SeqCst);
@@ -628,6 +632,7 @@ mod tests {
     /// `algorithm_do_this` passes NULL for an operation a provider has no table for.
     #[test]
     fn a_null_map_runs_the_pre_and_post_and_constructs_nothing() {
+        let _guard = crate::test_support::lock_global_state();
         reset();
         PRE_RESULT.store(1, Ordering::SeqCst);
         POST_RESULT.store(1, Ordering::SeqCst);

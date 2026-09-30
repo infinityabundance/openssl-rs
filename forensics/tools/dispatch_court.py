@@ -137,6 +137,20 @@ CONF_METHOD = ("not a provider dispatch: a member of `include/openssl/conftypes.
                "`OSSL_CORE_MAKE_FUNC` declaration")
 CONF_INT = ("not a provider dispatch: a member of the `CONF_METHOD` vtable, which the atlas "
             "records as a struct of plain function pointers rather than as typedefs")
+# `include/openssl/x509v3.h.in:79-85` -- the `X509V3_CONF_METHOD` members (Phase 10.14.4). Like
+# `conftypes.h`'s `CONF_METHOD`, the struct declares four plain function pointers inline rather than
+# through `OSSL_CORE_MAKE_FUNC`, so the atlas records no `typedef` for any of them and the crate's
+# four aliases have no authority name to link to.
+X509V3_CONF_METHOD_VTABLE = ("not a provider dispatch: a member of `X509V3_CONF_METHOD` "
+                             "(`include/openssl/x509v3.h.in:79-85`), declared inline as a plain "
+                             "function pointer rather than through `OSSL_CORE_MAKE_FUNC`")
+# `include/openssl/x509v3.h.in:489` -- `struct x509_purpose_st`'s `check_purpose` member (Phase
+# 10's `v3_purp.c`). Like the `X509V3_CONF_METHOD` vtable above, the struct declares it inline as a
+# plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`, so the atlas records no
+# `typedef` for it and the convention rule has no authority name for the crate's alias to join on.
+CHECK_PURPOSE = ("not a provider dispatch: `struct x509_purpose_st`'s `check_purpose` member "
+                 "(`include/openssl/x509v3.h.in:489`), declared inline as a plain function "
+                 "pointer rather than through `OSSL_CORE_MAKE_FUNC`")
 EVP_LEGACY = ("not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback "
               "list in `evp.h`, declared as a plain function pointer rather than through "
               "`OSSL_CORE_MAKE_FUNC`")
@@ -225,6 +239,17 @@ XLAT_GET = ("not a provider dispatch: the type of `fix_cipher_md`'s two function
             "its own signature rather than as typedefs; the crate names them to parameterise one "
             "function over `EVP_CIPHER` and `EVP_MD`")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
+ENCODE_KEY2ANY_TYPEDEF = (
+    "not a provider dispatch: the authority declares this `typedef` inside `encode_key2any.c` "
+    "itself (`:67-72`), not in an installed header, so the typedefs atlas has no record of it"
+)
+# `crypto/store/store_result.c:317` -- `store_info_new_fn`, the constructor `try_key` settles on.
+# A `.c`-local typedef like `encode_key2any.c`'s pair above, so the typedefs atlas -- whose
+# universe is the installed public surface -- records no name for it.
+STORE_RESULT_TYPEDEF = (
+    "not a provider dispatch: the authority declares this `typedef` inside `store_result.c` "
+    "itself (`:317`), not in an installed header, so the typedefs atlas has no record of it"
+)
 # `providers/implementations/include/prov/drbg.h:59-165` -- `struct prov_drbg_st`'s cached virtual
 # functions (`instantiate`, `uninstantiate`, `reseed`, `generate`) and its two `dnew`/`dfree`
 # callbacks. They are declared **inline in the struct as plain function pointers**, exactly as
@@ -242,6 +267,28 @@ DRBG_VTABLE = ("not a provider dispatch: a member of `struct prov_drbg_st`, decl
 WRAP_FN = ("not a provider dispatch: `cipher_aes_wrp.c:28-30`'s `aeswrap_fn`, a typedef local to a "
            "provider implementation file, which the atlas -- whose universe is the installed "
            "public surface -- records no typedef for")
+# `providers/implementations/encode_decode/decode_der2key.h` -- `key_from_pkcs8_t`, the callback
+# the decoder rows' `key_from_pkcs8` slot holds (it wraps `OSSL_FUNC_keymgmt_load`). It is a
+# typedef local to a provider implementation header, exactly `aeswrap_fn`'s shape, so the atlas --
+# whose universe is the installed public surface -- records no typedef for it and the convention
+# rule has no name to join on. The five sibling aliases for the same header's callbacks
+# (`d2i_PKCS8_fn`, `d2i_PUBKEY_fn`, `check_key_fn`, `adjust_key_fn`, `free_key_fn`) are declared
+# Rust-ABI `unsafe fn`, so the function-alias reader never extracts them.
+KEY_FROM_PKCS8_FN = (
+    "not a provider dispatch: `decode_der2key.h`'s `key_from_pkcs8_t`, a typedef local to a "
+    "provider implementation header, which the atlas -- whose universe is the installed public "
+    "surface -- records no typedef for")
+# `providers/implementations/encode_decode/decode_msblob2key.c` and `decode_pvk2key.c` declare
+# their `keytype_desc_st` callback fields as `.c`-local typedefs (`b2i_of_void_fn`,
+# `adjust_key_fn`, `free_key_fn`, `b2i_PVK_of_bio_pw_fn`, `check_key_fn`). The atlas's universe is
+# the installed public surface, so it records no typedef for a `.c`-local type (the same rule D333
+# applies to `EcFieldSetToOneFn`), and the convention rule has no authority name to join on. The
+# crate declares one Rust alias per type; `adjust_key_fn`/`free_key_fn` appear in both files with
+# the same canonical signature, so a bare name exempts both. Landed with 10.6's two decoder units.
+KEYTYPE_DESC_CALLBACK = (
+    "not a provider dispatch: a `.c`-local callback typedef of a provider implementation's "
+    "`keytype_desc_st` (`decode_msblob2key.c`/`decode_pvk2key.c`), which the atlas -- whose "
+    "universe is the installed public surface -- records no typedef for")
 # `prov/ciphercommon.h:30` -- `PROV_CIPHER_FUNC(type, name, args)` expands to
 # `typedef type(*OSSL_##name##_fn) args`, so the typedef is produced by the preprocessor and there
 # is no `typedef` declaration for a declaration reader to record. `OSSL_xts_stream_fn` is the one
@@ -273,6 +320,13 @@ UI_METHOD_VTABLE = ("not a provider dispatch: a member of `UI_METHOD`'s vtable, 
 # scalar typedef with no declarator for the signature reader to see.
 THREAD_ARCH_INT = ("not a provider dispatch: declared in `include/internal/thread_arch.h:57`, "
                    "which is not installed, so the atlas has no record of it")
+# `crypto/engine/eng_local.h` (Phase 10.9) -- `ENGINE_CLEANUP_CB` (`:44`) and
+# `engine_table_doall_cb` (`:67-70`). Both are callback typedefs in an **internal** header, so
+# the atlas -- whose universe is the installed public surface -- records no typedef for either,
+# and the convention rule has no authority name for the crate's two aliases to join on.
+ENGINE_LOCAL_TYPEDEF = ("not a provider dispatch: a callback typedef declared in "
+                        "`crypto/engine/eng_local.h`, which is internal, so the atlas records "
+                        "no typedef for it")
 
 
 def _inline(fn: str, spelling: str) -> str:
@@ -343,6 +397,11 @@ NOT_A_DISPATCH: dict[str, str] = {
     "McmLockStoreFn": MCM,
     "McmUnlockStoreFn": MCM,
     "MethodFromAlgorithmFn": MCM,
+    # --- `X509V3_CONF_METHOD` (`include/openssl/x509v3.h.in:79-85`, Phase 10.14.4) ----------
+    "X509V3GetString": X509V3_CONF_METHOD_VTABLE,
+    "X509V3GetSection": X509V3_CONF_METHOD_VTABLE,
+    # `struct x509_purpose_st`'s checker (Phase 10's `v3_purp.c`).
+    "CheckPurpose": CHECK_PURPOSE,
     # --- `EVP_CIPHER` / `EVP_MD` legacy callback lists (`evp.h`) -----------------------------
     "CipherDoAllFn": EVP_LEGACY,
     "MdDoAllFn": EVP_LEGACY,
@@ -516,6 +575,13 @@ NOT_A_DISPATCH: dict[str, str] = {
     "SkCopyFn": SK_MACRO,
     "SkFreeFn": SK_MACRO,
     "AesWrapFn@src/provider/cipher.rs": WRAP_FN,
+    # `encode_key2any.c:67-72`'s two function-type typedefs: the unit's own `key_to_paramstring_fn`
+    # and `key_to_der_fn`. The authority declares them in the `.c`, not in a header, so the
+    # typedefs atlas cannot name them and no link can resolve. Landed with the engine (D445).
+    "KeyToParamstringFn": ENCODE_KEY2ANY_TYPEDEF,
+    "KeyToDerFn": ENCODE_KEY2ANY_TYPEDEF,
+    # `store_result.c`'s `store_info_new_fn` (Phase 10's `OSSL_STORE_load` slice).
+    "StoreInfoNewFn": STORE_RESULT_TYPEDEF,
     "OsslXtsStreamFn": PROV_CIPHER_FUNC_TYPE,
     # The same macro-generated typedef one header over. `cipher_sm4_xts.h:14-17` invokes
     # `PROV_CIPHER_FUNC(void, xts_stream, ...)` with `SM4_KEY` parameters and a trailing `enc` where
@@ -535,6 +601,13 @@ NOT_A_DISPATCH: dict[str, str] = {
     "ConfFinishFn": ("not a provider dispatch: the crate's `conf_finish_func` equivalent for the "
                      "`CONF_METHOD` vtable; the authority declares the module finish callback "
                      "only as a local typedef in `conf.h`, which the atlas does not record"),
+    "KeyFromPkcs8Fn": KEY_FROM_PKCS8_FN,
+    # --- `decode_msblob2key.c`/`decode_pvk2key.c`'s `.c`-local `keytype_desc_st` callbacks (10.6) --
+    "B2iOfVoidFn": KEYTYPE_DESC_CALLBACK,
+    "B2iPvkOfBioPwFn": KEYTYPE_DESC_CALLBACK,
+    "AdjustKeyFn": KEYTYPE_DESC_CALLBACK,
+    "FreeKeyFn": KEYTYPE_DESC_CALLBACK,
+    "CheckKeyFn": KEYTYPE_DESC_CALLBACK,
     "ConfCreateFn": CONF_INT,
     "ConfDestroyFn": CONF_INT,
     "ConfDestroyDataFn": CONF_INT,
@@ -543,6 +616,9 @@ NOT_A_DISPATCH: dict[str, str] = {
     "ConfLoadBioFn": CONF_INT,
     # --- the thread layer's one alias (`include/internal/thread_arch.h`, D397) ----------------
     "CryptoThreadRoutine": THREAD_ARCH_INT,
+    # --- the engine registry's two callback aliases (`crypto/engine/eng_local.h`, Phase 10.9) ---
+    "EngineCleanupCb": ENGINE_LOCAL_TYPEDEF,
+    "EngineTableDoallCb": ENGINE_LOCAL_TYPEDEF,
     "ConfIsNumberFn": CONF_INT,
     "ConfToIntFn": CONF_INT,
     "DsoMergerFunc": DSO_INT,

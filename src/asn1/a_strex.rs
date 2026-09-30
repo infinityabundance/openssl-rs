@@ -1,8 +1,9 @@
 //! Phase 5 — `crypto/asn1/a_strex.c`: the escaping printer and the UTF-8 converter.
 //!
-//! Three exports here; the rest of the translation unit (`do_name_ex`,
-//! `X509_NAME_print_ex`, `X509_NAME_print_ex_fp`) is `x509.h`'s and belongs to
-//! Phase 11.
+//! Three exports landed in Phase 5. Phase 10.11 adds the unit's **`X509_NAME` print half**
+//! (`do_indent`, `do_name_ex`, `X509_NAME_print_ex`, `X509_NAME_print_ex_fp`) now that the
+//! `X509_NAME` object model and its per-entry accessors are landed; nothing of the unit is
+//! withheld after that.
 //!
 //! * `ASN1_STRING_print_ex` and `ASN1_STRING_print_ex_fp` are one implementation
 //!   with two sinks. The sink is a `char_io` callback, so the *counting* pass and
@@ -62,13 +63,21 @@ use crate::asn1::layout::*;
 use crate::asn1::string::as_str;
 use crate::asn1::text::to_hex;
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::bss_file::BIO_new_fp;
 use crate::runtime::bio::iolib::BIO_write;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::sys::{fwrite, FILE};
-use crate::runtime::bio::Bio;
+use crate::runtime::bio::{BIO_free, Bio, BIO_NOCLOSE};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+use crate::runtime::obj::{NID_undef, OBJ_nid2ln, OBJ_nid2sn, OBJ_obj2nid, OBJ_obj2txt};
+use crate::runtime::str::OPENSSL_strnlen;
+use crate::x509::x509name::{
+    X509_NAME_ENTRY_get_data, X509_NAME_ENTRY_get_object, X509_NAME_ENTRY_set,
+    X509_NAME_entry_count, X509_NAME_get_entry,
+};
+use crate::x509::x_name::{X509Name, X509_NAME_print};
 
 /// The authority translation unit for the escaping printer.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/asn1/a_strex.c";
@@ -727,4 +736,293 @@ pub unsafe extern "C" fn ASN1_STRING_to_UTF8(
         unsafe { *out = stmp.data };
         stmp.length
     })
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 10.11 — the `X509_NAME` print half (`a_strex.c:406-581`)
+// ---------------------------------------------------------------------------------------------
+
+/// `XN_FLAG_SEP_MASK` — `include/openssl/x509.h:157`, the separator group selector.
+const XN_FLAG_SEP_MASK: c_ulong = 0xf << 16;
+/// `XN_FLAG_COMPAT` — `:159`; selects the old [`X509_NAME_print`].
+const XN_FLAG_COMPAT: c_ulong = 0;
+/// `XN_FLAG_SEP_COMMA_PLUS` — `:160`; RFC 2253's `,`/`+` with no spaces.
+const XN_FLAG_SEP_COMMA_PLUS: c_ulong = 1 << 16;
+/// `XN_FLAG_SEP_CPLUS_SPC` — `:161`; `, `/` + `.
+///
+/// `crate::x509::x_attrib`'s `ossl_print_attribute_value` reads it (`x_attrib.c:181`), so it is
+/// crate-visible rather than file-local.
+pub(crate) const XN_FLAG_SEP_CPLUS_SPC: c_ulong = 2 << 16;
+/// `XN_FLAG_SEP_SPLUS_SPC` — `:162`; `; `/` + `.
+const XN_FLAG_SEP_SPLUS_SPC: c_ulong = 3 << 16;
+/// `XN_FLAG_SEP_MULTILINE` — `:163`; one field per line.
+const XN_FLAG_SEP_MULTILINE: c_ulong = 4 << 16;
+/// `XN_FLAG_DN_REV` — `:165`; reverse the entry order.
+const XN_FLAG_DN_REV: c_ulong = 1 << 20;
+/// `XN_FLAG_FN_MASK` — `:169`, the field-name group selector.
+const XN_FLAG_FN_MASK: c_ulong = 0x3 << 21;
+/// `XN_FLAG_FN_SN` — `:171`; short name.
+const XN_FLAG_FN_SN: c_ulong = 0;
+/// `XN_FLAG_FN_LN` — `:172`; long name.
+const XN_FLAG_FN_LN: c_ulong = 1 << 21;
+/// `XN_FLAG_FN_OID` — `:173`; always the numeric OID.
+const XN_FLAG_FN_OID: c_ulong = 2 << 21;
+/// `XN_FLAG_FN_NONE` — `:174`; no field names.
+const XN_FLAG_FN_NONE: c_ulong = 3 << 21;
+/// `XN_FLAG_SPC_EQ` — `:176`; spaces round `=`.
+const XN_FLAG_SPC_EQ: c_ulong = 1 << 23;
+/// `XN_FLAG_DUMP_UNKNOWN_FIELDS` — `:183`; DER-dump values of unrecognised OIDs.
+const XN_FLAG_DUMP_UNKNOWN_FIELDS: c_ulong = 1 << 24;
+/// `XN_FLAG_FN_ALIGN` — `:185`; pad short field names to the long-name width.
+const XN_FLAG_FN_ALIGN: c_ulong = 1 << 25;
+
+/// `XN_FLAG_ONELINE` — `include/openssl/x509.h.in:194`, the one-line spelling.
+///
+/// `ASN1_STRFLGS_RFC2253 | ASN1_STRFLGS_ESC_QUOTE | XN_FLAG_SEP_CPLUS_SPC | XN_FLAG_SPC_EQ |
+/// XN_FLAG_FN_SN`; `crate::x509::v3_san`'s `GENERAL_NAME_print` reads it for its `DirName` arm.
+pub(crate) const XN_FLAG_ONELINE: c_ulong = ASN1_STRFLGS_RFC2253
+    | ASN1_STRFLGS_ESC_QUOTE
+    | XN_FLAG_SEP_CPLUS_SPC
+    | XN_FLAG_SPC_EQ
+    | XN_FLAG_FN_SN;
+
+/// `FN_WIDTH_LN` — `crypto/asn1/a_strex.c:417`.
+const FN_WIDTH_LN: c_int = 25;
+/// `FN_WIDTH_SN` — `crypto/asn1/a_strex.c:418`.
+const FN_WIDTH_SN: c_int = 10;
+
+/// `static int do_indent(char_io *io_ch, void *arg, int indent)` —
+/// `crypto/asn1/a_strex.c:408-415`.
+///
+/// Writes `indent` spaces (or measures them when `arg` is null) and answers 1, or 0 if the sink
+/// refuses. A negative `indent` loops zero times, because the loop tests `i < indent`.
+///
+/// # Safety
+///
+/// `io_ch` must be a `char_io`; `arg` null or whatever `io_ch` expects.
+unsafe fn do_indent(io_ch: CharIo, arg: *mut c_void, indent: c_int) -> c_int {
+    let mut i = 0;
+    while i < indent {
+        // SAFETY: `io_ch` is a live callback and the one-byte literal is static.
+        if unsafe { io_ch(arg, c" ".as_ptr().cast(), 1) } == 0 {
+            return 0;
+        }
+        i += 1;
+    }
+    1
+}
+
+/// `static int do_name_ex(char_io *io_ch, void *arg, const X509_NAME *n, int indent,
+/// unsigned long flags)` — `crypto/asn1/a_strex.c:420-554`.
+///
+/// Renders an `X509_NAME` under `flags`: the `XN_FLAG_SEP_*` group chooses the inter-RDN and
+/// inter-entry separators, `XN_FLAG_DN_REV` reverses the entry order, the `XN_FLAG_FN_*` group
+/// chooses the field-name spelling, `XN_FLAG_SPC_EQ`/`XN_FLAG_FN_ALIGN` adjust spacing, and
+/// `XN_FLAG_DUMP_UNKNOWN_FIELDS` forces a DER dump for entries whose OID is unrecognised -- by
+/// setting `ASN1_STRFLGS_DUMP_ALL` in the **value's** flag word, not the name's. Answers the
+/// number of bytes written, or -1.
+///
+/// The counting pass and the writing pass are the same code: the two `do_indent`/`do_print_ex`
+/// helpers measure with a null sink and write with the real one, so `outlen` cannot disagree with
+/// the bytes emitted.
+///
+/// # Safety
+///
+/// `io_ch` must be a `char_io`; `arg` null or whatever `io_ch` expects; `n` NULL or a live name.
+unsafe fn do_name_ex(
+    io_ch: CharIo,
+    arg: *mut c_void,
+    n: *const X509Name,
+    indent: c_int,
+    flags: c_ulong,
+) -> c_int {
+    let indent = if indent < 0 { 0 } else { indent };
+    let mut outlen = indent;
+    // SAFETY: the caller's contract is `do_indent`'s.
+    if unsafe { do_indent(io_ch, arg, indent) } == 0 {
+        return -1;
+    }
+
+    let sep_dn: &[u8];
+    let sep_mv: &[u8];
+    let mut indent = indent;
+    let sep_mask = flags & XN_FLAG_SEP_MASK;
+    if sep_mask == XN_FLAG_SEP_MULTILINE {
+        sep_dn = b"\n";
+        sep_mv = b" + ";
+    } else if sep_mask == XN_FLAG_SEP_COMMA_PLUS {
+        sep_dn = b",";
+        sep_mv = b"+";
+        indent = 0;
+    } else if sep_mask == XN_FLAG_SEP_CPLUS_SPC {
+        sep_dn = b", ";
+        sep_mv = b" + ";
+        indent = 0;
+    } else if sep_mask == XN_FLAG_SEP_SPLUS_SPC {
+        sep_dn = b"; ";
+        sep_mv = b" + ";
+        indent = 0;
+    } else {
+        return -1;
+    }
+
+    let sep_eq: &[u8] = if flags & XN_FLAG_SPC_EQ != 0 {
+        b" = "
+    } else {
+        b"="
+    };
+
+    let fn_opt = flags & XN_FLAG_FN_MASK;
+
+    // SAFETY: `n` is NULL or live per the contract; a NULL name counts zero entries.
+    let cnt = unsafe { X509_NAME_entry_count(n) };
+    let mut prev: c_int = -1;
+    let mut i: c_int = 0;
+    while i < cnt {
+        let ent = if flags & XN_FLAG_DN_REV != 0 {
+            // SAFETY: `n` is live when `cnt` is positive and the index is in range.
+            unsafe { X509_NAME_get_entry(n, cnt - i - 1) }
+        } else {
+            // SAFETY: as above; the index is in range.
+            unsafe { X509_NAME_get_entry(n, i) }
+        };
+        if prev != -1 {
+            // SAFETY: `ent` came from a valid index and is live.
+            if prev == unsafe { X509_NAME_ENTRY_set(ent) } {
+                // SAFETY: the literal is static and `io_ch` is a live callback.
+                if unsafe { io_ch(arg, sep_mv.as_ptr().cast(), sep_mv.len() as c_int) } == 0 {
+                    return -1;
+                }
+                outlen += sep_mv.len() as c_int;
+            } else {
+                // SAFETY: as above.
+                if unsafe { io_ch(arg, sep_dn.as_ptr().cast(), sep_dn.len() as c_int) } == 0 {
+                    return -1;
+                }
+                outlen += sep_dn.len() as c_int;
+                // SAFETY: `io_ch`/`arg` are the caller's.
+                if unsafe { do_indent(io_ch, arg, indent) } == 0 {
+                    return -1;
+                }
+                outlen += indent;
+            }
+        }
+        // SAFETY: `ent` is live.
+        prev = unsafe { X509_NAME_ENTRY_set(ent) };
+        // SAFETY: `ent` is live.
+        let fn_ = unsafe { X509_NAME_ENTRY_get_object(ent) };
+        // SAFETY: `ent` is live.
+        let val = unsafe { X509_NAME_ENTRY_get_data(ent) };
+        // SAFETY: `fn_` is a live object.
+        let fn_nid = unsafe { OBJ_obj2nid(fn_) };
+        if fn_opt != XN_FLAG_FN_NONE {
+            let mut objtmp = [0 as c_char; 80];
+            let fld_len: c_int;
+            let objbuf: *const c_char;
+            if fn_opt == XN_FLAG_FN_OID || fn_nid == NID_undef {
+                // SAFETY: `objtmp` is an 80-byte buffer and `fn_` is live.
+                unsafe { OBJ_obj2txt(objtmp.as_mut_ptr(), 80, fn_, 1) };
+                fld_len = 0;
+                objbuf = objtmp.as_ptr();
+            } else if fn_opt == XN_FLAG_FN_SN {
+                fld_len = FN_WIDTH_SN;
+                // SAFETY: `fn_nid` names an object in the table.
+                objbuf = OBJ_nid2sn(fn_nid);
+            } else if fn_opt == XN_FLAG_FN_LN {
+                fld_len = FN_WIDTH_LN;
+                // SAFETY: `fn_nid` names an object in the table.
+                objbuf = OBJ_nid2ln(fn_nid);
+            } else {
+                fld_len = 0;
+                objbuf = c"".as_ptr();
+            }
+            // SAFETY: `objbuf` is a NUL-terminated string.
+            let objlen = unsafe { OPENSSL_strnlen(objbuf, usize::MAX) } as c_int;
+            // SAFETY: `objbuf` is readable for `objlen` bytes and `io_ch` is live.
+            if unsafe { io_ch(arg, objbuf.cast(), objlen) } == 0 {
+                return -1;
+            }
+            if objlen < fld_len && flags & XN_FLAG_FN_ALIGN != 0 {
+                // SAFETY: `io_ch`/`arg` are the caller's.
+                if unsafe { do_indent(io_ch, arg, fld_len - objlen) } == 0 {
+                    return -1;
+                }
+                outlen += fld_len - objlen;
+            }
+            // SAFETY: the literal is static and `io_ch` is live.
+            if unsafe { io_ch(arg, sep_eq.as_ptr().cast(), sep_eq.len() as c_int) } == 0 {
+                return -1;
+            }
+            outlen += objlen + sep_eq.len() as c_int;
+        }
+        let orflags: c_ulong = if fn_nid == NID_undef && flags & XN_FLAG_DUMP_UNKNOWN_FIELDS != 0 {
+            ASN1_STRFLGS_DUMP_ALL
+        } else {
+            0
+        };
+        // SAFETY: `io_ch`/`arg` are the caller's and `val` is a live entry value.
+        let len = unsafe { do_print_ex(io_ch, arg, flags | orflags, val.cast::<Asn1String>()) };
+        if len < 0 {
+            return -1;
+        }
+        outlen += len;
+        i += 1;
+    }
+    outlen
+}
+
+/// `int X509_NAME_print_ex(BIO *out, const X509_NAME *nm, int indent, unsigned long flags)` —
+/// `crypto/asn1/a_strex.c:558-564`.
+///
+/// `XN_FLAG_COMPAT` selects the old [`X509_NAME_print`]; anything else goes to [`do_name_ex`]
+/// over a BIO sink.
+///
+/// # Safety
+///
+/// `out` must be a live BIO; `nm` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_NAME_print_ex(
+    out: *mut Bio,
+    nm: *const X509Name,
+    indent: c_int,
+    flags: c_ulong,
+) -> c_int {
+    if flags == XN_FLAG_COMPAT {
+        // SAFETY: `out` and `nm` are the caller's.
+        return unsafe { X509_NAME_print(out, nm, indent) };
+    }
+    // SAFETY: `send_bio_chars` is the BIO sink and `out` is live per the contract.
+    unsafe { do_name_ex(send_bio_chars, out.cast(), nm, indent, flags) }
+}
+
+/// `int X509_NAME_print_ex_fp(FILE *fp, const X509_NAME *nm, int indent, unsigned long flags)` —
+/// `crypto/asn1/a_strex.c:567-581`.
+///
+/// The `XN_FLAG_COMPAT` arm wraps `fp` in a no-close BIO, prints the old way, and releases the
+/// BIO; anything else writes straight through the `FILE` sink.
+///
+/// # Safety
+///
+/// `fp` must be a live `FILE`; `nm` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_NAME_print_ex_fp(
+    fp: *mut FILE,
+    nm: *const X509Name,
+    indent: c_int,
+    flags: c_ulong,
+) -> c_int {
+    if flags == XN_FLAG_COMPAT {
+        // SAFETY: `fp` is live per the contract.
+        let btmp = unsafe { BIO_new_fp(fp.cast(), BIO_NOCLOSE) };
+        if btmp.is_null() {
+            return -1;
+        }
+        // SAFETY: `btmp` is live and `nm` is the caller's.
+        let ret = unsafe { X509_NAME_print(btmp, nm, indent) };
+        // SAFETY: `btmp` is this call's own BIO.
+        unsafe { BIO_free(btmp) };
+        return ret;
+    }
+    // SAFETY: `send_fp_chars` is the FILE sink and `fp` is live per the contract.
+    unsafe { do_name_ex(send_fp_chars, fp.cast(), nm, indent, flags) }
 }

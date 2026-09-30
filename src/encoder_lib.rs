@@ -36,25 +36,30 @@
 //! while a `break` leaves the index that broke -- and the post-loop half is one `if`. The three
 //! `continue`s inside the body are Rust `continue`s, which reach the same decrement.
 //!
-//! ## What is withheld, as one named block
+//! ## What is now landed at the tail
 //!
 //! The three `ossl_bio_print_*` helpers -- `ossl_bio_print_labeled_bignum` (`:706`),
 //! `ossl_bio_print_labeled_buf` (`:785`) and `ossl_bio_print_ffc_params` (`:813`) -- are the tail of
-//! the file and are called by **provider encoder implementations** (the default provider's
-//! `encoder_text.c` and friends), of which this crate publishes none: `provider-algorithms.json`
-//! records all 482 encoder rows as `unimplemented`. No landed caller reaches them, so they are
-//! withheld with a `divergences` row rather than written as three dead functions.
+//! the file and are called by **provider encoder implementations**. They landed with the first of
+//! them, `src/provider/encode_key2text.rs` (10.1), which is the caller the `prerequisites.json`
+//! `divergences` row that withheld them named as their landing condition. They are transcribed
+//! whole; the `LABELED_BUF_PRINT_WIDTH`-octet layout, the one-word decimal-with-hex form and the
+//! `X9.42` parameter layout are all observable in `RT-CODEC`'s transcript.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use core::ptr;
 
+use crate::bn::bignum::{BN_bn2hex, BN_is_negative, BN_is_zero, BN_num_bits, BigNum};
+use crate::bn::intern::bn_get_words;
 use crate::encoder_meth::{
     ossl_encoder_parsed_properties, EncoderCleanupFn, EncoderConstructFn, OSSL_ENCODER_free,
     OSSL_ENCODER_get0_name, OSSL_ENCODER_get0_properties, OSSL_ENCODER_get0_provider,
     OSSL_ENCODER_is_a, OSSL_ENCODER_up_ref, OsslEncoder, OsslEncoderCtx, OsslEncoderInstance,
 };
+use crate::ffc::dh::{ossl_ffc_named_group_get_name, ossl_ffc_uid_to_dh_named_group};
+use crate::ffc::FfcParams;
 use crate::params::{
     OSSL_PARAM_construct_end, OSSL_PARAM_construct_octet_string, OSSL_PARAM_construct_utf8_string,
     OsslParam,
@@ -66,13 +71,14 @@ use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::bss_mem::BIO_s_mem;
 use crate::runtime::bio::core_bio::{ossl_core_bio_free, ossl_core_bio_new_from_bio, OsslCoreBio};
 use crate::runtime::bio::iolib::BIO_ctrl;
-use crate::runtime::bio::print::BIO_snprintf;
+use crate::runtime::bio::print::{BIO_printf, BIO_snprintf};
 use crate::runtime::bio::{
     BIO_free, BIO_new, Bio, BIO_C_GET_BUF_MEM_PTR, BIO_C_SET_FILE_PTR, BIO_NOCLOSE,
 };
 use crate::runtime::buffer::BufMem;
 use crate::runtime::err::{err_sites, raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
+use crate::runtime::obj::NID_undef;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value,
 };
@@ -994,6 +1000,235 @@ unsafe fn encoder_process(data: *mut EncoderProcessData) -> c_int {
         }
     }
     ok
+}
+
+/// `LABELED_BUF_PRINT_WIDTH` — `crypto/encode_decode/encoder_lib.c:27`.
+const LABELED_BUF_PRINT_WIDTH: usize = 15;
+
+/// `BN_BYTES` — `include/openssl/bn.h:38` for a 64-bit `BN_ULONG`.
+const BN_BYTES: c_int = 8;
+
+/// `int ossl_bio_print_labeled_bignum(BIO *out, const char *label, const BIGNUM *bn)` —
+/// `crypto/encode_decode/encoder_lib.c:706-783`.
+///
+/// The three-part shape is the contract: a small value (at most one word) prints as decimal with
+/// its hex in parentheses on one line; a larger one prints the label alone, then the magnitude in
+/// lower-case hex, 15 bytes per line, with a leading `00` when the top bit is set and `:` between
+/// bytes. A `%s%c%c` call carries the separator so the first byte of a line has none.
+///
+/// # Safety
+/// `out` must be a live BIO; `bn` NULL or live; `label` NULL or NUL-terminated.
+pub(crate) unsafe fn ossl_bio_print_labeled_bignum(
+    out: *mut Bio,
+    label_in: *const c_char,
+    bn: *const BigNum,
+) -> c_int {
+    let spaces = c"    ";
+    let mut use_sep = 0;
+    let mut label = label_in;
+    let mut post_label_spc: *const c_char = c" ".as_ptr();
+
+    if bn.is_null() {
+        return 0;
+    }
+    if label.is_null() {
+        label = c"".as_ptr();
+        post_label_spc = c"".as_ptr();
+    }
+
+    // SAFETY: `bn` is live per the contract.
+    if unsafe { BN_is_zero(bn) } != 0 {
+        // SAFETY: `out` is live; the format and its two `%s` arguments agree.
+        return unsafe { BIO_printf(out, c"%s%s0\n".as_ptr(), label, post_label_spc) };
+    }
+
+    // `BN_num_bytes(a)` is the authority's macro `((BN_num_bits(a)+7)/8)`.
+    // SAFETY: `bn` is live.
+    if (unsafe { BN_num_bits(bn) } + 7) / 8 <= BN_BYTES {
+        // SAFETY: `bn` is live and non-zero, so it has at least one word.
+        let words = unsafe { bn_get_words(bn) };
+        let mut neg: *const c_char = c"".as_ptr();
+        // SAFETY: `bn` is live.
+        if unsafe { BN_is_negative(bn) } != 0 {
+            neg = c"-".as_ptr();
+        }
+        // SAFETY: `words` points at `bn`'s live magnitude; the format's `%lu`/`%lx` take a
+        // `c_ulong` and `BN_ULONG` is `unsigned long` on this build.
+        let word = unsafe { *words } as c_ulong;
+        // SAFETY: `out` is live and every argument matches its conversion.
+        return unsafe {
+            BIO_printf(
+                out,
+                c"%s%s%s%lu (%s0x%lx)\n".as_ptr(),
+                label,
+                post_label_spc,
+                neg,
+                word,
+                neg,
+                word,
+            )
+        };
+    }
+
+    // SAFETY: `bn` is live.
+    let hex_str: *mut c_char = unsafe { BN_bn2hex(bn) };
+    if hex_str.is_null() {
+        return 0;
+    }
+
+    // SAFETY: `hex_str` is a live NUL-terminated NUL-terminated buffer from `BN_bn2hex`.
+    let ret = unsafe {
+        let mut p = hex_str;
+        let mut neg: *const c_char = c"".as_ptr();
+        if *p == b'-' as c_char {
+            p = p.add(1);
+            neg = c" (Negative)".as_ptr();
+        }
+        if BIO_printf(out, c"%s%s\n".as_ptr(), label, neg) <= 0 {
+            0
+        } else {
+            'blk: {
+                let mut bytes: c_int = 0;
+                if BIO_printf(out, c"%s".as_ptr(), spaces.as_ptr()) <= 0 {
+                    break 'blk 0;
+                }
+                if *p >= b'8' as c_char {
+                    if BIO_printf(out, c"%02x".as_ptr(), 0) <= 0 {
+                        break 'blk 0;
+                    }
+                    bytes += 1;
+                    use_sep = 1;
+                }
+                while *p != 0 {
+                    if (bytes % 15) == 0 && bytes > 0 {
+                        if BIO_printf(out, c":\n%s".as_ptr(), spaces.as_ptr()) <= 0 {
+                            break 'blk 0;
+                        }
+                        use_sep = 0;
+                    }
+                    let c0 = (*p as u8).to_ascii_lowercase() as c_int;
+                    let c1 = (*p.add(1) as u8).to_ascii_lowercase() as c_int;
+                    let sep = if use_sep == 1 { c":" } else { c"" };
+                    if BIO_printf(out, c"%s%c%c".as_ptr(), sep.as_ptr(), c0, c1) <= 0 {
+                        break 'blk 0;
+                    }
+                    bytes += 1;
+                    p = p.add(2);
+                    use_sep = 1;
+                }
+                if BIO_printf(out, c"\n".as_ptr()) <= 0 {
+                    break 'blk 0;
+                }
+                1
+            }
+        }
+    };
+    // SAFETY: `hex_str` is the buffer `BN_bn2hex` returned and this call owns it.
+    unsafe { CRYPTO_free(hex_str.cast(), ptr::null(), 0) };
+    ret
+}
+
+/// `int ossl_bio_print_labeled_buf(BIO *out, const char *label, const unsigned char *buf,
+/// size_t buflen)` — `crypto/encode_decode/encoder_lib.c:785-810`.
+///
+/// # Safety
+/// `out` must be a live BIO; `label` NUL-terminated; `buf` valid for `buflen` bytes.
+pub(crate) unsafe fn ossl_bio_print_labeled_buf(
+    out: *mut Bio,
+    label: *const c_char,
+    buf: *const c_uchar,
+    buflen: usize,
+) -> c_int {
+    // SAFETY: `out` is live and `label` matches the `%s`.
+    if unsafe { BIO_printf(out, c"%s\n".as_ptr(), label) } <= 0 {
+        return 0;
+    }
+    let mut i: usize = 0;
+    while i < buflen {
+        if i.is_multiple_of(LABELED_BUF_PRINT_WIDTH) {
+            // SAFETY: `out` is live; the two writes are the authority's line break and indent.
+            unsafe {
+                if i > 0 && BIO_printf(out, c"\n".as_ptr()) <= 0 {
+                    return 0;
+                }
+                if BIO_printf(out, c"    ".as_ptr()) <= 0 {
+                    return 0;
+                }
+            }
+        }
+        let sep = if i == buflen - 1 { c"" } else { c":" };
+        // SAFETY: `out` is live; `buf` is valid for `buflen` bytes so `i < buflen` is in range.
+        if unsafe { BIO_printf(out, c"%02x%s".as_ptr(), *buf.add(i) as c_int, sep.as_ptr()) } <= 0 {
+            return 0;
+        }
+        i += 1;
+    }
+    // SAFETY: `out` is live.
+    if unsafe { BIO_printf(out, c"\n".as_ptr()) } <= 0 {
+        return 0;
+    }
+    1
+}
+
+/// `int ossl_bio_print_ffc_params(BIO *out, const FFC_PARAMS *ffc)` —
+/// `crypto/encode_decode/encoder_lib.c:813-864`.
+///
+/// A named group prints one `GROUP:` line; otherwise the parameters print in the `X9.42` layout.
+///
+/// # Safety
+/// `out` must be a live BIO and `ffc` live.
+pub(crate) unsafe fn ossl_bio_print_ffc_params(out: *mut Bio, ffc: *const FfcParams) -> c_int {
+    // SAFETY: `ffc` is live per the contract.
+    if unsafe { (*ffc).nid } != NID_undef {
+        // SAFETY: `ffc` is live; the uid lookup answers NULL or a static named group.
+        let group = unsafe { ossl_ffc_uid_to_dh_named_group((*ffc).nid) };
+        // SAFETY: `group` is NULL or live; the accessor answers NULL or a static name.
+        let name = unsafe { ossl_ffc_named_group_get_name(group) };
+        if name.is_null() {
+            return 0;
+        }
+        // SAFETY: `out` is live and `name` matches the `%s`.
+        if unsafe { BIO_printf(out, c"GROUP: %s\n".as_ptr(), name) } <= 0 {
+            return 0;
+        }
+        return 1;
+    }
+    // SAFETY: `ffc` is live and each field is NULL or a live object it owns; `out` is live.
+    unsafe {
+        if ossl_bio_print_labeled_bignum(out, c"P:   ".as_ptr(), (*ffc).p) == 0 {
+            return 0;
+        }
+        if !(*ffc).q.is_null()
+            && ossl_bio_print_labeled_bignum(out, c"Q:   ".as_ptr(), (*ffc).q) == 0
+        {
+            return 0;
+        }
+        if ossl_bio_print_labeled_bignum(out, c"G:   ".as_ptr(), (*ffc).g) == 0 {
+            return 0;
+        }
+        if !(*ffc).j.is_null()
+            && ossl_bio_print_labeled_bignum(out, c"J:   ".as_ptr(), (*ffc).j) == 0
+        {
+            return 0;
+        }
+        if !(*ffc).seed.is_null()
+            && ossl_bio_print_labeled_buf(out, c"SEED:".as_ptr(), (*ffc).seed, (*ffc).seedlen) == 0
+        {
+            return 0;
+        }
+        if (*ffc).gindex != -1 && BIO_printf(out, c"gindex: %d\n".as_ptr(), (*ffc).gindex) <= 0 {
+            return 0;
+        }
+        if (*ffc).pcounter != -1
+            && BIO_printf(out, c"pcounter: %d\n".as_ptr(), (*ffc).pcounter) <= 0
+        {
+            return 0;
+        }
+        if (*ffc).h != 0 && BIO_printf(out, c"h: %d\n".as_ptr(), (*ffc).h) <= 0 {
+            return 0;
+        }
+    }
+    1
 }
 
 #[cfg(test)]

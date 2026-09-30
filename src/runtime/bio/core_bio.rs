@@ -346,6 +346,33 @@ pub(crate) unsafe fn ossl_core_bio_vprintf(
     unsafe { BIO_vprintf(bio, format, args) }
 }
 
+/// `BIO *ossl_bio_new_from_core_bio(PROV_CTX *provctx, OSSL_CORE_BIO *corebio)` —
+/// `providers/common/bio_prov.c`.
+///
+/// **The provider-BIO method is why this is a bridge and not a copy.** The authority's version
+/// builds a new `BIO` over the provider's core-BIO method and stores the `OSSL_CORE_BIO` as its
+/// data; that method is installed by `ossl_prov_bio_from_dispatch`, which this crate does not
+/// build (see `ossl_default_provider_init`). Here the `OSSL_CORE_BIO` the core hands a provider
+/// **already wraps the real `BIO`** (`ossl_core_bio_new_from_bio`), so the bridge is the wrapped
+/// BIO with its own reference taken and released by the caller's `BIO_free` — the same reads and
+/// writes an authority provider performs, through the one handle this crate has. It is recorded
+/// as a divergence (`docs/SECURITY_DIVERGENCE_POLICY.md`, D-PROV-BIO-METHOD-1).
+///
+/// # Safety
+/// `cb` must be NULL or a live handle from `core_bio_new`, and its wrapped BIO must be live.
+pub(crate) unsafe fn ossl_bio_new_from_core_bio(cb: *mut OsslCoreBio) -> *mut Bio {
+    if cb.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `cb` is live per the contract.
+    let bio = unsafe { (*cb).bio };
+    // SAFETY: the BIO is live and this call takes its own reference on success.
+    if unsafe { BIO_up_ref(bio) } == 0 {
+        return ptr::null_mut();
+    }
+    bio
+}
+
 #[cfg(test)]
 mod tests {
     //! The reference count, the two constructors' differing ownership, and the forwards.
