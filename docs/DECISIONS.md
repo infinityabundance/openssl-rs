@@ -33277,3 +33277,51 @@ implied, and it is what remains before the merge.
 
 The pipeline prints `PIPELINE OK` exit 0 with **109 courts and 46,117 observations**, and
 `gen_frf_courts.py --check`, `docs_consistency` and `regression_guard --require-current` are green.
+## D476 -- Phase 10's FRF chain entry: five receipts, ten challenges, the claim, and the Gemel checkpoint
+
+**The half D475 named as owed is landed.** Phase 10's five differential courts
+(`rt-keyformat-ref`, `rt-codec`, `rt-keyformat`, `rt-pkcs12`, `rt-store`) ran the chain phase 8's and
+phase 9's ran: `frf court run` against each manifest, `frf receipt emit` per run, `frf court
+challenge` per court, `frf claim compile --policy sensitivity-backed` over the five receipts, then
+`frf evidence status`. All fifteen steps exited 0.
+
+**The evidence exists and is committed.** Five `receipt-run-*` receipts (one per court, each
+`residuals: []`, both axes `pass`); ten challenge records (stdout and exit per court, each
+`saw_defect: true`, `specificity_clean: true`, one affected axis); fifteen captures; the compiled
+claim `6fd47c3c1957a8707168b2427cee76aaf04d7106720273117212b4a9a64aaaa9` with `blockers: []`,
+`excluded_evidence: []` and no narrowed scope cell; and the **Gemel checkpoint `K49`**
+(`checkpoint.c26506bf...`), with `forensics/GEMEL_TRAJECTORY.md`'s head at `C95`. The `.frf` store
+moved objects 706 -> 747, captures 258 -> 273, challenges 172 -> 182, claims 9 -> 10, receipts
+86 -> 91, residuals 176 -> 186, and remains `graph_verified: yes`, `object_closure: complete`.
+
+**The seal was corrected to match, and that moved its own hash.** `docs/PHASE-10-KEYFORMATS-SEAL.md`
+§7 and §8 recorded items 6, 8 and 10 as unmet; they are now met, so the sections say so and the
+head-matter bullets, §6 item 9, §9's first bullet and §10's last sentence were corrected with them.
+The seal's `seal_sha256` moved `2bffe04d...` -> `4c042a47a1b577f19e8c45c0f14547da9fe2638edf93a0494a3ebaadf8df685a`,
+which cascades through `phase-state.json` and every artefact recording it; the pipeline needed
+**three runs** to reach a fixed point, confirmed by an identical tracked-diff fingerprint across
+them.
+
+**The chain is not idempotent, and that is recorded rather than discovered later.** Re-running it
+against a throwaway copy of the store produced different run ids and a different claim and added
+five duplicate receipts, so the committed store is **not** re-run: a second pass would add stray
+evidence to a record whose whole point is that each object is the one run that produced it. That is
+the property that makes `.frf` evidence rather than a log.
+
+### Counts, and what closed
+
+Phase 10 is now complete by all four of `docs/RELEASE_GATES.md` §2's evidence items that apply to it
+-- court manifests, mutation/sensitivity evidence, FRF receipts, and a Gemel checkpoint (item 7, the
+resolution runs, is not applicable; items 1, 2 and 9 were already present). Phase-10's ledger still
+reads **`298 implemented / 0 open`** exports and **`636 implemented / 0 open`** provider rows, and
+`implemented_surface` is unchanged at **4,254** symbols.
+
+### Verification
+
+The pipeline prints `PIPELINE OK` exit 0 on three consecutive settled runs, with **109 courts and
+46,117 observations**, `cargo test --lib` at 1117 passed on both halves, and
+`gen_frf_courts.py --check` reporting 172 files over 86 courts.
+
+### What remains
+
+The merge of `phase10-keyformats` into `main`.
