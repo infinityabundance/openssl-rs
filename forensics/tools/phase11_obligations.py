@@ -5,7 +5,7 @@ Phase 11 is the X.509 stratum: the certificate, request, CRL and attribute-certi
 object graphs and their verification machinery (`X509`, `X509_REQ`, `X509_CRL`,
 `X509_ACERT`, `X509_STORE`, `X509_VERIFY_PARAM`, `X509_POLICY_*`, the `X509V3_EXT_*`
 engine and the `PEM_*_X509*` container readers and writers around them).
-`docs/PHASE-11-X509-SUBPHASES.md` is its plan and this ledger is the machine-checkable
+`docs/PHASE-11-SUBPHASES.md` is its plan and this ledger is the machine-checkable
 arithmetic behind it.
 
 This ledger does not decide its own universe
@@ -341,11 +341,11 @@ def main(argv: list[str]) -> int:
             "Phase 10's pulled-forward X.509 subphases 10.8-10.14 (D442-D451), and two "
             "hand-offs (`ASN1_generate_nconf`, `ASN1_generate_v3`) by Phase 5 -- and the "
             "ledger reports them as `implemented` because `implemented-surface.json` does. "
-            "docs/PHASE-11-X509-SUBPHASES.md section 4 is the measurement. This stratum owns "
+            "docs/PHASE-11-SUBPHASES.md section 4 is the measurement. This stratum owns "
             "no provider registration row (`forensics/atlas/provider-algorithms.json` records "
             "rows for owning phases 8, 9, 10 and 13 only), so `provider_rows_owned` is 0. "
             "Nothing here is a parity claim: a symbol in `implemented` is at most "
-            "`IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-X509-SUBPHASES.md "
+            "`IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-SUBPHASES.md "
             "section 4 decides when the stratum may be called complete."
         ),
     }

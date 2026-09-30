@@ -1070,7 +1070,7 @@
     ],
     "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
     "module_overrides": [],
-    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation except Phase 10, this ledger does not start with the whole working set open: 954 of the 1,467 were landed before this stratum was activated -- 952 atlas-owned exports by Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases 10.8-10.14 (D442-D451), and two hand-offs (`ASN1_generate_nconf`, `ASN1_generate_v3`) by Phase 5 -- and the ledger reports them as `implemented` because `implemented-surface.json` does. docs/PHASE-11-X509-SUBPHASES.md section 4 is the measurement. This stratum owns no provider registration row (`forensics/atlas/provider-algorithms.json` records rows for owning phases 8, 9, 10 and 13 only), so `provider_rows_owned` is 0. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-X509-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation except Phase 10, this ledger does not start with the whole working set open: 954 of the 1,467 were landed before this stratum was activated -- 952 atlas-owned exports by Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases 10.8-10.14 (D442-D451), and two hand-offs (`ASN1_generate_nconf`, `ASN1_generate_v3`) by Phase 5 -- and the ledger reports them as `implemented` because `implemented-surface.json` does. docs/PHASE-11-SUBPHASES.md section 4 is the measurement. This stratum owns no provider registration row (`forensics/atlas/provider-algorithms.json` records rows for owning phases 8, 9, 10 and 13 only), so `provider_rows_owned` is 0. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-SUBPHASES.md section 4 decides when the stratum may be called complete.",
     "open": [
       {
         "declaring_header": "asn1.h",
@@ -4313,7 +4313,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "99dd30d64a5a4c270e9f6e8ff1d0ff1c4529b6b67f23783b70bdbdbe56cf6915"
+      "sha256": "71304b700656a3f5a998149ee6e5aaf90be6270ff5894e5443c21e2b5566cb5b"
     }
   ],
   "kind": "phase11-obligations",

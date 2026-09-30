@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 954 inherited `implemented` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). **This stratum has landed no unit of its own**, so `RT-X509-REF` is the only court it can register until 11.1: none of the store, verification, attribute-certificate, request, `v3` or PEM surfaces exists, and a probe that called one would need the very object graph this stratum has not built. `pending_courts` names the courts the plan gives this stratum (docs/PHASE-11-X509-SUBPHASES.md section 2) and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-11-X509-SUBPHASES.md section 3 records what the behavioural courts must compare when they land.",
+    "claim": "`RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 954 inherited `implemented` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). **This stratum has landed no unit of its own**, so `RT-X509-REF` is the only court it can register until 11.1: none of the store, verification, attribute-certificate, request, `v3` or PEM surfaces exists, and a probe that called one would need the very object graph this stratum has not built. `pending_courts` names the courts the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts must compare when they land.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -48,7 +48,7 @@
     {
       "name": "probe",
       "path": "courts/phase11/rt_coverage_ref_probe.c",
-      "sha256": "4e13b5502085fd82b0ebabfba544ea3e482cc71dd5034f313919254bb346ee72"
+      "sha256": "ebffa30a0166ea4e34baaca01e6faf8d99c06e4cb0aea759d75fed08d3edfd39"
     }
   ],
   "kind": "phase11-courts",

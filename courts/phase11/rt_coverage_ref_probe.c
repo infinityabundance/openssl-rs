@@ -21,7 +21,7 @@
  * PEM subphases are open, and a probe that called one would need the very object graph
  * this stratum has not built. So this is the one edge the court coverage atlas holds
  * for each on the commit that puts the stratum's ledger in scope, and it claims
- * reference, not behaviour (docs/PHASE-11-X509-SUBPHASES.md section 4.3).
+ * reference, not behaviour (docs/PHASE-11-SUBPHASES.md section 4.3).
  *
  * It is a probe rather than a source scan because a source scan cannot tell a call
  * from a comment, and because the dynamic linker resolves the reference only if the

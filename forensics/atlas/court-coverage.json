@@ -31837,7 +31837,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "33e3b16335dd4688dc1949d3bfb4ab472b5561d13c63e8d5d270e2c0d55f489a"
+      "sha256": "760a18209dd61d49d1932e83ab039d53fc633edad36525d5254cf4e67fa91f48"
     },
     {
       "name": "phase10-courts",
@@ -31847,12 +31847,12 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "e5280f72ed00ca367d0dcc961e32a4ccb4cc89915f1b3f3704f017322cad5308"
+      "sha256": "128eefedc30b19aef9a2c6459ad04bfbf8e45d156bb0e47d4e2df33135b23088"
     },
     {
       "name": "phase11-courts",
       "path": "artifacts/phase11/COURTS.json",
-      "sha256": "55869d817df3ccd8630f3b3e41dab5ede6194795536e1dee9ef629b1c8846985"
+      "sha256": "e49208faacad70b53d73754a2f2f3110d6fbd761dcc378870eff9562e3aa164e"
     }
   ],
   "kind": "court-coverage",

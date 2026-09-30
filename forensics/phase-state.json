@@ -483,11 +483,11 @@
         "stratum": "Key formats + PKCS + STORE"
       },
       {
-        "blocking": "513 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. Nine hundred and fifty-four of the working set are already implemented -- 952 atlas-owned exports landed by Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases, and two hand-offs landed by Phase 5 -- rather than by this stratum, so the ledger's `open` count is not the whole working set. The stratum owns no provider registration row (docs/PHASE-11-X509-SUBPHASES.md sections 1 and 4)",
+        "blocking": "513 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. Nine hundred and fifty-four of the working set are already implemented -- 952 atlas-owned exports landed by Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases, and two hand-offs landed by Phase 5 -- rather than by this stratum, so the ledger's `open` count is not the whole working set. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
-          "docs/PHASE-11-X509-SUBPHASES.md",
+          "docs/PHASE-11-SUBPHASES.md",
           "forensics/tools/phase11_obligations.py",
           "forensics/phase11-obligations.json",
           "artifacts/phase11/COURTS.json",
@@ -634,7 +634,7 @@
       "not_started": 10
     }
   },
-  "body_hash": "c229c74005e0b7f2cd24ab77641b3fb8df1499af81c6070dd4c7431e2ac0e6fe",
+  "body_hash": "15a6346e66d89476c3dab7e402ca00a3a1a033b0552bfc6a7de472950691e4a1",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

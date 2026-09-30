@@ -466,11 +466,7 @@ def main(argv: list[str]) -> int:
 
     plan_files: list[Path] = []
     for plan in plans:
-        # `docs/PHASE-<n>-SUBPHASES.md`, or the descriptive-infix spelling
-        # (`docs/PHASE-11-X509-SUBPHASES.md`) the seal documents also use. A plan the discovery
-        # did not match would publish no census for its stratum while the stratum still claimed
-        # to be under way, which is the blind spot this tool is here to close.
-        m = re.fullmatch(r"PHASE-(\d+)(?:-[A-Za-z0-9_]+)*-SUBPHASES\.md", plan.name)
+        m = re.search(r"PHASE-(\d+)-SUBPHASES\.md$", plan.name)
         if m is None:
             continue
         phase = int(m.group(1))
