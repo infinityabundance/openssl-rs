@@ -33325,3 +33325,36 @@ The pipeline prints `PIPELINE OK` exit 0 on three consecutive settled runs, with
 ### What remains
 
 The merge of `phase10-keyformats` into `main`.
+## D477 -- release 0.0.15: Phase 10's implementation moves, and the declarations move with it
+
+**`main` is released as 0.0.15**, by the sequence `docs/RELEASE_GATES.md` section 8 fixes and D428
+applied for **Key formats, PKCS#12 and STORE** -- the stratum D431 activated and D474 sealed.
+`Cargo.toml`'s `version` and `Cargo.lock`'s `[[package]] version` both move 0.0.14 -> 0.0.15,
+`python3 forensics/tools/gen_frf_courts.py` rewrites the declaration table so all **86** courts'
+`version_or_commit` name the version the crate is, and `--check` reads `ok: 172 file(s) match the
+table (86 courts)`. The version string is part of the binary, so the staged shell and every atlas
+that hashes it regenerate with it.
+
+**What this release contains.** All of Phase 10: **298 of 298 exports implemented and 0 open**,
+**636 of 636 provider rows implemented and 0 open**, the `standard_exts[]` array and the `v3_lib.c`
+dispatch, `PKCS12_parse` and `OSSL_STORE_load` both landed and directly courted, the stroke's seal
+`docs/PHASE-10-KEYFORMATS-SEAL.md`, and the FRF chain entry -- five receipts, ten challenges and the
+`K49` Gemel checkpoint. `implemented_surface` is **4,254** symbols; the pipeline reads **109 courts
+and 46,117 observations**.
+
+**The FRF receipts stay where they are.** They remain bound to the artifact the chain actually ran
+against (`openssl-rs 0.0.14`), for D428's reason: a receipt records the run that produced it, and
+re-running the chain against a bumped version would either duplicate evidence or, worse, make a
+receipt describe a binary nobody executed. The declarations name 0.0.15 because they are a
+statement about *this* tree; the receipts name 0.0.14 because they are a statement about *that* run.
+
+**What this is not.** `libssl` remains entirely `SCAFFOLDED`, X.509 is Phase 11, and no symbol is
+`PARITY_VERIFIED`. Phase 10's completion is a completion of its own ledger, courts and seal, which is
+what `docs/PARITY_MODEL.md` says those words mean.
+
+### Verification
+
+`sh forensics/tools/pipeline.sh` prints `PIPELINE OK` exit 0 on **three consecutive runs** with an
+identical tracked-diff fingerprint across them, `cargo test --lib` is 1117 passed on both halves,
+`gen_frf_courts.py --check` is clean, and `phase_state.py` derives phase 10 `complete` with its
+seal and phase 11 `not-started`.
