@@ -33721,3 +33721,40 @@ writes only to a scratch directory and the tracked log.
 
 `PIPELINE OK` exit 0 with **112 courts** and 47,575 observations; the phase-22 ledger reads 2 of 18
 planes implemented, 16 open.
+
+## D487 -- the court image is made self-describing: Doxygen, the pinned toolchain, and git trust
+
+22.2 needs a Doxygen corpus, and Doxygen was not in the image. Installing it by hand in a running
+container is exactly the unreproducibility the court exists to prevent, so the image was extended
+and rebuilt -- and doing that surfaced two older defects that had been harmless only because nobody
+had recreated the container since they appeared.
+
+### `doxygen` is now an instrument in the image, and `graphviz` deliberately is not
+`doxygen 1.9.4` joins `clang`, `lld`, `binutils` and `python3`. `graphviz` does not: Doxygen's HTML
+call graphs are for a human to look at, while 22.3's every-translation-unit Clang AST and 22.6's
+relocations are the machine-readable edge oracles. The plan's own rule is that Doxygen is one
+oracle and not *the* oracle (`docs/PHASE-22-SUBPHASES.md` section 6), and a minimal image is part of
+that statement.
+
+### The pinned Rust toolchain is installed by the image, not assembled at run time
+The Dockerfile installed `stable` and relied on `rust-toolchain.toml`'s override to pull `1.98.1` on
+the first `cargo` invocation. On a fresh container that auto-install produced an **incomplete**
+toolchain -- `rustc`, `rustdoc`, `rustfmt`, `clippy-driver` and `cargo-fmt`, with no `cargo` binary
+-- and every `cargo` command failed with *"the 'cargo' binary, normally provided by the 'cargo'
+component, is not applicable to the '1.98.1-x86_64-unknown-linux-gnu' toolchain"*. The old container
+had a good copy because it predated the defect; recreating it reproduced the failure immediately.
+The image now installs `1.98.1` explicitly with `rustfmt` and `clippy`, and asserts `cargo
+--version` at build time, so a toolchain that cannot run `cargo` cannot become an image.
+
+### `safe.directory /work` is baked in
+The repository is bind-mounted from the host and owned by the developer's uid while courts run as
+root, so git refuses to read it with *"detected dubious ownership in repository at '/work'"*. It had
+been papered over by a `git config` typed into a live container. A court whose ability to read
+`origin/main` -- which `regression_guard.py --baseline-ref origin/main` needs -- depends on somebody
+having typed a command is not reproducible, so it is `git config --system --add safe.directory
+/work` in the Dockerfile. The mount point is fixed by `docker/openssl-rs-court.sh`, so this is a
+constant rather than an assumption about the host.
+
+`PIPELINE OK` exit 0 in the rebuilt image with 112 courts and 47,575 observations; `cargo 1.98.1`,
+`rustc 1.98.1`, `doxygen 1.9.4` and `python3 3.11.2` are the container's own versions, verified
+inside it.
