@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 435,
+        "authority_observations": 465,
         "candidate_exit_code": 0,
-        "candidate_observations": 435,
+        "candidate_observations": 465,
         "candidate_stderr_tail": [],
         "court": "RT-X509-STORE",
         "crashed": false,
@@ -69,7 +69,7 @@
     {
       "name": "probe",
       "path": "courts/phase11/rt_x509_store_probe.c",
-      "sha256": "b81f24e8e2e902c8c2533399a46a2b1416a989a68ce1149c3ee289825e473213"
+      "sha256": "ec33f567a5926b7a311f41bb54957af2c1bfdf13c876cbe30f4ff99886c1f9aa"
     }
   ],
   "kind": "phase11-courts",

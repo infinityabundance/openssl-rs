@@ -36,7 +36,10 @@
  * and `X509V3_CTX` (with `basicConstraints`/`keyUsage` values, the `critical,` prefix, a
  * `pathlen`, and the missing-section and unknown-name refusals), and the six `v3_utl.c`
  * host/email/IP checks and `get1_email`/`get1_ocsp` accessors over the SAN fixture and the
- * SAN-less root.
+ * SAN-less root. **11.4b adds the `X509_EXTENSIONS` wrapper and the request extension functions**
+ * -- `X509_EXTENSIONS_it`/`d2i_`/`i2d_`, `X509_REQ_get_extensions`, `X509_REQ_add_extensions(_nid)`,
+ * `X509_REQ_get1_email` and the two `X509V3_EXT_REQ_add_*` -- driven over the SAN fixture's own
+ * extension set, the `ext_req` attribute it round-trips through and a `CONF` section.
  *
  * It does **not** call anything that needs an `X509_STORE` or an `X509_STORE_CTX` it cannot
  * obtain. The stratum withholds `X509_STORE_new`/`X509_STORE_CTX_new` (their blocker is
@@ -1320,6 +1323,139 @@ static void drive_store_load_store(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * Phase 11.4b -- `crypto/x509/x_exten.c`'s `X509_EXTENSIONS` wrapper, `x509_req.c`'s three
+ * extension functions, `v3_utl.c`'s `X509_REQ_get1_email` and `v3_conf.c`'s two request wrappers.
+ *
+ * The `X509_EXTENSIONS` item is exercised over the SAN fixture's own extension set, so the encoding
+ * both sides agree on is a real certificate's. `X509_REQ_add_extensions(_nid)` stores it as the
+ * `ext_req` attribute and `X509_REQ_get_extensions` decodes it back; `X509_REQ_get1_email` then
+ * reads the `subjectAltName` out of that request, and the two `X509V3_EXT_REQ_add_*` wrappers build
+ * a request's extension attribute straight from a `CONF` section.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_extensions(X509 *san)
+{
+    CONF *conf = mk_conf();
+    STACK_OF(X509_EXTENSION) *sk = sk_X509_EXTENSION_new_null();
+    STACK_OF(X509_EXTENSION) *rt = NULL;
+    STACK_OF(OPENSSL_STRING) *em;
+    X509_REQ *req = X509_REQ_new();
+    X509V3_CTX ctx;
+    unsigned char *der = NULL;
+    const unsigned char *p;
+    int i, n, dlen;
+
+    out_ptr("extensions.it", (const void *)X509_EXTENSIONS_it());
+
+    n = X509_get_ext_count(san);
+    for (i = 0; i < n; i++)
+        sk_X509_EXTENSION_push(sk, X509_EXTENSION_dup(X509_get_ext(san, i)));
+    out_int("extensions.input.count", sk_X509_EXTENSION_num(sk));
+
+    dlen = i2d_X509_EXTENSIONS(sk, &der);
+    out_int("extensions.i2d.length", dlen);
+    if (dlen > 0)
+        out_hex("extensions.i2d", der, dlen);
+
+    p = der;
+    rt = d2i_X509_EXTENSIONS(NULL, &p, dlen);
+    out_ptr("extensions.d2i", rt);
+    out_int("extensions.d2i.count", rt != NULL ? sk_X509_EXTENSION_num(rt) : -1);
+    sk_X509_EXTENSION_pop_free(rt, X509_EXTENSION_free);
+
+    ERR_clear_error();
+    out_int("req_ext.add", X509_REQ_add_extensions(req, sk));
+    out_err("req_ext.add.err");
+    out_int("req_ext.attr_count", X509_REQ_get_attr_count(req));
+
+    {
+        STACK_OF(X509_EXTENSION) *back = X509_REQ_get_extensions(req);
+        unsigned char *der2 = NULL;
+        int m, j, dlen2;
+
+        out_ptr("req_ext.get", back);
+        out_int("req_ext.get.count", back != NULL ? sk_X509_EXTENSION_num(back) : -1);
+        dlen2 = i2d_X509_EXTENSIONS(back, &der2);
+        out_int("req_ext.get.i2d.length", dlen2);
+        out_int("req_ext.round_trip_equal",
+                dlen2 == dlen && dlen2 > 0 && memcmp(der2, der, (size_t)dlen2) == 0);
+        OPENSSL_free(der2);
+
+        em = X509_REQ_get1_email(req);
+        m = em != NULL ? sk_OPENSSL_STRING_num(em) : -1;
+        out_int("req_ext.email.count", m);
+        for (j = 0; j < m; j++) {
+            char key[32];
+
+            snprintf(key, sizeof key, "req_ext.email.%d", j);
+            printf("%s=", key);
+            printf("%s\n", sk_OPENSSL_STRING_value(em, j));
+        }
+        X509_email_free(em);
+        sk_X509_EXTENSION_pop_free(back, X509_EXTENSION_free);
+    }
+
+    /* A blank request has no `subjectAltName`: an empty stack, not an error. */
+    {
+        X509_REQ *r0 = X509_REQ_new();
+        STACK_OF(X509_EXTENSION) *e0 = X509_REQ_get_extensions(r0);
+        STACK_OF(OPENSSL_STRING) *m0 = X509_REQ_get1_email(r0);
+
+        out_ptr("req_ext.blank", e0);
+        out_int("req_ext.blank.count", e0 != NULL ? sk_X509_EXTENSION_num(e0) : -1);
+        out_int("req_ext.blank.email_count", m0 != NULL ? sk_OPENSSL_STRING_num(m0) : -1);
+        sk_X509_EXTENSION_pop_free(e0, X509_EXTENSION_free);
+        X509_email_free(m0);
+        X509_REQ_free(r0);
+    }
+
+    /* The nid spelling, and the empty/NULL no-op. */
+    {
+        X509_REQ *r2 = X509_REQ_new();
+        STACK_OF(X509_EXTENSION) *empty = sk_X509_EXTENSION_new_null();
+
+        out_int("req_ext.nid.add", X509_REQ_add_extensions_nid(r2, sk, NID_ext_req));
+        out_int("req_ext.nid.attr_count", X509_REQ_get_attr_count(r2));
+        out_int("req_ext.empty.noop", X509_REQ_add_extensions(r2, empty));
+        out_int("req_ext.null.noop", X509_REQ_add_extensions(r2, NULL));
+        out_int("req_ext.empty.attr_count", X509_REQ_get_attr_count(r2));
+        sk_X509_EXTENSION_pop_free(empty, X509_EXTENSION_free);
+        X509_REQ_free(r2);
+    }
+
+    /* The two `CONF` wrappers build the request's attribute straight from a section. */
+    {
+        X509_REQ *r3 = X509_REQ_new();
+        STACK_OF(X509_EXTENSION) *b3;
+
+        X509V3_set_ctx(&ctx, NULL, NULL, NULL, NULL, 0);
+        ERR_clear_error();
+        out_int("req_add_nconf", X509V3_EXT_REQ_add_nconf(conf, &ctx, "ext", r3));
+        out_err("req_add_nconf.err");
+        b3 = X509_REQ_get_extensions(r3);
+        out_int("req_add_nconf.ext_count", b3 != NULL ? sk_X509_EXTENSION_num(b3) : -1);
+        if (b3 != NULL && sk_X509_EXTENSION_num(b3) > 0)
+            out_int("req_add_nconf.ext0.nid",
+                    OBJ_obj2nid(X509_EXTENSION_get_object(sk_X509_EXTENSION_value(b3, 0))));
+        sk_X509_EXTENSION_pop_free(b3, X509_EXTENSION_free);
+
+        ERR_clear_error();
+        out_int("req_add_nconf.null_req", X509V3_EXT_REQ_add_nconf(conf, &ctx, "ext", NULL));
+        out_err("req_add_nconf.null_req.err");
+
+        ERR_clear_error();
+        out_int("req_add_conf.null_lhash", X509V3_EXT_REQ_add_conf(NULL, &ctx, "ext", r3));
+        out_err("req_add_conf.null_lhash.err");
+        X509_REQ_free(r3);
+    }
+
+    OPENSSL_free(der);
+    sk_X509_EXTENSION_pop_free(sk, X509_EXTENSION_free);
+    X509_REQ_free(req);
+    NCONF_free(conf);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * main
  * --------------------------------------------------------------------------------------------- */
 
@@ -1355,6 +1491,7 @@ int main(void)
     drive_ext_print();
     drive_v3_conf();
     drive_v3_utl(san, cert);
+    drive_extensions(san);
 
     X509_free(san);
     X509_CRL_free(crl);

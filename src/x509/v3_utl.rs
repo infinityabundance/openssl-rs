@@ -1,10 +1,10 @@
 //! Phase 10.14.3 — `crypto/x509/v3_utl.c`: the X.509v3 extension string/value utilities.
 //!
 //! `crypto/x509/v3_utl.c` is 1,449 lines and defines 51 hand-written functions. **This module lands
-//! 50 of them and withholds one by name** — the D451/D459 rule applied at function granularity.
+//! all 51** — the D451/D459 rule applied at function granularity.
 //!
 //! Phase 10.14.3 landed 32: the value/string utilities and the IP-address conversions. **This slice
-//! (Phase 11.5) lands the remaining 18** the withheld half waited on, now that 10.14.5's
+//! (Phase 11.5) lands the remaining 19** the withheld half waited on, now that 10.14.5's
 //! `X509_get_ext_d2i`/`X509V3_get_d2i` and the `GENERAL_NAME`/`ACCESS_DESCRIPTION` decoders exist:
 //!
 //! * the two email/OCSP accessors [`X509_get1_email`] (`:449-458`) and [`X509_get1_ocsp`]
@@ -17,14 +17,14 @@
 //!   public entry points built on it: [`X509_check_host`] (`:1002-1019`), [`X509_check_email`]
 //!   (`:1021-1038`), [`X509_check_ip`] (`:1040-1046`) and [`X509_check_ip_asc`] (`:1048-1059`).
 //!
-//! ## The one withhold, and its blocker
+//! ## `X509_REQ_get1_email`, and why 11.4b lands it
 //!
-//! `X509_REQ_get1_email` (`:482-494`) is withheld by name: it calls `X509_REQ_get_extensions`
-//! (`crypto/x509/x509_req.c`), which that unit withholds because the `X509_EXTENSIONS` item is
-//! absent from `src/x509/x_exten.rs` (a sibling Phase 11.4 unit this slice may not edit) — the
-//! same blocker `X509_REQ_add_extensions` carries in `v3_conf.rs`. Its other two callees,
-//! `X509_REQ_get_subject_name` and `X509V3_get_d2i`, are both landed, so the missing item is the
-//! sole reason; the name is not declared.
+//! `X509_REQ_get1_email` (`:482-494`) was withheld through Phase 10.14.3 and 11.5 because it calls
+//! `X509_REQ_get_extensions` (`crypto/x509/x509_req.c`), which that unit withheld while the
+//! `X509_EXTENSIONS` item was absent from `src/x509/x_exten.rs`. 11.4b landed that item and the
+//! request functions over it, so the request"s `subjectAltName` is now decodable and this last name
+//! lands with them. Its other two callees, `X509_REQ_get_subject_name` and `X509V3_get_d2i`, were
+//! already landed.
 //!
 //! `OSSL_GENERAL_NAMES_print` (`:1421-1432`) landed in the 10.14.3 slice once `GENERAL_NAME_print`
 //! (`v3_san.rs`) existed, so its closure is satisfied and the export is drivable from the admitted
@@ -94,14 +94,16 @@ use crate::x509::v3_genn::{
     GEN_OTHERNAME, GEN_URI,
 };
 use crate::x509::v3_info::{AUTHORITY_INFO_ACCESS_free, AccessDescription};
-use crate::x509::v3_lib::X509V3ExtMethod;
+use crate::x509::v3_lib::{X509V3ExtMethod, X509V3_get_d2i};
 use crate::x509::v3_san::GENERAL_NAME_print;
 use crate::x509::x509_cmp::X509_get_subject_name;
 use crate::x509::x509_ext::X509_get_ext_d2i;
+use crate::x509::x509_req::{X509Req, X509_REQ_get_extensions, X509_REQ_get_subject_name};
 use crate::x509::x509name::{
     X509_NAME_ENTRY_get_data, X509_NAME_add_entry_by_txt, X509_NAME_get_entry,
     X509_NAME_get_index_by_NID,
 };
+use crate::x509::x_exten::{X509Extension, X509_EXTENSION_free};
 use crate::x509::x_name::X509Name;
 use crate::x509::x_x509::X509;
 
@@ -1730,6 +1732,44 @@ pub unsafe extern "C" fn X509_get1_ocsp(x: *mut X509) -> *mut OpenSslStack {
     }
     // SAFETY: `info` is this call's own authority-info stack.
     unsafe { AUTHORITY_INFO_ACCESS_free(info) };
+    ret
+}
+
+/// The `void (*)(void *)` thunk `sk_X509_EXTENSION_pop_free(exts, X509_EXTENSION_free)` installs —
+/// `crypto/x509/v3_utl.c:492`.
+///
+/// # Safety
+///
+/// `p` must be NULL or a live `X509_EXTENSION` (the stack contract).
+unsafe extern "C" fn x509_extension_free_thunk(p: *mut c_void) {
+    // SAFETY: the stack holds `X509_EXTENSION` pointers per the contract.
+    unsafe { X509_EXTENSION_free(p.cast::<X509Extension>()) };
+}
+
+/// `STACK_OF(OPENSSL_STRING) *X509_REQ_get1_email(X509_REQ *x)` — `crypto/x509/v3_utl.c:482-494`.
+///
+/// The request's `subjectAltName` extension is decoded (`:487-488`), the subject DN and the
+/// `GEN_EMAIL` general names are collected through [`get_email`] (`:490`), and both intermediate
+/// stacks are released (`:491-492`).
+///
+/// # Safety
+///
+/// `x` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_REQ_get1_email(x: *mut X509Req) -> *mut OpenSslStack {
+    // SAFETY: `x` is live per the contract; the callee answers a new stack or NULL.
+    let exts = unsafe { X509_REQ_get_extensions(x) };
+    // SAFETY: `exts` is NULL or a live extension stack; `crit`/`idx` are NULL, which the decoder
+    // accepts.
+    let gens =
+        unsafe { X509V3_get_d2i(exts, NID_subject_alt_name, ptr::null_mut(), ptr::null_mut()) }
+            .cast::<OpenSslStack>();
+    // SAFETY: `x` is live; `gens` is NULL or a live `GENERAL_NAMES`.
+    let ret = unsafe { get_email(X509_REQ_get_subject_name(x), gens) };
+    // SAFETY: `gens` is NULL or this call's own stack of `GENERAL_NAME` pointers.
+    unsafe { OPENSSL_sk_pop_free(gens, Some(general_name_free_thunk)) };
+    // SAFETY: `exts` is NULL or this call's own stack of extensions.
+    unsafe { OPENSSL_sk_pop_free(exts, Some(x509_extension_free_thunk)) };
     ret
 }
 
