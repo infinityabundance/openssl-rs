@@ -1,0 +1,69 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-PHASE22-BUILD-CAPTURE` is 22.1's FRF-style sensitivity challenge, not a file existence check. It runs `forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw capture and on controlled mutations of it in memory, and requires the normalizer's output to move in exactly the expected way: dropping one `-D` removes exactly that element from the unit's `defines` and `args`; swapping two `-I` options reorders that unit's `includes` and leaves its `defines`; appending a synthetic unit raises `commands` and `distinct_sources` by one; and appending a build-time `-o /dev/null` assembler probe -- which is not a translation unit -- changes nothing. It also re-derives the committed `forensics/atlas/phase22/compile-commands.json` body from the raw log and requires they be equal. The court carries no parity claim about the candidate; `22.1` captures the authority's own GCC build (`producer` is read from the pinned `configdata.pm`), and Clang is recorded as a shadow analysis instrument rather than a redefinition of the authority (docs/PHASE-22-SUBPHASES.md section 6). `pending_courts` names the courts the plan gives later subphases and every name is printed on each run, so 'not run yet' cannot be read as 'passed'.",
+    "courts": [
+      {
+        "captured_commands": 2201,
+        "court": "RT-PHASE22-BUILD-CAPTURE",
+        "distinct_sources": 1232,
+        "failures": [],
+        "mutations": [
+          "drop-define",
+          "reorder-includes",
+          "synthetic-unit",
+          "assembler-probe"
+        ],
+        "observations": 19,
+        "producer": "gcc",
+        "raw_capture": "forensics/atlas/phase22/raw/compile-commands.jsonl",
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {
+      "RT-PHASE22-BINARY": "22.6 -- the object/archive/DSO/module graph (`binary-reference-graph.json`)",
+      "RT-PHASE22-CLI": "22.9 -- the CLI grammar, aliases and pseudo-command surface (`cli-surface.json`)",
+      "RT-PHASE22-CLOSURE": "22.14 -- the external-root reachability closure (`compatibility-closure.json`)",
+      "RT-PHASE22-CONDITIONAL": "22.4 -- the preprocessor and conditional-compilation graph (`conditional-surface.json`)",
+      "RT-PHASE22-CONFIG": "22.10 -- the configuration, environment and default-path surface (`config-surface.json`)",
+      "RT-PHASE22-CROSSWALK": "22.13 -- the test/demo/fuzz semantic crosswalk (`test-crosswalk.json`)",
+      "RT-PHASE22-DISPATCH": "22.7 -- the indirect dispatch, callback and registration graph (`dispatch-graph.json`)",
+      "RT-PHASE22-DOXYGEN": "22.2 -- the pinned Doxygen corpus and entity graph (`doxygen-entities.json`)",
+      "RT-PHASE22-FRF": "22.15 -- the FRF challenges and FRF-Fuzz sensitivity campaigns (`frf-challenges.json`)",
+      "RT-PHASE22-GEMEL": "22.16 -- the Gemel checkpoint and regenerated ledgers (`gemel-checkpoint.json`)",
+      "RT-PHASE22-GENEALOGY": "22.5 -- generated-source provenance (`generated-lineage.json`)",
+      "RT-PHASE22-INSTALL": "22.8 -- the installed-distribution manifest (`install-manifest.json`)",
+      "RT-PHASE22-POD": "22.11 -- the POD contract oracle and the POD<->runtime differential (`pod-contract.json`)",
+      "RT-PHASE22-RECONCILE": "22.12 -- the cross-plane reconciliation (`reconciliation.json`)",
+      "RT-PHASE22-SEAL": "22.17 -- the Phase-22 seal (`docs/PHASE-22-ATLAS-SEAL.md`)",
+      "RT-PHASE22-TU-AST": "22.3 -- the every-translation-unit Clang AST and declaration/definition graph (`tu-ast.json`), replayed from 22.1's captured invocations"
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 1,
+      "total": 1
+    }
+  },
+  "generator": "forensics/tools/phase22_courts.py",
+  "inputs": [
+    {
+      "name": "raw-compile-commands",
+      "path": "forensics/atlas/phase22/raw/compile-commands.jsonl",
+      "sha256": "3bc7b1adcf8e49c0468c251d9775a6f8a191b2d2db803f1cbd2d97ea5307b69d"
+    },
+    {
+      "name": "normalized-compile-commands",
+      "path": "forensics/atlas/phase22/compile-commands.json",
+      "sha256": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e"
+    },
+    {
+      "name": "phase-22-plan",
+      "path": "docs/PHASE-22-SUBPHASES.md",
+      "sha256": "831c9863252c68c31c961c582603bec10ffd2a48e0dadd76aecb30618a9e0489"
+    }
+  ],
+  "kind": "phase22-courts",
+  "schema": "openssl-rs/atlas/phase22-courts/v1"
+}

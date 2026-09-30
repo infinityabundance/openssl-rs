@@ -3,6 +3,7 @@
     "phase10",
     "phase11",
     "phase2",
+    "phase22",
     "phase3",
     "phase4",
     "phase5",
@@ -372,6 +373,10 @@
       "observations": 102,
       "verdict": "pass"
     },
+    "RT-PHASE22-BUILD-CAPTURE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-PKCS12": {
       "observations": 353,
       "verdict": "pass"
@@ -476,7 +481,7 @@
   "open_obligations": {
     "phase10": 0,
     "phase11": 335,
-    "phase22": 17,
+    "phase22": 16,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

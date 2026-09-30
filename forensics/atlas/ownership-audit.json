@@ -3188,17 +3188,17 @@
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "aceccc8d94e7c240560d80426cab1d0631bdd14af0086667c89a8984bbb3d339"
+      "sha256": "2dc345ddee0d6f86bac889edc41ec5245cb8b5ddffc8b586a500235b46fb1646"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "ef36e4f5f4b9fb0a8e5d7c43e6b2a5c278697d92a0e6d41008f402a3894ccb54"
+      "sha256": "dcf6ac4551ed6a1e8cffa0a1fd505ed240ed2f3c1c8c258f9c9a4a5d2da9cf5e"
     },
     {
       "name": "ledger-9",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "139cc37715dae609f26637801a86b31d8a14f40d360819233986b8bafa918ea2"
+      "sha256": "7f4bb7969591cd702f99c3a67e9c83cbc01e4600d9fa17f44fd3c2a83413b7b8"
     },
     {
       "name": "ledger-10",
