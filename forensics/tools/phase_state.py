@@ -756,6 +756,31 @@ PHASE10_MODULES = [
 ]
 
 
+# Phase 11's evidence: the X.509 stratum -- the certificate, request, CRL and attribute-
+# certificate object graphs and their verification machinery (`X509`, `X509_REQ`, `X509_CRL`,
+# `X509_ACERT`, `X509_STORE`, `X509_VERIFY_PARAM`, `X509_POLICY_*`, the `X509V3_EXT_*` engine
+# and the `PEM_*_X509*` container readers and writers). Its plan is
+# `docs/PHASE-11-X509-SUBPHASES.md`, which 11.0 lands with the ledger. The modules are added by
+# the subphase that lands them, in the same commit, so that this list is a statement about the
+# tree rather than about the plan -- which is why it names no `src/x509/` module beyond the ones
+# Phase 10's pulled-forward subphases already landed: the stratum has landed none of its own.
+#
+# **Like Phase 10, this stratum does not start with a whole working set open.**
+# `forensics/phase11-obligations.json` reports 954 of its 1,467-export working set already
+# `implemented` -- 952 atlas-owned exports landed by Phase 8's 8.8 chain and Phase 10's
+# pulled-forward X.509 subphases (10.8-10.14, D442-D451), and two hand-offs landed by Phase 5 --
+# so `phase-state.json` reports the stratum `in-progress` because its ledger has an open count,
+# not because it has a plan alone. It owns **no provider registration row**.
+# `docs/PHASE-11-X509-SUBPHASES.md` section 4 records the measurement and the precondition it
+# places on the coverage join.
+PHASE11_COURTS = "artifacts/phase11/COURTS.json"
+PHASE11_OBLIGATIONS = "forensics/phase11-obligations.json"
+PHASE11_MODULES = [
+    "docs/PHASE-11-X509-SUBPHASES.md",
+    "forensics/tools/phase11_obligations.py",
+]
+
+
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
                        ledger_note=(
@@ -787,6 +812,19 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "landed by Phase 8's 8.8 chain rather than by this stratum, so the "
                             "ledger's `open` count is not the whole working set "
                             "(docs/PHASE-10-SUBPHASES.md section 4)"
+                        )),
+    11: StratumEvidence(PHASE11_MODULES, PHASE11_OBLIGATIONS, PHASE11_COURTS,
+                        ledger_note=(
+                            "One thousand four hundred and fifty-five of the exports it owns "
+                            "are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, "
+                            "`x509_acert.h`, `pem.h`) and the twelve remainder arrive as "
+                            "recorded hand-offs from phases 5 and 7. Nine hundred and "
+                            "fifty-four of the working set are already implemented -- 952 "
+                            "atlas-owned exports landed by Phase 8's 8.8 chain and Phase 10's "
+                            "pulled-forward X.509 subphases, and two hand-offs landed by Phase "
+                            "5 -- rather than by this stratum, so the ledger's `open` count is "
+                            "not the whole working set. The stratum owns no provider "
+                            "registration row (docs/PHASE-11-X509-SUBPHASES.md sections 1 and 4)"
                         )),
 }
 

@@ -4,26 +4,55 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {},
-    "census_by_stratum": {},
+    "census": {
+      "units_not_reached": 21
+    },
+    "census_by_stratum": {
+      "11": 21
+    },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {},
+    "census_samples": {
+      "units_not_reached": [
+        "crypto/asn1/asn_mstbl.c",
+        "crypto/asn1/nsseq.c",
+        "crypto/asn1/t_spki.c",
+        "crypto/asn1/x_info.c",
+        "crypto/asn1/x_pkey.c",
+        "crypto/pem/pem_info.c",
+        "crypto/pem/pem_x509.c",
+        "crypto/pem/pem_xaux.c",
+        "crypto/x509/by_dir.c",
+        "crypto/x509/by_file.c",
+        "crypto/x509/by_store.c",
+        "crypto/x509/t_acert.c",
+        "crypto/x509/t_crl.c",
+        "crypto/x509/t_req.c",
+        "crypto/x509/v3_prn.c",
+        "crypto/x509/x509_d2.c",
+        "crypto/x509/x509_meth.c",
+        "crypto/x509/x509_r2x.c",
+        "crypto/x509/x509aset.c",
+        "crypto/x509/x_ietfatt.c",
+        "crypto/x509/x_req.c"
+      ]
+    },
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
+        "docs/PHASE-11-X509-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
         "docs/PHASE-7-SUBPHASES.md",
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 102,
+      "rows_judged": 111,
       "symbols_named_by_a_row": 108,
       "symbols_reached": 108,
       "unit_records": 96,
       "units_named_by_a_record": 98,
-      "units_named_by_a_row": 348,
-      "units_reached": 348
+      "units_named_by_a_row": 375,
+      "units_reached": 354
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -122,6 +151,14 @@
           "src/asn1/asn_mime.rs"
         ]
       },
+      "crypto/asn1/asn_mstbl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.7"
+        ],
+        "transcribed_by": []
+      },
       "crypto/asn1/d2i_param.c": {
         "defines": [],
         "recorded_by": "units:crypto/asn1/d2i_param.c",
@@ -170,6 +207,24 @@
           "src/asn1/i2d_evp.rs"
         ]
       },
+      "crypto/asn1/nsseq.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/asn1/p5_scrypt.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.7"
+        ],
+        "transcribed_by": [
+          "src/evp/p5_scrypt.rs"
+        ]
+      },
       "crypto/asn1/p8_pkey.c": {
         "defines": [],
         "recorded_by": null,
@@ -180,6 +235,14 @@
         "transcribed_by": [
           "src/asn1/p8_pkey.rs"
         ]
+      },
+      "crypto/asn1/t_spki.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.7"
+        ],
+        "transcribed_by": []
       },
       "crypto/asn1/tasn_typ.c": {
         "defines": [],
@@ -207,6 +270,22 @@
         "transcribed_by": [
           "src/asn1/x_algor.rs"
         ]
+      },
+      "crypto/asn1/x_info.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.7"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/asn1/x_pkey.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.7"
+        ],
+        "transcribed_by": []
       },
       "crypto/asn1/x_spki.c": {
         "defines": [],
@@ -1942,6 +2021,7 @@
         ],
         "recorded_by": null,
         "subphases": [
+          "11:11.7",
           "7:7.3",
           "7:7.3b",
           "7:7.3d",
@@ -1969,6 +2049,7 @@
         "recorded_by": "units:crypto/evp/evp_pkey.c",
         "subphases": [
           "10:10.11",
+          "11:11.7",
           "7:7.4"
         ],
         "transcribed_by": [
@@ -2729,11 +2810,20 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
+          "11:11.6",
           "8:8.9"
         ],
         "transcribed_by": [
           "src/pem/key_legacy.rs"
         ]
+      },
+      "crypto/pem/pem_info.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.6"
+        ],
+        "transcribed_by": []
       },
       "crypto/pem/pem_lib.c": {
         "defines": [
@@ -2763,6 +2853,7 @@
         "recorded_by": "units:crypto/pem/pem_pk8.c",
         "subphases": [
           "10:10.6",
+          "11:11.6",
           "7:7.5"
         ],
         "transcribed_by": [
@@ -2787,6 +2878,22 @@
         "recorded_by": "units:crypto/pem/pem_sign.c",
         "subphases": [
           "7:7.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/pem/pem_x509.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.6"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/pem/pem_xaux.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.6"
         ],
         "transcribed_by": []
       },
@@ -2913,7 +3020,8 @@
         "recorded_by": null,
         "subphases": [
           "10:10.15",
-          "10:10.3"
+          "10:10.3",
+          "11:11.7"
         ],
         "transcribed_by": [
           "src/pkcs12/p12_mutl.rs"
@@ -3499,6 +3607,30 @@
           "src/runtime/thread.rs"
         ]
       },
+      "crypto/x509/by_dir.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.1"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/by_file.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.1"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/by_store.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.1"
+        ],
+        "transcribed_by": []
+      },
       "crypto/x509/pcy_cache.c": {
         "defines": [
           "ossl_policy_cache_find_data",
@@ -3561,7 +3693,32 @@
         "defines": [],
         "recorded_by": "units:crypto/x509/pcy_tree.c",
         "subphases": [
-          "10:10.14"
+          "10:10.14",
+          "11:11.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/t_acert.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/t_crl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.4"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/t_req.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.4"
         ],
         "transcribed_by": []
       },
@@ -3573,10 +3730,35 @@
         "recorded_by": null,
         "subphases": [
           "10:10.14",
+          "11:11.4",
           "8:8.8"
         ],
         "transcribed_by": [
           "src/x509/t_x509.rs"
+        ]
+      },
+      "crypto/x509/v3_addr.c": {
+        "defines": [
+          "ossl_v3_addr"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.5"
+        ],
+        "transcribed_by": [
+          "src/x509/v3_addr.rs"
+        ]
+      },
+      "crypto/x509/v3_asid.c": {
+        "defines": [
+          "ossl_v3_asid"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.5"
+        ],
+        "transcribed_by": [
+          "src/x509/v3_asid.rs"
         ]
       },
       "crypto/x509/v3_audit_id.c": {
@@ -3588,6 +3770,16 @@
           "10:10.12"
         ],
         "transcribed_by": []
+      },
+      "crypto/x509/v3_conf.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.5"
+        ],
+        "transcribed_by": [
+          "src/x509/v3_conf.rs"
+        ]
       },
       "crypto/x509/v3_group_ac.c": {
         "defines": [
@@ -3675,6 +3867,14 @@
           "src/x509/v3_pku.rs"
         ]
       },
+      "crypto/x509/v3_prn.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.5"
+        ],
+        "transcribed_by": []
+      },
       "crypto/x509/v3_single_use.c": {
         "defines": [
           "ossl_v3_single_use"
@@ -3732,6 +3932,22 @@
           "src/x509/v3_utf8.rs"
         ]
       },
+      "crypto/x509/v3_utl.c": {
+        "defines": [
+          "ossl_a2i_ipadd",
+          "ossl_bio_print_hex",
+          "ossl_ipaddr_to_asc",
+          "ossl_v3_name_cmp",
+          "x509v3_add_len_value_uchar"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.5"
+        ],
+        "transcribed_by": [
+          "src/x509/v3_utl.rs"
+        ]
+      },
       "crypto/x509/x509_acert.c": {
         "defines": [
           "OSSL_ISSUER_SERIAL_it",
@@ -3742,7 +3958,8 @@
         ],
         "recorded_by": "units:crypto/x509/x509_acert.c",
         "subphases": [
-          "10:10.14"
+          "10:10.14",
+          "11:11.3"
         ],
         "transcribed_by": []
       },
@@ -3776,6 +3993,24 @@
           "src/x509/x509_cmp.rs"
         ]
       },
+      "crypto/x509/x509_d2.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.1"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_def.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.7"
+        ],
+        "transcribed_by": [
+          "src/x509/x509_def.rs"
+        ]
+      },
       "crypto/x509/x509_lu.c": {
         "defines": [
           "ossl_x509_store_ctx_get_by_subject",
@@ -3783,7 +4018,16 @@
         ],
         "recorded_by": "units:crypto/x509/x509_lu.c",
         "subphases": [
-          "10:10.14"
+          "10:10.14",
+          "11:11.1"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509_meth.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.1"
         ],
         "transcribed_by": []
       },
@@ -3797,11 +4041,20 @@
           "src/x509/x509_obj.rs"
         ]
       },
+      "crypto/x509/x509_r2x.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.4"
+        ],
+        "transcribed_by": []
+      },
       "crypto/x509/x509_req.c": {
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "10:10.14"
+          "10:10.14",
+          "11:11.4"
         ],
         "transcribed_by": [
           "src/x509/x509_req.rs"
@@ -3815,6 +4068,7 @@
         "recorded_by": null,
         "subphases": [
           "10:10.14",
+          "11:11.4",
           "8:8.8"
         ],
         "transcribed_by": [
@@ -3825,7 +4079,8 @@
         "defines": [],
         "recorded_by": "units:crypto/x509/x509_trust.c",
         "subphases": [
-          "10:10.14"
+          "10:10.14",
+          "11:11.1"
         ],
         "transcribed_by": []
       },
@@ -3855,7 +4110,8 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "10:10.14"
+          "10:10.14",
+          "11:11.2"
         ],
         "transcribed_by": [
           "src/x509/x509_vfy.rs"
@@ -3865,7 +4121,16 @@
         "defines": [],
         "recorded_by": "units:crypto/x509/x509_vpm.c",
         "subphases": [
-          "10:10.14"
+          "10:10.14",
+          "11:11.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/x509/x509aset.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.3"
         ],
         "transcribed_by": []
       },
@@ -3904,7 +4169,8 @@
         "recorded_by": null,
         "subphases": [
           "10:10.12",
-          "10:10.14"
+          "10:10.14",
+          "11:11.7"
         ],
         "transcribed_by": [
           "src/x509/x_all.rs"
@@ -3929,7 +4195,8 @@
         "recorded_by": null,
         "subphases": [
           "10:10.14",
-          "10:10.8"
+          "10:10.8",
+          "11:11.4"
         ],
         "transcribed_by": [
           "src/x509/x_crl.rs"
@@ -3940,11 +4207,20 @@
         "recorded_by": null,
         "subphases": [
           "10:10.11",
-          "10:10.8"
+          "10:10.8",
+          "11:11.4"
         ],
         "transcribed_by": [
           "src/x509/x_exten.rs"
         ]
+      },
+      "crypto/x509/x_ietfatt.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.3"
+        ],
+        "transcribed_by": []
       },
       "crypto/x509/x_name.c": {
         "defines": [],
@@ -3986,6 +4262,16 @@
         "transcribed_by": [
           "src/x509/x_pubkey.rs"
         ]
+      },
+      "crypto/x509/x_req.c": {
+        "defines": [
+          "ossl_x509_req_set0_libctx"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "11:11.4"
+        ],
+        "transcribed_by": []
       },
       "crypto/x509/x_x509.c": {
         "defines": [
@@ -5183,7 +5469,7 @@
       "transcribed_units": 434
     }
   },
-  "body_hash": "1c290406d49d2745ba22201dc80dbc9111918b216acfacb8dbdafa95f8fc4821",
+  "body_hash": "9ecba8cf2bded9a8e063204ed08c9e9fe25b699ca40c9a10594ef453ce4e9333",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -5204,7 +5490,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d0348847727b794f350b2ccefd6eb93cb59c7d452aeb3cbce312287e59e4b016"
+      "sha256": "79641430f4c29b8e9239525ff90cae7e2040e7ca06033a77bf362d372ca884b2"
     },
     {
       "name": "prerequisites",
@@ -5220,6 +5506,11 @@
       "name": "plan-PHASE-10-SUBPHASES",
       "path": "docs/PHASE-10-SUBPHASES.md",
       "sha256": "2acd6b36f3853865589efd2cb28d18c3c0575e88c6d87c3a73e07a687df0a2fa"
+    },
+    {
+      "name": "plan-PHASE-11-X509-SUBPHASES",
+      "path": "docs/PHASE-11-X509-SUBPHASES.md",
+      "sha256": "3385915bfbf386174510bdc11d0f4b73268ea957102246feeea19bdf059926fb"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

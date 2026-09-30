@@ -19,7 +19,7 @@ enforced here:
 | 8 | Native cryptographic primitives | `complete` |  |
 | 9 | RAND / DRBG + entropy | `complete` |  |
 | 10 | Key formats + PKCS + STORE | `complete` |  |
-| 11 | X.509 + verification | `not-started` | not started |
+| 11 | X.509 + verification | `in-progress` | 513 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. Nine hundred and fifty-four of the working set are already implemented -- 952 atlas-owned exports landed by Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases, and two hand-offs landed by Phase 5 -- rather than by this stratum, so the ledger's `open` count is not the whole working set. The stratum owns no provider registration row (docs/PHASE-11-X509-SUBPHASES.md sections 1 and 4) |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | not started |
 | 13 | Legacy / deprecated compatibility | `not-started` | not started |
 | 14 | TLS / DTLS (libssl) | `not-started` | not started |

@@ -254,6 +254,7 @@ def defers_to_census(text: str) -> list[tuple[str, str, str]]:
 #
 # The mechanism is stratum-generic: an active stratum is discovered from `forensics/phase-state.json`
 # (so the next one inherits this without a code change), its plan is `docs/PHASE-<n>-SUBPHASES.md`
+# (or the descriptive-infix spelling `docs/PHASE-<n>-<NAME>-SUBPHASES.md` a later stratum may use)
 # and its ledger is `forensics/phase<n>-obligations.json`. Two clause headings in the plan are the
 # anchors, and the symbols inside them are compared per symbol with the ledger:
 #
@@ -351,10 +352,19 @@ CHECKS: list[Check] = [
 # Every active stratum's plan, discovered rather than listed: the next stratum to move to
 # `in-progress` inherits this gate by carrying the two anchored clause headings in its plan, and
 # a plan that has them removed fails `ClaimMissing` rather than passing silently.
+#
+# The plan's name is `docs/PHASE-<n>-SUBPHASES.md`, or a descriptive-infix spelling
+# (`docs/PHASE-11-X509-SUBPHASES.md`) the way the seal documents carry theirs
+# (`docs/PHASE-10-KEYFORMATS-SEAL.md`). Both are discovered, and the plain name wins when both
+# exist so an infix can never shadow an existing plan. A plan the discovery did not match would
+# make this gate vanish for that stratum while the stratum still moved to `in-progress` -- the
+# silent hole the gate exists to remove, not a convenience its naming may reintroduce.
 for _phase in active_phases():
-    _plan = f"docs/PHASE-{_phase}-SUBPHASES.md"
-    if (REPO_ROOT / _plan).is_file():
-        CHECKS.append(active_status_check(_phase, _plan))
+    plans = (sorted((REPO_ROOT / "docs").glob(f"PHASE-{_phase}-SUBPHASES.md"))
+             or sorted((REPO_ROOT / "docs").glob(f"PHASE-{_phase}-*-SUBPHASES.md")))
+    if plans:
+        CHECKS.append(active_status_check(
+            _phase, plans[0].relative_to(REPO_ROOT).as_posix()))
 
 # A `(check id, document)` pair here is exempt from the numeric comparison, and the
 # reason is printed with every run. The entry below is a quantity a document legitimately
