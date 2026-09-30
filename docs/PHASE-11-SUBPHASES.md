@@ -256,7 +256,11 @@ ledger's implemented list: `X509_LOOKUP_store`, `X509_STORE_load_store`,
 `X509_set_issuer_name`, `X509_set_subject_name`, `X509_set_pubkey`, `X509_REQ_new`,
 `X509_REQ_get0_pubkey`, `X509_REQ_get_attr_count`, `X509_REQ_set_version`,
 `X509_NAME_add_entry_by_txt`, `X509V3_EXT_nconf`, `X509V3_EXT_conf`, `X509V3_EXT_add_nconf`,
-`X509V3_EXT_print`, `X509V3_EXT_print_fp`, `X509V3_extensions_print`, `X509V3_EXT_val_prn`. The
+`X509V3_EXT_print`, `X509V3_EXT_print_fp`, `X509V3_extensions_print`, `X509V3_EXT_val_prn`. 11.4b
+adds the X509_EXTENSIONS wrapper and the request extension functions:
+`X509_EXTENSIONS_it`, `d2i_X509_EXTENSIONS`, `i2d_X509_EXTENSIONS`, `X509_REQ_get_extensions`,
+`X509_REQ_add_extensions`, `X509_REQ_add_extensions_nid`, `X509_REQ_get1_email`,
+`X509V3_EXT_REQ_add_nconf` and `X509V3_EXT_REQ_add_conf`. The
 bulk of the implemented list was landed before this stratum's first slice by Phase 8's 8.8 chain
 and Phase 10's pulled-forward X.509 subphases, with `ASN1_generate_nconf` and `ASN1_generate_v3`
 handed over by Phase 5; the ledger is the record and this sentence names only what the slices above
@@ -266,7 +270,7 @@ added.
 
 The store and verification layer is still open at `X509_STORE_new`, `X509_STORE_set1_param` and
 `X509_verify_cert`; the attribute certificate at `X509_ACERT_new` and `X509_ACERT_verify`; the
-request surface at `X509_REQ_sign`, `X509_REQ_get_extensions` and `X509_to_X509_REQ`; the PEM
+request surface at `X509_REQ_sign` and `X509_to_X509_REQ`; the PEM
 container surface at `PEM_read_X509`, `PEM_X509_INFO_read` and `PEM_write_bio_X509_REQ_NEW`; and
 the remaining shared units at `X509_get_default_cert_file` and `NETSCAPE_SPKI_print`. Every name
 here is in the ledger's open list; the counts move as the slices land, so the ledger, not this

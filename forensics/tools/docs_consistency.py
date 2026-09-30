@@ -370,10 +370,21 @@ CHECKS: list[Check] = [
 # Every active stratum's plan, discovered rather than listed: the next stratum to move to
 # `in-progress` inherits this gate by carrying the two anchored clause headings in its plan, and
 # a plan that has them removed fails `ClaimMissing` rather than passing silently.
+#
+# The gate binds a plan's *status sentences* to its *obligation ledger*, so it applies only to a
+# stratum that has both. Phase 22 is an atlas stratum rather than an export stratum: it owns no
+# exports, its plan carries neither clause, and its own closure rule lives in
+# `forensics/tools/phase_state.py`. Requiring the anchor rather than the file keeps that a
+# property of the document rather than a phase number special-cased here -- a plan that carries
+# the anchor and has no ledger still fails, in `active_status_check`.
 for _phase in active_phases():
     _plan = f"docs/PHASE-{_phase}-SUBPHASES.md"
-    if (REPO_ROOT / _plan).is_file():
-        CHECKS.append(active_status_check(_phase, _plan))
+    _path = REPO_ROOT / _plan
+    if not _path.is_file():
+        continue
+    if LANDED_CLAUSE not in _path.read_text(encoding="utf-8"):
+        continue
+    CHECKS.append(active_status_check(_phase, _plan))
 
 # A `(check id, document)` pair here is exempt from the numeric comparison, and the
 # reason is printed with every run. The entry below is a quantity a document legitimately

@@ -1,0 +1,117 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "counts": {
+      "atlas_owned": 18,
+      "deferred_to_later_phase": 0,
+      "implemented": 1,
+      "open_in_this_stratum": 17,
+      "owned": 18,
+      "received_by_handoff": 0
+    },
+    "deferred": [],
+    "implemented": [
+      "22.0"
+    ],
+    "note": "`open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
+    "open": [
+      {
+        "artefact": "forensics/atlas/phase22/compile-commands.json",
+        "plane": "The exact build-command capture and the normalized compilation database",
+        "subphase": "22.1"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/doxygen-entities.json",
+        "plane": "The pinned Doxygen corpus and its entity graph",
+        "subphase": "22.2"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/tu-ast.json",
+        "plane": "Every active translation unit's Clang AST and the declaration/definition graph",
+        "subphase": "22.3"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/conditional-surface.json",
+        "plane": "The preprocessor and conditional-compilation graph",
+        "subphase": "22.4"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/generated-lineage.json",
+        "plane": "The generated-source and build genealogy",
+        "subphase": "22.5"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/binary-reference-graph.json",
+        "plane": "The object, archive, DSO and provider-module symbol and relocation graph",
+        "subphase": "22.6"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/dispatch-graph.json",
+        "plane": "The indirect dispatch, callback and registration graph",
+        "subphase": "22.7"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/install-manifest.json",
+        "plane": "The installed-distribution manifest",
+        "subphase": "22.8"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/cli-surface.json",
+        "plane": "The CLI grammar, aliases and digest/cipher pseudo-command surface",
+        "subphase": "22.9"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/config-surface.json",
+        "plane": "The configuration, environment and default-path surface",
+        "subphase": "22.10"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/pod-contract.json",
+        "plane": "The canonical POD contract oracle and the POD-runtime differential",
+        "subphase": "22.11"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/reconciliation.json",
+        "plane": "The cross-plane reconciliation",
+        "subphase": "22.12"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/test-crosswalk.json",
+        "plane": "The test, demo and fuzz semantic crosswalk",
+        "subphase": "22.13"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/compatibility-closure.json",
+        "plane": "The external-root reachability closure",
+        "subphase": "22.14"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/frf-challenges.json",
+        "plane": "The FRF challenges and the FRF-Fuzz sensitivity campaigns",
+        "subphase": "22.15"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/gemel-checkpoint.json",
+        "plane": "The Gemel checkpoint and the regenerated phase ledgers",
+        "subphase": "22.16"
+      },
+      {
+        "artefact": "docs/PHASE-22-ATLAS-SEAL.md",
+        "plane": "The Phase-22 seal",
+        "subphase": "22.17"
+      }
+    ],
+    "rule": "the stratum's working set is its compatibility planes, one per subphase of docs/PHASE-22-SUBPHASES.md, and a plane is implemented when the artefact it names exists on disk; this stratum owns no export, so its unit is a plane rather than a symbol",
+    "unit": "compatibility plane"
+  },
+  "generator": "forensics/tools/phase22_obligations.py",
+  "inputs": [
+    {
+      "name": "phase-22-plan",
+      "path": "docs/PHASE-22-SUBPHASES.md",
+      "sha256": "831c9863252c68c31c961c582603bec10ffd2a48e0dadd76aecb30618a9e0489"
+    }
+  ],
+  "kind": "phase22-obligations",
+  "schema": "openssl-rs/atlas/phase22-obligations/v1"
+}

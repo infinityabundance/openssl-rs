@@ -111,7 +111,27 @@ STRATA: list[tuple[int, str, str]] = [
     (19, "performance", "Performance / CPU dispatch"),
     (20, "custodian-seal", "3.6.4 custodian seal"),
     (21, "maintenance-delta", "Maintenance delta machinery"),
+    (22, "whole-program-atlas",
+     "Authority exhaustiveness and the whole-program compatibility atlas"),
 ]
+
+# The dependency the strata are ordered by (D138). It is a DAG, not "the previous number".
+#
+# The historical chain is `requires[n] == (n - 1,)`: a stratum may not be complete while the one
+# before it is not. Phase 22 is why that is no longer the whole rule. Its evidence is the
+# whole-program archaeology every *later* implementation stratum leans on -- the verification
+# engine most of all -- so it must exist before Phase 11 finishes even though it is numbered 22.
+# The edge is therefore declared rather than inferred from the number:
+#
+#     0 -> 1 -> ... -> 10 -> 22 -> 11 -> 12 -> ... -> 21
+#
+# Phase numbers stay as historical names; the dependency is represented by the dependency. The
+# plan is `docs/PHASE-22-SUBPHASES.md` section 8.
+REQUIRES: dict[int, tuple[int, ...]] = {
+    **{p: (p - 1,) for p, _n, _s in STRATA if 1 <= p <= 21},
+    22: (10,),
+    11: (10, 22),
+}
 
 CONSTITUTION_DOCS = [
     "docs/CUSTODIAN_CONTRACT.md", "docs/PARITY_MODEL.md", "docs/AUTHORITY_POLICY.md",
@@ -173,6 +193,39 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                       if c["verdict"] != "pass"]
             if failed:
                 blocking = f"courts not passing: {failed}"
+        return present, absent, blocking
+
+    # Phase 22 is an atlas stratum: its evidence is the plan, the residual ledger its closure
+    # produces, the atlas courts and the seal -- not an export universe, an ownership projection or
+    # a provider row. It is the one stratum whose `open` count is a count of *unclassified
+    # surfaces* rather than of unbuilt exports, and `docs/PHASE-22-SUBPHASES.md` section 7 is what
+    # its seal requires.
+    if phase == 22:
+        for d in PHASE22_MODULES:
+            (present if exists(d) else absent).append(d)
+        ledger = read_json(PHASE22_LEDGER)
+        if ledger:
+            present.append(PHASE22_LEDGER)
+            open_count = ledger["body"]["counts"]["open_in_this_stratum"]
+            if open_count:
+                blocking = (
+                    f"{open_count} unresolved atlas residual(s) recorded in {PHASE22_LEDGER}; "
+                    f"the Phase-22 seal is refused while any UNKNOWN residual intersects a "
+                    f"declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7)"
+                    + (f". {ledger['body'].get('note', '')}"
+                       if ledger["body"].get("note") else "")
+                )
+        else:
+            absent.append(PHASE22_LEDGER)
+        courts = read_json(PHASE22_COURTS)
+        if courts:
+            present.append(PHASE22_COURTS)
+            failed = [c["court"] for c in courts["body"]["courts"] if c["verdict"] != "pass"]
+            if failed:
+                blocking = f"Phase 22 courts not passing: {failed}"
+        else:
+            blocking = blocking or f"no Phase 22 courts yet ({PHASE22_COURTS} absent)"
+        (present if exists(PHASE22_SEAL) else absent).append(PHASE22_SEAL)
         return present, absent, blocking
 
     # Strata 3 and later are one rule, not five.
@@ -791,6 +844,17 @@ PHASE11_MODULES = [
     "forensics/tools/phase11_obligations.py",
 ]
 
+# Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
+# every other stratum's: no export universe, no ownership projection and no provider row. What it
+# owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
+# the seal. `docs/PHASE-22-SUBPHASES.md` sections 7 and 8 are the rule and the claim.
+PHASE22_MODULES = [
+    "docs/PHASE-22-SUBPHASES.md",
+]
+PHASE22_LEDGER = "forensics/phase22-obligations.json"
+PHASE22_COURTS = "artifacts/phase22/COURTS.json"
+PHASE22_SEAL = "docs/PHASE-22-ATLAS-SEAL.md"
+
 
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
@@ -839,6 +903,15 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "implemented-surface.json` are the live record. The stratum owns "
                             "no provider registration row (docs/PHASE-11-SUBPHASES.md "
                             "sections 1 and 4)"
+                        )),
+    # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
+    # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no
+    # row, and `docs/PHASE-22-SUBPHASES.md` is evidence from the day 22.0 lands it.
+    22: StratumEvidence(PHASE22_MODULES, PHASE22_LEDGER, PHASE22_COURTS,
+                        ledger_note=(
+                            "This stratum's `open` count is a count of unclassified surfaces, "
+                            "not of unbuilt exports; the closure and its disposition model are "
+                            "docs/PHASE-22-SUBPHASES.md sections 3, 4 and 7"
                         )),
 }
 
@@ -958,7 +1031,6 @@ def derive_state_rows() -> list[dict]:
     `complete`.
     """
     rows = []
-    earlier_incomplete: int | None = None
     for phase, name, stratum in STRATA:
         present, absent, blocking = evidence_for(phase)
         # The divergence rule (`divergence_blocking_reason`). An obligation this stratum owns whose
@@ -988,15 +1060,6 @@ def derive_state_rows() -> list[dict]:
         else:
             state = "complete"
 
-        # Executable policy: a later stratum may not be complete while an earlier
-        # one is not.
-        if state == "complete" and earlier_incomplete is not None:
-            state = "in-progress"
-            blocking = (f"blocked by the dependency-order invariant: phase "
-                        f"{earlier_incomplete} is not complete")
-        elif state != "complete" and earlier_incomplete is None:
-            earlier_incomplete = phase
-
         seal_doc = SEAL_DOCS.get(phase)
         rows.append({
             "phase": phase, "name": name, "stratum": stratum, "state": state,
@@ -1006,6 +1069,28 @@ def derive_state_rows() -> list[dict]:
             "deferred": deferred_rows(phase),
             "provider_rows": provider_rows_for(phase),
         })
+
+    # The dependency invariant (`REQUIRES`, D138, and `docs/PHASE-22-SUBPHASES.md` section 8). A
+    # stratum may be `complete` only when every stratum it *requires* is complete. Two things make
+    # this a separate pass rather than the running "earlier phase" check it used to be: the edges
+    # are declared rather than inferred from the number, and one of them -- `requires[11] = (10,
+    # 22)` -- points *forward* in the registry, so a single list-order pass would read Phase 22's
+    # state before it had one. The pass therefore runs to a fixed point.
+    by_phase = {r["phase"]: r for r in rows}
+    changed = True
+    while changed:
+        changed = False
+        for row in rows:
+            if row["state"] != "complete":
+                continue
+            incomplete = [d for d in REQUIRES.get(row["phase"], ())
+                          if by_phase[d]["state"] != "complete"]
+            if incomplete:
+                row["state"] = "in-progress"
+                row["blocking"] = (
+                    "blocked by the dependency invariant: phase "
+                    + ", ".join(str(d) for d in incomplete) + " is not complete")
+                changed = True
     return rows
 
 
@@ -1123,7 +1208,8 @@ def main(argv: list[str]) -> int:
     rows = derive_state_rows()
 
     body = {
-        "rule": "a phase may be complete only if every earlier phase is complete",
+        "rule": "a phase may be complete only if every phase it requires is complete "
+                "(forensics/tools/phase_state.py REQUIRES; docs/PHASE-22-SUBPHASES.md section 8)",
         "derived_from": "artefact existence and their content, never typed status",
         "phases": rows,
         "summary": {

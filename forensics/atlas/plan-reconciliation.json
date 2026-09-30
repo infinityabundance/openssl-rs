@@ -35,13 +35,14 @@
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
         "docs/PHASE-11-SUBPHASES.md",
+        "docs/PHASE-22-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
         "docs/PHASE-7-SUBPHASES.md",
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 111,
+      "rows_judged": 129,
       "symbols_named_by_a_row": 108,
       "symbols_reached": 108,
       "unit_records": 96,
@@ -5478,7 +5479,7 @@
       "transcribed_units": 441
     }
   },
-  "body_hash": "1d957b0d4ed8ea2a98dca1a3a3d42b738b8c83a779123991106657195443c1bf",
+  "body_hash": "064f7c887ff963c0a6f0e301adb6db1a5f987c5196aada5dbde0d113b6b2e8b4",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -5489,17 +5490,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "ffd745afd20eca44a5917b3e5ded0616f952c35a2825d5b8a483da3e43429716"
+      "sha256": "0a12be4ba74ab7985837b802567aa1ec5a0137345e8a81e6efac6e264a2785cd"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "fd7e698b28869fd1f89d2acd644ff0f1dee9d58647b71dfaa5a5de0e01e77e4a"
+      "sha256": "92c4e254f1f55f3ca475b2e2734098673c3d0ce665e2514f54006baf3f86699f"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "28806bef8ef8d8b49c20b415160baa0ef3525a3ceeeaee7227ea6792f6ac18f2"
+      "sha256": "8ab6b56e6bc17fc7b119eb55a08f2880c282c08916a24cd0af6c56677ea1457d"
     },
     {
       "name": "prerequisites",
@@ -5519,7 +5520,12 @@
     {
       "name": "plan-PHASE-11-SUBPHASES",
       "path": "docs/PHASE-11-SUBPHASES.md",
-      "sha256": "ebd25a87418138efe64fe8bad0bdea277e1bf5de6d8f5672f4a60b47d6a94efb"
+      "sha256": "d4ab6256e098de9e6e1c8d347416b4c7afc377abcf933dd4c94803d6816bc665"
+    },
+    {
+      "name": "plan-PHASE-22-SUBPHASES",
+      "path": "docs/PHASE-22-SUBPHASES.md",
+      "sha256": "831c9863252c68c31c961c582603bec10ffd2a48e0dadd76aecb30618a9e0489"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

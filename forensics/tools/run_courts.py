@@ -98,10 +98,17 @@ COURTLESS: dict[int, str] = {
 # problem this whole tool exists for. And the invariant that a stratum cannot *complete*
 # without its courts is not weakened here at all: `phase_state.py` makes an absent courts file
 # a blocking reason, so a stratum with no runner cannot reach `complete`.
-# Empty, and it should stay that way: the row that was here was 7's, and its own text said
-# keeping it past 7.1 was not possible. `RT-FETCH` landed with 7.1's remainder, so the entry is
-# gone rather than emptied -- an empty dict with a comment above it is what a reader needs.
-NO_RUNNER_YET: dict[int, str] = {}
+# A stratum is added here only while it is between its ledger and its first probe, and the entry is
+# conditional on `artifacts/phase<N>/COURTS.json` being absent, so it retires itself the moment the
+# first court commits. Phase 7's row was the only one it had ever held, and it went rather than
+# emptied once `RT-FETCH` landed. Phase 22's row is here for the same reason and with the same
+# condition: an atlas stratum lands its plan and its dependency edge in 22.0 and its first extractor
+# and sensitivity court in 22.1, so the runner cannot exist in 22.0 without inventing the court
+# first.
+NO_RUNNER_YET: dict[int, str] = {
+    22: "an atlas stratum: 22.0 lands the plan and the dependency edge, and 22.1 lands the first "
+        "extractor with the FRF sensitivity court that challenges it, so the runner lands in 22.1",
+}
 
 
 def phase_states() -> dict[int, str]:
