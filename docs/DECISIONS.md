@@ -33427,3 +33427,65 @@ observations**; the register reads **10 rows, 0 blocking**; the self-test prints
 `divergence_obligations.py --check`, `prerequisite_gate.py`, `evidence_determinism.py` and
 `check_evidence_portability.py` are all clean; phase 10 still derives `complete` and phase 11
 `in-progress` with 513 open.
+## D481 -- 11.1a and 11.4a land the first X.509 work; the store gets a behavioural court, and two court tools are repaired
+
+**Phase 11 is no longer inherited-only.** Two slices landed, and with them the first code this
+stratum wrote rather than received: **136 exports closed**, phase 11 implemented **954 -> 1,090**,
+open **513 -> 377**, and `libcrypto` implemented **4,254 -> 4,390**. The pipeline reads **111 courts
+and 47,314 observations**.
+
+### 11.1a -- the `X509_STORE` object model and the lookup layer
+`src/x509/x509_lu.rs` lands `crypto/x509/x509_lu.c`: the `X509_OBJECT` value and its `union`, the
+`X509_LOOKUP` and `X509_LOOKUP_METHOD` objects, the `X509_STORE` container, the twelve
+`set_*`/`get_*` callback pairs, and the read path (`X509_STORE_CTX_get_obj_by_subject`,
+`_get_by_subject`, `_get1_certs`, `_get1_crls`, `get0_store`). `src/x509/x509_meth.rs` lands
+`x509_meth.c`'s twenty `X509_LOOKUP_meth_*` functions whole. **Seven `X509_STORE_*` accessors stay
+withheld by name** -- `X509_STORE_new`/`_free`/`_set_flags`/`_set_depth`/`_set_purpose`/`_set_trust`/
+`_set1_param` -- each because it reads an `X509_VERIFY_PARAM`, which is 11.2's unit. The
+`X509_STORE_CTX` **lifecycle** is 11.2's as well; what landed here is the store's own read path.
+
+### 11.4a -- the mutators, the attribute surface and the request item group
+`src/x509/x509_set.rs` lands all 16 mutators/readers (`X509_set_serialNumber`/`_issuer_name`/
+`_subject_name`/`_pubkey`/`_set1_notBefore`/`_set1_notAfter`, `X509_get0_notBefore`/`_notAfter`,
+`X509_getm_notBefore`/`_notAfter`, `X509_get_signature_type`, `X509_get_X509_PUBKEY`,
+`X509_get0_uids`, `X509_get0_tbs_sigalg`, `X509_SIG_INFO_get`, `X509_get_signature_info`).
+`src/x509/x509_req.rs` lands 20 of `x509_req.c`'s 24 (the pubkey accessors, the attribute surface and
+the four `add1_attr*`, the signature setters, `i2d_re_X509_REQ_tbs`), withholding `X509_to_X509_REQ`
+(it calls `X509_REQ_sign`, withheld in `x_all.rs`) and the four extension functions (they decode
+through the `X509_EXTENSIONS` item, withheld in `x_exten.rs`). `src/x509/x_req.rs` lands
+`x_req.c` whole: the `X509_REQ_INFO` and `X509_REQ` item groups, their descriptors, the
+`_it`/`_new`/`_free`/`d2i_`/`i2d_` group, `X509_REQ_dup`, the distinguishing-id pair and
+`X509_REQ_new_ex`, reusing the `X509ReqInfo`/`X509Req` layouts D472 pulled forward rather than
+redeclaring them.
+
+### The court, and why it is behavioural rather than a reference basis
+**`RT-X509-STORE` (`courts/phase11/rt_x509_store_probe.c`) drives the landed surface and compares
+204 observations, byte-for-byte identical on both sides** -- the `X509_LOOKUP_METHOD` vtable through
+a set of hooks it installs itself, the `X509_LOOKUP` object with and without hooks (including the
+`ctrl_ex` -> `ctrl` fallback and the four `get_by_*` doors), `X509_OBJECT` over a fixed certificate
+and CRL, the four `X509_STORE` refusal arms with their error coordinates, the `x509_set.c` round
+trips, and the request item group over a fixed request DER. **97 of the 136 new exports are `called`;
+39 are `referenced`**, and the reference probe grew 954 -> 993 names. The 39 are referenced for
+honest reasons, each recorded: 32 `X509_STORE_*` and 5 `X509_STORE_CTX_*` need an object that cannot
+be constructed while `X509_STORE_new`/`X509_STORE_CTX_new` are withheld behind `X509_VERIFY_PARAM`
+(so the four refusal arms are the only `X509_STORE` calls that exist to make); `X509_SIG_INFO_get`'s
+argument type is opaque in `x509.h`; and `X509_get_signature_info` is a **measured divergence**
+(D333/D343: the authority answers `md=672 sec=128 flags=3`, the candidate `md=672 sec=-1 flags=0`),
+which is the divergence's evidence rather than this unit's.
+
+### Two court-tool defects, found by the landing and fixed at the root cause
+* `prototype_court.py`'s return-type scanner discarded the `->` inside an inline function-pointer
+  return type, so three `X509_LOOKUP_meth_get_*` canonicalised to `fptr(void; ...)` against the
+  authority's `fptr(int:4:s; ...)` -- three false `TYPE-MISMATCH`es. `canon_rust_type` already
+  preserved the arrow; only the scanner dropped it.
+* `dispatch_court.py`'s `rust_key` stripped `Fn` but not the `_fn` suffix that `authority_key`
+  strips, so the eighteen new `X509_LOOKUP_*_fn`/`X509_STORE_CTX_*_fn` aliases were unlinked.
+  Both fixes leave the tools' sensitivity controls firing.
+
+`docs/CI.md`'s live `c_style` count moved 484 -> 485.
+
+### Verification
+`PIPELINE OK` exit 0 with **111 courts and 47,314 observations**; `court_coverage.py` reports phase
+11 with **zero unmatched** (`called=501`, `referenced=589`); `cargo test --lib` is **1119 passed**
+(up from 1117: the new request and mutator tests); `cargo fmt`/`clippy -D warnings` clean;
+`probe_hygiene` reports the new probe stable across `-O0/-O1/-O2` on both sides.

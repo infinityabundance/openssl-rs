@@ -1,5 +1,5 @@
 /*
- * RT-X509-REF -- reference basis for the X.509 stratum's inherited entries, and
+ * RT-X509-REF -- the reference basis the X.509 stratum's court coverage needs, and
  * nothing more.
  *
  * This probe exists to answer exactly one question the court coverage atlas asks:
@@ -12,16 +12,33 @@
  * purpose: the name is referenced by a probe that ran, which is not the same as
  * every arm of the name having been driven. See docs/DECISIONS.md D199.
  *
- * The 954 names below are this stratum's inherited `implemented`
- * exports -- the 952 atlas-owned exports Phase 8's 8.8 chain and Phase 10's
- * pulled-forward X.509 subphases (10.8-10.16, D442-D451) landed, and the two
- * `ASN1_generate_*` hand-offs Phase 5 landed -- as `forensics/phase11-obligations.json`
- * records them. **Phase 11 landed none of them**, and it can run no behavioural court
- * for them yet: its own store, verification, attribute-certificate, request, `v3` and
- * PEM subphases are open, and a probe that called one would need the very object graph
- * this stratum has not built. So this is the one edge the court coverage atlas holds
- * for each on the commit that puts the stratum's ledger in scope, and it claims
- * reference, not behaviour (docs/PHASE-11-SUBPHASES.md section 4.3).
+ * The 993 names below are the stratum's `implemented` exports this reference basis
+ * covers. 954 are the ones earlier strata landed and this stratum now owns -- the 952
+ * atlas-owned exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases
+ * (10.8-10.16, D442-D451) landed, and the two `ASN1_generate_*` hand-offs Phase 5
+ * landed. The other 39 are Phase 11.1a's and 11.4a's own: as
+ * `forensics/phase11-obligations.json` records them, those two subphases landed
+ * `x509_lu.c`, `x509_meth.c`, `x509_set.c`, `x509_req.c` and `x_req.c`, and the
+ * behavioural court `RT-X509-STORE` (`courts/phase11/rt_x509_store_probe.c`) **calls**
+ * 97 of their exports and observes them. The 39 below are the ones it cannot: 37 need an
+ * `X509_STORE` or `X509_STORE_CTX` that 11.1a does not build (`X509_STORE_new`/
+ * `X509_STORE_CTX_new` are withheld -- their blocker is `X509_VERIFY_PARAM`, 11.2's --
+ * and the candidate's shell `abort`s on either, so `X509_STORE_add_lookup`,
+ * `X509_STORE_get0_objects`/`get0_param`, the twenty-six callback `set_*`/`get_*` pairs,
+ * `lock`/`unlock`/`up_ref` and the whole `X509_STORE_CTX_*` read path cannot be driven
+ * without re-declaring those structs), `X509_SIG_INFO_get` reads an `X509_SIG_INFO` that
+ * `x509.h` leaves opaque, and `X509_get_signature_info` would compare the crate's
+ * recorded `EVP_get_digestbyname` divergence D333/D343 rather than this unit's contract.
+ * So for these the atlas holds the weaker true statement -- the name is referenced by a
+ * probe that ran -- and never `called` (docs/DECISIONS.md D199,
+ * docs/PHASE-11-SUBPHASES.md section 4.3).
+ *
+ * Some of the 993 are, independently, imported by a behavioural court -- 401 of the 954
+ * by Phases 8 and 10, and 3 more (`X509_REQ_get_version`, `X509_REQ_get_subject_name`,
+ * `X509_REQ_get0_signature`) by `RT-X509-STORE`, which reads them while driving the
+ * `X509_REQ` surface. Listing a name here cannot weaken a stronger edge: the atlas
+ * records `called` wherever a behavioural court imports the name, and `referenced` only
+ * where this probe is the sole importer.
  *
  * It is a probe rather than a source scan because a source scan cannot tell a call
  * from a comment, and because the dynamic linker resolves the reference only if the
@@ -572,12 +589,50 @@ extern void X509_REVOKED_it(void);
 extern void X509_REVOKED_new(void);
 extern void X509_REVOKED_set_revocationDate(void);
 extern void X509_REVOKED_set_serialNumber(void);
+extern void X509_SIG_INFO_get(void);
 extern void X509_SIG_INFO_set(void);
 extern void X509_SIG_free(void);
 extern void X509_SIG_get0(void);
 extern void X509_SIG_getm(void);
 extern void X509_SIG_it(void);
 extern void X509_SIG_new(void);
+extern void X509_STORE_CTX_get0_store(void);
+extern void X509_STORE_CTX_get1_certs(void);
+extern void X509_STORE_CTX_get1_crls(void);
+extern void X509_STORE_CTX_get_by_subject(void);
+extern void X509_STORE_CTX_get_obj_by_subject(void);
+extern void X509_STORE_add_lookup(void);
+extern void X509_STORE_get0_objects(void);
+extern void X509_STORE_get0_param(void);
+extern void X509_STORE_get_cert_crl(void);
+extern void X509_STORE_get_check_crl(void);
+extern void X509_STORE_get_check_issued(void);
+extern void X509_STORE_get_check_policy(void);
+extern void X509_STORE_get_check_revocation(void);
+extern void X509_STORE_get_cleanup(void);
+extern void X509_STORE_get_ex_data(void);
+extern void X509_STORE_get_get_crl(void);
+extern void X509_STORE_get_get_issuer(void);
+extern void X509_STORE_get_lookup_certs(void);
+extern void X509_STORE_get_lookup_crls(void);
+extern void X509_STORE_get_verify(void);
+extern void X509_STORE_get_verify_cb(void);
+extern void X509_STORE_lock(void);
+extern void X509_STORE_set_cert_crl(void);
+extern void X509_STORE_set_check_crl(void);
+extern void X509_STORE_set_check_issued(void);
+extern void X509_STORE_set_check_policy(void);
+extern void X509_STORE_set_check_revocation(void);
+extern void X509_STORE_set_cleanup(void);
+extern void X509_STORE_set_ex_data(void);
+extern void X509_STORE_set_get_crl(void);
+extern void X509_STORE_set_get_issuer(void);
+extern void X509_STORE_set_lookup_certs(void);
+extern void X509_STORE_set_lookup_crls(void);
+extern void X509_STORE_set_verify(void);
+extern void X509_STORE_set_verify_cb(void);
+extern void X509_STORE_unlock(void);
+extern void X509_STORE_up_ref(void);
 extern void X509_VAL_free(void);
 extern void X509_VAL_it(void);
 extern void X509_VAL_new(void);
@@ -635,6 +690,7 @@ extern void X509_get_pathlen(void);
 extern void X509_get_proxy_pathlen(void);
 extern void X509_get_pubkey(void);
 extern void X509_get_serialNumber(void);
+extern void X509_get_signature_info(void);
 extern void X509_get_signature_nid(void);
 extern void X509_get_subject_name(void);
 extern void X509_get_version(void);
@@ -1528,12 +1584,50 @@ static const void *volatile refs[] = {
     (const void *) X509_REVOKED_new,
     (const void *) X509_REVOKED_set_revocationDate,
     (const void *) X509_REVOKED_set_serialNumber,
+    (const void *) X509_SIG_INFO_get,
     (const void *) X509_SIG_INFO_set,
     (const void *) X509_SIG_free,
     (const void *) X509_SIG_get0,
     (const void *) X509_SIG_getm,
     (const void *) X509_SIG_it,
     (const void *) X509_SIG_new,
+    (const void *) X509_STORE_CTX_get0_store,
+    (const void *) X509_STORE_CTX_get1_certs,
+    (const void *) X509_STORE_CTX_get1_crls,
+    (const void *) X509_STORE_CTX_get_by_subject,
+    (const void *) X509_STORE_CTX_get_obj_by_subject,
+    (const void *) X509_STORE_add_lookup,
+    (const void *) X509_STORE_get0_objects,
+    (const void *) X509_STORE_get0_param,
+    (const void *) X509_STORE_get_cert_crl,
+    (const void *) X509_STORE_get_check_crl,
+    (const void *) X509_STORE_get_check_issued,
+    (const void *) X509_STORE_get_check_policy,
+    (const void *) X509_STORE_get_check_revocation,
+    (const void *) X509_STORE_get_cleanup,
+    (const void *) X509_STORE_get_ex_data,
+    (const void *) X509_STORE_get_get_crl,
+    (const void *) X509_STORE_get_get_issuer,
+    (const void *) X509_STORE_get_lookup_certs,
+    (const void *) X509_STORE_get_lookup_crls,
+    (const void *) X509_STORE_get_verify,
+    (const void *) X509_STORE_get_verify_cb,
+    (const void *) X509_STORE_lock,
+    (const void *) X509_STORE_set_cert_crl,
+    (const void *) X509_STORE_set_check_crl,
+    (const void *) X509_STORE_set_check_issued,
+    (const void *) X509_STORE_set_check_policy,
+    (const void *) X509_STORE_set_check_revocation,
+    (const void *) X509_STORE_set_cleanup,
+    (const void *) X509_STORE_set_ex_data,
+    (const void *) X509_STORE_set_get_crl,
+    (const void *) X509_STORE_set_get_issuer,
+    (const void *) X509_STORE_set_lookup_certs,
+    (const void *) X509_STORE_set_lookup_crls,
+    (const void *) X509_STORE_set_verify,
+    (const void *) X509_STORE_set_verify_cb,
+    (const void *) X509_STORE_unlock,
+    (const void *) X509_STORE_up_ref,
     (const void *) X509_VAL_free,
     (const void *) X509_VAL_it,
     (const void *) X509_VAL_new,
@@ -1591,6 +1685,7 @@ static const void *volatile refs[] = {
     (const void *) X509_get_proxy_pathlen,
     (const void *) X509_get_pubkey,
     (const void *) X509_get_serialNumber,
+    (const void *) X509_get_signature_info,
     (const void *) X509_get_signature_nid,
     (const void *) X509_get_subject_name,
     (const void *) X509_get_version,

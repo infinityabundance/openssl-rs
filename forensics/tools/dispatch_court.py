@@ -692,8 +692,17 @@ def rust_key(alias: str) -> str:
         if alias.startswith(prefix):
             alias = alias[len(prefix):]
             break
-    if alias.endswith("Fn"):
-        alias = alias[:-2]
+    # The crate names some aliases after the authority's own typedef -- `x509_lu.rs`'s
+    # `X509_LOOKUP_ctrl_fn`, `X509_STORE_CTX_verify_fn` and their siblings -- whose names end
+    # `_fn` rather than the camel-case `Fn` the earlier units used. `authority_key` already
+    # strips `_fn`, so without stripping it here too the two keys are asymmetric and a crate
+    # alias that mirrors its authority typedef exactly fails to link by convention. Both
+    # suffixes are stripped, longest first, so `OSSLFuncBioReadEx` and `X509_LOOKUP_ctrl_fn`
+    # both reach their authority typedef.
+    for suffix in ("_fn", "Fn"):
+        if alias.endswith(suffix):
+            alias = alias[:-len(suffix)]
+            break
     return squash(alias)
 
 

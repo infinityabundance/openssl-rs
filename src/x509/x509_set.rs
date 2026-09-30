@@ -1,35 +1,37 @@
-//! `crypto/x509/x509_set.c`'s `X509_SIG_INFO_set`, `X509_up_ref` and `ossl_x509_init_sig_info`.
-//! Phase 8.8 (D349) landed the first; Phase 10.8 added the second; **Phase 10.14.5 adds the
-//! third**, the signature-strength initialiser `ossl_x509v3_cache_extensions` (`v3_purp.c`) calls
-//! at the end of its cache pass.
+//! `crypto/x509/x509_set.c` — the X.509 object's mutator layer, transcribed whole. Phase 11.4
+//! completes it; Phases 8.8, 10.8, 10.14.1 and 10.14.5 landed its first seven exports.
 //!
-//! ## A partial unit, and the two exports this slice reaches
+//! `crypto/x509/x509_set.c` is 309 lines and **21 public exports**. The earlier phases landed
+//! five of them -- `X509_SIG_INFO_set` (`:200`), `X509_up_ref` (`:120`), `X509_set_version`
+//! (`:27-47`), `X509_get_version` (`:132-135`) and `X509_get0_extensions` (`:167-170`) -- plus the
+//! two internal helpers `ossl_x509_set1_time` (`:78-92`) and `ossl_x509_init_sig_info`
+//! (`:305-309`). **This slice lands the remaining sixteen**, the mutator layer proper:
 //!
-//! `crypto/x509/x509_set.c` is the X.509 object's mutator layer: **21 exports**, of which this
-//! module lands **five**: `X509_SIG_INFO_set` (`:200`) and `X509_up_ref` (`:120`) from Phase 8.8
-//! and 10.8, plus the three that 10.14.1's comparison/accessor slice reaches -- `X509_get_version`
-//! (`:132-135`), `X509_set_version` (`:27-47`) and the `ossl_x509_set1_time` helper (`:78-92`)
-//! that `x509cset.c`'s CRL setters and this unit's own validity setters share. **10.14.5 lands
-//! a sixth and seventh: the static `x509_sig_info_init` (`:217-302`) and its one-line wrapper
-//! `ossl_x509_init_sig_info` (`:305-309).** The other fourteen -- the four
-//! `X509_set_issuer_name`/`_subject_name`/`_pubkey`/`_serialNumber` setters, the six
-//! `notBefore`/`notAfter` accessors, `X509_get0_extensions`, `X509_get0_uids`,
-//! `X509_get0_tbs_sigalg`, `X509_get_X509_PUBKEY`, `X509_get_signature_info`,
-//! `X509_SIG_INFO_get` and `X509_get_signature_type` -- are the `X509` mutator layer proper.
-//! They are not this subphase's, and are withheld rather than stubbed.
+//! * the four setters `X509_set_serialNumber` (`:49-60`), `X509_set_issuer_name` (`:62-68`),
+//!   `X509_set_subject_name` (`:70-76`) and `X509_set_pubkey` (`:110-118`);
+//! * the six validity accessors `X509_set1_notBefore` (`:94-100`), `X509_set1_notAfter`
+//!   (`:102-108`), `X509_get0_notBefore` (`:137-140`), `X509_get0_notAfter` (`:142-145`),
+//!   `X509_getm_notBefore` (`:147-150`) and `X509_getm_notAfter` (`:152-155`);
+//! * the four readers `X509_get_signature_type` (`:157-160`), `X509_get_X509_PUBKEY` (`:162-165`),
+//!   `X509_get0_uids` (`:172-179`) and `X509_get0_tbs_sigalg` (`:181-184`);
+//! * `X509_SIG_INFO_get` (`:186-198`) and `X509_get_signature_info` (`:209-214`).
+//!
+//! Every one of the sixteen raises nothing, and the whole unit is now landed. The `X509_CRL_set_*`
+//! and `X509_REQ_set_*` families some plans group with this layer live in `x509cset.c` and
+//! `x509rset.c` (the latter already landed in [`crate::x509::x509rset`]) and are not this file's.
 //!
 //! **`ossl_x509_init_sig_info` is landed because `ossl_x509v3_cache_extensions` names it**, and
 //! it is the third of the three non-`x509_ext.c` names that function was measured to need (D461).
-//! Both of its authority callers are themselves withheld -- `X509_get_signature_info` (`:209-214`,
-//! blocked on `X509_check_purpose`) and `ossl_x509v3_cache_extensions` -- so it is **unreachable
-//! until 10.14.5 lands the cache**, and its `default:` branch routes through
+//! Of its two authority callers, `X509_get_signature_info` (`:209-214`) is landed by this same
+//! slice and calls it, so the initialiser is reachable now; the other, `ossl_x509v3_cache_extensions`,
+//! remains withheld. Its `default:` branch routes through
 //! `EVP_get_digestbynid`/`EVP_get_digestbyname`, the crate's recorded legacy-`OBJ_NAME` divergence
-//! (D333/D343); the transcription reproduces that path rather than papering over it. Neither fact
-//! is observable while the function has no landed caller, so no court names it.
+//! (D333/D343); the transcription reproduces that path rather than papering over it.
 //!
 //! **`ossl_x509_set1_time` (`:78-92`) was withheld with the mutator layer until 10.14.1**, and
 //! lands here: it duplicates one `ASN1_TIME` with `ASN1_STRING_dup`, frees the old one and sets a
-//! caller's `modified` flag (or, for the CRL paths, a NULL one).
+//! caller's `modified` flag (or, for the CRL paths, a NULL one). It is the shared half of the six
+//! validity setters landed by this slice.
 //!
 //! ## The `X509SigInfo` layout
 //!
@@ -41,9 +43,8 @@
 //! the name for the `sig_print` callback signature rather than declaring a second,
 //! placeholder one (D348's rule).
 //!
-//! The authority's reader, `X509_SIG_INFO_get` (`:186-198`), is not landed, so nothing
-//! reads the three fields this setter writes except the court and the unit test. They are
-//! read through the structure directly, which is what the reader does.
+//! The authority's reader, `X509_SIG_INFO_get` (`:186-198`), is landed by this same slice and
+//! reads the four fields this setter writes; the unit test drives the pair.
 //!
 //! ## No raise, and the court
 //!
@@ -60,19 +61,23 @@ use core::ptr;
 
 use crate::asn1::layout::Asn1String;
 use crate::asn1::prim::{ASN1_INTEGER_get, ASN1_INTEGER_set};
-use crate::asn1::string::{ASN1_INTEGER_free, ASN1_INTEGER_new, ASN1_STRING_dup, ASN1_TIME_free};
+use crate::asn1::string::{
+    ASN1_INTEGER_free, ASN1_INTEGER_new, ASN1_STRING_copy, ASN1_STRING_dup, ASN1_TIME_free,
+};
 use crate::asn1::x_algor::X509Algor;
 use crate::evp::digest::{EVP_MD_get_size, EvpMd};
 use crate::evp::legacy_evp::EVP_get_digestbyname;
-use crate::evp::pkey::EVP_PKEY_get_security_bits;
-use crate::evp::pkey_asn1::EVP_PKEY_asn1_find;
+use crate::evp::pkey::{EVP_PKEY_get_security_bits, EvpPkey};
+use crate::evp::pkey_asn1::{EVP_PKEY_asn1_find, EVP_PKEY_type};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::obj::{
     NID_id_GostR3411_94, NID_md5, NID_sha1, NID_sha256, NID_sha384, NID_sha512, NID_undef,
     OBJ_find_sigid_algs, OBJ_nid2sn, OBJ_obj2nid,
 };
 use crate::runtime::stack::OpenSslStack;
-use crate::x509::x_pubkey::X509_PUBKEY_get0;
+use crate::x509::v3_purp::X509_check_purpose;
+use crate::x509::x_name::{X509Name, X509_NAME_set};
+use crate::x509::x_pubkey::{X509Pubkey, X509_PUBKEY_get0, X509_PUBKEY_set};
 use crate::x509::x_x509::X509;
 
 /// `struct x509_sig_info_st` — `X509_SIG_INFO`, from `include/crypto/x509.h:50-59`.
@@ -405,6 +410,325 @@ pub unsafe extern "C" fn ossl_x509_init_sig_info(x: *mut X509) -> c_int {
     }
 }
 
+// ---------------------------------------------------------------------------------------------
+// The mutator layer proper — `crypto/x509/x509_set.c:49-214` (Phase 11.4)
+// ---------------------------------------------------------------------------------------------
+
+/// `int X509_set_serialNumber(X509 *x, ASN1_INTEGER *serial)` — `crypto/x509/x509_set.c:49-60`.
+///
+/// Copies `serial` into the certificate's embedded `cert_info.serialNumber`; when the source is the
+/// field itself the copy is skipped and the cached encoding marked stale instead, which is the
+/// authority's own distinction between "the caller set it" and "it is already this value".
+///
+/// # Safety
+///
+/// `x` is NULL or a live `X509`; `serial` is NULL or a live `ASN1_INTEGER`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_set_serialNumber(x: *mut X509, serial: *mut Asn1String) -> c_int {
+    if x.is_null() {
+        return 0;
+    }
+    // SAFETY: `x` is live per the contract; `serialNumber` is its own embedded field.
+    let in_ = unsafe { &raw mut (*x).cert_info.serialNumber };
+    if in_ != serial {
+        // SAFETY: `in_` is the certificate's own field and `serial` is live per the contract.
+        return unsafe { ASN1_STRING_copy(in_, serial) };
+    }
+    // SAFETY: `x` is live and `enc.modified` is its own field.
+    unsafe { (*x).cert_info.enc.modified = 1 };
+    1
+}
+
+/// `int X509_set_issuer_name(X509 *x, const X509_NAME *name)` — `crypto/x509/x509_set.c:62-68`.
+///
+/// # Safety
+///
+/// `x` is NULL or a live `X509`; `name` is NULL or a live `X509_NAME`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_set_issuer_name(x: *mut X509, name: *const X509Name) -> c_int {
+    if x.is_null() {
+        return 0;
+    }
+    // SAFETY: `x` is live, so the `issuer` slot is its own; `name` is NULL or live per the
+    // contract.
+    if unsafe { X509_NAME_set(&raw mut (*x).cert_info.issuer, name) } == 0 {
+        return 0;
+    }
+    // SAFETY: `x` is live and `enc.modified` is its own field.
+    unsafe { (*x).cert_info.enc.modified = 1 };
+    1
+}
+
+/// `int X509_set_subject_name(X509 *x, const X509_NAME *name)` — `crypto/x509/x509_set.c:70-76`.
+///
+/// # Safety
+///
+/// `x` is NULL or a live `X509`; `name` is NULL or a live `X509_NAME`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_set_subject_name(x: *mut X509, name: *const X509Name) -> c_int {
+    if x.is_null() {
+        return 0;
+    }
+    // SAFETY: `x` is live, so the `subject` slot is its own; `name` is NULL or live per the
+    // contract.
+    if unsafe { X509_NAME_set(&raw mut (*x).cert_info.subject, name) } == 0 {
+        return 0;
+    }
+    // SAFETY: `x` is live and `enc.modified` is its own field.
+    unsafe { (*x).cert_info.enc.modified = 1 };
+    1
+}
+
+/// `int X509_set1_notBefore(X509 *x, const ASN1_TIME *tm)` — `crypto/x509/x509_set.c:94-100`.
+///
+/// A NULL `x` or `tm` is refused; otherwise [`ossl_x509_set1_time`] duplicates `tm` into the
+/// validity field and marks the cached encoding stale.
+///
+/// # Safety
+///
+/// `x` is NULL or a live `X509`; `tm` is NULL or a live `ASN1_TIME`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_set1_notBefore(x: *mut X509, tm: *const Asn1String) -> c_int {
+    if x.is_null() || tm.is_null() {
+        return 0;
+    }
+    // SAFETY: `x` is live per the contract, so both field slots are its own; `tm` is live.
+    unsafe {
+        ossl_x509_set1_time(
+            &raw mut (*x).cert_info.enc.modified,
+            &raw mut (*x).cert_info.validity.notBefore,
+            tm,
+        )
+    }
+}
+
+/// `int X509_set1_notAfter(X509 *x, const ASN1_TIME *tm)` — `crypto/x509/x509_set.c:102-108`.
+///
+/// # Safety
+///
+/// `x` is NULL or a live `X509`; `tm` is NULL or a live `ASN1_TIME`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_set1_notAfter(x: *mut X509, tm: *const Asn1String) -> c_int {
+    if x.is_null() || tm.is_null() {
+        return 0;
+    }
+    // SAFETY: `x` is live per the contract, so both field slots are its own; `tm` is live.
+    unsafe {
+        ossl_x509_set1_time(
+            &raw mut (*x).cert_info.enc.modified,
+            &raw mut (*x).cert_info.validity.notAfter,
+            tm,
+        )
+    }
+}
+
+/// `int X509_set_pubkey(X509 *x, EVP_PKEY *pkey)` — `crypto/x509/x509_set.c:110-118`.
+///
+/// # Safety
+///
+/// `x` is NULL or a live `X509`; `pkey` is NULL or a live `EVP_PKEY`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_set_pubkey(x: *mut X509, pkey: *mut EvpPkey) -> c_int {
+    if x.is_null() {
+        return 0;
+    }
+    // SAFETY: `x` is live, so the `key` slot is its own; `pkey` is NULL or live per the contract.
+    if unsafe { X509_PUBKEY_set(&raw mut (*x).cert_info.key, pkey) } == 0 {
+        return 0;
+    }
+    // SAFETY: `x` is live and `enc.modified` is its own field.
+    unsafe { (*x).cert_info.enc.modified = 1 };
+    1
+}
+
+/// `const ASN1_TIME *X509_get0_notBefore(const X509 *x)` — `crypto/x509/x509_set.c:137-140`.
+///
+/// The borrowed validity start; `X509_getm_notBefore` is its mutable twin.
+///
+/// # Safety
+///
+/// `x` is a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get0_notBefore(x: *const X509) -> *const Asn1String {
+    // SAFETY: `x` is live per the contract; `validity.notBefore` is its own field.
+    unsafe { (*x).cert_info.validity.notBefore as *const Asn1String }
+}
+
+/// `const ASN1_TIME *X509_get0_notAfter(const X509 *x)` — `crypto/x509/x509_set.c:142-145`.
+///
+/// # Safety
+///
+/// `x` is a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get0_notAfter(x: *const X509) -> *const Asn1String {
+    // SAFETY: `x` is live per the contract; `validity.notAfter` is its own field.
+    unsafe { (*x).cert_info.validity.notAfter as *const Asn1String }
+}
+
+/// `ASN1_TIME *X509_getm_notBefore(const X509 *x)` — `crypto/x509/x509_set.c:147-150`.
+///
+/// The mutable form, which the deprecated `X509_get_notBefore` macro also spells.
+///
+/// # Safety
+///
+/// `x` is a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_getm_notBefore(x: *const X509) -> *mut Asn1String {
+    // SAFETY: `x` is live per the contract; `validity.notBefore` is its own field.
+    unsafe { (*x).cert_info.validity.notBefore }
+}
+
+/// `ASN1_TIME *X509_getm_notAfter(const X509 *x)` — `crypto/x509/x509_set.c:152-155`.
+///
+/// # Safety
+///
+/// `x` is a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_getm_notAfter(x: *const X509) -> *mut Asn1String {
+    // SAFETY: `x` is live per the contract; `validity.notAfter` is its own field.
+    unsafe { (*x).cert_info.validity.notAfter }
+}
+
+/// `int X509_get_signature_type(const X509 *x)` — `crypto/x509/x509_set.c:157-160`.
+///
+/// `EVP_PKEY_type(OBJ_obj2nid(x->sig_alg.algorithm))` — the key type the outer signature names,
+/// not the signature algorithm.
+///
+/// # Safety
+///
+/// `x` is a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get_signature_type(x: *const X509) -> c_int {
+    // SAFETY: `x` is live per the contract; `sig_alg.algorithm` is its own.
+    unsafe { EVP_PKEY_type(OBJ_obj2nid((*x).sig_alg.algorithm)) }
+}
+
+/// `X509_PUBKEY *X509_get_X509_PUBKEY(const X509 *x)` — `crypto/x509/x509_set.c:162-165`.
+///
+/// The embedded `cert_info.key`, borrowed; the header's own comment gives its one use,
+/// `i2d_X509_PUBKEY(X509_get_X509_PUBKEY(x), &buf)`.
+///
+/// # Safety
+///
+/// `x` is a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get_X509_PUBKEY(x: *const X509) -> *mut X509Pubkey {
+    // SAFETY: `x` is live per the contract; `cert_info.key` is its own field.
+    unsafe { (*x).cert_info.key }
+}
+
+/// `void X509_get0_uids(const X509 *x, const ASN1_BIT_STRING **piuid, const ASN1_BIT_STRING
+/// **psuid)` — `crypto/x509/x509_set.c:172-179`.
+///
+/// Writes the optional issuer/subject unique IDs through whichever slot the caller passed.
+///
+/// # Safety
+///
+/// `x` is a live `X509`; `piuid` and `psuid` are each NULL or a writable slot.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get0_uids(
+    x: *const X509,
+    piuid: *mut *const Asn1String,
+    psuid: *mut *const Asn1String,
+) {
+    if !piuid.is_null() {
+        // SAFETY: `piuid` is writable and `x` is live per the contract.
+        unsafe { *piuid = (*x).cert_info.issuerUID };
+    }
+    if !psuid.is_null() {
+        // SAFETY: `psuid` is writable and `x` is live per the contract.
+        unsafe { *psuid = (*x).cert_info.subjectUID };
+    }
+}
+
+/// `const X509_ALGOR *X509_get0_tbs_sigalg(const X509 *x)` — `crypto/x509/x509_set.c:181-184`.
+///
+/// The TBS signature algorithm, borrowed from the embedded `cert_info.signature`.
+///
+/// # Safety
+///
+/// `x` is a live `X509`.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get0_tbs_sigalg(x: *const X509) -> *const X509Algor {
+    // SAFETY: `x` is live per the contract; `cert_info.signature` is its own embedded field.
+    unsafe { &raw const (*x).cert_info.signature }
+}
+
+/// `int X509_SIG_INFO_get(const X509_SIG_INFO *siginf, int *mdnid, int *pknid, int *secbits,
+/// uint32_t *flags)` — `crypto/x509/x509_set.c:186-198`.
+///
+/// The reader for the [`X509SigInfo`] block [`X509_SIG_INFO_set`] writes; its answer tests the
+/// `X509_SIG_INFO_VALID` bit.
+///
+/// # Safety
+///
+/// `siginf` is a live `X509_SIG_INFO`; each out-pointer is NULL or writable for its type.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_SIG_INFO_get(
+    siginf: *const X509SigInfo,
+    mdnid: *mut c_int,
+    pknid: *mut c_int,
+    secbits: *mut c_int,
+    flags: *mut u32,
+) -> c_int {
+    // SAFETY: `siginf` is live per the contract; each out-pointer is NULL or writable for its type.
+    unsafe {
+        if !mdnid.is_null() {
+            *mdnid = (*siginf).mdnid;
+        }
+        if !pknid.is_null() {
+            *pknid = (*siginf).pknid;
+        }
+        if !secbits.is_null() {
+            *secbits = (*siginf).secbits;
+        }
+        if !flags.is_null() {
+            *flags = (*siginf).flags;
+        }
+        c_int::from((*siginf).flags & X509_SIG_INFO_VALID != 0)
+    }
+}
+
+/// `int X509_get_signature_info(X509 *x, int *mdnid, int *pknid, int *secbits, uint32_t *flags)` —
+/// `crypto/x509/x509_set.c:209-214`.
+///
+/// Runs `X509_check_purpose(x, -1, -1)` first so the certificate's cached `siginf` is current, then
+/// reports it through [`X509_SIG_INFO_get`].
+///
+/// # Safety
+///
+/// `x` is a live `X509`; each out-pointer is NULL or writable for its type.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_get_signature_info(
+    x: *mut X509,
+    mdnid: *mut c_int,
+    pknid: *mut c_int,
+    secbits: *mut c_int,
+    flags: *mut u32,
+) -> c_int {
+    // SAFETY: `x` is live per the contract; each out-pointer is NULL or writable for its type.
+    unsafe {
+        X509_check_purpose(x, -1, -1);
+        X509_SIG_INFO_get(&raw const (*x).siginf, mdnid, pknid, secbits, flags)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -424,5 +748,24 @@ mod tests {
         assert_eq!(siginf.pknid, 6);
         assert_eq!(siginf.secbits, 128);
         assert_eq!(siginf.flags, 0x5);
+
+        // The reader landed by the same slice reports the four fields back, and its answer tests
+        // the `X509_SIG_INFO_VALID` bit.
+        let mut mdnid = 0;
+        let mut pknid = 0;
+        let mut secbits = 0;
+        let mut flags = 0u32;
+        // SAFETY: `siginf` is a live local and every out-pointer is a live local.
+        let valid = unsafe {
+            X509_SIG_INFO_get(
+                &raw const siginf,
+                &raw mut mdnid,
+                &raw mut pknid,
+                &raw mut secbits,
+                &raw mut flags,
+            )
+        };
+        assert_eq!((mdnid, pknid, secbits, flags), (672, 6, 128, 0x5));
+        assert_eq!(valid, 1);
     }
 }

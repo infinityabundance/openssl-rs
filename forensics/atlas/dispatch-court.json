@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 613,
+      "crate_files_read": 615,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,12 +12,12 @@
       "identities_authority_only": 45,
       "identities_checked": 232,
       "identities_mismatches": 0,
-      "links_convention": 252,
+      "links_convention": 271,
       "links_documented": 25,
       "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 334,
-      "signatures_checked": 303,
+      "signatures_authority_only": 315,
+      "signatures_checked": 322,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 208,
       "signatures_unlinked": 0,
@@ -1626,25 +1626,6 @@
         "TS_time_cb",
         "X509V3_EXT_FREE",
         "X509V3_EXT_R2I",
-        "X509_LOOKUP_ctrl_ex_fn",
-        "X509_LOOKUP_ctrl_fn",
-        "X509_LOOKUP_get_by_alias_fn",
-        "X509_LOOKUP_get_by_fingerprint_fn",
-        "X509_LOOKUP_get_by_issuer_serial_fn",
-        "X509_LOOKUP_get_by_subject_ex_fn",
-        "X509_LOOKUP_get_by_subject_fn",
-        "X509_STORE_CTX_cert_crl_fn",
-        "X509_STORE_CTX_check_crl_fn",
-        "X509_STORE_CTX_check_issued_fn",
-        "X509_STORE_CTX_check_policy_fn",
-        "X509_STORE_CTX_check_revocation_fn",
-        "X509_STORE_CTX_cleanup_fn",
-        "X509_STORE_CTX_get_crl_fn",
-        "X509_STORE_CTX_get_issuer_fn",
-        "X509_STORE_CTX_lookup_certs_fn",
-        "X509_STORE_CTX_lookup_crls_fn",
-        "X509_STORE_CTX_verify_cb",
-        "X509_STORE_CTX_verify_fn",
         "bio_info_cb",
         "conf_finish_func",
         "custom_ext_add_cb",
@@ -4273,6 +4254,158 @@
           "authority": "X509V3_EXT_I2R",
           "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque), ptr(opaque), int:4:s)",
           "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(opaque), ptr(opaque), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_LOOKUP_ctrl_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_LOOKUP_ctrl_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:8:s, ptr(ptr(int:1:s)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:8:s, ptr(ptr(int:1:s)))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_LOOKUP_ctrl_ex_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_LOOKUP_ctrl_ex_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:8:s, ptr(ptr(int:1:s)), ptr(opaque), ptr(const(int:1:s)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:8:s, ptr(ptr(int:1:s)), ptr(opaque), ptr(const(int:1:s)))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_LOOKUP_get_by_subject_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_LOOKUP_get_by_subject_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_LOOKUP_get_by_subject_ex_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_LOOKUP_get_by_subject_ex_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(opaque)), ptr(opaque), ptr(opaque), ptr(const(int:1:s)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(opaque)), ptr(opaque), ptr(opaque), ptr(const(int:1:s)))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_LOOKUP_get_by_issuer_serial_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_LOOKUP_get_by_issuer_serial_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(opaque)), ptr(const(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(opaque)), ptr(const(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_LOOKUP_get_by_fingerprint_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_LOOKUP_get_by_fingerprint_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:u)), int:4:s, ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:u)), int:4:s, ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_LOOKUP_get_by_alias_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_LOOKUP_get_by_alias_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:4:s, ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), int:4:s, ptr(const(int:1:s)), int:4:s, ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_verify_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_verify_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_verify_cb",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_verify_cb",
+          "authority_signature": "fptr(int:4:s; int:4:s, ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; int:4:s, ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_get_issuer_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_get_issuer_fn",
+          "authority_signature": "fptr(int:4:s; ptr(ptr(opaque)), ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(ptr(opaque)), ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_check_issued_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_check_issued_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_check_revocation_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_check_revocation_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_get_crl_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_get_crl_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(opaque)), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(ptr(opaque)), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_check_crl_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_check_crl_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_cert_crl_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_cert_crl_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_check_policy_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_check_policy_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_lookup_certs_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_lookup_certs_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_lookup_crls_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_lookup_crls_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(const(opaque)), ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(const(opaque)), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "X509_STORE_CTX_cleanup_fn",
+          "at": "src/x509/x509_lu.rs",
+          "authority": "X509_STORE_CTX_cleanup_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
           "how": "convention"
         }
       ],

@@ -3,13 +3,13 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 954 inherited `implemented` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). **This stratum has landed no unit of its own**, so `RT-X509-REF` is the only court it can register until 11.1: none of the store, verification, attribute-certificate, request, `v3` or PEM surfaces exists, and a probe that called one would need the very object graph this stratum has not built. `pending_courts` names the courts the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts must compare when they land.",
+    "claim": "`RT-X509-STORE` is a **behavioural** court: its probe calls the store/lookup/object objects 11.1a lands and the mutator surface 11.4a lands over fixed DER fixtures, and the candidate's transcript must equal the authority's observation for observation. `RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 993 exports that no behavioural court drives -- the 954 inherited `implemented` ones and the 39 of 11.1a's/11.4a's own that `RT-X509-STORE` cannot reach without a store 11.1a does not build or the opaque `X509_SIG_INFO` -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `pending_courts` names the courts the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts must compare when they land.",
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 954,
+        "authority_observations": 993,
         "candidate_exit_code": 0,
-        "candidate_observations": 954,
+        "candidate_observations": 993,
         "candidate_stderr_tail": [],
         "court": "RT-X509-REF",
         "crashed": false,
@@ -21,21 +21,37 @@
           "candidate": "artifacts/phase11/probes/rt_coverage_ref_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 204,
+        "candidate_exit_code": 0,
+        "candidate_observations": 204,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-STORE",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_store_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_store_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_store_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "RT-X509": "11.7 -- the remaining shared units whose closure crosses into the landed strata (`x_all.c`, `p5_scrypt.c`, `nsseq.c`, `x509_def.c`, `x_info.c`, `x_pkey.c`, `evp_lib.c`, `evp_pkey.c`, `t_spki.c`, `p12_mutl.c`, `asn_mstbl.c`)",
       "RT-X509-ACERT": "11.3 -- the `X509_ACERT` item group and its accessors, setters and `X509_ACERT_verify` (`x509_acert.c`, `x509aset.c`, `x_ietfatt.c`, `t_acert.c`)",
       "RT-X509-PEM": "11.6 -- the `PEM_read[_bio]_X509*`/`PEM_write[_bio]_X509*` and `PEM_X509_INFO_*` container surface (`pem_all.c`, `pem_pk8.c`, `pem_info.c`, `pem_x509.c`, `pem_xaux.c`)",
-      "RT-X509-REQ": "11.4 -- `X509_REQ`, the `X509_set_*`/`X509_CRL_set_*` mutators, the extension accessors and `X509_to_X509_REQ` (`x509_req.c`, `x509_set.c`, `x_req.c`, `x_crl.c`, `x_exten.c`, `t_*.c`)",
-      "RT-X509-STORE": "11.1 -- the `X509_STORE` object, the four `X509_LOOKUP_METHOD`s, the `X509_OBJECT` cache and the file/`dir`/store lookups (`x509_lu.c`, `x509_meth.c`, `x509_trust.c`, `x509_d2.c`, `by_*.c`)",
+      "RT-X509-REQ": "11.4 -- the rest of `X509_REQ` (`x_crl.c`, `x_exten.c`, `t_*.c`): the 11.4a units 11.4 landed (`x509_req.c`, `x509_set.c`, `x_req.c`) are driven by `RT-X509-STORE`, and what remains open is the `X509_CRL_set_*` mutators, the extension accessors and `X509_to_X509_REQ`",
       "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the `GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, `v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)",
       "RT-X509-VERIFY": "11.2 -- `X509_verify_cert`, the `X509_STORE_CTX` chain builder, the `X509_VERIFY_PARAM_*` surface and the policy tree (`x509_vfy.c`, `x509_vpm.c`, `pcy_tree.c`)"
     },
     "summary": {
       "fail": 0,
-      "pass": 1,
-      "total": 1
+      "pass": 2,
+      "total": 2
     }
   },
   "generator": "forensics/tools/phase11_courts.py",
@@ -48,7 +64,12 @@
     {
       "name": "probe",
       "path": "courts/phase11/rt_coverage_ref_probe.c",
-      "sha256": "ebffa30a0166ea4e34baaca01e6faf8d99c06e4cb0aea759d75fed08d3edfd39"
+      "sha256": "669300ebee74ec3215b5beff01bbe1e834024495ecb802f8708bfed7846feee6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_store_probe.c",
+      "sha256": "6c63b4f19e939f146b7ce1def3e9738504f4520f711afab6810dca30110b4427"
     }
   ],
   "kind": "phase11-courts",
