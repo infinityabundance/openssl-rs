@@ -106,6 +106,7 @@ use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void, CStr};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
+use crate::asn1::layout::Asn1String;
 use crate::context::dispatch::{entry_function, OsslDispatch, OSSL_DISPATCH_END};
 use crate::evp::algorithm::{ossl_algorithm_get1_first_name, OSSL_OP_DIGEST};
 use crate::evp::fetch::{
@@ -124,8 +125,9 @@ use crate::evp::pkey::{evp_pkey_export_to_provider, EvpPkey};
 use crate::evp::pkey_asn1::Engine;
 use crate::evp::pkey_ctx::{
     evp_pkey_ctx_dup, evp_pkey_ctx_free, evp_pkey_ctx_free_old_ops, evp_pkey_ctx_use_cached_data,
-    EVP_PKEY_CTX_dup, EVP_PKEY_CTX_free, EVP_PKEY_CTX_new, EVP_PKEY_CTX_new_from_pkey, EvpPkeyCtx,
-    EVP_PKEY_OP_SIGNCTX, EVP_PKEY_OP_TYPE_SIG, EVP_PKEY_OP_UNDEFINED, EVP_PKEY_OP_VERIFYCTX,
+    EVP_PKEY_CTX_dup, EVP_PKEY_CTX_free, EVP_PKEY_CTX_new, EVP_PKEY_CTX_new_from_pkey,
+    EVP_PKEY_CTX_set1_id, EvpPkeyCtx, EVP_PKEY_OP_SIGNCTX, EVP_PKEY_OP_TYPE_SIG,
+    EVP_PKEY_OP_UNDEFINED, EVP_PKEY_OP_VERIFYCTX,
 };
 use crate::evp::signature::{
     evp_signature_fetch_from_prov, EVP_SIGNATURE_fetch, EVP_SIGNATURE_free,
@@ -1786,6 +1788,60 @@ pub unsafe extern "C" fn EVP_MD_CTX_reset(ctx: *mut EvpMdCtx) -> c_int {
 #[no_mangle]
 pub extern "C" fn EVP_MD_CTX_new() -> *mut EvpMdCtx {
     CRYPTO_zalloc(core::mem::size_of::<EvpMdCtx>(), FILE, LINE_ZALLOC_CTX).cast::<EvpMdCtx>()
+}
+
+/// `EVP_MD_CTX *evp_md_ctx_new_ex(EVP_PKEY *pkey, const ASN1_OCTET_STRING *id,
+/// OSSL_LIB_CTX *libctx, const char *propq)` — `crypto/evp/digest.c:104-126`.
+///
+/// Phase 10.10 lands this: it is the reachable one of the two functions of `crypto/evp/digest.c`
+/// that were still absent, and `crypto/asn1/a_sign.c`'s `ASN1_item_sign_ex` is its only caller.
+/// (The other, `evp_digest_fetch_from_prov` at `:1200-1209`, is **withheld by name**: its closure
+/// is complete -- `evp_generic_fetch_from_prov`, landed -- but it has no caller anywhere in the
+/// authority (its only other appearance is the `evp_local.h` prototype) and none here, so defining
+/// it would be uncalled code; it can land the day a caller exists.) It builds a context and a
+/// key context, binds the signer's `id` (the `distid` a signature scheme carries) into the key
+/// context when there is one, and hands the pair to `EVP_MD_CTX_set_pkey_ctx`. The `#ifndef
+/// FIPS_MODULE` guard the authority carries is constant-true in this profile, so the function is
+/// not conditional here.
+///
+/// # Safety
+///
+/// `pkey` must be NULL or a live key; `id` NULL or live; `libctx` NULL or live; `propq` NULL or
+/// NUL-terminated.
+pub(crate) unsafe fn evp_md_ctx_new_ex(
+    pkey: *mut EvpPkey,
+    id: *const Asn1String,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut EvpMdCtx {
+    let ctx = EVP_MD_CTX_new();
+    // SAFETY: the arguments are forwarded under this function's contract.
+    let pctx = unsafe { EVP_PKEY_CTX_new_from_pkey(libctx, pkey, propq) };
+    if ctx.is_null() || pctx.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::DIGEST_112) };
+        // SAFETY: `pctx` is NULL or this call's own context; `ctx` is NULL or this call's own.
+        unsafe {
+            EVP_PKEY_CTX_free(pctx);
+            EVP_MD_CTX_free(ctx);
+        }
+        return ptr::null_mut();
+    }
+    if !id.is_null() {
+        // SAFETY: `id` is live and `pctx` is live; the `data`/`length` pair is its content.
+        let ok = unsafe { EVP_PKEY_CTX_set1_id(pctx, (*id).data.cast::<c_void>(), (*id).length) };
+        if ok <= 0 {
+            // SAFETY: both are this call's own contexts.
+            unsafe {
+                EVP_PKEY_CTX_free(pctx);
+                EVP_MD_CTX_free(ctx);
+            }
+            return ptr::null_mut();
+        }
+    }
+    // SAFETY: `ctx` is live and `pctx` is handed to it.
+    unsafe { EVP_MD_CTX_set_pkey_ctx(ctx, pctx) };
+    ctx
 }
 
 /// `void EVP_MD_CTX_free(EVP_MD_CTX *ctx)`.

@@ -454,6 +454,34 @@ COURTS: list[tuple[str, int, str, str]] = [
     ("rt-rand-users", 9, "rt_rand_users_probe",
      "the differential probe for the random layer's first three consumers "
      "(RT-RAND-USERS)"),
+    # Phase 10 -- key formats, PKCS#12 and STORE.
+    #
+    # The five courts that compile the same probe source against both sides. Their
+    # descriptions are each probe's own one-line subject, as Phase 7's, 8's and 9's
+    # rows carry theirs (D200, D413, D431).
+    #
+    # `CT-PKCS12` is deliberately absent, and the reason is the instrument exactly as
+    # it is for Phase 8's three `CT-*` courts and Phase 9's two: it is **candidate-only
+    # construction verification** against the pinned `evppbe_pkcs12.txt` vectors rather
+    # than a differential court, so it has no authority transcript to diff and no
+    # `artifacts/phase10/probes/<probe>.{authority,candidate}` pair to stage. Its
+    # evidence is its row in `artifacts/phase10/COURTS.json`; a manifest generated from
+    # this table would name execution-context artifacts that do not exist (D13, D201).
+    ("rt-keyformat-ref", 10, "rt_coverage_ref_probe",
+     "the reference basis for the key-format plane's inherited entries: the address "
+     "of each inherited `implemented` export, printed as non-NULL or NULL"),
+    ("rt-codec", 10, "rt_codec_probe",
+     "the encoder and decoder rows Phase 10.1 lands, driven through the public "
+     "`OSSL_ENCODER_*`/`OSSL_DECODER_*` surface"),
+    ("rt-keyformat", 10, "rt_keyformat_probe",
+     "the twenty-six `d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` names phases 5 and 7 "
+     "handed forward"),
+    ("rt-pkcs12", 10, "rt_pkcs12_probe",
+     "the `PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups, the container "
+     "and the PKCS#12 KDF surface"),
+    ("rt-store", 10, "rt_store_probe",
+     "the `OSSL_STORE_LOADER` object, the scheme registry, the `OSSL_STORE_INFO` "
+     "type-name table and the `OSSL_STORE_CTX` state machine"),
 ]
 
 

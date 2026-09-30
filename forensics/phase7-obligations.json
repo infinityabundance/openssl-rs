@@ -5,67 +5,21 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 6,
-      "structured_rows": 3,
+      "structured_blockers": 3,
+      "structured_rows": 1,
       "unblocked_rows": 18,
       "unblocked_symbols": 66
     },
     "complete": true,
     "counts": {
       "atlas_owned": 924,
-      "deferred_to_later_phase": 217,
-      "implemented": 733,
+      "deferred_to_later_phase": 214,
+      "implemented": 736,
       "open_in_this_stratum": 0,
       "owned": 950,
       "received_by_handoff": 26
     },
     "deferred": [
-      {
-        "binding_phase": 11,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/asn1/a_sign.c",
-            "kind": "exported",
-            "line": 146,
-            "name": "ASN1_item_sign_ctx",
-            "owning_phase": 11
-          },
-          {
-            "authority_unit": "crypto/asn1/a_verify.c",
-            "kind": "exported",
-            "line": 111,
-            "name": "ASN1_item_verify_ctx",
-            "owning_phase": 11
-          }
-        ],
-        "declaring_header": "asn1.h",
-        "owning_phase": 11,
-        "reason": "`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:121`) builds its digest context and then hands it to `ASN1_item_sign_ctx` (`:138`); `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:95`) is the same shape around `ASN1_item_verify_ctx` (`:104`). Both delegates are declared in `x509.h`, are defined in those same two files (`a_sign.c:146`, `a_verify.c:111`) and are Phase 11's exports, so the Phase 5 -> 7 hand-off cannot be completed here; `forensics/prerequisites.json` carries the pair with this reason and `RT-EVP-PKEY`'s `NOT_MEASURED` lines name them. `evp_md_ctx_new_ex`, the other callee, is `crypto/evp/digest.c`'s own internal and belongs with this stratum.",
-        "symbol": "ASN1_item_sign_ex"
-      },
-      {
-        "binding_phase": 11,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/asn1/a_sign.c",
-            "kind": "exported",
-            "line": 146,
-            "name": "ASN1_item_sign_ctx",
-            "owning_phase": 11
-          },
-          {
-            "authority_unit": "crypto/asn1/a_verify.c",
-            "kind": "exported",
-            "line": 111,
-            "name": "ASN1_item_verify_ctx",
-            "owning_phase": 11
-          }
-        ],
-        "declaring_header": "asn1.h",
-        "owning_phase": 11,
-        "reason": "`ASN1_item_sign_ex` (`crypto/asn1/a_sign.c:121`) builds its digest context and then hands it to `ASN1_item_sign_ctx` (`:138`); `ASN1_item_verify_ex` (`crypto/asn1/a_verify.c:95`) is the same shape around `ASN1_item_verify_ctx` (`:104`). Both delegates are declared in `x509.h`, are defined in those same two files (`a_sign.c:146`, `a_verify.c:111`) and are Phase 11's exports, so the Phase 5 -> 7 hand-off cannot be completed here; `forensics/prerequisites.json` carries the pair with this reason and `RT-EVP-PKEY`'s `NOT_MEASURED` lines name them. `evp_md_ctx_new_ex`, the other callee, is `crypto/evp/digest.c`'s own internal and belongs with this stratum.",
-        "symbol": "ASN1_item_verify_ex"
-      },
       {
         "binding_phase": 9,
         "blocked_by": [],
@@ -357,22 +311,6 @@
         "owning_phase": 9,
         "reason": "`crypto/evp/p_seal.c:42` takes the session key from `EVP_CIPHER_CTX_rand_key` and `:46` fills the IV with `RAND_priv_bytes_ex(libctx, iv, len, 0)`. The `RAND_*` front landed in D313, so the blocker this row named is now a landed callee; `EVP_CIPHER_CTX_rand_key` is the second name of this group and is owed with it.",
         "symbol": "EVP_SealInit"
-      },
-      {
-        "binding_phase": 11,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/x509/v3_utl.c",
-            "kind": "exported",
-            "line": 266,
-            "name": "X509V3_get_value_bool",
-            "owning_phase": 11
-          }
-        ],
-        "declaring_header": "evp.h",
-        "owning_phase": 11,
-        "reason": "`crypto/evp/evp_cnf.c:69` registers `alg_module_init` (`:24`), whose `fips_mode` arm reads the section value with `X509V3_get_value_bool` (`:46`, defined at `crypto/x509/v3_utl.c:266` and declared in `x509v3.h`, Phase 11's). The other three calls in the handler -- `CONF_imodule_get_value`, `NCONF_get_section`, `evp_set_default_properties_int` -- are landed, so Phase 11 is the only blocker, and it is the same one the subphase plan names for this name.",
-        "symbol": "EVP_add_alg_module"
       },
       {
         "binding_phase": 13,
@@ -1843,7 +1781,7 @@
       "8": 27,
       "9": 12,
       "10": 10,
-      "11": 5,
+      "11": 2,
       "13": 163
     },
     "handoffs_discharged": {
@@ -2037,6 +1975,8 @@
       ]
     },
     "implemented": [
+      "ASN1_item_sign_ex",
+      "ASN1_item_verify_ex",
       "BIO_f_base64",
       "BIO_f_cipher",
       "BIO_f_md",
@@ -2687,6 +2627,7 @@
       "EVP_SignFinal_ex",
       "EVP_VerifyFinal",
       "EVP_VerifyFinal_ex",
+      "EVP_add_alg_module",
       "EVP_add_cipher",
       "EVP_add_digest",
       "EVP_blake2b512",
@@ -3004,6 +2945,12 @@
         ]
       },
       {
+        "module": "src/evp/evp_cnf.rs",
+        "prefixes": [
+          "EVP_add_alg_module"
+        ]
+      },
+      {
         "module": "src/evp/legacy_evp.rs",
         "prefixes": [
           "OpenSSL_add_all",
@@ -3011,7 +2958,6 @@
           "EVP_cleanup",
           "EVP_add_cipher",
           "EVP_add_digest",
-          "EVP_add_alg_module",
           "SSLeay_add",
           "OpenSSL_add_all_algorithms"
         ]
@@ -3040,6 +2986,7 @@
       "src/evp/cipher.rs": 110,
       "src/evp/digest.rs": 105,
       "src/evp/encode.rs": 12,
+      "src/evp/evp_cnf.rs": 1,
       "src/evp/exchange.rs": 11,
       "src/evp/fetch.rs": 4,
       "src/evp/kdf.rs": 26,
@@ -3047,7 +2994,7 @@
       "src/evp/keymgmt.rs": 13,
       "src/evp/legacy_cipher.rs": 144,
       "src/evp/legacy_digest.rs": 6,
-      "src/evp/legacy_evp.rs": 3,
+      "src/evp/legacy_evp.rs": 2,
       "src/evp/mac.rs": 29,
       "src/evp/p_legacy.rs": 13,
       "src/evp/pbe.rs": 10,
@@ -3084,7 +3031,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "45cf04e6fc30928b4fa6a43b8a83a8f993f1a374177be67ed96c351ab2318f86"
+      "sha256": "9613da262c1681c6baaf93ad119d40ed3e177dd924dd8977b0552e574870c0e5"
     },
     {
       "name": "export-defining-units",
@@ -3094,7 +3041,7 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "9efd32cc11a63889416315eb89741c9f12d6defe467f979eb0a3dcc7ccb363dd"
+      "sha256": "c78da2f1604cab793d50cdea67c828a066403ce79e788ec9d2a0a299a3cb10c4"
     },
     {
       "name": "typedef-owners",
@@ -3104,12 +3051,12 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "dc20cc52dab0e2aa85cb19c56fbeac02edd99028a16de3e5197ddb798b857a58"
+      "sha256": "c89e00332148cd1ca272bda20f03d19cea821697b535ce2e90b6d74541942995"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "98c1170519c46b44cfef30fe19250059f86409dcd36412ff8874bf63c8687419"
+      "sha256": "d0348847727b794f350b2ccefd6eb93cb59c7d452aeb3cbce312287e59e4b016"
     },
     {
       "name": "authority-source-tree-and-crate-source",
@@ -3118,7 +3065,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "5b312434e3e802ec4c764395a740cad0c9b5669d331276124e21a8071ecff158"
+      "sha256": "c8b3b7f46cc135e6d21f79931758ceb4deb8ecd959d8101d62ba6851ba83bd25"
     }
   ],
   "kind": "phase7-obligations",

@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 2963 | 2933 |
+| libcrypto | 5896 | 4254 | 1642 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **2963** | **3536** |
+| **total** | **6499** | **4254** | **2245** |
 
 ## Ownership atlas, by stratum
 
@@ -32,10 +32,10 @@ declared owner; this is that assignment.
 | 4 | BIO + CONF + object database | `complete` | 256 | 272 | 249 | 23 | 0 |
 | 5 | BN + ASN.1 + DER/PEM | `complete` | 561 | 565 | 474 | 91 | 0 |
 | 6 | OSSL_LIB_CTX + provider core | `complete` | 137 | 161 | 161 | 0 | 0 |
-| 7 | EVP framework | `complete` | 924 | 950 | 733 | 217 | 0 |
+| 7 | EVP framework | `complete` | 924 | 950 | 736 | 214 | 0 |
 | 8 | Native cryptographic primitives | `complete` | 759 | 786 | 786 | 0 | 0 |
 | 9 | RAND / DRBG + entropy | `complete` | 25 | 69 | 69 | 0 | 0 |
-| 10 | Key formats + PKCS + STORE | `in-progress` | 272 | 298 | 87 | 0 | 211 |
+| 10 | Key formats + PKCS + STORE | `complete` | 272 | 298 | 298 | 0 | 0 |
 | 11 | X.509 + verification | `not-started` | 1455 | — | — | — | — |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
 | 13 | Legacy / deprecated compatibility | `not-started` | 189 | — | — | — | — |
@@ -215,8 +215,8 @@ Courts: `all pass`, 10 court(s), **2040** authority observation(s) over 10 trans
 * ledger: `forensics/phase7-obligations.json`
 * atlas-owned: 924
 * owned working set: 950
-* implemented: 733
-* deferred to a later stratum with a stated reason: 217
+* implemented: 736
+* deferred to a later stratum with a stated reason: 214
 * **open in this stratum: 0**
 
 Deferred out, by receiving stratum:
@@ -227,8 +227,8 @@ Deferred out, by receiving stratum:
   `BIO_f_reliable`, `EVP_CIPHER_CTX_rand_key`, `EVP_SealInit`, `OSSL_HPKE_get_grease_value`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_do_header`
 * to phase 10: 10 symbol(s)
   `PEM_write_bio_PrivateKey_traditional`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
-* to phase 11: 5 symbol(s)
-  `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor`, `EVP_add_alg_module`
+* to phase 11: 2 symbol(s)
+  `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor`
 * to phase 13: 163 symbol(s)
   `EVP_PKEY_get0_engine`, `EVP_PKEY_set1_engine`, `EVP_aes_128_cbc`, `EVP_aes_128_cbc_hmac_sha1`, `EVP_aes_128_cbc_hmac_sha256`, `EVP_aes_128_ccm`, `EVP_aes_128_cfb1`, `EVP_aes_128_cfb128`, `EVP_aes_128_cfb8`, `EVP_aes_128_ctr`, `EVP_aes_128_ecb`, `EVP_aes_128_gcm`, `EVP_aes_128_ocb`, `EVP_aes_128_ofb`, `EVP_aes_128_wrap`, `EVP_aes_128_wrap_pad`, `EVP_aes_128_xts`, `EVP_aes_192_cbc`, `EVP_aes_192_ccm`, `EVP_aes_192_cfb1`, `EVP_aes_192_cfb128`, `EVP_aes_192_cfb8`, `EVP_aes_192_ctr`, `EVP_aes_192_ecb`, `EVP_aes_192_gcm`, `EVP_aes_192_ocb`, `EVP_aes_192_ofb`, `EVP_aes_192_wrap`, `EVP_aes_192_wrap_pad`, `EVP_aes_256_cbc`, `EVP_aes_256_cbc_hmac_sha1`, `EVP_aes_256_cbc_hmac_sha256`, `EVP_aes_256_ccm`, `EVP_aes_256_cfb1`, `EVP_aes_256_cfb128`, `EVP_aes_256_cfb8`, `EVP_aes_256_ctr`, `EVP_aes_256_ecb`, `EVP_aes_256_gcm`, `EVP_aes_256_ocb`, `EVP_aes_256_ofb`, `EVP_aes_256_wrap`, `EVP_aes_256_wrap_pad`, `EVP_aes_256_xts`, `EVP_aria_128_cbc`, `EVP_aria_128_ccm`, `EVP_aria_128_cfb1`, `EVP_aria_128_cfb128`, `EVP_aria_128_cfb8`, `EVP_aria_128_ctr`, `EVP_aria_128_ecb`, `EVP_aria_128_gcm`, `EVP_aria_128_ofb`, `EVP_aria_192_cbc`, `EVP_aria_192_ccm`, `EVP_aria_192_cfb1`, `EVP_aria_192_cfb128`, `EVP_aria_192_cfb8`, `EVP_aria_192_ctr`, `EVP_aria_192_ecb`, `EVP_aria_192_gcm`, `EVP_aria_192_ofb`, `EVP_aria_256_cbc`, `EVP_aria_256_ccm`, `EVP_aria_256_cfb1`, `EVP_aria_256_cfb128`, `EVP_aria_256_cfb8`, `EVP_aria_256_ctr`, `EVP_aria_256_ecb`, `EVP_aria_256_gcm`, `EVP_aria_256_ofb`, `EVP_bf_cbc`, `EVP_bf_cfb64`, `EVP_bf_ecb`, `EVP_bf_ofb`, `EVP_camellia_128_cbc`, `EVP_camellia_128_cfb1`, `EVP_camellia_128_cfb128`, `EVP_camellia_128_cfb8`, `EVP_camellia_128_ctr`, `EVP_camellia_128_ecb`, `EVP_camellia_128_ofb`, `EVP_camellia_192_cbc`, `EVP_camellia_192_cfb1`, `EVP_camellia_192_cfb128`, `EVP_camellia_192_cfb8`, `EVP_camellia_192_ctr`, `EVP_camellia_192_ecb`, `EVP_camellia_192_ofb`, `EVP_camellia_256_cbc`, `EVP_camellia_256_cfb1`, `EVP_camellia_256_cfb128`, `EVP_camellia_256_cfb8`, `EVP_camellia_256_ctr`, `EVP_camellia_256_ecb`, `EVP_camellia_256_ofb`, `EVP_cast5_cbc`, `EVP_cast5_cfb64`, `EVP_cast5_ecb`, `EVP_cast5_ofb`, `EVP_chacha20`, `EVP_chacha20_poly1305`, `EVP_des_cbc`, `EVP_des_cfb1`, `EVP_des_cfb64`, `EVP_des_cfb8`, `EVP_des_ecb`, `EVP_des_ede`, `EVP_des_ede3`, `EVP_des_ede3_cbc`, `EVP_des_ede3_cfb1`, `EVP_des_ede3_cfb64`, `EVP_des_ede3_cfb8`, `EVP_des_ede3_ecb`, `EVP_des_ede3_ofb`, `EVP_des_ede3_wrap`, `EVP_des_ede_cbc`, `EVP_des_ede_cfb64`, `EVP_des_ede_ecb`, `EVP_des_ede_ofb`, `EVP_des_ofb`, `EVP_desx_cbc`, `EVP_idea_cbc`, `EVP_idea_cfb64`, `EVP_idea_ecb`, `EVP_idea_ofb`, `EVP_md4`, `EVP_mdc2`, `EVP_rc2_40_cbc`, `EVP_rc2_64_cbc`, `EVP_rc2_cbc`, `EVP_rc2_cfb64`, `EVP_rc2_ecb`, `EVP_rc2_ofb`, `EVP_rc4`, `EVP_rc4_40`, `EVP_rc4_hmac_md5`, `EVP_seed_cbc`, `EVP_seed_cfb128`, `EVP_seed_ecb`, `EVP_seed_ofb`, `EVP_sm3`, `EVP_sm4_cbc`, `EVP_sm4_cfb128`, `EVP_sm4_ctr`, `EVP_sm4_ecb`, `EVP_sm4_ofb`, `EVP_whirlpool`, `PEM_read_PrivateKey`, `PEM_read_PrivateKey_ex`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_PrivateKey`, `PEM_read_bio_PrivateKey_ex`, `PEM_write_PKCS8PrivateKey`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_PrivateKey`, `PEM_write_PrivateKey_ex`, `PEM_write_bio_PKCS8PrivateKey`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey`, `PEM_write_bio_PrivateKey_ex`
 
@@ -236,7 +236,7 @@ Hand-offs received and discharged:
 
 * from phase 5: 26 symbol(s) — `ASN1_item_sign_ex`, `ASN1_item_verify_ex`, `PEM_ASN1_read`, `PEM_ASN1_read_bio`, `PEM_ASN1_write`, `PEM_ASN1_write_bio`, `PEM_ASN1_write_bio_ctx`, `PEM_SignFinal`, `PEM_SignInit`, `PEM_SignUpdate`, `PEM_bytes_read_bio`, `PEM_bytes_read_bio_secmem`, `PEM_def_callback`, `PEM_do_header`, `PEM_read`, `PEM_read_bio`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_ex`, `PEM_write`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_bio`, `PEM_write_bio_ASN1_stream`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey_traditional`
 
-Courts: `all pass`, 19 court(s), **2954** authority observation(s) over 19 transcript court(s).
+Courts: `all pass`, 19 court(s), **2955** authority observation(s) over 19 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -255,7 +255,7 @@ Courts: `all pass`, 19 court(s), **2954** authority observation(s) over 19 trans
 | RT-HMAC | `pass` | 32 |
 | RT-CMAC | `pass` | 26 |
 | RT-HPKE | `pass` | 65 |
-| RT-EVP-REF | `pass` | 264 |
+| RT-EVP-REF | `pass` | 265 |
 | RT-EVP-INTROSPECT | `pass` | 338 |
 | RT-EVP-CLASS | `pass` | 22 |
 | RT-EVP-PKEY-OPS | `pass` | 100 |
@@ -275,13 +275,13 @@ Hand-offs received and discharged:
 
 * from phase 7: 27 symbol(s) — `EVP_PKEY_assign`, `EVP_PKEY_decrypt_old`, `EVP_PKEY_encrypt_old`, `EVP_PKEY_get0_DH`, `EVP_PKEY_get0_DSA`, `EVP_PKEY_get0_EC_KEY`, `EVP_PKEY_get0_RSA`, `EVP_PKEY_get0_hmac`, `EVP_PKEY_get0_poly1305`, `EVP_PKEY_get0_siphash`, `EVP_PKEY_get1_DH`, `EVP_PKEY_get1_DSA`, `EVP_PKEY_get1_EC_KEY`, `EVP_PKEY_get1_RSA`, `EVP_PKEY_get_ec_point_conv_form`, `EVP_PKEY_get_field_type`, `EVP_PKEY_meth_find`, `EVP_PKEY_meth_get0`, `EVP_PKEY_meth_get_count`, `EVP_PKEY_set1_DH`, `EVP_PKEY_set1_DSA`, `EVP_PKEY_set1_EC_KEY`, `EVP_PKEY_set1_RSA`, `EVP_PKEY_type`, `d2i_KeyParams`, `d2i_KeyParams_bio`, `d2i_PublicKey`
 
-Courts: `all pass`, 18 court(s), **15474** authority observation(s) over 15 transcript court(s).
+Courts: `all pass`, 18 court(s), **15490** authority observation(s) over 15 transcript court(s).
 
 The other 3 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
-| RT-DIGEST | `pass` | 654 |
+| RT-DIGEST | `pass` | 670 |
 | RT-CIPHER | `pass` | 7291 |
 | RT-CIPHER-MEM | `pass` | 382 |
 | RT-RSA | `pass` | 1021 |
@@ -332,26 +332,32 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 
 ## Phase 10 — Key formats + PKCS + STORE
 
-* state: `in-progress`
-* blocking: 211 open obligation(s) of this stratum recorded in forensics/phase10-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. Two hundred and seventy-two of the exports it owns are its own four headers' (`pkcs12.h`, `store.h`, `decoder.h`, `encoder.h`) and the twenty-six remainder arrive as recorded hand-offs from phases 5 and 7. Eighty-seven of the working set are already implemented, landed by Phase 8's 8.8 chain rather than by this stratum, so the ledger's `open` count is not the whole working set (docs/PHASE-10-SUBPHASES.md section 4)
-* seal: none written yet (`unnamed`)
+* state: `complete`
+* seal: `docs/PHASE-10-KEYFORMATS-SEAL.md`
 * ledger: `forensics/phase10-obligations.json`
 * atlas-owned: 272
 * owned working set: 298
-* implemented: 87
+* implemented: 298
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 211**
+* **open in this stratum: 0**
 
 Hand-offs received and discharged:
 
 * from phase 5: 16 symbol(s) — `b2i_PVK_bio`, `b2i_PVK_bio_ex`, `b2i_PrivateKey`, `b2i_PrivateKey_bio`, `b2i_PublicKey`, `b2i_PublicKey_bio`, `d2i_PKCS8PrivateKey_bio`, `d2i_PKCS8PrivateKey_fp`, `i2b_PVK_bio`, `i2b_PVK_bio_ex`, `i2b_PrivateKey_bio`, `i2b_PublicKey_bio`, `i2d_PKCS8PrivateKey_bio`, `i2d_PKCS8PrivateKey_fp`, `i2d_PKCS8PrivateKey_nid_bio`, `i2d_PKCS8PrivateKey_nid_fp`
 * from phase 7: 10 symbol(s) — `PEM_write_bio_PrivateKey_traditional`, `d2i_AutoPrivateKey`, `d2i_AutoPrivateKey_ex`, `d2i_PrivateKey`, `d2i_PrivateKey_ex`, `i2d_KeyParams`, `i2d_KeyParams_bio`, `i2d_PKCS8PrivateKey`, `i2d_PrivateKey`, `i2d_PublicKey`
 
-Courts: `all pass`, 1 court(s), **87** authority observation(s) over 1 transcript court(s).
+Courts: `all pass`, 6 court(s), **6008** authority observation(s) over 5 transcript court(s).
+
+The other 1 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
 | RT-KEYFORMAT-REF | `pass` | 87 |
+| RT-CODEC | `pass` | 4160 |
+| RT-KEYFORMAT | `pass` | 370 |
+| RT-PKCS12 | `pass` | 353 |
+| RT-STORE | `pass` | 1038 |
+| CT-PKCS12 | `pass` | — (structural) |
 
 ## Court coverage
 
@@ -368,13 +374,13 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 |---|---|---|---|---|---|---|---|
 | 3 | 251 | 251 | 162 | 89 | 0 | 0 | 0 |
 | 4 | 249 | 249 | 213 | 36 | 0 | 0 | 0 |
-| 5 | 474 | 474 | 383 | 91 | 0 | 0 | 0 |
+| 5 | 474 | 474 | 384 | 90 | 0 | 0 | 0 |
 | 6 | 161 | 161 | 156 | 5 | 0 | 0 | 0 |
-| 7 | 733 | 733 | 688 | 45 | 0 | 0 | 0 |
+| 7 | 736 | 736 | 691 | 45 | 0 | 0 | 0 |
 | 8 | 786 | 778 | 778 | 0 | 8 | 0 | 0 |
 | 9 | 69 | 69 | 69 | 0 | 0 | 0 | 0 |
-| 10 | 87 | 87 | 0 | 87 | 0 | 0 | 0 |
-| **total** | **2810** | **2802** | **2449** | **353** | **8** | **0** | **0** |
+| 10 | 298 | 298 | 237 | 61 | 0 | 0 | 0 |
+| **total** | **3024** | **3016** | **2690** | **326** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

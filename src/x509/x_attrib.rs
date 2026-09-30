@@ -1,9 +1,11 @@
-//! `crypto/x509/x_attrib.c` — the `X509_ATTRIBUTE` family, transcribed whole except its printer.
+//! `crypto/x509/x_attrib.c` — the `X509_ATTRIBUTE` family, transcribed whole. Phase 10.14.6
+//! (the attribute-value printer is part B of the extension-table group; see the printer note).
 //!
 //! `crypto/x509/x_attrib.c` is 249 lines and 8 exports: the `ASN1_SEQUENCE(X509_ATTRIBUTE)`
 //! template and the `IMPLEMENT_ASN1_FUNCTIONS`/`IMPLEMENT_ASN1_DUP_FUNCTION` groups over it
 //! (`_it`, `_new`, `_free`, `_dup`, `d2i_`, `i2d_`), the hand-written `X509_ATTRIBUTE_create`
-//! (`:37-59`), and `ossl_print_attribute_value` (`:76-249`). It lands here because
+//! (`:37-59`), and `ossl_print_attribute_value` (`:76-249`) with its `static print_oid` helper
+//! (`:61-74`). It lands here because
 //! `crypto/asn1/p8_pkey.c`'s `PKCS8_PRIV_KEY_INFO` template names `X509_ATTRIBUTE_it` for its
 //! `attributes` column, which D349 recorded as the block on that item; the cycle it names is
 //! gone and the item can be built.
@@ -14,14 +16,17 @@
 //! `ASN1_OBJECT *object` then `STACK_OF(ASN1_TYPE) *set`. The `set` column is `ASN1_SET_OF`, so
 //! its value is an [`OpenSslStack`] and the decoder sorts it into canonical order.
 //!
-//! ## What is withheld, with its coordinate
+//! ## The attribute-value printer, and why it was the third hub
 //!
-//! `ossl_print_attribute_value` (`:76-249`) is an **internal** printer: a `switch` over every
-//! `V_ASN1_*` tag that reaches `ossl_bio_print_hex`, `ASN1_ENUMERATED_get_int64`,
-//! `d2i_X509_NAME`, `X509_NAME_print_ex`, `X509_NAME_free` and `ASN1_parse_dump`, of which the
-//! two `X509_NAME` names are the X.509 name layer's and unlanded. No landed caller reaches it, so
-//! it is withheld as one named block rather than transcribed into six unwired calls. The unit
-//! defines exactly this one internal, so that is the whole remainder.
+//! `ossl_print_attribute_value` (`:76-249`) is the internal printer the `v3_aaa.c`,
+//! `v3_attrdesc.c`, `v3_attrmap.c` and `v3_sda.c` rows call; D464 measured it as one of the three
+//! hubs that block the remaining `standard_exts[]` tables. It is a `switch` over every `V_ASN1_*`
+//! tag reaching `ossl_bio_print_hex` (`v3_utl.rs`, 10.14.3), `ASN1_ENUMERATED_get_int64`
+//! (`asn1/prim.rs`), `d2i_X509_NAME`/`X509_NAME_print_ex`/`X509_NAME_free` (`x_name.rs`,
+//! `a_strex.rs`) and `ASN1_parse_dump` (`asn1/der.rs`), all of which landed by 10.14.2/10.14.3;
+//! the earlier slice's withhold was measured against a frontier the later slices passed (D451's
+//! rule). Its `print_oid` helper (`:61-74`) is inlined by the authority's optimiser, so an object
+//! scan does not name it, but it is transcribed as the separate `static` the source declares.
 //!
 //! ## No raise, and the court
 //!
@@ -32,19 +37,30 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_int, c_long, c_uchar};
+use core::ffi::{c_char, c_int, c_long, c_uchar};
 use core::ptr;
 
 use crate::asn1::a_dup::ASN1_item_dup;
+use crate::asn1::a_strex::{X509_NAME_print_ex, XN_FLAG_SEP_CPLUS_SPC};
 use crate::asn1::a_type::{ASN1_TYPE_free, ASN1_TYPE_new, ASN1_TYPE_set};
 use crate::asn1::d2i::ASN1_item_d2i;
+use crate::asn1::der::ASN1_parse_dump;
 use crate::asn1::fre::ASN1_item_free;
 use crate::asn1::i2d::ASN1_item_i2d;
 use crate::asn1::items::{ASN1_ANY_it, ASN1_OBJECT_it};
 use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
-use crate::runtime::obj::{Asn1Object, OBJ_nid2obj};
+use crate::asn1::prim::ASN1_ENUMERATED_get_int64;
+use crate::runtime::bio::print::BIO_printf;
+use crate::runtime::bio::{BIO_puts, Bio};
+use crate::runtime::obj::{
+    Asn1Object, NID_associatedName, NID_dITRedirect, NID_documentAuthor, NID_manager, NID_member,
+    NID_owner, NID_roleOccupant, NID_secretary, NID_seeAlso, NID_undef, OBJ_nid2ln, OBJ_nid2obj,
+    OBJ_obj2nid, OBJ_obj2txt,
+};
 use crate::runtime::stack::{OPENSSL_sk_push, OpenSslStack};
+use crate::x509::v3_utl::ossl_bio_print_hex;
+use crate::x509::x_name::{d2i_X509_NAME, X509_NAME_free};
 
 /// `struct x509_attributes_st` — `X509_ATTRIBUTE`, from `include/openssl/x509.h`.
 ///
@@ -212,6 +228,239 @@ pub unsafe extern "C" fn X509_ATTRIBUTE_create(
         ASN1_TYPE_set(val, atrtype, value);
     }
     attr
+}
+
+/// `static int print_oid(BIO *out, const ASN1_OBJECT *oid)` — `crypto/x509/x_attrib.c:61-74`.
+///
+/// The authority's optimiser inlines this into its one caller, but the source declares a separate
+/// `static` and it is transcribed as one. It answers 0 only when the OID does not render; the
+/// long-name bracket is added when `OBJ_nid2ln` names the OID, and either `BIO_printf` result is
+/// compared `>= 0` (a partial write is still success here).
+///
+/// # Safety
+///
+/// `out` must be a live BIO; `oid` must be a live `ASN1_OBJECT`.
+unsafe extern "C" fn print_oid(out: *mut Bio, oid: *const Asn1Object) -> c_int {
+    let mut objbuf = [0 as c_char; 80];
+    // SAFETY: `objbuf` is 80 writable bytes and `oid` is live per the contract.
+    if unsafe { OBJ_obj2txt(objbuf.as_mut_ptr(), objbuf.len() as c_int, oid, 1) } <= 0 {
+        return 0;
+    }
+    // SAFETY: `oid` is live per the contract.
+    let ln = OBJ_nid2ln(unsafe { OBJ_obj2nid(oid) });
+    let rc = if !ln.is_null() {
+        // SAFETY: `objbuf` is NUL-terminated by `OBJ_obj2txt`; `ln` is non-null and NUL-terminated.
+        unsafe { BIO_printf(out, c"%s (%s)".as_ptr(), objbuf.as_ptr(), ln) }
+    } else {
+        // SAFETY: `objbuf` is NUL-terminated by `OBJ_obj2txt`.
+        unsafe { BIO_printf(out, c"%s".as_ptr(), objbuf.as_ptr()) }
+    };
+    c_int::from(rc >= 0)
+}
+
+/// The OIDs whose `V_ASN1_SEQUENCE` value is a distinguished name — `crypto/x509/x_attrib.c:154-167`.
+///
+/// `NID_undef` is included: an unrecognised OID's sequence is attempted as a DN and falls back to
+/// the DER dump only when the decode fails.
+fn is_dn_oid(obj_nid: c_int) -> bool {
+    obj_nid == NID_undef
+        || obj_nid == NID_member
+        || obj_nid == NID_roleOccupant
+        || obj_nid == NID_seeAlso
+        || obj_nid == NID_manager
+        || obj_nid == NID_documentAuthor
+        || obj_nid == NID_secretary
+        || obj_nid == NID_associatedName
+        || obj_nid == NID_dITRedirect
+        || obj_nid == NID_owner
+}
+
+/// `int ossl_print_attribute_value(BIO *out, int obj_nid, const ASN1_TYPE *av, int indent)` —
+/// `crypto/x509/x_attrib.c:76-249`.
+///
+/// The internal printer the `v3_aaa`/`v3_attrdesc`/`v3_attrmap`/`v3_sda` rows call. Each arm
+/// writes its indentation with a separate `BIO_printf("%*s", indent, "")` (whose negativity is
+/// the only failure it checks), then the value; the integer arm falls back to a hex dump when
+/// `ASN1_ENUMERATED_get_int64` refuses, and the `V_ASN1_SEQUENCE` arm decodes a distinguished
+/// name only for the OIDs [`is_dn_oid`] lists, dumping otherwise.
+///
+/// # Safety
+///
+/// `out` must be a live BIO; `av` must be a live `ASN1_TYPE` whose `type` tag matches the arm
+/// taken.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_print_attribute_value(
+    out: *mut Bio,
+    obj_nid: c_int,
+    av: *const Asn1Type,
+    indent: c_int,
+) -> c_int {
+    // SAFETY: `av` is live per the contract.
+    let type_ = unsafe { (*av).type_ };
+    // SAFETY: `av` is live per the contract; every tag reached below except `V_ASN1_BOOLEAN`
+    // selects a pointer-valued union member, and the pointer is not dereferenced here.
+    let value = unsafe { (*av).value.ptr };
+    let str_ = value.cast::<Asn1String>();
+
+    // The three "print indentation, then the value" arms share this printer; the authority's
+    // `%.*s` precision bounds the read of `s`'s content even when it is not NUL-terminated.
+    let print_indented = |s: *mut Asn1String| {
+        // SAFETY: `out` is a live BIO and the format is a static literal; `s` is a live
+        // `ASN1_STRING` and the precision bounds its content read.
+        unsafe {
+            BIO_printf(
+                out,
+                c"%*s%.*s".as_ptr(),
+                indent,
+                c"".as_ptr(),
+                (*s).length,
+                (*s).data.cast::<c_char>(),
+            )
+        }
+    };
+    // The authority's `BIO_printf(out, "%*s", indent, "") < 0` guard.
+    let indent_ok = || {
+        // SAFETY: `out` is a live BIO and the format is a static literal.
+        unsafe { BIO_printf(out, c"%*s".as_ptr(), indent, c"".as_ptr()) >= 0 }
+    };
+
+    match type_ {
+        V_ASN1_BOOLEAN => {
+            // SAFETY: the union's `boolean` arm is valid for this tag.
+            let truthy = unsafe { (*av).value.boolean } != 0;
+            // SAFETY: `out` is a live BIO and the format is a static literal.
+            let r = unsafe {
+                if truthy {
+                    BIO_printf(out, c"%*sTRUE".as_ptr(), indent, c"".as_ptr())
+                } else {
+                    BIO_printf(out, c"%*sFALSE".as_ptr(), indent, c"".as_ptr())
+                }
+            };
+            c_int::from(r >= if truthy { 4 } else { 5 })
+        }
+
+        V_ASN1_INTEGER | V_ASN1_ENUMERATED => {
+            if !indent_ok() {
+                0
+            } else {
+                let mut int_val: i64 = 0;
+                // SAFETY: `str_` is the live `ASN1_STRING` for this tag; `int_val` is this
+                // frame's own slot.
+                if unsafe { ASN1_ENUMERATED_get_int64(&mut int_val, str_) } > 0 {
+                    // SAFETY: `out` is a live BIO and the format is a static literal.
+                    c_int::from(unsafe { BIO_printf(out, c"%lld".as_ptr(), int_val) } > 0)
+                } else {
+                    // SAFETY: `str_` is live and its `data`/`length` describe readable content.
+                    unsafe { ossl_bio_print_hex(out, (*str_).data, (*str_).length) }
+                }
+            }
+        }
+
+        V_ASN1_BIT_STRING => {
+            if !indent_ok() {
+                0
+            } else {
+                // SAFETY: `str_` is live and its `data`/`length` describe readable content.
+                unsafe { ossl_bio_print_hex(out, (*str_).data, (*str_).length) }
+            }
+        }
+
+        V_ASN1_OCTET_STRING | V_ASN1_VIDEOTEXSTRING => {
+            if !indent_ok() {
+                0
+            } else {
+                // SAFETY: `str_` is live and its `data`/`length` describe readable content.
+                unsafe { ossl_bio_print_hex(out, (*str_).data, (*str_).length) }
+            }
+        }
+
+        V_ASN1_NULL => {
+            // SAFETY: `out` is a live BIO and the format is a static literal.
+            c_int::from(unsafe { BIO_printf(out, c"%*sNULL".as_ptr(), indent, c"".as_ptr()) } >= 4)
+        }
+
+        V_ASN1_OBJECT => {
+            if !indent_ok() {
+                0
+            } else {
+                let obj = value.cast::<Asn1Object>();
+                // SAFETY: `obj` is the live object for this tag; `out` is a live BIO.
+                unsafe { print_oid(out, obj) }
+            }
+        }
+
+        // ObjectDescriptor is an IMPLICIT GraphicString, but GeneralString is a superset, so the
+        // authority prints all three through the `generalstring` arm.
+        V_ASN1_GENERALSTRING | V_ASN1_GRAPHICSTRING | V_ASN1_OBJECT_DESCRIPTOR => {
+            c_int::from(print_indented(str_) >= 0)
+        }
+
+        V_ASN1_UTF8STRING => c_int::from(print_indented(str_) >= 0),
+
+        V_ASN1_REAL => {
+            // SAFETY: `out` is a live BIO and the format is a static literal.
+            c_int::from(unsafe { BIO_printf(out, c"%*sREAL".as_ptr(), indent, c"".as_ptr()) } >= 4)
+        }
+
+        V_ASN1_SEQUENCE if is_dn_oid(obj_nid) => {
+            // The authority preserves the original pointer because `d2i_` advances the cursor.
+            // SAFETY: `str_` is live and its `data`/`length` describe the sequence content.
+            let mut value = unsafe { (*str_).data };
+            // SAFETY: `value` starts at the sequence content and `length` bounds it.
+            let xn = unsafe {
+                d2i_X509_NAME(
+                    ptr::null_mut(),
+                    (&raw mut value).cast::<*const c_uchar>(),
+                    (*str_).length as c_long,
+                )
+            };
+            if xn.is_null() {
+                // SAFETY: `out` is a live BIO and the string is a static NUL-terminated literal.
+                unsafe { BIO_puts(out, c"(COULD NOT DECODE DISTINGUISHED NAME)\n".as_ptr()) };
+                0
+            } else {
+                // SAFETY: `xn` is live and `out` is a live BIO.
+                let r = unsafe { X509_NAME_print_ex(out, xn, indent, XN_FLAG_SEP_CPLUS_SPC) };
+                // SAFETY: `xn` is this call's own object.
+                unsafe { X509_NAME_free(xn) };
+                c_int::from(r > 0)
+            }
+        }
+
+        V_ASN1_SEQUENCE | V_ASN1_SET => {
+            // SAFETY: `str_` is live and its content describes a valid DER blob for `length`
+            // bytes.
+            c_int::from(
+                unsafe { ASN1_parse_dump(out, (*str_).data, (*str_).length as c_long, indent, 1) }
+                    > 0,
+            )
+        }
+
+        // UTCTime/GeneralizedTime are IMPLICIT VisibleString; VisibleString is a superset for
+        // NumericString, so the authority prints all four through the `visiblestring` arm.
+        V_ASN1_VISIBLESTRING | V_ASN1_UTCTIME | V_ASN1_GENERALIZEDTIME | V_ASN1_NUMERICSTRING => {
+            c_int::from(print_indented(str_) >= 0)
+        }
+
+        V_ASN1_PRINTABLESTRING => c_int::from(print_indented(str_) >= 0),
+        V_ASN1_T61STRING => c_int::from(print_indented(str_) >= 0),
+        V_ASN1_IA5STRING => c_int::from(print_indented(str_) >= 0),
+
+        _ => {
+            // SAFETY: `out` is a live BIO and the format is a static literal.
+            c_int::from(
+                unsafe {
+                    BIO_printf(
+                        out,
+                        c"%*s<Unsupported tag %d>".as_ptr(),
+                        indent,
+                        c"".as_ptr(),
+                        type_,
+                    )
+                } >= 0,
+            )
+        }
+    }
 }
 
 #[cfg(test)]

@@ -30912,3 +30912,2449 @@ still carried the old front door would be the wrong thing to hand a reader. The 
 `Cargo.toml` and `Cargo.lock` move to `0.0.14`; 81 `forensics/frf/courts/*/manifest.yaml` files move
 with them; the staged shell and the atlases that hash it regenerate; `docs/DECISIONS.md` gains this
 entry. `PIPELINE OK` exit 0, twice, and `gen_frf_courts.py --check` clean.
+
+## D434 -- 10.1 lands the decomposition before the code, and the 636 rows turn out to be eleven units
+
+Phase 10's first work subphase. The instruction was explicit that the stratum must not read 636
+provider rows as 636 implementations, and the measurement says it should not: the rows are **318
+dispatch-table symbols published by both the `default` and the `base` provider** -- both `#include` the
+same `encoders.inc`/`decoders.inc` with a different `ENCODER_PROVIDER` (`defltprov.c:675-687`,
+`baseprov.c:67-85`) -- and those 318 symbols come from **eleven translation units** under
+`providers/implementations/encode_decode/`, measured by `nm --defined-only` over the authority's build
+objects and joined to `provider-algorithms.json`'s `dispatch_table_symbol`:
+`encode_key2any.c` 206 tables/412 rows, `decode_der2key.c` 69/138, `encode_key2text.c` 29/58,
+`encode_key2ms.c` 4/8, and seven units of 2, 2, 2, 1, 1, 1 and 1 tables (4, 4, 4, 2, 2, 2 and 2 rows).
+The decomposition is written into `docs/PHASE-10-SUBPHASES.md` as §1a with its coordinates.
+
+**Two things the measurement settled that the plan had wrong.** First, **none of the eleven was already
+transcribed**: what Phase 8 landed at 8.8/8.9 (D362-D367) is the *framework* under `crypto/encode_decode/`
+(`src/encoder_*.rs`, `decoder_*.rs`), which dispatches to a codec without implementing one, so §2's 10.1
+row naming `encoder_pkey.c`/`decoder_pkey.c`/`*_meth.c`/`*_lib.c` as the units to write was wrong and now
+says so. Second, **no unit is pure registration**: every row-publishing unit carries its own engine.
+`D-DECODER-ABSENT-1` is therefore **not** retired by this subphase, because it needs a decoder and the
+remaining units wait on 10.6's `d2i`/`i2b` hand-offs.
+
+**The first slice is `encode_key2text.c`**, chosen as the biggest mover with a landed closure rather
+than the biggest outright: it is one 745-line unit for 58 rows, where `encode_key2any.c`'s 412 and
+`decode_der2key.c`'s 138 both wait on 10.6's serialization backends. `src/provider/encode_key2text.rs`
+transcribes the engine, the six printers and the eleven tables; `src/provider/endecoder_common.rs` adds
+`ossl_prov_import_key`/`free_key`/`pillfers`/`ossl_read_der`; the three withheld `ossl_bio_print_*`
+helpers land in `src/encoder_lib.rs` (their `prerequisites.json` divergence row is removed, because they
+landed with the caller it named); `ossl_bio_new_from_core_bio` lands in `core_bio.rs`; and
+`deflt_query`/`base_query` gain their `OSSL_OP_ENCODER` arms. **Twenty-two rows are published** -- eleven
+tables across both providers, for `RSA`, `RSA-PSS`, `DH`, `DHX`, `DSA`, `EC`, `ED25519`, `ED448`,
+`X25519`, `X448` and `SM2`. The eighteen `ML-KEM`/`ML-DSA`/`SLH-DSA` tables are **withheld as
+`pending`**, because their `*_to_text` helpers live in `ml_kem_codecs.c`/`ml_dsa_codecs.c`/`slh_dsa_key.c`,
+none of which is landed -- §3.5's case, named rather than counted as passing.
+
+**`RT-CODEC` is no longer pending.** `courts/phase10/rt_codec_probe.c` is a real differential court,
+compiled against the authority and the candidate, with **152 observations**: the row identity for all
+22 published rows, ten behaviour arms and one refusal arm carrying the error queue.
+`provider_court_coverage.py` reports 22 phase-10 rows directly courted and 0 unmatched, and `run_courts.py`
+reads phase 10 as two courts and 239 observations.
+
+**Rows are not exports, and the ledger proves it.** `forensics/phase10-obligations.json` reads
+`owned=298 implemented=87 open=211` **before and after** this subphase, because a provider row is not an
+export and 10.1 adds rows rather than symbols. The provider census is where the movement shows:
+`provider-algorithms.json` reads phase 10 as `implemented 22 / unimplemented 614`, where it read 636
+unimplemented, and `phase-state.json`'s phase 10 row carries `owned 636, implemented 22, unimplemented
+614, handed_on 39`. Phase 9 stays `complete`; Phase 10 stays `in-progress`.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count is **1049 passed, 0 failed** (two tests more than the 1047 the stratum opened
+with, both for the new engine). `run_courts.py`, `court_coverage.py` and `provider_court_coverage.py`
+clean; `PIPELINE OK` exit 0, twice.
+
+### Movement
+
+`src/provider/encode_key2text.rs` and `src/provider/endecoder_common.rs` are added;
+`src/encoder_lib.rs`, `src/provider/{base,digest,mod}.rs`, `src/runtime/bio/core_bio.rs`,
+`src/runtime/err_sites.rs` and `courts/phase10/rt_codec_probe.c` change or are added;
+`forensics/tools/{gen_provider_algorithms,gen_err_raise_sites,phase10_courts,provider_court_coverage}.py`
+change; `docs/PHASE-10-SUBPHASES.md` gains §1a and a corrected 10.1 row; and the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
+
+## D435 -- 10.1 continues: two more units land, and the dependency order inside the subphase turns out to be wrong
+
+Two more of the eleven row-publishing units land: `encode_key2blob.c` (2 tables, **4 rows** for `EC`
+and `SM2` across both providers) and `decode_epki2pki.c` (1 table, **2 rows** for `DER`), each
+implemented the way `encode_key2text.c` was -- the authority's engine, the row's identity as
+`provider-algorithms.json` records it for both providers, and the refusal arms with their coordinates
+(`PROV_ENCODE_KEY2BLOB_175`/`_177` and `PROV_DECODE_EPKI2PKI_88`/`_179`, with both units added to
+`gen_err_raise_sites.py`'s coverage, 4134 to 4138 sites). Phase 10's provider rows move from
+`implemented 22` to **`implemented 28 / unimplemented 608`**, and `RT-CODEC` grows from 152 to **207
+observations** -- identity for the six new rows, behaviour for both blob rows and the decoder (the
+authority's own pinned `test/certs/key-pass-12345.pem` PKCS#8 `EncryptedPrivateKeyInfo` through
+`OSSL_DECODER_from_data`), and three refusal arms.
+
+**Five of the seven units the plan expected to be unblocked are not, and each blocker is measured.**
+`encode_key2ms.c` needs `i2b_PVK_bio_ex`/`i2b_PrivateKey_bio`/`i2b_PublicKey_bio`; `decode_msblob2key.c`
+needs `ossl_do_blob_header`/`ossl_blob_length`/`ossl_b2i_{RSA,DSA}_after_header`; `decode_pvk2key.c`
+needs `b2i_{DSA,RSA}_PVK_bio_ex` -- all three from `crypto/pem/pvkfmt.c`, which is 10.6's.
+`decode_spki2typespki.c` needs `ossl_x509_algor_is_sm2`, a withheld divergence owned by a later
+stratum; and `decode_pem2der.c` needs `ossl_spki2typespki_der_decode`, which lives in the pending
+`decode_spki2typespki` unit. All five are held `pending` with those reasons rather than counted as
+passing, which is §3.5's rule.
+
+**The ordering lesson is the important half, and it is a correction to §1a.** `nm --undefined-only`
+over the authority's objects, joined to the crate's landed surface, says `decode_der2key.c` (138 rows)
+does **not** wait on 10.6 -- its closure is landed except for four PQC codec helpers,
+`ossl_ml_kem_d2i_PKCS8`/`_PUBKEY` and `ossl_ml_dsa_d2i_PKCS8`/`_PUBKEY`, which live in
+`ml_kem_codecs.c`/`ml_dsa_codecs.c` and are in neither 10.6 nor §1a's eleven. And `encode_key2any.c`
+(412 rows) waits on **more** than 10.6: the same four helpers, plus 10.6's six container writers, plus
+10.4's `PKCS8_encrypt_ex`. So the two big units are gated first on the **PQC codec helper units**, and
+pulling 10.6 forward would unblock neither. The plan's §2 now says so. **The general finding is that
+the eleven publishers are not the whole closure**: a row-publishing unit's engine can call a helper
+unit that publishes no rows of its own, so §1a's table is a census of publishers and not of closure,
+and the plan now says that too.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+at the default thread count is **1053 passed, 0 failed** (four more tests than D434's 1049, two per new
+unit). `run_courts.py`, `court_coverage.py` and `provider_court_coverage.py` clean with 0 unmatched
+rows; phase 10 reads two courts and 294 observations. `forensics/phase10-obligations.json` still reads
+`owned=298 implemented=87 open=211`, because a provider row is not an export. Phase 9 stays `complete`;
+Phase 10 stays `in-progress`; `PIPELINE OK` exit 0, twice.
+
+### Movement
+
+`src/provider/encode_key2blob.rs` and `src/provider/decode_epki2pki.rs` are added;
+`src/decoder_meth.rs`, `src/encoder_meth.rs`, `src/provider/{base,digest,mod,encode_key2text}.rs`,
+`src/runtime/err_sites.rs` and `courts/phase10/rt_codec_probe.c` change; `gen_err_raise_sites.py` and
+`phase10_courts.py` change; `docs/PHASE-10-SUBPHASES.md`'s §2 gains the measured ordering correction;
+and the atlases, the census and `forensics/regression-baseline.json` are regenerated.
+
+## D436 -- 10.1 lands the PQC codec helpers and the eighteen withheld tables, and reaches 64 of 636 rows
+
+D435's measurement said the two big units are gated first on the PQC codec helper units, so this slice
+lands them. Three new modules -- `src/provider/ml_common_codecs.rs`, `src/provider/ml_kem_codecs.rs`,
+`src/provider/ml_dsa_codecs.rs` -- carry the ML-KEM/ML-DSA `d2i`/`i2d` PKCS#8 and PUBKEY codecs, the
+SPKI prefixes, the PKCS#8 format tables and the `ML_COMMON` preference ordering with its
+`PROV_R_ML_DSA_NO_FORMAT` refusal; the SLH-DSA text printer D398 withheld lands in `src/slh_dsa/key.rs`
+as `ossl_slh_dsa_key_to_text`. **The eighteen `ML-KEM`/`ML-DSA`/`SLH-DSA` text tables D434 held `pending`
+are now published**, which is **36 new rows** (18 tables across both providers): all 29
+`MAKE_TEXT_ENCODER` tables are in, and `DEFLT_ENCODERS`/`BASE_ENCODERS` grow from 13 rows to 31 each.
+Phase 10's provider rows move from `implemented 28` to **`implemented 64 / unimplemented 572`** of 636,
+and nothing this slice touched is left `pending`. The four units join `gen_err_raise_sites.py`'s
+coverage (4138 to **4170** sites), and `ossl_slh_dsa_key_to_text`'s withheld-divergence row leaves
+`forensics/prerequisites.json`, as D434's `ossl_bio_print_*` row did.
+
+**`RT-CODEC` grows from 207 to 486 observations**, and the growth is the point: identity for all 29 rows
+across both providers, behaviour for **every** PQC text row over fixed inputs -- ML-KEM and ML-DSA
+texts printed from Phase 8's landed keygen seeds, SLH-DSA from the twelve ACVP private keys Phase 8
+already carries -- and two refusal arms with their error coordinates, the `ml_dsa`/`slh_dsa` printers'
+`PROV_R_MISSING_KEY`. `provider_court_coverage.py` reads 64 phase-10 rows directly courted with 0
+unmatched.
+
+**The helper units publish no rows, and the court says so.** Their `d2i`/`i2d` half is observable only
+through the two units that call it, so landing these three modules unlocks the eighteen text tables
+(36 rows) but leaves the four helpers themselves uncourtable until `decode_der2key.c` and
+`encode_key2any.c` land. `RT-CODEC` names that rather than implying the helpers are covered, and
+`ossl_ml_common_pkcs8_fmt_order`'s `PROV_R_ML_DSA_NO_FORMAT` refusal is driven by the provider
+*config*'s `input-formats`/`output-formats` rather than by an `OSSL_ENCODER_CTX`, so it is unit-tested
+(five tests) rather than court-driven -- stated because a refusal that is not court-driven is weaker
+evidence than one that is.
+
+**`decode_der2key.c` is now unblocked and is deliberately not half-landed.** Its four-helper closure is
+complete, so the 138-row unit is genuinely landable; it is a 1,315-line, 69-table unit plus the largest
+court extension in the stratum, and it is the next slice rather than a partial one here.
+`encode_key2any.c` remains blocked exactly as D435 measured -- 10.6's six container writers and 10.4's
+`PKCS8_encrypt_ex` are both unlanded.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+at the default thread count is **1061 passed, 0 failed** (eight more than D435's 1053, all taking
+`lock_global_state`). `run_courts.py`, `court_coverage.py` and `provider_court_coverage.py` clean, phase
+10 at two courts and 573 observations. `forensics/phase10-obligations.json` still reads
+`owned=298 implemented=87 open=211`, because a provider row is not an export. Phase 9 `complete`, Phase
+10 `in-progress`, `PIPELINE OK` exit 0 twice.
+
+### Movement
+
+`src/provider/ml_common_codecs.rs`, `ml_kem_codecs.rs` and `ml_dsa_codecs.rs` are added;
+`src/provider/{base,digest,mod,encode_key2text}.rs`, `src/slh_dsa/key.rs`, `src/runtime/err_sites.rs` and
+`courts/phase10/rt_codec_probe.c` change; `gen_err_raise_sites.py`, `phase10_courts.py` and
+`provider_court_coverage.py` change; `forensics/prerequisites.json` loses the SLH-DSA divergence row;
+and the atlases, the census and `forensics/regression-baseline.json` are regenerated.
+
+## D437 -- 10.1 lands `decode_der2key.c` whole: 69 tables, 138 rows, and Phase 10 passes a third of the stratum
+
+D436 unblocked the largest decoder unit by landing its four-helper closure, and this slice lands it.
+`src/provider/decode_der2key.rs` (3,461 lines) is the whole unit: the engine
+(`der2key_newctx`/`freectx`/`check_selection`/`decode`/`export_object`, `der2key_decode_p8`, the
+machine-generated `set_ctx_params` parser, `KeytypeDesc`/`Der2keyCtx`), the SLH-DSA `d2i_PKCS8`/`d2i_PUBKEY`
+helper with its five `PROV_R_BAD_ENCODING`/`PROV_R_UNEXPECTED_KEY_PARAMETERS` arms, and **all 69
+`MAKE_DECODER` tables**. They register as 138 new rows, so Phase 10's provider rows move from
+`implemented 64` to **`implemented 202 / unimplemented 434`** of 636 -- a third of the stratum -- with the
+decoder operation at 70 of its 76 rows per provider, and the `EncryptedPrivateKeyInfo` rows they share a
+table with already landed at D435.
+
+**`RT-CODEC` grows from 486 to 1,375 observations, and every join is deliberate.** Join 1 is identity:
+all 70 rows across both providers, 140 fetches, each reading `get0_name`/`get0_properties`/`is_a` back
+with `input=der` and its structure. Join 2 is behaviour over fixed inputs for 25 rows: the four ECX
+types' PKCS#8 and SPKI from the pinned `evppkey_ecx.txt` vector 1, and the `DH`/`DHX` parameter rows
+from `20-test_dhparam_data`'s own PKCS#3 and X9.42 DERs, through `OSSL_DECODER_CTX_new_for_pkey` and
+`OSSL_DECODER_from_data`, printing the type, the bits and the decoded public key -- not a round-trip
+claim. Join 3 is the refusals: the selection refusal observes `decode_der2key.c:300` exactly
+(`lib=57, reason=524550`), and the twelve SLH-DSA SPKI rows are driven over a five-byte body.
+**Forty-five rows are held `pending` and printed as such** rather than counted as passing: seventeen
+`no-fixed-der` (the authority tree carries no bare DER for `RSA`/`RSA-PSS`/`DSA`/`DH`/`DHX`/`EC`/`SM2`'s
+PKCS#8 and SPKI rows) and twenty-eight `encoder-unlanded` (a fixed DER only `encode_key2any.c`, still
+blocked, could write). §3.5 is the rule being followed, and the count of what is driven is stated
+separately from the count of what exists.
+
+**Two forensic tools needed a real fix, and both are the class this project keeps finding.**
+`prototype_court.py` treated an invocation inside *any* `macro_rules!` body as a call, but such an
+invocation is a template with `$`-parameters, so the `dec!`/`slh_pair!` wrappers forwarding to
+`make_decoder!` were reported as unreadable; the scanner now skips macro-definition spans, and its six
+sensitivity controls still fire. `dispatch_court.py` needed `KeyFromPkcs8Fn` -- `decode_der2key.h`'s
+`key_from_pkcs8_t`, a provider-implementation-header typedef the installed-surface atlas does not
+record -- exempted through `NOT_A_DISPATCH`, following the `WRAP_FN` precedent. The unit joins
+`gen_err_raise_sites.py`'s coverage (4,170 to **4,178** sites, with the eight `PROV_DECODE_DER2KEY_*`
+coordinates present).
+
+**Two plan corrections, one structural.** The census reader cannot read a `macro_rules!`-generated
+table: `gen_provider_algorithms.py` reads rows from table text, so the combined provider tables are
+spelled as literal `OsslAlgorithm` rows rather than through the `row!`/`decoder_rows!` macros the unit
+first used, with a unit test holding the mirror property between the two spellings. And the SLH-DSA
+`:751` coordinate is **not observable through the public decoder path** -- that length check is a
+non-fatal "this decoder did not match" refusal that `decoder_process`'s `ERR_pop_to_mark` discards once
+the decoder answers success without an object, so both sides then answer the framework's `No supported
+data to decode` (`decoder_lib.c:104`). The arm drives the twelve rows; the coordinate is **named, not
+claimed**, and that distinction is the point.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count is **1064 passed, 0 failed**. `run_courts.py`, `court_coverage.py` (0
+non-observable) and `provider_court_coverage.py` (523 implemented, 523 directly courted, **0 unmatched**)
+clean; phase 10 reads two courts and 1,462 observations. `forensics/phase10-obligations.json` still reads
+`owned=298 implemented=87 open=211`, because a provider row is not an export. Phase 9 `complete`, Phase
+10 `in-progress`; `PIPELINE OK` exit 0 twice.
+
+### Movement
+
+`src/provider/decode_der2key.rs` is added; `src/provider/{base,digest,mod}.rs`, `src/runtime/err_sites.rs`,
+`courts/phase10/rt_codec_probe.c`, `forensics/tools/{gen_err_raise_sites,prototype_court,dispatch_court}.py`
+and `forensics/tools/phase10_courts.py` change; and the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
+
+## D438 -- 10.6 lands 24 of 26 hand-offs, `RT-KEYFORMAT` becomes a court, and two pre-existing divergences surface
+
+Subphase 10.6 is the 26 symbols phases 5 and 7 handed forward, and **24 of them land**: `src/asn1/i2d_evp.rs`
+(5), `src/asn1/d2i_pr.rs` (4), `src/pem/pvkfmt.rs` (10), `src/pem/pem_pkey.rs` (1) and `src/pem/pem_pk8.rs`
+(4), each transcribed against the authority with its bytes and its error coordinates. Two are **held
+open** with a measured reason: `i2d_PKCS8PrivateKey_nid_bio`/`_fp` have no unencrypted arm at all -- every
+path calls `PKCS8_encrypt` (`crypto/pkcs12/p12_p8e.c`), which is 10.4's and open -- so they are
+`arm_reference` (address-only) in the court rather than claimed. Both `forensics/prerequisites.json`
+`units` records naming `d2i_pr.c` and `i2d_evp.c` are retired, and a **third** record the brief did not
+name had to retire with them: the `d2i_PrivateKey` deferral, which `prerequisite_gate.py` reported
+`stale_deferral` the moment the symbol was built.
+
+**This is the first slice where the ledger moves, because these are exports and not provider rows.**
+`forensics/phase10-obligations.json` goes from `owned=298 implemented=87 open=211` to **`implemented=111
+open=187`**: 24 exports discharged, and the 2 held ones are named rather than counted. The provider side
+moves too, because 10.6 unblocks three 10.1 units: `src/provider/encode_key2ms.rs` (4 tables/8 rows),
+`decode_msblob2key.rs` (2/4) and `decode_pvk2key.rs` (2/4) land, taking Phase 10's provider rows from
+`implemented 202` to **`218 / 636`** with 418 open.
+
+**`RT-KEYFORMAT` is a real court** (`courts/phase10/rt_keyformat_probe.c` plus its key header), out of
+`PENDING_COURTS` and into `phase10_courts.py`, with **256 observations**: the encoding bytes for fixed
+keys, the refusal arms with their coordinates, and **both** arms of the readers, because
+`d2i_PrivateKey`/`d2i_AutoPrivateKey` try the provider path first and fall back to the legacy one
+(`crypto/asn1/d2i_pr.c:172-175`, `:247-250`) and a probe that drove only the provider path would measure
+half the function. `RT-CODEC` grows from 1,375 to **1,487 observations** for the three new units' rows,
+and `court_coverage.py` reads phase 10 as 111 implemented, 111 direct (48 called, 63 referenced), 0
+non-observable.
+
+**Two instrument defects were found and fixed on the way, and one of them was a vacuous pass.** The
+previous slice's `RT-CODEC` extension for these three units was **not actually present**: the rows were
+being matched only by the `"RSA"`/`"DSA"` name literals, so the coverage join passed without driving
+them. That is the class this project keeps finding -- a reader answering a smaller question than it was
+asked -- and it is repaired rather than re-checked. Separately, `cargo fmt` re-wrapped the long
+`implementation: ...FUNCTIONS.as_ptr().cast()` rows, which the census reader cannot parse
+(`DEFLT_ENCODERS has 35 aliased row(s) and the reader found 31`); the tables are now imported so each row
+stays on one line.
+
+**Two pre-existing divergences surfaced, and neither is fixed by this slice.** First,
+`EVP_PKEY_get_id` returns `EVP_PKEY_KEYMGMT` for a provider key instead of the real NID
+(`src/evp/pkey.rs:770`). **That is `D-PKEY-AMETH-1`'s subject**, and D427 classified that entry `fixed` on
+the register's own "superseded by D-PKEY-AMETH-3" text; if this observation holds, that classification
+is **wrong and must be re-measured** rather than left as a machine-recorded truth -- it is the first
+case the divergence machinery's own record has been contradicted, and it is named here so it is not
+lost. Second, the Phase 8 `i2d_ECPrivateKey` emits `0x20`/`0x21` for the `[0]`/`[1]` explicit tags where
+the authority emits `0xa0`/`0xa1` (`old_ec_priv_encode`), which is why `RT-KEYFORMAT`'s EC private
+spellings are held rather than enabled: a byte comparison there would measure that Phase 8 defect, not
+this subphase's work. Transcribing `pvkfmt.c` also made two internals visible
+(`b2i_DSA_PVK_bio`/`b2i_RSA_PVK_bio`), so the gate's `sealed_census` rises 50 to 52, recorded as an
+approved `prerequisite_transitions` row the way D314 did.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count and serially are both **1064 passed, 0 failed**. `run_courts.py`,
+`court_coverage.py` and `provider_court_coverage.py` clean (539 implemented, 539 directly courted, 0
+unmatched); `gen_err_raise_sites.py` reads 4,230 sites with 0 unattributed. Phase 9 `complete`, Phase 10
+`in-progress`; `PIPELINE OK` exit 0 twice, at 106 courts and 41,922 observations.
+
+### Movement
+
+`src/asn1/i2d_evp.rs`, `src/pem/pvkfmt.rs`, `src/pem/pem_pk8.rs`,
+`src/provider/{encode_key2ms,decode_msblob2key,decode_pvk2key}.rs` and `courts/phase10/rt_keyformat_probe.c`
+(with its key header) are added; `src/asn1/{d2i_pr,mod}.rs`, `src/decoder_meth.rs`, `src/evp/evp_pkey.rs`,
+`src/pem/{mod,pem_pkey}.rs`, `src/provider/{decode_der2key,encode_key2text,mod}.rs`, `src/runtime/err_sites.rs`,
+`courts/phase10/rt_codec_probe.c` and `forensics/tools/{dispatch_court,gen_err_raise_sites,phase10_courts}.py`
+change; `forensics/{prerequisites,ownership-transitions}.json` change; and the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
+## D439 -- the two divergences D438 surfaced are both real, both are repaired, and the register's `fixed` was contradicted before it was earned
+
+D438 named two pre-existing divergences and said neither was fixed by that slice. This slice re-measures
+both against the authority and repairs them, and the first one is the more important because it settled a
+question about the divergence machinery itself.
+
+**`D-PKEY-AMETH-1` was genuinely divergent, so D427's `fixed` was wrong until this change.** The
+authority's `EVP_PKEY_get_id` reads `pkey->type` (`crypto/evp/p_lib.c:1023-1026`),
+`EVP_PKEY_get_base_id` is `EVP_PKEY_type(pkey->type)` (`:1028-1031`), and `pkey_set_type`
+(`:1537-1648`) sets the real `ameth->pkey_id` when the ASN.1 method is found and `EVP_PKEY_KEYMGMT` only
+when it is not -- reaching that method through `PKEY_asn1_find_str` via the **public**
+`EVP_PKEY_set_type_by_keymgmt` (`:1674-1701`), which `crypto/evp/keymgmt_lib.c:64`/`:505` call.
+Measured on provider keys through the decoder path, the candidate answered `-1` (`EVP_PKEY_KEYMGMT`)
+where the authority answers `6` (`EVP_PKEY_RSA`) and `116` (`EVP_PKEY_DSA`), `base_id` `0` where the
+authority answers the real NID. **The cause was a transcription defect, not the register's account of
+it**: `src/evp/keymgmt_lib.rs`'s `evp_keymgmt_util_assign_pkey`/`_copy` called a crate-local helper
+`evp_pkey_set_type_by_keymgmt` that passed `str = NULL` and so skipped the name walk the authority takes.
+The authority has no such helper. Both call sites now call the public `EVP_PKEY_set_type_by_keymgmt`,
+the invented helper is removed, and the doc records the authority's single entry point. `D-PKEY-AMETH-3`'s
+provider-key-typing observable was broken by the same bug and is repaired with it. **This is the first
+time the divergence machinery's own record has been caught asserting a `fixed` that was not earned**,
+which is exactly what D427 built it to prevent -- and the record is corrected rather than cosmetically
+kept: both rows now name `src/evp/keymgmt_lib.rs` in their `evidence`, the table reads 10 rows and 0
+blocking, and no published stratum flipped to blocking, so Phase 8 stays `complete`.
+
+**The `i2d_ECPrivateKey` explicit-tag defect was also real.** The authority's `crypto/ec/ec_asn1.c:159-164`
+uses `ASN1_EXP_OPT(...,0)`/`(...,1)`, which expands to `ASN1_TFLG_EXPLICIT | ASN1_TFLG_CONTEXT |
+ASN1_TFLG_OPTIONAL`; `src/ec/asn1.rs`'s `EC_PRIVATEKEY_SEQ_TT` wrote `EXPTAG | OPTIONAL`, omitting the
+context class bit. Measured, the authority's bytes carry `a0 0a ... a1 44` where the candidate's carried
+`20 0a ... 21 44`, and the `d2i` side returned NULL for the authority's own SEC1 and PKCS#8 EC bodies
+(lib=60, error 13) -- so it could not read real EC private keys at all, not merely write them
+non-identically. The template is corrected and the comment with it. **`RT-KEYFORMAT`'s EC arms are
+enabled** as a result -- `i2d.PrivateKey.ec`, `i2d.PKCS8PrivateKey.ec`, `pem.traditional.ec` and the
+`d2i` SEC1/PKCS#8 arms -- and its observations rise from 256 to **342**, which is the evidence that the
+fix is real rather than asserted.
+
+**Two things are flagged rather than decided.** The `crypto/x509/x_all.c` wrappers
+`i2d_ECPrivateKey_bio`/`_fp` are not implemented in the crate, so no X.509 test is affected today; when
+Phase 11 lands `x_all.c` those wrappers inherit the corrected encoding. And no new machine row was
+created for the EC tag defect, because it was an unintended transcription bug rather than a deliberate
+safety or parity narrowing, and the register's §6 is for recorded divergences rather than for fixed
+bugs -- its record is this entry. If the project wants fixed parity bugs to carry machine rows of their
+own, that is a change to the register's rule and should be decided explicitly rather than slipped in.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count is **1064 passed, 0 failed**. `divergence_obligations.py` and its `--check` are
+clean (10 rows, 0 blocking); `phase_state.py` reads 10 `complete`, 1 `in-progress`, 11 `not-started` with
+**Phase 8 `complete`** and Phase 10 `in-progress`. `run_courts.py`, `court_coverage.py` and
+`provider_court_coverage.py` clean (539/539 provider rows). `PIPELINE OK` exit 0 twice, at 106 courts and
+42,008 observations.
+
+### Movement
+
+`src/evp/keymgmt_lib.rs`, `src/evp/pkey.rs` and `src/ec/asn1.rs` change; `courts/phase10/rt_keyformat_probe.c`
+and `docs/SECURITY_DIVERGENCE_POLICY.md` change; `forensics/tools/divergence_obligations.py` and its
+regenerated `forensics/divergence-obligations.json` change; and the atlases, the census and
+`forensics/regression-baseline.json` are regenerated. `implemented-surface.json`'s
+`compiler_emitted_count` moved 12026 to 10318, a toolchain codegen property excluded from `body_hash` and
+normalized by `evidence_determinism.py`, with the C-visible symbol set unchanged and the ABI courts green.
+
+## D440 -- 10.2 lands 46 of 64 PKCS#12 exports, and the container turns out to be Phase 12's
+
+Subphase 10.2 is the `PKCS12` object and its ASN.1, and **46 of its 64 exports land** in four new modules
+under `src/pkcs12/`: `p12_asn.rs` 16 of 22 (the `MAC_DATA`, `BAGS` and `SAFEBAG` item groups and their
+`d2i`/`i2d` spellings), `p12_sbag.rs` 14 of 22 (the five `get0_*` union readers, `get_nid`/`get_bag_nid`,
+`create_secret`, the two `create0_*` forms and the three attribute readers), `p12_attr.rs` 12 of 12, and
+`p12_utl.rs` 4 of 8 (the four `asc2uni`/`uni2asc`/`utf82uni`/`uni2utf8` turns). The
+`PKCS12_BAGS`/`PKCS12_SAFEBAG` `ANY DEFINED BY` tables are transcribed in the authority's order, and the
+`PFX` template's order -- `version, authsafes, mac`, deliberately *not* the struct order -- is recorded
+in the module doc even though the container itself is withheld. **The ledger moves from
+`implemented=111 open=187` to `implemented=157 open=141`**, which is the largest single-slice move in the
+stratum so far.
+
+**The eighteen that stay open each have a measured blocker, and the largest is a stratum nobody had
+assigned to this subphase.** Six of `p12_asn.c`'s and all four of `p12_utl.c`'s remaining exports --
+`PKCS12_it`/`new`/`free`, `d2i_`/`i2d_PKCS12`, `PKCS12_AUTHSAFES_it` and the two BIO/fp wrappers -- need
+**`PKCS7_it`, which is Phase 12's** (`crypto/pkcs7/pk7_asn1.c`), because the `PFX` structure's
+`authsafes` column is a `PKCS7`. That is a plan correction: §2's 10.2 row named only 10.0 as its
+dependency. Eight of `p12_sbag.c`'s need Phase 11's `X509_it`/`X509_CRL_it` and
+`ossl_x509*_set0_libctx` (the four `get1_cert`/`get1_crl` spellings), 10.3's
+`PKCS12_item_pack_safebag` (the two `create_cert`/`create_crl` forms) and 10.4's `PKCS8_encrypt` (the two
+`create_pkcs8_encrypt*` forms). None is stubbed; all eighteen are `open` in the ledger with those
+reasons, and the plan's §3.2 -- which expects the `PFX` structure's order to be byte-comparable here --
+cannot hold in 10.2 for the same reason, which is now stated rather than assumed.
+
+**`RT-PKCS12` is a real court**, out of `PENDING_COURTS`, with **102 observations** and zero residuals:
+the item-group **DER bytes** for fixed inputs and hand-written fixtures (`SafeBag` secret, keyBag,
+shrouded and safeContents forms; `BAGS`; `MacData`), the accessor surface, the `SET OF` attribute
+ordering, the `create0_*` adoption by pointer identity, and three refusal arms with coordinates (35.112
+for a bad `vtype`, 11.140 for a duplicate attribute). **What it does not cover it prints**: the `PFX`
+container, the four `get1_cert`/`get1_crl` readers and the three `create_{cert,crl,pkcs8_encrypt*}`
+spellings each appear as `pending.<name>=<blocker>` rather than as a pass. A first draft of the probe
+crashed on a malformed `safeContentsBag` fixture because its OID arc was wrong (corrected to
+`.1.12.10.1.6`, with decodes now null-guarded) -- worth recording because a probe that crashes is a
+probe whose fixture was wrong, not a court finding a defect.
+
+`gen_err_raise_sites.py` gains `crypto/pkcs12/p12_sbag.c` (4,230 to **4,238** sites); the other three
+units raise nothing, so they are deliberately **not** listed, with that reason recorded rather than the
+omission being silent.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` at
+the default thread count is **1072 passed, 0 failed** (eight more than D439's 1064, all taking
+`lock_global_state`). `run_courts.py` reads phase 10 as four courts and 2,018 observations;
+`court_coverage.py` reads 157 implemented and 157 direct with 0 non-observable; `provider_court_coverage.py`
+reads 539/539 with 0 unmatched. Phase 9 `complete`, Phase 10 `in-progress`; `PIPELINE OK` exit 0 twice, at
+107 courts and 42,110 observations.
+
+### Movement
+
+`src/pkcs12/p12_asn.rs`, `p12_sbag.rs`, `p12_attr.rs` and `p12_utl.rs` are added and `src/pkcs12/mod.rs`
+wires them; `src/runtime/err_sites.rs`, `courts/phase10/rt_pkcs12_probe.c`,
+`forensics/tools/{gen_err_raise_sites,phase10_courts}.py` change; and the ledgers, the atlases, the census
+and `forensics/regression-baseline.json` are regenerated.
+
+## D441 -- 10.3 lands 4 of 31, and the reason is a stratum-ordering defect: the PKCS#12 container needs Phase 12's `PKCS7`
+
+Subphase 10.3 is the PKCS#12 container construction, and **4 of its 31 exports land**:
+`PKCS12_item_pack_safebag` (the first half of 10.2's `create_cert`/`create_crl` blocker),
+`PKCS12_decrypt_skey` and its `_ex` twin, and `PKCS12_add_secret`. The ledger moves from
+`implemented=157 open=141` to **`implemented=161 open=137`**, and `gen_err_raise_sites.py` gains
+`crypto/pkcs12/p12_add.c` under a distinct `PKCS12_ADD` stem because the `PKCS12` stem's line numbers
+collide (4,238 to 4,253 sites, 0 unattributed).
+
+**The other twenty-seven are blocked outside the subphase, and the dominant blocker is a defect in the
+plan rather than in the work.** `PKCS12_pack_p7data`/`unpack_p7data`, `PKCS12_pack_p7encdata(_ex)`,
+`PKCS12_pack_authsafes`/`unpack_authsafes`, `PKCS12_add_safe(_ex)`, `PKCS12_add_safes(_ex)`,
+`PKCS12_create(_ex/_ex2)`, `PKCS12_mac_present`/`get0_mac`/`setup_mac`, `PKCS12_init(_ex)` and
+`PKCS12_newpass` all need **Phase 12's `PKCS7` object** (`crypto/pkcs7/pk7_asn1.c`), because the `PFX`
+structure's `authsafes` column *is* a `PKCS7` and no `PKCS12` object can be built without one. Others need
+Phase 11's `X509_it`/`X509_CRL_it`/`EVP_PKEY2PKCS8` (the `get1_cert`/`get1_crl` spellings and
+`PKCS12_add_key(_ex)`), 10.4's `PKCS8_encrypt` and `PKCS12_key_gen_utf8_ex` (the shrouded-key and MAC
+setters), and Phase 11's `PKCS5_pbe*set*_ex` (the two `p7encdata` spellings). **The structural finding:
+Phase 10's ordering above Phase 12 does not match its dependency on Phase 12.** The plan's §2 put PKCS#12
+in 10 and PKCS#7 in 12, and for the container the dependency runs the other way.
+
+**What that means is flagged rather than chosen.** Either Phase 10 stays `in-progress` until Phase 12
+lands `PKCS7` -- which the sequential model permits but makes "one stratum at a time" false for these
+rows -- or a `PKCS7` subset is pulled forward, which reorders the plan and is not a decision an
+implementing slice should take alone. D440's version of the same finding (the `PFX` container cannot be
+byte-comparable in 10.2) is its first symptom. Nothing was stubbed and no `PKCS7` was fabricated.
+
+**`RT-PKCS12` grows from 102 to 146 observations, and it grows honestly.** Four exports became real
+observations (17 lines): `item_pack_safebag` packing a fixed `PKCS8_PRIV_KEY_INFO` as a `certBag` with
+its nids and DER, the two `decrypt_skey` spellings printing the NULL return and the error coordinate for
+a non-PBE shrouded bag, and `add_secret` printing the stack count, the nids and the bag's DER. **Zero of
+the eighteen already-`pending` rows became driven**, because every one is blocked the same way;
+`create_cert`/`create_crl` changed blocker text from `phase-10.3` to `phase-11-x509` as 10.3's half
+landed, which is what a blocker field should show. **Twenty-seven new `pending.*` lines were added** for
+the open 10.3 exports so that "not driven" cannot read as "passed". `CT-PKCS12` stays pending for a
+measured reason: 10.3's closure holds nothing vector-checkable (an ASN.1 packer, a shrouded-key reader
+and an `add_*` builder), and the KDF/PBE corpus is 10.4's, so no corpus was invented to make a
+correctness court exist.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` is
+**1074 passed, 0 failed** at the default thread count and serially. `run_courts.py` is `ok` over nine
+phases; `court_coverage.py` reads phase 10 as 161 implemented and 161 direct (98 called, 63 referenced)
+with 0 unmatched; `provider_court_coverage.py` reads 539/539. Phase 9 `complete`, Phase 10 `in-progress`;
+`PIPELINE OK` exit 0 twice, at 107 courts and 42,154 observations.
+
+### Movement
+
+`src/pkcs12/p12_add.rs` and `src/pkcs12/p12_crt.rs` are added and wired in `src/pkcs12/mod.rs`;
+`src/runtime/err_sites.rs`, `courts/phase10/rt_pkcs12_probe.c`,
+`forensics/tools/{gen_err_raise_sites,phase10_courts}.py` change; and the ledgers, the atlases, the census
+and `forensics/regression-baseline.json` are regenerated.
+
+## D442 -- the plan is reordered: `crypto/pkcs7/`'s object and ASN.1 are a prerequisite of 10.2/10.3, and Phase 10 moves to 183 of 298
+
+D441 measured that 27 of 10.3's 31 exports are blocked on Phase 12's `PKCS7` object and flagged the
+stratum-ordering defect rather than choosing. The project owner chose: pull it forward. This slice lands
+the subset and records the reorder.
+
+**The subset is measured, not guessed.** `nm --undefined-only` over the authority's own `crypto/pkcs12/`
+build objects, filtered to the two prefixes, names exactly **ten** symbols: `PKCS7_free`, `PKCS7_it`,
+`PKCS7_new`, `PKCS7_new_ex`, `PKCS7_set_type`, `ossl_pkcs7_ctx_get0_libctx`, `ossl_pkcs7_ctx_get0_propq`,
+`ossl_pkcs7_ctx_propagate`, `ossl_pkcs7_set0_libctx` and `ossl_pkcs7_set1_propq`. A new `src/pkcs7/`
+(`pk7_asn1.rs`, `pk7_lib.rs`, 880 lines) carries them, and **fourteen of `pkcs7.h`'s 118 exports land**
+(the five above plus `PKCS7_ENC_CONTENT_it/new/free`, `PKCS7_ENCRYPT_it/new/free` and
+`PKCS7_DIGEST_it/new/free`), leaving 104. **Three of the item's six `ASN1_ADB` arms land -- `data`,
+`digest`, `encrypted` -- and `signed`/`enveloped`/`signedAndEnveloped` are withheld rather than stubbed,
+because their templates name Phase 11's `X509_it`/`X509_CRL_it`/`X509_NAME_it`.** That is not a shortcut:
+PKCS#12 never reaches them (an `authsafes` is always `NID_pkcs7_data` and a `p7encdata` safe is
+`NID_pkcs7_encrypted`), the withheld arms fall to the authority's own `default:` arm raising
+`PKCS7_R_UNSUPPORTED_CONTENT_TYPE` (`PKCS7_LIB_179`), and `ossl_pkcs7_resolve_libctx`'s three propagation
+walks are withheld with a note that for these three arms all three stacks are null by type, so the
+authority's loops iterate zero times. The one gate finding is recorded in `forensics/prerequisites.json`
+as an `owned_by_a_later_stratum` row for `pkcs7_get0_certificates`.
+
+**Ownership is unchanged by the landing.** The atlas still assigns `pkcs7.h` to Phase 12 and the fourteen
+symbols read `implemented` with `owning_phase: 12` while **Phase 12 stays `not-started`** -- no Phase 12
+evidence, ledger, plan, seal or state row is created, and `phase_state.py` still derives `not-started` for
+it. That is the precedent Phase 8 set when it landed 87 exports the atlas assigns to Phase 10, and it is
+why a stratum can be *behind* another in the order while its closure is built *ahead* of it.
+
+**The reorder is the point: PKCS#7 is not Phase 12-only.** `crypto/pkcs7/`'s object and ASN.1 are a
+prerequisite of 10.2 and 10.3, so the plan's §2 ordering had to be corrected rather than worked around --
+which is what a plan derived from the authority's own objects can do, and what a plan read as a backlog
+cannot. The arms' closure split is the same finding one level down: `data`/`digest`/`encrypted` depend on
+nothing above Phase 10, and `signed`/`enveloped`/`signedAndEnveloped` depend on Phase 11.
+
+**Twenty-two exports became reachable and landed.** Twelve of 10.3's twenty-seven --
+`PKCS12_pack_p7data`/`unpack_p7data`/`unpack_p7encdata`, `PKCS12_pack_authsafes`/`unpack_authsafes`,
+`PKCS12_add_safes(_ex)`, `PKCS12_mac_present`/`get0_mac`/`setup_mac`, `PKCS12_init(_ex)` -- and the
+ten `PKCS12`-container rows 10.2 had left open (`PKCS12_it`/`new`/`free`, `d2i_`/`i2d_PKCS12`,
+`PKCS12_AUTHSAFES_it` and the four `_bio`/`_fp` spellings). `setup_mac` needed no KDF at all, only
+`RAND_bytes_ex`, `X509_SIG_getm` and `X509_ALGOR_set0`. **The ledger moves from
+`implemented=161 open=137` to `implemented=183 open=115`**, and 10.3 now stands at 16 implemented of 32
+rather than 4. Eight remain open with a measured Phase 11 blocker
+(`PKCS12_pack_p7encdata(_ex)`, `PKCS12_add_safe(_ex)` and `PKCS12_newpass` need `PKCS5_pbe*set*_ex` and
+the PBE parameter types), and 10.2's `create_cert`/`create_crl` plus the four `get1_cert`/`get1_crl`
+readers stay open because neither `X509_it` nor `X509_CRL_it` is landed. Nothing was stubbed.
+
+**`RT-PKCS12` moves from 146 to 184 observations and twenty-two of its `pending` rows to driven** (45 to
+23 `pending.*` lines), on the real thing §3.2 asked for: the `PFX` DER order (`version`, `authsafes`,
+`mac`) for an empty container and for a fixed-`MacData` one, the `MacData`'s `salt`/`iterations`/
+`digestAlgorithm` read back through `PKCS12_get0_mac`, the two-element authsafes' `SEQUENCE OF PKCS7`
+ordering by i2d bytes and by `unpack_authsafes`, the `_bio`/`_fp` spellings over a memory BIO and a
+`tmpfile`, and two refusal arms with coordinates. The remaining 23 `pending.*` lines have blockers
+corrected from `phase-12-pkcs7` to `phase-11-pkcs5`/`phase-11-pbe`/`phase-11-x509` -- a blocker field
+that moved as the truth moved.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` is
+**1074 passed, 0 failed** at the default thread count and serially. `run_courts.py` is `ok` over nine
+phases; `court_coverage.py` reads phase 10 as 183 implemented and 183 direct with 0 unmatched;
+`provider_court_coverage.py` reads 539/539. `phase_state.py` reads 0-9 `complete`, **10 `in-progress`**,
+11-21 `not-started`. `PIPELINE OK` exit 0 twice, at 107 courts and 42,192 observations.
+
+### Movement
+
+`src/pkcs7/{mod,pk7_asn1,pk7_lib}.rs` and `src/pkcs12/{p12_init,p12_mutl}.rs` are added; `src/lib.rs`,
+`src/pkcs12/{mod,p12_add,p12_asn,p12_crt,p12_utl}.rs`, `src/runtime/err_sites.rs`,
+`courts/phase10/rt_pkcs12_probe.c`, `forensics/prerequisites.json` and
+`forensics/tools/gen_err_raise_sites.py` change; and the ledgers, the atlases, the census and
+`forensics/regression-baseline.json` are regenerated. **The plan's §2 ordering is superseded by this
+entry**: `crypto/pkcs7/`'s `data`/`digest`/`encrypted` arms belong to 10.2/10.3's critical path, and only
+its `signed`/`enveloped`/`signedAndEnveloped` arms and the remaining 104 `pkcs7.h` exports are Phase 12's.
+
+## D443 -- 10.4 lands 11 of 14, closes `D-PBE-PKCS12-KEYGEN-1`, gives `CT-PKCS12` a corpus, and confirms the next blocker is Phase 11
+
+Subphase 10.4 is the PKCS#12 key derivation and the PBE pair, and **11 of its 14 open exports land** in
+three new modules: `src/pkcs12/p12_key.rs` (the six `PKCS12_key_gen_{asc,asc_ex,uni,uni_ex,utf8,utf8_ex}`
+spellings), `src/pkcs12/p12_crpt.rs` (`PKCS12_PBE_add` and both `PKCS12_PBE_keyivgen` forms) and
+`src/pkcs12/p12_p8e.rs` (`PKCS8_set0_pbe(_ex)`). **The KDF is a provider call rather than a hand-written
+derivation** -- it reaches `EVP_KDF_fetch("PKCS12KDF")` and the `src/provider/kdf.rs` row that already
+existed -- which matters because a hand-rolled KDF that agrees with the corpus is a different library with
+the same output. The ledger moves from `implemented=183 open=115` to **`implemented=194 open=104`**.
+
+**`D-PBE-PKCS12-KEYGEN-1` is closed, and closed with evidence.** The six `BUILTIN_PBE` rows now carry
+`PKCS12_PBE_keyivgen`/`_ex` (`src/evp/evp_pbe.rs`), its register heading reads `— **CLOSED**`, and its
+machine-readable row carries `trigger_satisfied: true`, `disposition: "fixed"`, `blocking: false` with
+`evidence` naming `src/pkcs12/p12_crpt.rs`, `src/evp/evp_pbe.rs` and `RT-PKCS12`'s `pbe.find.04..09` arms
+-- which are the measurement of the divergence itself: those six arms print each row's keygen presence,
+so the closure is observed rather than asserted. D439 had to correct a `fixed` that was not earned; this
+one is earned. `divergence_obligations.py` and `--check` are clean at 10 rows and **0 blocking**.
+
+**`CT-PKCS12` is a real correctness court, and its corpus is the authority's own.**
+`courts/phase10/ct_pkcs12.c` over a generated `forensics/vectors/pkcs12.json` (6 vectors) re-reads the
+pinned corpus's six `PBE = pkcs12` stanzas and calls `PKCS12_key_gen_uni` exactly as `test/evp_test.c`'s
+`pbe_test_run` does: **6 of 6 vectors pass**. Two corpora are **declined with reasons** rather than
+ignored -- `evppbe_pbkdf2.txt` is `PBE = pbkdf2`, which is `PKCS5_PBKDF2_HMAC` and Phase 7's, and
+`80-test_pkcs12.t` is a `PKCS7`/`X509` container test, which is Phase 12's and Phase 11's. No corpus was
+invented to make a correctness court exist.
+
+**`RT-PKCS12` grows from 184 to 216 observations, and zero of its pending rows moved to driven -- which
+is the honest result rather than a miss.** The 11 landed exports were not previously `pending` lines, so
+there is nothing to move: what grew is the evidence for what landed (the six KDF spellings,
+`PKCS12_PBE_add`, both `PKCS12_PBE_keyivgen` forms, the six `builtin_pbe[]` keygen-presence arms,
+`EVP_PBE_CipherInit_ex` on the two TripleDES rows which genuinely reach the keygen, and
+`PKCS8_set0_pbe(_ex)`), plus **three new `pending.*` lines** for the still-open exports. Six blocker texts
+were corrected as their true owner moved, and `pending` went 23 to 26 lines.
+
+**The measurement that matters most is what did *not* land, and its blocker is now pinned.**
+`nm --undefined-only` on the authority's `encode_key2any.o` shows its **only** remaining unlanded
+dependency is `PKCS8_encrypt_ex`: D438's six container writers and D436's four PQC `i2d` helpers are
+landed, and the third blocker is not closable inside 10.4, because `PKCS8_encrypt(_ex)`'s own closure is
+**Phase 11's `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex`** (both `x509.h` exports, `owner_phase: 11`,
+neither landed). Since 116 of `encode_key2any.c`'s 206 tables reference it, the unit does not compile and
+**the 412-row mover stays open: provider rows are unchanged at `218 implemented / 418 open` and
+`RT-CODEC` stays at 1,487 observations.** The plan's §2 said "then `encode_key2any.c` once 10.6 and 10.4
+have landed", and that is now measured to be **unsatisfiable**: its true prerequisite is Phase 11. The
+same holds for 10.3's remaining eight (which need `PKCS5_pbe*set*_ex`), 10.2's two
+`create_pkcs8_encrypt*` forms, and the four MAC setters (whose blocker moved from `phase-10.4-kdf` to
+`phase-11-pbe`, needing `PBMAC1PARAM`/`PKCS5_pbkdf2_set`).
+
+**So the decision the `PKCS7` pull-forward answered is now asked again, with numbers attached.** The
+stratum's two largest remaining movers -- `encode_key2any.c`'s 412 rows and 10.2/10.3's Phase 11-blocked
+exports -- need a Phase 11 `X509`/`PKCS5` subset, and on D442's precedent the subset would be measured the
+same way (`nm --undefined-only` over the objects that need it) rather than guessed. **This is flagged for
+the owner rather than decided here**, for the same reason D441 flagged the `PKCS7` one: it changes a
+stratum's dependency order, not a subphase's contents.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` is
+**1079 passed, 0 failed** (five more than D442's 1074, all taking `lock_global_state`). `run_courts.py`,
+`court_coverage.py` (phase 10: 194 implemented, 194 direct, 131 called and 63 referenced, 0
+non-observable) and `provider_court_coverage.py` (539/539, 0 unmatched) clean. `phase_state.py` reads 0-9
+`complete`, **10 `in-progress`**, 11-21 `not-started`. `PIPELINE OK` exit 0 twice, at 108 courts and
+42,224 observations.
+
+### Movement
+
+`src/pkcs12/{p12_key,p12_crpt,p12_p8e}.rs`, `courts/phase10/ct_pkcs12.c`,
+`forensics/tools/gen_pkcs12_vectors.py` and `forensics/vectors/pkcs12.json` are added;
+`src/evp/evp_pbe.rs`, `src/pkcs12/mod.rs`, `src/runtime/err_sites.rs`, `courts/phase10/rt_pkcs12_probe.c`,
+`forensics/tools/{correctness_vectors,phase10_courts}.py`, `docs/SECURITY_DIVERGENCE_POLICY.md` and
+`forensics/tools/divergence_obligations.py` change; and the ledgers, the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
+
+## D444 -- the Phase 11 subset is pulled forward, `encode_key2any.c`'s blocker closes, and a gate is found not to bind
+
+D443 measured that the stratum's remaining big movers needed Phase 11, and the owner's `PKCS7` decision is
+extended here on D442's precedent: **pull the measured subset forward.** The subset is measured the same
+way -- `nm --undefined-only` over the authority's `crypto/pkcs12/` objects and
+`providers/implementations/encode_decode/encode_key2any.o`, filtered to the six prefixes -- and names
+**42 symbols, 21 of them already landed and 21 open**. **Thirty `x509.h` exports land**: the
+`PBEPARAM`/`PBE2PARAM`/`PBKDF2PARAM`/`PBMAC1PARAM` items with their `_it`/`_new`/`_free`/`d2i_`/`i2d_`
+spellings (20), the `PKCS5_pbe_set*`/`pbe2_set*`/`pbkdf2_set*` family (9) and `EVP_PKEY2PKCS8` (1), in
+new `src/asn1/p5_pbe.rs` and `src/asn1/p5_pbev2.rs`. `x509.h` moves from 83 implemented of 548 to **113,
+leaving 435**.
+
+**The `X509`/`X509_CRL`/`X509_NAME` family is withheld rather than stubbed**, with D442's explicit note and
+for the same measured reason: `X509_it`'s template and its `x509_cb` aux callbacks name the whole Phase 11
+certificate object graph, which Phase 10's closure never reaches. The `PKCS7` pull-forward could land
+three of its six arms because PKCS#12 provably never reaches the other three; here the item cannot be
+built at all without the certificate graph, so nothing is pretended. **Ownership is unchanged and Phase
+11 still derives `not-started`** -- no Phase 11 evidence, ledger, plan, seal or state row is created.
+
+**With its dependency closed, four more Phase 10 exports land**: 10.2's
+`PKCS12_SAFEBAG_create_pkcs8_encrypt(_ex)` and 10.4's `PKCS8_encrypt(_ex)`, driven by new `RT-PKCS12` arms
+over a fixed salt and iteration count. The ledger moves from `implemented=194 open=104` to
+**`implemented=198 open=100`**, and `RT-PKCS12` from 216 to 222 observations. **The twenty-four remaining
+non-STORE rows now have their blockers corrected rather than repeated**: the Phase 11 ones are gone, so
+the MAC setters and `pack_p7encdata`/`add_safe`/`newpass` read `phase-10.3` (this stratum's own unwritten
+work) and `create(_ex/_ex2)`/`add_cert`/`get1_cert`/`get1_crl`/`create_cert`/`create_crl`/`parse` stay
+`phase-11-x509`.
+
+**`encode_key2any.c` did not land, and the reason has changed shape.** Its last unlanded dependency is now
+closed -- `PKCS8_encrypt_ex` is one of the thirty `x509.h` exports above -- so §2's note ("then
+`encode_key2any.c` once 10.6 and 10.4 have landed") was **wrong about *why* it waited**: the blocker was
+Phase 11, not 10.6 and 10.4, and what remains is the unit's own 1,820-line, 206-table transcription.
+Provider rows are unchanged at `218 implemented / 418 open` and `RT-CODEC` stays at 1,487 observations.
+That is the honest state: the dependency is cleared and the work is not done.
+
+**A gate was found not to bind, which is the kind of finding this project treats as a defect in the
+evidence system rather than a curiosity.** `docs_consistency.py`'s `active_status_check` for the active
+stratum is supposed to extract the plan's `Landed`/`Open` symbol clauses and check them against the
+generated surface; for Phase 10 it extracts **zero** symbols, because the plan's subphase table puts a
+blank line between each row's heading and its paragraph and the extractor's pattern does not cross it. The
+Phase 10 anchor is therefore **vacuous** -- the gate reports success without checking anything, which is
+exactly the class D417/D420/D421 kept finding. It is recorded here rather than fixed in this slice, and it
+is a follow-up with a named cause rather than a mystery. A second, smaller follow-up is recorded too: the
+private `PBEPARAM`/`PBE2PARAM`/`PBKDF2PARAM` descriptors in `src/evp/p5_crpt.rs`/`p5_crpt2.rs` now
+co-exist with the landed items, and the D348-style de-duplication to a single home is outstanding.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib` is
+**1081 passed, 0 failed** (two more item-shape tests than D443's 1079). `run_courts.py`,
+`court_coverage.py` and `provider_court_coverage.py` clean. `phase_state.py` reads 0-9 `complete`,
+**10 `in-progress`**, 11-21 `not-started` with **Phase 11 `not-started`**. `PIPELINE OK` exit 0 twice, at
+108 courts and 42,230 observations.
+
+### Movement
+
+`src/asn1/p5_pbe.rs` and `src/asn1/p5_pbev2.rs` are added; `src/asn1/mod.rs`, `src/evp/evp_pkey.rs`,
+`src/pkcs12/{p12_crt,p12_p8e,p12_sbag}.rs`, `src/runtime/err_sites.rs`, `courts/phase10/rt_pkcs12_probe.c`
+and `forensics/tools/gen_err_raise_sites.py` change; and the ledgers, the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
+
+## D445 -- `encode_key2any.c` lands whole: 208 expansions, 206 registered rows, 412 provider rows, and three machinery defects found on the way
+
+This closes 10.1. `src/provider/encode_key2any.rs` is the authority's largest provider unit (1,820
+lines, one `MAKE_ENCODER` macro at `:1467-1532` over 208 expansions at `:1538-1819`), and it is
+**the unit's own transcription**, engine and tables, not a table of registrations. The engine is
+`key2any_encode` over `KEY2ANY_CTX`, the seven writers (`key_to_pki_*`, `key_to_epki_*`,
+`key_to_spki_*`, `key_to_type_specific_*`), `key_to_p8info`/`key_to_encp8`/`key_to_pubkey`, and the
+per-type DER producers and parameter-blob builders (`prepare_*_params`, `*_spki_pub_to_der`,
+`*_pki_priv_to_der`, `*_check_key_type`, the seven `k2d_noctx!` closures). The tables are 208
+`make_encoder!` expansions; **206 are registered** as rows by both providers and two --
+`MAKE_ENCODER(sm2, ec, SM2, der/pem)` -- are transcribed and left unregistered, exactly as the
+authority's own `encoders.inc` does.
+
+**Provenance is stated rather than implied.** The engine and the `make_encoder!` macro were found
+in the working tree as an **uncommitted, unfinished** transcription: the macro was written, the
+208 expansions were not, and a `// @@ENCODER_TABLES@@` placeholder stood where they belong. This
+slice generated the expansions and the rows, fixed the defects the compiler and clippy then
+surfaced, and wired the unit into both providers. It did not re-derive the engine.
+
+**Two Phase-11 exports are pulled forward, and only the measured two.**
+`nm --undefined-only` over the authority's `libdefault-lib-encode_key2any.o` names exactly two
+symbols this crate did not implement that the unit reaches, both from the
+`SubjectPublicKeyInfo` arms (`:329`, `:354`): `i2d_X509_PUBKEY_bio` (landed beside
+`i2d_X509_PUBKEY` in `src/x509/x_pubkey.rs`) and `PEM_write_bio_X509_PUBKEY` (landed beside
+`PEM_ASN1_write_bio_ctx` in `src/pem/pem_lib.rs`). Both are thin wrappers over landed machinery
+(`ASN1_item_i2d_bio`, `PEM_ASN1_write_bio`), and **ownership is unchanged**: Phase 11 still derives
+`not-started` and no Phase 11 evidence, ledger, plan, seal or state row is created.
+
+**The 10.4 dependency closes and takes two exports with it.** `pem_pk8.rs`'s `do_pk8pkey`
+withheld the authority's `nid != -1` arm because it needed `PKCS8_encrypt`, and that arm is what
+`i2d_PKCS8PrivateKey_nid_bio`/`_fp` are. With `PKCS8_encrypt_ex` landed (D444) the arm is
+transcribed whole (`pem_pk8.c:135-154`, including the `PEM_R_READ_KEY` read and the cleanse), and
+both exports land. The ledger moves from `implemented=198 open=100` to **`implemented=200
+open=98`**, and `RT-KEYFORMAT` from 342 to **349** observations.
+
+### Three machinery defects, each found by a gate refusing the work
+
+1. **The provider census could not read a formatted table.** `gen_provider_algorithms.py`'s
+   inline reader required `.as_ptr()` to abut the dispatch identifier, so the first formatting pass
+   that wrapped `implementation: <long authority name>.as_ptr().cast(),` onto its own line made it
+   read **55 of 241** rows and refuse the table. The reader now tolerates whitespace before
+   `.as_ptr()`. This is the D417/D420/D421 class: a reader that silently under-counts.
+2. **The row order is `encoders.inc`'s, and it interleaves.** The type-specific rows and the
+   `blob` rows alternate (`EC` ts, `EC` blob, `SM2` ts, `SM2` blob), so appending all
+type-specific rows before the blob rows is not a subsequence and the census refused it. The rows
+are now placed by anchor against the rows already present, in the authority's own order, and the
+subsequence check holds for both tables.
+3. **Two readers cannot see two things this unit needs.** `prerequisite_gate.py` reads definitions
+   textually and cannot see a `macro_rules!`-generated `static`, so a table named after the
+   authority's symbol would read as an unresolved prerequisite; the tables therefore take the
+   crate's existing SCREAMING convention (`RSA_TO_TEXT_FUNCTIONS`) with the authority's symbol name
+   in the doc comment. And `dispatch_court.py` cannot link `encode_key2any.c:67-72`'s two
+   function-type typedefs (`key_to_paramstring_fn`, `key_to_der_fn`) because they are declared in
+   the `.c`, not in an installed header, so the typedefs atlas has no record of them; the crate's
+   two aliases are exempted with that reason rather than left unlinked.
+
+**What is landed and what is not driven, stated plainly.** The 206 rows are implemented, registered
+by both providers, pinned by the census's `algorithm_names`/`property_definition` join, and
+`provider_court_coverage` marks them `direct` (their aliases are named by `rt_codec_probe.c`). **No
+observation drives them yet**: `RT-CODEC` stays at 1,487 observations, and its own header still
+says the encoder half is open. `docs/PHASE-10-SUBPHASES.md` section 3.1's first join is therefore
+only partly read for this unit, and the next slice is the probe arms that read it. The two `_nid_`
+writers cannot be byte-compared at all -- `PKCS8_encrypt` draws a random salt -- so their arm
+observes the return, the encoded length, a passphrase round-trip through the reader and the error
+queue, and says why in the probe.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1083 passed, 0 failed** (two item-shape tests in the new module). `run_courts.py`,
+`court_coverage.py`, `provider_court_coverage.py`, `dispatch_court.py`, `prerequisite_gate.py` and
+`probe_hygiene.py` clean. `PIPELINE OK` exit 0 on two consecutive runs, at 108 courts and 42,237
+observations. `phase_state.py` reads 0-9 `complete`, 10 `in-progress`, 11-21 `not-started`.
+
+### Movement
+
+Phase-10 provider rows move from `218 implemented / 418 open` to **`630 implemented / 6 open`**
+(the 412 `encode_key2any.c` rows; the remaining six are the four `decode_pem2der.c`/
+`decode_spki2typespki.c` rows, waiting on Phase 11's `ossl_x509_algor_is_sm2`, and the two
+`file_store.c` rows 10.5 owes). Phase-10 exports move to `200 implemented / 98 open`. The new
+module is added; `src/provider/mod.rs`, `src/provider/encode_key2text.rs`, `src/dh/asn1.rs`,
+`src/x509/x_pubkey.rs`, `src/pem/pem_lib.rs`, `src/pem/pem_pk8.rs`,
+`courts/phase10/rt_keyformat_probe.c`, `forensics/tools/gen_provider_algorithms.py` and
+`forensics/tools/dispatch_court.py` change; and the ledgers, the atlases, the census and
+`forensics/regression-baseline.json` are regenerated.
+
+## D446 -- RT-CODEC drives the 206 `encode_key2any.c` rows, and 10.1's first join is read
+
+D445 landed the unit and left the evidence open: the rows were implemented and registered, and
+`provider_court_coverage` marked them `direct`, but no observation touched one and `RT-CODEC` sat
+at 1,487. This slice is the probe work `docs/PHASE-10-SUBPHASES.md` section 3.1 requires, and it
+is the difference between a row that exists and a row that has been measured.
+
+`courts/phase10/rt_codec_probe.c` gains a `encode_key2any.c` section. **Identity**: all 206 rows
+are fetched in **both** providers (412 fetches) with the query `encoders.inc` publishes --
+`provider=default|base,fips=…,output=der|pem,structure=…` -- printing `get0_name`,
+`get0_properties` and `is_a`. **Behaviour**: 206 fixed-input encodes through
+`OSSL_ENCODER_CTX_new_for_pkey(pkey, selection, "DER"/"PEM", structure, NULL)`, comparing
+`OSSL_ENCODER_to_data`'s bytes with the authority's. **144 rows emit exact bytes**; **62 return 0
+as the row's own refusal** -- the 58 `EncryptedPrivateKeyInfo` rows, whose `cipher_intent` is unset
+when no cipher is given, and the four `DH`/`DHX` `SubjectPublicKeyInfo` rows, which raise
+`PROV_R_NOT_A_PUBLIC_KEY`. Refusal arms cover the parameters-only key under a keypair selection and
+the `cipher_intent` upgrade on both `EncryptedPrivateKeyInfo` and `PrivateKeyInfo`
+(`PROV_R_UNABLE_TO_GET_PASSPHRASE`).
+
+**Every key is a fixed, non-secret constant** the Phase-10 and Phase-8 probes already carry: the
+RSA/DSA/EC/ECX PKCS#8 bodies, the RSA-PSS key re-imported from the fixed RSA key, the SM2 scalar
+one on the published generator, the fixed DH/DHX private value, and the Phase-8 keygen seeds and
+ACVP keys for the PQC types. Nothing is generated and nothing is salted, so the transcript stays a
+function of its inputs alone.
+
+**One path is pending, with a measured blocker rather than a silent skip.** The abstract-object
+refusal (`encode_key2any.c:1504`) cannot be reached from the public `OSSL_ENCODER_*` surface: a
+non-NULL `key_abstract` is only passed when a deeper encoder in the same chain has produced data
+whose output type is an alias of this row's algorithm name (`encoder_lib.c:662`), and no provider
+encoder publishes such an output type. The arm prints
+`ek.abstract.pending=abstract-object-unreachable-from-the-public-surface` beside the measurement
+`ek.abstract.instances=26` (the encoders one RSA key collects), which is section 3.5's rule: a row
+or path that cannot be driven is named, never counted as passing.
+
+### Verification
+
+`RT-CODEC` moves from **1,487 to 4,072 observations**, candidate and authority byte-identical and
+deterministic across runs, 0 residuals. `provider_court_coverage.py` reads 951 of 951 rows
+`direct` with none unmatched. `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D
+warnings` clean; `cargo test --lib` is **1083 passed, 0 failed**. `PIPELINE OK` exit 0 on two
+consecutive runs, at 108 courts and **44,822 observations**. `phase_state.py` is unchanged: 0-9
+`complete`, 10 `in-progress`, 11-21 `not-started`. No `src/` file changes, so no export or provider
+row moves: Phase 10 stands at `200 implemented / 98 open` exports and `630 implemented / 6 open`
+provider rows.
+
+## D447 -- 10.3 lands its eleven PKCS#12 exports, and the eleven it does not land have a measured blocker
+
+10.3 is the container *construction* half of `crypto/pkcs12/`, and this slice lands every export in
+it that this stratum's closure can reach: `PKCS12_add_key(_ex)` and `PKCS12_add_safe(_ex)`
+(`p12_crt.c`), `PKCS12_gen_mac`, `PKCS12_verify_mac`, `PKCS12_set_mac`,
+`PKCS12_set_pbmac1_pbkdf2` and `PKCS12_pack_p7encdata(_ex)` (`p12_mutl.c`, `p12_add.rs`), and
+`PKCS12_newpass` (`p12_npas.c`). The ledger moves from `implemented=200 open=98` to
+**`implemented=211 open=87`**.
+
+**The eleven that stay open stay open for a reason that was measured, not assumed.**
+`nm --undefined-only` over the authority's `crypto/pkcs12/` objects shows each of them reaching a
+name Phase 11 owns and this crate does not yet have: `PKCS12_create(_ex/_ex2)` and
+`PKCS12_add_cert` reach `X509_check_private_key`/`X509_digest`/`X509_alias_get0`/`X509_keyid_get0`;
+the `PKCS12_SAFEBAG_create_cert/_crl` and `_get1_cert(_ex)`/`_get1_crl(_ex)` family reaches
+`X509_it`/`X509_CRL_it` and the `ossl_x509*_set0_libctx` group; `PKCS12_parse` reaches
+`PKCS12_SAFEBAG_get1_cert_ex`/`ossl_x509_add_cert_new`. They are withheld with that blocker named
+in `src/pkcs12/mod.rs` and printed `pending` by the probe; **no Phase 11 evidence, ledger, plan,
+seal or state row is created**, and Phase 11 still derives `not-started`.
+
+**The identity is the DER document and the MAC, per section 3.2.** `courts/phase10/rt_pkcs12_probe.c`
+gains six arms -- `court_mac`, `court_pbmac1`, `court_p7encdata`, `court_add_key`, `court_add_safe`
+and `court_newpass` -- each driving its exports over a **fixed** salt, iteration count and IV, and
+printing either the exact DER or the exact error queue and coordinates. `RT-PKCS12` moves from 222
+to **292** observations. `CT-PKCS12` stays at **6/6**: the correctness plane carries the PKCS#12 KDF
+and PBE vectors, and the authority publishes no container-construction vector, so the container's
+identity is the differential court's rather than a corpus's. That is stated rather than papered
+over.
+
+**`p12_npas.c` is a new module and its coordinates are declared locally.** The unit is not yet in
+`gen_err_raise_sites.py`'s per-phase file list, so `src/pkcs12/p12_npas.rs` declares the three
+`ERR_raise*` sites the way `src/provider/encode_key2any.rs` does (D445) and says so in its module
+doc; they move into the generated `err_sites.rs` when that generator next runs.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1086 passed, 0 failed** (three new tests, each taking the crate-wide global-state lock).
+`run_courts.py`, `court_coverage.py`, `provider_court_coverage.py` and `probe_hygiene.py` clean.
+`PIPELINE OK` exit 0 on two consecutive runs, at 108 courts and **44,892 observations**.
+`phase_state.py` reads 0-9 `complete`, 10 `in-progress`, 11-21 `not-started`. Phase-10 provider rows
+are unchanged at `630 implemented / 6 open`; `libcrypto` moves to 3,133 implemented exports.
+
+## D448 -- 10.5 part one: the loader object and its registry land, and `store_lib.c` is withheld with a measured blocker
+
+`crypto/store/` has four units and 76 exports. This slice lands the three that carry no
+certificate object: `store_strings.c` (1, `OSSL_STORE_INFO_type_string`), `store_meth.c` (10, the
+`OSSL_STORE_LOADER` method object and its `set0_*` accessors) and `store_register.c` (16, the
+loader registry) -- **27 exports**, in a new `src/store/` module tree. The ledger moves from
+`implemented=211 open=87` to **`implemented=238 open=60`**.
+
+**The context slot is built, not faked.** `src/context/mod.rs` now builds and releases the store
+slot in the authority's `P2` position after `encoder_store` (slot 15), and
+`src/provider/stores.rs`'s two loader bridges are real delegations where they were
+`assert_slot_unfilled` guards. That is what makes a registered loader findable by a later
+`OSSL_STORE_LOADER_fetch` rather than merely present in a table.
+
+**`RT-STORE` lands as a court** (`courts/phase10/rt_store_probe.c`, registered in
+`phase10_courts.py` and in `provider_court_coverage.py`'s `COURT_PROBES`, which now names the
+`"file"` algorithm), with **60 observations**, authority and candidate identical.
+
+**Two things are withheld, and both blockers are measured rather than assumed.**
+
+* `store_lib.c`'s **49 exports** stay open. `nm --undefined-only` over
+  `libcrypto-lib-store_lib.o` names names this crate does not define anywhere -- checked by
+  searching for each as a definition, not for the word: `X509_up_ref`, `X509_CRL_up_ref`,
+  `X509_free`, `X509_CRL_free` and `i2d_X509_NAME` for the CERT/CRL arms of
+  `OSSL_STORE_INFO_free`/`get1_CERT`/`get1_CRL` and for `OSSL_STORE_SEARCH_by_name`; `d2i_X509`,
+  `d2i_X509_AUX` and `d2i_X509_CRL` through `store_result.c`'s
+  `ossl_store_handle_load_result`, which `OSSL_STORE_load`'s fetched branch calls; and
+  `PKCS12_parse` (10.3-withheld) for its `try_pkcs12` arm.
+* **The two `file` `OSSL_OP_STORE` provider rows stay `unimplemented`.** `file_store.c` (900 lines)
+  and `file_store_any2obj.c` (361) are not transcribed, and publishing a row in front of a stubbed
+  engine would be a false `implemented` -- the exact thing this census exists to refuse.
+  `OSSL_STORE_LOADER_fetch` and `OSSL_STORE_LOADER_do_all_provided` are therefore **reference-taken
+  and never called**, so the candidate cannot produce a transcript that diverges while the row is
+  absent, and the judge prints each blocker as a `pending.` line instead.
+
+**The `store_lib.c` blockage is per-function and the record says so.** `OSSL_STORE_load`,
+`OSSL_STORE_INFO_free`'s CERT/CRL arms, `OSSL_STORE_INFO_get1_CERT`/`get1_CRL`,
+`OSSL_STORE_find` and the two search objects are the blocked ones; the remaining `OSSL_STORE_INFO`
+constructors and accessors (`new_PKEY`/`new_NAME`/`new_PARAMS`/`new_PUBKEY`/`new_OTHER`, the
+matching `get0_*`, `get_type`, `get0_name`, `up_ref`) and the CTX's `open`/`eof`/`error`/`expect`/
+`close` are not blocked by any of those names. Carving that reachable subset -- each blocked arm
+withheld with its own note, never stubbed -- is the rest of 10.5, and calling the unit wholly
+blocked would have been the opposite error.
+
+**Correction (D449): the list above is too broad in one place.**
+`OSSL_STORE_SEARCH_by_name` and `OSSL_STORE_SEARCH_by_issuer_serial` do **not** call
+`i2d_X509_NAME`; they store the borrowed `X509_NAME *` and only the unborn fetched branch would
+serialise it. Both land in D449, as do `attach`/`delete`/`supports_search`/`ctrl`/`vctrl`.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1087 passed, 0 failed** (the loader-object test is now the positive form of a guard).
+`run_courts.py`, `court_coverage.py`, `provider_court_coverage.py` and `probe_hygiene.py` clean;
+the census's subsequence and dispatch-partition checks pass. `PIPELINE OK` exit 0 on two
+consecutive runs, at **109 courts** and **44,952 observations**. `phase_state.py` reads 0-9
+`complete`, 10 `in-progress`, 11-21 `not-started`.
+
+## D449 -- 10.5 part two: `store_lib.c`'s reachable subset lands, and D448's blocker list is corrected
+
+D448 withheld `store_lib.c` as a unit with a defence that is not good enough: the blockage is
+per-function, and calling 49 exports blocked because some of them are is a deferral wearing a
+measurement's clothes. This slice lands **46 of the 49**, in a new `src/store/store_lib.rs`: the
+`OSSL_STORE_CTX` state machine (`open`/`open_ex`/`eof`/`error`/`expect`/`close`/`close_fp`), the
+whole `OSSL_STORE_INFO` object model (`new_PKEY`/`new_NAME`/`new_PARAMS`/`new_PUBKEY`/`new_OTHER`,
+the `get0_*` accessors, `get_type`, `get0_name`, `up_ref`, `free` with its two blocked arms carved
+out), the `OSSL_STORE_SEARCH` family and `OSSL_STORE_find`. The ledger moves from
+`implemented=238 open=60` to **`implemented=284 open=14`**.
+
+**`OSSL_STORE_ctrl`/`OSSL_STORE_vctrl` are C-variadic**, so their behaviour is a Rust function
+(`openssl_rs_store_vctrl`) behind a small C shim, `src/store/store_lib_variadic.c`, compiled by
+`build.rs`. That is the crate's existing pattern for a variadic entry point rather than a new
+mechanism; the shim holds the one conditional `va_arg` pull and nothing else.
+
+**Three exports are withheld, each with its own measured blocker rather than the unit's.**
+`OSSL_STORE_load` needs `store_result.c`'s `ossl_store_handle_load_result`, whose closure reaches
+`d2i_X509`/`d2i_X509_AUX`/`d2i_X509_CRL` (Phase 11) and `PKCS12_parse` (withheld in 10.3); it is
+withheld whole because the fetched path is the function, not a `switch` arm.
+`OSSL_STORE_INFO_get1_CERT` and `_get1_CRL` need `X509_up_ref` and `X509_CRL_up_ref`. Two further
+*arms inside functions that otherwise land* are carved and noted at the site:
+`OSSL_STORE_INFO_free`'s CERT/CRL arms (`X509_free`/`X509_CRL_free`) and `OSSL_STORE_find`'s
+`BY_NAME`/`BY_ISSUER_SERIAL` arms (`i2d_X509_NAME`), both in the unborn fetched branch.
+
+**D448's blocker list was too broad in one place, and this entry is the correction.**
+`OSSL_STORE_SEARCH_by_name` and `OSSL_STORE_SEARCH_by_issuer_serial` do **not** call
+`i2d_X509_NAME` -- they store the borrowed `X509_NAME *`; only the unborn fetched branch would
+serialise it. Both land here, as do `attach`/`delete`/`supports_search`/`ctrl`/`vctrl`. The
+correction is recorded inline in D448 as well as here, because a reader of D448 alone would be
+misled. No Phase 11 row is created and Phase 11 still derives `not-started`.
+
+The two `file` `OSSL_OP_STORE` provider rows stay unpublished, unchanged from D448:
+`OSSL_STORE_LOADER_fetch`/`_do_all_provided` remain reference-taken and never called, so no false
+residual is possible while the row is absent. `file_store.c` (900 lines) and
+`file_store_any2obj.c` (361) are the last unit of this stratum that carries a row.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1091 passed, 0 failed** (four new tests, each taking the crate-wide global-state lock,
+and `openssl_rs_store_vctrl` exercises the borrowed-`va_arg` path). `run_courts.py`,
+`court_coverage.py`, `provider_court_coverage.py` and `probe_hygiene.py` clean. `RT-STORE` moves
+from 60 to **159 observations**, authority and candidate identical, 0 residuals. `PIPELINE OK` exit
+0 on two consecutive runs, at 109 courts and **45,051 observations**. `phase_state.py` reads 0-9
+`complete`, 10 `in-progress`, 11-21 `not-started`; Phase-10 provider rows are unchanged at
+`630 implemented / 6 open` and `libcrypto` moves to 3,206 implemented exports.
+
+## D450 -- the decoder front doors land, a Phase-8 defect surfaces, and Phase 10's remaining distance is measured rather than estimated
+
+Phase 10 stood at `284 implemented / 14 open` exports and `630 implemented / 6 open` provider rows,
+with every open row blocked on Phase 11's `X509` object graph. D442 and D444 settled what to do
+about that: **measure the subset and pull it forward.** D450 is the measurement, and the one piece
+of it that is small enough to land cleanly.
+
+**Landed: the two decoder front doors.** `crypto/pkcs7`'s pull-forward left four `OSSL_OP_DECODER`
+rows open (`decode_pem2der.c`, `decode_spki2typespki.c`), and their genuinely unlanded closure is
+exactly two names: `ossl_spki2typespki_der_decode` (the sibling unit) and `ossl_x509_algor_is_sm2`
+(`crypto/ec/ec_backend.c:729-757`). Both land, in `src/provider/decode_spki2typespki.rs` (209
+lines), `src/provider/decode_pem2der.rs` (336 lines) and `src/ec/backend.rs`. Phase-10 provider rows
+move from `630 implemented / 6 open` to **`634 implemented / 2 open`**; `RT-CODEC` moves from 4,072
+to **4,160** observations.
+
+**A real Phase-8 defect was found by making the front door reachable.** Publishing the PEM decoder
+makes a decoded key provider-backed, which exposed that `src/evp/pkey_ctx.rs`'s `int_ctx_new`
+refused a legacy-only `EVP_PKEY` where the authority types it from `pkey->type`. That is the
+authority's branch, now transcribed; phase 8's `RT-PUBKEY` is green rather than regressed. The
+`nm` measurement could not have found this: it is a behaviour the closure only reaches once the
+row above it is real.
+
+### The measurement: what Phase 10's remaining rows actually need
+
+`nm --undefined-only` over the authority's objects, iterated over the authority units that define
+each crate-unlanded name until the set stabilises, with "landed" checked by *definition* rather
+than by the bare word:
+
+| closure | authority units | unlanded symbols | authority lines |
+|---|---:|---:|---:|
+| the whole blocked set (seeds: `crypto/store/*`, `crypto/pkcs12/*`, `encode_decode/*`, `storemgmt/*`) | 181 | 597 | ~60,599 |
+| **the `X509` object graph** (`X509_it`, `X509_CRL_it`, `X509_new`/`free`/`up_ref`, `d2i_X509(_AUX)`, `d2i_X509_CRL`, `X509_check_private_key`, `X509_digest`, `ossl_x509_add_cert_new`, `ossl_x509*_set0_libctx`, …) | 127 | 538 | ~45,241 |
+| the decoder front doors (D450's landing) | 3 | 2 | ~580 |
+
+The union is dominated by Phase 11 -- `crypto/x509/*`'s 46 units plus `crypto/ocsp/`, `crypto/ct/`,
+`crypto/engine/`, `crypto/http/`, `crypto/pkcs7/` -- and **the remaining distance to Phase 10's
+seal is that table**: 14 exports and 2 provider rows, all reachable only through ~45,000 lines of
+Phase 11's object graph. Phase 10's own subphases are done; 10.7 waits on a stratum the atlas
+places after it. That is a measurement of the boundary, not a deferral of work, and it is recorded
+here so the next slice's size is a number.
+
+**`D-DECODER-ABSENT-1` is substantively resolved and is a retirement candidate.** With the front
+doors landed the candidate publishes provider decoders, `pem_read_bio_key_decoder` succeeds, and
+`RT-PUBKEY`'s queue-count observable matches the authority. The retirement follows the register's
+own obligation, so it is named here and left for the entry that does it rather than done silently
+in a passing slice.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1094 passed, 0 failed**. `run_courts.py`, `court_coverage.py`,
+`provider_court_coverage.py`, `dispatch_court.py`, `prerequisite_gate.py` and `probe_hygiene.py`
+clean. `PIPELINE OK` exit 0 on two consecutive runs, at 109 courts and **45,139 observations**.
+`phase_state.py` reads 0-9 `complete`, 10 `in-progress`, 11-21 `not-started`; `libcrypto` moves to
+3,206 implemented exports (the new rows are provider rows and one internal, so the export count is
+unchanged at `284 implemented / 14 open`). No Phase 11 row is created.
+
+## D451 -- 10.8, the X.509 object core, and the plan's own conclusion corrected
+
+The owner chose to pull Phase 11's `X509` subset forward rather than defer it, and this is the
+first subphase: **10.8, the `X509` object core.** `crypto/x509/x_x509.c` (310 lines),
+`x_name.c` (552), `x_crl.c` (542)'s object half, `x_exten.c` and `crypto/asn1/x_val.c` are
+transcribed into `src/x509/x_x509.rs`, `x_name.rs`, `x_crl.rs`, `x_exten.rs` and
+`src/asn1/x_val.rs`: the `X509`/`X509_CINF`/`X509_NAME`/`X509_NAME_ENTRY`/`X509_CRL`/
+`X509_CRL_INFO`/`X509_REVOKED`/`X509_EXTENSION`/`X509_VAL` items and their lifecycles,
+`d2i_X509`/`i2d_X509`/`d2i_X509_CRL`/`i2d_X509_CRL`, the `ASN1_ITYPE_EXTERN` name hooks and
+`i2d_re_X509_tbs`. The ledger moves from `implemented=284 open=14` to **`implemented=286 open=12`**:
+`OSSL_STORE_INFO_get1_CERT`, `OSSL_STORE_INFO_get1_CRL` and the CERT/CRL arms of
+`OSSL_STORE_INFO_free` are closed, and `RT-STORE` moves from 159 to **181** observations.
+
+**The plan's own conclusion was wrong and this entry corrects it.** `docs/PHASE-10-SUBPHASES.md`
+section 6 first measured the X.509 subsystem as a 75-unit, 30,711-line strongly-connected
+component and concluded that no subphase could land because the component "cannot be cut at unit
+granularity". That is true of the units and false of the work: the object core cut out of the SCC
+cleanly, because the transcription's frontier is the **call graph**, and each function whose
+closure is unlanded is withheld by name instead of its whole unit. The section is renumbered
+`10.8`-`10.15` (it had reused `6.1`-`6.8`, colliding with `PHASE-6-SUBPHASES.md`), the correction is
+recorded there with the old conclusion kept visible, and the distance to the rest of the stratum is
+now measured per subphase.
+
+**A tooling defect was found by that collision and fixed at the root.**
+`plan_reconciliation.py` keyed each subphase row's state by the bare subphase id, so two plan
+documents that both number a section `6.1`-`6.6` overwrote each other's state -- Phase 6's
+`complete` erased Phase 10's `in-progress`, turning an in-progress stratum's census into 46
+findings. The key is now plan-scoped (`{phase}:{heading}`), which is what the tool's own contract
+always said it was.
+
+**Withheld, each by name rather than by unit**: `d2i_X509_AUX`/`i2d_X509_AUX` and the
+`X509_CERT_AUX` lifecycle (`x_x509a.c`); the seven extension-cache frees in `X509_it`'s and
+`X509_CRL_it`'s callbacks, whose `v3_*`/`pcy_*` units are unlanded and whose pointers are only ever
+written by `ossl_x509v3_cache_extensions` (so each omission is a no-op on every buildable object,
+marked at the site); `x_name.c`'s print half; and `x_crl.c`'s `crl_cb` `D2I_POST` arm, the CRL
+method-object setters and the lookup/verify callbacks.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1100 passed, 0 failed**. `run_courts.py`, `court_coverage.py` (286 implemented, 286
+direct, 0 non-observable), `provider_court_coverage.py`, `plan_reconciliation.py`,
+`prerequisite_gate.py` and `probe_hygiene.py` clean. `PIPELINE OK` exit 0 on two consecutive runs,
+at 109 courts and **45,161 observations**. `phase_state.py` reads 0-9 `complete`, 10
+`in-progress`, 11-21 `not-started`; Phase-10 provider rows are unchanged at `634 implemented / 2
+open`.
+
+### The next subphase's measured size
+
+Seeded from the still-blocked objects (`store_result.o`, `file_store.o`, `file_store_any2obj.o`)
+and joined one hop to the crate's surface: **18 dependency units, 32 unlanded names, ~10,293
+authority lines**, on top of the store slice itself (`store_result.c` 667 + `file_store.c` 900 +
+`file_store_any2obj.c` 361 = 1,928 lines). The largest are `provider_core.c` (2,679),
+`decoder_lib.c` (1,165), `pvkfmt.c` (1,152), `decoder_meth.c` (675), `keymgmt_lib.c`/
+`keymgmt_meth.c` (~590 each), `x509_cmp.c` (594), `t_x509.c` (559), `x_crl.c` (542, for
+`ossl_x509_crl_set0_libctx`), `x509_obj.c` (179), `x_x509a.c` (174) and `p12_kiss.c` (274, for
+`PKCS12_parse`). A full transitive closure is 542 units and ~182k lines, which is the
+over-approximation a linker sees rather than the work; the ~18-unit direct set is the number.
+
+## D452 -- 10.9, the digest substrate: the engine table lands, and `X509_digest` gets its dependency
+
+The second pulled-forward subphase. `crypto/engine/`'s nine built units (`eng_lib`, `eng_ctrl`,
+`eng_init`, `eng_table`, `eng_list`, `eng_all`, `tb_digest`, `tb_pkmeth`, `tb_asnmth`) are 2,005
+authority lines, and **~1,915 of them are transcribed** in a new `src/engine/` tree, one module per
+authority unit, with the `ENGINE` object's `#[repr(C)]` layout asserted by `core::mem::offset_of!`.
+`crypto/o_str.c` (451) and `crypto/ctype.c` (313) were already landed as `src/runtime/str.rs` and
+`src/runtime/ctype.rs` (D51), so 10.9's twelve units are the nine engine units plus `defaults.c`'s
+`ossl_get_enginesdir`, not twelve fresh transcriptions. This is what `X509_digest` reaches through
+`ossl_asn1_item_digest_ex`, so the subphase is real work in front of a real row even though it closes
+no Phase-10 export or provider row on its own -- counts stay at `286 implemented / 12 open` and
+`634 implemented / 2 open`, and that is the expected shape for a dependency subphase.
+
+**Withheld by name, each with its blocker** (the D451 rule, applied at function granularity):
+`ENGINE_load_builtin_engines` (`eng_all.c:13-16`) -- the crate's `OPENSSL_init_crypto` refuses the
+`ENGINE_*` bits (`src/runtime/init.rs:254`), so its call would diverge on every invocation;
+`ENGINE_by_id` (`eng_list.c:408-473`) -- its closure needs the withheld loader and `eng_dyn.c`, which
+is not among the twelve; `engine_cleanup_int` (`eng_lib.c:175-184`) -- reachable only from
+`OPENSSL_cleanup`, which the crate's landed cleanup does not yet name; `ENGINE_get_pkey_meth`
+(`tb_pkmeth.c:74-83`) -- no landed caller, its only authority caller being Phase 7's deferred
+`EVP_PKEY_set1_engine`; and `ossl_get_enginesdir`, whose only caller is the withheld `ENGINE_by_id`.
+The method tables proper (`tb_cipher`/`tb_rsa`/`tb_dsa`/`tb_dh`/`tb_eckey`/`tb_rand`, and
+`eng_dyn`/`eng_cnf`/`eng_fat`/`eng_rand`) are **out of scope**, not withheld: they belong to the
+strata that own those methods.
+
+**Two defects were caught by driving the code rather than by compiling it.** `ENGINE_up_ref`
+initially failed to write the incremented count back, which double-frees on
+`ENGINE_unregister_digests`; and the layout-resolved `AtomicPtr` cast carried a typo. Both are fixed
+before the green runs, and both are the kind of thing a fetch-only probe would have missed.
+
+**Three pieces of machinery moved with the subphase.**
+`forensics/tools/gen_err_raise_sites.py` gained the eight raising engine units (the engine header
+`ossl/engineerr.h` was added to the resolver's include set), so their coordinates are generated
+rather than declared. `dispatch_court.py` gained two `NOT_A_DISPATCH` exemptions for
+`EngineCleanupCb`/`EngineTableDoallCb`, which are `crypto/engine/eng_local.h` internal typedefs with
+no installed-header counterpart. `forensics/prerequisites.json` gained two hand-maintained
+`divergences` records -- `engine_lock_init` as `named_differently` and `engine_cleanup_int` as
+`modelled_differently` -- so the prerequisite gate's findings became decisions instead of noise,
+which is the mechanism D345 established.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test
+--lib` is **1100 passed, 0 failed**. `RT-STORE` moves from 181 to **209** observations, over 109
+courts and **45,189** observations in total; `run_courts.py`, `court_coverage.py`,
+`provider_court_coverage.py`, `dispatch_court.py`, `plan_reconciliation.py`,
+`prerequisite_gate.py` and `probe_hygiene.py` clean; `PIPELINE OK` exit 0 twice.
+`phase_state.py` reads 0-9 `complete`, 10 `in-progress`, 11-21 `not-started`. 61 `ENGINE_*` exports
+are now defined; all remain Phase 13's by header and are in no phase ledger.
+
+### What 10.10 now needs
+
+10.10's five units (`a_digest.c`, `a_sign.c`, `asn1_lib.c`, `evp/digest.c` and `x509_obj.c`'s
+`X509_NAME_oneline` half; **2,293 lines**) now have their engine dependency answered:
+`ossl_asn1_item_digest_ex`'s `ENGINE_get_digest_engine` and its `ENGINE_finish` release are landed
+and on the same table. Nothing 10.9 withheld is on 10.10's path, so the remaining distance is still
+section 6's 2,293 lines rather than a number 10.9 changed.
+
+## D453 -- 10.10, the ASN.1 digest/sign/verify layer: `X509_digest`'s own text lands
+
+Third pulled-forward subphase. Section 6 sizes 10.10's five units at 2,293 lines, and most of them
+were already in: `asn1_lib.c` (473) landed as `src/asn1/der.rs`/`string.rs`/`bitstr.rs` in Phases 5-6,
+and `evp/digest.c` (1,262) as `src/evp/digest.rs` in Phases 5 and 7. What 10.10 actually transcribes is
+`a_digest.c` (91), `a_sign.c` (288), `x509_obj.c` (179) and `evp_md_ctx_new_ex` (23) -- **581 fresh
+authority lines** -- in `src/asn1/a_digest.rs`, `src/asn1/a_sign.rs` and `src/x509/x509_obj.rs`, plus
+the **frontier advance** that un-withholds `X509_NAME_print` (38 lines) in `x_name.rs` now that its
+only blocker, `X509_NAME_oneline`, is landed. That is the second time a later subphase has shrunk
+because an earlier one moved the frontier, and it is the reason the plan is re-measured per subphase
+rather than trusted.
+
+**Two functions withheld, each with its blocker, both with complete closures** -- the reverse of the
+usual case and worth naming: `ossl_sk_ASN1_UTF8STRING2text` (`asn1_lib.c:435-473`) because its only
+authority callers are `crypto/ts/ts_rsp_verify.c` and `crypto/cmp/cmp_client.c`, neither landed; and
+`evp_digest_fetch_from_prov` (`evp/digest.c:1200-1209`) because nothing in the authority or the crate
+calls it at all. A function whose closure is complete is still withheld when no reachable caller
+exists, and the note says which of the two reasons applies.
+
+**A Phase-7 hand-off was discharged as a consequence.** `ASN1_item_sign_ex` is now built, so
+`forensics/tools/phase7_obligations.py`'s `BLOCKED_HANDOFFS` row was retired rather than left stale --
+the rule D452 used for the prerequisite divergences -- and Phase 7 moves from `deferred 217` to `216`
+and `implemented 733` to `734`. Phase-10 counts are unchanged at `286 implemented / 12 open` exports
+and `634 implemented / 2 open` provider rows, which is the expected shape for a dependency subphase.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1100 passed, 0 failed**. `RT-STORE` moves from 209 to **222** observations (a populated `Name` DER
+lifted from the certificate and decoded through 10.8's `d2i_X509_NAME`, printed both ways, plus the
+empty-name, NULL-name and zero-length-buffer arms) and `RT-DIGEST` from 654 to **670**
+(`ASN1_item_digest` over a legacy and a provider-fetched method, `ASN1_digest`, and the
+`ASN1_item_sign_ex` NULL-key refusal with its coordinate). 109 courts, **45,218 observations**,
+`PIPELINE OK` exit 0 twice, all gates clean and no new exemptions needed.
+
+### What 10.11 now needs
+
+Section 6 sizes 10.11 at 10 units / 3,487 lines, but three are already in: `x_name.c` (552, completed
+here), `x_exten.c` (27, 10.8) and `x_pubkey.c` (1,079, Phase 8.8). The fresh transcription is ~1,300
+lines: `x509_v3.c` (273), `x509name.c` (361), `x509rset.c` (42), `a_strex.c`'s unlanded print half
+(`do_name_ex`, `X509_NAME_print_ex(_fp)`, ~163), `a_verify.c` (226) and `evp_pkey.c`'s remaining
+~236. It carries one hand-off consequence: `ASN1_item_verify_ex` now has a **single** blocker,
+`ASN1_item_verify_ctx` (`a_verify.c:111`), so 10.11 closes Phase 7's last blocked row.
+
+## D454 -- 10.11, the name, print and `v3` dispatch layer, and Phase 7's last blocked row retires
+
+Fourth pulled-forward subphase, and the first whose *consequence* reaches another stratum. Section 6
+sizes 10.11 at ten units / 3,487 lines; D453's re-measurement put the fresh text at ~1,300, and the
+landed figure is **~1,087 authority lines**: `x509_v3.c` (273, all 15 functions),
+`x509name.c` (361, all 18), `a_strex.c`'s print half (~163, `do_indent`, `do_name_ex`,
+`X509_NAME_print_ex(_fp)`), `a_verify.c` (226, all four) and `evp_pkey.c`'s remainder
+(`EVP_PKCS82PKEY` and the nine `EVP_PKEY_*_attr*` accessors, ~64), which makes that unit whole.
+`x509rset.c` is transcribed as a documented module with **all three functions withheld by name**
+(`X509_REQ_set_version`/`_set_subject_name`/`_set_pubkey`): their closure is landed but the crate has
+no `X509_REQ` type, which `crypto/x509/x509_req.c` (10.14) owns. A module that is a doc and three
+withholds is the honest shape when the unit cannot be named yet, and it is recorded as such rather
+than left out of the plan.
+
+**Phase 7's last blocked hand-off is discharged.** `ASN1_item_verify_ex`'s single blocker,
+`ASN1_item_verify_ctx` (`a_verify.c:111`), lands with the unit, so the stale `BLOCKED_HANDOFFS` row
+is retired from `forensics/tools/phase7_obligations.py` -- the rule D453 used for
+`ASN1_item_sign_ex` -- and its deferral is removed from `forensics/prerequisites.json`. Phase 7 moves
+from `deferred 216` to `215` and `implemented 734` to `735`. Phase-10 counts are unchanged at
+`286 implemented / 12 open` exports and `634 implemented / 2 open` provider rows.
+
+**A defect was found by driving, not compiling**: `OBJ_nid2obj` returned NULL **silently** for an
+unknown NID where the authority raises `ERR_LIB_OBJ`/`OBJ_R_UNKNOWN_NID` (`crypto/objects/obj_dat.c:278`).
+It now raises, and `RT-STORE`'s `name.access.index.badnid` and `v3.create.badnid` arms are what
+observe it. That is the second time this session a court found a defect the compiler could not
+(D451's `int_ctx_new` was the first).
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1100 passed, 0 failed**. `RT-STORE` moves from 222 to **289** observations (the `x509name.c`
+accessors, `X509_NAME_print_ex` under eight flag sets including `XN_FLAG_COMPAT`, and the whole
+`X509v3_*` surface with its refusals and coordinates) and `RT-KEYFORMAT` from 349 to **370** (an
+Ed25519 sign-then-verify positive arm, a tampered-document refusal, the NULL-key refusal, the
+`_ex`-less `ASN1_item_verify` and the deprecated `ASN1_verify`). 109 courts, **45,306
+observations**, `PIPELINE OK` exit 0 twice, `prototype-court mismatches=0`, `probe-hygiene
+all_clean=True`.
+
+### What 10.12 now needs
+
+Section 6 sizes 10.12 at 16 units / 3,490 lines and `x_val.c` (20) already landed in 10.8, so the
+remaining distance is **~3,470 authority lines over 15 units**: `x_x509a.c`, `x509_txt.c`, `pcy_lib.c`,
+`pcy_node.c`, the small `v3_*` leaves and the `http`/`punycode` units `x_all.c` reaches. 10.11
+removed its blockers on that path -- the `X509_EXTENSION` create/set/get surface, the extension
+stack, and the byte-exact `X509_NAME_print_ex` are in place.
+
+## D455 -- 10.12, the leaf extension items and the policy graph, and a differential-plane limit found by measuring it
+
+Fifth pulled-forward subphase. **`x_x509a.c` (174 lines) lands whole** -- `X509_CERT_AUX_it` and its
+lifecycle, `X509_trusted`, the alias/keyid setters and `X509_alias_get0`/`X509_keyid_get0` -- and it
+**un-withholds the `X509_AUX` layer in `x_x509.c`** (`d2i_X509_AUX`, `i2d_x509_aux_internal`,
+`i2d_X509_AUX` and the two `X509_CERT_AUX_free` calls in `x509_cb`) that D448/D451 had withheld by
+name. `x509_txt.c` (236, `X509_verify_cert_error_string` and the whole `X509_V_ERR_*` table),
+`pcy_lib.c` (105, nine accessors) and `v3_pcia.c` (62) land whole; `v3_ist.c`, `v3_ia5.c` and
+`v3_skid.c` land their exported items and the `i2s_`/`s2i_` helpers. `RT-STORE` moves from 289 to
+**362** observations and the total to **45,379** over 109 courts.
+
+**The finding is a limit of the differential plane, and it is measured rather than assumed.**
+`nm -D` over the admitted prefix shows the authority's shared object **exports no `ossl_v3_*` symbol
+at all**, and hides `ossl_x509_pubkey_hash` and every `ossl_policy_*`. The differential plane links
+its probes against that shared object, so **no court can name those symbols**: a transcription of
+them would be unreachable from every observation this project admits. Combined with their only
+authority callers being unlanded (`X509V3_add_standard_extensions` and `X509V3_EXT_get` in
+`v3_lib.c`, 10.14; `x509_vfy.c`, Phase 11), that makes `pcy_node.c` (157,
+`ossl_policy_node_*`) and the four table-only leaves `v3_audit_id.c`, `v3_group_ac.c`,
+`v3_ind_iss.c`, `v3_no_ass.c` **withheld with a two-part blocker**: not drivable from this profile's
+exported surface, and called by nothing that is landed. The three `http`/`punycode` units (2,244) are
+withheld on `X509_load_http` (`x_all.c`, 10.14). This is the same class as D442's `X509_it` note,
+with a sharper reason: there the symbol was unlanded, here it is unlanded *and* unnameable.
+
+**A defect was found in the probe rather than in the library.** The differential transcript matched
+on the first run, but the probe's first draft read a **stale** error coordinate: the preceding
+`s2i_ASN1_OCTET_STRING("nonsense")` refusal was never popped, so an arm reported the older
+`15.102` instead of `34.107`. Each arm now pops its own error, and the `skid.*.err`/`ia5.*.err` arms
+are what observe it. The compiler could not see this; the court could. It is also a reminder that an
+error-coordinate claim is only as good as the queue state it is read from.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1101 passed, 0 failed**. Phase-10 counts are unchanged at `286 implemented / 12 open` exports and
+`634 implemented / 2 open` provider rows; `implemented_surface` moves from 3,392 to **3,439** and all
+47 new symbols are Phase-11-headed, so they are `not_yet_begun` with no row and no coverage
+obligation. All gates clean (`court_coverage` 286/286 direct, `provider_court_coverage` 634/0
+unmatched, `dispatch_court`, `probe_hygiene`, `plan_reconciliation`, `prerequisite_gate`,
+`evidence_determinism`, `regression_guard`), `PIPELINE OK` exit 0 twice.
+
+### What 10.13 now needs
+
+Section 6 gives 10.13 six units / 875 lines. Two are drivable through exported items as 10.12's were
+-- `v3_timespec.c` (599) and `v3_pku.c` (52), **651 lines** -- and the other four
+(`ossl_v3_utf8_list`, `ossl_v3_no_rev_avail`, `ossl_v3_single_use`, `ossl_v3_soa_identifier`;
+224 lines) share **10.12's exact two-part blocker**, so they stay withheld by name unless 10.14's
+`v3_lib.c` dispatch is pulled in with them. 10.12's own remainder is ~2,760 lines, all of it blocked
+on 10.14 or Phase 11 and named in `src/x509/mod.rs`'s 10.12 section.
+
+## D456 -- 10.13, the remaining leaf extension items: the scope increase was attempted, measured insufficient, and reported
+
+Sixth pulled-forward subphase, with one deliberate scope increase and an honest negative result.
+Section 6 gives 10.13 six units / 875 lines. D455 measured that only `v3_timespec.c` (599) and
+`v3_pku.c` (52) are drivable as they stand, because the four table-only leaves export no symbol from
+the admitted prefix, and proposed pulling `crypto/x509/v3_lib.c`'s dispatch in so they could land
+rather than be withheld a second time. **This subphase did that, and the measurement says it is not
+enough -- so the leaves stay withheld, with a sharper blocker than before.**
+
+`v3_lib.c` (308 lines) lands its **registration half**: `ext_cmp`, `ext_list_free`,
+`X509V3_EXT_add`/`_add_list`/`_cleanup`, `X509V3_add_standard_extensions` and the
+`X509V3_EXT_METHOD` layout (asserted with `offset_of!`/`size_of!`). `v3_timespec.c` lands its eleven
+`ASN1_SEQUENCE`/`CHOICE` item groups with `IMPLEMENT_ASN1_FUNCTIONS` (`:49-125`), `v3_pku.c` its
+`PKEY_USAGE_PERIOD` item, and `v3_utf8.c` its `i2s_`/`s2i_ASN1_UTF8STRING` helpers. `RT-STORE` moves
+from 362 to **437** observations and the total to **45,454** over 109 courts.
+
+**Why the leaves still cannot land, measured rather than asserted.** `v3_lib.c`'s dispatch is
+`X509V3_EXT_get_nid`, which searches `standard_exts[]` (`standard_exts.h:15-95`) -- **73 entries over
+63 distinct `ossl_v3_*` tables**. This subphase lands six of them; the other ~57 belong to units it
+does not own (`v3_bcons.c`, `v3_key_usage.c`, `v3_alt.c`, `v3_cpols.c`, the `crypto/ocsp/` rows,
+`v3_ncons.c`, ...). A partial `standard_exts[]` would **silently change `OBJ_bsearch_ext`'s answer for
+every missing NID**, so `X509V3_EXT_get_nid`, `_get`, `_add_alias`, `_EXT_d2i`, `_get_d2i` and
+`_add1_i2d` are withheld **together**, by name, and the four leaves stay withheld behind them. This is
+the opposite of a decreed deferral: the increase was tried, and the tool that would have to carry it
+would be a table with fifty-seven silent holes in it.
+
+**Two gate findings were fixed at the root rather than by loosening.** `prototype_court.py` refused
+`macro_rules!` groups that fill a *type* position (`X_new`/`d2i_X`/`i2d_X`) as unreadable
+declarations, so the 44 generated functions are written out explicitly; and `prerequisite_gate.py`
+reported three `unwired_function_in_the_current_stratum` findings for the withheld tables, which are
+now three `forensics/prerequisites.json` `owned_by_a_later_stratum` divergence records -- the D452
+mechanism. No runtime defect this slice: the differential transcript matched on the first run, and
+every new arm pops its error queue first (D455's lesson).
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1101 passed, 0 failed**; `PIPELINE OK` exit 0 on two consecutive runs, 109 courts and **45,454
+observations**. Phase-10 counts are unchanged at `286 implemented / 12 open` exports and
+`634 implemented / 2 open` provider rows; `implemented_surface` moves from 3,439 to **3,505** and all
+66 new symbols are `x509v3.h`/Phase-11-headed with no coverage obligation.
+
+### What 10.14 now needs
+
+10.13 leaves the extension dispatch a frontier of **~473 lines** (the six withheld `v3_lib.c` names,
+`X509V3_EXT_i2d`/`do_ext_i2d` in `v3_conf.c`, `standard_exts.h`'s 63 tables, and the four leaves'
+tables and callbacks) -- **gated on the whole 30,711-line component**, because `standard_exts[]`
+names ~57 tables from units inside it. The honest number for "make the extension dispatch real" is
+therefore still 10.14's SCC, of which 10.13 has landed the `v3_lib` registration half and six of the
+the 63 tables. 10.12's remainder (~2,760 lines) is unchanged.
+
+## D457 -- 10.14 is decomposed into fifteen sub-subphases, and 10.14.1 lands
+
+Seventh pulled-forward slice, and the one that turns the remaining monolith into work. Section 6's
+`10.14` is the 75-unit certificate strongly-connected component; D451 proved it is a *unit-level* SCC
+rather than a function-level one, and 10.8 cut its object core out. This slice does that at the scale
+the rest of it needs: **10.14 is decomposed into 15 dependency-ordered sub-subphases, 10.14.1 through
+10.14.15**, plus the already-named 10.15 (PKCS#12 certificate layer) and 10.16 (STORE result and file
+loader), written into `docs/PHASE-10-SUBPHASES.md` as a new **section 7**, with section 6's `10.14`
+row pointing at it.
+
+**The decomposition was measured, not assumed, and it corrects section 6.** `nm --undefined-only`
+over the authority's objects, seeded from the nineteen blocked-row objects, each undefined name
+resolved to its *defining* unit and tested against the crate's compiled surface, gives a strict
+unlanded certificate subsystem of **100 units / 32,326 lines** before this landing. The dependency
+order was verified from the same joins rather than guessed -- `v3_purp.c` before `x509_cmp.c`'s
+comparison layer, `x509_vfy.c` after `x509_cmp.c`/`v3_purp.c`/`x509_vpm.c`/`x509cset.c` and the OCSP
+rows, `store_result.c`/`file_store.c` behind `PKCS12_parse` -- and it ends, as it must, with 10.15 and
+10.16, which are the two rows that close the 12 exports and 2 provider rows. One correction is
+recorded in the plan: 10.8 already closed `OSSL_STORE_INFO_get1_CERT` and `_get1_CRL`, so 10.16
+closes **one** export, not three.
+
+**10.14.1 lands ~913 authority lines**: `x509_cmp.c` (27 of 32 functions), `x509cset.c` (21 of 22) and
+`x509type.c` whole, in `src/x509/x509_cmp.rs`, `x509cset.rs` and `x509type.rs`, plus the un-withheld
+`X509_get_version`/`X509_set_version`/`ossl_x509_set1_time` in `x509_set.rs`. `RT-STORE` moves from
+437 to **531** observations (94 new `cmp.*` arms over the decoded certificate, CRL and name) and the
+total to **45,548** over 109 courts.
+
+**Withheld by name, one closure each**: `X509_cmp` (blocked by `X509_check_purpose`, `v3_purp.c`) and
+`ossl_x509_add_cert_new`/`X509_add_cert`/`X509_add_certs`/`ossl_x509_add_certs_new` (blocked by
+`X509_self_signed`, `x509_vfy.c`). No defect this slice -- the differential transcript matched on the
+first run -- and every arm pops its own error queue first (D455's lesson).
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1102 passed, 0 failed**; `PIPELINE OK` exit 0 on two consecutive runs, 109 courts and **45,548
+observations**. Phase-10 counts are unchanged at `286 implemented / 12 open` exports and
+`634 implemented / 2 open` provider rows; `implemented_surface` moves from 3,505 to **3,555** and all
+50 new symbols are Phase-11-headed and `not_yet_begun`. Phase 11 still derives `not-started`.
+
+### The remaining distance
+
+After 10.14.1 the strict unlanded frontier is **76 units / 27,335 lines**, in **16 more
+sub-subphases** (10.14.2-10.14.15, 10.15, 10.16). 10.14.12's `x509_vfy.c` alone is 3,984 lines and may
+need a function-level split of its own. The 12 open exports and 2 open rows are closed by the last two
+rows, 10.15 and 10.16.
+
+## D458 -- 10.14.2 lands the certificate DER faces, and two defects of the plan's own are recorded
+
+Eighth pulled-forward slice. Section 7's **10.14.2** owns five units (~1,299 lines) and lands
+`x_all.c`'s **73 of 98 functions** (`src/x509/x_all.rs`), `x509_def.c`'s 2 of 6, `x509spki.c` and
+`crypto/asn1/x_spki.c` **whole**, and `x509_meth.c` as a **doc-only module with all twenty functions
+withheld**. Two helpers were un-withheld so the faces could be written (`X509_get0_extensions`,
+`X509_get0_pubkey_bitstr`), and `RT-STORE` moves from 531 to **671** observations over 109 courts and
+**45,688** in total; `implemented_surface` moves from 3,555 to **3,646**, all Phase-11-headed.
+
+**Two faces were saved from a second withholding by landing their object.** The `NETSCAPE_SPKI`
+faces (`x_all.c:71`, `:209`) had been withheld since D455 because `crypto/asn1/x_spki.c` was unlanded;
+landing that object and `x509spki.c` made them reachable, so they are transcribed rather than withheld
+again. That is the same rule 10.13 followed and D451 named: a withholding is a claim about the
+frontier, and the frontier moves.
+
+**Withheld by name, each with its blocker**: the `X509_REQ` type's nine faces and the `X509_ACERT`
+type's seven (both `x509_req.c`/`x509_acert.c`, 10.14.11); `OSSL_HTTP_get` and `X509_load_http`/
+`X509_CRL_load_http` (the `http`/`punycode` units withheld since D455); five PKCS#7 faces
+(10.14.13); all twenty of `x509_meth.c` (the `X509_LOOKUP`/`X509_LOOKUP_METHOD` types, 10.14.10); and
+the four `X509_get_default_*dir`/`*area` accessors, which are `OPENSSLDIR` strings and Phase 16's.
+
+### Two defects of the plan's own, recorded rather than smoothed over
+
+**1. Section 7's order is not closure-ordered, and 10.14.3 is the counter-example.** The next ready
+row is not the next-numbered one: `10.14.3` (`v3_utl.c` 1,449 + `v3_prn.c` 215) is **not**
+closure-ready, because its undefined names reach `v3_genn.c`/`v3_conf.c` (10.14.4), 10.13's withheld
+`X509V3_EXT_get`/`X509V3_get_d2i` lookup half, `x509_req.c` (10.14.11) and `v3_akid.c` (10.14.6).
+Landing it now would be a function-level partial rather than a clean row, so it was **not started**
+and nothing was reverted. The plan's rows need a readiness re-measure at each slice rather than a
+fixed numeric order, and that is now what it says.
+
+**2. A test flake was observed once and did not reproduce.** One standalone `cargo test --lib` run in
+this slice reported **1101 passed, 1 failed**; **four subsequent runs -- including both pipeline runs,
+serial and parallel -- reported 1102 passed, 0 failed**, and both are green above. The failing test's
+name was not captured, so this is recorded as an **open instrument defect with no reproduction**
+rather than dismissed as noise or hidden as a retry. The next slice's first task is to run the suite
+with output preserved until it reappears; a flake that cannot be named cannot be fixed, and this
+project's rule is that it is named either way.
+
+### A measurement, not a defect: the classical RSA verify path is incomparable
+
+The `X509_verify`/`NETSCAPE_SPKI_verify` path over an **RSA** signature resolves its digest by name
+through `EVP_get_digestbyname`, which this crate answers NULL for every built-in name -- the
+**already-recorded** Phase 13 legacy `OBJ_NAME` divergence (D333/D343; `add_all_legacy_methods` is a
+no-op at `src/runtime/init.rs:234`). That path is therefore incomparable, so the probe prints
+`pending.X509_verify.rsa=` and drives both functions over an **Ed25519** signature instead, while the
+signing faces use the fixed RSA key whose PKCS#1 v1.5 output is deterministic. This is a previously
+known divergence being met by a new caller, and it is named at the arm rather than worked around
+silently.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1102 passed, 0 failed** on both the serial and parallel pipeline runs; `PIPELINE OK` exit 0 on two
+consecutive runs at 109 courts and **45,688 observations**. Phase-10 counts are unchanged at
+`286 implemented / 12 open` exports and `634 implemented / 2 open` provider rows. Phase 11 still
+derives `not-started`; section 7 marks 10.14.2 landed with every withheld name and blocker.
+
+### The remaining distance
+
+**15 sub-subphases remain** (10.14.3-10.14.15, 10.15, 10.16). The last strict frontier measurement
+(D457, after 10.14.1) is **76 units / 27,335 authority lines**; 10.14.2 did not re-measure it. The 12
+open exports and 2 open provider rows are closed by **10.15 and 10.16 alone**.
+
+## D459 -- 10.15's container builders close ten of the twelve open exports, and the flake stays open
+
+Ninth pulled-forward slice, and the largest single move since 10.1: **ten of Phase 10's twelve open
+exports close**, and the ledger moves from `286 implemented / 12 open` to **`296 implemented / 2
+open`**. Only `PKCS12_parse` and `OSSL_STORE_load` are left, and both are now blocked by exactly one
+name each.
+
+**Task 0 first, and the answer is a negative.** D458 recorded an unreproduced `cargo test --lib`
+failure (one run at 1101/1, four at 1102/0) without a test name. This slice ran the suite **five
+more times, each preserving full output to a file: all five green at 1102/0**. Five consecutive
+passes after a one-off failure is **not** a reproduction, so the defect stays **open and unnamed** --
+recorded as such rather than closed by absence, and with no retry added and no test skipped. The next
+slice should keep capturing output.
+
+**The readiness re-measurement falsified section 7's numeric order again, and worse than D458 found.**
+A whole-unit cascade -- land a unit when every name its object leaves undefined is already provided,
+crediting the crate's ordinary `pub fn` definitions as well as its C symbols -- lands four units and
+stalls. **No `10.14.N` row is closure-ready at row granularity.** `10.14.3` is still not ready and was
+not started: `v3_utl.c` leaves `X509V3_get_d2i`, `GENERAL_NAME_print`, `X509_REQ_get_extensions`,
+`AUTHORITY_INFO_ACCESS_free` and `X509_get_ext_d2i` undefined, and `v3_prn.c` needs `X509V3_EXT_get`.
+Three units section 7 had never named turn out to be on the critical path and are now assigned:
+`x509_ext.c` to **10.14.5**, `v3_info.c` to **10.14.6**, `v3_pmaps.c` to **10.14.9**.
+
+**The row that was ready was 10.15's, not 10.14's, and it closed ten exports.** `p12_sbag.c` is now
+**whole** (`PKCS12_SAFEBAG_get1_cert`/`_crl`/`_ex`, `create_cert`/`create_crl`, `:94-160`) and
+`p12_crt.c` lands `PKCS12_create_ex2`/`_ex`/`create`, `pkcs12_add_cert_bag`, `PKCS12_add_cert`,
+`pkcs12_remove_bag` and `copy_bag_attr`. Every blocker D447 listed for those names is now landed:
+`X509_it`/`X509_CRL_it`, the two `ossl_x509*_set0_libctx`, `X509_alias_get0`/`X509_keyid_get0`,
+`X509_check_private_key`, `X509_digest`, `PKCS12_item_pack_safebag`. **`p12_crt.c` withholds exactly
+one function, `PKCS12_parse`,** whose single blocker is `ossl_x509_add_cert_new` (10.14.1's withhold
+from `x509_cmp.c`) -- so one name in 10.14.1 is now the only thing between Phase 10 and eleven of its
+exports.
+
+**10.14.4 lands `v3_genn.c` whole** (269 lines): the `OTHERNAME`/`EDIPARTYNAME`/`GENERAL_NAME`
+templates, the `GENERAL_NAMES` `SEQUENCE OF`, and all eleven hand-written functions -- the hub the
+remaining extension tables wait on. `v3_conf.c` and `v3_ncons.c` are withheld by name with their
+blockers.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1106 passed, 0 failed** (four new tests). `RT-PKCS12` moves from 292 to **317** observations and
+`RT-STORE` from 671 to **709**; 109 courts, **45,751 observations**, `PIPELINE OK` exit 0 on two
+consecutive runs. Phase-10 provider rows are unchanged at `634 implemented / 2 open`;
+`implemented_surface` moves from 3,646 to **3,684**. Phase 11 still derives `not-started`, and section 7
+now records the re-measurement, the corrected order, the three newly-assigned units and each landed
+row's transcribed-withheld split.
+
+### The remaining distance
+
+**75 units / 26,157 authority lines** in the strict unlanded certificate frontier (the same
+convention as D457's 76 / 27,335), across **15 sub-subphases -- ten untouched, five partial** -- with
+**2 open exports** and **2 open provider rows**, the latter still the two `file` store rows. The next
+real move is a **function-level cut inside `v3_utl.c`** (~900 lines; its six blockers are confined to
+`X509_get1_email`, `X509_get1_ocsp`, `X509_REQ_get1_email`, `do_x509_check`'s callers and
+`OSSL_GENERAL_NAMES_print`), which D458's rule allows: the frontier is the call graph.
+
+## D460 -- the `file` store rows close, and the fetch defect was in the row that was not there
+
+Tenth pulled-forward slice, and **Phase 10's provider rows are now complete: `636 implemented / 0
+open`**, up from 634/2. `provider_court_coverage.py` reads 957 implemented rows with **0 unmatched**.
+Only two Phase-10 exports remain open: `PKCS12_parse` and `OSSL_STORE_load`.
+
+**The divergence D459's revert recorded is root-caused, and it was not the shared fetch path.**
+The reverted candidate raised `ERR_LIB_OSSL_STORE`/`ERR_R_UNSUPPORTED` (`44.524556`) from
+`store_meth.c:362`, and reading that site settles it: `unsupported` is
+`flag_construct_error_occurred == 0`, so `ERR_R_UNSUPPORTED` means **`construct_loader` was never
+called** -- the `OSSL_OP_STORE` map carried no row. A row that reached `construct_loader` and failed
+the four-clause sanity check at `store_meth.c:241` would instead have set the flag and answered
+`ERR_R_FETCH_FAILED`. That was then proved rather than argued: instrumenting the container showed
+`deflt_query(NULL, 22, ...)` and `ossl_provider_query_operation(prov, 22, ...)` both return the store
+table, and a **temporary well-formed one-row arm made the fetch resolve on the first run** while a
+temporary rowless arm reproduced the old signature exactly. So
+`OSSL_STORE_LOADER_fetch -> ossl_method_store_fetch -> ossl_provider_query_operation -> deflt_query ->
+construct_loader` was never the defect; the published table was simply incomplete. D459's revert was
+therefore correct at the time and correct to undo once the row was real.
+
+**`file_store.c` (900 lines) and `file_store_any2obj.c` (361) land whole, with nothing withheld.**
+Every callee is landed: the decoder front doors and chain, `X509_NAME_hash_ex`, the `X509_NAME`
+object and printer, `OPENSSL_DIR_*`, the core-BIO bridge and the param layer. Their four
+`ERR_raise_data` "repeated parameter" sites and four per-case `set_input_structure` sites now carry
+generated `err_sites` coordinates (stems `PROV_FILE_STORE`/`PROV_FILE_STORE_ANY2OBJ`). A regression
+test, `provider::file_store::tests::the_file_fetch_resolves_through_the_published_row`, pins the
+fetch path so this cannot silently regress to a fetch-only claim.
+
+**The court now observes the row.** `store.file.fetch=nonnull`, `store.file.fetch.err=none`,
+`store.file.do_all.count=2`, and the `store.file.find.*` arms are driven -- the two stale
+`pending.OSSL_STORE_find.*` lines are gone, because a `find` behind an unpublished row was never a
+withhold, only an artefact of the row's absence. `RT-STORE` moves from 709 to **716** observations.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1110 passed, 0 failed**; 109 courts and **45,758 observations**; `PIPELINE OK` exit 0 on two
+consecutive runs. **The D458/D459 flake did not appear** in any run this slice (a focused run, two
+manual full runs, and both pipeline runs' serial and parallel halves), which makes eleven-plus green
+runs since the single failure -- still not a reproduction, still not closed. Phase 11 still derives
+`not-started`; no Phase 11 row was created.
+
+### The remaining distance
+
+**2 open exports, 0 open provider rows.** 10.16 is half-landed: `store_result.c` (667 lines) and
+`store_lib.c`'s `OSSL_STORE_load` half remain, so `OSSL_STORE_load` and `PKCS12_parse` still derive
+open. The broader frontier is D459's 75 units / 26,157 lines minus the two landed store units --
+**~73 units / ~24,900 lines**, to be re-measured by the next slice's `nm` join -- and the next real
+move is unchanged: the **function-level cut inside `v3_utl.c`**.
+
+## D461 -- the `v3_utl.c` cut lands, and the keystone is measured to be six names away
+
+Eleventh pulled-forward slice. **`v3_utl.c` is cut at function level**: of its 51 hand-written
+functions **31 land** (`X509V3_add_value(_uchar)` and the length/value family, `X509V3_conf_free`,
+`X509V3_parse_list`, `strip_spaces`, `ossl_v3_name_cmp`, `i2s_ASN1_INTEGER`/`ENUMERATED`,
+`s2i_ASN1_INTEGER`, `X509V3_get_value_bool`/`_int`, `a2i_IPADDRESS(_NC)`, `ossl_a2i_ipadd`,
+`ipv4_from_asc`/`ipv6_from_asc`/`ipv6_cb`/`ipv6_hex`, `X509V3_NAME_from_section`,
+`ossl_ipaddr_to_asc`, `ossl_bio_print_hex`, `X509_email_free`), and **20 are withheld by name with
+their blockers**. `RT-STORE` moves from 716 to **774** observations (58 arms: parse-list shapes and
+refusals, the adders, the bool/int readers, the sign and radix handling of `s2i_`, both
+`a2i_IPADDRESS` forms, `X509V3_NAME_from_section`) and the total to **45,817** over 109 courts.
+
+**The withholdings split by reason, and both reasons are recorded.** Nine have an unlanded blocker
+(`X509_get1_email`/`_ocsp`/`REQ_get1_email` and the four `X509_check_*` through `do_x509_check`, all
+on `X509_get_ext_d2i` in `x509_ext.c` (10.14.5) and `AUTHORITY_INFO_ACCESS_free` in `v3_info.c`
+(10.14.6); `OSSL_GENERAL_NAMES_print` on `GENERAL_NAME_print` in `v3_san.c`). Eleven more have a
+**complete** closure and **no reachable caller** (`get_email`, `append_ia5`, `sk_strcmp`,
+`skip_prefix`, the five `equal_*`/`wildcard_match`/`valid_star` family and `do_check_string`) --
+D453's second reason, and it is named rather than left as an unexplained dead_code allowance.
+
+**A Phase-7 deferral was discharged as a consequence.** Landing `X509V3_get_value_bool` invalidated
+Phase 7's `EVP_add_alg_module` hand-off, so `crypto/evp/evp_cnf.c` landed **whole**
+(`alg_module_init` and `EVP_add_alg_module`; two `OSSL_TRACE` calls omitted as no-trace) and the
+`phase7_obligations.py` blocked-handoff row and its `forensics/prerequisites.json` unit record were
+retired -- the D453/D454 rule. Phase 7 moves from `deferred 215` to `214` and `implemented 735` to
+`736`.
+
+### The keystone is six names away, measured
+
+**`ossl_x509v3_cache_extensions` did not become reachable, and the reason is a number.** `v3_purp.c`'s
+remaining need is exactly six: `X509_get_ext`, `X509_get_ext_by_NID`, `X509_get_ext_count` and
+`X509_get_ext_d2i` (`x509_ext.c`, 10.14.5), `ossl_x509_init_sig_info` (`x509_set.c`, withheld), and
+`DIST_POINT_set_dpname` (`v3_crld.c`, 10.14.6). And `x509_ext.c`'s own only callees are `v3_lib.c`'s
+withheld lookup half, so the `x509_cmp` <-> `v3_purp` <-> `x509_vfy` cycle is still cut at the
+function level: **the keystone that opens `PKCS12_parse` is gated on `x509_ext.c`, and `x509_ext.c`
+is gated on `v3_lib.c`'s dispatch and a complete `standard_exts[]`.** That chain is now named end to
+end rather than discovered one slice at a time.
+
+**`v3_prn.c` was deliberately not started.** Only `X509V3_EXT_val_prn` (`:24-65`) has a complete
+closure; `X509V3_EXT_print`, `X509V3_extensions_print` and `X509V3_EXT_print_fp` are all blocked by
+`X509V3_EXT_get` (withheld behind `standard_exts[]`), and `unknown_ext_print` is unreachable. A
+one-function module whose other three names cannot be named is not a bite worth taking before the
+dispatch lands -- the same judgement D459 made, applied to a smaller unit.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1114 passed, 0 failed**; 109 courts and **45,817 observations**; `PIPELINE OK` exit 0 on two
+consecutive runs. **The flake did not appear** in any of the ~8 full runs (~16 green runs now).
+Phase-10 counts are unchanged at `296 implemented / 2 open` exports and **`636 implemented / 0 open`**
+provider rows. Phase 11 still derives `not-started`; no Phase 11 row was created.
+
+### The remaining distance
+
+**74 units / 24,708 authority lines** (D460's ~73 / ~24,900, re-measured), of which **71 still need a
+function-level cut**. Two open exports remain; both wait on the chain above.
+
+## D462 -- the flake, chased: three hypotheses tested, two hazardous patterns found guarded, one leading explanation named
+
+D458 recorded one `cargo test --lib` failure -- **1101 passed, 1 failed** -- and D459, D460 and D461
+could not reproduce it. This entry is a deliberate hunt, and its value is in what it *rules out*
+with evidence rather than in a hopeful green run.
+
+**Reproduction attempts, all green.** Five consecutive full-suite runs on this slice's settled tree:
+**1114 passed, 0 failed** each. That makes **twenty-one consecutive green full runs** since the single
+failure. Two targeted stress runs were added: thirty iterations of the only tests that use timing at
+all (`runtime::thread`, `runtime::rcu`, `context::thread_data` -- 40 tests each time, the category
+D425's thread-pool flake came from) and twenty-five iterations of the modules that reference
+process-global state with **zero** crate-wide-lock calls (`context::namemap`, `provider::mod`,
+`evp::digest`, `evp::cipher`, `evp::pkey_ctx`, `runtime::confmod`). **All green.** Neither thread
+scheduling nor the unlocked global-state modules are the cause on this tree.
+
+**Two genuinely hazardous patterns were found, and both are already guarded.**
+1. `ERR_error_string(NULL)` answers through a **process-global** `ERR_STRING_BUF`
+   (`src/runtime/err.rs:1582`), shared across threads. That is the authority's own contract and is
+   reproduced deliberately (the doc says so at `:1750`), not a defect -- and every test that reads
+   it takes the crate-wide lock (`string_lookups_match_the_measured_authority_values` holds `lock()`).
+2. `GENERIC_LOADED`/`LIB_LOADED` (`:556-558`) are **one-way process-global** flags set by *any*
+   thread's first `ERR` call, so a test asserting the pre-load window is order-dependent by
+   construction. Every such assertion was inspected: the three in
+   `string_lookups_match_the_measured_authority_values` are guarded by the lock, and each asks about
+   a library or reason that is absent from the tables entirely (`200 << 23`, reason `0x7F_FFFF`,
+   `ERR_SYSTEM_FLAG`), so they hold whether or not the tables are loaded. No unguarded window claim
+   remains.
+
+**The leading explanation, and it is a process defect rather than a library one.** D458's own report
+places the failure **"early in the session"** of an agent that was **concurrently writing the tree**.
+A suite run against a partially-written tree is not a measurement of the library; a test added before
+the code it needs, or a module mid-edit, fails once and passes on the next run for reasons that have
+nothing to do with concurrency. That hypothesis fits every observation (twenty-one green runs on
+settled trees; targeted stress green; no hazardous unguarded pattern found) and it is the only one
+that does.
+
+**It is recorded as a hypothesis, not a conclusion, and here is what would falsify it:** a future
+`cargo test --lib` failure on a **committed, clean tree**. To make that attributable, the next slice
+that sees a failure must capture, together, the failing test's **name, assertion and backtrace**, the
+`git --no-optional-locks status --short` at the moment of the run, and the run's position in its
+loop. A failure reported with a dirty tree is the mid-edit explanation; a failure reported with a
+clean tree is a real defect and the entry that records it must chase it with the same rigour this one
+applied. **No retry, no skipped test, no deleted test, and no weakening of any assertion** -- the
+absence of a reproduction is evidence about the tree, never licence to hide the failure.
+
+## D463 -- the chain's non-table half lands, D461's count of six was seven, and the wall is named
+
+Twelfth pulled-forward slice. The keystone chain D461 measured is now landed **except its table
+half**: `x509_ext.c` (`src/x509/x509_ext.rs`, **21 of 27** containers), `ossl_x509_init_sig_info`
+(`x509_set.c:217-309`), `DIST_POINT_set_dpname` (`v3_crld.c`, with the `DIST_POINT_NAME` layout) and
+the `BASIC_CONSTRAINTS` item (`v3_bcons.c`). `RT-STORE` moves from 774 to **806** observations
+(the `x509_ext` accessor/search/add/delete arms and the empty-list collapse, `DIST_POINT_set_dpname`
+under its three type arms, and the `BASIC_CONSTRAINTS` build/encode/decode/re-encode/free round trip)
+and the total to **45,849** over 109 courts.
+
+**D461 was wrong by one, and the correction matters because it is the keystone's own signature.**
+`ossl_x509v3_cache_extensions` needs **seven** names, not six: the four `x509_ext.c` accessors,
+`ossl_x509_init_sig_info`, `DIST_POINT_set_dpname`, **and `BASIC_CONSTRAINTS_free` (`v3_bcons.c`)`,
+which D461's list omitted. Six are now landed, so the keystone is **one name away** --
+`X509_get_ext_d2i` -> `X509V3_get_d2i` -> the dispatch.
+
+**The wall is measured and it is not a loader.** `standard_exts.h:15-95` names **73 entries over 63
+distinct `ossl_v3_*` tables defined by 44 authority units / 9,948 lines**, and their collective
+closure adds **24 unlanded names from 17 further units** (`asn1_gen.c` 794, `t_x509.c` 559, the CT
+units, `http_lib.c`, `punycode.c`, ...). A partial array would silently change `OBJ_bsearch_ext`'s
+answer for every missing NID, so `X509V3_EXT_get_nid`, `_get`, `_add_alias`, `_EXT_d2i`, `_get_d2i`
+and `_add1_i2d` are withheld **together** (D456's rule), and `store_result.c`/`OSSL_STORE_load` stay
+unstarted behind `PKCS12_parse`. **No Phase-10 export could close this slice, and none is claimed.**
+
+The withholdings carry their blockers by name: `x509_ext.c`'s six `*_get_ext_d2i`/`*_add1_ext_i2d`
+containers; `v3_crld.c`'s six tables and their item groups and fifteen callbacks; and `v3_bcons.c`'s
+`ossl_v3_bcons`, `i2v_BASIC_CONSTRAINTS` and `v2i_BASIC_CONSTRAINTS`, each with a divergence row.
+A stale `forensics/prerequisites.json` row was retired (D453/D454) and `x509_set.c` joined
+`gen_err_raise_sites.py`.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1114 passed, 0 failed**; 109 courts and **45,849 observations**; `PIPELINE OK` exit 0 on two
+consecutive runs. Phase-10 counts are unchanged at `296 implemented / 2 open` exports and
+**`636 implemented / 0 open`** provider rows. Phase 11 still derives `not-started`.
+
+### The remaining distance
+
+**44 units / 9,948 authority lines** for `standard_exts[]` alone, plus its 24-name closure over 17
+further units -- the `v3_lib` <-> tables <-> `v3_utl`/`v3_conf`/`v3_san` component. Behind it: the
+keystone, then `PKCS12_parse`, then `store_result.c` and `OSSL_STORE_load`, then the seal.
+
+## D464 -- the table layer starts: 14 of 63 tables land, and the three-way split is measured
+
+Thirteenth pulled-forward slice, and the first to take option 1 (D463's note): land the tables as
+work, withhold only the *claim* -- the published `standard_exts[]` array and the six `v3_lib.rs`
+lookup names -- until all 63 exist. **Twelve units transcribed whole, 612 authority lines, carrying
+14 of the 63 tables**, each landing its item group, its `i2s_`/`s2i_`/`i2v_`/`v2i_`/`i2r_`/`r2i_`
+callbacks and its `OSSL_V3_EXT_METHOD` row with nothing stubbed: `v3_int` (3 tables), `v3_enum`,
+`v3_audit_id`, `v3_no_ass`, `v3_single_use`, `v3_soa_id`, `v3_group_ac`, `v3_ind_iss`,
+`v3_no_rev_avail`, `v3_ia5` (8 rows), `v3_utf8`, `v3_pku`. `RT-STORE` moves from 806 to **810**
+observations (four arms driving `i2s_ASN1_ENUMERATED_TABLE`, the one newly nameable export) and the
+total to **45,853** over 109 courts.
+
+**The wall is now a three-way split rather than one number**, which is the point of measuring it:
+
+| status | tables | units | authority lines |
+|---|---:|---:|---:|
+| landed whole | **14** | 12 | 612 |
+| closure-ready, withheld for budget | 16 | 12 | 2,714 |
+| withheld by name, unlanded blocker | 33 | 20 | 6,622 |
+| **withheld total** | **49** | 32 | **9,336** |
+
+The **33 genuinely blocked** are dominated by three hubs, not by the tables themselves:
+`v3_san.c`'s general-name printers (`GENERAL_NAME_print`, `v2i`/`i2v_GENERAL_NAME(S)`), `v3_conf.c`'s
+config layer (`X509V3_get_section`/`_section_free`), and `x_attrib.c`'s
+`ossl_print_attribute_value`; the rest reach `http_lib.c`/`punycode.c` or the CT units. **That is the
+useful finding: 33 tables wait on three hubs, so the hubs are worth more than the tables.**
+
+**A representation correction was found and fixed.** `struct v3_ext_method`'s `ASN1_ITEM_EXP *it` is
+a **function** pointer -- `ASN1_ITEM_EXP` is `typedef const ASN1_ITEM *ASN1_ITEM_EXP(void)`, and
+`ASN1_ITEM_ptr(method->it)` calls it -- where D456 had typed it `*const Asn1Item`. `v3_lib.rs` now
+types it as the function pointer and claims `Sync` so the tables can be `static`. No landed code read
+the field, so nothing behaved differently, but a table published against the wrong shape would have.
+Three stale `prerequisites.json` divergence rows were retired (they covered exactly the tables now
+built); no gate was loosened.
+
+**The D462 flake did not reproduce again**: five full runs on the settled tree, **with `git status`
+captured at each run** as D462's protocol requires -- all five `1114 passed, 0 failed` on a clean
+tree. That makes twenty-six green full runs since the single failure, and the protocol is now being
+followed rather than merely described.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1114 passed, 0 failed**; 109 courts and **45,853 observations**; `PIPELINE OK` exit 0 twice.
+Phase-10 counts are unchanged at `296 implemented / 2 open` exports and **`636 implemented / 0
+open`** provider rows. Nothing closed this slice, and none is claimed: the array is a claim, and 49
+of its 63 tables are missing.
+
+### The remaining distance
+
+**49 of 63 tables** -- 33 blocked over 20 units / 6,622 lines and 16 closure-ready over 12 units /
+2,714 lines -- plus D463's 24-name closure over 17 further units; then the array, then
+`X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` /
+`OSSL_STORE_load` -> the seal.
+
+## D465 -- the three hubs land, and the `v2i` cluster is one name from `ASN1_generate_v3`
+
+Fourteenth pulled-forward slice, aimed at D464's finding rather than at the table list. **All three
+hubs land**: `crypto/x509/x_attrib.c` **whole** (`print_oid` `:61-74` and
+`ossl_print_attribute_value` `:76-249`, 188 lines -- it needed `V_ASN1_VIDEOTEXSTRING` and
+`XN_FLAG_ONELINE` to be named, so both were added); `crypto/x509/v3_conf.c`'s config-value layer
+(~109 lines: `X509V3_get_string`, `X509V3_get_section`, the two `free`s, the `nconf` and
+`conf_lhash` method pairs, `X509V3_set_nconf`/`_set_ctx`/`_set_issuer_pkey`/`_set_conf_lhash`, with
+the `X509V3_CTX` and `X509V3_CONF_METHOD` layouts asserted); and `crypto/x509/v3_san.c`'s printers
+(`i2v_GENERAL_NAMES`, `i2v_GENERAL_NAME`, `GENERAL_NAME_print`, 247 lines). `v3_utl.c`
+**un-withholds `OSSL_GENERAL_NAMES_print`** now that `GENERAL_NAME_print` exists, and lands 32 of its
+51 functions. `RT-STORE` moves from 810 to **865** observations and the total to **45,908** over 109
+courts.
+
+**The hub selection was right, and the re-measurement proves it: closure-ready table units go from
+24 to 34** and blocked units from 20 to 10. The hubs unblocked `v3_aaa`, `v3_ac_tgt`, `v3_admis`,
+`v3_attrdesc`, `v3_attrmap`, `v3_cpols`, `v3_iobo`, `v3_pci`, `v3_sda` and `v3_usernotice`
+(~2,084 lines) -- **ten table units bought by three units of hub**, which is the leverage D464
+predicted and is now measured rather than assumed.
+
+**The next blocker is a single function, and it is Phase 5's deferred pair.** Hub 1's `v2i` half
+(`a2i_GENERAL_NAME`, `v2i_GENERAL_NAME_ex`, `v2i_GENERAL_NAME(S)`, `do_othername`, `do_dirname`,
+`v2i_subject_alt`, `copy_email`, `v2i_issuer_alt`, `copy_issuer`) is withheld on **one** name:
+**`ASN1_generate_v3`** (`crypto/asn1/asn1_gen.c`, Phase 5's deferred pair, ~500 lines). `ossl_v3_alt`
+is withheld whole rather than published with holes -- two of its three rows name withheld `v2i`
+callbacks -- and that is recorded as a `prerequisites.json` `owned_by_a_later_stratum` divergence row
+rather than a loosened gate. The remaining blockage is otherwise named: `v3_ncons` additionally on
+`http_lib.c`/`punycode.c`, `v3_akid` on `AUTHORITY_KEYID_*` (`v3_akeya.c`), `v3_authattid` on
+`OSSL_ISSUER_SERIAL_it`, `v3_rolespec` on `ossl_serial_number_print`, `v3_ocsp` on `ocsp_asn.c`,
+`ct_x509v3` on the CT units, and `v3_addr` on `ossl_asn1_string_set_bits_left` -- **which is already
+landed under the name `asn1::bitstr::set_bits_left`**, so that one is a naming shim rather than
+work.
+
+**The array was not published and nothing closed.** 49 of 63 tables are still missing, so
+`standard_exts[]` and the six `v3_lib.rs` lookup names stay withheld (D456), the keystone stays shut,
+and Phase-10 counts are unchanged at `296 implemented / 2 open` exports and **`636 implemented / 0
+open`** provider rows. Fourteen tables landed, fourteen claimed -- no more.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1114 passed, 0 failed**; 109 courts and **45,908 observations**; `PIPELINE OK` exit 0 twice. The
+D462 flake protocol was followed: the run's tree was **clean** and the suite green, and both pipeline
+runs agreed -- no reproduction, so the defect stays open and unnamed. Two gate findings became
+decisions (a `NOT_A_DISPATCH` exemption for the `X509V3_CONF_METHOD` aliases, and the `x_attrib`
+divergence row retired with the `v3_san` row added). `implemented_surface` moves from 3,684 to
+**3,741**.
+
+### The remaining distance
+
+**49 tables over 32 units / 9,336 lines** (10 blocked units / 4,538 lines, 22 closure-ready units /
+4,798 lines), plus D463's 24-name closure over 17 further units. The immediate next move is
+**`ASN1_generate_v3`/`ASN1_generate_nconf`** -- one function closing the `v2i` cluster and, with it,
+`v3_info`, `v3_crld` and `v3_san`'s tables -- then the 22 closure-ready table units, then the array,
+then `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> **`PKCS12_parse`** -> `store_result.c`
+/ **`OSSL_STORE_load`** -> the seal.
+
+## D466 -- the flake is reproduced, named, root-caused and fixed; D462's hypothesis is falsified and corrected
+
+**This is the entry D462 said would be owed if its hypothesis failed, and it failed.** D462 recorded the
+unreproduced `cargo test --lib` failure as most likely a mid-edit run and wrote down its own
+falsification criterion: *a failure on a committed, clean tree*. That criterion fired.
+
+**The failure, captured in full this time.** `evp::algorithm::tests::a_refused_precondition_is_success_and_skips_the_map`,
+`assertion left == right failed  left: 2  right: 1`, at `src/evp/algorithm.rs:576`. It fired in the
+**parallel** run inside `pipeline.sh` (the serial `--test-threads=1` run immediately before it was
+green), on a tree carrying this session's source edits and **no mid-edit window** -- which is what
+falsifies D462 rather than merely being inconvenient for it.
+
+**The cause.** Five sibling tests in `evp::algorithm` share the **process-global** `SAW` array and the
+`PRE_RESULT`/`PRE_ERRORS`/`POST_RESULT` statics **without** `test_support::lock_global_state`. Two
+interleaved and `pre` was counted twice. That is precisely the cross-module coupling the parallel gate
+exists to catch, and the project's documented remedy is the crate-wide lock.
+
+**The fix, and what was not done to it.** The five tests now take
+`crate::test_support::lock_global_state()`. **No test was skipped, deleted or weakened and no
+assertion was relaxed.** Verified by six focused parallel runs of `evp::algorithm::tests`, four full
+parallel suite runs, and this slice's two pipeline runs (each containing a serial and a parallel
+half) -- all **1117 passed, 0 failed**.
+
+**Why this matters more than the fix.** D462 wrote a hypothesis with a criterion that could kill it,
+kept the defect open rather than closing it by absence, and refused to add a retry. The criterion
+fired, and the response is to correct the record instead of defending the hypothesis -- which is the
+whole difference between this project's evidence model and a green checkmark. The mid-edit story was
+*reasonable*; it was also *wrong*, and only a written falsification criterion made that visible.
+
+**A second defect, found by the court rather than the compiler.** The previous slice declared its
+`v3_san.c` raise coordinates locally (the D445 allowance). The differential court read them back and
+found three wrong: `V3_SAN_604` read reason `109` where `X509V3_R_MISSING_VALUE` is **124**,
+`V3_SAN_623` read `110` where `X509V3_R_UNSUPPORTED_OPTION` is **117**, and `ERR_R_ASN1_LIB` was
+typed `524557` instead of **524301**. All three are corrected from `x509v3err.h`/`err.h` and both
+reachable sites are now pinned by refusal arms. The allowance to declare coordinates locally is what
+made that possible; the court is what made it *visible*, and that is the cost of the allowance being
+paid rather than hidden.
+
+**Three landings.** `crypto/asn1/asn1_gen.c` lands **whole** (`src/asn1/asn1_gen.rs`:
+`ASN1_generate_v3`/`ASN1_generate_nconf`, `generate_v3`, `asn1_cb`, `parse_tagging`, `asn1_multi`,
+`append_exp`, `asn1_str2type`, `bitstr_cb`) -- nothing withheld -- which is the one function that
+closed the `v2i` cluster; the cluster itself lands (`do_othername`, `do_dirname`, `a2i_GENERAL_NAME`,
+`v2i_GENERAL_NAME(_ex)`, `v2i_GENERAL_NAMES`), with `v2i_subject_alt`/`copy_email` withheld on
+`X509_REQ_get_subject_name` (10.14.11), `v2i_issuer_alt`/`copy_issuer` on `X509V3_EXT_d2i` (the
+dispatch) and `ossl_v3_alt` withheld whole rather than published with holes; and `v3_bitst.c` lands
+whole. `RT-STORE` moves from 865 to **981** observations and the total to **46,024** over 109 courts.
+
+### Counts, and what did not close
+
+**16 of 63 tables landed, 47 withheld**; closure-ready table units go from 34 to **36** and blocked
+units from 10 to **8**. `standard_exts[]` was **not** published -- 47 tables are missing, so the six
+`v3_lib.rs` lookup names and `X509_get_ext_d2i` stay withheld (D456) -- and therefore **the keystone,
+`PKCS12_parse` and `OSSL_STORE_load` did not close.** Phase-10 counts are unchanged at
+**`296 implemented / 2 open`** exports and **`636 implemented / 0 open`** provider rows.
+`implemented_surface` moves from 3,741 to 3,749.
+
+### Verification
+
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings` clean; `cargo test --lib`
+is **1117 passed, 0 failed** on both the serial and parallel halves; 109 courts and **46,024
+observations**; `PIPELINE OK` exit 0 twice. Phase 11 still derives `not-started`.
+
+### The remaining distance
+
+**47 of 63 tables** (8 blocked units + 36 closure-ready units, 23 unlanded), plus D463's 24-name
+closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
+`ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+Named shims are identified too: `v3_addr`'s `ossl_asn1_string_set_bits_left` is already landed as
+`asn1::bitstr::set_bits_left`.
+
+## D467 -- the closure-ready table units land; thirty of sixty-three tables exist, and the array stays withheld
+
+**The sixteenth pulled-forward slice took D466's list directly, and the list was re-measured before
+it was taken.** The same `nm --undefined-only` join over the admitted prefix was re-run first and
+reproduced D466 exactly: **36 closure-ready table units, 8 blocked**, **16 of 63 tables landed**, 23
+closure-ready units unlanded. Only then did the work start. That order is the property D451 asks
+for: the frontier is recomputed, not inherited, so a table that moved into closure between sessions
+cannot be missed and a table that left it cannot be silently claimed.
+
+**Nine units / 14 tables land, nothing stubbed.** `v3_extku.c` (4 tables: `ossl_v3_ext_ku`,
+`ossl_v3_ocsp_accresp`, `ossl_v3_acc_cert_policies`, `ossl_v3_acc_priv_policies`), `v3_info.c` (2:
+`ossl_v3_info`, `ossl_v3_sinfo`), `v3_sda.c` (2: `ossl_v3_subj_dir_attrs`,
+`ossl_v3_associated_info`), `v3_pmaps.c`, `v3_pcons.c`, `v3_battcons.c`, `v3_tlsf.c`, `v3_iobo.c` and
+the table half of `v3_bcons.c`. Each carries its item group(s), its
+`i2s_`/`s2i_`/`i2v_`/`v2i_`/`i2r_`/`r2i_` callbacks and its `OSSL_V3_EXT_METHOD` row(s). No table row
+is published with a hole in it; the withholding is done by name and the blocker recorded, which is
+the D459 rule.
+
+**The table layer is taken incrementally and the array is the one thing not taken (D464 option 1,
+D456).** `standard_exts[]` (`standard_exts.h:15-95`) stays withheld, and so do the six `v3_lib.rs`
+lookup names and `X509_get_ext_d2i`. Thirty of sixty-three tables is a partial array, and a partial
+array does not fail loudly -- it silently changes what `OBJ_bsearch_ext` finds for every missing NID,
+so publishing it now would be a behavior change disguised as progress. The array is published once,
+when the sixty-third table exists.
+
+**A divergence row retired rather than rewritten.** `forensics/prerequisites.json` carried a row for
+the `v3_bcons.c` table that was withheld; the table now exists, so the row was **retired** and the
+register goes from 18 rows to 17. A divergence register that only ever grows is a register nobody
+reads (D453/D454).
+
+**Raise coordinates read from the headers, not typed.** Each new unit declares its coordinates
+locally with the `err_sites::ErrSite` shape -- none of these files is in `gen_err_raise_sites.py`'s
+covered set -- and every reason value was read out of the authority's `err.h`/`x509v3err.h` rather
+than transcribed: `v3_info`'s five, `v3_pcons`'s three, `v3_pmaps`'s four, `v3_battcons`'s two,
+`v3_bcons`'s two and `v3_tlsf`'s three. `v3_sda.c` and `v3_iobo.c` raise nothing. D466 is what
+established the cost of the local-declaration allowance: three wrong numbers were found by reading
+the headers back, so the reading is now part of the write.
+
+**The output surface moves, the court surface does not.** `implemented_surface` moves from 3,749 to
+**3,784** symbols -- the thirty-five new exports (five `EXTENDED_KEY_USAGE_*`, five
+`OSSL_BASIC_ATTR_CONSTRAINTS_*`, five `ACCESS_DESCRIPTION_*`, five `AUTHORITY_INFO_ACCESS_*`, five
+`OSSL_ATTRIBUTES_SYNTAX_*`, three `POLICY_CONSTRAINTS_*`, three `POLICY_MAPPING_*`, one
+`POLICY_MAPPINGS_it`, two `TLS_FEATURE_*` and the exported `i2a_ACCESS_DESCRIPTION`). `RT-STORE` stays
+at **981** observations and the total at **46,024** across **109** courts: these rows are internal
+data the admitted DSO does not name, so they are unnamed by the built artifact rather than unwatched
+by intent, and no arm was added that could not name its subject.
+
+### Counts, and what did not close
+
+**30 of 63 tables landed, 33 withheld** -- 14 blocked tables over the 8 blocked units, 19
+closure-ready tables over the 14 closure-ready units still unlanded. Closure-ready units stay at
+**36** and blocked units at **8** (both sets existed before this slice; what changed is how much of
+the closure-ready set is now real). `standard_exts[]` was **not** published, so `X509_get_ext_d2i`
+stays withheld, `ossl_x509v3_cache_extensions` stays unreachable, and **`PKCS12_parse` and
+`OSSL_STORE_load` stay open**. Phase-10 counts are unchanged at **`296 implemented / 2 open`**
+exports and **`636 implemented / 0 open`** provider rows. Phase 11 still derives `not-started`.
+
+### Verification
+
+D462's protocol was followed first: `cargo test --lib` with `git --no-optional-locks status --short`
+read at the moment of the run gave **1117 passed, 0 failed** on a clean tree -- D466's fix holds and
+no test was retried, skipped or weakened. `cargo fmt --all -- --check` and `cargo clippy
+--all-targets -- -D warnings` are clean. The 109-court pipeline reads **1117 passed, 0 failed** on
+both the serial and the parallel half and prints `PIPELINE OK` exit 0 on two consecutive runs. One
+intermediate run failed `probe_hygiene.py` with `rt_bio_resolve_probe.c` `UNSTABLE` -- its
+`getaddrinfo` failure text differed between `-O0` (`Name or service not known`) and `-O1` (`No
+address associated with hostname`) -- which is a host DNS/environment divergence in the container,
+not a source change: the same probe read `clean` in the runs either side of it and neither this
+slice's source nor its evidence touches `crypto/bio/b_addr.c`. It is recorded rather than smoothed.
+
+### The remaining distance
+
+**33 of the 63 tables** -- 14 blocked over 8 units (`v3_addr`'s `ossl_v3_addr` is a naming shim since
+`ossl_asn1_string_set_bits_left` is already landed as `asn1::bitstr::set_bits_left`; the rest blocked
+on `ct_x509v3.c`, `ocsp_asn.c`, `AUTHORITY_KEYID_*` in `v3_akeya.c`, `OSSL_ISSUER_SERIAL_it` in
+`x509_acert.c`, `http_lib.c`/`punycode.c`, `ossl_serial_number_print` in `t_x509.c`, and
+`X509V3_EXT_d2i`/`X509_REQ_get_subject_name`), 19 closure-ready over 14 units (`v3_crld.c`'s six,
+`v3_asid.c`, `v3_timespec.c`, `v3_cpols.c`, `v3_admis.c`, `v3_pci.c`, `v3_sxnet.c`, `v3_skid.c`,
+`v3_ac_tgt.c`, `v3_attrdesc.c`, `v3_attrmap.c`, `v3_aaa.c`, `v3_ist.c`, `v3_usernotice.c`) -- plus
+D463's 24-name closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
+`ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+## D468 -- the second table batch lands; 41 of 63 tables exist, and a rewrite hazard is caught by reading the authority back
+
+**Six units and eleven tables landed**, each whole: `v3_crld.c` (six rows), `v3_asid.c`,
+`v3_timespec.c`, `v3_cpols.c`, `v3_skid.c` and `v3_sxnet.c`. Tables go from **30 to 41 of 63** and
+`implemented_surface` from 3,749/3,784 to **3,878** symbols. `standard_exts[]` stays withheld, as do
+the six `v3_lib.rs` lookup names and `X509_get_ext_d2i`, so **`PKCS12_parse` and `OSSL_STORE_load`
+stay open** and Phase-10 counts are unchanged at **`296 implemented / 2 open`** exports and **`636
+implemented / 0 open`** provider rows.
+
+**The withholding is by name with its blocker, in both cases a missing type, not a missing effort.**
+`v3_asid.c`'s three path-validation names and its `validation_err` macro are withheld whole because
+they read an `X509_STORE_CTX` and this crate has no `struct x509_store_ctx_st` layout; inventing one
+inside a table unit would be a stub of a Phase-11 type. `v3_skid.c`'s `s2i_skey_id` is withheld
+because its `hash` arm reads `ctx->subject_req->req_info.pubkey` and there is no `X509_REQ` type
+(10.14.11), which is also why the `ossl_v3_skey_id` row's `s2i` slot is `None` rather than a hole;
+`ossl_x509_pubkey_hash` is withheld with it (D453's second reason: closure complete, no reachable
+caller). `v3_crld.c`, `v3_timespec.c`, `v3_cpols.c` and `v3_sxnet.c` withhold nothing beyond the
+array.
+
+**The divergence register moved with the evidence, because the gate forced it to.** The first
+pipeline run of this slice failed at the prerequisite gate with `divergence_record_does_not_match`
+for `ossl_v3_skey_id`, `ossl_v3_time_specification` and `ossl_v3_aa_issuing_dist_point`: the register
+still claimed to cover names the crate had just built. The `v3_timespec.c` and `v3_crld.c` rows are
+retired and the `v3_skid.c` row is narrowed to `ossl_x509_pubkey_hash`; the register goes from 17
+rows to **15**. That is the gate working in the direction it was built for: a record that can keep
+covering a name the crate has since fixed is a record that can hide the next one.
+
+### A rewrite hazard, found by reading the authority back
+
+**The three modules `v3_crld.rs`, `v3_skid.rs` and `v3_timespec.rs` already existed as tracked
+modules** -- the function-granularity landings of 10.13, 10.14.6 and D455. This slice's setup
+truncated them before the work began, on the wrong assumption that they were new files, and the
+transcriptions were then re-derived rather than extended. Two came back whole against the committed
+text (`v3_skid.rs`) or one unused import short of it (`v3_timespec.rs`), verified by diffing the
+non-comment lines. **The third did not.** The `v3_crld.rs` re-derivation inverted
+`DIST_POINT_set_dpname`'s `set` argument, writing `c_int::from(i != 0)` where the authority's
+`X509_NAME_add_entry(dpn->dpname, ne, -1, i ? 0 : 1)` (`crypto/x509/v3_crld.c:541`) is `i == 0`. No
+court can name this row -- it is an internal the admitted DSO does not export -- so nothing but
+reading the authority back would have found it, and that is what found it.
+
+The response is the project's: the file is a superset of its committed self with the one inverted
+bit corrected, the diff against HEAD is recorded here rather than hidden, and the slice adds a
+verification step for the next one -- a re-derived module is checked against both the authority and
+its own committed self. The truncation was avoidable and the honest disposition is to name it as
+this session's error, not as a property of the work: `git ls-files` would have shown the three files
+were tracked. The `gens = NULL` dead assignment the authority writes in `v2i_aaidp` is kept under the
+crate's existing `#[allow(unused_assignments)]` convention (`dsa/check.rs`), not removed to quiet the
+lint.
+
+### Counts, and what did not close
+
+**41 of 63 tables landed, 22 withheld** -- 14 blocked over 8 units and 8 closure-ready over 8 units
+(`v3_admis.c`, `v3_pci.c`, `v3_ac_tgt.c`, `v3_attrdesc.c`, `v3_attrmap.c`, `v3_aaa.c`, `v3_ist.c`,
+`v3_usernotice.c`). `standard_exts[]` was **not** published, so `X509_get_ext_d2i` stays withheld,
+`ossl_x509v3_cache_extensions` stays unreachable, and `PKCS12_parse` and `OSSL_STORE_load` stay open.
+`RT-STORE` stays at **46,024** observations across **109** courts: the rows are internal data the
+admitted DSO does not name. Phase 11 still derives `not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves (no test was
+retried, skipped or weakened). `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D
+warnings` are clean; the first clippy pass over the new modules found 50 lints, 9 applied by
+`clippy --fix` and 41 `undocumented_unsafe_blocks` fixed by hand. The 109-court pipeline prints
+`PIPELINE OK` exit 0; `probe_hygiene.py` read clean, so the `rt_bio_resolve_probe.c` `UNSTABLE` D467
+recorded did not recur.
+
+### The remaining distance
+
+**22 of the 63 tables** (14 blocked over 8 units, 8 closure-ready over 8 units), plus D463's 24-name
+closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
+`ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+## D469 -- the closure-ready table set empties; 49 of 63 tables exist and every remaining table is blocked on a named unit
+
+**The last eight closure-ready units landed, one table each**: `v3_admis.c` (`ossl_v3_ext_admission`),
+`v3_pci.c` (`ossl_v3_pci`), `v3_ac_tgt.c` (`ossl_v3_targeting_information`), `v3_attrdesc.c`
+(`ossl_v3_attribute_descriptor`), `v3_attrmap.c` (`ossl_v3_attribute_mappings`), `v3_aaa.c`
+(`ossl_v3_allowed_attribute_assignments`), `v3_usernotice.c` (`ossl_v3_user_notice`) and `v3_ist.c`
+(`ossl_v3_issuer_sign_tool`). Tables go from **41 to 49 of 63** and `implemented_surface` from 3,878
+to **4,009** symbols (+131). `v3_ist.rs` was **extended, not rewritten**: it was an existing tracked
+module (10.12's item-group landing), so the row and its two callbacks were added and its doc
+corrected while every pre-existing line survived.
+
+**Nothing beyond the array is withheld in these eight.** They transcribe whole; the only withheld
+names are `standard_exts[]` and the six `v3_lib.rs` lookup names (D456), cited in each module doc.
+The `v3_ist.c` divergence row was retired -- the prerequisite gate reported
+`divergence_record_does_not_match` for `ossl_v3_issuer_sign_tool` on the first run -- taking the
+register from 15 rows to **14**. This is the third consecutive slice in which the gate, not a
+reviewer, is what moved the register, which is the direction it was built to fail in.
+
+**Every closure-ready table unit is now landed, which is the fact that changes the shape of the
+remaining work.** The 14 withheld tables are exactly the 14 blocked tables over the eight blocked
+units, and each is blocked on a name *outside* the table layer: `v3_addr.c` on the naming shim
+`ossl_asn1_string_set_bits_left` (landed as `asn1::bitstr::set_bits_left`); `v3_akid.c` on
+`AUTHORITY_KEYID_*` (`v3_akeya.c`) and `X509V3_EXT_d2i`; `v3_san.c`'s `ossl_v3_alt` on
+`X509V3_EXT_d2i`/`X509_REQ_get_subject_name`; `v3_authattid.c` on `OSSL_ISSUER_SERIAL_it`
+(`x509_acert.c`); `v3_ncons.c`'s three on `OSSL_parse_url` (`http_lib.c`)/`ossl_a2ulabel`
+(`punycode.c`); `v3_ocsp.c`'s five on `ocsp_asn.c`; and `v3_rolespec.c` on `ossl_serial_number_print`
+(`t_x509.c`). The next slice is the pivot to those dependencies. Until they land, `standard_exts[]`
+cannot be published, so `X509_get_ext_d2i` stays withheld, `ossl_x509v3_cache_extensions` stays
+unreachable, and **`PKCS12_parse` and `OSSL_STORE_load` stay open**.
+
+### Counts, and what did not close
+
+**49 of 63 tables landed, 14 withheld** -- all 14 over the eight blocked units. Phase-10 counts are
+unchanged at **`296 implemented / 2 open`** exports and **`636 implemented / 0 open`** provider rows.
+`RT-STORE` stays at **46,024** observations across **109** courts. Phase 11 still derives
+`not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean (the three transcriptions
+were written with their `// SAFETY:` comments, so no clippy cleanup pass was needed this time). The
+109-court pipeline prints `PIPELINE OK` exit 0; `probe_hygiene.py` read clean.
+
+### The remaining distance
+
+**14 of the 63 tables**, all blocked, over the eight blocked units named above, plus D463's 24-name
+closure over 17 further units; then the array, then `X509_get_ext_d2i` ->
+`ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load` -> the seal.
+## D470 -- the blocked-unit pivots begin; 57 of 63 tables exist and exactly six are left
+
+**The two blocked units whose closure was one landed name away, plus the five-table OCSP unit the new
+`ocsp_asn` unblocked, landed.** Tables go from **49 to 57 of 63** and `implemented_surface` from 4,009
+to **4,133** symbols (+124).
+
+* `v3_addr.c` -- the RFC 3779 IP-address unit, 1,359 lines, transcribed whole except its three
+  path-validation names. Its only measured blocker, `ossl_asn1_string_set_bits_left`, is a **naming
+  difference only**: it is landed as `crate::asn1::bitstr::set_bits_left`, the shim D463 named. The
+  three withheld names have the same blocker `v3_asid.c`'s three have -- no `X509_STORE_CTX` layout.
+* `v3_rolespec.c` -- blocked on `ossl_serial_number_print` (`t_x509.c:519-559`), which landed into the
+  existing `src/x509/t_x509.rs` (its `X509_signature_dump` byte-for-byte unchanged). `v3_rolespec`'s
+  printer is that function's first caller, which is what turns the record from "no caller" into a
+  landed function.
+* `v3_ocsp.c` -- **five** tables, in the new `src/ocsp/` tree whose first unit `ocsp_asn.c` (135 lines,
+  fifteen item groups, seventy-five exports, landed whole) is the only reason `OCSP_CRLID_it` and
+  `OCSP_SERVICELOC_it` exist.
+* `v3_akeya.c` -- the `AUTHORITY_KEYID` item group. `AUTHORITY_KEYID_dup` is deliberately **not**
+  defined: the authority's `IMPLEMENT_ASN1_FUNCTIONS` emits only the `_it`/`_new`/`_free`/`d2i_`/
+  `i2d_` quintet and the admitted DSO exports no `_dup`, so defining one would invent an export.
+* `v3_authattid.c` -- one blocker, `OSSL_ISSUER_SERIAL_it`; the file-local accessor in `v3_ac_tgt.rs`
+  became `pub(crate)` and is reached by Rust path, which is the whole of that file's change.
+
+**One divergence row narrowed, the register held at 14.** `t_x509.rs`'s row covered
+`ossl_serial_number_print` and `ossl_x509_print_ex_brief`; the first is now built, so the row is
+narrowed to the second with its Phase-11 object-layer blocker. The gate did not have to force this
+one -- the narrowing was made before the run, because the change that landed the name is the change
+that makes the record wrong.
+
+### Counts, and what did not close
+
+**57 of 63 tables landed; exactly six remain, over four units**: `v3_akid.c` and `v3_san.c`'s
+`ossl_v3_alt` (blocked on `X509V3_EXT_d2i`, the `v3_lib.c` dispatch, and for `v3_san`
+`X509_REQ_get_subject_name`), `v3_ncons.c`'s three (on `OSSL_parse_url` in `http_lib.c` and
+`ossl_a2ulabel` in `punycode.c`), and `ct_x509v3.c` (on `SCT_LIST_free`/`_print`, `SCT_set_source`,
+`d2i_SCT_LIST`/`i2d_SCT_LIST`). Phase-10 counts are unchanged at **`296 implemented / 2 open`**
+exports and **`636 implemented / 0 open`** provider rows. `RT-STORE` stays at **46,024** observations
+across **109** courts. Phase 11 still derives `not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean. The 109-court pipeline
+prints `PIPELINE OK` exit 0 on the first run; `probe_hygiene.py` read clean.
+
+### The remaining distance
+
+**Six of the 63 tables** over the four units named above, plus D463's 24-name closure over 17 further
+units; then the array, then `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse`
+-> `store_result.c` / `OSSL_STORE_load` -> the seal.
+## D471 -- the last dependencies land; 61 of 63 tables exist and the two that remain need the dispatch
+
+**The units the last four unlanded tables were blocked on landed, and three of those tables with
+them.** Tables go from **57 to 61 of 63** and `implemented_surface` from 4,133 to **4,201** (+68).
+
+* `crypto/punycode.c` landed whole into `src/punycode.rs` -- `ossl_a2ulabel` is the name
+  `v3_ncons.c` needed.
+* `crypto/http/http_lib.c`'s `OSSL_parse_url` landed into the new `src/http/` tree, with the rest of
+  the unit withheld **by name** and its reason: `OSSL_HTTP_parse_url` and `OSSL_HTTP_adapt_proxy`
+  serve the HTTP transport entry points this crate deliberately does not fabricate. Withholding them
+  is the correct disposition; a network stack invented to make a table land would be the opposite.
+* `crypto/ct/` landed whole -- nine units, 2,053 lines, fifty-nine exports, forty-four raise sites --
+  into the new `src/ct/`, including `ct_x509v3.c`'s `ossl_v3_ct_scts` table. One export is withheld
+  with its blocker: `CTLOG_STORE_load_default_file` reads a path built from the admitted build's
+  **forensic** `OPENSSLDIR`, which is Phase 16's, exactly as `x509_def.c`'s four withheld names are.
+* `crypto/x509/v3_ncons.c` landed whole (`ossl_v3_name_constraints`, `ossl_v3_holder_name_constraints`,
+  `ossl_v3_delegated_name_constraints`) now that its two blockers exist. Unlike `v3_asid.c` and
+  `v3_addr.c`, it has no `X509_STORE_CTX` surface, so nothing in it waits.
+
+**The docs gate caught a count, and the count was wrong, so the count was fixed.** `docs/CI.md`
+binds the `internal_symbols.c_style` figure to the live atlas exact; the new modules added two plain
+C identifiers (`ossl_a2ulabel` and one CT helper), so it moved 479 -> 481. The record is corrected
+rather than exempted, because the quantity is a live property of the build and the gate is how a
+reader learns that it changed.
+
+### Counts, and what did not close
+
+**61 of 63 tables landed; exactly two remain**, `ossl_v3_akey_id` (`v3_akid.c`) and `ossl_v3_alt`
+(`v3_san.c`). Both need `X509V3_EXT_d2i` -- the `v3_lib.c` dispatch, which searches the
+`standard_exts[]` array this layer exists to publish -- and `v3_san.c` also needs
+`X509_REQ_get_subject_name`. That is why the remaining order is forced rather than chosen: the array,
+the six `v3_lib.rs` lookup names, `X509V3_EXT_d2i`, these two tables and `X509_REQ_get_subject_name`
+land in one slice, because any earlier split would publish a dispatch that silently answers NULL for
+a NID whose table is simply not there yet (D456). Phase-10 counts are unchanged at **`296
+implemented / 2 open`** exports and **`636 implemented / 0 open`** provider rows. `RT-STORE` stays at
+**46,024** observations across **109** courts. Phase 11 still derives `not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean. The 109-court pipeline
+prints `PIPELINE OK` exit 0; `probe_hygiene.py` read clean.
+
+### The remaining distance
+
+**Two of the 63 tables**, both needing the dispatch; then the array and the dispatch; then
+`X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` -> `PKCS12_parse` -> `store_result.c` /
+`OSSL_STORE_load` -> the seal.
+## D472 -- the table layer closes: the array is published, 63 of 63 tables exist, and the dispatch is implemented
+
+**The endgame landed as one unit, because it has to be one unit.** `standard_exts[]` names all 63
+tables and the last two tables call `X509V3_EXT_d2i`, so any earlier split either publishes a
+partial array -- a silent `OBJ_bsearch_ext` divergence (D456) -- or leaves the last two tables
+unlandable. The slice therefore carried, together:
+
+* `src/x509/v3_lib.rs`: `STANDARD_EXTS`, the **seventy-three-entry** array transcribed entry for
+  entry from `standard_exts.h:15-95`, `STANDARD_EXTENSION_COUNT`, and the six lookup names
+  (`X509V3_EXT_get_nid`, `_get`, `_add_alias`, `_EXT_d2i`, `_get_d2i`, `_add1_i2d`).
+* `src/x509/v3_conf.rs`: `X509V3_EXT_i2d` and its body `do_ext_i2d`, which `X509V3_add1_i2d` needs.
+* `src/x509/v3_akid.rs` (new): the `ossl_v3_akey_id` table.
+* `src/x509/v3_san.rs`: `v2i_subject_alt`, `copy_email`, `v2i_issuer_alt`, `copy_issuer` and the
+  three-row `ossl_v3_alt` table.
+* `src/x509/x509_req.rs` (new, a pulled-forward Phase-11 subset): the `X509_REQ_INFO`/`X509_REQ`
+  layouts, `X509_REQ_get_subject_name` (the `v2i_subject_alt` blocker), `X509_REQ_get_version` and
+  `X509_REQ_get0_signature`. With the type in place, `src/x509/x509rset.rs`'s three setters were
+  **un-withheld** -- their only blocker was the missing type and their callees were already landed.
+
+**A placement error was made and corrected in the same slice, and the correction is the point.** The
+endgame's first pass transcribed `ossl_x509_pubkey_hash` inside `v3_akid.rs`, the module that reaches
+it, rather than inside `crypto/x509/v3_skid.c`, its authority unit and its `prerequisites.json`
+`owner_module`. The intent was sound -- it avoided a 72-entry partial array -- but the result put one
+unit's function in another unit's module, which is exactly the placement the divergence register's
+`owner_module` fields exist to make checkable. The follow-up moved the function to
+`src/x509/v3_skid.rs`, landed `s2i_skey_id` there as well (now that `X509_REQ` exists), and set the
+`ossl_v3_skey_id` row's `s2i` slot to `s2i_skey_id` rather than the `None` D468 had to publish.
+`crypto/x509/v3_skid.c` now transcribes **whole**, and the `None` slot D468's own doc called out as
+non-faithful is gone.
+
+**Two divergence rows retired, 14 to 12.** The `v3_san.rs` row covered `ossl_v3_alt` and the
+`v3_skid.rs` row covered `ossl_x509_pubkey_hash`; both are now built and the gate reported both as
+`divergence_record_does_not_match` before the retirement.
+
+### Counts, and what did not close
+
+**63 of 63 tables landed.** `implemented_surface` moves from 4,201 to **4,214** symbols. Phase-10
+counts are unchanged at **`296 implemented / 2 open`**: the array and the dispatch are the
+*prerequisite* of the five names that close the stratum -- `X509_get_ext_d2i` (`x509_ext.c`),
+`ossl_x509v3_cache_extensions` (`v3_purp.c`), `ossl_x509_add_cert_new` (`x509_cmp.c`),
+`PKCS12_parse` (`p12_kiss.c`) and `OSSL_STORE_load` (`store_lib.c`) -- and those five are the next
+slice. `RT-STORE` stays at **46,024** observations across **109** courts. Phase 11 still derives
+`not-started`.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean. The 109-court pipeline
+prints `PIPELINE OK` exit 0; `probe_hygiene.py` read clean.
+
+### The remaining distance
+
+The five names named above, then the seal. `X509_get_ext_d2i` -> `ossl_x509v3_cache_extensions` ->
+`ossl_x509_add_cert_new` -> `PKCS12_parse` -> `store_result.c` / `OSSL_STORE_load`.
+## D473 -- Phase 10 is complete: the last five names land, both open exports close, and the stratum derives complete
+
+**The chain the published dispatch made reachable landed whole**, and with it the stratum's last two
+open exports:
+
+* `X509_get_ext_d2i` and its five siblings -- `x509_ext.c` transcribes **whole**, nothing withheld.
+* `ossl_x509v3_cache_extensions`, `X509_check_purpose` and 29 more names -- `src/x509/v3_purp.rs`,
+  the purpose table, the issuer/CA checks and the extension cache.
+* `X509_self_signed` (`src/x509/x509_vfy.rs`; the other 67 names of the 3,984-line verify unit are
+  withheld by name with their `X509_STORE_CTX` blocker) and the add-cert family `x509_cmp.rs`
+  withheld behind it (`X509_cmp`, `X509_add_cert`, `X509_add_certs`, `ossl_x509_add_cert_new`,
+  `ossl_x509_add_certs_new`) -- `x509_cmp.c` transcribes **whole**.
+* `PKCS12_parse` -- `p12_kiss.c` whole.
+* `OSSL_STORE_load` and `store_result.c` -- `src/store/store_result.rs` plus the `store_lib.c` half.
+
+**Both courts are real, and both sides agree byte for byte.** `RT-PKCS12` gains a `PKCS12_parse` arm
+over a fixed, matching certificate/key pair and a fixed-salt MAC: 37 observations, including the two
+refusal coordinates `35.113` (MAC verify failure) and `35.105` (invalid NULL pointer) -- **317 to
+353 observations**. `RT-STORE` gains an `OSSL_STORE_load` arm over the fetched `file:` loader -- a
+fixed PEM certificate, its DER form, a fixed PKCS#8 key, an absent path and a malformed file, five
+arms and 58 observations, plus the removal of the `pending.` placeholder -- **981 to 1038
+observations**. The pipeline reads **109 courts and 46,117 observations**.
+
+**Every bookkeeping gate the landings made stale was brought level with the code, not silenced.**
+`dispatch_court.py` gained two `NOT_A_DISPATCH` entries with their reasons (`CheckPurpose` is
+declared inline in `x509v3.h.in:489` with no typedef; `StoreInfoNewFn` is a `.c`-local typedef at
+`store_result.c:317` the atlas never records), and the unlinked-typo sensitivity control still
+fires. The `x509_cmp.rs` divergence row was retired because the five names it covered are now built.
+`ossl_x509_check_cert_time` was **recorded as a divergence with its blocker rather than landed**: it
+reads `X509_VERIFY_PARAM`, `X509_STORE_CTX` and `X509_cmp_time`, none of which this crate models, so
+landing it would invent an out-of-unit type -- exactly what the surrounding withholds avoid. The
+plan's parsed table rows were corrected to the authority's real paths (the authority ships
+generated `.c.in` sources: `encode_key2any.c.in`, `decode_der2key.c.in`, `file_store.c.in`, ...) and
+`forensics/prerequisites.json` gained the unit records those corrections need; no plan row was
+deleted to silence the tool. `docs/CI.md`'s live `c_style` count moved to 484.
+
+### Counts, and what closed
+
+`implemented_surface` moves from 4,214 to **4,254** symbols; `libcrypto` is at **4,254 of 5,896**
+exports. Phase-10's ledger reads **`298 implemented / 0 open`** exports and **`636 implemented / 0
+open`** provider rows, so `phase_state.py` derives **phase 10 `complete`**, and phase 11 still
+derives `not-started`. The two exports this stratum was opened against -- `PKCS12_parse` and
+`OSSL_STORE_load` -- are both landed and both directly courted.
+
+### Verification
+
+`cargo test --lib` is **1117 passed, 0 failed** on both the serial and parallel halves. `cargo fmt
+--all -- --check` and `cargo clippy --all-targets -- -D warnings` are clean. The pipeline prints
+`PIPELINE OK` exit 0 on **two consecutive runs**, with `evidence_determinism`, `docs_consistency` and
+`regression_guard --require-current` all green.
+
+### What remains in Phase 10
+
+**10.7, the seal** -- `docs/PHASE-10-KEYFORMATS-SEAL.md`, its `seal_sha256` and its
+`phase_state.py` `STRATUM_EVIDENCE` row. Then Phase 10 is ready to merge into `main`.
+## D474 -- the Phase 10 seal: complete with its seal in place, and the FRF chain named as the remaining gate
+
+**10.7 wrote `docs/PHASE-10-KEYFORMATS-SEAL.md`** (763 lines), mirroring
+`docs/PHASE-9-RAND-DRBG-SEAL.md`'s ten sections, and registered it the way phase 9's is registered:
+`atlas_common.SEAL_DOCS[10]` and `phase_state.PHASE10_MODULES`. The registration is part of the same
+commit deliberately -- without it a stratum could reach `complete` with no seal, which is the hole
+the phase-9 comment names -- so `forensics/phase-state.json` now reports phase 10 `complete` with a
+**non-null `seal_sha256`**, `evidence_absent` empty, and phase 11 still `not-started`.
+
+**The seal cites rather than restates.** Every count in it comes from
+`docs/SEAL-CENSUS.md` / `forensics/phase10-obligations.json` / `artifacts/phase10/COURTS.json` (the
+one table it copies is §3's court list, and it says so), because a number typed into a seal is a
+number that can drift from the evidence it summarises. Its §6 non-claims are the vocabulary
+`docs/PARITY_MODEL.md` defines: `libssl` remains entirely `SCAFFOLDED`, X.509 verification is Phase
+11's, and no symbol is `PARITY_VERIFIED`.
+
+### What the seal records, including what contradicts it
+
+The seal's §10 and §5 record defects and staleness rather than smoothing them:
+
+* **Phase 10 has not joined the FRF chain.** `gen_frf_courts.py`'s table ends at phase 9, so
+  `docs/RELEASE_GATES.md` §2 items **6, 8 and 10 are not met** (7 is not applicable). That is
+  recorded as the next move, not as a satisfied gate.
+* **`D-DECODER-ABSENT-1`'s machine row is stale.** D450 measured its trigger satisfied and called it
+  a retirement candidate; the row still reads `trigger_satisfied: false, open`. Recorded, not
+  quietly retired.
+* **Two claim strings in `artifacts/phase10/COURTS.json` are stale**: they still say the
+  `i2d_PKCS8PrivateKey_nid_*` writers are held pending and that `OSSL_STORE_load` remains the one
+  `pending.` name, both falsified by D445/D473.
+* **The plan's §5/§6 ledger lines are historical** (`87`/`211`, `286/12`, `634/2`) against the
+  ledger's `298/0` and `636/0`.
+* **The prerequisite register moved 18 rows to 12**, and four of the five edits were forced by the
+  gate rather than made in anticipation; D470's narrowing was made before the run that would have
+  forced it.
+* **The hash-chain lag fired on this seal's own registration** and needed four runs, not two, to
+  settle: registering the seal changes `phase-state.json`'s `seal_sha256`, which cascades
+  `phase-state.json -> phase 7/8/9 ledgers -> phase 10 ledger -> court-coverage / ownership-audit /
+  divergence-obligations`. Both the step order and the `phase10`-before-`phase7` glob order
+  contribute; the fixed point is reached when the recorded hashes stop moving.
+* **A pre-existing Phase-8 test flaked once**: `sm2::crypt::tests::the_ciphertext_size_matches_and_a_round_trip_holds`
+  (`src/sm2/crypt.rs:851`) failed a DER-length lower-bound assertion on a random encryption. It is
+  Phase 8's, it is recorded, and it is not fixed here.
+* **One pipeline failure was seen once and not reproduced**: the provider census read 55 of 241
+  `DEFLT_ENCODERS` rows during a batch of four back-to-back runs; every direct run before and since
+  read all 241. Recorded as an unreproduced instrument observation (the container was later found
+  SIGKILLed, `exit 137`, `oom=false`, a plausible environmental cause).
+
+### Verification
+
+The pipeline prints `PIPELINE OK` exit 0 with **109 courts and 46,117 observations**, and
+`evidence_determinism`, `docs_consistency` and `regression_guard --require-current` are green; the
+regenerated artefacts are byte-identical across settled runs. `cargo test --lib` is 1117 passed on
+both halves.
+
+### What remains
+
+Phase 10 is complete by its ledger, its courts and its seal. What is **not** done is joining the FRF
+chain (`gen_frf_courts.py`) that `docs/RELEASE_GATES.md` §2 items 6 and 8 require, after which the
+staging branch merges into `main`.
+## D475 -- Phase 10's differential courts join the FRF court manifests, and the receipt/checkpoint half is named
+
+**The seal's §7 recorded `docs/RELEASE_GATES.md` §2 items 6, 8 and 10 as unmet because phase 10 had
+not joined the FRF chain.** This entry lands the half that is a generator input: phase 10's **five
+differential courts** are registered in `forensics/tools/gen_frf_courts.py`'s `COURTS` table
+(`rt-keyformat-ref`, `rt-codec`, `rt-keyformat`, `rt-pkcs12`, `rt-store`), so
+`gen_frf_courts.py` now writes **86 runtime courts** (was 81; phase 10's five across 172 files) and
+`gen_frf_courts.py --check` is green.
+
+**`CT-PKCS12` is deliberately absent, for the instrument's reason.** It is **candidate-only
+construction verification** against the pinned `evppbe_pkcs12.txt` vectors, not a differential
+court, so it has no authority transcript to diff, no
+`artifacts/phase10/probes/<probe>.{authority,candidate}` pair to stage and no `{fixture}` for a
+challenge to locate -- exactly the reason Phase 8's and Phase 9's `CT-*` courts are absent (D13,
+D201). A manifest generated from the table would name execution-context artifacts that do not exist.
+
+**Two live counts moved with it, and the docs gate forced the move.** `forensics/frf/README.md`'s
+"runtime count is N as of this revision" sentence gained the phase-10 five (81 -> 86, with the
+per-phase breakdown the tool parses), and `docs/RELEASE_GATES.md`'s "the alternative is N YAML" moved
+81 -> 86. Both are bound to the generator's table exact, so a manifest added without them is a
+document that contradicts the tree.
+
+**What this does and does not satisfy.** `RELEASE_GATES.md` §2 item 3 (court manifests) is what this
+lands. Items **6 (mutation/sensitivity evidence), 8 (FRF receipts) and 10 (a Gemel checkpoint)**
+still require running the sensitivity evidence and recording receipts and a checkpoint against these
+manifests -- the chain entry phase 9 has and phase 10 does not yet. That is recorded rather than
+implied, and it is what remains before the merge.
+
+### Verification
+
+The pipeline prints `PIPELINE OK` exit 0 with **109 courts and 46,117 observations**, and
+`gen_frf_courts.py --check`, `docs_consistency` and `regression_guard --require-current` are green.
+## D476 -- Phase 10's FRF chain entry: five receipts, ten challenges, the claim, and the Gemel checkpoint
+
+**The half D475 named as owed is landed.** Phase 10's five differential courts
+(`rt-keyformat-ref`, `rt-codec`, `rt-keyformat`, `rt-pkcs12`, `rt-store`) ran the chain phase 8's and
+phase 9's ran: `frf court run` against each manifest, `frf receipt emit` per run, `frf court
+challenge` per court, `frf claim compile --policy sensitivity-backed` over the five receipts, then
+`frf evidence status`. All fifteen steps exited 0.
+
+**The evidence exists and is committed.** Five `receipt-run-*` receipts (one per court, each
+`residuals: []`, both axes `pass`); ten challenge records (stdout and exit per court, each
+`saw_defect: true`, `specificity_clean: true`, one affected axis); fifteen captures; the compiled
+claim `6fd47c3c1957a8707168b2427cee76aaf04d7106720273117212b4a9a64aaaa9` with `blockers: []`,
+`excluded_evidence: []` and no narrowed scope cell; and the **Gemel checkpoint `K49`**
+(`checkpoint.c26506bf...`), with `forensics/GEMEL_TRAJECTORY.md`'s head at `C95`. The `.frf` store
+moved objects 706 -> 747, captures 258 -> 273, challenges 172 -> 182, claims 9 -> 10, receipts
+86 -> 91, residuals 176 -> 186, and remains `graph_verified: yes`, `object_closure: complete`.
+
+**The seal was corrected to match, and that moved its own hash.** `docs/PHASE-10-KEYFORMATS-SEAL.md`
+§7 and §8 recorded items 6, 8 and 10 as unmet; they are now met, so the sections say so and the
+head-matter bullets, §6 item 9, §9's first bullet and §10's last sentence were corrected with them.
+The seal's `seal_sha256` moved `2bffe04d...` -> `4c042a47a1b577f19e8c45c0f14547da9fe2638edf93a0494a3ebaadf8df685a`,
+which cascades through `phase-state.json` and every artefact recording it; the pipeline needed
+**three runs** to reach a fixed point, confirmed by an identical tracked-diff fingerprint across
+them.
+
+**The chain is not idempotent, and that is recorded rather than discovered later.** Re-running it
+against a throwaway copy of the store produced different run ids and a different claim and added
+five duplicate receipts, so the committed store is **not** re-run: a second pass would add stray
+evidence to a record whose whole point is that each object is the one run that produced it. That is
+the property that makes `.frf` evidence rather than a log.
+
+### Counts, and what closed
+
+Phase 10 is now complete by all four of `docs/RELEASE_GATES.md` §2's evidence items that apply to it
+-- court manifests, mutation/sensitivity evidence, FRF receipts, and a Gemel checkpoint (item 7, the
+resolution runs, is not applicable; items 1, 2 and 9 were already present). Phase-10's ledger still
+reads **`298 implemented / 0 open`** exports and **`636 implemented / 0 open`** provider rows, and
+`implemented_surface` is unchanged at **4,254** symbols.
+
+### Verification
+
+The pipeline prints `PIPELINE OK` exit 0 on three consecutive settled runs, with **109 courts and
+46,117 observations**, `cargo test --lib` at 1117 passed on both halves, and
+`gen_frf_courts.py --check` reporting 172 files over 86 courts.
+
+### What remains
+
+The merge of `phase10-keyformats` into `main`.
+## D477 -- release 0.0.15: Phase 10's implementation moves, and the declarations move with it
+
+**`main` is released as 0.0.15**, by the sequence `docs/RELEASE_GATES.md` section 8 fixes and D428
+applied for **Key formats, PKCS#12 and STORE** -- the stratum D431 activated and D474 sealed.
+`Cargo.toml`'s `version` and `Cargo.lock`'s `[[package]] version` both move 0.0.14 -> 0.0.15,
+`python3 forensics/tools/gen_frf_courts.py` rewrites the declaration table so all **86** courts'
+`version_or_commit` name the version the crate is, and `--check` reads `ok: 172 file(s) match the
+table (86 courts)`. The version string is part of the binary, so the staged shell and every atlas
+that hashes it regenerate with it.
+
+**What this release contains.** All of Phase 10: **298 of 298 exports implemented and 0 open**,
+**636 of 636 provider rows implemented and 0 open**, the `standard_exts[]` array and the `v3_lib.c`
+dispatch, `PKCS12_parse` and `OSSL_STORE_load` both landed and directly courted, the stroke's seal
+`docs/PHASE-10-KEYFORMATS-SEAL.md`, and the FRF chain entry -- five receipts, ten challenges and the
+`K49` Gemel checkpoint. `implemented_surface` is **4,254** symbols; the pipeline reads **109 courts
+and 46,117 observations**.
+
+**The FRF receipts stay where they are.** They remain bound to the artifact the chain actually ran
+against (`openssl-rs 0.0.14`), for D428's reason: a receipt records the run that produced it, and
+re-running the chain against a bumped version would either duplicate evidence or, worse, make a
+receipt describe a binary nobody executed. The declarations name 0.0.15 because they are a
+statement about *this* tree; the receipts name 0.0.14 because they are a statement about *that* run.
+
+**What this is not.** `libssl` remains entirely `SCAFFOLDED`, X.509 is Phase 11, and no symbol is
+`PARITY_VERIFIED`. Phase 10's completion is a completion of its own ledger, courts and seal, which is
+what `docs/PARITY_MODEL.md` says those words mean.
+
+### Verification
+
+`sh forensics/tools/pipeline.sh` prints `PIPELINE OK` exit 0 on **three consecutive runs** with an
+identical tracked-diff fingerprint across them, `cargo test --lib` is 1117 passed on both halves,
+`gen_frf_courts.py --check` is clean, and `phase_state.py` derives phase 10 `complete` with its
+seal and phase 11 `not-started`.

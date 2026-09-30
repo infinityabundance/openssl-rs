@@ -63,6 +63,7 @@ use crate::runtime::bio::{BIO_ctrl, BIO_free, BIO_new, Bio, BIO_C_SET_FILE_PTR};
 use crate::runtime::err::{err_sites, peek_first_reason, raise_site};
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, OPENSSL_cleanse};
 use crate::runtime::str::OPENSSL_strnlen;
+use crate::x509::x_pubkey::{i2d_X509_PUBKEY, X509Pubkey};
 
 /// `PEM_BUFSIZE` — `pem.h`'s header buffer length.
 pub(crate) const PEM_BUFSIZE: c_int = 1024;
@@ -234,6 +235,21 @@ pub(crate) const PEM_STRING_ECPARAMETERS: *const c_char = c"EC PARAMETERS".as_pt
 pub(crate) const PEM_STRING_PUBLIC: *const c_char = c"PUBLIC KEY".as_ptr();
 /// `PEM_STRING_ECPRIVATEKEY` — `include/openssl/pem.h:53`.
 pub(crate) const PEM_STRING_ECPRIVATEKEY: *const c_char = c"EC PRIVATE KEY".as_ptr();
+/// `PEM_STRING_DSA_PUBLIC` — `include/openssl/pem.h:46`. Landed with 10.5's `decode_pem2der.c`,
+/// whose `pem_name_map[]` is the first landed table to name every `pem.h` PEM block.
+pub(crate) const PEM_STRING_DSA_PUBLIC: *const c_char = c"DSA PUBLIC KEY".as_ptr();
+/// `PEM_STRING_SM2PRIVATEKEY` — `include/openssl/pem.h:60`.
+pub(crate) const PEM_STRING_SM2PRIVATEKEY: *const c_char = c"SM2 PRIVATE KEY".as_ptr();
+/// `PEM_STRING_SM2PARAMETERS` — `include/openssl/pem.h:61`.
+pub(crate) const PEM_STRING_SM2PARAMETERS: *const c_char = c"SM2 PARAMETERS".as_ptr();
+/// `PEM_STRING_X509` — `include/openssl/pem.h:36`.
+pub(crate) const PEM_STRING_X509: *const c_char = c"CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509_TRUSTED` — `include/openssl/pem.h:37`.
+pub(crate) const PEM_STRING_X509_TRUSTED: *const c_char = c"TRUSTED CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509_OLD` — `include/openssl/pem.h:35`.
+pub(crate) const PEM_STRING_X509_OLD: *const c_char = c"X509 CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509_CRL` — `include/openssl/pem.h:40`.
+pub(crate) const PEM_STRING_X509_CRL: *const c_char = c"X509 CRL".as_ptr();
 
 /// `OSSL_i2d_of_void_ctx` — `include/openssl/asn1.h:334`'s function *type*.
 ///
@@ -1051,6 +1067,42 @@ pub unsafe extern "C" fn PEM_ASN1_write_bio_ctx(
     // SAFETY: the caller's contract.
     unsafe {
         PEM_ASN1_write_bio_internal(None, i2d, vctx, name, bp, x, enc, kstr, klen, callback, u)
+    }
+}
+
+/// `int PEM_write_bio_X509_PUBKEY(BIO *out, const X509_PUBKEY *x)` — the write_bio half of
+/// `IMPLEMENT_PEM_rw(X509_PUBKEY, X509_PUBKEY, PEM_STRING_PUBLIC, X509_PUBKEY)`
+/// (`crypto/pem/pem_all.c:41`), whose body is `include/openssl/pem.h:156-162`'s
+/// `IMPLEMENT_PEM_write_bio`: `PEM_ASN1_write_bio((i2d_of_void *)i2d_X509_PUBKEY,
+/// PEM_STRING_PUBLIC, out, x, NULL, NULL, 0, NULL, NULL)`.
+///
+/// It is the encoder `encode_key2any.c`'s `SubjectPublicKeyInfo` PEM arm calls (`:354`), so
+/// Phase 10.3 pulls it forward rather than claiming a later stratum's symbol, the way
+/// `src/pem/pem_pk8.rs` builds its own `IMPLEMENT_PEM_*` expansions internally.
+///
+/// # Safety
+/// `out` a live BIO; `x` live.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_X509_PUBKEY(out: *mut Bio, x: *const X509Pubkey) -> c_int {
+    // SAFETY: this wrapper restates `i2d_X509_PUBKEY`'s contract in `I2dOfVoid`'s terms.
+    unsafe extern "C" fn i2d_void(a: *const c_void, p: *mut *mut c_uchar) -> c_int {
+        // SAFETY: the caller's contract, restated in the typed encoder's terms.
+        unsafe { i2d_X509_PUBKEY(a.cast::<X509Pubkey>(), p) }
+    }
+    let i2d: I2dOfVoid = i2d_void;
+    // SAFETY: every argument is live; the two NULLs are the macro's no-cipher arms.
+    unsafe {
+        PEM_ASN1_write_bio(
+            Some(i2d),
+            PEM_STRING_PUBLIC,
+            out,
+            x.cast::<c_void>(),
+            ptr::null(),
+            ptr::null(),
+            0,
+            None,
+            ptr::null_mut(),
+        )
     }
 }
 

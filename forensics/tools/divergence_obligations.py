@@ -215,15 +215,24 @@ OBLIGATIONS: list[Row] = [
         disposition="fixed",
         evidence=(
             "src/evp/pkey_asn1.rs (STANDARD_METHODS, the authority's fifteen rows); "
-            "src/evp/pkey.rs; docs/DECISIONS.md D353"
+            "src/evp/keymgmt_lib.rs (evp_keymgmt_util_assign_pkey/_copy call the public "
+            "EVP_PKEY_set_type_by_keymgmt, so the name walk runs); src/evp/pkey.rs; "
+            "RT-KEYFORMAT; docs/DECISIONS.md D353"
         ),
         note=(
-            "Superseded by D-PKEY-AMETH-3: the 8.8 landing D353 populated `standard_methods[]`, "
-            "so `pkey_set_type`'s legacy lookup finds the method and a provider key named "
-            "`\"RSA\"`/`\"EC\"`/... takes the legacy NID exactly as the authority does. D372 "
-            "then landed the four ECX rows, so the entry's remaining subject is closed too. "
-            "The Phase 8 seal §5 records it under `D-PKEY-AMETH-1, -2, superseded by -3, which "
-            "D372 supersedes in turn ... Every one is closed`."
+            "Superseded by D-PKEY-AMETH-3 for the table, and closed on it: the 8.8 landing D353 "
+            "populated `standard_methods[]` and D372 landed the four ECX rows. But the table alone "
+            "was **not** sufficient. The observable stayed owed because "
+            "`evp_keymgmt_util_assign_pkey`/`_copy` called a crate-local "
+            "`evp_pkey_set_type_by_keymgmt` that passed a NULL `str` and skipped the name walk, so "
+            "a provider key named `\"RSA\"`/`\"EC\"`/... stayed `EVP_PKEY_KEYMGMT`. D438 observed "
+            "it and `RT-KEYFORMAT` measured it (`EVP_PKEY_get_id` answers 6/116/408 on the "
+            "authority against `EVP_PKEY_KEYMGMT` (-1) here; `EVP_PKEY_get_base_id` 6/116/408 "
+            "against `NID_undef` 0). Both call sites now call the public "
+            "`EVP_PKEY_set_type_by_keymgmt` exactly as `crypto/evp/keymgmt_lib.c:64`/`:505` do, "
+            "the helper is removed, and `RT-KEYFORMAT` passes 342 observations with zero "
+            "residuals. The Phase 8 seal §5 records it under `D-PKEY-AMETH-1, -2, superseded by -3, "
+            "which D372 supersedes in turn ... Every one is closed`."
         ),
     ),
     Row(
@@ -239,14 +248,20 @@ OBLIGATIONS: list[Row] = [
         disposition="fixed",
         evidence=(
             "src/ec/ecx_meth.rs; src/evp/pkey_asn1.rs (STANDARD_METHODS, 15 rows); "
-            "src/evp/pkey_ctx.rs (PMETH_STANDARD_METHODS, 10 rows); docs/DECISIONS.md D372"
+            "src/evp/pkey_ctx.rs (PMETH_STANDARD_METHODS, 10 rows); src/evp/keymgmt_lib.rs (the "
+            "name walk its provider-key-typing observable needs); docs/DECISIONS.md D372"
         ),
         note=(
             "Superseded by D372 (the entry's own quote says so), which landed the ECX chain; "
             "`EVP_PKEY_asn1_get_count` now answers 15 and `EVP_PKEY_meth_get_count` 10, "
             "`EVP_PKEY_asn1_find`/`_find_str` answer the four ECX objects and `EVP_PKEY_type` "
-            "their four NIDs. The Phase 8 seal §5: `D372 landed the ECX chain and the register's "
-            "third entry retires with it. Every one is closed`."
+            "their four NIDs. The provider-key-typing observable it also names -- a keymgmt named "
+            "`\"X25519\"`/`\"X448\"`/`\"ED25519\"`/`\"ED448\"` taking the legacy NID through "
+            "`pkey_set_type` -- additionally required `evp_keymgmt_util_assign_pkey`/`_copy` to "
+            "call the public `EVP_PKEY_set_type_by_keymgmt` rather than a crate-local NULL-`str` "
+            "helper; that call site was repaired with D-PKEY-AMETH-1 and `RT-KEYFORMAT` measures "
+            "it. The Phase 8 seal §5: `D372 landed the ECX chain and the register's third entry "
+            "retires with it. Every one is closed`."
         ),
     ),
     # -- Phase 8's two standing narrowings ------------------------------------------
@@ -336,15 +351,24 @@ OBLIGATIONS: list[Row] = [
             "Phase 10's first commit that lands `crypto/pkcs12/p12_crpt.c`, which supplies the "
             "two `PKCS12_PBE_keyivgen` function addresses the six rows lack"
         ),
-        trigger_satisfied=False,
-        disposition="open",
-        evidence="RT-EVP-PBE (the `pbe.find.04`..`pbe.find.09` arms)",
+        trigger_satisfied=True,
+        disposition="fixed",
+        evidence=(
+            "src/pkcs12/p12_crpt.rs (PKCS12_PBE_keyivgen/_ex, transcribed against "
+            "crypto/pkcs12/p12_crpt.c with its three raises); src/evp/evp_pbe.rs (the six "
+            "BUILTIN_PBE rows now carry both addresses); courts/phase10/rt_pkcs12_probe.c "
+            "(the `pbe.find.04`..`pbe.find.09` arms); RT-PKCS12"
+        ),
         note=(
-            "The trigger phrase names Phase 10, which is not yet `complete`, so this row may be "
-            "`open`: the six `builtin_pbe[]` rows carry no keygen until Phase 10 lands "
-            "`p12_crpt.c`, and `EVP_PBE_find`/`_ex` answer 1 with both keygen pointers NULL "
-            "until then. The reader functions themselves are landed; what is owed is the "
-            "contents of two columns."
+            "10.4 landed `crypto/pkcs12/p12_crpt.c`, which is this row's trigger, so the six "
+            "`builtin_pbe[]` rows take both `PKCS12_PBE_keyivgen` addresses and "
+            "`EVP_PBE_find`/`_ex` answer 1 with both keygen out-parameters **non-NULL**. What "
+            "was a contents gap in two columns is now the authority's table. `RT-PKCS12` drives "
+            "all six NIDs through `EVP_PBE_find_ex` and prints the return code, the type, the "
+            "NID and both presence answers, which is the measurement `RT-EVP-PBE` held back "
+            "with a marker while the two libraries differed. The heading reads "
+            "`-- **CLOSED**`. Nothing was stubbed; the guard in `EVP_PBE_CipherInit_ex` still "
+            "covers the eighteen PRF rows, and the six PKCS#12 rows stop taking it."
         ),
     ),
     Row(

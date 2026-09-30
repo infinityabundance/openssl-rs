@@ -56,7 +56,7 @@ use crate::evp::keymgmt::{
     evp_keymgmt_newdata, EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name, EVP_KEYMGMT_is_a,
     EVP_KEYMGMT_up_ref, EvpKeyMgmt,
 };
-use crate::evp::pkey::{evp_pkey_set_type_by_keymgmt, EvpPkey};
+use crate::evp::pkey::{EVP_PKEY_set_type_by_keymgmt, EvpPkey};
 use crate::params::OsslParam;
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
@@ -231,7 +231,7 @@ pub(crate) unsafe fn evp_keymgmt_util_assign_pkey(
         || keymgmt.is_null()
         || keydata.is_null()
         // SAFETY: `pkey` is live and `keymgmt` is live.
-        || unsafe { evp_pkey_set_type_by_keymgmt(pkey, keymgmt) } == 0
+        || unsafe { EVP_PKEY_set_type_by_keymgmt(pkey, keymgmt) } == 0
     {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::KEYMGMT_LIB_65) };
@@ -901,7 +901,7 @@ pub(crate) unsafe fn evp_keymgmt_util_copy(
     // SAFETY: `to` is live.
     if unsafe { (*to).keymgmt }.is_null() {
         // SAFETY: `to` is live and `to_keymgmt` is live.
-        if unsafe { evp_pkey_set_type_by_keymgmt(to, to_keymgmt) } == 0 {
+        if unsafe { EVP_PKEY_set_type_by_keymgmt(to, to_keymgmt) } == 0 {
             // SAFETY: `to_keymgmt` is live and `alloc_keydata` is this call's own object or NULL.
             unsafe { evp_keymgmt_freedata(to_keymgmt, alloc_keydata) };
             return 0;

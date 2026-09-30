@@ -1024,6 +1024,22 @@ authority and the candidate for this function, and there was never supposed to b
 > as the authority does. It is kept rather than deleted because the four `crypto/ec/ecx_meth.c`
 > names it still describes are the whole of D-PKEY-AMETH-3's subject. The paragraphs below are the
 > state before the 8.8 landing.
+>
+> **Re-measured, and repaired.** The 8.8 landing alone did **not** close this. D438 observed the
+> divergence (`src/evp/pkey.rs`'s `EVP_PKEY_get_id`), and `RT-KEYFORMAT`
+> (`courts/phase10/rt_keyformat_probe.c`) has since measured it on every provider key the decoder
+> path builds: `EVP_PKEY_get_id` answered `6`/`116`/`408` (`EVP_PKEY_RSA`/`_DSA`/`_EC`) on the
+> authority and `EVP_PKEY_KEYMGMT` (`-1`) here, with `EVP_PKEY_get_base_id` answering `6`/`116`/`408`
+> there against `NID_undef` (`0`) here. The cause was **not** the table: it was a crate-local helper
+> (`src/evp/pkey.rs`'s `evp_pkey_set_type_by_keymgmt`) that called `pkey_set_type` with a **NULL
+> `str`** and so skipped the name walk. The authority has no such helper — `crypto/evp/keymgmt_lib.c`
+> `:64` (`evp_keymgmt_util_assign_pkey`) and `:505` (`evp_keymgmt_util_copy`) call the public
+> `EVP_PKEY_set_type_by_keymgmt`, walk and all — so this was a transcription defect and not a
+> recorded narrowing. Both call sites now call the public function and the helper is removed, so a
+> provider key named `"RSA"`, `"EC"`, `"DSA"`, `"DH"`, `"RSA-PSS"`, `"DHX"`, `"SM2"` or one of the
+> four ECX names takes the legacy NID into `pkey->type` exactly as the authority does.
+> `RT-KEYFORMAT` compares **342 observations with zero residuals** over the byte arms and both reader
+> arms, and this entry's machine-readable row is `fixed` on that evidence.
 
 - **Obligation:** `EVP_PKEY_set_type_by_keymgmt` on a provider method whose **name is a legacy key
   type** -- `"RSA"`, `"EC"`, `"DSA"`, and the rest of the twelve -- and, through it,
@@ -1142,6 +1158,10 @@ between the authority and the candidate at this site.**
 > `ossl_sm2_asn1_meth`, and the two `get_count`s answer **15** and **10** where they answered 11
 > and 6. The entry is kept rather than deleted, as its two siblings are, because the paragraphs
 > below are the state before that landing and are what **`RT-ECX`** now observes the absence of.
+> (The provider-key-typing observable this entry names — a keymgmt named `"X25519"`, `"X448"`,
+> `"ED25519"` or `"ED448"` taking the legacy NID through `pkey_set_type` — also required the name
+> walk that `crypto/evp/keymgmt_lib.c`'s `evp_keymgmt_util_assign_pkey`/`_copy` reach; the crate's
+> bypassing helper was repaired alongside `D-PKEY-AMETH-1`, and `RT-KEYFORMAT` measures it.)
 
 - **Obligation:** `EVP_PKEY_asn1_find(NULL, type)`, `EVP_PKEY_asn1_find_str(NULL, name, len)`,
   `EVP_PKEY_type(type)`, `EVP_PKEY_asn1_get0(idx)` and `EVP_PKEY_asn1_get_count()` for the four
@@ -1208,7 +1228,27 @@ between the authority and the candidate at this site.**
   and the trigger is the one above, one table over: the four accessors are appended to
   `PMETH_STANDARD_METHODS` in `pkey_id` order after `ossl_dhx_pkey_method` at 920.
 
-### D-PBE-PKCS12-KEYGEN-1 — the six `PKCS12_PBE_keyivgen` rows of `builtin_pbe[]` carry no keygen
+### D-PBE-PKCS12-KEYGEN-1 — the six `PKCS12_PBE_keyivgen` rows of `builtin_pbe[]` carry no keygen — **CLOSED**
+
+> **Re-measured, and closed.** Phase 10's 10.4 landed `crypto/pkcs12/p12_crpt.c`, which is the
+> trigger this entry named, and the six rows now carry both addresses:
+> `src/evp/evp_pbe.rs`'s `BUILTIN_PBE` has `keygen: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen)`
+> and `keygen_ex: Some(crate::pkcs12::p12_crpt::PKCS12_PBE_keyivgen_ex)` on each of the six rows
+> (`NID_pbe_WithSHA1And128BitRC4`, `_40BitRC4`, `_3_Key_TripleDES_CBC`, `_2_Key_TripleDES_CBC`,
+> `_128BitRC2_CBC`, `_40BitRC2_CBC`). `PKCS12_PBE_keyivgen` and `PKCS12_PBE_keyivgen_ex` are
+> `src/pkcs12/p12_crpt.rs`, transcribed against `crypto/pkcs12/p12_crpt.c` with its three raises
+> (`PKCS12_R_DECODE_ERROR` at `:41`, `PKCS12_R_KEY_GEN_ERROR` at `:55`, `PKCS12_R_IV_GEN_ERROR` at
+> `:64`), and the two key derivations reach the landed provider `PKCS12KDF` row. So `EVP_PBE_find`
+> and `EVP_PBE_find_ex` now answer **1** for each with both keygen pointers **non-NULL**, and
+> `EVP_PBE_CipherInit_ex` on an `ASN1_OBJECT` whose `OBJ_obj2nid` is one of the six reaches
+> `PKCS12_PBE_keyivgen_ex`, exactly as the authority does. **The measurement is `RT-PKCS12`'s new
+> arms** (`courts/phase10/rt_pkcs12_probe.c`), which drive all six NIDs through
+> `EVP_PBE_find_ex` and print each row's return code, type, NID and *both presence answers* — the
+> two answers whose difference `RT-EVP-PBE` used to hold back with a fixed marker. Nothing was
+> stubbed and nothing was omitted: the two columns are the addresses.
+> The guard below the table is unchanged and still covers the eighteen PRF rows (and any row a
+> caller adds with `EVP_PBE_alg_add_type`, which leaves `keygen_ex` empty); the six PKCS#12 rows
+> simply stop taking it, which is what this entry's `Claim removed` predicted.
 
 - **Obligation:** `EVP_PBE_find` and `EVP_PBE_find_ex` for the six NIDs `NID_pbe_WithSHA1And128BitRC4`
   (144), `NID_pbe_WithSHA1And40BitRC4` (145), `NID_pbe_WithSHA1And3_Key_TripleDES_CBC` (146),

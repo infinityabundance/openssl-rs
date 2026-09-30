@@ -477,6 +477,23 @@ fn context_init(ctx: *mut OsslLibCtx) -> bool {
     // SAFETY: as above; the slot is published once, here.
     unsafe { (*ctx).encoder_store = encoder_store.cast::<c_void>() };
 
+    // The store-loader method store, slot 15. The authority builds it **immediately after**
+    // `encoder_store` and before `provider_store` (`crypto/context.c:139`, the `P2` comment
+    // "We want loader_store to be cleaned up before the provider store"), which is this
+    // position. D-10.5 fills it with `src/store/store_meth.rs`; `get_loader_store` reads it and
+    // the two bridges in `src/provider/stores.rs` now delegate to it for real.
+    //
+    // SAFETY: `ctx` is the live context being initialised, and the store constructor only stores
+    // the pointer it is given.
+    let store_loader_store =
+        unsafe { crate::property::store::ossl_method_store_new(ctx.cast::<c_void>()) };
+    if store_loader_store.is_null() {
+        context_deinit(ctx);
+        return false;
+    }
+    // SAFETY: as above; the slot is published once, here.
+    unsafe { (*ctx).store_loader_store = store_loader_store.cast::<c_void>() };
+
     // The child-provider globals, slot 18. Built here and **filled later**:
     // `ossl_provider_init_as_child` is what creates the lock and stores the upcalls, so a
     // context that is not a child has a zeroed object with a NULL lock — which
@@ -728,6 +745,22 @@ fn context_deinit_objs(ctx: *mut OsslLibCtx) {
                     .cast::<crate::property::store::OsslMethodStore>(),
             );
             (*ctx).encoder_store = ptr::null_mut();
+        }
+    }
+
+    // The store-loader method store, slot 15 -- built immediately after the encoder store and
+    // released in the same `P2` band, before the provider store it holds references into. D-10.5
+    // builds it; this is its release counterpart.
+    // SAFETY: `ctx` is a live context being torn down by `context_deinit`, and no other thread
+    // holds a reference to it. The slot is released exactly once and re-NULLed.
+    unsafe {
+        if !(*ctx).store_loader_store.is_null() {
+            crate::property::store::ossl_method_store_free(
+                (*ctx)
+                    .store_loader_store
+                    .cast::<crate::property::store::OsslMethodStore>(),
+            );
+            (*ctx).store_loader_store = ptr::null_mut();
         }
     }
 

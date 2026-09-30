@@ -76,6 +76,9 @@ pub mod chacha;
 // structure.
 pub(crate) mod cipher_tables;
 pub mod context;
+// Phase 10.14.15 — `crypto/ct/`: Certificate Transparency. The directory is new here; it lands
+// the units `crypto/x509/v3_x509v3`/`ct_x509v3.c`'s table is blocked on. See `src/ct/mod.rs`.
+pub mod ct;
 pub(crate) mod der_writer;
 pub mod des;
 pub mod dh;
@@ -92,6 +95,11 @@ pub mod dso;
 // dispatches to, and the `curve_list[]` method column that is the authority coordinate
 // deciding it.
 pub mod ec;
+// Phase 10.9's digest substrate: the `crypto/engine/` registry core (`X509_digest` reaches the
+// engine table through `ossl_asn1_item_digest_ex`), transcribed as far as the reachable call
+// graph needs it. The `ENGINE_*` exports it defines remain Phase 13's by their `engine.h`
+// declaration; no Phase-10 export, row, or Phase-11 evidence is created.
+pub mod engine;
 pub mod evp;
 // Phase 8.5's `crypto/ffc/` primitives: the FFC domain-parameter object, its generators and
 // validators, and the private-key generator and validators DH and DSA are built on. Every name
@@ -107,6 +115,9 @@ pub mod evp;
 pub(crate) mod ffc;
 pub mod ffi;
 pub mod hpke;
+// Phase 10.14's dependency — `crypto/http/`'s `OSSL_parse_url`, the one name `v3_ncons.c` needs
+// from the HTTP tree. See `src/http/mod.rs`.
+pub mod http;
 pub mod idea;
 pub mod mac;
 // Phase 8's `crypto/ml_kem/` (FIPS 203): the single translation unit the six keymgmt and KEM rows
@@ -119,6 +130,10 @@ pub(crate) mod ml_kem;
 pub(crate) mod ml_dsa;
 pub mod modes;
 pub mod params;
+// Phase 10 (10.14.14) — `crypto/ocsp/`: the OCSP object model and its ASN.1, the first unit of
+// the OCSP sub-subphase. `ocsp_asn.c`'s item groups are landed here; the request/response/lookup
+// surface is 10.14.14's remaining work. The directory is new here. See `src/ocsp/mod.rs`.
+pub mod ocsp;
 // Phase 8.7's `crypto/param_build_set.c`: the two-way key-management writers a provider's
 // `export()` and `get_params()` methods share. `crypto/ec/ec_backend.c` is the first caller the
 // crate reaches; `crypto/ffc/ffc_backend.c`'s withheld `ossl_ffc_params_todata` reaches the same
@@ -143,8 +158,14 @@ pub mod pem;
 // ASN.1 decrypt/encrypt pair over it, and `p12_p8d.c`'s two `PKCS8_decrypt` spellings. It
 // lands early because `PKCS8_decrypt` is the PKCS#8 reader `pem_read_bio_key_legacy` reaches.
 pub mod pkcs12;
+// Phase 10's pulled-forward subset of Phase 12's `crypto/pkcs7/`: the `PKCS7` object the `PFX`
+// container's `authsafes` column is, on the closure D441 measured. See `src/pkcs7/mod.rs`.
+pub mod pkcs7;
 pub mod property;
+// Phase 10.14's dependency — `crypto/punycode.c`'s `ossl_a2ulabel`, the one name `v3_ncons.c`
+// needs from the punycode unit.
 pub mod provider;
+pub mod punycode;
 // Phase 8's `crypto/quic_vlint.c`: the QUIC variable-length integer codec, transcribed whole
 // because `crypto/packet.c`'s QUIC half calls it and `OPENSSL_NO_QUIC` is absent from the admitted
 // profile (D342).
@@ -165,6 +186,14 @@ pub mod sm4;
 // two crypt units the `SM2` signature and asym-cipher rows publish on.
 pub(crate) mod sm2;
 pub mod status;
+// Phase 10 (10.5) — `crypto/store/`: the `OSSL_STORE_LOADER` object and its registry, the
+// provider-side loader method fetched over slot 15, and `store_lib.c`'s `OSSL_STORE_CTX` state
+// machine and `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object model. The directory is new here;
+// this pass lands all four export-bearing units and names, per function, the three exports and
+// two arms it withholds (Phase 11's `X509` graph, and 10.3's `PKCS12_parse` behind
+// `ossl_store_handle_load_result`) in its module doc. The `file_store.c` provider row is the
+// only whole unit still withheld.
+pub mod store;
 // Test-only: the one process-wide lock that serialises tests touching the crate's
 // process-global state (init/cleanup, the default `OSSL_LIB_CTX`, the memory
 // functions, the error registry, the object database, the property/method stores,

@@ -34,9 +34,10 @@ What the pending courts will establish, and what they will not
 `RT-CODEC` and `RT-KEYFORMAT` compare the authority's *bytes* for the codecs and the hand-off
 helpers: `OSSL_ENCODER_to_data`/`to_bio`/`to_fp`'s exact output, the error queue and coordinate
 for a malformed input, the alias and selection behaviour under `set_output_type`/`set_selection`,
-and the same shape for the `d2i_*`/`i2d_*`/`PEM_*` pairs. `RT-PKCS12` compares the container's
-DER rather than a parsed structure, and `CT-PKCS12` checks the PKCS#12 KDF and PBE outputs
-against the vectors the pinned tree already carries. None of them can claim that a codec which
+and the same shape for the `d2i_*`/`i2d_*`/`PEM_*` pairs. `RT-PKCS12` (10.2) compares the
+`PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups' DER rather than a parsed structure,
+and `CT-PKCS12` checks the PKCS#12 KDF and PBE outputs against the vectors the pinned tree
+already carries. None of them can claim that a codec which
 round-trips is a codec: a transcription whose encoder writes and whose decoder reads back is a
 different library, and docs/PHASE-10-SUBPHASES.md section 3.1 records the three joins that make
 the difference observable. Nothing here is a parity claim about a key's meaning (section 3.5).
@@ -51,6 +52,8 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import correctness_vectors as cv  # noqa: E402
 
 from atlas_common import (  # noqa: E402
     PRODUCTION_AUTHORITY,
@@ -80,52 +83,43 @@ RUN_TIMEOUT_S = "60"
 # since none of its own rows is implemented. See the module doc.
 COURTS: list[tuple[str, str]] = [
     ("RT-KEYFORMAT-REF", "rt_coverage_ref_probe.c"),
+    # 10.1's behavioural court: the `OSSL_OP_ENCODER` text and blob rows the first provider codec
+    # units land (`encode_key2text.c`, `encode_key2blob.c`), driven through `OSSL_ENCODER_fetch`
+    # and `OSSL_ENCODER_CTX_new_for_pkey`, and the one `OSSL_OP_DECODER` row `decode_epki2pki.c`
+    # lands, driven through `OSSL_DECODER_fetch` and `OSSL_DECODER_from_data`.
+    ("RT-CODEC", "rt_codec_probe.c"),
+    # 10.6's behavioural court: the twenty-six `d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names
+    # the five authority units publish, driven with fixed legacy keys and compared byte for byte.
+    ("RT-KEYFORMAT", "rt_keyformat_probe.c"),
+    # 10.2's and 10.3's behavioural court: the `PKCS12_SAFEBAG`/`PKCS12_BAGS`/`PKCS12_MAC_DATA`
+    # item groups `p12_asn.c` lands, the `SafeBag` accessors and constructors `p12_sbag.c`
+    # lands, the attribute helpers of `p12_attr.c` and the Unicode conversions of `p12_utl.c`,
+    # plus 10.3's `PKCS12_item_pack_safebag`, the two `PKCS12_decrypt_skey` spellings and
+    # `PKCS12_add_secret`, driven through the public `pkcs12.h` surface and compared as DER bytes
+    # rather than a parsed structure (docs/PHASE-10-SUBPHASES.md section 3.2).
+    ("RT-PKCS12", "rt_pkcs12_probe.c"),
+    # 10.5's behavioural court: the `OSSL_STORE_LOADER` object and its registry
+    # (`store_register.c`), the provider-side loader method fetched over slot 15
+    # (`store_meth.c`) and the `OSSL_STORE_INFO` type-name table (`store_strings.c`), driven
+    # through the public `store.h` surface. 10.16 publishes the two `file` `OSSL_OP_STORE`
+    # provider rows, so the probe now calls `OSSL_STORE_LOADER_fetch`/`do_all_provided` and the
+    # fetched `OSSL_STORE_find` arms for real; `OSSL_STORE_load` stays printed `pending.`
+    # (`store_result.c`'s `ossl_store_handle_load_result`, 10.16's remaining half).
+    ("RT-STORE", "rt_store_probe.c"),
 ]
+
+# The construction court, beside the differential four. It is candidate-only and driven by
+# `correctness_vectors.py`, which owns the record shape (D201): a `CT-*` court answers "does it
+# satisfy the underlying construction?", which the differential plane cannot, and the differential
+# four answer "does it behave like the admitted authority?", which a vector set cannot. Neither
+# implies the other. `CT-PKCS12` is 10.4's: the PKCS#12 KDF's `Key` values are a fixed vector, and
+# the pinned corpus's `evppbe_pkcs12.txt` carries six of them.
+CORRECTNESS_COURTS: list[str] = ["CT-PKCS12"]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here
 # can pass, and each is printed with the subphase that brings it so that "not run yet" cannot be
-# read as "passed".
-PENDING_COURTS: dict[str, str] = {
-    "RT-CODEC": "10.1 -- the 241 `OSSL_OP_ENCODER` and 76 `OSSL_OP_DECODER` rows and the "
-                "codecs behind them, driven through the public `OSSL_ENCODER_*`/"
-                "`OSSL_DECODER_*` surface: the exact bytes of `to_data`/`to_bio`/`to_fp`, the "
-                "error queue and coordinate for a malformed input, and the alias and selection "
-                "behaviour under `set_output_type`/`set_selection`. The framework's 79 exports "
-                "are already landed (8.8's D362-D367), so the probe cannot be written before "
-                "the rows are, and a probe that reached an unimplemented row aborts the "
-                "candidate (docs/PHASE-10-SUBPHASES.md sections 3.1 and 3.5).",
-    "RT-PKCS12": "10.2-10.4 -- the `PKCS12` container and its ASN.1, compared as DER bytes and "
-                 "not as a parsed structure: the `PFX` order, the `SafeBag` attribute set and "
-                 "its ordering, the `MacData`'s `digestAlgorithm`/`salt`/`iterations`, and the "
-                 "`PKCS12_gen_mac`/`PKCS12_verify_mac` pair. Every container symbol is open -- "
-                 "the eight decryption names already landed are referenced by "
-                 "`RT-KEYFORMAT-REF`, not driven -- so the court lands with 10.2-10.4 "
-                 "(docs/PHASE-10-SUBPHASES.md section 3.2).",
-    "CT-PKCS12": "10.4 -- the PKCS#12 KDF and PBE construction vectors, whose corpus the pinned "
-                 "tree already carries: `test/recipes/30-test_evp_data/evppbe_pkcs12.txt` and "
-                 "its `evppbe_pbkdf2.txt` sibling, with the `80-test_pkcs12.t` recipe data. "
-                 "Candidate-only, like every `CT-*` court (docs/DECISIONS.md D201); no network "
-                 "fetch is needed and none is permitted (docs/AUTHORITY_POLICY.md).",
-    "RT-STORE": "10.5 -- `OSSL_STORE_open(_ex)` and the `file` loader, the `OSSL_STORE_INFO` "
-                "type and its constructor/accessor family, the `OSSL_STORE_LOADER` object and "
-                "its registry, and the `OSSL_STORE_SEARCH` family: the `OSSL_STORE_INFO` type "
-                "and refcount surface, the `eof`/`error`/`expect` state machine, and the "
-                "refusal arms (an unknown scheme, a NULL URI, a loader that answers a NULL "
-                "`load`) with the error queue. The loader's sub-fetches resolve in the "
-                "publishing provider's library context (D240) and the decoder arm lands after "
-                "10.4's pair, so it cannot be written before then "
-                "(docs/PHASE-10-SUBPHASES.md section 3.3).",
-    "RT-KEYFORMAT": "10.6 -- the 26 symbols phases 5 and 7 handed forward: the PVK and PKCS#8 "
-                    "container reads and writes, the four `d2i_PrivateKey*`/"
-                    "`d2i_AutoPrivateKey*` and the five `i2d_*` names, and "
-                    "`PEM_write_bio_PrivateKey_traditional`, compared by the exact bytes of a "
-                    "fixed key and the error queue and coordinate of each malformed-input arm. "
-                    "Every one is open, and the `d2i_PrivateKey*` pair is the subtle one: it "
-                    "tries `d2i_PrivateKey_decoder` first and falls back to "
-                    "`ossl_d2i_PrivateKey_legacy` (`crypto/asn1/d2i_pr.c:172`-`:175`, `:247`-"
-                    "`:250`), so a probe that only drove the provider path would measure half "
-                    "the function (docs/PHASE-10-SUBPHASES.md section 3.4).",
-}
+# read as "passed". Empty since 10.5 registered `RT-STORE`.
+PENDING_COURTS: dict[str, str] = {}
 
 
 def extra_defs(name: str, libdir: Path) -> list[str]:
@@ -277,6 +271,12 @@ def main(argv: list[str]) -> int:
             continue
         records.append(court(name, src, auth, work))
 
+    for name in CORRECTNESS_COURTS:
+        if name == "CT-PKCS12":
+            records.append(cv.run_pkcs12_court(name, work_dir=work, authority_id=auth.id))
+        else:
+            raise SystemExit(f"[{GENERATOR}] no driver for correctness court {name}")
+
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
         "all_pass": passed == len(records),
@@ -292,11 +292,90 @@ def main(argv: list[str]) -> int:
             "distribution defines the name -- which the link proves -- and NOT that any arm of "
             "it was driven; the court coverage atlas records those at basis `referenced`, never "
             "`called` (docs/DECISIONS.md D199). "
-            "**No behavioural court has landed:** every one of this stratum's own rows and "
-            "hand-offs is unimplemented, so nothing about the key-format layer is verified "
-            "here. `pending_courts` names the courts the plan gives this stratum and the "
+            "`RT-CODEC` is this stratum's first **behavioural** court (10.1): it drives the "
+            "twenty-nine text and blob encoder rows `encode_key2text.c` and `encode_key2blob.c` "
+            "publish through the "
+            "public `OSSL_ENCODER_*` surface and the one `EncryptedPrivateKeyInfo` decoder "
+            "`decode_epki2pki.c` publishes through `OSSL_DECODER_*`, observing each row's identity "
+            "(`OSSL_ENCODER_fetch`/`OSSL_DECODER_fetch`'s name and properties), its exact bytes "
+            "(`OSSL_ENCODER_to_data`/`OSSL_DECODER_from_data` with a construct callback), and a "
+            "refusal arm for each unit with the error queue. Since 10.6 it also drives the four "
+            "`msblob`/`pvk` encoder rows `encode_key2ms.c` publishes and the four `msblob`/`pvk` "
+            "decoder rows `decode_msblob2key.c`/`decode_pvk2key.c` publish, in both providers: "
+            "identity, a fixed RSA and 160-bit-`q` DSA keypair encoded to each output at the "
+            "unencrypted level and the bytes fed back through the matching decoder row, and the "
+            "selection and short-header refusals. It is a differential compatibility "
+            "claim about those rows, NOT that the other 572 rows or the remaining decoders are "
+            "implemented. "
+            "`RT-STORE` is 10.5's behavioural court: it drives the `OSSL_STORE_LOADER` object "
+            "(`OSSL_STORE_LOADER_new`, the ten setters, the by-name accessors and the refcount "
+            "pair), the process-global scheme registry (`OSSL_STORE_register_loader`/"
+            "`_unregister_loader`/`OSSL_STORE_do_all_loaders`) and the `OSSL_STORE_INFO` "
+            "type-name table (`OSSL_STORE_INFO_type_string`), and it drives the refusal arms -- "
+            "a NULL scheme, an RFC 3986-invalid scheme, an unregistered scheme and a loader "
+            "whose `load` is NULL -- with their error coordinates. `store_lib.c`'s "
+            "`OSSL_STORE_CTX` state machine and `OSSL_STORE_INFO`/`OSSL_STORE_SEARCH` object "
+            "model are driven, including the fetched `OSSL_STORE_find` arms; **10.16 publishes "
+            "the two `OSSL_OP_STORE` provider rows `file_store.c` publishes**, so "
+            "`OSSL_STORE_LOADER_fetch` and `OSSL_STORE_LOADER_do_all_provided` are called and "
+            "the `file` fetch resolves. `OSSL_STORE_load` remains the one name printed as "
+            "`pending.`: its fetched branch reaches `store_result.c`'s "
+            "`ossl_store_handle_load_result`, which needs `PKCS12_parse` "
+            "(docs/PHASE-10-SUBPHASES.md sections 3.3, 3.5). "
+            "`pending_courts` names the courts the plan gives this stratum and the "
             "subphase that brings each, and every name is printed on each run so that 'not run "
-            "yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3)."
+            "yet' cannot be read as 'passed' (docs/PHASE-10-SUBPHASES.md sections 3 and 4.3). "
+            "`RT-KEYFORMAT` is 10.6's behavioural court: it drives the twenty-four landed "
+            "`d2i_*`/`i2d_*`/`PEM_*`/`b2i_*`/`i2b_*` hand-off names with fixed RSA, DSA and EC "
+            "keys, compares the exact bytes and each malformed-input arm's error queue, and "
+            "references the two `i2d_PKCS8PrivateKey_nid_*` writers held pending because "
+            "`PKCS8_encrypt` (10.4) is unlanded. "
+            "`RT-PKCS12` is 10.2's and 10.3's behavioural court: it builds the `PKCS12_SAFEBAG`/"
+            "`PKCS12_BAGS`/`PKCS12_MAC_DATA` item groups from fixed inputs and fixed hand-written "
+            "DER fixtures, prints their bytes, and drives the `SafeBag` accessor surface, the "
+            "attribute helpers and the `OPENSSL_{asc2uni,uni2asc,utf82uni,uni2utf8}` conversions, "
+            "their error coordinates. Since 10.3 it also drives the exports of that subphase "
+            "whose closure is landed: "
+            "`PKCS12_item_pack_safebag` (the fixed `PKCS8_PRIV_KEY_INFO` packed as a `certBag`, "
+            "printed as DER), the two `PKCS12_decrypt_skey` spellings (a shrouded key bag with a "
+            "non-PBE algorithm, whose refusal and error coordinate are the observation), and "
+            "`PKCS12_add_secret` (the `add_*` surface and the stack it builds). With the `PKCS7` "
+            "subset pulled forward it drives the `PKCS12` container itself: "
+            "`PKCS12_it`/`_new`/`_free`, `d2i_PKCS12`/`i2d_PKCS12`, `PKCS12_AUTHSAFES_it` and the "
+            "four `d2i_PKCS12*`/`i2d_PKCS12*_bio/fp` spellings, `PKCS12_init(_ex)`, the `MacData` "
+            "accessors and `PKCS12_setup_mac`, and `PKCS12_add_safes(_ex)`. The second 10.3 "
+            "slice adds the container's own identity as a DER document (section 3.2): "
+            "`PKCS12_set_mac`/`PKCS12_gen_mac`/`PKCS12_verify_mac` over a **fixed** salt and "
+            "iteration count, reading the `MacData`'s `digestAlgorithm`/`salt`/`iterations` back "
+            "through `PKCS12_get0_mac` and printing both the recomputed MAC and the `PFX` bytes; "
+            "`PKCS12_set_pbmac1_pbkdf2` over fixed parameters (the RFC 9879 `PBMAC1PARAM` inside "
+            "the container); `PKCS12_pack_p7encdata(_ex)` over a fixed salt/iteration (the "
+            "encrypted octets are printed); `PKCS12_add_key(_ex)` over a fixed RSA `EVP_PKEY` "
+            "decoded from the shared fixed key set (the unencrypted `keyBag` arm, so the bytes "
+            "are fixed); `PKCS12_add_safe(_ex)`; and `PKCS12_newpass` over a fixed-salt MAC, with "
+            "the changed container printed and the new password verified. Since 10.4 it also "
+            "drives that subphase's landed exports: the six "
+            "`PKCS12_key_gen_*` spellings (the fixed `smeg`/salt vector through `uni`/`asc`/`utf8` "
+            "and their `_ex` twins), `PKCS12_PBE_add`, the two `PKCS12_PBE_keyivgen` spellings "
+            "driven directly, the **six `builtin_pbe[]` rows' keygen presence** through "
+            "`EVP_PBE_find_ex` (with `EVP_PBE_CipherInit_ex` on the two TripleDES rows, which "
+            "actually reach the keygen -- D-PBE-PKCS12-KEYGEN-1's measurement), and "
+            "`PKCS8_set0_pbe(_ex)` (a fixed `PrivateKeyInfo` encrypted under a fixed TripleDES "
+            "`PBEPARAM`, printed as the `EncryptedPrivateKeyInfo` DER). What remains `pending.` "
+            "needs Phase 11's `X509` object graph: the four `PKCS12_SAFEBAG_get1_*` readers and "
+            "the `create_cert`/`create_crl` pair on Phase 11's `X509_it`/`X509_CRL_it`; "
+            "`PKCS12_add_cert` and `PKCS12_create(_ex/_ex2)` on `X509_alias_get0`/"
+            "`X509_keyid_get0`/`X509_check_private_key`/`X509_digest`; and `PKCS12_parse` on "
+            "`PKCS12_SAFEBAG_get1_cert_ex`/`ossl_x509_add_cert_new`. The probe prints each as "
+            "`pending.` with its blocker rather than driving a fabricated arm "
+            "(docs/PHASE-10-SUBPHASES.md section 3.5). "
+            "`CT-PKCS12` is 10.4's second evidence plane and the other question: candidate-only "
+            "construction verification of the PKCS#12 KDF. Its probe (`courts/phase10/ct_pkcs12.c`) "
+            "re-reads the pinned `test/recipes/30-test_evp_data/evppbe_pkcs12.txt`'s six `PBE = "
+            "pkcs12` stanzas and calls `PKCS12_key_gen_uni` exactly as `test/evp_test.c`'s "
+            "`pbe_test_run` does, comparing each `Key` against the expected bytes mirrored in "
+            "`forensics/vectors/pkcs12.json`. It is NOT parity and NOT validation (D201); the "
+            "differential question is `RT-PKCS12`'s."
         ),
     }
 
@@ -306,11 +385,29 @@ def main(argv: list[str]) -> int:
     ]
     for _name, filename in COURTS:
         inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))
+    inputs.append(InputRef(name="pkcs12-correctness-probe", path=cv.PKCS12_PROBE))
+    inputs.append(InputRef(name="pkcs12-correctness-vectors", path=cv.PKCS12_VECTORS))
+    inputs.append(InputRef(name="pkcs12-corpus",
+                           path=resolve_authority(PRODUCTION_AUTHORITY).source
+                           / "test/recipes/30-test_evp_data/evppbe_pkcs12.txt"))
     doc = envelope(kind="phase10-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
     for r in records:
+        if r.get("plane") == "correctness":
+            if r["verdict"] == "pass":
+                print(f"  {r['court']:<18} pass   "
+                      f"({r['vectors_passed']}/{r['vectors_checked']} vectors)")
+            else:
+                print(f"  {r['court']:<18} FAIL   "
+                      f"stage={r.get('stage', 'vector-mismatch')} "
+                      f"({r.get('vectors_failed', '?')} vector(s) failed)")
+                detail = r.get("detail")
+                if isinstance(detail, list):
+                    for line in detail:
+                        print(f"      {line}")
+            continue
         if r["verdict"] == "pass":
             print(f"  {r['court']:<18} pass   "
                   f"({r['authority_observations']} observations)")

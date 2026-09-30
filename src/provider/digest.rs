@@ -2101,7 +2101,8 @@ static DEFLT_DIGESTS: [OsslAlgorithm; 28] = [
 /// `static const OSSL_ALGORITHM *deflt_query(void *provctx, int operation_id, int *no_cache)` —
 /// `providers/defltprov.c`, with the `OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_MAC`,
 /// `OSSL_OP_KDF`, `OSSL_OP_RAND`, `OSSL_OP_KEYMGMT`, `OSSL_OP_KEYEXCH`, `OSSL_OP_SIGNATURE`,
-/// `OSSL_OP_ASYM_CIPHER`, `OSSL_OP_KEM` and `OSSL_OP_SKEYMGMT` arms.
+/// `OSSL_OP_ASYM_CIPHER`, `OSSL_OP_KEM`, `OSSL_OP_SKEYMGMT`, `OSSL_OP_ENCODER`, `OSSL_OP_DECODER`
+/// and `OSSL_OP_STORE` arms.
 ///
 /// The other operations the authority answers are other subphases' and are absent, not stubbed.
 /// The arms are in the authority's own `switch` order (`defltprov.c:702-731`), where `SIGNATURE`
@@ -2158,6 +2159,26 @@ unsafe extern "C" fn deflt_query(
     }
     if operation_id == crate::evp::kem::OSSL_OP_KEM {
         return crate::provider::kem::DEFLT_ASYM_KEM.as_ptr();
+    }
+    if operation_id == crate::provider::encode_key2text::OSSL_OP_ENCODER {
+        // `defltprov.c:723` returns `deflt_encoder`, the crate's own `DEFLT_ENCODERS` -- the
+        // twenty-nine text and blob rows 10.1 has published; the other encoder rows are still
+        // unimplemented and absent.
+        return crate::provider::encode_key2text::DEFLT_ENCODERS.as_ptr();
+    }
+    if operation_id == crate::provider::decode_der2key::OSSL_OP_DECODER {
+        // `defltprov.c:725` returns `deflt_decoder`, the crate's own `DEFLT_DECODERS` -- the
+        // sixty-nine `decode_der2key.c` rows, the two 10.5 front doors (`decode_spki2typespki.c`
+        // and `decode_pem2der.c`) and the one `EncryptedPrivateKeyInfo` row. 10.5 closes the
+        // `OSSL_OP_DECODER` table; the six open Phase-10 rows that remain are the two `OSSL_OP_STORE`
+        // `file` rows.
+        return crate::provider::decode_der2key::DEFLT_DECODERS.as_ptr();
+    }
+    if operation_id == crate::provider::file_store::OSSL_OP_STORE {
+        // `defltprov.c:727-728` returns `deflt_store`: `stores.inc`'s one Linux row,
+        // `{"file", "provider=default,fips=yes", ossl_file_store_functions}`. It is the
+        // `OSSL_OP_STORE` table the `file` fetch resolves through (`src/provider/file_store.rs`).
+        return crate::provider::file_store::DEFLT_STORES.as_ptr();
     }
     ptr::null()
 }
@@ -2442,12 +2463,12 @@ mod tests {
             "the twenty-seven default-provider digest rows 8.1 has landed"
         );
 
-        // SAFETY: the query's contract; an operation no arm answers. `OSSL_OP_HIGHEST` (22) is the
-        // authority's own max sentinel and is not an operation any provider publishes.
+        // SAFETY: the query's contract; an operation no arm answers. `OSSL_OP_HIGHEST` (22) is now
+        // `OSSL_OP_STORE`, so the sentinel is one past it; `defltprov.c`'s `default:` answers NULL.
         let none = unsafe {
             deflt_query(
                 ptr::null_mut(),
-                crate::evp::algorithm::OSSL_OP_HIGHEST,
+                crate::evp::algorithm::OSSL_OP_HIGHEST + 1,
                 &mut no_cache,
             )
         };
@@ -2455,7 +2476,22 @@ mod tests {
             none.is_null(),
             "only OSSL_OP_DIGEST, OSSL_OP_CIPHER, OSSL_OP_MAC, OSSL_OP_KDF, OSSL_OP_RAND, \
              OSSL_OP_KEYMGMT, OSSL_OP_KEYEXCH, OSSL_OP_SIGNATURE, OSSL_OP_ASYM_CIPHER, \
-             OSSL_OP_KEM and OSSL_OP_SKEYMGMT are answered"
+             OSSL_OP_KEM, OSSL_OP_SKEYMGMT, OSSL_OP_ENCODER, OSSL_OP_DECODER and \
+             OSSL_OP_STORE are answered"
+        );
+
+        // The store arm answers `DEFLT_STORES`, the one `file` row 10.16 publishes.
+        // SAFETY: the query's contract; `provctx` is NULL and this arm ignores it.
+        let stores = unsafe {
+            deflt_query(
+                ptr::null_mut(),
+                crate::provider::file_store::OSSL_OP_STORE,
+                &mut no_cache,
+            )
+        };
+        assert!(
+            !stores.is_null(),
+            "the OSSL_OP_STORE arm answers DEFLT_STORES"
         );
 
         // The cipher half answers too, and its table starts at `deflt_ciphers[]`'s first row.
