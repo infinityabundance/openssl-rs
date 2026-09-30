@@ -1074,3079 +1074,3079 @@
     "open": [
       {
         "declaring_header": "asn1.h",
-        "module": "src/crypto/asn1/asn_mstbl.rs",
+        "module": "src/asn1/asn_mstbl.rs",
         "received_from_phase": 5,
         "symbol": "ASN1_add_stable_module"
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/crypto/evp/evp_lib.rs",
+        "module": "src/evp/evp_lib.rs",
         "received_from_phase": 7,
         "symbol": "EVP_CIPHER_CTX_get_algor"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/evp/evp_pkey.rs",
+        "module": "src/evp/evp_pkey.rs",
         "received_from_phase": null,
         "symbol": "EVP_PKCS82PKEY_ex"
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/crypto/evp/evp_lib.rs",
+        "module": "src/evp/evp_lib.rs",
         "received_from_phase": 7,
         "symbol": "EVP_PKEY_CTX_get_algor"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/nsseq.rs",
+        "module": "src/asn1/nsseq.rs",
         "received_from_phase": null,
         "symbol": "NETSCAPE_CERT_SEQUENCE_free"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/nsseq.rs",
+        "module": "src/asn1/nsseq.rs",
         "received_from_phase": null,
         "symbol": "NETSCAPE_CERT_SEQUENCE_it"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/nsseq.rs",
+        "module": "src/asn1/nsseq.rs",
         "received_from_phase": null,
         "symbol": "NETSCAPE_CERT_SEQUENCE_new"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/t_spki.rs",
+        "module": "src/asn1/t_spki.rs",
         "received_from_phase": null,
         "symbol": "NETSCAPE_SPKI_print"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_VALUE_free"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_VALUE_it"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_VALUE_new"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_add1_value"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_free"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_get0_policyAuthority"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_get0_value"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_get_value_num"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_it"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_new"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_print"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "OSSL_IETF_ATTR_SYNTAX_set0_policyAuthority"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "OSSL_ISSUER_SERIAL_free"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "OSSL_ISSUER_SERIAL_get0_issuer"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "OSSL_ISSUER_SERIAL_get0_issuerUID"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "OSSL_ISSUER_SERIAL_get0_serial"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "OSSL_ISSUER_SERIAL_new"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "OSSL_ISSUER_SERIAL_set1_issuer"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "OSSL_ISSUER_SERIAL_set1_issuerUID"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "OSSL_ISSUER_SERIAL_set1_serial"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "OSSL_OBJECT_DIGEST_INFO_free"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "OSSL_OBJECT_DIGEST_INFO_get0_digest"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "OSSL_OBJECT_DIGEST_INFO_new"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "OSSL_OBJECT_DIGEST_INFO_set1_digest"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_x509.rs",
+        "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "OSSL_STACK_OF_X509_free"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/pkcs12/p12_mutl.rs",
+        "module": "src/pkcs12/p12_mutl.rs",
         "received_from_phase": null,
         "symbol": "PBMAC1_get1_pbkdf2_param"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_info.rs",
+        "module": "src/pem/pem_info.rs",
         "received_from_phase": 5,
         "symbol": "PEM_X509_INFO_read"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_info.rs",
+        "module": "src/pem/pem_info.rs",
         "received_from_phase": 5,
         "symbol": "PEM_X509_INFO_read_bio"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_info.rs",
+        "module": "src/pem/pem_info.rs",
         "received_from_phase": 5,
         "symbol": "PEM_X509_INFO_read_bio_ex"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_info.rs",
+        "module": "src/pem/pem_info.rs",
         "received_from_phase": 5,
         "symbol": "PEM_X509_INFO_read_ex"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_info.rs",
+        "module": "src/pem/pem_info.rs",
         "received_from_phase": 5,
         "symbol": "PEM_X509_INFO_write_bio"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_DSA_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_EC_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_NETSCAPE_CERT_SEQUENCE"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_pk8.rs",
+        "module": "src/pem/pem_pk8.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_PKCS8"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_pk8.rs",
+        "module": "src/pem/pem_pk8.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_PKCS8_PRIV_KEY_INFO"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_RSA_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_x509.rs",
+        "module": "src/pem/pem_x509.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_X509"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_X509_ACERT"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_xaux.rs",
+        "module": "src/pem/pem_xaux.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_X509_AUX"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_X509_CRL"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_X509_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_X509_REQ"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_DSA_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_EC_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_NETSCAPE_CERT_SEQUENCE"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_pk8.rs",
+        "module": "src/pem/pem_pk8.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_PKCS8"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_pk8.rs",
+        "module": "src/pem/pem_pk8.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_PKCS8_PRIV_KEY_INFO"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_RSA_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_x509.rs",
+        "module": "src/pem/pem_x509.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_X509"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_X509_ACERT"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_xaux.rs",
+        "module": "src/pem/pem_xaux.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_X509_AUX"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_X509_CRL"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_X509_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_bio_X509_REQ"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_DSA_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_EC_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_NETSCAPE_CERT_SEQUENCE"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_pk8.rs",
+        "module": "src/pem/pem_pk8.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_PKCS8"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_pk8.rs",
+        "module": "src/pem/pem_pk8.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_PKCS8_PRIV_KEY_INFO"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_PUBKEY_ex"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_RSA_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_x509.rs",
+        "module": "src/pem/pem_x509.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_X509"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_X509_ACERT"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_xaux.rs",
+        "module": "src/pem/pem_xaux.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_X509_AUX"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_X509_CRL"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_X509_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_X509_REQ"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": 5,
         "symbol": "PEM_write_X509_REQ_NEW"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_DSA_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_EC_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_NETSCAPE_CERT_SEQUENCE"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_pk8.rs",
+        "module": "src/pem/pem_pk8.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_PKCS8"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_pk8.rs",
+        "module": "src/pem/pem_pk8.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_PKCS8_PRIV_KEY_INFO"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_PUBKEY_ex"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_RSA_PUBKEY"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_x509.rs",
+        "module": "src/pem/pem_x509.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_X509"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_X509_ACERT"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_xaux.rs",
+        "module": "src/pem/pem_xaux.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_X509_AUX"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_X509_CRL"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_X509_REQ"
       },
       {
         "declaring_header": "pem.h",
-        "module": "src/crypto/pem/pem_all.rs",
+        "module": "src/pem/pem_all.rs",
         "received_from_phase": 5,
         "symbol": "PEM_write_bio_X509_REQ_NEW"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/p5_scrypt.rs",
+        "module": "src/asn1/p5_scrypt.rs",
         "received_from_phase": null,
         "symbol": "PKCS5_pbe2_set_scrypt"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/p5_scrypt.rs",
+        "module": "src/asn1/p5_scrypt.rs",
         "received_from_phase": null,
         "symbol": "SCRYPT_PARAMS_free"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/p5_scrypt.rs",
+        "module": "src/asn1/p5_scrypt.rs",
         "received_from_phase": null,
         "symbol": "SCRYPT_PARAMS_it"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/p5_scrypt.rs",
+        "module": "src/asn1/p5_scrypt.rs",
         "received_from_phase": null,
         "symbol": "SCRYPT_PARAMS_new"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_CRL_add_conf"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_CRL_add_nconf"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_REQ_add_conf"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_REQ_add_nconf"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_add_conf"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_add_nconf"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_add_nconf_sk"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_conf"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_conf_nid"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_nconf"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_conf.rs",
+        "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_nconf_nid"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_prn.rs",
+        "module": "src/x509/v3_prn.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_print"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_prn.rs",
+        "module": "src/x509/v3_prn.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_print_fp"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_prn.rs",
+        "module": "src/x509/v3_prn.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_val_prn"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_prn.rs",
+        "module": "src/x509/v3_prn.rs",
         "received_from_phase": null,
         "symbol": "X509V3_extensions_print"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_INFO_free"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_INFO_it"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_INFO_new"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_ISSUER_V2FORM_free"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_ISSUER_V2FORM_new"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_add1_attr"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_add1_attr_by_NID"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_add1_attr_by_OBJ"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_add1_attr_by_txt"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_add1_ext_i2d"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_add_attr_nconf"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_delete_attr"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_dup"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_free"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_extensions"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_holder_baseCertId"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_holder_digest"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_holder_entityName"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_info_sigalg"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_issuerName"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_issuerUID"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_notAfter"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_notBefore"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_serialNumber"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get0_signature"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get_attr"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get_attr_by_NID"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get_attr_by_OBJ"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get_attr_count"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get_ext_d2i"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get_signature_nid"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_get_version"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_it"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_new"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/t_acert.rs",
+        "module": "src/x509/t_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_print"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/t_acert.rs",
+        "module": "src/x509/t_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_print_ex"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_set0_holder_baseCertId"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_set0_holder_digest"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_set0_holder_entityName"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_set1_issuerName"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_set1_notAfter"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_set1_notBefore"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_set1_serialNumber"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509aset.rs",
+        "module": "src/x509/x509aset.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_set_version"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_sign"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_sign_ctx"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_verify"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_crl.rs",
+        "module": "src/x509/x_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_METHOD_free"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_crl.rs",
+        "module": "src/x509/x_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_METHOD_new"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_crl.rs",
+        "module": "src/x509/x_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_add0_revoked"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_diff"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_crl.rs",
+        "module": "src/x509/x_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_get0_by_cert"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_crl.rs",
+        "module": "src/x509/x_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_get0_by_serial"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_crl.rs",
+        "module": "src/x509/x_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_get_meth_data"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_load_http"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_crl.rs",
+        "module": "src/x509/t_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_print"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_crl.rs",
+        "module": "src/x509/t_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_print_ex"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_crl.rs",
+        "module": "src/x509/t_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_print_fp"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_crl.rs",
+        "module": "src/x509/x_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_set_default_method"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_crl.rs",
+        "module": "src/x509/x_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_set_meth_data"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_crl.rs",
+        "module": "src/x509/x_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_verify"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_exten.rs",
+        "module": "src/x509/x_exten.rs",
         "received_from_phase": null,
         "symbol": "X509_EXTENSIONS_it"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/x_info.rs",
+        "module": "src/asn1/x_info.rs",
         "received_from_phase": null,
         "symbol": "X509_INFO_free"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/x_info.rs",
+        "module": "src/asn1/x_info.rs",
         "received_from_phase": null,
         "symbol": "X509_INFO_new"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_by_alias"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_by_fingerprint"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_by_issuer_serial"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_by_subject"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_by_subject_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_ctrl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_ctrl_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/by_file.rs",
+        "module": "src/x509/by_file.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_file"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_free"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_get_method_data"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_get_store"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/by_dir.rs",
+        "module": "src/x509/by_dir.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_hash_dir"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_init"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_free"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_get_ctrl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_get_free"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_get_get_by_alias"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_get_get_by_fingerprint"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_get_get_by_issuer_serial"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_get_get_by_subject"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_get_init"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_get_new_item"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_get_shutdown"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_new"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_set_ctrl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_set_free"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_set_get_by_alias"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_set_get_by_fingerprint"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_set_get_by_issuer_serial"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_set_get_by_subject"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_set_init"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_set_new_item"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_meth.rs",
+        "module": "src/x509/x509_meth.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_meth_set_shutdown"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_new"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_set_method_data"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_shutdown"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/by_store.rs",
+        "module": "src/x509/by_store.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_store"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_free"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_get0_X509"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_get0_X509_CRL"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_get_type"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_idx_by_subject"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_new"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_retrieve_by_subject"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_retrieve_match"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_set1_X509"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_set1_X509_CRL"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_OBJECT_up_ref_count"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/x_pkey.rs",
+        "module": "src/asn1/x_pkey.rs",
         "received_from_phase": null,
         "symbol": "X509_PKEY_free"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/x_pkey.rs",
+        "module": "src/asn1/x_pkey.rs",
         "received_from_phase": null,
         "symbol": "X509_PKEY_new"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_INFO_free"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_INFO_it"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_INFO_new"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_add1_attr"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_add1_attr_by_NID"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_add1_attr_by_OBJ"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_add1_attr_by_txt"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_add_extensions"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_add_extensions_nid"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_check_private_key"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_delete_attr"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_digest"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_dup"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_extension_nid"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_free"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get0_distinguishing_id"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get0_pubkey"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_utl.rs",
+        "module": "src/x509/v3_utl.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get1_email"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get_X509_PUBKEY"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get_attr"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get_attr_by_NID"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get_attr_by_OBJ"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get_attr_count"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get_extension_nids"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get_extensions"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get_pubkey"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_get_signature_nid"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_it"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_new"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_new_ex"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_req.rs",
+        "module": "src/x509/t_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_print"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_req.rs",
+        "module": "src/x509/t_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_print_ex"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_req.rs",
+        "module": "src/x509/t_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_print_fp"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_set0_distinguishing_id"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_set0_signature"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_set1_signature_algo"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_set_extension_nids"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_sign"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_sign_ctx"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_r2x.rs",
+        "module": "src/x509/x509_r2x.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_to_X509"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_verify"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_REQ_verify_ex"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_SIG_INFO_get"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_cleanup"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_free"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_cert"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_chain"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_current_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_current_issuer"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_param"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_parent_ctx"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_policy_tree"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_rpk"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_store"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get0_untrusted"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get1_certs"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get1_chain"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get1_crls"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get1_issuer"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_by_subject"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_cert_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_check_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_check_issued"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_check_policy"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_check_revocation"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_cleanup"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_current_cert"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_error"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_error_depth"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_ex_data"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_explicit_policy"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_get_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_get_issuer"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_lookup_certs"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_lookup_crls"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_num_untrusted"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_obj_by_subject"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_verify"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_get_verify_cb"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_init"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_init_rpk"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_new"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_new_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/t_x509.rs",
+        "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_print_verify_cb"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_purpose_inherit"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set0_crls"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set0_dane"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set0_param"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set0_rpk"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set0_trusted_stack"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set0_untrusted"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set0_verified_chain"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_cert"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_current_cert"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_current_reasons"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_default"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_depth"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_error"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_error_depth"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_ex_data"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_flags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_get_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_ocsp_resp"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_purpose"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_time"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_trust"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_verify"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_set_verify_cb"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_verify"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_add_cert"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_add_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_add_lookup"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_free"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get0_objects"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get0_param"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get1_all_certs"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get1_objects"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_cert_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_check_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_check_issued"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_check_policy"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_check_revocation"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_cleanup"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_ex_data"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_get_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_get_issuer"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_lookup_certs"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_lookup_crls"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_verify"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_get_verify_cb"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_d2.rs",
+        "module": "src/x509/x509_d2.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_load_file"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_d2.rs",
+        "module": "src/x509/x509_d2.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_load_file_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_d2.rs",
+        "module": "src/x509/x509_d2.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_load_locations"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_d2.rs",
+        "module": "src/x509/x509_d2.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_load_locations_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_d2.rs",
+        "module": "src/x509/x509_d2.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_load_path"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_d2.rs",
+        "module": "src/x509/x509_d2.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_load_store"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_d2.rs",
+        "module": "src/x509/x509_d2.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_load_store_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_lock"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_new"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set1_param"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_cert_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_check_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_check_issued"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_check_policy"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_check_revocation"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_cleanup"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_d2.rs",
+        "module": "src/x509/x509_d2.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_default_paths"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_d2.rs",
+        "module": "src/x509/x509_d2.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_default_paths_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_depth"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_ex_data"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_flags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_get_crl"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_get_issuer"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_lookup_certs"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_lookup_crls"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_purpose"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_trust"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_verify"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_verify_cb"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_unlock"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_lu.rs",
+        "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_up_ref"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_add"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_cleanup"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_get0"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_get0_name"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_get_by_id"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_get_count"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_get_flags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_get_trust"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_set"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_TRUST_set_default"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_add0_policy"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_add0_table"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_add1_host"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_clear_flags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_free"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get0"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get0_email"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get0_host"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get0_name"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get0_peername"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get1_ip_asc"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get_auth_level"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get_count"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get_depth"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get_flags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get_hostflags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get_inh_flags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get_purpose"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_get_time"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_inherit"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_lookup"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_move_peername"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_new"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set1"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set1_email"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set1_host"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set1_ip"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set1_ip_asc"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set1_name"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set1_policies"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set_auth_level"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set_depth"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set_flags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set_hostflags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set_inh_flags"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set_purpose"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set_time"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_set_trust"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vpm.rs",
+        "module": "src/x509/x509_vpm.rs",
         "received_from_phase": null,
         "symbol": "X509_VERIFY_PARAM_table_cleanup"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_x509.rs",
+        "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_aux_print"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_build_chain"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_utl.rs",
+        "module": "src/x509/v3_utl.rs",
         "received_from_phase": null,
         "symbol": "X509_check_email"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_utl.rs",
+        "module": "src/x509/v3_utl.rs",
         "received_from_phase": null,
         "symbol": "X509_check_host"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_utl.rs",
+        "module": "src/x509/v3_utl.rs",
         "received_from_phase": null,
         "symbol": "X509_check_ip"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_utl.rs",
+        "module": "src/x509/v3_utl.rs",
         "received_from_phase": null,
         "symbol": "X509_check_ip_asc"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_trust.rs",
+        "module": "src/x509/x509_trust.rs",
         "received_from_phase": null,
         "symbol": "X509_check_trust"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_cmp_current_time"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_cmp_time"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_cmp_timeframe"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_get0_notAfter"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_get0_notBefore"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_get0_tbs_sigalg"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_get0_uids"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_utl.rs",
+        "module": "src/x509/v3_utl.rs",
         "received_from_phase": null,
         "symbol": "X509_get1_email"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_utl.rs",
+        "module": "src/x509/v3_utl.rs",
         "received_from_phase": null,
         "symbol": "X509_get1_ocsp"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_get_X509_PUBKEY"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_def.rs",
+        "module": "src/x509/x509_def.rs",
         "received_from_phase": null,
         "symbol": "X509_get_default_cert_area"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_def.rs",
+        "module": "src/x509/x509_def.rs",
         "received_from_phase": null,
         "symbol": "X509_get_default_cert_dir"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_def.rs",
+        "module": "src/x509/x509_def.rs",
         "received_from_phase": null,
         "symbol": "X509_get_default_cert_file"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_def.rs",
+        "module": "src/x509/x509_def.rs",
         "received_from_phase": null,
         "symbol": "X509_get_default_private_dir"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_get_pubkey_parameters"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_get_signature_info"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_get_signature_type"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_getm_notAfter"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_getm_notBefore"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_gmtime_adj"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/by_file.rs",
+        "module": "src/x509/by_file.rs",
         "received_from_phase": null,
         "symbol": "X509_load_cert_crl_file"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/by_file.rs",
+        "module": "src/x509/by_file.rs",
         "received_from_phase": null,
         "symbol": "X509_load_cert_crl_file_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/by_file.rs",
+        "module": "src/x509/by_file.rs",
         "received_from_phase": null,
         "symbol": "X509_load_cert_file"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/by_file.rs",
+        "module": "src/x509/by_file.rs",
         "received_from_phase": null,
         "symbol": "X509_load_cert_file_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/by_file.rs",
+        "module": "src/x509/by_file.rs",
         "received_from_phase": null,
         "symbol": "X509_load_crl_file"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "X509_load_http"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_x509.rs",
+        "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_ocspid_print"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/pcy_tree.rs",
+        "module": "src/x509/pcy_tree.rs",
         "received_from_phase": null,
         "symbol": "X509_policy_check"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/pcy_tree.rs",
+        "module": "src/x509/pcy_tree.rs",
         "received_from_phase": null,
         "symbol": "X509_policy_tree_free"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_x509.rs",
+        "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_print"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_x509.rs",
+        "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_print_ex"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_x509.rs",
+        "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_print_ex_fp"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_x509.rs",
+        "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_print_fp"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_set1_notAfter"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_set1_notBefore"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_set_issuer_name"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_set_pubkey"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_set_serialNumber"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_set.rs",
+        "module": "src/x509/x509_set.rs",
         "received_from_phase": null,
         "symbol": "X509_set_subject_name"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/t_x509.rs",
+        "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_signature_print"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_time_adj"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_time_adj_ex"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "X509_to_X509_REQ"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/crypto/x509/x509_vfy.rs",
+        "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_verify_cert"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_addr.rs",
+        "module": "src/x509/v3_addr.rs",
         "received_from_phase": null,
         "symbol": "X509v3_addr_validate_path"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_addr.rs",
+        "module": "src/x509/v3_addr.rs",
         "received_from_phase": null,
         "symbol": "X509v3_addr_validate_resource_set"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_asid.rs",
+        "module": "src/x509/v3_asid.rs",
         "received_from_phase": null,
         "symbol": "X509v3_asid_validate_path"
       },
       {
         "declaring_header": "x509v3.h",
-        "module": "src/crypto/x509/v3_asid.rs",
+        "module": "src/x509/v3_asid.rs",
         "received_from_phase": null,
         "symbol": "X509v3_asid_validate_resource_set"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/nsseq.rs",
+        "module": "src/asn1/nsseq.rs",
         "received_from_phase": null,
         "symbol": "d2i_NETSCAPE_CERT_SEQUENCE"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "d2i_OSSL_IETF_ATTR_SYNTAX"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/p5_scrypt.rs",
+        "module": "src/asn1/p5_scrypt.rs",
         "received_from_phase": null,
         "symbol": "d2i_SCRYPT_PARAMS"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_ACERT"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_ACERT_bio"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_ACERT_fp"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_exten.rs",
+        "module": "src/x509/x_exten.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_EXTENSIONS"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_REQ"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_REQ_INFO"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_REQ_bio"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_REQ_fp"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/nsseq.rs",
+        "module": "src/asn1/nsseq.rs",
         "received_from_phase": null,
         "symbol": "i2d_NETSCAPE_CERT_SEQUENCE"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_ietfatt.rs",
+        "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
         "symbol": "i2d_OSSL_IETF_ATTR_SYNTAX"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/asn1/p5_scrypt.rs",
+        "module": "src/asn1/p5_scrypt.rs",
         "received_from_phase": null,
         "symbol": "i2d_SCRYPT_PARAMS"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x509_acert.rs",
+        "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "i2d_X509_ACERT"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "i2d_X509_ACERT_bio"
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "i2d_X509_ACERT_fp"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_exten.rs",
+        "module": "src/x509/x_exten.rs",
         "received_from_phase": null,
         "symbol": "i2d_X509_EXTENSIONS"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "i2d_X509_REQ"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_req.rs",
+        "module": "src/x509/x_req.rs",
         "received_from_phase": null,
         "symbol": "i2d_X509_REQ_INFO"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "i2d_X509_REQ_bio"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x_all.rs",
+        "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "i2d_X509_REQ_fp"
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/crypto/x509/x509_req.rs",
+        "module": "src/x509/x509_req.rs",
         "received_from_phase": null,
         "symbol": "i2d_re_X509_REQ_tbs"
       }
@@ -4161,114 +4161,114 @@
       "x509v3.h": 511
     },
     "owned_by_module": {
-      "src/crypto/asn1/a_digest.rs": 2,
-      "src/crypto/asn1/a_sign.rs": 3,
-      "src/crypto/asn1/a_strex.rs": 2,
-      "src/crypto/asn1/a_verify.rs": 3,
-      "src/crypto/asn1/asn1_gen.rs": 2,
-      "src/crypto/asn1/asn_mstbl.rs": 1,
-      "src/crypto/asn1/nsseq.rs": 5,
-      "src/crypto/asn1/p5_pbe.rs": 9,
-      "src/crypto/asn1/p5_pbev2.rs": 20,
-      "src/crypto/asn1/p5_scrypt.rs": 6,
-      "src/crypto/asn1/p8_pkey.rs": 11,
-      "src/crypto/asn1/t_spki.rs": 1,
-      "src/crypto/asn1/x_algor.rs": 14,
-      "src/crypto/asn1/x_info.rs": 2,
-      "src/crypto/asn1/x_pkey.rs": 2,
-      "src/crypto/asn1/x_sig.rs": 7,
-      "src/crypto/asn1/x_spki.rs": 10,
-      "src/crypto/asn1/x_val.rs": 5,
-      "src/crypto/evp/evp_lib.rs": 2,
-      "src/crypto/evp/evp_pkey.rs": 12,
-      "src/crypto/pem/pem_all.rs": 34,
-      "src/crypto/pem/pem_info.rs": 5,
-      "src/crypto/pem/pem_pk8.rs": 8,
-      "src/crypto/pem/pem_pkey.rs": 4,
-      "src/crypto/pem/pem_x509.rs": 4,
-      "src/crypto/pem/pem_xaux.rs": 4,
-      "src/crypto/pkcs12/p12_mutl.rs": 1,
-      "src/crypto/x509/by_dir.rs": 1,
-      "src/crypto/x509/by_file.rs": 6,
-      "src/crypto/x509/by_store.rs": 1,
-      "src/crypto/x509/pcy_lib.rs": 9,
-      "src/crypto/x509/pcy_tree.rs": 2,
-      "src/crypto/x509/t_acert.rs": 2,
-      "src/crypto/x509/t_crl.rs": 3,
-      "src/crypto/x509/t_req.rs": 3,
-      "src/crypto/x509/t_x509.rs": 10,
-      "src/crypto/x509/v3_aaa.rs": 15,
-      "src/crypto/x509/v3_ac_tgt.rs": 15,
-      "src/crypto/x509/v3_addr.rs": 31,
-      "src/crypto/x509/v3_admis.rs": 46,
-      "src/crypto/x509/v3_akeya.rs": 5,
-      "src/crypto/x509/v3_asid.rs": 28,
-      "src/crypto/x509/v3_attrdesc.rs": 25,
-      "src/crypto/x509/v3_attrmap.rs": 25,
-      "src/crypto/x509/v3_authattid.rs": 5,
-      "src/crypto/x509/v3_battcons.rs": 5,
-      "src/crypto/x509/v3_bcons.rs": 5,
-      "src/crypto/x509/v3_bitst.rs": 2,
-      "src/crypto/x509/v3_conf.rs": 20,
-      "src/crypto/x509/v3_cpols.rs": 26,
-      "src/crypto/x509/v3_crld.rs": 27,
-      "src/crypto/x509/v3_enum.rs": 1,
-      "src/crypto/x509/v3_extku.rs": 5,
-      "src/crypto/x509/v3_genn.rs": 28,
-      "src/crypto/x509/v3_ia5.rs": 2,
-      "src/crypto/x509/v3_info.rs": 11,
-      "src/crypto/x509/v3_ist.rs": 5,
-      "src/crypto/x509/v3_lib.rs": 10,
-      "src/crypto/x509/v3_ncons.rs": 8,
-      "src/crypto/x509/v3_pcia.rs": 10,
-      "src/crypto/x509/v3_pcons.rs": 3,
-      "src/crypto/x509/v3_pku.rs": 5,
-      "src/crypto/x509/v3_pmaps.rs": 4,
-      "src/crypto/x509/v3_prn.rs": 4,
-      "src/crypto/x509/v3_purp.rs": 28,
-      "src/crypto/x509/v3_rolespec.rs": 10,
-      "src/crypto/x509/v3_san.rs": 7,
-      "src/crypto/x509/v3_sda.rs": 5,
-      "src/crypto/x509/v3_skid.rs": 2,
-      "src/crypto/x509/v3_sxnet.rs": 16,
-      "src/crypto/x509/v3_timespec.rs": 55,
-      "src/crypto/x509/v3_tlsf.rs": 2,
-      "src/crypto/x509/v3_usernotice.rs": 5,
-      "src/crypto/x509/v3_utf8.rs": 2,
-      "src/crypto/x509/v3_utl.rs": 24,
-      "src/crypto/x509/x509_acert.rs": 48,
-      "src/crypto/x509/x509_att.rs": 19,
-      "src/crypto/x509/x509_cmp.rs": 28,
-      "src/crypto/x509/x509_d2.rs": 9,
-      "src/crypto/x509/x509_def.rs": 6,
-      "src/crypto/x509/x509_ext.rs": 27,
-      "src/crypto/x509/x509_lu.rs": 73,
-      "src/crypto/x509/x509_meth.rs": 20,
-      "src/crypto/x509/x509_obj.rs": 1,
-      "src/crypto/x509/x509_r2x.rs": 1,
-      "src/crypto/x509/x509_req.rs": 27,
-      "src/crypto/x509/x509_set.rs": 21,
-      "src/crypto/x509/x509_trust.rs": 11,
-      "src/crypto/x509/x509_txt.rs": 1,
-      "src/crypto/x509/x509_v3.rs": 16,
-      "src/crypto/x509/x509_vfy.rs": 71,
-      "src/crypto/x509/x509_vpm.rs": 39,
-      "src/crypto/x509/x509aset.rs": 12,
-      "src/crypto/x509/x509cset.rs": 23,
-      "src/crypto/x509/x509name.rs": 19,
-      "src/crypto/x509/x509rset.rs": 3,
-      "src/crypto/x509/x509spki.rs": 4,
-      "src/crypto/x509/x509type.rs": 1,
-      "src/crypto/x509/x_all.rs": 92,
-      "src/crypto/x509/x_attrib.rs": 7,
-      "src/crypto/x509/x_crl.rs": 27,
-      "src/crypto/x509/x_exten.rs": 9,
-      "src/crypto/x509/x_ietfatt.rs": 14,
-      "src/crypto/x509/x_name.rs": 15,
-      "src/crypto/x509/x_pubkey.rs": 24,
-      "src/crypto/x509/x_req.rs": 14,
-      "src/crypto/x509/x_x509.rs": 21,
-      "src/crypto/x509/x_x509a.rs": 16
+      "src/asn1/a_digest.rs": 2,
+      "src/asn1/a_sign.rs": 3,
+      "src/asn1/a_strex.rs": 2,
+      "src/asn1/a_verify.rs": 3,
+      "src/asn1/asn1_gen.rs": 2,
+      "src/asn1/asn_mstbl.rs": 1,
+      "src/asn1/nsseq.rs": 5,
+      "src/asn1/p5_pbe.rs": 9,
+      "src/asn1/p5_pbev2.rs": 20,
+      "src/asn1/p5_scrypt.rs": 6,
+      "src/asn1/p8_pkey.rs": 11,
+      "src/asn1/t_spki.rs": 1,
+      "src/asn1/x_algor.rs": 14,
+      "src/asn1/x_info.rs": 2,
+      "src/asn1/x_pkey.rs": 2,
+      "src/asn1/x_sig.rs": 7,
+      "src/asn1/x_spki.rs": 10,
+      "src/asn1/x_val.rs": 5,
+      "src/evp/evp_lib.rs": 2,
+      "src/evp/evp_pkey.rs": 12,
+      "src/pem/pem_all.rs": 34,
+      "src/pem/pem_info.rs": 5,
+      "src/pem/pem_pk8.rs": 8,
+      "src/pem/pem_pkey.rs": 4,
+      "src/pem/pem_x509.rs": 4,
+      "src/pem/pem_xaux.rs": 4,
+      "src/pkcs12/p12_mutl.rs": 1,
+      "src/x509/by_dir.rs": 1,
+      "src/x509/by_file.rs": 6,
+      "src/x509/by_store.rs": 1,
+      "src/x509/pcy_lib.rs": 9,
+      "src/x509/pcy_tree.rs": 2,
+      "src/x509/t_acert.rs": 2,
+      "src/x509/t_crl.rs": 3,
+      "src/x509/t_req.rs": 3,
+      "src/x509/t_x509.rs": 10,
+      "src/x509/v3_aaa.rs": 15,
+      "src/x509/v3_ac_tgt.rs": 15,
+      "src/x509/v3_addr.rs": 31,
+      "src/x509/v3_admis.rs": 46,
+      "src/x509/v3_akeya.rs": 5,
+      "src/x509/v3_asid.rs": 28,
+      "src/x509/v3_attrdesc.rs": 25,
+      "src/x509/v3_attrmap.rs": 25,
+      "src/x509/v3_authattid.rs": 5,
+      "src/x509/v3_battcons.rs": 5,
+      "src/x509/v3_bcons.rs": 5,
+      "src/x509/v3_bitst.rs": 2,
+      "src/x509/v3_conf.rs": 20,
+      "src/x509/v3_cpols.rs": 26,
+      "src/x509/v3_crld.rs": 27,
+      "src/x509/v3_enum.rs": 1,
+      "src/x509/v3_extku.rs": 5,
+      "src/x509/v3_genn.rs": 28,
+      "src/x509/v3_ia5.rs": 2,
+      "src/x509/v3_info.rs": 11,
+      "src/x509/v3_ist.rs": 5,
+      "src/x509/v3_lib.rs": 10,
+      "src/x509/v3_ncons.rs": 8,
+      "src/x509/v3_pcia.rs": 10,
+      "src/x509/v3_pcons.rs": 3,
+      "src/x509/v3_pku.rs": 5,
+      "src/x509/v3_pmaps.rs": 4,
+      "src/x509/v3_prn.rs": 4,
+      "src/x509/v3_purp.rs": 28,
+      "src/x509/v3_rolespec.rs": 10,
+      "src/x509/v3_san.rs": 7,
+      "src/x509/v3_sda.rs": 5,
+      "src/x509/v3_skid.rs": 2,
+      "src/x509/v3_sxnet.rs": 16,
+      "src/x509/v3_timespec.rs": 55,
+      "src/x509/v3_tlsf.rs": 2,
+      "src/x509/v3_usernotice.rs": 5,
+      "src/x509/v3_utf8.rs": 2,
+      "src/x509/v3_utl.rs": 24,
+      "src/x509/x509_acert.rs": 48,
+      "src/x509/x509_att.rs": 19,
+      "src/x509/x509_cmp.rs": 28,
+      "src/x509/x509_d2.rs": 9,
+      "src/x509/x509_def.rs": 6,
+      "src/x509/x509_ext.rs": 27,
+      "src/x509/x509_lu.rs": 73,
+      "src/x509/x509_meth.rs": 20,
+      "src/x509/x509_obj.rs": 1,
+      "src/x509/x509_r2x.rs": 1,
+      "src/x509/x509_req.rs": 27,
+      "src/x509/x509_set.rs": 21,
+      "src/x509/x509_trust.rs": 11,
+      "src/x509/x509_txt.rs": 1,
+      "src/x509/x509_v3.rs": 16,
+      "src/x509/x509_vfy.rs": 71,
+      "src/x509/x509_vpm.rs": 39,
+      "src/x509/x509aset.rs": 12,
+      "src/x509/x509cset.rs": 23,
+      "src/x509/x509name.rs": 19,
+      "src/x509/x509rset.rs": 3,
+      "src/x509/x509spki.rs": 4,
+      "src/x509/x509type.rs": 1,
+      "src/x509/x_all.rs": 92,
+      "src/x509/x_attrib.rs": 7,
+      "src/x509/x_crl.rs": 27,
+      "src/x509/x_exten.rs": 9,
+      "src/x509/x_ietfatt.rs": 14,
+      "src/x509/x_name.rs": 15,
+      "src/x509/x_pubkey.rs": 24,
+      "src/x509/x_req.rs": 14,
+      "src/x509/x_x509.rs": 21,
+      "src/x509/x_x509a.rs": 16
     },
     "provider_rows_owned": 0,
     "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 11, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
