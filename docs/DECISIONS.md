@@ -33592,3 +33592,78 @@ is where a reader finds it named.
 
 `PIPELINE OK` exit 0 with 111 courts and 47,545 observations; `docs-consistency --self-test`
 passes its three cases.
+
+## D485 -- 22.0: the whole-program atlas becomes a stratum, and the dependency order becomes a DAG
+
+Phase 22 is activated. `docs/PHASE-22-SUBPHASES.md` is its plan, `forensics/phase22-obligations.json`
+its ledger, and its question is the one Phase 1 could not ask: *starting from the exact admitted
+`openssl-3.6.4-production` source, build, installed distribution and runtime, can every externally
+relevant compatibility surface be discovered, connected to the authority implementation that
+produces it, assigned a parity obligation, and mapped to an implementation phase, with zero
+unexplained gaps?*
+
+Phase 1's atlas answers a smaller question -- what the installed public headers *publish* -- and it
+is still the authority for that. Phase 22 does not replace it; it is the closure around it: the
+build graph, the whole-source semantic graph, the preprocessor's conditional reality, the
+generated-code genealogy, the object and relocation graph, the runtime registration graph, the
+installed distribution, the CLI, the configuration and environment surface, and the canonical POD
+manuals, joined to the source by a **typed** edge graph rather than a call graph. The typed part is
+the point: the architecture of this library is function-pointer tables, and
+`static const OSSL_DISPATCH t[] = { { ..., (void (*)(void))f }, ... }` has no `caller -> f` edge
+anywhere in the source.
+
+### The order is now a DAG, and Phase 11 requires Phase 22
+`phase_state.py` enforced "a phase may be complete only if every *earlier* phase is complete", a
+running check over the numerically-ordered registry. Phase 22's evidence must exist **before Phase
+11 finishes** -- discovering an omitted callback, config flag, static dispatch path, error path or
+policy table after the verification engine is written is exactly the cost Phase 22 exists to avoid
+-- so the edge leaves the numbers:
+
+```
+0 -> 1 -> ... -> 10 -> 22 -> 11 -> 12 -> ... -> 21
+```
+
+`REQUIRES` is now an explicit DAG, and the enforcement runs to a fixed point rather than in list
+order, because `requires[11]` names 22 and the registry lists 22 after 11. Phase numbers remain
+historical names; the dependency is represented by the dependency. The claim rule is reprinted
+wherever it is rendered (`phase-state.json`'s `rule`, `forensics/STATUS.md`, this entry).
+
+### The ledger's unit is a plane
+Phase 22 owns no `libcrypto` export, so a ledger that counted symbols would count zero while the
+stratum did the most important work in the repository. Its unit is a **compatibility plane**: one
+extraction or reconciliation instrument per subphase, and a plane is implemented when the
+content-addressed artefact it names exists. `counts.open_in_this_stratum` is therefore a count of
+instruments not yet built, not of exports not yet written -- the one place this ledger's arithmetic
+differs from every other stratum's.
+
+That difference is declared rather than special-cased: the ledger carries `unit: "compatibility
+plane"`, and the two tools that partition the *export* universe (`court_coverage.py`,
+`ownership_audit.py`) skip a ledger whose `unit` is not an export set. The marker is a property of
+the document, so neither tool learns a phase number.
+
+### The three joiners this activation had to teach, and why that is the right shape
+The activation failed four times before it was green, and each failure was a *joiner* asserting
+something true about every other stratum and not about an atlas stratum:
+
+* `run_courts.py` requires an active stratum to have a runner. Phase 22's first court is an
+extractor's sensitivity challenge, which is 22.1's; `NO_RUNNER_YET[22]` carries the reason and
+retires itself the moment `artifacts/phase22/COURTS.json` exists.
+* `regression_guard.py` requires a stratum that moved off `not-started` to have an obligation
+ledger. That is why 22.0 lands the ledger and not only the plan.
+* `court_coverage.py` and `ownership_audit.py` partition the export universe and found `"22.0"` in
+it. The `unit` marker above is the fix.
+
+Each is recorded because the pattern is the point: a stratum that is genuinely a different kind of
+thing will always meet the joiners, and the joiners are supposed to be the place where that gets
+noticed. None of them was weakened to make phase 22 fit; each gained a rule about a document
+property.
+
+### The Phase-11 freeze
+Phase 11 is frozen at **`97b3cef5`**, the 11.4b WIP commit: `libcrypto` implemented 4,432 of 5,896,
+the Phase-11 working set 1,132 of 1,467 with 335 open, `RT-X509-REF` and `RT-X509-STORE` both
+passing, 111 courts and 47,575 observations. Phase 22's 22.16 regenerates the phase ledgers from the
+stronger atlas; until then Phase 11's own ledger stands and this entry is the baseline it is
+compared against.
+
+`PIPELINE OK` exit 0 with 111 courts and 47,575 observations; `phase-state.json` derives phases 0
+through 10 `complete`, phases 11 and 22 `in-progress`, and phases 12-21 `not-started`.

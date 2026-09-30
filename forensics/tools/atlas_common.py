@@ -41,6 +41,13 @@ REGISTRY = AUTH_ROOT / "AUTHORITIES.json"
 BUILD_RECORDS = ATLAS / "BUILD_RECORDS.json"
 
 PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
+
+# A ledger whose obligations are not exports declares its `body.unit` here, and the tools that
+# partition the *export* universe (`court_coverage.py`, `ownership_audit.py`) skip it. Phase 22
+# owns no `libcrypto` symbol -- its unit is a *compatibility plane* and its `implemented` list
+# names subphases -- so a ledger that counted symbols would count zero. The marker is a property of
+# the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485).
+NON_EXPORT_UNITS = {"compatibility plane"}
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
 # Which seal document belongs to which stratum, where one exists. **One table, because two tools

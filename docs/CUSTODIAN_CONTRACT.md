@@ -136,6 +136,14 @@ built around algorithm *selection* and *object machinery*; the context/provider/
 fetch/EVP semantics must be correct before algorithms have somewhere faithful to
 live. Beginning with AES, SHA, RSA and TLS is explicitly disallowed as a start.
 
+The order is a **DAG, not a numeric chain**, and the one edge that leaves the
+numbers is deliberate: Phase 22 (the whole-program compatibility atlas) must exist
+before Phase 11 (X.509 + verification) finishes, because discovering an omitted
+callback, config flag, static dispatch path or policy table after the verification
+engine is written is expensive. `docs/RELEASE_GATES.md` section 1 draws the edge and
+`docs/PHASE-22-SUBPHASES.md` section 8 states the rule; `forensics/tools/phase_state.py`
+enforces it.
+
 ## 10. Authorities
 
 The initial authority set is:

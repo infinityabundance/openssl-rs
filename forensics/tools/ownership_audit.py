@@ -80,6 +80,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from atlas_common import (  # noqa: E402
     ATLAS,
+    NON_EXPORT_UNITS,
     PRODUCTION_AUTHORITY,
     REPO_ROOT,
     InputRef,
@@ -114,6 +115,13 @@ def ledger_paths() -> dict[int, str]:
     for path in sorted((REPO_ROOT / "forensics").glob("phase*-obligations.json")):
         m = re.fullmatch(r"phase(\d+)-obligations\.json", path.name)
         if m is None:
+            continue
+        # A ledger whose obligations are not exports is outside this audit's universe: Phase 22's
+        # unit is a compatibility plane and its `implemented` list names subphases, so the atlas
+        # has no symbol to reconcile against it. The marker is the ledger's own `unit` field, so
+        # the exclusion is a property of the document (`docs/PHASE-22-SUBPHASES.md`, D485).
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        if doc.get("body", {}).get("unit") in NON_EXPORT_UNITS:
             continue
         out[int(m.group(1))] = rel(path)
     return out

@@ -449,7 +449,7 @@
       "verdict": "pass"
     },
     "RT-X509-STORE": {
-      "observations": 435,
+      "observations": 465,
       "verdict": "pass"
     },
     "libcrypto-contamination": {
@@ -460,6 +460,7 @@
   "deferred": {
     "phase10": 0,
     "phase11": 0,
+    "phase22": 0,
     "phase3": 43,
     "phase4": 23,
     "phase5": 91,
@@ -469,12 +470,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4423,
+    "libcrypto": 4432,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
-    "phase11": 344,
+    "phase11": 335,
+    "phase22": 17,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -486,6 +488,7 @@
   "owned_obligations": {
     "phase10": 298,
     "phase11": 1467,
+    "phase22": 18,
     "phase3": 294,
     "phase4": 272,
     "phase5": 565,
@@ -510,6 +513,7 @@
     "2": "complete",
     "20": "not-started",
     "21": "not-started",
+    "22": "in-progress",
     "3": "complete",
     "4": "complete",
     "5": "complete",
@@ -522,7 +526,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 38,
     "findings": 0,
-    "language_census": 7198,
+    "language_census": 7190,
     "sealed_census": 52
   },
   "provider_implemented": [
