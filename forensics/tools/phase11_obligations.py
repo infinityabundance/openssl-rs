@@ -167,8 +167,19 @@ def incoming_handoffs() -> dict[int, list[dict]]:
 
 def crate_module(unit: str) -> str:
     """The crate module the authority unit is laid out as: `crypto/<dir>/<stem>.c` ->
-    `src/<dir>/<stem>.rs`."""
-    return "src/" + unit[:-2] + ".rs"
+    `src/<dir>/<stem>.rs`.
+
+    The `crypto/` prefix is **dropped**, because the crate's tree is `src/x509/`, `src/pem/`,
+    `src/asn1/`, ... -- one directory per authority *subdirectory* of `crypto/`, exactly as
+    `crypto/x509/v3_genn.c` is `src/x509/v3_genn.rs` and `crypto/pem/pem_all.c` is
+    `src/pem/pem_all.rs`. Keeping the prefix would label every phase-11 symbol
+    `src/crypto/x509/...`, a tree that does not exist, and `plan_reconciliation.py` would then
+    read every unit as unreached. A unit outside `crypto/` (none in this stratum) keeps its own
+    path with `crypto/` absent, which is what the mapping below does by only stripping the
+    prefix when it is there.
+    """
+    stem = unit[len("crypto/"):] if unit.startswith("crypto/") else unit
+    return "src/" + stem[:-2] + ".rs"
 
 
 def module_of(symbol: str, units: dict[str, str]) -> str | None:
