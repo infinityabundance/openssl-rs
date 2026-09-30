@@ -33667,3 +33667,57 @@ compared against.
 
 `PIPELINE OK` exit 0 with 111 courts and 47,575 observations; `phase-state.json` derives phases 0
 through 10 `complete`, phases 11 and 22 `in-progress`, and phases 12-21 `not-started`.
+
+## D486 -- 22.1: the exact build commands are captured, and Phase 22's first court challenges the
+## instrument that captured them
+
+Phase 22 has its first plane. `forensics/tools/phase22_capture_build.py` rebuilds the admitted
+profile in a scratch directory with a **transparent compiler wrapper** that records each argv and
+then `exec`s the real compiler unchanged; it wrote 2,272 invocations, of which 2,201 are
+translation units over 1,232 distinct sources (the other 71 are the build's
+`gcc -Wa,-v -c -o /dev/null -x assembler /dev/null` feature probes, which the normalizer
+recognises and drops because they are not translation units).
+
+**The capture is execution-captured, not a `Configure` reconstruction.** The plan is explicit
+(section 6): the per-object perlasm defines -- the `-DAES_ASM ...` block the x86-64 assembly units
+carry -- appear nowhere in the `Configure` profile and are in the log only because the build
+emitted them. The artefact records `capture_method: "execution-captured"`, `producer: "gcc"` (read
+from the pinned `configdata.pm`), and `analysis_instrument: "clang"` beside the sentence that Clang
+is the *shadow* instrument 22.3 will use and that the authority stays a GCC build.
+
+`forensics/tools/phase22_build_commands.py` normalizes the log into
+`forensics/atlas/phase22/compile-commands.json`: one row per translation unit with `source`,
+`output`, `directory`, the ordered `defines` and `includes`, and the full `args`, sorted by source
+so the same log always produces byte-identical JSON. The scratch build took 42 seconds and never
+touched `forensics/authorities/build/` or `prefix/`; the pinned build directory's mtime is unchanged.
+
+### The raw capture is tracked, and that is a departure from the captures policy
+The authority's capture directory is gitignored on purpose -- its logs are reproducible from the
+source, and `BUILD_RECORDS.json` is the tracked record of the build. This capture is different in
+one respect that decides where it lives: `RT-PHASE22-BUILD-CAPTURE` re-derives the committed
+artefact **from the raw log and requires the two to be equal**, so the log is not a reproducible
+intermediate, it is the second half of the comparison. Ignored, a fresh checkout could only assert
+that some JSON existed. It therefore lives at `forensics/atlas/phase22/raw/compile-commands.jsonl`
+(3.1 MB), tracked, and its sha256 is one of the artefact's own inputs.
+
+### The court challenges the instrument, not a file's existence
+`forensics/tools/phase22_courts.py` runs the normalizer's own body over the real log and over
+**controlled mutations of it in memory**: drop one `-D` (that unit's `defines` and `args` lose
+exactly that element and nothing else moves); swap two `-I` options (that unit's `includes` order
+follows and its `defines` do not); append a synthetic translation unit (`commands` and
+`distinct_sources` rise by one); append a build-time `-o /dev/null` assembler probe (nothing
+changes, because it is not a translation unit). It then re-derives the committed artefact and
+requires equality. 19 observations; the court fails if the normalizer is insensitive to any of
+its four defect classes, and the sensitivity was proved by breaking the normalizer and watching the
+court fail. `pending_courts` names the other sixteen, so "not run yet" cannot be read as "passed".
+
+### Everything runs in the court, and the normalizer is a pipeline step
+The three new tools initially ran on the host, where Python is 3.14; the court image pins Debian
+bookworm (Python 3.11.2) by digest. That is exactly the class of unreproducibility the court exists
+to prevent, and D485's activation did not catch it because the tools did not exist yet. The
+normalizer is now a `pipeline.sh` step immediately before `run_courts.py`, so the artefact the
+court re-derives is regenerated inside the court on every run; the capture tool is one-shot and
+writes only to a scratch directory and the tracked log.
+
+`PIPELINE OK` exit 0 with **112 courts** and 47,575 observations; the phase-22 ledger reads 2 of 18
+planes implemented, 16 open.

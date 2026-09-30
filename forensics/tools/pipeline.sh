@@ -124,6 +124,12 @@ echo "== phase 2 shell + its courts =="
 bash forensics/tools/build_phase2.sh
 
 echo "== every active stratum's courts =="
+# Phase 22.1's normalizer runs first: `RT-PHASE22-BUILD-CAPTURE` re-derives
+# `forensics/atlas/phase22/compile-commands.json` from the tracked raw capture and requires the
+# committed artefact to be equal to the re-derivation, so the normalizer has to have run for the
+# court to be judging a fresh artefact rather than last commit's. It is idempotent and needs only
+# the tracked capture plus the pinned `configdata.pm`.
+python3 forensics/tools/phase22_build_commands.py
 python3 forensics/tools/run_courts.py
 
 echo "== prerequisite atlases =="
