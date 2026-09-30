@@ -9,20 +9,29 @@ The method is Phases 3-10's, for the same reason: a unit test encodes what its a
 contract is, whereas a probe measures what the authority actually does, and the comparison is
 between two *executions* of the same program, so the expectation cannot drift.
 
-`RT-X509-REF` is the one court this stratum can register, and what it claims
---------------------------------------------------------------------------------
-The stratum's own work has landed nothing: no store, no verification engine, no attribute
-certificate, no PEM X.509 container. What it *has* is 954 exports earlier strata landed and it now
-owns — the 952 atlas-owned exports of Phase 8's 8.8 chain and Phase 10's pulled-forward X.509
-subphases (10.8-10.16, D442-D451), and the two `ASN1_generate_*` hand-offs of Phase 5 — and
-`court_coverage.py` refuses a stratum that has begun while any of its implemented exports has no
-court edge. So this runner lands `RT-X509-REF`, `courts/phase11/rt_coverage_ref_probe.c`: it takes
-each of the 954's address through a `volatile` table, prints one `coverage_ref.N=nonnull` line per
-symbol, and stops. **It does not call any of them and claims no behaviour about them.** The court
-coverage atlas records every symbol covered only by it at basis `referenced`, never `called`,
-because the probe's name is in that atlas's `reference_probes` table; the atlas's `claim` is the
-weaker, true statement. See docs/DECISIONS.md D199 and docs/PHASE-11-SUBPHASES.md section 4.3,
-which is where this stratum's activation requires it.
+`RT-X509-STORE` and `RT-X509-REF`, and what each claims
+------------------------------------------------------
+11.1a and 11.4a have landed the stratum's first real units: `x509_lu.c`, `x509_meth.c`,
+`x509_set.c`, `x509_req.c` and `x_req.c`. `RT-X509-STORE`,
+`courts/phase11/rt_x509_store_probe.c`, is the behavioural court over them: it **calls** the
+`X509_LOOKUP_METHOD`/`X509_LOOKUP`/`X509_OBJECT` objects, the four `X509_STORE_*` arms that reach
+their refusal without a store, the `X509_set_*`/`X509_get0_*` mutator layer and the `X509_REQ`
+mutators, item group and lifecycle over fixed DER fixtures, and diffs the two transcripts.
+
+The stratum also owns 954 exports earlier strata landed -- the 952 atlas-owned exports of Phase
+8's 8.8 chain and Phase 10's pulled-forward X.509 subphases (10.8-10.16, D442-D451), and the two
+`ASN1_generate_*` hand-offs of Phase 5 -- and `court_coverage.py` refuses a stratum that has begun
+while any of its implemented exports has no court edge. `RT-X509-REF`,
+`courts/phase11/rt_coverage_ref_probe.c`, is the reference basis for those and for the 39 of
+11.1a's/11.4a's own exports `RT-X509-STORE` cannot drive (they need an `X509_STORE`/
+`X509_STORE_CTX` 11.1a does not build, read the opaque `X509_SIG_INFO`, or would compare the
+crate's recorded D333/D343 divergence): it takes each of the 993's address through a `volatile`
+table, prints one `coverage_ref.N=nonnull` line per symbol, and stops. **It does not call any of
+them and claims no behaviour about them.** The court coverage atlas records every symbol covered
+only by it at basis `referenced`, never `called`, because the probe's name is in that atlas's
+`reference_probes` table; the atlas's `claim` is the weaker, true statement. See
+docs/DECISIONS.md D199 and docs/PHASE-11-SUBPHASES.md section 4.3, which is where this stratum's
+activation requires it.
 
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
@@ -31,15 +40,15 @@ later activation established.
 
 What the pending courts will establish, and what they will not
 --------------------------------------------------------------
-`RT-X509-STORE`, `RT-X509-VERIFY`, `RT-X509-ACERT`, `RT-X509-REQ`, `RT-X509-V3`, `RT-X509-PEM`
-and `RT-X509` compare the authority's *behaviour* for the subphases that land them: the container
-bytes and the print text for the object graphs (section 3.1), the decision, error code, depth and
-callback sequence of `X509_verify_cert` (section 3.2), the lookup refusals and cache behaviour
-(section 3.3), and the PEM text and malformed-input error coordinates (section 3.4). None of them
-can claim that an object that round-trips is the authority's object: a transcription whose writer
-emits bytes its own reader accepts is a different library, and docs/PHASE-11-SUBPHASES.md
-section 3 records where the difference is observable. Nothing here is a parity claim about a
-certificate's meaning (section 3.5).
+`RT-X509-VERIFY`, `RT-X509-ACERT`, `RT-X509-REQ`, `RT-X509-V3`, `RT-X509-PEM` and `RT-X509`
+compare the authority's *behaviour* for the subphases that land them: the container bytes and the
+print text for the object graphs (section 3.1), the decision, error code, depth and callback
+sequence of `X509_verify_cert` (section 3.2), the lookup refusals and cache behaviour (section
+3.3), and the PEM text and malformed-input error coordinates (section 3.4). None of them can
+claim that an object that round-trips is the authority's object: a transcription whose writer
+emits bytes its own reader accepts is a different library, and docs/PHASE-11-SUBPHASES.md section
+3 records where the difference is observable. Nothing here is a parity claim about a certificate's
+meaning (section 3.5).
 
 SPDX-License-Identifier: Apache-2.0"""
 
@@ -74,12 +83,20 @@ RUN_TIMEOUT_S = "60"
 # declared in the same commit as the entry, so a runner that names a probe which does not exist
 # cannot be committed -- the check below fails instead.
 #
-# **One entry, and it is the reference basis rather than a behavioural court.** It is registered
-# because the 954 exports this stratum inherited are implemented and `court_coverage.py` requires
-# an edge for each; it is the only probe this stratum can link, since none of its own units is
-# built. See the module doc.
+# **The reference basis comes first, then the first behavioural court.** `RT-X509-REF` is
+# registered because the exports this stratum inherited (and the 39 of its own that `RT-X509-STORE`
+# cannot drive) are implemented and `court_coverage.py` requires an edge for each. `RT-X509-STORE`
+# is 11.1a's and 11.4a's behavioural court, and its description is its probe header's own first
+# sentence. See the module doc.
 COURTS: list[tuple[str, str]] = [
     ("RT-X509-REF", "rt_coverage_ref_probe.c"),
+    # "RT-X509-STORE -- the Phase 11.1/11.4 X.509 store/lookup/object and mutator surface, driven."
+    # It calls the `X509_LOOKUP_METHOD` vtable (`x509_meth.c`), the `X509_LOOKUP` object and its
+    # five `by_*` doors, the `X509_OBJECT` accessors and updaters, the four `X509_STORE_*` arms
+    # that refuse without a store, the `X509_set_*`/`X509_get0_*` layer (`x509_set.c`) and the
+    # `X509_REQ`/`X509_REQ_INFO` mutators, attribute accessors and lifecycle (`x509_req.c`,
+    # `x_req.c`), over fixed DER fixtures and with no address or address-dependent value printed.
+    ("RT-X509-STORE", "rt_x509_store_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -87,18 +104,16 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-11-SUBPHASES.md` section 2's, one per work
 # subphase; `RT-X509` is 11.7's, over the units whose closure crosses into the landed strata.
 PENDING_COURTS: dict[str, str] = {
-    "RT-X509-STORE": "11.1 -- the `X509_STORE` object, the four `X509_LOOKUP_METHOD`s, the "
-                     "`X509_OBJECT` cache and the file/`dir`/store lookups (`x509_lu.c`, "
-                     "`x509_meth.c`, `x509_trust.c`, `x509_d2.c`, `by_*.c`)",
     "RT-X509-VERIFY": "11.2 -- `X509_verify_cert`, the `X509_STORE_CTX` chain builder, the "
                       "`X509_VERIFY_PARAM_*` surface and the policy tree (`x509_vfy.c`, "
                       "`x509_vpm.c`, `pcy_tree.c`)",
     "RT-X509-ACERT": "11.3 -- the `X509_ACERT` item group and its accessors, setters and "
                      "`X509_ACERT_verify` (`x509_acert.c`, `x509aset.c`, `x_ietfatt.c`, "
                      "`t_acert.c`)",
-    "RT-X509-REQ": "11.4 -- `X509_REQ`, the `X509_set_*`/`X509_CRL_set_*` mutators, the "
-                   "extension accessors and `X509_to_X509_REQ` (`x509_req.c`, `x509_set.c`, "
-                   "`x_req.c`, `x_crl.c`, `x_exten.c`, `t_*.c`)",
+    "RT-X509-REQ": "11.4 -- the rest of `X509_REQ` (`x_crl.c`, `x_exten.c`, `t_*.c`): the "
+                   "11.4a units 11.4 landed (`x509_req.c`, `x509_set.c`, `x_req.c`) are driven "
+                   "by `RT-X509-STORE`, and what remains open is the `X509_CRL_set_*` mutators, "
+                   "the extension accessors and `X509_to_X509_REQ`",
     "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the "
                   "`GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, "
                   "`v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)",
@@ -115,10 +130,11 @@ PENDING_COURTS: dict[str, str] = {
 def extra_defs(name: str, libdir: Path) -> list[str]:
     """Per-side build definitions.
 
-    **None.** The one probe this stratum registers takes addresses and prints whether each is
-    non-NULL; it is compiled identically on both sides, so a difference in its transcript could
-    only be a difference in what the library defines. `extra_defs` is kept because the runner's
-    shape is Phase 8's through Phase 10's and a later court here may need one.
+    **None.** `RT-X509-REF` takes addresses and prints whether each is non-NULL; `RT-X509-STORE`
+    drives the landed units with no side-specific input. Both are compiled identically on both
+    sides, so a difference in either transcript can only be a difference in what the library
+    does. `extra_defs` is kept because the runner's shape is Phase 8's through Phase 10's and a
+    later court here may need one.
     """
     del name, libdir
     return []
@@ -270,19 +286,20 @@ def main(argv: list[str]) -> int:
                     "fail": len(records) - passed},
         "pending_courts": PENDING_COURTS,
         "claim": (
-            "`RT-X509-REF` is a **reference-basis** court: its probe takes the address of each "
-            "of this stratum's 954 inherited `implemented` exports and prints whether each is "
-            "non-NULL. A symbol covered only by it means the candidate distribution defines the "
-            "name -- which the link proves -- and NOT that any arm of it was driven; the court "
-            "coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md "
-            "D199). **This stratum has landed no unit of its own**, so `RT-X509-REF` is the only "
-            "court it can register until 11.1: none of the store, verification, attribute-"
-            "certificate, request, `v3` or PEM surfaces exists, and a probe that called one would "
-            "need the very object graph this stratum has not built. "
-            "`pending_courts` names the courts the plan gives this stratum "
-            "(docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings each, and "
-            "every name is printed on each run so that 'not run yet' cannot be read as 'passed'. "
-            "Nothing here is a parity claim: `referenced` is not `called`, and "
+            "`RT-X509-STORE` is a **behavioural** court: its probe calls the store/lookup/object "
+            "objects 11.1a lands and the mutator surface 11.4a lands over fixed DER fixtures, and "
+            "the candidate's transcript must equal the authority's observation for observation. "
+            "`RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of "
+            "this stratum's 993 exports that no behavioural court drives -- the 954 inherited "
+            "`implemented` ones and the 39 of 11.1a's/11.4a's own that `RT-X509-STORE` cannot "
+            "reach without a store 11.1a does not build or the opaque `X509_SIG_INFO` -- and "
+            "prints whether each is non-NULL. A symbol covered only by it means the candidate "
+            "distribution defines the name -- which the link proves -- and NOT that any arm of it "
+            "was driven; the court coverage atlas records those at basis `referenced`, never "
+            "`called` (docs/DECISIONS.md D199). `pending_courts` names the courts the plan gives "
+            "this stratum (docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings "
+            "each, and every name is printed on each run so that 'not run yet' cannot be read as "
+            "'passed'. Nothing here is a parity claim: `referenced` is not `called`, and "
             "docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts must "
             "compare when they land."
         ),

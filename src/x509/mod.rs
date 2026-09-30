@@ -331,3 +331,10 @@ pub mod x509_req;
 // Phase 10.14.12's `crypto/x509/x509_vfy.c` slice -- `X509_self_signed`, the one name the
 // `X509_add_cert` closure waits on; the rest of the verify engine is withheld by name (Phase 11).
 pub mod x509_vfy;
+
+// Phase 11.1 -- `crypto/x509/x509_lu.c`: the `X509_STORE`, `X509_OBJECT`, `X509_LOOKUP` and
+// `X509_LOOKUP_METHOD` object model and the `X509_STORE_get_by_subject` read path. The stratum's
+// first unit of its own work; see docs/PHASE-11-SUBPHASES.md section 2.
+pub mod x509_lu;
+// Phase 11.4 -- `crypto/x509/x_req.c`: the `X509_REQ`/`X509_REQ_INFO` item group and lifecycle.
+pub mod x_req;

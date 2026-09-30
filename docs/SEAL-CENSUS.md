@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 4254 | 1642 |
+| libcrypto | 5896 | 4390 | 1506 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **4254** | **2245** |
+| **total** | **6499** | **4390** | **2109** |
 
 ## Ownership atlas, by stratum
 
@@ -36,7 +36,7 @@ declared owner; this is that assignment.
 | 8 | Native cryptographic primitives | `complete` | 759 | 786 | 786 | 0 | 0 |
 | 9 | RAND / DRBG + entropy | `complete` | 25 | 69 | 69 | 0 | 0 |
 | 10 | Key formats + PKCS + STORE | `complete` | 272 | 298 | 298 | 0 | 0 |
-| 11 | X.509 + verification | `in-progress` | 1455 | 1467 | 954 | 0 | 513 |
+| 11 | X.509 + verification | `in-progress` | 1455 | 1467 | 1090 | 0 | 377 |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
 | 13 | Legacy / deprecated compatibility | `not-started` | 189 | — | — | — | — |
 | 14 | TLS / DTLS (libssl) | `not-started` | 600 | — | — | — | — |
@@ -362,25 +362,26 @@ The other 1 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 11 — X.509 + verification
 
 * state: `in-progress`
-* blocking: 513 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. Nine hundred and fifty-four of the working set are already implemented -- 952 atlas-owned exports landed by Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases, and two hand-offs landed by Phase 5 -- rather than by this stratum, so the ledger's `open` count is not the whole working set. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4)
+* blocking: 377 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. Nine hundred and fifty-four of the working set are already implemented -- 952 atlas-owned exports landed by Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases, and two hand-offs landed by Phase 5 -- rather than by this stratum, so the ledger's `open` count is not the whole working set. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase11-obligations.json`
 * atlas-owned: 1455
 * owned working set: 1467
-* implemented: 954
+* implemented: 1090
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 513**
+* **open in this stratum: 377**
 
 Hand-offs received and discharged:
 
 * from phase 5: 10 symbol(s) — `ASN1_add_stable_module`, `ASN1_generate_nconf`, `ASN1_generate_v3`, `PEM_X509_INFO_read`, `PEM_X509_INFO_read_bio`, `PEM_X509_INFO_read_bio_ex`, `PEM_X509_INFO_read_ex`, `PEM_X509_INFO_write_bio`, `PEM_write_X509_REQ_NEW`, `PEM_write_bio_X509_REQ_NEW`
 * from phase 7: 2 symbol(s) — `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor`
 
-Courts: `all pass`, 1 court(s), **954** authority observation(s) over 1 transcript court(s).
+Courts: `all pass`, 2 court(s), **1197** authority observation(s) over 2 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
-| RT-X509-REF | `pass` | 954 |
+| RT-X509-REF | `pass` | 993 |
+| RT-X509-STORE | `pass` | 204 |
 
 ## Court coverage
 
@@ -403,8 +404,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 8 | 786 | 778 | 778 | 0 | 8 | 0 | 0 |
 | 9 | 69 | 69 | 69 | 0 | 0 | 0 | 0 |
 | 10 | 298 | 298 | 237 | 61 | 0 | 0 | 0 |
-| 11 | 954 | 954 | 401 | 553 | 0 | 0 | 0 |
-| **total** | **3978** | **3970** | **3091** | **879** | **8** | **0** | **0** |
+| 11 | 1090 | 1090 | 501 | 589 | 0 | 0 | 0 |
+| **total** | **4114** | **4106** | **3191** | **915** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 
