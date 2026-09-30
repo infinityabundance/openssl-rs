@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""openssl-rs -- Phase 22 courts: the build-command capture and its sensitivity challenge.
+"""openssl-rs -- Phase 22 courts: the instruments' sensitivity challenges.
 
 Phase 22's courts are not behavioural probes: the stratum adds no code to the crate, so there is
 nothing to run both against the authority and against the candidate. What each Phase 22 court
@@ -25,14 +25,27 @@ of that capture in memory**:
 The court FAILS if the normalizer ignores any of those. `observations` is the number of
 assertions made; each mutation contributes several.
 
-What this court does not claim
-------------------------------
-It does not claim the capture is exhaustive -- that the 2,272 logged invocations are every
-invocation the authority's build makes. It claims the logged invocations are transcribed
-faithfully and that the transcriber reacts to its defect class (a dropped flag, a reordered
-include path, a missing or spurious unit). Whether the wrapper missed an invocation is a
-question for a re-run, recorded as `capture_method` and the covered command count in the atlas
-(`docs/PHASE-22-SUBPHASES.md` section 6).
+`RT-PHASE22-DOXYGEN`
+--------------------
+The second court is 22.2's. It exercises `forensics/tools/phase22_doxygen.py`'s own view-merge
+and classification logic, on the committed `forensics/atlas/phase22/doxygen-entities.json` and on
+controlled in-memory mutations of its rows:
+
+  * round-trip: reconstruct the two per-view row sets from the artefact's own `entities`, re-derive
+    the whole body (entities, references, the `lexical_only`/`configured_only` differences, every
+    count) and require it to equal the committed artefact -- so the court judges the logic that
+    built the artefact, not a stale copy of its output;
+  * add a configured entity -- `entities`, `configured` and `configured_only` rise by one;
+  * add a lexical-only entity -- `entities`, `lexical` and `lexical_only` rise by one;
+  * clear one entity's `documented` flag -- `documented` falls by one and nothing else moves;
+  * move one shared entity's line -- its two views stop joining, so `shared` falls by one while
+    `entities`, `configured_only` and `lexical_only` each rise by one;
+  * add one reference edge -- `reference_sources` and `reference_edges` rise by one.
+
+It FAILS if the extractor is insensitive to any of those. What it does **not** claim is that the
+Doxygen corpus is complete or that the committed XML matches the tree: the XML is a scratch
+product and is not tracked, so no fresh-checkout re-derivation is possible, and `doxygen` absence
+must never be read as surface absence (`docs/PHASE-22-SUBPHASES.md` section 6).
 
 A court the plan gives a later subphase is named in `pending_courts` with that subphase and
 printed on every run, so "not run yet" cannot be read as "passed" -- the contract Phase 8's
@@ -66,21 +79,21 @@ from atlas_common import (  # noqa: E402
 )
 
 import phase22_build_commands as pbc  # noqa: E402
+import phase22_doxygen as pdox  # noqa: E402
 
 GENERATOR = "forensics/tools/phase22_courts.py"
 OUT = REPO_ROOT / "artifacts" / "phase22" / "COURTS.json"
 RAW = REPO_ROOT / pbc.RAW_REL
 NORMALIZED = REPO_ROOT / pbc.OUT_REL
+DOXYGEN_ARTEFACT = REPO_ROOT / pdox.OUT_REL
 
-# The court this stratum has landed. Its name is the stratum's event, `RT-PHASE22-BUILD-CAPTURE`.
-COURTS = ["RT-PHASE22-BUILD-CAPTURE"]
+# The courts this stratum has landed, in the order the subphases land them.
+COURTS = ["RT-PHASE22-BUILD-CAPTURE", "RT-PHASE22-DOXYGEN"]
 
 # A court the plan gives a later subphase. Named here with the subphase and the instrument it will
 # challenge, and printed on each run. The names follow the plan's own vocabulary; section 5 is
 # where each artefact is named.
 PENDING_COURTS: dict[str, str] = {
-    "RT-PHASE22-DOXYGEN": "22.2 -- the pinned Doxygen corpus and entity graph "
-                          "(`doxygen-entities.json`)",
     "RT-PHASE22-TU-AST": "22.3 -- the every-translation-unit Clang AST and declaration/definition "
                          "graph (`tu-ast.json`), replayed from 22.1's captured invocations",
     "RT-PHASE22-CONDITIONAL": "22.4 -- the preprocessor and conditional-compilation graph "
@@ -275,6 +288,201 @@ def court_build_capture(records: list[dict], producer: str, directory: str | Non
     }
 
 
+def _identity(row: dict) -> list:
+    return [row["kind"], row["name"], row["file"], row["line"]]
+
+
+def _entities_by_identity(entities: list[dict]) -> dict[tuple, dict]:
+    return {tuple(_identity(e)): e for e in entities}
+
+
+def _edges_from_references(references: dict) -> list[dict]:
+    """Rebuild the flat edge list the artefact's adjacency was collapsed from.
+
+    The key is `kind|file|line|name`; file paths contain no `|` and the line is empty for an
+    entity Doxygen gave no line. This is what lets the round-trip re-derive the adjacency from
+    the committed artefact and compare, rather than trusting the stored copy.
+    """
+    out: list[dict] = []
+    for key, slot in references.items():
+        kind, file, line, name = key.split("|", 3)
+        for rel in ("references", "referenced_by"):
+            for target in slot.get(rel, []):
+                out.append({"from_kind": kind, "from_file": file or None, "from_name": name,
+                            "from_line": int(line) if line else None, "relation": rel,
+                            "name": target})
+    return out
+
+
+def _mutation_add_entity(configured, lexical, edges, base, checks) -> None:
+    synth = {"kind": "function", "name": "phase22_synthetic_probe",
+             "file": "synthetic/phase22_probe.c", "line": 1, "brief": "",
+             "is_static": True, "documented": False}
+    new = pdox.build_body(configured + [synth], lexical, edges)
+    checks.append(("add-entity: entities rose by one",
+                   new["counts"]["entities"] == base["counts"]["entities"] + 1))
+    checks.append(("add-entity: configured rose by one",
+                   new["counts"]["configured"] == base["counts"]["configured"] + 1))
+    checks.append(("add-entity: configured_only rose by one",
+                   new["counts"]["configured_only"] == base["counts"]["configured_only"] + 1))
+    row = _entities_by_identity(new["entities"]).get(tuple(_identity(synth)))
+    checks.append(("add-entity: the unit is present and configured-only",
+                   row is not None and row["views"] == ["configured"]))
+    checks.append(("add-entity: nothing else moved",
+                   _stable(base, new, {tuple(_identity(synth))})))
+
+
+def _mutation_add_lexical_only(configured, lexical, edges, base, checks) -> None:
+    synth = {"kind": "function", "name": "phase22_synthetic_lexical_probe",
+             "file": "synthetic/phase22_probe.c", "line": 2, "brief": "",
+             "is_static": False, "documented": False}
+    new = pdox.build_body(configured, lexical + [synth], edges)
+    checks.append(("add-lexical-only: entities rose by one",
+                   new["counts"]["entities"] == base["counts"]["entities"] + 1))
+    checks.append(("add-lexical-only: lexical_only rose by one",
+                   new["counts"]["lexical_only"] == base["counts"]["lexical_only"] + 1))
+    row = _entities_by_identity(new["entities"]).get(tuple(_identity(synth)))
+    checks.append(("add-lexical-only: the unit is present and lexical-only",
+                   row is not None and row["views"] == ["lexical"]))
+
+
+def _mutation_clear_documented(configured, lexical, edges, base, checks) -> None:
+    idx = next((i for i, e in enumerate(configured) if e["documented"]), None)
+    if idx is None:
+        checks.append(("clear-documented: a documented configured entity was found", False))
+        return
+    target = tuple(_identity(configured[idx]))
+    mutated = copy.deepcopy(configured)
+    mutated[idx]["documented"] = False
+    new = pdox.build_body(mutated, lexical, edges)
+    checks.append(("clear-documented: documented count fell by one",
+                   new["counts"]["documented"] == base["counts"]["documented"] - 1))
+    row = _entities_by_identity(new["entities"]).get(target)
+    checks.append(("clear-documented: the entity now reads undocumented",
+                   row is not None and not row["documented"]))
+    checks.append(("clear-documented: entity count unchanged",
+                   new["counts"]["entities"] == base["counts"]["entities"]))
+    checks.append(("clear-documented: no other entity moved",
+                   _stable(base, new, {target})))
+
+
+def _mutation_move_location(configured, lexical, edges, base, checks) -> None:
+    """Moving a shared entity's line breaks the identity join between the two views."""
+    configured_keys = {tuple(_identity(e)) for e in configured}
+    idx = next((i for i, e in enumerate(lexical) if tuple(_identity(e)) in configured_keys), None)
+    if idx is None:
+        checks.append(("move-location: a shared entity was found", False))
+        return
+    mutated = copy.deepcopy(lexical)
+    old = tuple(_identity(mutated[idx]))
+    mutated[idx]["line"] = (mutated[idx]["line"] or 0) + 10_000_000
+    new = pdox.build_body(configured, mutated, edges)
+    checks.append(("move-location: entities rose by one (the join split)",
+                   new["counts"]["entities"] == base["counts"]["entities"] + 1))
+    checks.append(("move-location: shared fell by one",
+                   new["counts"]["shared"] == base["counts"]["shared"] - 1))
+    checks.append(("move-location: lexical_only rose by one",
+                   new["counts"]["lexical_only"] == base["counts"]["lexical_only"] + 1))
+    checks.append(("move-location: configured_only rose by one",
+                   new["counts"]["configured_only"] == base["counts"]["configured_only"] + 1))
+    by_id = _entities_by_identity(new["entities"])
+    old_row = by_id.get(old)
+    new_row = by_id.get(tuple(_identity(mutated[idx])))
+    checks.append(("move-location: the original key is now configured-only",
+                   old_row is not None and old_row["views"] == ["configured"]))
+    checks.append(("move-location: the moved key is now lexical-only",
+                   new_row is not None and new_row["views"] == ["lexical"]))
+
+
+def _mutation_add_edge(configured, lexical, edges, base, checks) -> None:
+    edge = {"from_kind": "function", "from_name": "phase22_probe_fn",
+            "from_file": "synthetic/phase22_probe.c", "from_line": 3,
+            "relation": "references", "name": "EVP_DigestInit_ex"}
+    new = pdox.build_body(configured, lexical, edges + [edge])
+    checks.append(("add-edge: reference_sources rose by one",
+                   new["counts"]["reference_sources"] == base["counts"]["reference_sources"] + 1))
+    checks.append(("add-edge: reference_edges rose by one",
+                   new["counts"]["reference_edges"] == base["counts"]["reference_edges"] + 1))
+    key = "function|synthetic/phase22_probe.c|3|phase22_probe_fn"
+    checks.append(("add-edge: the adjacency gained the source",
+                   key in new["references"]
+                   and new["references"][key]["references"] == ["EVP_DigestInit_ex"]))
+
+
+def _stable(base: dict, new: dict, moved: set) -> bool:
+    """Every entity except those named by `moved` is byte-for-byte identical.
+
+    `moved` names the identities a mutation is *allowed* to add, remove or change; every other
+    identity must appear on both sides with the same row.
+    """
+    a, b = _entities_by_identity(base["entities"]), _entities_by_identity(new["entities"])
+    return all(a.get(k) == b.get(k) for k in (set(a) | set(b)) - moved)
+
+
+def court_doxygen() -> dict:
+    """`RT-PHASE22-DOXYGEN`: the Doxygen extractor's own view-merge and classification logic."""
+    if not DOXYGEN_ARTEFACT.is_file():
+        return {"court": "RT-PHASE22-DOXYGEN", "verdict": "fail",
+                "stage": "doxygen-artefact-missing", "observations": 0,
+                "failures": [f"artefact missing: {rel(DOXYGEN_ARTEFACT)}"]}
+
+    body = json.loads(DOXYGEN_ARTEFACT.read_text(encoding="utf-8"))["body"]
+    configured, lexical = pdox.split_views(copy.deepcopy(body["entities"]))
+    edges = _edges_from_references(body["references"])
+    checks: list[tuple[str, bool]] = []
+
+    checks.append(("baseline: the artefact has entities", body["counts"]["entities"] > 0))
+    checks.append(("baseline: the artefact has reference edges",
+                   body["counts"]["reference_edges"] > 0))
+    checks.append(("baseline: both views contributed entities",
+                   len(configured) > 0 and len(lexical) > 0))
+
+    # Round-trip: re-derive the whole body from the artefact's own rows. This is the freshness
+    # gate a tracked raw input would give 22.1; here it ties the committed artefact to the logic
+    # that produced it rather than to a copy of its output.
+    rebuilt = pdox.build_body(copy.deepcopy(configured), copy.deepcopy(lexical), edges)
+    checks.append(("round-trip: entities equal", rebuilt["entities"] == body["entities"]))
+    checks.append(("round-trip: references equal", rebuilt["references"] == body["references"]))
+    checks.append(("round-trip: lexical_only equal",
+                   rebuilt["lexical_only"] == body["lexical_only"]))
+    checks.append(("round-trip: configured_only equal",
+                   rebuilt["configured_only"] == body["configured_only"]))
+    checks.append(("round-trip: counts equal", rebuilt["counts"] == body["counts"]))
+
+    base = pdox.build_body(copy.deepcopy(configured), copy.deepcopy(lexical), edges)
+    _mutation_add_entity(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base, checks)
+    _mutation_add_lexical_only(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base,
+                               checks)
+    _mutation_clear_documented(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base,
+                               checks)
+    _mutation_move_location(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base,
+                            checks)
+    _mutation_add_edge(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base, checks)
+
+    failures = [desc for desc, ok in checks if not ok]
+    return {
+        "court": "RT-PHASE22-DOXYGEN",
+        "artefact": rel(DOXYGEN_ARTEFACT),
+        "doxygen_version": body.get("doxygen_version"),
+        "entities": body["counts"]["entities"],
+        "lexical_only": body["counts"]["lexical_only"],
+        "reference_edges": body["counts"]["reference_edges"],
+        "mutations": ["round-trip", "add-entity", "add-lexical-only", "clear-documented",
+                      "move-location", "add-edge"],
+        "observations": len(checks),
+        "failures": failures,
+        "verdict": "pass" if not failures else "fail",
+    }
+
+
+def _summary(r: dict) -> str:
+    """A one-line, court-specific figure for the pass line (the courts differ)."""
+    if r["court"] == "RT-PHASE22-BUILD-CAPTURE":
+        return f"{r.get('captured_commands')} commands / {r.get('distinct_sources')} sources"
+    return (f"{r.get('entities')} entities, {r.get('lexical_only')} lexical-only, "
+            f"{r.get('reference_edges')} reference edges")
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -296,7 +504,7 @@ def main(argv: list[str]) -> int:
                   "stage": "raw-capture-missing", "raw_capture": rel(RAW), "observations": 0,
                   "failures": [f"raw capture missing: {rel(RAW)}"]}
 
-    records_out = [record]
+    records_out = [record, court_doxygen()]
     passed = sum(1 for r in records_out if r["verdict"] == "pass")
     body = {
         "all_pass": passed == len(records_out),
@@ -306,20 +514,31 @@ def main(argv: list[str]) -> int:
                     "fail": len(records_out) - passed},
         "pending_courts": PENDING_COURTS,
         "claim": (
-            "`RT-PHASE22-BUILD-CAPTURE` is 22.1's FRF-style sensitivity challenge, not a file "
-            "existence check. It runs `forensics/tools/phase22_build_commands.py`'s own "
-            "`build_body` on the real raw capture and on controlled mutations of it in memory, "
-            "and requires the normalizer's output to move in exactly the expected way: dropping "
-            "one `-D` removes exactly that element from the unit's `defines` and `args`; swapping "
-            "two `-I` options reorders that unit's `includes` and leaves its `defines`; appending "
-            "a synthetic unit raises `commands` and `distinct_sources` by one; and appending a "
-            "build-time `-o /dev/null` assembler probe -- which is not a translation unit -- "
-            "changes nothing. It also re-derives the committed "
+            "Two courts, each an FRF-style sensitivity challenge rather than a file existence "
+            "check. `RT-PHASE22-BUILD-CAPTURE` runs "
+            "`forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw "
+            "capture and on controlled mutations of it in memory: dropping one `-D` removes "
+            "exactly that element from the unit's `defines` and `args`; swapping two `-I` options "
+            "reorders that unit's `includes` and leaves its `defines`; appending a synthetic unit "
+            "raises `commands` and `distinct_sources` by one; and appending a build-time "
+            "`-o /dev/null` assembler probe -- which is not a translation unit -- changes "
+            "nothing. It also re-derives the committed "
             "`forensics/atlas/phase22/compile-commands.json` body from the raw log and requires "
-            "they be equal. The court carries no parity claim about the candidate; `22.1` "
-            "captures the authority's own GCC build (`producer` is read from the pinned "
-            "`configdata.pm`), and Clang is recorded as a shadow analysis instrument rather than "
-            "a redefinition of the authority (docs/PHASE-22-SUBPHASES.md section 6). "
+            "they be equal. `RT-PHASE22-DOXYGEN` runs "
+            "`forensics/tools/phase22_doxygen.py`'s own view-merge and classification logic on "
+            "the committed `forensics/atlas/phase22/doxygen-entities.json` and on controlled "
+            "mutations of its rows: it re-derives the whole body (entities, references, the "
+            "`lexical_only`/`configured_only` differences, every count) from the artefact's own "
+            "`entities` and requires it to equal the committed artefact; adding a configured "
+            "entity raises `entities`/`configured`/`configured_only` by one; adding a "
+            "lexical-only entity raises `entities`/`lexical`/`lexical_only` by one; clearing a "
+            "`documented` flag lowers `documented` by one and moves nothing else; moving a shared "
+            "entity's line splits its two views so `shared` falls while `entities`, "
+            "`configured_only` and `lexical_only` each rise; and adding an edge raises the "
+            "reference counts. Neither court claims the authority surface is complete: the "
+            "Doxygen XML is a scratch product and is not tracked, so `RT-PHASE22-DOXYGEN` ties "
+            "the artefact to the logic that built it rather than to a fresh re-derivation, and "
+            "Doxygen absence is never surface absence (docs/PHASE-22-SUBPHASES.md section 6). "
             "`pending_courts` names the courts the plan gives later subphases and every name is "
             "printed on each run, so 'not run yet' cannot be read as 'passed'."
         ),
@@ -328,6 +547,7 @@ def main(argv: list[str]) -> int:
     inputs = [
         InputRef(name="raw-compile-commands", path=RAW),
         InputRef(name="normalized-compile-commands", path=NORMALIZED),
+        InputRef(name="doxygen-entities", path=DOXYGEN_ARTEFACT),
         InputRef(name="phase-22-plan", path=REPO_ROOT / "docs" / "PHASE-22-SUBPHASES.md"),
     ]
     doc = envelope(kind="phase22-courts", authority=auth.id, inputs=inputs,
@@ -336,8 +556,8 @@ def main(argv: list[str]) -> int:
 
     for r in records_out:
         if r["verdict"] == "pass":
-            print(f"  {r['court']:<26} pass   ({r['observations']} observations, "
-                  f"{r['captured_commands']} commands / {r['distinct_sources']} sources)")
+            print(f"  {r['court']:<26} pass   ({r['observations']} observations; "
+                  f"{_summary(r)})")
         else:
             print(f"  {r['court']:<26} FAIL   "
                   f"stage={r.get('stage', 'sensitivity')}")

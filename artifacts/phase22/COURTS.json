@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-PHASE22-BUILD-CAPTURE` is 22.1's FRF-style sensitivity challenge, not a file existence check. It runs `forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw capture and on controlled mutations of it in memory, and requires the normalizer's output to move in exactly the expected way: dropping one `-D` removes exactly that element from the unit's `defines` and `args`; swapping two `-I` options reorders that unit's `includes` and leaves its `defines`; appending a synthetic unit raises `commands` and `distinct_sources` by one; and appending a build-time `-o /dev/null` assembler probe -- which is not a translation unit -- changes nothing. It also re-derives the committed `forensics/atlas/phase22/compile-commands.json` body from the raw log and requires they be equal. The court carries no parity claim about the candidate; `22.1` captures the authority's own GCC build (`producer` is read from the pinned `configdata.pm`), and Clang is recorded as a shadow analysis instrument rather than a redefinition of the authority (docs/PHASE-22-SUBPHASES.md section 6). `pending_courts` names the courts the plan gives later subphases and every name is printed on each run, so 'not run yet' cannot be read as 'passed'.",
+    "claim": "Two courts, each an FRF-style sensitivity challenge rather than a file existence check. `RT-PHASE22-BUILD-CAPTURE` runs `forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw capture and on controlled mutations of it in memory: dropping one `-D` removes exactly that element from the unit's `defines` and `args`; swapping two `-I` options reorders that unit's `includes` and leaves its `defines`; appending a synthetic unit raises `commands` and `distinct_sources` by one; and appending a build-time `-o /dev/null` assembler probe -- which is not a translation unit -- changes nothing. It also re-derives the committed `forensics/atlas/phase22/compile-commands.json` body from the raw log and requires they be equal. `RT-PHASE22-DOXYGEN` runs `forensics/tools/phase22_doxygen.py`'s own view-merge and classification logic on the committed `forensics/atlas/phase22/doxygen-entities.json` and on controlled mutations of its rows: it re-derives the whole body (entities, references, the `lexical_only`/`configured_only` differences, every count) from the artefact's own `entities` and requires it to equal the committed artefact; adding a configured entity raises `entities`/`configured`/`configured_only` by one; adding a lexical-only entity raises `entities`/`lexical`/`lexical_only` by one; clearing a `documented` flag lowers `documented` by one and moves nothing else; moving a shared entity's line splits its two views so `shared` falls while `entities`, `configured_only` and `lexical_only` each rise; and adding an edge raises the reference counts. Neither court claims the authority surface is complete: the Doxygen XML is a scratch product and is not tracked, so `RT-PHASE22-DOXYGEN` ties the artefact to the logic that built it rather than to a fresh re-derivation, and Doxygen absence is never surface absence (docs/PHASE-22-SUBPHASES.md section 6). `pending_courts` names the courts the plan gives later subphases and every name is printed on each run, so 'not run yet' cannot be read as 'passed'.",
     "courts": [
       {
         "captured_commands": 2201,
@@ -20,6 +20,25 @@
         "producer": "gcc",
         "raw_capture": "forensics/atlas/phase22/raw/compile-commands.jsonl",
         "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/doxygen-entities.json",
+        "court": "RT-PHASE22-DOXYGEN",
+        "doxygen_version": "1.9.4",
+        "entities": 70075,
+        "failures": [],
+        "lexical_only": 4670,
+        "mutations": [
+          "round-trip",
+          "add-entity",
+          "add-lexical-only",
+          "clear-documented",
+          "move-location",
+          "add-edge"
+        ],
+        "observations": 29,
+        "reference_edges": 323306,
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
@@ -30,7 +49,6 @@
       "RT-PHASE22-CONFIG": "22.10 -- the configuration, environment and default-path surface (`config-surface.json`)",
       "RT-PHASE22-CROSSWALK": "22.13 -- the test/demo/fuzz semantic crosswalk (`test-crosswalk.json`)",
       "RT-PHASE22-DISPATCH": "22.7 -- the indirect dispatch, callback and registration graph (`dispatch-graph.json`)",
-      "RT-PHASE22-DOXYGEN": "22.2 -- the pinned Doxygen corpus and entity graph (`doxygen-entities.json`)",
       "RT-PHASE22-FRF": "22.15 -- the FRF challenges and FRF-Fuzz sensitivity campaigns (`frf-challenges.json`)",
       "RT-PHASE22-GEMEL": "22.16 -- the Gemel checkpoint and regenerated ledgers (`gemel-checkpoint.json`)",
       "RT-PHASE22-GENEALOGY": "22.5 -- generated-source provenance (`generated-lineage.json`)",
@@ -42,8 +60,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 1,
-      "total": 1
+      "pass": 2,
+      "total": 2
     }
   },
   "generator": "forensics/tools/phase22_courts.py",
@@ -59,9 +77,14 @@
       "sha256": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e"
     },
     {
+      "name": "doxygen-entities",
+      "path": "forensics/atlas/phase22/doxygen-entities.json",
+      "sha256": "b4aca03b1afda8cdb53b671ebe6df0e15f4349806e655206ab31983d4bf9277a"
+    },
+    {
       "name": "phase-22-plan",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "831c9863252c68c31c961c582603bec10ffd2a48e0dadd76aecb30618a9e0489"
+      "sha256": "ed4af2df27639b451535d13ecb801a27860b36f21f5ca7e6aa83e358350efc24"
     }
   ],
   "kind": "phase22-courts",

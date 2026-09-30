@@ -33758,3 +33758,55 @@ constant rather than an assumption about the host.
 `PIPELINE OK` exit 0 in the rebuilt image with 112 courts and 47,575 observations; `cargo 1.98.1`,
 `rustc 1.98.1`, `doxygen 1.9.4` and `python3 3.11.2` are the container's own versions, verified
 inside it.
+
+## D488 -- 22.2: the Doxygen entity graph, and the two views that disagree in both directions
+
+Phase 22's second plane. Two pinned Doxyfiles (`forensics/phase22/Doxyfile.configured`,
+`Doxyfile.lexical`) run over the **whole** admitted authority tree -- no input narrowing was needed:
+10.9 s for the configured view, 2.9 s for the lexical one, `external_entities_skipped` 0 in both.
+`forensics/tools/phase22_doxygen.py` normalizes the XML into
+`forensics/atlas/phase22/doxygen-entities.json`: **70,075 entities**, 40,810 seen by both views,
+**4,670 `lexical_only`**, 24,595 `configured_only`, 323,306 deduplicated reference edges over
+33,237 source entities, 654 documented and 17,185 static. The document is byte-identical across runs
+and carries no host or scratch path.
+
+### Neither view is a superset, and that is the finding
+"Reduced preprocessing" does not merely reveal the untaken branches: it also *loses* the
+preprocessed entity set, so `configured_only` is large too. Both directions are recorded. The
+strongest instance is macros: Doxygen 1.9.4 emits **no `define` entities when preprocessing is off**,
+so the 17,622 macro entities -- the bulk of `configured_only` -- exist only in the configured view.
+This is the plan's section-6 rule made concrete: a surface one view misses is not a surface that is
+absent, and a plane that reported only one view's entity count would understate the authority in a
+direction nobody could see.
+
+### The plan said "Clang-assisted" and Doxygen cannot do that
+Section 6 described 22.2's configured view as "production profile, compilation database,
+Clang-assisted". Doxygen 1.9.4 has **no Clang frontend**. The configured view is Doxygen's own
+preprocessor seeded from 22.1's capture as an aggregated project profile -- per-translation-unit
+capture cannot be expressed to Doxygen at all -- and reading the same capture with Clang is 22.3's
+job. The plan is corrected rather than left implying that 22.2 did 22.3's work, and the artefact
+records what the instrument actually is. This is the class of defect the project's own rule is for:
+the document said something the tool cannot support, and the measurement is what caught it.
+
+### The court
+`RT-PHASE22-DOXYGEN` adds 29 observations to the existing runner: a full round trip (re-derive the
+committed body from its own entities and edges and require equality) plus five mutations -- add a
+configured entity, add a lexical-only entity, clear a `documented` flag, move a shared entity's
+line so the view join splits, add a reference edge. Sensitivity was proved by breaking
+`_adjacency`, the documented classifier and `merge_views` in memory: each turned the court to `fail`
+and it returned to `pass` on restore.
+
+### Non-claims, recorded rather than hidden
+The court ties the artefact to the normalizer's logic and to the committed entity set, **not** to a
+fresh Doxygen run: the XML is a scratch product and untracked, so a reviewer re-deriving the graph
+must re-run Doxygen. That is the same shape as the authority itself -- `build/` is ignored and
+`BUILD_RECORDS.json` is the tracked record -- and it is a non-claim of this plane rather than a gap.
+
+The artefact is 37 MB, larger than any other atlas document; the first naive edge list was 127 MB,
+and it was collapsed to a per-source-entity adjacency with deduplicated target names and Doxygen's
+internal `refid`s dropped. It is committed for the same reason `parity-obligations.json` (23 MB) is:
+it is the evidence the later planes join against, and a graph nothing carries is a graph nothing can
+reconcile.
+
+`PIPELINE OK` exit 0 with **113 courts** and 47,575 observations; the phase-22 ledger reads 3 of 18
+planes implemented, 15 open.

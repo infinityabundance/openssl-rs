@@ -149,9 +149,16 @@ exhaustiveness is "nothing is unclassified".
   quietly redefining the authority as a Clang build.
 * **22.2** must treat Doxygen as one oracle among several. OpenSSL's own policy makes the POD
   manual canonical for public APIs and the Doxygen block a navigation aid; Doxygen absence must
-  never be read as surface absence. Two views are taken: a **configured** view (production
-  profile, compilation database, Clang-assisted) and a **lexical** view (discovery-only,
-  deliberately reduced preprocessing) for material the production profile hides.
+  never be read as surface absence. Two views are taken: a **configured** view (the production
+  profile, seeded with 22.1's captured defines and include paths) and a **lexical** view
+  (discovery-only, deliberately reduced preprocessing) for material the production profile hides.
+  The two views disagree in **both** directions and that is the honest shape: the lexical view
+  contributes entities the production profile preprocesses away (`lexical_only`), and the
+  configured view contributes the macros and bodies the un-preprocessed parse cannot see
+  (`configured_only`), so neither is a superset. **Doxygen 1.9.4 has no Clang frontend**, so the
+  configured view is Doxygen's own preprocessor seeded from the capture, not a Clang-assisted
+  parse; reading the captured commands with Clang is 22.3's job, and 22.2's artefact records the
+  distinction rather than implying one instrument did the other's work.
 * **22.3** must parse **every** active translation unit, not a synthetic aggregate. The public
   −header view of Phase 1 remains, and is joined, not replaced.
 * **22.4** must answer *why* a function exists in this build and *why* another does not, with a

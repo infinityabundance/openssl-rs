@@ -1,0 +1,72 @@
+# openssl-rs -- Phase 22.2 pinned Doxygen configuration: the *configured* view.
+#
+# WHAT THIS IS
+#   The project-level Doxygen configuration for the production-profile view of the admitted
+#   authority `openssl-3.6.4-production`. Doxygen parses the authority source tree with its own
+#   preprocessor, told the authority's own include directories and preprocessor definitions.
+#
+# WHY IT IS PINNED HERE, AND WHY IT IS OURS
+#   OpenSSL ships no canonical Doxyfile for 3.6.4 (the tree carries none; `util/find-doc-nits`
+#   and the POD manuals are its documentation instruments, not Doxygen). A Doxygen corpus is
+#   therefore only reproducible if the configuration that produced it is a tracked artefact
+#   beside its output. This file is that configuration. It is a *forensic* configuration, bound
+#   to the exact authority path and the court image's `doxygen 1.9.4`
+#   (`docs/DECISIONS.md` D487); changing a key changes the corpus and must be a reviewed change.
+#
+# WHICH VIEW
+#   The **configured** view: the production profile. `ENABLE_PREPROCESSING = YES` and
+#   `MACRO_EXPANSION = YES`, with the include paths and preprocessor definitions the authority's
+#   own build used. Those two lists are not typed here: they are a pure function of 22.1's
+#   captured `forensics/atlas/phase22/compile-commands.json`, and
+#   `forensics/tools/phase22_doxygen.py` appends `INCLUDE_PATH` and `PREDEFINED` (and its own
+#   scratch `OUTPUT_DIRECTORY`) to this file at run time, because a committed file that embedded
+#   them would be a transcription with a second place to drift.
+#
+# ORACLE, NOT THE ORACLE
+#   `docs/PHASE-22-SUBPHASES.md` section 6: Doxygen is one oracle among several, and Doxygen
+#   absence must never be read as surface absence. This view sees what Doxygen, given the
+#   production profile, chose to document; it does not see assembly, perlasm, macro-generated
+#   declarations Doxygen failed to expand, or anything under a conditional the profile disables.
+#   The lexical view (`Doxyfile.lexical`) is the complement that reveals that last class.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+PROJECT_NAME           = openssl-3.6.4-production
+PROJECT_BRIEF          = "Phase 22.2 configured Doxygen view"
+
+INPUT                  = /work/forensics/authorities/src/openssl-3.6.4
+RECURSIVE              = YES
+FILE_PATTERNS          = *.c *.h
+EXCLUDE_PATTERNS       = */.git/*
+
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_LOCAL_CLASSES  = YES
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+GENERATE_XML           = YES
+XML_PROGRAMLISTING     = NO
+HAVE_DOT               = NO
+
+QUIET                  = YES
+WARNINGS               = NO
+WARN_IF_UNDOCUMENTED   = NO
+
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+SEARCH_INCLUDES        = YES
+INCLUDE_PATH           =
+PREDEFINED             =
+
+REFERENCES_RELATION    = YES
+REFERENCED_BY_RELATION = YES
+
+# The lines below are appended at run time by forensics/tools/phase22_doxygen.py:
+#   OUTPUT_DIRECTORY = <scratch>/configured      (a scratch path; never the authority)
+#   INPUT            = <resolved authority source root>
+#   INCLUDE_PATH     = <from 22.1's capture>
+#   PREDEFINED       = <from 22.1's capture>
