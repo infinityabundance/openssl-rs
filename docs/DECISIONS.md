@@ -33358,3 +33358,72 @@ what `docs/PARITY_MODEL.md` says those words mean.
 identical tracked-diff fingerprint across them, `cargo test --lib` is 1117 passed on both halves,
 `gen_frf_courts.py --check` is clean, and `phase_state.py` derives phase 10 `complete` with its
 seal and phase 11 `not-started`.
+## D479 -- the divergence register derives its trigger state; a stale `trigger_satisfied=false` can no longer let a stratum seal
+
+**The register's most important input was typed by hand.** `divergence_obligations.py` held
+`Row.trigger_satisfied: bool`, and `blocking = trigger_satisfied and disposition == "open"` was
+derived from it -- so the derivation was only as good as the human who last edited the boolean. The
+failure was not hypothetical: `D-DECODER-ABSENT-1` read `trigger_satisfied: false, disposition: open`
+while the Phase-10 provider decoders existed, `RT-CODEC` courted them, and D474's own seal named the
+row a retirement candidate. **Phase 10 derived `complete` with a fired trigger in its own register**,
+which is exactly the failure mode the register exists to prevent.
+
+**The trigger state is now derived, and manual rows fail closed.**
+
+* `Row` loses `trigger_satisfied` and gains `trigger_basis` (`"predicate"` | `"manual"`),
+  `trigger_predicate` (a name in a new `PREDICATES` table) and `adjudication`.
+* `trigger_satisfied` is rendered, never typed: a predicate row carries its predicate's read of
+  generated evidence; a `manual` row carries `null`, because a machine genuinely cannot decide it.
+* `blocking` is derived and fail-closed:
+  `disposition == "open" and (trigger_satisfied is True or (trigger_basis == "manual" and not adjudication))`.
+  An open `manual` row therefore **blocks its owner until an adjudication records, with evidence, why
+  the trigger has not fired** -- the default is "the gun may have fired", not "assume it has not".
+* `phase_state.divergence_blocking_reason` now reads the row's derived `blocking` (keeping the
+  `current_owner == phase` scoping), so the artefact and the rule cannot disagree about which
+  stratum a row blocks.
+
+**`D-DECODER-ABSENT-1` is retired truthfully, through the new mechanism.** Its predicate reads
+`forensics/atlas/provider-algorithms.json` and observed **152 of 152 `OSSL_OP_DECODER` rows
+implemented**, so `trigger_satisfied` renders `true`; the row moves to `disposition: fixed` with the
+row-publishing units and `RT-CODEC` as evidence, and its `note` records that D474's seal named it a
+retirement candidate. The row is kept, not deleted -- the row is the record that the divergence
+existed and was closed. `D-EVP-CIPHER-LEGACY-NID-1` (open, owner 13) is `manual` with an
+adjudication naming the machine facts that show its trigger has not fired: Phase 13 is `not-started`
+and `src/runtime/init.rs`'s `add_all_legacy_methods` is a no-op, so the legacy `OBJ_NAME` table is
+still empty.
+
+### The sensitivity test, and why it is the point
+
+**`phase_state.py --self-test` reconstructs the stale row and requires the rule to catch it.**
+It computes the phase states, picks a stratum that derived `complete`, deep-copies the real register,
+appends a reconstructed `manual`/`open`/unadjudicated row owned by that stratum with `blocking` set
+by the register's **own** `derive_blocking` (imported, not retyped), and refuses to pass unless
+`divergence_blocking_reason` returns a non-empty reason naming it. `pipeline.sh` runs it immediately
+after the divergence step, on every run, so a future edit that reintroduced a hand-typed quiet row is
+a red pipeline rather than a silent seal.
+
+**Recorded residual.** A `predicate` row whose predicate returns `None` while `open` is
+non-blocking under the formula above. It is unreachable in a valid tree -- the census a predicate
+reads exists before this step, and a missing census already blocks every stratum at 3 or beyond --
+but the formula does not say so, and that is worth knowing.
+
+### The CLI archaeology defect is recorded, not left in prose
+
+Phase 16 owns the CLI and the conservation order puts Phase 11 first, so the defect is recorded
+rather than repaired: `forensics/prerequisites.json` gains the deferral `cli_option_list_parse`
+(`owner_phase: 16`) with the measurement (`forensics/atlas/openssl-3.6.4-production/cli-commands.json`
+line 5: `command_count` 55; line 9: `option_count` 0 and `options` `[]` on all 55; 2,008 raw option
+rows, being 2,063 non-blank rows less the 55 `- -` sentinels; parser `forensics/tools/atlas_runtime.py:240`
+`_OPTION_ROW` and `:243` `parse_option_list`), and the `blocking_dependencies` 4 -> 5 movement is
+recorded as the approved transition the regression guard requires. A deferral in the gated ledger is
+re-printed by `prerequisite_gate.py` on every run; a paragraph in a seal is not, which is why the
+seal's own preamble says its lists are kept as the record of seal time.
+
+### Verification
+
+`sh forensics/tools/pipeline.sh` prints `PIPELINE OK` exit 0 with **110 courts and 47,071
+observations**; the register reads **10 rows, 0 blocking**; the self-test prints
+`[phase-state] self-test ok: the stale row (manual, open, unadjudicated) is caught without a human`;
+`divergence_obligations.py --check`, `prerequisite_gate.py`, `evidence_determinism.py` and
+`check_evidence_portability.py` are all clean; phase 10 still derives `complete` and phase 11
+`in-progress` with 513 open.
