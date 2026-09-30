@@ -464,6 +464,7 @@
         "evidence_present": [
           "docs/PHASE-10-SUBPHASES.md",
           "forensics/tools/phase10_obligations.py",
+          "docs/PHASE-10-KEYFORMATS-SEAL.md",
           "forensics/phase10-obligations.json",
           "artifacts/phase10/COURTS.json",
           "forensics/atlas/court-coverage.json",
@@ -477,7 +478,7 @@
           "implemented": 636,
           "owned": 636
         },
-        "seal_sha256": null,
+        "seal_sha256": "2bffe04d2fed9ebca88e58ec13d79a29be7deb2dc874ba3ac30f370c8fd2df98",
         "state": "complete",
         "stratum": "Key formats + PKCS + STORE"
       },
@@ -625,7 +626,7 @@
       "not_started": 11
     }
   },
-  "body_hash": "d9b4f78416df8ac67d74c112277913ec8f28280d598cf2173616fcfa469cb887",
+  "body_hash": "b1ea7fd6181377c5a8d54d4f2ba78c06d5674dbcd66fc6354af5495565c1d888",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
