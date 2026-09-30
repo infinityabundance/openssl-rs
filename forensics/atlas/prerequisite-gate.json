@@ -3,6 +3,7 @@
   "body": {
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
+      "cli_option_list_parse -> phase 16 (cli option-list parse yields zero structured options. The authority CLI archaeology capture is incomplete in this checkable way: parse_option_list() (forensics/tools/atlas_runtime.py:243) matches _OPTION_ROW (:240) against a shape resembling `-in val        Input file`, but the real `openssl list -options <cmd>` capture is unsorted `name type` pairs (`help -`, `in <`, `out >`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count is 0 and all 2,008 raw rows stay unstructured. Named rather than repaired: Phase 16 (cli-config) owns the CLI and its archaeology is 16.0, while the conservation order puts Phase 11 first. Closure: parse_option_list() reads the authority's actual option shape and the capture's total structured option_count is non-zero.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
@@ -592,7 +593,7 @@
       "authority_units": 434,
       "crate_modules": 613,
       "deferral_blocker_rows": 0,
-      "deferrals_recorded": 4,
+      "deferrals_recorded": 5,
       "divergence_names_covered": 38,
       "divergence_rows": 12,
       "names_referenced_and_not_built": 19
@@ -703,7 +704,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "8651f8ffc34160790cfddfd0d1752a4cd11b9b809da2814488f512eeda8edc9b",
+  "body_hash": "43fdb57a7669dd11a1170ee612177c949895c5c032ecd0495e31768bddc617c9",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -749,7 +750,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "c89e00332148cd1ca272bda20f03d19cea821697b535ce2e90b6d74541942995"
+      "sha256": "6dd12c146d465dcf3eff90ec13a10bc62abe5ee90268ec6661b771c1fdf1cce6"
     },
     {
       "name": "crate-source-tree",

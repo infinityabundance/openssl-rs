@@ -25,6 +25,12 @@
         "owner_phase": 13,
         "reason": "providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.",
         "symbol": "OSSL_provider_init"
+      },
+      {
+        "evidence": "forensics/atlas/openssl-3.6.4-production/cli-commands.json lines 5, 9 and 11 -- command_count 55; option_count 0 and options [] on all 55 commands; 2,008 raw option rows across the 55 option_listing strings (2,063 non-blank rows less 55 `- -` sentinels); parser forensics/tools/atlas_runtime.py:240 (_OPTION_ROW) and :243 (parse_option_list)",
+        "owner_phase": 16,
+        "reason": "cli option-list parse yields zero structured options. The authority CLI archaeology capture is incomplete in this checkable way: parse_option_list() (forensics/tools/atlas_runtime.py:243) matches _OPTION_ROW (:240) against a shape resembling `-in val        Input file`, but the real `openssl list -options <cmd>` capture is unsorted `name type` pairs (`help -`, `in <`, `out >`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count is 0 and all 2,008 raw rows stay unstructured. Named rather than repaired: Phase 16 (cli-config) owns the CLI and its archaeology is 16.0, while the conservation order puts Phase 11 first. Closure: parse_option_list() reads the authority's actual option shape and the capture's total structured option_count is non-zero.",
+        "symbol": "cli_option_list_parse"
       }
     ],
     "divergences": [
