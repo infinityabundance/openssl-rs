@@ -23,6 +23,8 @@ open blocking residuals, and the seal identity when one exists.
 
 from __future__ import annotations
 
+import argparse
+import copy
 import json
 import sys
 from pathlib import Path
@@ -40,6 +42,10 @@ from atlas_common import (  # noqa: E402
     write_text,
     REPO_ROOT,
 )
+# The register's own derivation, so the sensitivity control below judges a reconstructed row by the
+# real rule rather than by a boolean typed into the test. `divergence_obligations` imports only
+# `atlas_common`, so this is not a cycle.
+from divergence_obligations import derive_blocking  # noqa: E402
 
 OUT = REPO_ROOT / "forensics" / "phase-state.json"
 
@@ -71,11 +77,14 @@ PROVIDER_COVERAGE = "forensics/atlas/provider-court-coverage.json"
 # project that was **prose**: its entries carry a `**Trigger:**` -- the condition under which the
 # divergence must be revisited or removed -- and nothing machine-checked it, so a stratum could
 # derive `complete` while an obligation it owned had had its trigger fire and was still owed.
-# `forensics/tools/divergence_obligations.py` now renders each trigger-bearing entry as a row with
-# `trigger_satisfied`, `disposition` and `current_owner`, and `divergence_blocking_reason` below is
-# the executable half. Generated before this tool by the pipeline; if the JSON is absent this tool
-# fails closed rather than skipping the rule, because a check that can be silently skipped is not a
-# check (see `divergence_blocking_reason`).
+# `forensics/tools/divergence_obligations.py` now renders each trigger-bearing entry as a row whose
+# trigger state is **derived**, not typed: a `trigger_basis: predicate` row reads generated evidence
+# through a named predicate, and a `trigger_basis: manual` row's `trigger_satisfied` is `null` and
+# blocks while `open` until an `adjudication` records why it has not fired. `divergence_blocking_reason`
+# below is the executable half, and it reads the row's derived `blocking` so the rule and the
+# artefact cannot disagree. Generated before this tool by the pipeline; if the JSON is absent this
+# tool fails closed rather than skipping the rule, because a check that can be silently skipped is
+# not a check (see `divergence_blocking_reason`).
 DIVERGENCE_OBLIGATIONS = "forensics/divergence-obligations.json"
 
 # The conservation strata, in dependency order (docs/RELEASE_GATES.md §1).
@@ -882,8 +891,8 @@ def provider_rows_for(phase: int) -> dict | None:
     }
 
 
-def divergence_blocking_reason(phase: int) -> str:
-    """The reason a triggered, still-open divergence obligation holds a stratum open.
+def divergence_blocking_reason(phase: int, doc: dict | None = None) -> str:
+    """The reason a blocking divergence obligation holds this stratum open.
 
     `docs/SECURITY_DIVERGENCE_POLICY.md`'s entries carry a `**Trigger:**`: the condition under
     which the divergence must be revisited or removed. Review named the absence of any
@@ -892,18 +901,26 @@ def divergence_blocking_reason(phase: int) -> str:
     because the register was prose and nothing read it. `divergence_obligations.py` renders the
     trigger-bearing entries as rows, so the rule can be executable:
 
-        a row blocks its `current_owner` when `trigger_satisfied` and `disposition == "open"`
+        a row blocks its `current_owner` when its derived `blocking` is true, which the
+        register sets for an `open` obligation whose trigger has materially fired
+        (`trigger_satisfied`) or which is a `manual` row with no `adjudication`
 
-    and this function applies it to one stratum. The test is the row's own `current_owner`
-    equality rather than the derived `blocking` field, so the artefact and the rule cannot
-    disagree about *which* stratum a row blocks.
+    and this function reads that derived `blocking` -- not the trigger state itself -- scoped by
+    the row's own `current_owner` equality, so the artefact and the rule cannot disagree about
+    *which* stratum a row blocks. Deriving the trigger state is the point: the hand-typed
+    `trigger_satisfied` this replaces is what let `D-DECODER-ABSENT-1` read `false` while its
+    trigger had fired.
+
+    `doc` exists so `--self-test` can hand in a reconstructed artefact; it defaults to reading the
+    committed file.
 
     **Fail-closed when the artefact is absent.** The register is what makes the rule checkable,
     so a missing `divergence-obligations.json` is a fatal, not an empty result: returning "" would
     let the whole rule be skipped by deleting one file, which is the hole this closes. The message
     names the generator to run, the way the pipeline runs it.
     """
-    doc = read_json(DIVERGENCE_OBLIGATIONS)
+    if doc is None:
+        doc = read_json(DIVERGENCE_OBLIGATIONS)
     if doc is None:
         print(
             f"[phase-state] fatal: {DIVERGENCE_OBLIGATIONS} is absent or unreadable, so the "
@@ -914,57 +931,35 @@ def divergence_blocking_reason(phase: int) -> str:
         raise SystemExit(1)
     owed = [
         row for row in doc["body"]["rows"]
-        if row["current_owner"] == phase
-        and row["trigger_satisfied"]
-        and row["disposition"] == "open"
+        if row["current_owner"] == phase and row["blocking"]
     ]
     if not owed:
         return ""
     ids = ", ".join(row["id"] for row in owed)
     return (
-        f"{len(owed)} triggered, open divergence obligation(s) of this stratum, whose trigger has "
-        f"fired and which are still owed ({DIVERGENCE_OBLIGATIONS}): {ids}"
+        f"{len(owed)} blocking divergence obligation(s) of this stratum -- an `open` row whose "
+        f"trigger has fired, or an `open` `manual` row with no adjudication ({DIVERGENCE_OBLIGATIONS}): "
+        f"{ids}"
     )
 
 
-def main() -> int:
-    # Every stratum that has *any* of the three artefacts a stratum's evidence is built from
-    # must have a row, or it would be derived `not-started` however much of that evidence is
-    # on disk. The check reads the filesystem rather than `STRATA`, because reading the
-    # registry would make it tautological: every phase is in the registry from the day it is
-    # planned, including the fifteen nothing has been written for. A phase is *started* when a
-    # plan, a ledger or a court file exists, and that is a fact about the tree.
-    #
-    # This is the one place a stratum's existence is discovered rather than declared, and it
-    # runs on every invocation rather than being asserted in prose.
-    started_without_a_row = [
-        phase for phase, _n, _s in STRATA
-        if phase >= 3
-        and phase not in STRATUM_EVIDENCE
-        and (
-            exists(f"docs/PHASE-{phase}-SUBPHASES.md")
-            or exists(f"forensics/phase{phase}-obligations.json")
-            or exists(f"artifacts/phase{phase}/COURTS.json")
-        )
-    ]
-    if started_without_a_row:
-        print(
-            f"[phase-state] fatal: {started_without_a_row} have evidence on disk but no "
-            f"STRATUM_EVIDENCE row, so they would be derived `not-started` despite it. "
-            f"Add the row rather than the state: `forensics/STATUS.md` is generated and "
-            f"docs/DECISIONS.md D138 is why.",
-            file=sys.stderr,
-        )
-        return 1
+def derive_state_rows() -> list[dict]:
+    """Compute every stratum's row from evidence, exactly as `main` writes it.
 
+    Factored out of `main` so `self_test` can ask *which* strata derive `complete` without writing
+    the artefacts and reconstruct its stale row against one. The divergence rule
+    (`divergence_blocking_reason`) is applied here, **before** the state is computed from
+    `blocking`, so a blocking row's effect is the state rather than a reason printed beside a
+    `complete`.
+    """
     rows = []
     earlier_incomplete: int | None = None
     for phase, name, stratum in STRATA:
         present, absent, blocking = evidence_for(phase)
-        # The divergence-trigger rule (`divergence_blocking_reason`). A triggered, still-open
-        # obligation this stratum owns is a blocking reason exactly as an open ledger row is, and
-        # it is applied here, **before** the state is computed from `blocking`, so the effect is
-        # the state rather than a reason printed beside a `complete`.
+        # The divergence rule (`divergence_blocking_reason`). An obligation this stratum owns whose
+        # register row blocks it is a blocking reason exactly as an open ledger row is, and it is
+        # applied here, **before** the state is computed from `blocking`, so the effect is the state
+        # rather than a reason printed beside a `complete`.
         blocking = blocking or divergence_blocking_reason(phase)
         # **A stratum with any evidence is under way, and `absent` does not say otherwise.**
         #
@@ -1006,6 +1001,121 @@ def main() -> int:
             "deferred": deferred_rows(phase),
             "provider_rows": provider_rows_for(phase),
         })
+    return rows
+
+
+# The id the sensitivity control stamps on the row it reconstructs. It cannot collide with a real
+# register id, and the control requires the rule's reason to name it.
+SELF_TEST_STALE_ID = "SELF-TEST-STALE-ROW"
+
+
+def self_test() -> int:
+    """Reconstruct the stale row the typed trigger state could not see, and require the rule to fire.
+
+    The register's most important input used to be a hand-typed `trigger_satisfied`, and
+    `D-DECODER-ABSENT-1` is the proof it failed: its trigger had fired (Phase 10's provider
+    decoders existed, `RT-CODEC` courted them, and the Phase 10 seal named the row a retirement
+    candidate) while the row still read `false`, so Phase 10 derived `complete` with a fired
+    trigger. The fix derives the trigger state, and this control reconstructs the shape the defect
+    had -- an `open`, `manual`, unadjudicated row whose `current_owner` is a stratum that derives
+    `complete` -- and requires `divergence_blocking_reason` to name it. It refuses to pass
+    otherwise, because a check that has never been seen to fire is not evidence.
+    """
+    rows = derive_state_rows()
+    complete = [r for r in rows if r["state"] == "complete"]
+    if not complete:
+        print(
+            "[phase-state] SELF-TEST FAILED: no stratum derives `complete`, so the stale row "
+            "cannot be reconstructed against one",
+            file=sys.stderr,
+        )
+        return 1
+    owner = complete[-1]  # the highest-numbered stratum that derived `complete`
+
+    doc = read_json(DIVERGENCE_OBLIGATIONS)
+    if doc is None:
+        print(
+            f"[phase-state] SELF-TEST FAILED: {DIVERGENCE_OBLIGATIONS} is absent or unreadable, "
+            f"so the rule the control exercises cannot run; run "
+            f"`python3 forensics/tools/divergence_obligations.py` to write it.",
+            file=sys.stderr,
+        )
+        return 1
+    reconstructed = copy.deepcopy(doc)
+    stale = {
+        "id": SELF_TEST_STALE_ID,
+        "current_owner": owner["phase"],
+        "trigger_basis": "manual",
+        "trigger_predicate": "",
+        "trigger_satisfied": None,
+        "adjudication": "",
+        "disposition": "open",
+    }
+    # The register's own derivation, not a typed boolean: the control is evidence only if it is the
+    # `manual`/`open`/unadjudicated shape that makes `blocking` true.
+    stale["blocking"] = derive_blocking(stale)
+    reconstructed["body"]["rows"].append(stale)
+
+    reason = divergence_blocking_reason(owner["phase"], doc=reconstructed)
+    print(
+        f"[phase-state] self-test: reconstructed a stale row ({stale['trigger_basis']}, "
+        f"{stale['disposition']}, unadjudicated, `blocking` derived {stale['blocking']}) owned by "
+        f"phase {owner['phase']} ({owner['name']}), which derives `complete`:")
+    print(f"  {reason or '(no reason: the rule did not fire)'}")
+    if not reason or SELF_TEST_STALE_ID not in reason:
+        print(
+            "[phase-state] SELF-TEST FAILED: the divergence rule did not refuse an open, manual, "
+            "unadjudicated row owned by a complete stratum",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        "[phase-state] self-test ok: the stale row (manual, open, unadjudicated) is caught "
+        "without a human")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument(
+        "--self-test",
+        action="store_true",
+        help="reconstruct a stale divergence row and require the rule to refuse it",
+    )
+    args = ap.parse_args(argv)
+    if args.self_test:
+        return self_test()
+
+    # Every stratum that has *any* of the three artefacts a stratum's evidence is built from
+    # must have a row, or it would be derived `not-started` however much of that evidence is
+    # on disk. The check reads the filesystem rather than `STRATA`, because reading the
+    # registry would make it tautological: every phase is in the registry from the day it is
+    # planned, including the fifteen nothing has been written for. A phase is *started* when a
+    # plan, a ledger or a court file exists, and that is a fact about the tree.
+    #
+    # This is the one place a stratum's existence is discovered rather than declared, and it
+    # runs on every invocation rather than being asserted in prose.
+    started_without_a_row = [
+        phase for phase, _n, _s in STRATA
+        if phase >= 3
+        and phase not in STRATUM_EVIDENCE
+        and (
+            exists(f"docs/PHASE-{phase}-SUBPHASES.md")
+            or exists(f"forensics/phase{phase}-obligations.json")
+            or exists(f"artifacts/phase{phase}/COURTS.json")
+        )
+    ]
+    if started_without_a_row:
+        print(
+            f"[phase-state] fatal: {started_without_a_row} have evidence on disk but no "
+            f"STRATUM_EVIDENCE row, so they would be derived `not-started` despite it. "
+            f"Add the row rather than the state: `forensics/STATUS.md` is generated and "
+            f"docs/DECISIONS.md D138 is why.",
+            file=sys.stderr,
+        )
+        return 1
+
+    rows = derive_state_rows()
 
     body = {
         "rule": "a phase may be complete only if every earlier phase is complete",
@@ -1050,4 +1160,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

@@ -211,6 +211,17 @@ echo "== divergence obligations =="
 python3 forensics/tools/divergence_obligations.py
 python3 forensics/tools/divergence_obligations.py --check
 
+# The sensitivity control for the divergence rule, immediately after the artefact it reads. The
+# register's most important input used to be a hand-typed `trigger_satisfied`, and
+# `D-DECODER-ABSENT-1` is the proof it failed: a fired trigger read `false` and the owning stratum
+# derived `complete` anyway. The rule is now derived, and `--self-test` reconstructs the shape the
+# defect had -- an `open`, `manual`, unadjudicated row owned by a stratum that derives `complete`
+# -- and refuses to pass unless the rule catches it. It runs before `phase_state.py` derives any
+# state, so a rule that could no longer fire is a failure here rather than a silent gap. It follows
+# the same principle as `gen_provider_algorithms.py --self-test` above, which reconstructs the six
+# ways to defeat the census and requires each to fire.
+python3 forensics/tools/phase_state.py --self-test
+
 echo "== phase state =="
 python3 forensics/tools/phase_state.py
 
