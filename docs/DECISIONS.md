@@ -33245,3 +33245,35 @@ both halves.
 Phase 10 is complete by its ledger, its courts and its seal. What is **not** done is joining the FRF
 chain (`gen_frf_courts.py`) that `docs/RELEASE_GATES.md` §2 items 6 and 8 require, after which the
 staging branch merges into `main`.
+## D475 -- Phase 10's differential courts join the FRF court manifests, and the receipt/checkpoint half is named
+
+**The seal's §7 recorded `docs/RELEASE_GATES.md` §2 items 6, 8 and 10 as unmet because phase 10 had
+not joined the FRF chain.** This entry lands the half that is a generator input: phase 10's **five
+differential courts** are registered in `forensics/tools/gen_frf_courts.py`'s `COURTS` table
+(`rt-keyformat-ref`, `rt-codec`, `rt-keyformat`, `rt-pkcs12`, `rt-store`), so
+`gen_frf_courts.py` now writes **86 runtime courts** (was 81; phase 10's five across 172 files) and
+`gen_frf_courts.py --check` is green.
+
+**`CT-PKCS12` is deliberately absent, for the instrument's reason.** It is **candidate-only
+construction verification** against the pinned `evppbe_pkcs12.txt` vectors, not a differential
+court, so it has no authority transcript to diff, no
+`artifacts/phase10/probes/<probe>.{authority,candidate}` pair to stage and no `{fixture}` for a
+challenge to locate -- exactly the reason Phase 8's and Phase 9's `CT-*` courts are absent (D13,
+D201). A manifest generated from the table would name execution-context artifacts that do not exist.
+
+**Two live counts moved with it, and the docs gate forced the move.** `forensics/frf/README.md`'s
+"runtime count is N as of this revision" sentence gained the phase-10 five (81 -> 86, with the
+per-phase breakdown the tool parses), and `docs/RELEASE_GATES.md`'s "the alternative is N YAML" moved
+81 -> 86. Both are bound to the generator's table exact, so a manifest added without them is a
+document that contradicts the tree.
+
+**What this does and does not satisfy.** `RELEASE_GATES.md` §2 item 3 (court manifests) is what this
+lands. Items **6 (mutation/sensitivity evidence), 8 (FRF receipts) and 10 (a Gemel checkpoint)**
+still require running the sensitivity evidence and recording receipts and a checkpoint against these
+manifests -- the chain entry phase 9 has and phase 10 does not yet. That is recorded rather than
+implied, and it is what remains before the merge.
+
+### Verification
+
+The pipeline prints `PIPELINE OK` exit 0 with **109 courts and 46,117 observations**, and
+`gen_frf_courts.py --check`, `docs_consistency` and `regression_guard --require-current` are green.
