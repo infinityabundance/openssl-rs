@@ -151,6 +151,22 @@ X509V3_CONF_METHOD_VTABLE = ("not a provider dispatch: a member of `X509V3_CONF_
 CHECK_PURPOSE = ("not a provider dispatch: `struct x509_purpose_st`'s `check_purpose` member "
                  "(`include/openssl/x509v3.h.in:489`), declared inline as a plain function "
                  "pointer rather than through `OSSL_CORE_MAKE_FUNC`")
+# `include/openssl/x509_vfy.h.in:83-88,145` -- `struct x509_trust_st`'s `check_trust` member and
+# the checker `X509_TRUST_set_default` installs and returns (Phase 11.1b). Both are declared inline
+# as plain function pointers and the atlas records no `typedef` for either, for the same reason as
+# `x509_purpose_st`'s `check_purpose` above.
+X509_TRUST_CHECKER = ("not a provider dispatch: `struct x509_trust_st`'s `check_trust` member "
+                      "and `X509_TRUST_set_default`'s argument "
+                      "(`include/openssl/x509_vfy.h.in:83-88,145`), declared inline as plain "
+                      "function pointers rather than through `OSSL_CORE_MAKE_FUNC`")
+# `crypto/x509/v3_utl.c:573-575` -- `equal_fn`, the matcher type `do_x509_check` dispatches the
+# host/email/IP comparisons through (`equal_nocase`/`equal_case`/`equal_email`/`equal_wildcard`).
+# A `.c`-local function-pointer typedef, so the atlas -- whose universe is the installed public
+# surface -- records no `typedef` for it (the same rule the `decode_*` `keytype_desc_st` callbacks
+# above are exempted under). Landed with 11.5's name-check surface.
+V3_UTL_EQUAL_FN = ("not a provider dispatch: `crypto/x509/v3_utl.c:573-575`'s `.c`-local "
+                   "`equal_fn` matcher type, which the atlas -- whose universe is the installed "
+                   "public surface -- records no `typedef` for")
 EVP_LEGACY = ("not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback "
               "list in `evp.h`, declared as a plain function pointer rather than through "
               "`OSSL_CORE_MAKE_FUNC`")
@@ -402,6 +418,10 @@ NOT_A_DISPATCH: dict[str, str] = {
     "X509V3GetSection": X509V3_CONF_METHOD_VTABLE,
     # `struct x509_purpose_st`'s checker (Phase 10's `v3_purp.c`).
     "CheckPurpose": CHECK_PURPOSE,
+    # Phase 11.1b's trust-checker pair and 11.5's `.c`-local matcher type.
+    "CheckTrust": X509_TRUST_CHECKER,
+    "DefaultTrustFn": X509_TRUST_CHECKER,
+    "EqualFn": V3_UTL_EQUAL_FN,
     # --- `EVP_CIPHER` / `EVP_MD` legacy callback lists (`evp.h`) -----------------------------
     "CipherDoAllFn": EVP_LEGACY,
     "MdDoAllFn": EVP_LEGACY,

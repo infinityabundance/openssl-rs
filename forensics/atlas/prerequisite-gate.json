@@ -10,7 +10,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 76,
-      "language_surface_not_modelled_by_name": 7166,
+      "language_surface_not_modelled_by_name": 7198,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -423,8 +423,9 @@
         "crypto/ui/ui_openssl.c": 9,
         "crypto/ui/ui_util.c": 13,
         "crypto/whrlpool/wp_dgst.c": 3,
+        "crypto/x509/by_store.c": 16,
         "crypto/x509/pcy_lib.c": 8,
-        "crypto/x509/t_x509.c": 62,
+        "crypto/x509/t_x509.c": 60,
         "crypto/x509/v3_aaa.c": 26,
         "crypto/x509/v3_ac_tgt.c": 38,
         "crypto/x509/v3_addr.c": 54,
@@ -437,7 +438,7 @@
         "crypto/x509/v3_battcons.c": 16,
         "crypto/x509/v3_bcons.c": 16,
         "crypto/x509/v3_bitst.c": 11,
-        "crypto/x509/v3_conf.c": 36,
+        "crypto/x509/v3_conf.c": 27,
         "crypto/x509/v3_cpols.c": 56,
         "crypto/x509/v3_crld.c": 53,
         "crypto/x509/v3_enum.c": 6,
@@ -452,6 +453,7 @@
         "crypto/x509/v3_pcons.c": 15,
         "crypto/x509/v3_pku.c": 9,
         "crypto/x509/v3_pmaps.c": 24,
+        "crypto/x509/v3_prn.c": 16,
         "crypto/x509/v3_purp.c": 43,
         "crypto/x509/v3_rolespec.c": 18,
         "crypto/x509/v3_san.c": 31,
@@ -462,9 +464,10 @@
         "crypto/x509/v3_tlsf.c": 23,
         "crypto/x509/v3_usernotice.c": 17,
         "crypto/x509/v3_utf8.c": 8,
-        "crypto/x509/v3_utl.c": 59,
+        "crypto/x509/v3_utl.c": 45,
         "crypto/x509/x509_att.c": 19,
         "crypto/x509/x509_cmp.c": 19,
+        "crypto/x509/x509_d2.c": 17,
         "crypto/x509/x509_def.c": 13,
         "crypto/x509/x509_ext.c": 8,
         "crypto/x509/x509_lu.c": 53,
@@ -472,8 +475,9 @@
         "crypto/x509/x509_obj.c": 11,
         "crypto/x509/x509_req.c": 31,
         "crypto/x509/x509_set.c": 19,
+        "crypto/x509/x509_trust.c": 19,
         "crypto/x509/x509_v3.c": 10,
-        "crypto/x509/x509_vfy.c": 222,
+        "crypto/x509/x509_vfy.c": 211,
         "crypto/x509/x509cset.c": 15,
         "crypto/x509/x509name.c": 12,
         "crypto/x509/x509rset.c": 4,
@@ -593,8 +597,8 @@
       ]
     },
     "checked": {
-      "authority_units": 437,
-      "crate_modules": 615,
+      "authority_units": 441,
+      "crate_modules": 621,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
       "divergence_names_covered": 38,
@@ -707,13 +711,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "30daa09389081b2549ee055bd0f28805e4b68290e967680c035e8f02a3144adf",
+  "body_hash": "9059be5e6520dfd778a80c4ea3f4e08fabda4a220fe68c3b53089f660259aca4",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "b7b0b61344659615c124a51b15f317e55fdf355f4b469507a6b0c90fc5cac270"
+      "sha256": "c835734aa000d5103a11100b95734a9738c97bf4835c0eb43aeb3a78eeb0c221"
     },
     {
       "name": "macro-owners",
@@ -728,7 +732,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8668278a4192f4854096554969e84a01db780c1b857ff90961558872faf48911"
+      "sha256": "ffd745afd20eca44a5917b3e5ded0616f952c35a2825d5b8a483da3e43429716"
     },
     {
       "name": "symbol-ownership",
@@ -743,12 +747,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9617003604c254fbbda4c62a398df69a49d0ec0221e0cd08168348768df6f106"
+      "sha256": "fd7e698b28869fd1f89d2acd644ff0f1dee9d58647b71dfaa5a5de0e01e77e4a"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "937d16de0de627991da646c9497d4b0e18137b609c65c076ad04ad4afb9bdc91"
+      "sha256": "28806bef8ef8d8b49c20b415160baa0ef3525a3ceeeaee7227ea6792f6ac18f2"
     },
     {
       "name": "prerequisites",

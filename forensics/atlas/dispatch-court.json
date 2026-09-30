@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 615,
+      "crate_files_read": 621,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 315,
       "signatures_checked": 322,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 208,
+      "signatures_not_a_dispatch": 211,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -5450,6 +5450,21 @@
           "alias": "CheckPurpose",
           "at": "src/x509/v3_purp.rs",
           "why": "not a provider dispatch: `struct x509_purpose_st`'s `check_purpose` member (`include/openssl/x509v3.h.in:489`), declared inline as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "EqualFn",
+          "at": "src/x509/v3_utl.rs",
+          "why": "not a provider dispatch: `crypto/x509/v3_utl.c:573-575`'s `.c`-local `equal_fn` matcher type, which the atlas -- whose universe is the installed public surface -- records no `typedef` for"
+        },
+        {
+          "alias": "CheckTrust",
+          "at": "src/x509/x509_trust.rs",
+          "why": "not a provider dispatch: `struct x509_trust_st`'s `check_trust` member and `X509_TRUST_set_default`'s argument (`include/openssl/x509_vfy.h.in:83-88,145`), declared inline as plain function pointers rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "DefaultTrustFn",
+          "at": "src/x509/x509_trust.rs",
+          "why": "not a provider dispatch: `struct x509_trust_st`'s `check_trust` member and `X509_TRUST_set_default`'s argument (`include/openssl/x509_vfy.h.in:83-88,145`), declared inline as plain function pointers rather than through `OSSL_CORE_MAKE_FUNC`"
         }
       ],
       "unlinked": [],

@@ -775,13 +775,15 @@ PHASE10_MODULES = [
 # Phase 10's pulled-forward subphases already landed: the stratum has landed none of its own.
 #
 # **Like Phase 10, this stratum does not start with a whole working set open.**
-# `forensics/phase11-obligations.json` reports 954 of its 1,467-export working set already
-# `implemented` -- 952 atlas-owned exports landed by Phase 8's 8.8 chain and Phase 10's
-# pulled-forward X.509 subphases (10.8-10.14, D442-D451), and two hand-offs landed by Phase 5 --
-# so `phase-state.json` reports the stratum `in-progress` because its ledger has an open count,
-# not because it has a plan alone. It owns **no provider registration row**.
-# `docs/PHASE-11-SUBPHASES.md` section 4 records the measurement and the precondition it
-# places on the coverage join.
+# `forensics/phase11-obligations.json` reports a working set of 1,467 exports and an `open` count
+# smaller than it, because Phase 8's 8.8 chain, Phase 10's pulled-forward X.509 subphases
+# (10.8-10.14, D442-D451) and two Phase 5 hand-offs landed part of the set before activation, so
+# `phase-state.json` reports the stratum `in-progress` because its ledger has an open count, not
+# because it has a plan alone. **That split moves as the stratum lands its own units**, so the
+# note below does not restate its counts: the ledger's `counts` is the live record and
+# `forensics/atlas/implemented-surface.json` is the authority behind it. It owns **no provider
+# registration row**. `docs/PHASE-11-SUBPHASES.md` section 4 records the activation measurement
+# and the precondition it places on the coverage join.
 PHASE11_COURTS = "artifacts/phase11/COURTS.json"
 PHASE11_OBLIGATIONS = "forensics/phase11-obligations.json"
 PHASE11_MODULES = [
@@ -827,13 +829,16 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "One thousand four hundred and fifty-five of the exports it owns "
                             "are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, "
                             "`x509_acert.h`, `pem.h`) and the twelve remainder arrive as "
-                            "recorded hand-offs from phases 5 and 7. Nine hundred and "
-                            "fifty-four of the working set are already implemented -- 952 "
-                            "atlas-owned exports landed by Phase 8's 8.8 chain and Phase 10's "
-                            "pulled-forward X.509 subphases, and two hand-offs landed by Phase "
-                            "5 -- rather than by this stratum, so the ledger's `open` count is "
-                            "not the whole working set. The stratum owns no provider "
-                            "registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4)"
+                            "recorded hand-offs from phases 5 and 7. The ledger does not start "
+                            "with that whole working set open: exports Phase 8's 8.8 chain and "
+                            "Phase 10's pulled-forward X.509 subphases landed, and two Phase 5 "
+                            "hand-offs, are reported as `implemented` at activation, so its "
+                            "`open` count is not the whole working set. That split moves as "
+                            "this stratum lands its own units, so this note does not restate "
+                            "its counts; the ledger's `counts` and `forensics/atlas/"
+                            "implemented-surface.json` are the live record. The stratum owns "
+                            "no provider registration row (docs/PHASE-11-SUBPHASES.md "
+                            "sections 1 and 4)"
                         )),
 }
 

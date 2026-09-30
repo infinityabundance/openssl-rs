@@ -1,41 +1,34 @@
 //! Phase 10.14.3 — `crypto/x509/v3_utl.c`: the X.509v3 extension string/value utilities.
 //!
 //! `crypto/x509/v3_utl.c` is 1,449 lines and defines 51 hand-written functions. **This module lands
-//! 32 of them and withholds 19 by name** — the D451/D459 rule applied at function granularity.
-//! Nine are withheld because a callee is unlanded (the table below); ten because their closure
-//! is *complete* but every caller is itself withheld, so they would be dead code. The split is
-//! measured, not read off the unit: the function-level closure (`court/v3utl_cut.py`, the same
-//! `nm --undefined-only` join over the authority object that D459 used) resolves every relocation
-//! in the unit to the container that holds it, so a whole-unit blocker is attributed to the
-//! function that actually names it.
+//! 50 of them and withholds one by name** — the D451/D459 rule applied at function granularity.
 //!
-//! ## The nine withholds with an unlanded callee
+//! Phase 10.14.3 landed 32: the value/string utilities and the IP-address conversions. **This slice
+//! (Phase 11.5) lands the remaining 18** the withheld half waited on, now that 10.14.5's
+//! `X509_get_ext_d2i`/`X509V3_get_d2i` and the `GENERAL_NAME`/`ACCESS_DESCRIPTION` decoders exist:
 //!
-//! `crypto/x509/v3_utl.c` leaves six names undefined that the crate has not landed:
-//! `X509_get_ext_d2i` (`x509_ext.c`), `X509V3_get_d2i` (`v3_lib.c`), `GENERAL_NAME_print`
-//! (`v3_san.c`), `AUTHORITY_INFO_ACCESS_free` (`v3_info.c`) and `X509_REQ_get_extensions`/
-//! `X509_REQ_get_subject_name` (`x509_req.c`). Confined to the functions that name them:
+//! * the two email/OCSP accessors [`X509_get1_email`] (`:449-458`) and [`X509_get1_ocsp`]
+//!   (`:460-480`) and the three helpers they share: `sk_strcmp` (`:444-447`), `get_email`
+//!   (`:496-523`) and `append_ia5` (`:530-566`);
+//! * the whole hostname/email/IP matching surface — the `equal_fn` cluster `skip_prefix`
+//!   (`:578-606`), `equal_nocase` (`:609-636`), `equal_case` (`:639-647`), `equal_email`
+//!   (`:653-677`), `wildcard_match` (`:683-728`), `valid_star` (`:735-796`), `equal_wildcard`
+//!   (`:799-817`), `do_check_string` (`:825-867`) and `do_x509_check` (`:869-1000`) — and the four
+//!   public entry points built on it: [`X509_check_host`] (`:1002-1019`), [`X509_check_email`]
+//!   (`:1021-1038`), [`X509_check_ip`] (`:1040-1046`) and [`X509_check_ip_asc`] (`:1048-1059`).
 //!
-//! | withheld | authority lines | blocker |
-//! |---|---|---|
-//! | `X509_get1_email` | `:449-458` | `X509_get_ext_d2i` (`x509_ext.c`, 10.14.5) |
-//! | `X509_get1_ocsp` | `:460-480` | `X509_get_ext_d2i` and `AUTHORITY_INFO_ACCESS_free` (`v3_info.c`, 10.14.6) |
-//! | `X509_REQ_get1_email` | `:482-494` | `X509_REQ_get_extensions`/`_subject_name` (`x509_req.c`, 10.14.11) and `X509V3_get_d2i` (`v3_lib.c`, 10.14.5) |
-//! | `do_x509_check` | `:869-1000` | `X509_get_ext_d2i` (`x509_ext.c`) |
-//! | `X509_check_host`/`_email`/`_ip`/`_ip_asc` | `:1002-1059` | their only callee is the withheld `do_x509_check` |
+//! ## The one withhold, and its blocker
 //!
-//! `OSSL_GENERAL_NAMES_print` (`:1421-1432`) was the tenth name on this list; this slice lands it
-//! because `GENERAL_NAME_print` (`v3_san.rs`) now exists, so its closure is satisfied and the
-//! export is drivable from the admitted DSO (`OPENSSL_3.4.0`).
+//! `X509_REQ_get1_email` (`:482-494`) is withheld by name: it calls `X509_REQ_get_extensions`
+//! (`crypto/x509/x509_req.c`), which that unit withholds because the `X509_EXTENSIONS` item is
+//! absent from `src/x509/x_exten.rs` (a sibling Phase 11.4 unit this slice may not edit) — the
+//! same blocker `X509_REQ_add_extensions` carries in `v3_conf.rs`. Its other two callees,
+//! `X509_REQ_get_subject_name` and `X509V3_get_d2i`, are both landed, so the missing item is the
+//! sole reason; the name is not declared.
 //!
-//! The hostname-matching cluster (`skip_prefix`, `equal_nocase`, `equal_case`, `equal_email`,
-//! `wildcard_match`, `valid_star`, `equal_wildcard`, `do_check_string`) has a *complete* closure —
-//! every name it calls is built — but every one of them is reached only from `do_x509_check`, so
-//! they are withheld with that reason rather than defined unreachable. `get_email`, `append_ia5`
-//! and `sk_strcmp` are the same case one hop over: their only callers are the withheld
-//! `X509_get1_email`/`X509_get1_ocsp`/`X509_REQ_get1_email` (and `get_email`). That is D453's
-//! rule — a complete closure with no reachable caller is still a withhold, and the note says
-//! which of the two reasons applies.
+//! `OSSL_GENERAL_NAMES_print` (`:1421-1432`) landed in the 10.14.3 slice once `GENERAL_NAME_print`
+//! (`v3_san.rs`) existed, so its closure is satisfied and the export is drivable from the admitted
+//! DSO (`OPENSSL_3.4.0`).
 //!
 //! ## What it unblocks
 //!
@@ -67,7 +60,10 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, CStr};
 use core::ptr;
 
-use crate::asn1::layout::{Asn1String, V_ASN1_NEG};
+use crate::asn1::a_strex::ASN1_STRING_to_UTF8;
+use crate::asn1::layout::{
+    Asn1String, V_ASN1_IA5STRING, V_ASN1_NEG, V_ASN1_OCTET_STRING, V_ASN1_UTF8STRING,
+};
 use crate::asn1::prim::{ASN1_ENUMERATED_to_BN, ASN1_INTEGER_to_BN, BN_to_ASN1_INTEGER};
 use crate::asn1::string::{ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new, ASN1_OCTET_STRING_set};
 use crate::bn::bignum::{
@@ -75,24 +71,39 @@ use crate::bn::bignum::{
 };
 use crate::runtime::bio::iolib::BIO_puts;
 use crate::runtime::bio::print::{BIO_printf, BIO_snprintf};
-use crate::runtime::bio::sys::{memchr, memcpy, memset, strchr, strcmp, strlen, strncmp};
+use crate::runtime::bio::sys::{memchr, memcmp, memcpy, memset, strchr, strcmp, strlen, strncmp};
 use crate::runtime::bio::Bio;
 use crate::runtime::conf::modparse::CONF_parse_list;
 use crate::runtime::conf::types::ConfValue;
 use crate::runtime::ctype::{ossl_isdigit, ossl_isspace};
 use crate::runtime::err::{err_sites, openssl_rs_err_add_data, raise_site};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_strndup};
+use crate::runtime::obj::{
+    NID_ad_OCSP, NID_commonName, NID_id_on_SmtpUTF8Mailbox, NID_info_access,
+    NID_pkcs9_emailAddress, NID_subject_alt_name, NID_undef, OBJ_obj2nid,
+};
 use crate::runtime::stack::{
-    OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
-    OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new, OPENSSL_sk_new_null, OPENSSL_sk_num,
+    OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::str::{
-    OPENSSL_buf2hexstr, OPENSSL_hexchar2int, OPENSSL_strlcat, OPENSSL_strlcpy,
+    OPENSSL_buf2hexstr, OPENSSL_hexchar2int, OPENSSL_strlcat, OPENSSL_strlcpy, OPENSSL_strncasecmp,
 };
+use crate::x509::v3_genn::{
+    GENERAL_NAMES_free, GENERAL_NAME_free, GeneralName, GEN_DNS, GEN_EMAIL, GEN_IPADD,
+    GEN_OTHERNAME, GEN_URI,
+};
+use crate::x509::v3_info::{AUTHORITY_INFO_ACCESS_free, AccessDescription};
 use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_san::GENERAL_NAME_print;
-use crate::x509::x509name::X509_NAME_add_entry_by_txt;
+use crate::x509::x509_cmp::X509_get_subject_name;
+use crate::x509::x509_ext::X509_get_ext_d2i;
+use crate::x509::x509name::{
+    X509_NAME_ENTRY_get_data, X509_NAME_add_entry_by_txt, X509_NAME_get_entry,
+    X509_NAME_get_index_by_NID,
+};
 use crate::x509::x_name::X509Name;
+use crate::x509::x_x509::X509;
 
 /// `OPENSSL_FILE` for this unit's allocation expansions — `crypto/x509/v3_utl.c`.
 const FILE: &CStr = c"crypto/x509/v3_utl.c";
@@ -1520,6 +1531,948 @@ pub unsafe extern "C" fn ossl_bio_print_hex(out: *mut Bio, buf: *mut c_uchar, le
     // SAFETY: `hexbuf` is this call's own allocation.
     unsafe { CRYPTO_free(hexbuf.cast::<c_void>(), FILE.as_ptr(), 1447) };
     c_int::from(result)
+}
+
+// ---------------------------------------------------------------------------
+// The email/OCSP accessors
+// ---------------------------------------------------------------------------
+
+/// `static int sk_strcmp(const char *const *a, const char *const *b)` —
+/// `crypto/x509/v3_utl.c:444-447`.
+///
+/// The dedup comparator `sk_OPENSSL_STRING_new(sk_strcmp)` installs, so the email stack
+/// [`append_ia5`] builds is ordered by `strcmp` and `OPENSSL_sk_find` then binary-searches it.
+///
+/// # Safety
+///
+/// `a`/`b` must be stack element slots, each holding a live `OPENSSL_STRING`.
+unsafe extern "C" fn sk_strcmp(a: *const c_void, b: *const c_void) -> c_int {
+    // SAFETY: the stack layer passes element slots for a comparator installed on this stack.
+    let (x, y) = unsafe { (*a.cast::<*const c_char>(), *b.cast::<*const c_char>()) };
+    // SAFETY: both are non-null, NUL-terminated strings the caller pushed.
+    unsafe { strcmp(x, y) }
+}
+
+/// `static int append_ia5(STACK_OF(OPENSSL_STRING) **sk, const ASN1_IA5STRING *email)` —
+/// `crypto/x509/v3_utl.c:530-566`.
+///
+/// Sanity-checks the string (type, empty, embedded NUL), then appends a duplicate-free copy. The
+/// three "not a usable IA5 address" cases answer success without appending; on an allocation or
+/// push failure the caller-visible stack is freed and set back to NULL, so a partial result never
+/// escapes. `X509_email_free` is the caller's sharing free, reused here as the authority does.
+///
+/// # Safety
+///
+/// `sk` must be writable and hold NULL or a live string stack; `email` must be live.
+unsafe fn append_ia5(sk: *mut *mut OpenSslStack, email: *const Asn1String) -> c_int {
+    // SAFETY: `email` is live per the contract.
+    let (type_, data, length) = unsafe { ((*email).type_, (*email).data, (*email).length) };
+    if type_ != V_ASN1_IA5STRING {
+        return 1;
+    }
+    if data.is_null() || length == 0 {
+        return 1;
+    }
+    // SAFETY: `data` is `length` readable bytes per the contract.
+    if !unsafe { memchr(data.cast::<c_void>(), 0, length as usize) }.is_null() {
+        return 1;
+    }
+    // SAFETY: `sk` is writable per the contract.
+    if unsafe { *sk }.is_null() {
+        // SAFETY: no preconditions; the comparator is this module's own.
+        let fresh = OPENSSL_sk_new(Some(sk_strcmp));
+        // SAFETY: `sk` is writable per the contract.
+        unsafe { *sk = fresh };
+    }
+    // SAFETY: `sk` is writable per the contract.
+    if unsafe { *sk }.is_null() {
+        return 0;
+    }
+    // SAFETY: `data` is `length` readable bytes per the contract.
+    let emtmp =
+        unsafe { CRYPTO_strndup(data.cast::<c_char>(), length as usize, FILE.as_ptr(), 547) };
+    if emtmp.is_null() {
+        // SAFETY: `*sk` is the live stack this call built or the caller's own.
+        unsafe { X509_email_free(*sk) };
+        // SAFETY: `sk` is writable per the contract.
+        unsafe { *sk = ptr::null_mut() };
+        return 0;
+    }
+    // SAFETY: `*sk` is live; `emtmp` is this call's own NUL-terminated string.
+    if unsafe { OPENSSL_sk_find(*sk, emtmp.cast::<c_void>()) } != -1 {
+        // SAFETY: `emtmp` is this call's own.
+        unsafe { CRYPTO_free(emtmp.cast::<c_void>(), FILE.as_ptr(), 556) };
+        return 1;
+    }
+    // SAFETY: `*sk` is live; `emtmp` is this call's own string.
+    if unsafe { OPENSSL_sk_push(*sk, emtmp.cast::<c_void>()) } == 0 {
+        // SAFETY: `emtmp` is this call's own (the failed push did not take it).
+        unsafe { CRYPTO_free(emtmp.cast::<c_void>(), FILE.as_ptr(), 560) };
+        // SAFETY: `*sk` is the live stack this call built or the caller's own.
+        unsafe { X509_email_free(*sk) };
+        // SAFETY: `sk` is writable per the contract.
+        unsafe { *sk = ptr::null_mut() };
+        return 0;
+    }
+    1
+}
+
+/// The `void (*)(void *)` thunk `sk_GENERAL_NAME_pop_free(gens, GENERAL_NAME_free)` installs —
+/// `crypto/x509/v3_utl.c:456`.
+///
+/// # Safety
+///
+/// `p` must be NULL or a live `GENERAL_NAME` (the stack contract).
+unsafe extern "C" fn general_name_free_thunk(p: *mut c_void) {
+    // SAFETY: the stack holds `GENERAL_NAME` pointers per the contract.
+    unsafe { GENERAL_NAME_free(p.cast::<GeneralName>()) };
+}
+
+/// `static STACK_OF(OPENSSL_STRING) *get_email(const X509_NAME *name, GENERAL_NAMES *gens)` —
+/// `crypto/x509/v3_utl.c:496-523`.
+///
+/// First the subject DN's `emailAddress` attributes, then every `GEN_EMAIL` general name. A failed
+/// append answers NULL; the partial stack is left for the caller's `X509_email_free` to drain, as
+/// in the authority.
+///
+/// # Safety
+///
+/// `name` must be NULL or a live `X509_NAME`; `gens` NULL or a live `GENERAL_NAMES`.
+unsafe fn get_email(name: *const X509Name, gens: *mut OpenSslStack) -> *mut OpenSslStack {
+    let mut ret: *mut OpenSslStack = ptr::null_mut();
+    let mut i: c_int = -1;
+    loop {
+        // SAFETY: `name` is NULL or live; the NID is a constant.
+        i = unsafe { X509_NAME_get_index_by_NID(name, NID_pkcs9_emailAddress, i) };
+        if i < 0 {
+            break;
+        }
+        // SAFETY: `i` is a valid entry index returned above.
+        let ne = unsafe { X509_NAME_get_entry(name, i) };
+        // SAFETY: `ne` is a live entry.
+        let email = unsafe { X509_NAME_ENTRY_get_data(ne) };
+        // SAFETY: `&mut ret` is writable; `email` is live.
+        if unsafe { append_ia5(&raw mut ret, email) } == 0 {
+            return ptr::null_mut();
+        }
+    }
+    // SAFETY: `gens` is NULL or a live `GENERAL_NAMES` per the contract (a NULL answer is -1).
+    let num = unsafe { OPENSSL_sk_num(gens) };
+    for j in 0..num {
+        // SAFETY: `gens` is live and `j` is within its count.
+        let gen = unsafe { OPENSSL_sk_value(gens, j) }.cast::<GeneralName>();
+        // SAFETY: `gen` is a live `GENERAL_NAME`.
+        if unsafe { (*gen).type_ } != GEN_EMAIL {
+            continue;
+        }
+        // SAFETY: `gen` is live and the `rfc822Name` arm is live under the `GEN_EMAIL` selector.
+        let ia5 = unsafe { (*gen).d.ia5 };
+        // SAFETY: `&mut ret` is writable; `ia5` is live.
+        if unsafe { append_ia5(&raw mut ret, ia5) } == 0 {
+            return ptr::null_mut();
+        }
+    }
+    ret
+}
+
+/// `STACK_OF(OPENSSL_STRING) *X509_get1_email(X509 *x)` — `crypto/x509/v3_utl.c:449-458`.
+///
+/// # Safety
+///
+/// `x` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_get1_email(x: *mut X509) -> *mut OpenSslStack {
+    // SAFETY: `x` is live per the contract; `crit`/`idx` are NULL, which the decoder accepts.
+    let gens =
+        unsafe { X509_get_ext_d2i(x, NID_subject_alt_name, ptr::null_mut(), ptr::null_mut()) }
+            .cast::<OpenSslStack>();
+    // SAFETY: `x` is live; `gens` is NULL or a live `GENERAL_NAMES`.
+    let ret = unsafe { get_email(X509_get_subject_name(x), gens) };
+    // SAFETY: `gens` is NULL or this call's own stack of `GENERAL_NAME` pointers.
+    unsafe { OPENSSL_sk_pop_free(gens, Some(general_name_free_thunk)) };
+    ret
+}
+
+/// `STACK_OF(OPENSSL_STRING) *X509_get1_ocsp(X509 *x)` — `crypto/x509/v3_utl.c:460-480`.
+///
+/// # Safety
+///
+/// `x` must be live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_get1_ocsp(x: *mut X509) -> *mut OpenSslStack {
+    let mut ret: *mut OpenSslStack = ptr::null_mut();
+    // SAFETY: `x` is live per the contract; `crit`/`idx` are NULL, which the decoder accepts.
+    let info = unsafe { X509_get_ext_d2i(x, NID_info_access, ptr::null_mut(), ptr::null_mut()) }
+        .cast::<OpenSslStack>();
+    if info.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `info` is live.
+    let num = unsafe { OPENSSL_sk_num(info) };
+    for i in 0..num {
+        // SAFETY: `info` is live and `i` is within its count.
+        let ad = unsafe { OPENSSL_sk_value(info, i) }.cast::<AccessDescription>();
+        // SAFETY: `ad` is a live `ACCESS_DESCRIPTION`; its `method` is a live object.
+        if unsafe { OBJ_obj2nid((*ad).method) } == NID_ad_OCSP {
+            // SAFETY: `ad` is live; `location` is a live `GENERAL_NAME`.
+            let loc = unsafe { (*ad).location };
+            // SAFETY: `loc` is live.
+            if unsafe { (*loc).type_ } == GEN_URI {
+                // SAFETY: `loc` is live and the `uniformResourceIdentifier` arm is live under the
+                // `GEN_URI` selector.
+                let ia5 = unsafe { (*loc).d.ia5 };
+                // SAFETY: `&mut ret` is writable; `ia5` is live.
+                if unsafe { append_ia5(&raw mut ret, ia5) } == 0 {
+                    break;
+                }
+            }
+        }
+    }
+    // SAFETY: `info` is this call's own authority-info stack.
+    unsafe { AUTHORITY_INFO_ACCESS_free(info) };
+    ret
+}
+
+// ---------------------------------------------------------------------------
+// The hostname / email / IP matching surface
+// ---------------------------------------------------------------------------
+
+/// `#define X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT 0x1` — `include/openssl/x509v3.h.in:790`.
+const X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT: c_uint = 0x1;
+/// `#define X509_CHECK_FLAG_NO_WILDCARDS 0x2` — `include/openssl/x509v3.h.in:792`.
+const X509_CHECK_FLAG_NO_WILDCARDS: c_uint = 0x2;
+/// `#define X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS 0x4` — `include/openssl/x509v3.h.in:794`.
+const X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS: c_uint = 0x4;
+/// `#define X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS 0x8` — `include/openssl/x509v3.h.in:796`.
+const X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS: c_uint = 0x8;
+/// `#define X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS 0x10` — `include/openssl/x509v3.h.in:798`.
+const X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS: c_uint = 0x10;
+/// `#define X509_CHECK_FLAG_NEVER_CHECK_SUBJECT 0x20` — `include/openssl/x509v3.h.in:800`.
+const X509_CHECK_FLAG_NEVER_CHECK_SUBJECT: c_uint = 0x20;
+/// `#define _X509_CHECK_FLAG_DOT_SUBDOMAINS 0x8000` — `include/openssl/x509v3.h.in:806`.
+const _X509_CHECK_FLAG_DOT_SUBDOMAINS: c_uint = 0x8000;
+
+/// `#define LABEL_START (1 << 0)` — `crypto/x509/v3_utl.c:730`.
+const LABEL_START: c_int = 1 << 0;
+/// `#define LABEL_END (1 << 1)` — `crypto/x509/v3_utl.c:731`. The authority defines it and no line
+/// reads it; kept for fidelity.
+#[allow(dead_code)]
+const LABEL_END: c_int = 1 << 1;
+/// `#define LABEL_HYPHEN (1 << 2)` — `crypto/x509/v3_utl.c:732`.
+const LABEL_HYPHEN: c_int = 1 << 2;
+/// `#define LABEL_IDNA (1 << 3)` — `crypto/x509/v3_utl.c:733`.
+const LABEL_IDNA: c_int = 1 << 3;
+
+/// `typedef int (*equal_fn)(const unsigned char *pattern, size_t pattern_len,
+/// const unsigned char *subject, size_t subject_len, unsigned int flags)` —
+/// `crypto/x509/v3_utl.c:573-575`.
+type EqualFn = unsafe extern "C" fn(*const c_uchar, usize, *const c_uchar, usize, c_uint) -> c_int;
+
+/// `HAS_CASE_PREFIX(s, p)` — `include/internal/common.h:63`, i.e.
+/// `OPENSSL_strncasecmp(s, p, sizeof(p) - 1) == 0`.
+///
+/// # Safety
+///
+/// `s` must be readable for `p`'s byte length (the callers guarantee at least that many bytes).
+unsafe fn has_case_prefix(s: *const c_uchar, p: &CStr) -> bool {
+    // SAFETY: `s` is readable for `p`'s length per the contract.
+    (unsafe { OPENSSL_strncasecmp(s.cast::<c_char>(), p.as_ptr(), p.count_bytes()) }) == 0
+}
+
+/// `static void skip_prefix(const unsigned char **p, size_t *plen, size_t subject_len,
+/// unsigned int flags)` — `crypto/x509/v3_utl.c:578-606`.
+///
+/// Advances the pattern past any leading labels the dot-subdomain flag permits, but only if the
+/// whole prefix can be dropped (the remaining length equals the subject's).
+///
+/// # Safety
+///
+/// `p`/`plen` are writable slots naming the pattern; `*p` is `*plen` readable bytes.
+unsafe fn skip_prefix(p: *mut *const c_uchar, plen: *mut usize, subject_len: usize, flags: c_uint) {
+    // SAFETY: `p`/`plen` are the caller's own slots.
+    let mut pattern = unsafe { *p };
+    // SAFETY: as above.
+    let mut pattern_len = unsafe { *plen };
+    if flags & _X509_CHECK_FLAG_DOT_SUBDOMAINS == 0 {
+        return;
+    }
+    while pattern_len > subject_len {
+        // SAFETY: `pattern` has `pattern_len` readable bytes, so `*pattern` is in bounds.
+        if unsafe { *pattern } == 0 {
+            break;
+        }
+        if flags & X509_CHECK_FLAG_SINGLE_LABEL_SUBDOMAINS != 0
+            // SAFETY: `pattern` is before the terminator.
+            && unsafe { *pattern } == b'.'
+        {
+            break;
+        }
+        // SAFETY: `pattern` is before the terminator.
+        pattern = unsafe { pattern.add(1) };
+        pattern_len -= 1;
+    }
+    if pattern_len == subject_len {
+        // SAFETY: `p`/`plen` are the caller's own slots.
+        unsafe {
+            *p = pattern;
+            *plen = pattern_len;
+        }
+    }
+}
+
+/// `static int equal_nocase(const unsigned char *pattern, size_t pattern_len,
+/// const unsigned char *subject, size_t subject_len, unsigned int flags)` —
+/// `crypto/x509/v3_utl.c:609-636`.
+///
+/// ASCII-case-insensitive compare after the optional dot-subdomain prefix skip; a NUL in the
+/// pattern is refused even if it would match.
+///
+/// # Safety
+///
+/// `pattern` is `pattern_len` and `subject` is `subject_len` readable bytes.
+unsafe extern "C" fn equal_nocase(
+    pattern: *const c_uchar,
+    pattern_len: usize,
+    subject: *const c_uchar,
+    subject_len: usize,
+    flags: c_uint,
+) -> c_int {
+    let mut p = pattern;
+    let mut plen = pattern_len;
+    // SAFETY: `&mut p`/`&mut plen` are this frame's own slots; the byte ranges are the caller's.
+    unsafe { skip_prefix(&raw mut p, &raw mut plen, subject_len, flags) };
+    if plen != subject_len {
+        return 0;
+    }
+    let mut s = subject;
+    let mut n = plen;
+    while n != 0 {
+        // SAFETY: `p`/`s` each have `n` readable bytes remaining.
+        let (mut l, mut r) = unsafe { (*p, *s) };
+        if l == 0 {
+            return 0;
+        }
+        if l != r {
+            if l.is_ascii_uppercase() {
+                l = (l - b'A') + b'a';
+            }
+            if r.is_ascii_uppercase() {
+                r = (r - b'A') + b'a';
+            }
+            if l != r {
+                return 0;
+            }
+        }
+        // SAFETY: `p`/`s` advance within the `n`-byte range.
+        unsafe {
+            p = p.add(1);
+            s = s.add(1);
+        }
+        n -= 1;
+    }
+    1
+}
+
+/// `static int equal_case(const unsigned char *pattern, size_t pattern_len,
+/// const unsigned char *subject, size_t subject_len, unsigned int flags)` —
+/// `crypto/x509/v3_utl.c:639-647`.
+///
+/// # Safety
+///
+/// `pattern` is `pattern_len` and `subject` is `subject_len` readable bytes.
+unsafe extern "C" fn equal_case(
+    pattern: *const c_uchar,
+    pattern_len: usize,
+    subject: *const c_uchar,
+    subject_len: usize,
+    flags: c_uint,
+) -> c_int {
+    let mut p = pattern;
+    let mut plen = pattern_len;
+    // SAFETY: `&mut p`/`&mut plen` are this frame's own slots; the byte ranges are the caller's.
+    unsafe { skip_prefix(&raw mut p, &raw mut plen, subject_len, flags) };
+    if plen != subject_len {
+        return 0;
+    }
+    // SAFETY: `p`/`subject` are each `plen` readable bytes.
+    c_int::from(unsafe { memcmp(p.cast::<c_void>(), subject.cast::<c_void>(), plen) } == 0)
+}
+
+/// `static int equal_email(const unsigned char *a, size_t a_len, const unsigned char *b,
+/// size_t b_len, unsigned int unused_flags)` — `crypto/x509/v3_utl.c:653-677`.
+///
+/// RFC 5280 §7.5: only the domain is compared case-insensitively, so the search for the last `@`
+/// runs backwards to leave any quoted local-part alone.
+///
+/// # Safety
+///
+/// `a` is `a_len` and `b` is `b_len` readable bytes.
+unsafe extern "C" fn equal_email(
+    a: *const c_uchar,
+    a_len: usize,
+    b: *const c_uchar,
+    b_len: usize,
+    _unused_flags: c_uint,
+) -> c_int {
+    let mut i = a_len;
+    if a_len != b_len {
+        return 0;
+    }
+    while i > 0 {
+        i -= 1;
+        // SAFETY: `i < a_len == b_len`, so both reads are in bounds.
+        if unsafe { *a.add(i) } == b'@' || unsafe { *b.add(i) } == b'@' {
+            // SAFETY: `a+i`/`b+i` are each `a_len - i` readable bytes.
+            if unsafe { equal_nocase(a.add(i), a_len - i, b.add(i), a_len - i, 0) } == 0 {
+                return 0;
+            }
+            break;
+        }
+    }
+    if i == 0 {
+        i = a_len;
+    }
+    // SAFETY: `a`/`b` are each at least `i <= a_len == b_len` readable bytes.
+    unsafe { equal_case(a, i, b, i, 0) }
+}
+
+/// `static int wildcard_match(const unsigned char *prefix, size_t prefix_len,
+/// const unsigned char *suffix, size_t suffix_len, const unsigned char *subject,
+/// size_t subject_len, unsigned int flags)` — `crypto/x509/v3_utl.c:683-728`.
+///
+/// Matches the wildcard's fixed prefix and suffix against the subject and then validates the
+/// in-between label characters.
+///
+/// # Safety
+///
+/// `prefix`/`suffix`/`subject` are readable for their stated lengths; `suffix_len >= 1` (both
+/// callers derive the suffix from a `valid_star` result, which leaves at least one byte after the
+/// star).
+unsafe extern "C" fn wildcard_match(
+    prefix: *const c_uchar,
+    prefix_len: usize,
+    suffix: *const c_uchar,
+    suffix_len: usize,
+    subject: *const c_uchar,
+    subject_len: usize,
+    flags: c_uint,
+) -> c_int {
+    let mut allow_multi = false;
+    let mut allow_idna = false;
+    if subject_len < prefix_len + suffix_len {
+        return 0;
+    }
+    // SAFETY: `prefix` is `prefix_len` and `subject` is `subject_len >= prefix_len` bytes.
+    if unsafe { equal_nocase(prefix, prefix_len, subject, prefix_len, flags) } == 0 {
+        return 0;
+    }
+    // SAFETY: `prefix_len <= subject_len`.
+    let wildcard_start = unsafe { subject.add(prefix_len) };
+    // SAFETY: `suffix_len <= subject_len`.
+    let wildcard_end = unsafe { subject.add(subject_len - suffix_len) };
+    // SAFETY: `wildcard_end` is `suffix_len` readable bytes.
+    if unsafe { equal_nocase(wildcard_end, suffix_len, suffix, suffix_len, flags) } == 0 {
+        return 0;
+    }
+    // SAFETY: `suffix` has `suffix_len >= 1` readable bytes per the contract.
+    if prefix_len == 0 && unsafe { *suffix } == b'.' {
+        if wildcard_start == wildcard_end {
+            return 0;
+        }
+        allow_idna = true;
+        if flags & X509_CHECK_FLAG_MULTI_LABEL_WILDCARDS != 0 {
+            allow_multi = true;
+        }
+    }
+    // SAFETY: `subject` has `subject_len >= 4` bytes when the guard is true.
+    if !allow_idna && subject_len >= 4 && unsafe { has_case_prefix(subject, c"xn--") } {
+        return 0;
+    }
+    // SAFETY: `wildcard_start`/`wildcard_end` delimit the star's matched bytes.
+    if wildcard_end == unsafe { wildcard_start.add(1) } && unsafe { *wildcard_start } == b'*' {
+        return 1;
+    }
+    let mut q = wildcard_start;
+    while q != wildcard_end {
+        // SAFETY: `q` is within the wildcard byte range.
+        let c = unsafe { *q };
+        let ok = c.is_ascii_alphanumeric() || c == b'-' || (allow_multi && c == b'.');
+        if !ok {
+            return 0;
+        }
+        // SAFETY: `q` advances toward `wildcard_end`.
+        q = unsafe { q.add(1) };
+    }
+    1
+}
+
+/// `static const unsigned char *valid_star(const unsigned char *p, size_t len,
+/// unsigned int flags)` — `crypto/x509/v3_utl.c:735-796`.
+///
+/// Locates the one legal wildcard, or NULL. `LABEL_*` is the little state machine the authority
+/// runs; the final label may not end in a hyphen or dot and at least two dots must follow the
+/// star.
+///
+/// # Safety
+///
+/// `p` must be `len` readable bytes.
+unsafe fn valid_star(p: *const c_uchar, len: usize, flags: c_uint) -> *const c_uchar {
+    let mut star: *const c_uchar = ptr::null();
+    let mut state = LABEL_START;
+    let mut dots: c_int = 0;
+    let mut i = 0;
+    while i < len {
+        // SAFETY: `i < len`, so `p[i]` is readable.
+        let c = unsafe { *p.add(i) };
+        if c == b'*' {
+            let atstart = (state & LABEL_START) != 0;
+            // SAFETY: `i < len`, so `i == len - 1` or `i + 1 < len` is readable.
+            let atend = i == len - 1 || unsafe { *p.add(i + 1) } == b'.';
+            if !star.is_null() || (state & LABEL_IDNA) != 0 || dots != 0 {
+                return ptr::null();
+            }
+            if flags & X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS != 0 && !(atstart && atend) {
+                return ptr::null();
+            }
+            if !atstart && !atend {
+                return ptr::null();
+            }
+            // SAFETY: `i < len`; the returned pointer points into the caller's buffer.
+            star = unsafe { p.add(i) };
+            state &= !LABEL_START;
+        } else if c.is_ascii_alphanumeric() {
+            if (state & LABEL_START) != 0
+                && len - i >= 4
+                // SAFETY: `len - i >= 4` bytes are readable from `p + i`.
+                && unsafe { has_case_prefix(p.add(i), c"xn--") }
+            {
+                state |= LABEL_IDNA;
+            }
+            state &= !(LABEL_HYPHEN | LABEL_START);
+        } else if c == b'.' {
+            if (state & (LABEL_HYPHEN | LABEL_START)) != 0 {
+                return ptr::null();
+            }
+            state = LABEL_START;
+            dots += 1;
+        } else if c == b'-' {
+            if (state & LABEL_START) != 0 {
+                return ptr::null();
+            }
+            state |= LABEL_HYPHEN;
+        } else {
+            return ptr::null();
+        }
+        i += 1;
+    }
+    if (state & (LABEL_START | LABEL_HYPHEN)) != 0 || dots < 2 {
+        return ptr::null();
+    }
+    star
+}
+
+/// `static int equal_wildcard(const unsigned char *pattern, size_t pattern_len,
+/// const unsigned char *subject, size_t subject_len, unsigned int flags)` —
+/// `crypto/x509/v3_utl.c:799-817`.
+///
+/// # Safety
+///
+/// `pattern` is `pattern_len` and `subject` is `subject_len` readable bytes.
+unsafe extern "C" fn equal_wildcard(
+    pattern: *const c_uchar,
+    pattern_len: usize,
+    subject: *const c_uchar,
+    subject_len: usize,
+    flags: c_uint,
+) -> c_int {
+    let mut star: *const c_uchar = ptr::null();
+    // SAFETY: `subject` is `subject_len` readable bytes.
+    if !(subject_len > 1 && unsafe { *subject } == b'.') {
+        // SAFETY: `pattern` is `pattern_len` readable bytes.
+        star = unsafe { valid_star(pattern, pattern_len, flags) };
+    }
+    if star.is_null() {
+        // SAFETY: readable ranges per the contract.
+        return unsafe { equal_nocase(pattern, pattern_len, subject, subject_len, flags) };
+    }
+    // SAFETY: `star` is within `pattern[..pattern_len]`, so both derived lengths are exact.
+    unsafe {
+        wildcard_match(
+            pattern,
+            star.offset_from(pattern).cast_unsigned(),
+            star.add(1),
+            pattern
+                .add(pattern_len)
+                .offset_from(star.add(1))
+                .cast_unsigned(),
+            subject,
+            subject_len,
+            flags,
+        )
+    }
+}
+
+/// `static int do_check_string(const ASN1_STRING *a, int cmp_type, equal_fn equal,
+/// unsigned int flags, const char *b, size_t blen, char **peername)` —
+/// `crypto/x509/v3_utl.c:825-867`.
+///
+/// Compares one candidate string by the chosen `equal` function. `cmp_type > 0` requires an exact
+/// type match; `cmp_type <= 0` converts the string to UTF-8 first. A positive match optionally
+/// records the peer name (a fresh `OPENSSL_strndup`); an allocation failure answers -1.
+///
+/// # Safety
+///
+/// `a` is `NULL` or live but the callers pass live; `b` is `blen` readable bytes; `peername` is
+/// NULL or writable.
+unsafe fn do_check_string(
+    a: *const Asn1String,
+    cmp_type: c_int,
+    equal: EqualFn,
+    flags: c_uint,
+    b: *const c_char,
+    blen: usize,
+    peername: *mut *mut c_char,
+) -> c_int {
+    let mut rv = 0;
+    // SAFETY: `a` is live per the contract.
+    let (data, length, type_) = unsafe { ((*a).data, (*a).length, (*a).type_) };
+    if data.is_null() || length == 0 {
+        return 0;
+    }
+    if cmp_type > 0 {
+        if cmp_type != type_ {
+            return 0;
+        }
+        if cmp_type == V_ASN1_IA5STRING {
+            // SAFETY: `data` is `length` and `b` is `blen` readable bytes.
+            rv = unsafe { equal(data, length as usize, b.cast::<c_uchar>(), blen, flags) };
+        } else if length as usize == blen
+            // SAFETY: `data` and `b` are each `blen` readable bytes.
+            && unsafe { memcmp(data.cast::<c_void>(), b.cast::<c_void>(), blen) } == 0
+        {
+            rv = 1;
+        }
+        if rv > 0 && !peername.is_null() {
+            // SAFETY: `data` is `length` readable bytes.
+            let dup = unsafe {
+                CRYPTO_strndup(data.cast::<c_char>(), length as usize, FILE.as_ptr(), 841)
+            };
+            // SAFETY: `peername` is writable per the contract.
+            unsafe { *peername = dup };
+            if dup.is_null() {
+                return -1;
+            }
+        }
+    } else {
+        let mut astr: *mut c_uchar = ptr::null_mut();
+        // SAFETY: `a` is live; `astr` is a writable slot.
+        let astrlen = unsafe { ASN1_STRING_to_UTF8(&raw mut astr, a) };
+        if astrlen < 0 {
+            return -1;
+        }
+        // SAFETY: `astr` is `astrlen` and `b` is `blen` readable bytes.
+        rv = unsafe { equal(astr, astrlen as usize, b.cast::<c_uchar>(), blen, flags) };
+        if rv > 0 && !peername.is_null() {
+            // SAFETY: `astr` is `astrlen` readable bytes.
+            let dup = unsafe {
+                CRYPTO_strndup(astr.cast::<c_char>(), astrlen as usize, FILE.as_ptr(), 858)
+            };
+            // SAFETY: `peername` is writable per the contract.
+            unsafe { *peername = dup };
+            if dup.is_null() {
+                // SAFETY: `astr` is this call's own.
+                unsafe { CRYPTO_free(astr.cast::<c_void>(), FILE.as_ptr(), 860) };
+                return -1;
+            }
+        }
+        // SAFETY: `astr` is this call's own.
+        unsafe { CRYPTO_free(astr.cast::<c_void>(), FILE.as_ptr(), 864) };
+    }
+    rv
+}
+
+/// `static int do_x509_check(X509 *x, const char *chk, size_t chklen, unsigned int flags,
+/// int check_type, char **peername)` — `crypto/x509/v3_utl.c:869-1000`.
+///
+/// The shared engine behind the four public checks: scans the subjectAltName general names for
+/// the requested type (an `otherName` `SmtpUTF8Mailbox` counts as an email under RFC 8398), then
+/// falls back to the subject CN/emailAddress attributes unless a flag says otherwise. The
+/// internal dot-subdomain flag is cleared on entry and re-derived for the DNS case only.
+///
+/// # Safety
+///
+/// `x` is live; `chk` is `chklen` readable bytes; `peername` is NULL or writable.
+unsafe fn do_x509_check(
+    x: *mut X509,
+    chk: *const c_char,
+    mut chklen: usize,
+    mut flags: c_uint,
+    check_type: c_int,
+    peername: *mut *mut c_char,
+) -> c_int {
+    let mut cnid = NID_undef;
+    let mut alt_type;
+    let mut san_present = 0;
+    let mut rv = 0;
+    let equal: EqualFn;
+
+    flags &= !_X509_CHECK_FLAG_DOT_SUBDOMAINS;
+    if check_type == GEN_EMAIL {
+        cnid = NID_pkcs9_emailAddress;
+        alt_type = V_ASN1_IA5STRING;
+        equal = equal_email;
+    } else if check_type == GEN_DNS {
+        cnid = NID_commonName;
+        // SAFETY: `chk` is `chklen` readable bytes.
+        if chklen > 1 && unsafe { *chk } == b'.' as c_char {
+            flags |= _X509_CHECK_FLAG_DOT_SUBDOMAINS;
+        }
+        alt_type = V_ASN1_IA5STRING;
+        if flags & X509_CHECK_FLAG_NO_WILDCARDS != 0 {
+            equal = equal_nocase;
+        } else {
+            equal = equal_wildcard;
+        }
+    } else {
+        alt_type = V_ASN1_OCTET_STRING;
+        equal = equal_case;
+    }
+
+    if chklen == 0 {
+        // SAFETY: `chk` is NULL or NUL-terminated per the contract.
+        chklen = unsafe { strlen(chk) };
+    }
+
+    // SAFETY: `x` is live per the contract; `crit`/`idx` are NULL, which the decoder accepts.
+    let gens =
+        unsafe { X509_get_ext_d2i(x, NID_subject_alt_name, ptr::null_mut(), ptr::null_mut()) }
+            .cast::<OpenSslStack>();
+    if !gens.is_null() {
+        // SAFETY: `gens` is live.
+        let num = unsafe { OPENSSL_sk_num(gens) };
+        for i in 0..num {
+            // SAFETY: `gens` is live and `i` is within its count.
+            let gen = unsafe { OPENSSL_sk_value(gens, i) }.cast::<GeneralName>();
+            // SAFETY: `gen` is a live `GENERAL_NAME`.
+            let cstr: *mut Asn1String;
+            // SAFETY: `gen` is live; the selector chooses which union arm is live.
+            match unsafe { (*gen).type_ } {
+                GEN_OTHERNAME => {
+                    // SAFETY: the `otherName` arm is live under the `GEN_OTHERNAME` selector.
+                    let other = unsafe { (*gen).d.otherName };
+                    // SAFETY: `other` is live.
+                    let type_id = unsafe { (*other).type_id };
+                    // SAFETY: `type_id` is a live object.
+                    if unsafe { OBJ_obj2nid(type_id) } != NID_id_on_SmtpUTF8Mailbox {
+                        continue;
+                    }
+                    // SAFETY: `other->value` is a live `ASN1_TYPE`.
+                    let val = unsafe { (*other).value };
+                    // SAFETY: `val` is live.
+                    if check_type != GEN_EMAIL || unsafe { (*val).type_ } != V_ASN1_UTF8STRING {
+                        continue;
+                    }
+                    alt_type = 0;
+                    // SAFETY: `val` is live and the `utf8string` arm is live under the
+                    // `V_ASN1_UTF8STRING` selector.
+                    cstr = unsafe { (*val).value.ptr }.cast::<Asn1String>();
+                }
+                GEN_EMAIL => {
+                    if check_type != GEN_EMAIL {
+                        continue;
+                    }
+                    // SAFETY: the `rfc822Name` arm is live under the `GEN_EMAIL` selector.
+                    cstr = unsafe { (*gen).d.ia5 };
+                }
+                GEN_DNS => {
+                    if check_type != GEN_DNS {
+                        continue;
+                    }
+                    // SAFETY: the `dNSName` arm is live under the `GEN_DNS` selector.
+                    cstr = unsafe { (*gen).d.ia5 };
+                }
+                GEN_IPADD => {
+                    if check_type != GEN_IPADD {
+                        continue;
+                    }
+                    // SAFETY: the `iPAddress` arm is live under the `GEN_IPADD` selector.
+                    cstr = unsafe { (*gen).d.iPAddress };
+                }
+                _ => continue,
+            }
+            san_present = 1;
+            // SAFETY: `cstr` is a live `ASN1_STRING`; `chk` is `chklen` bytes.
+            rv = unsafe { do_check_string(cstr, alt_type, equal, flags, chk, chklen, peername) };
+            if rv != 0 {
+                break;
+            }
+        }
+        // SAFETY: `gens` is this call's own general-names stack.
+        unsafe { GENERAL_NAMES_free(gens) };
+        if rv != 0 {
+            return rv;
+        }
+        if san_present != 0 && flags & X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT == 0 {
+            return 0;
+        }
+    }
+
+    if cnid == NID_undef || flags & X509_CHECK_FLAG_NEVER_CHECK_SUBJECT != 0 {
+        return 0;
+    }
+
+    let mut i: c_int = -1;
+    // SAFETY: `x` is live.
+    let name = unsafe { X509_get_subject_name(x) };
+    loop {
+        // SAFETY: `name` is live; the NID is a constant.
+        i = unsafe { X509_NAME_get_index_by_NID(name, cnid, i) };
+        if i < 0 {
+            return 0;
+        }
+        // SAFETY: `i` is a valid entry index returned above.
+        let ne = unsafe { X509_NAME_get_entry(name, i) };
+        // SAFETY: `ne` is a live entry.
+        let str_ = unsafe { X509_NAME_ENTRY_get_data(ne) };
+        // SAFETY: `str_` is a live `ASN1_STRING`; `chk` is `chklen` bytes.
+        rv = unsafe { do_check_string(str_, -1, equal, flags, chk, chklen, peername) };
+        if rv != 0 {
+            return rv;
+        }
+    }
+}
+
+/// `int X509_check_host(X509 *x, const char *chk, size_t chklen, unsigned int flags,
+/// char **peername)` — `crypto/x509/v3_utl.c:1002-1019`.
+///
+/// # Safety
+///
+/// `x` is live; `chk` is `chklen` readable bytes; `peername` is NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn X509_check_host(
+    x: *mut X509,
+    chk: *const c_char,
+    mut chklen: usize,
+    flags: c_uint,
+    peername: *mut *mut c_char,
+) -> c_int {
+    if chk.is_null() {
+        return -2;
+    }
+    // Embedded NULs are disallowed except as the last character of a length-2-or-more string.
+    if chklen == 0 {
+        // SAFETY: `chk` is NUL-terminated per the contract.
+        chklen = unsafe { strlen(chk) };
+    } else {
+        let probe = if chklen > 1 { chklen - 1 } else { chklen };
+        // SAFETY: `chk` is `chklen` readable bytes, so `probe <= chklen` are readable.
+        if !unsafe { memchr(chk.cast::<c_void>(), 0, probe) }.is_null() {
+            return -2;
+        }
+    }
+    // SAFETY: `chk` is `chklen` readable bytes.
+    if chklen > 1 && unsafe { *chk.add(chklen - 1) } == 0 {
+        chklen -= 1;
+    }
+    // SAFETY: `x` is live; `chk` is `chklen` bytes.
+    unsafe { do_x509_check(x, chk, chklen, flags, GEN_DNS, peername) }
+}
+
+/// `int X509_check_email(X509 *x, const char *chk, size_t chklen, unsigned int flags)` —
+/// `crypto/x509/v3_utl.c:1021-1038`.
+///
+/// # Safety
+///
+/// `x` is live; `chk` is `chklen` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn X509_check_email(
+    x: *mut X509,
+    chk: *const c_char,
+    mut chklen: usize,
+    flags: c_uint,
+) -> c_int {
+    if chk.is_null() {
+        return -2;
+    }
+    if chklen == 0 {
+        // SAFETY: `chk` is NUL-terminated per the contract.
+        chklen = unsafe { strlen(chk) };
+    } else {
+        let probe = if chklen > 1 { chklen - 1 } else { chklen };
+        // SAFETY: `chk` is `chklen` readable bytes, so `probe <= chklen` are readable.
+        if !unsafe { memchr(chk.cast::<c_void>(), 0, probe) }.is_null() {
+            return -2;
+        }
+    }
+    // SAFETY: `chk` is `chklen` readable bytes.
+    if chklen > 1 && unsafe { *chk.add(chklen - 1) } == 0 {
+        chklen -= 1;
+    }
+    // SAFETY: `x` is live; `chk` is `chklen` bytes.
+    unsafe { do_x509_check(x, chk, chklen, flags, GEN_EMAIL, ptr::null_mut()) }
+}
+
+/// `int X509_check_ip(X509 *x, const unsigned char *chk, size_t chklen,
+/// unsigned int flags)` — `crypto/x509/v3_utl.c:1040-1046`.
+///
+/// # Safety
+///
+/// `x` is live; `chk` is `chklen` readable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn X509_check_ip(
+    x: *mut X509,
+    chk: *const c_uchar,
+    chklen: usize,
+    flags: c_uint,
+) -> c_int {
+    if chk.is_null() {
+        return -2;
+    }
+    // SAFETY: `x` is live; `chk` is `chklen` bytes and is read as bytes.
+    unsafe {
+        do_x509_check(
+            x,
+            chk.cast::<c_char>(),
+            chklen,
+            flags,
+            GEN_IPADD,
+            ptr::null_mut(),
+        )
+    }
+}
+
+/// `int X509_check_ip_asc(X509 *x, const char *ipasc, unsigned int flags)` —
+/// `crypto/x509/v3_utl.c:1048-1059`.
+///
+/// # Safety
+///
+/// `x` is live; `ipasc` is NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn X509_check_ip_asc(
+    x: *mut X509,
+    ipasc: *const c_char,
+    flags: c_uint,
+) -> c_int {
+    let mut ipout = [0 as c_uchar; 16];
+    if ipasc.is_null() {
+        return -2;
+    }
+    // SAFETY: `ipout` is 16 writable bytes; `ipasc` is NUL-terminated.
+    let iplen = unsafe { ossl_a2i_ipadd(ipout.as_mut_ptr(), ipasc) };
+    if iplen == 0 {
+        return -2;
+    }
+    // SAFETY: `x` is live; `ipout` is `iplen <= 16` readable bytes.
+    unsafe {
+        do_x509_check(
+            x,
+            ipout.as_ptr().cast::<c_char>(),
+            iplen as usize,
+            flags,
+            GEN_IPADD,
+            ptr::null_mut(),
+        )
+    }
 }
 
 #[cfg(test)]

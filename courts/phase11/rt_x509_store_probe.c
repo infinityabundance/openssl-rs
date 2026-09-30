@@ -1,5 +1,6 @@
 /*
- * RT-X509-STORE -- the Phase 11.1/11.4 X.509 store/lookup/object and mutator surface, driven.
+ * RT-X509-STORE -- the Phase 11 X.509 store/lookup/object, mutator, trust, printer,
+ * extension-build and name-check surface, driven.
  *
  * This is the first *behavioural* court of the X.509 stratum: one C program, compiled once
  * against the admitted authority and once against the candidate distribution shell, whose two
@@ -9,8 +10,11 @@
  * the probe's own frame (`probe_hygiene.py` compiles it at -O0/-O1/-O2 and requires that).
  *
  * The fixtures are fixed and embedded (`rt_x509_der.h`): the `root-cert.pem` certificate, the
- * `testcrl.pem` CRL, and `test/certs/x509-check.csr` with its leading `X509_REQ_INFO` lifted
- * out. Both sides decode the same bytes; the error queue is popped at the start of every arm.
+ * `testcrl.pem` CRL, `test/certs/x509-check.csr` with its leading `X509_REQ_INFO` lifted out, and a
+ * self-signed SAN certificate the authority's own `openssl` made for 11.5 (`example.com`,
+ * `*.example.com`, `foo.bar.example.com`, `user@example.com`, `other@example.org`, `192.0.2.1`,
+ * `2001:db8::1` and an `authorityInfoAccess` OCSP URI). Both sides decode the same bytes; the
+ * error queue is popped at the start of every arm.
  *
  * What it drives, and what it deliberately does not
  * -------------------------------------------------
@@ -22,6 +26,17 @@
  * the whole `X509_set_*`/`X509_get0_*`/`X509_getm_*` mutator layer over a fixed `X509`, and the
  * `X509_REQ` mutators, attribute accessors, the `X509_REQ_INFO`/`X509_REQ` item group and
  * lifecycle over the fixed request DER.
+ *
+ * 11.1b and 11.5 add six more units to the same program. It **calls** the `X509_TRUST` table
+ * (`X509_TRUST_get_count`/`get0`/`get_by_id`/`get_flags`/`get0_name`/`get_trust`, `set`, `add`,
+ * `cleanup`, `set_default`, `check_trust`; `x509_trust.c`), the STORE-URI lookup constructor and
+ * its ctrl door (`X509_LOOKUP_store`, `by_store.c`) and the store loaders' NULL-URI refusals
+ * (`X509_STORE_load_store(_ex)`, `x509_d2.c`); it **drives** the four `v3_prn.c` printers over a
+ * memory BIO and an `open_memstream`, the nine `v3_conf.c` extension builders over a real `CONF`
+ * and `X509V3_CTX` (with `basicConstraints`/`keyUsage` values, the `critical,` prefix, a
+ * `pathlen`, and the missing-section and unknown-name refusals), and the six `v3_utl.c`
+ * host/email/IP checks and `get1_email`/`get1_ocsp` accessors over the SAN fixture and the
+ * SAN-less root.
  *
  * It does **not** call anything that needs an `X509_STORE` or an `X509_STORE_CTX` it cannot
  * obtain. The stratum withholds `X509_STORE_new`/`X509_STORE_CTX_new` (their blocker is
@@ -36,6 +51,15 @@
  * `X509_check_purpose` and then reads the cached `siginf`, whose digest-name lookup is the
  * crate's recorded `EVP_get_digestbyname` divergence D333/D343; driving it would compare that
  * divergence, not this unit's contract, so it is left to the reference basis and named here).
+ * For the same reason `X509_STORE_load_store`/`_ex` are driven only to their NULL-URI refusal,
+ * and two arms are deliberately withheld rather than compared: `X509_TRUST_set_default(NULL)`
+ * followed by an unclaimed id (the authority dereferences the NULL slot, the candidate answers 0
+ * -- a fault boundary a probe cannot compare), and `basicConstraints=CA:FALSE` (the authority's
+ * `BASIC_CONSTRAINTS` template is `ASN1_OPT(..., ASN1_FBOOLEAN)` and omits a FALSE `ca`, this
+ * crate's `v3_bcons.rs` template names `ASN1_BOOLEAN_it` and encodes it -- a divergence in that
+ * earlier unit, met by the new caller and named by the `pending.` line rather than hidden). The
+ * digest-by-name caveat above did **not** appear when the trust arms drove
+ * `ossl_x509_init_sig_info`: the arms print their error queues and the two sides agree.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -43,14 +67,19 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <openssl/asn1.h>
+#include <openssl/bio.h>
+#include <openssl/conf.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
+#include <openssl/safestack.h>
 #include <openssl/x509.h>
 #include <openssl/x509_vfy.h>
+#include <openssl/x509v3.h>
 
 #include "rt_x509_der.h"
 
@@ -718,6 +747,579 @@ static void drive_req(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * Phase 11.5 -- `crypto/x509/v3_prn.c`'s four extension printers.
+ *
+ * Every output goes to a memory BIO whose bytes are printed as hex, so the transcript is the exact
+ * text the authority produced. Three fixtures select the arms: a well-formed `basicConstraints`
+ * extension (the `i2v` path), an unregistered OID (the whole `unknown_ext_print` dispatch through
+ * its four `X509V3_EXT_UNKNOWN_MASK` selectors), and a malformed `basicConstraints` value (the
+ * method-is-found-but-the-decode-fails arm). The `X509V3_EXT_val_prn` stack carries a `name:value`,
+ * a name-only and a value-only entry, driven inline and multiline, plus the empty and NULL stacks;
+ * `X509V3_EXT_print_fp` is captured with `open_memstream`. The unit raises nothing, so no arm has
+ * an error coordinate; its refusal is `X509V3_EXT_print` answering 0 under the default
+ * unknown-extension flag.
+ * --------------------------------------------------------------------------------------------- */
+
+static void out_hex(const char *key, const unsigned char *buf, long len)
+{
+    long i;
+
+    printf("%s.len=%ld\n", key, len);
+    printf("%s.hex=", key);
+    for (i = 0; i < len; i++)
+        printf("%02x", buf[i]);
+    printf("\n");
+}
+
+/* The bytes a memory BIO holds; the BIO is rewound for the next arm. */
+static void emit_mem(const char *key, BIO *b)
+{
+    char *data = NULL;
+    long n = BIO_get_mem_data(b, &data);
+
+    out_hex(key, (const unsigned char *)data, n);
+    BIO_reset(b);
+}
+
+/* An extension's identity and full DER, so a builder's result is compared byte for byte. */
+static void out_ext(const char *key, X509_EXTENSION *e)
+{
+    unsigned char *der = NULL;
+    int len, i;
+
+    if (e == NULL) {
+        printf("%s=null\n", key);
+        return;
+    }
+    printf("%s.nid=%d\n", key, OBJ_obj2nid(X509_EXTENSION_get_object(e)));
+    printf("%s.critical=%d\n", key, X509_EXTENSION_get_critical(e));
+    printf("%s.data.len=%d\n", key, ASN1_STRING_length(X509_EXTENSION_get_data(e)));
+    len = i2d_X509_EXTENSION(e, &der);
+    printf("%s.der.len=%d\n", key, len);
+    printf("%s.der.hex=", key);
+    for (i = 0; i < len; i++)
+        printf("%02x", der[i]);
+    printf("\n");
+    OPENSSL_free(der);
+}
+
+static X509_EXTENSION *mk_ext_by_nid(int nid, const unsigned char *der, int derlen, int crit)
+{
+    ASN1_OCTET_STRING *oct = ASN1_OCTET_STRING_new();
+    X509_EXTENSION *e;
+
+    if (oct == NULL)
+        return NULL;
+    ASN1_OCTET_STRING_set(oct, der, derlen);
+    e = X509_EXTENSION_create_by_NID(NULL, nid, crit, oct);
+    ASN1_OCTET_STRING_free(oct);
+    return e;
+}
+
+static X509_EXTENSION *mk_ext_by_txt(const char *oid, const unsigned char *der, int derlen)
+{
+    ASN1_OBJECT *o = OBJ_txt2obj(oid, 1);
+    ASN1_OCTET_STRING *oct = ASN1_OCTET_STRING_new();
+    X509_EXTENSION *e;
+
+    if (o == NULL || oct == NULL)
+        return NULL;
+    ASN1_OCTET_STRING_set(oct, der, derlen);
+    e = X509_EXTENSION_create_by_OBJ(NULL, o, 0, oct);
+    ASN1_OCTET_STRING_free(oct);
+    ASN1_OBJECT_free(o);
+    return e;
+}
+
+static void drive_val_prn(void)
+{
+    BIO *b = BIO_new(BIO_s_mem());
+    STACK_OF(CONF_VALUE) *v = sk_CONF_VALUE_new_null();
+    STACK_OF(CONF_VALUE) *empty = sk_CONF_VALUE_new_null();
+    CONF_VALUE *a = OPENSSL_malloc(sizeof *a);
+    CONF_VALUE *c = OPENSSL_malloc(sizeof *c);
+    CONF_VALUE *d = OPENSSL_malloc(sizeof *d);
+
+    a->section = OPENSSL_strdup("s");
+    a->name = OPENSSL_strdup("CA");
+    a->value = OPENSSL_strdup("TRUE");
+    c->section = OPENSSL_strdup("s");
+    c->name = OPENSSL_strdup("pathlen");
+    c->value = NULL;
+    d->section = OPENSSL_strdup("s");
+    d->name = NULL;
+    d->value = OPENSSL_strdup("anon");
+
+    sk_CONF_VALUE_push(v, a);
+    sk_CONF_VALUE_push(v, c);
+    sk_CONF_VALUE_push(v, d);
+    out_int("valprn.stack.count", sk_CONF_VALUE_num(v));
+
+    X509V3_EXT_val_prn(b, v, 0, 0);
+    emit_mem("valprn.inline", b);
+    X509V3_EXT_val_prn(b, v, 2, 1);
+    emit_mem("valprn.multiline", b);
+    X509V3_EXT_val_prn(b, v, 4, 0);
+    emit_mem("valprn.indent", b);
+
+    X509V3_EXT_val_prn(b, NULL, 0, 0);
+    emit_mem("valprn.null_stack", b);
+    X509V3_EXT_val_prn(b, empty, 2, 0);
+    emit_mem("valprn.empty.inline", b);
+    X509V3_EXT_val_prn(b, empty, 2, 1);
+    emit_mem("valprn.empty.multiline", b);
+
+    sk_CONF_VALUE_pop_free(v, X509V3_conf_free);
+    sk_CONF_VALUE_free(empty);
+    BIO_free(b);
+}
+
+static void drive_ext_print(void)
+{
+    static const unsigned char bc[] = { 0x30, 0x03, 0x01, 0x01, 0xff };
+    static const unsigned char junk[] = { 0xff, 0xff, 0xff };
+    static const unsigned char raw[] = { 0x04, 0x02, 0x41, 0x42 };
+    X509_EXTENSION *bc_ext = mk_ext_by_nid(NID_basic_constraints, bc, sizeof bc, 0);
+    X509_EXTENSION *bad = mk_ext_by_nid(NID_basic_constraints, junk, sizeof junk, 0);
+    X509_EXTENSION *unk = mk_ext_by_txt("1.2.3.4", raw, sizeof raw);
+    STACK_OF(X509_EXTENSION) *sk = sk_X509_EXTENSION_new_null();
+    BIO *b = BIO_new(BIO_s_mem());
+    char *buf = NULL;
+    size_t sz = 0;
+    FILE *f;
+
+    out_ptr("ext.bc", bc_ext);
+    out_ptr("ext.bad_value", bad);
+    out_ptr("ext.unknown_oid", unk);
+
+    out_int("print.bc.default", X509V3_EXT_print(b, bc_ext, 0, 0));
+    emit_mem("print.bc.default.out", b);
+    out_int("print.bc.error_flag", X509V3_EXT_print(b, bc_ext, X509V3_EXT_ERROR_UNKNOWN, 0));
+    emit_mem("print.bc.error_flag.out", b);
+    out_int("print.bc.indent", X509V3_EXT_print(b, bc_ext, 0, 3));
+    emit_mem("print.bc.indent.out", b);
+
+    out_int("print.bad.default", X509V3_EXT_print(b, bad, 0, 1));
+    emit_mem("print.bad.default.out", b);
+    out_int("print.bad.error_flag", X509V3_EXT_print(b, bad, X509V3_EXT_ERROR_UNKNOWN, 1));
+    emit_mem("print.bad.error_flag.out", b);
+
+    out_int("print.unk.default", X509V3_EXT_print(b, unk, 0, 2));
+    emit_mem("print.unk.default.out", b);
+    out_int("print.unk.error_flag", X509V3_EXT_print(b, unk, X509V3_EXT_ERROR_UNKNOWN, 2));
+    emit_mem("print.unk.error_flag.out", b);
+    out_int("print.unk.parse", X509V3_EXT_print(b, unk, X509V3_EXT_PARSE_UNKNOWN, 2));
+    emit_mem("print.unk.parse.out", b);
+    out_int("print.unk.dump", X509V3_EXT_print(b, unk, X509V3_EXT_DUMP_UNKNOWN, 2));
+    emit_mem("print.unk.dump.out", b);
+
+    sk_X509_EXTENSION_push(sk, bc_ext);
+    sk_X509_EXTENSION_push(sk, unk);
+    out_int("exts.titled", X509V3_extensions_print(b, "probe", sk, 0, 0));
+    emit_mem("exts.titled.out", b);
+    out_int("exts.untitled", X509V3_extensions_print(b, NULL, sk, 0, 0));
+    emit_mem("exts.untitled.out", b);
+    out_int("exts.kid_filter",
+            X509V3_extensions_print(b, NULL, sk, X509_FLAG_EXTENSIONS_ONLY_KID, 0));
+    emit_mem("exts.kid_filter.out", b);
+    out_int("exts.null_stack", X509V3_extensions_print(b, "x", NULL, 0, 0));
+    emit_mem("exts.null_stack.out", b);
+    BIO_free(b);
+
+    f = open_memstream(&buf, &sz);
+    out_int("print_fp.ret", X509V3_EXT_print_fp(f, bc_ext, 0, 0));
+    fclose(f);
+    out_hex("print_fp.out", (const unsigned char *)buf, (long)sz);
+    free(buf);
+
+    sk_X509_EXTENSION_free(sk);
+    X509_EXTENSION_free(bc_ext);
+    X509_EXTENSION_free(bad);
+    X509_EXTENSION_free(unk);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Phase 11.5 -- `crypto/x509/v3_conf.c`'s extension-building chain.
+ *
+ * The two name/value builders and their two legacy-lhash twins run over a fixed `CONF`-free arm
+ * (`basicConstraints`, with and without the `critical,` prefix, with `pathlen`) and their refusals
+ * (an unknown extension name and `NID_undef`, both raising `X509V3_R_UNKNOWN_EXTENSION`, `34.130`);
+ * the legacy-lhash twins are called with a NULL lhash, which reaches `X509V3_EXT_nconf(_nid)` after
+ * the temporary `NCONF` is wrapped. The five section-driven exports run over a real `NCONF` (two
+ * entries under `[ext]`) and a real `X509V3_CTX` -- the header defines `struct v3_ext_ctx`, so the
+ * probe can hold one and `X509V3_set_ctx` initialises it: `X509V3_EXT_add_nconf_sk` builds the
+ * stack (`CONF`/`X509V3_CTX`), once plain and once with `X509V3_CTX_REPLACE`, and
+ * `X509V3_EXT_add_nconf`/`_CRL_add_nconf` attach the same section to a fresh `X509`/`X509_CRL`,
+ * whose extension count and NIDs are read back. `X509V3_EXT_add_conf`/`_CRL_add_conf` are driven
+ * with a NULL lhash, which leaves the temporary `NCONF` empty, so their result is the missing-
+ * section refusal (`0`); the lhash-loading arm needs a populated `LHASH_OF(CONF_VALUE)`, which the
+ * probe can build but which the two `conf` names do not need to be exercised as exports.
+ * **One value is withheld and named:** `basicConstraints=CA:FALSE` diverges, because the authority's
+ * `BASIC_CONSTRAINTS` template is `ASN1_OPT(..., ASN1_FBOOLEAN)` (`v3_bcons.c:38-40`) and omits a
+ * `FALSE` `ca`, while this crate's `v3_bcons.rs` template names `ASN1_BOOLEAN_it` and encodes it;
+ * the divergence is in `v3_bcons.rs`/the item encoder, not this unit, and the arms below avoid only
+ * that value (`pending.v3_conf.bcons_ca_false=` names it rather than hiding it).
+ * --------------------------------------------------------------------------------------------- */
+
+static CONF *mk_conf(void)
+{
+    static const char text[] = "[ext]\n"
+                               "basicConstraints=CA:TRUE\n"
+                               "keyUsage=digitalSignature\n";
+    BIO *b = BIO_new_mem_buf(text, -1);
+    CONF *c = NCONF_new(NULL);
+
+    NCONF_load_bio(c, b, NULL);
+    BIO_free(b);
+    return c;
+}
+
+static void drive_v3_conf(void)
+{
+    CONF *conf = mk_conf();
+    X509V3_CTX ctx;
+    X509 *cert = X509_new();
+    X509_CRL *crl = X509_CRL_new();
+    X509_EXTENSION *e;
+    STACK_OF(X509_EXTENSION) *sk = NULL;
+
+    printf("pending.v3_conf.bcons_ca_false=");
+    printf("authority_omits_false_ca_the_crate_encodes_it\n");
+
+    ERR_clear_error();
+    e = X509V3_EXT_nconf(NULL, NULL, "basicConstraints", "CA:TRUE");
+    out_ext("nconf.bc", e);
+    out_err("nconf.bc.err");
+    X509_EXTENSION_free(e);
+
+    ERR_clear_error();
+    e = X509V3_EXT_nconf(NULL, NULL, "basicConstraints", "critical,CA:TRUE,pathlen:3");
+    out_ext("nconf.bc_critical", e);
+    out_err("nconf.bc_critical.err");
+    X509_EXTENSION_free(e);
+
+    ERR_clear_error();
+    out_ptr("nconf.unknown_name", X509V3_EXT_nconf(NULL, NULL, "noSuchExtension", "x"));
+    out_err("nconf.unknown_name.err");
+
+    ERR_clear_error();
+    e = X509V3_EXT_nconf_nid(NULL, NULL, NID_basic_constraints, "CA:TRUE,pathlen:2");
+    out_ext("nconf_nid.bc", e);
+    out_err("nconf_nid.bc.err");
+    X509_EXTENSION_free(e);
+
+    ERR_clear_error();
+    out_ptr("nconf_nid.undef", X509V3_EXT_nconf_nid(NULL, NULL, NID_undef, "CA:TRUE"));
+    out_err("nconf_nid.undef.err");
+
+    ERR_clear_error();
+    e = X509V3_EXT_conf(NULL, NULL, "basicConstraints", "CA:TRUE,pathlen:1");
+    out_ext("conf.bc", e);
+    out_err("conf.bc.err");
+    X509_EXTENSION_free(e);
+
+    ERR_clear_error();
+    e = X509V3_EXT_conf_nid(NULL, NULL, NID_basic_constraints, "CA:TRUE");
+    out_ext("conf_nid.bc", e);
+    out_err("conf_nid.bc.err");
+    X509_EXTENSION_free(e);
+
+    out_ptr("conf.new", conf);
+
+    X509V3_set_ctx(&ctx, NULL, cert, NULL, NULL, 0);
+    ERR_clear_error();
+    out_int("add_nconf_sk.build", X509V3_EXT_add_nconf_sk(conf, &ctx, "ext", &sk));
+    out_err("add_nconf_sk.build.err");
+    out_int("add_nconf_sk.build.count", sk != NULL ? sk_X509_EXTENSION_num(sk) : -1);
+    out_int("add_nconf_sk.build.0.nid",
+            sk != NULL
+                ? OBJ_obj2nid(X509_EXTENSION_get_object(sk_X509_EXTENSION_value(sk, 0))) : -1);
+    out_int("add_nconf_sk.build.1.nid",
+            sk != NULL
+                ? OBJ_obj2nid(X509_EXTENSION_get_object(sk_X509_EXTENSION_value(sk, 1))) : -1);
+    sk_X509_EXTENSION_pop_free(sk, X509_EXTENSION_free);
+    sk = NULL;
+
+    X509V3_set_ctx(&ctx, NULL, cert, NULL, NULL, X509V3_CTX_REPLACE);
+    ERR_clear_error();
+    out_int("add_nconf_sk.replace", X509V3_EXT_add_nconf_sk(conf, &ctx, "ext", &sk));
+    out_err("add_nconf_sk.replace.err");
+    sk_X509_EXTENSION_pop_free(sk, X509_EXTENSION_free);
+    sk = NULL;
+
+    ERR_clear_error();
+    out_int("add_nconf.missing_section", X509V3_EXT_add_nconf(conf, &ctx, "nosuch", cert));
+    out_err("add_nconf.missing_section.err");
+
+    X509V3_set_ctx(&ctx, NULL, cert, NULL, NULL, 0);
+    out_int("add_nconf.cert", X509V3_EXT_add_nconf(conf, &ctx, "ext", cert));
+    out_int("add_nconf.cert.extcount", X509_get_ext_count(cert));
+    out_int("add_nconf.cert.ext0.nid",
+            OBJ_obj2nid(X509_EXTENSION_get_object(X509_get_ext(cert, 0))));
+    out_int("add_nconf.cert.ext1.nid",
+            OBJ_obj2nid(X509_EXTENSION_get_object(X509_get_ext(cert, 1))));
+
+    out_int("crl_add_nconf.crl", X509V3_EXT_CRL_add_nconf(conf, &ctx, "ext", crl));
+    out_int("crl_add_nconf.crl.extcount", X509_CRL_get_ext_count(crl));
+
+    out_int("add_conf.null_lhash", X509V3_EXT_add_conf(NULL, &ctx, "ext", cert));
+    out_int("crl_add_conf.null_lhash", X509V3_EXT_CRL_add_conf(NULL, &ctx, "ext", crl));
+
+    X509_free(cert);
+    X509_CRL_free(crl);
+    NCONF_free(conf);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Phase 11.5 -- `crypto/x509/v3_utl.c`'s host/email/IP checks and the two `get1_*` accessors.
+ *
+ * The SAN fixture carries a DNS `example.com`, a wildcard `*.example.com`, a literal
+ * `foo.bar.example.com`, two `rfc822Name` emails, an IPv4 and an IPv6 address and an OCSP responder
+ * URI, so the exact, wildcard, deep-wildcard, `NO_WILDCARDS`, literal, subject-CN-fallback and
+ * case rules are all reachable. `X509_check_host`/`_email` with a NULL check string and with an
+ * embedded NUL are the refusals (`-2`, raising nothing), as is a non-address `X509_check_ip_asc`;
+ * `X509_get1_email`/`_ocsp` are read over both the SAN fixture and the SAN-less root, whose counts
+ * are 3/1 and NULL. The wildcard arms are the `*` cases; the SAN-less certificate is the
+ * subject-fallback refusal.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_v3_utl(X509 *san, X509 *cert)
+{
+    STACK_OF(OPENSSL_STRING) *em;
+    char *peer = NULL;
+    static const unsigned char v4[] = { 192, 0, 2, 1 };
+    static const unsigned char v4miss[] = { 192, 0, 2, 9 };
+    int i, n;
+
+    out_int("check_host.exact", X509_check_host(san, "example.com", 0, 0, NULL));
+    out_int("check_host.wildcard", X509_check_host(san, "www.example.com", 0, 0, NULL));
+    out_int("check_host.wildcard.deep", X509_check_host(san, "a.b.example.com", 0, 0, NULL));
+    out_int("check_host.wildcard.no_flag",
+            X509_check_host(san, "www.example.com", 0, X509_CHECK_FLAG_NO_WILDCARDS, NULL));
+    out_int("check_host.san_literal", X509_check_host(san, "foo.bar.example.com", 0, 0, NULL));
+    out_int("check_host.miss", X509_check_host(san, "example.org", 0, 0, NULL));
+    out_int("check_host.cn_fallback", X509_check_host(san, "san-probe.example", 0, 0, NULL));
+    out_int("check_host.cn_forced",
+            X509_check_host(san, "san-probe.example", 0,
+                            X509_CHECK_FLAG_ALWAYS_CHECK_SUBJECT, NULL));
+    out_int("check_host.cn_only_cert", X509_check_host(cert, "Root CA", 0, 0, NULL));
+    out_int("check_host.explicit_len", X509_check_host(san, "example.com", 11, 0, NULL));
+
+    ERR_clear_error();
+    out_int("check_host.null_chk", X509_check_host(san, NULL, 0, 0, NULL));
+    out_err("check_host.null_chk.err");
+    ERR_clear_error();
+    out_int("check_host.embedded_nul", X509_check_host(san, "ab\0cd", 5, 0, NULL));
+    out_err("check_host.embedded_nul.err");
+
+    ERR_clear_error();
+    out_int("check_host.peername", X509_check_host(san, "example.com", 0, 0, &peer));
+    out_int("check_host.peername.matches", peer != NULL && strcmp(peer, "example.com") == 0);
+    out_err("check_host.peername.err");
+    OPENSSL_free(peer);
+
+    out_int("check_email.san", X509_check_email(san, "user@example.com", 0, 0));
+    out_int("check_email.san_case", X509_check_email(san, "user@EXAMPLE.com", 0, 0));
+    out_int("check_email.miss", X509_check_email(san, "nobody@example.com", 0, 0));
+    ERR_clear_error();
+    out_int("check_email.null_chk", X509_check_email(san, NULL, 0, 0));
+    out_err("check_email.null_chk.err");
+    ERR_clear_error();
+    out_int("check_email.embedded_nul", X509_check_email(san, "a\0b", 3, 0));
+    out_err("check_email.embedded_nul.err");
+
+    out_int("check_ip_asc.hit", X509_check_ip_asc(san, "192.0.2.1", 0));
+    out_int("check_ip_asc.miss", X509_check_ip_asc(san, "192.0.2.2", 0));
+    out_int("check_ip_asc.v6", X509_check_ip_asc(san, "2001:db8::1", 0));
+    ERR_clear_error();
+    out_int("check_ip_asc.bad", X509_check_ip_asc(san, "not-an-ip", 0));
+    out_err("check_ip_asc.bad.err");
+    ERR_clear_error();
+    out_int("check_ip_asc.null_ip", X509_check_ip_asc(san, NULL, 0));
+    out_err("check_ip_asc.null_ip.err");
+    out_int("check_ip.raw.hit", X509_check_ip(san, v4, 4, 0));
+    out_int("check_ip.raw.miss", X509_check_ip(san, v4miss, 4, 0));
+    ERR_clear_error();
+    out_int("check_ip.raw.null", X509_check_ip(san, NULL, 4, 0));
+    out_err("check_ip.raw.null.err");
+
+    em = X509_get1_email(san);
+    n = em != NULL ? sk_OPENSSL_STRING_num(em) : -1;
+    out_int("get1_email.count", n);
+    for (i = 0; i < n; i++) {
+        char key[32];
+
+        snprintf(key, sizeof key, "get1_email.%d", i);
+        printf("%s=", key);
+        printf("%s\n", sk_OPENSSL_STRING_value(em, i));
+    }
+    X509_email_free(em);
+    out_ptr("get1_email.san_less_cert", X509_get1_email(cert));
+
+    em = X509_get1_ocsp(san);
+    n = em != NULL ? sk_OPENSSL_STRING_num(em) : -1;
+    out_int("get1_ocsp.count", n);
+    for (i = 0; i < n; i++) {
+        char key[32];
+
+        snprintf(key, sizeof key, "get1_ocsp.%d", i);
+        printf("%s=", key);
+        printf("%s\n", sk_OPENSSL_STRING_value(em, i));
+    }
+    X509_email_free(em);
+    out_ptr("get1_ocsp.no_aia_cert", X509_get1_ocsp(cert));
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Phase 11.1b -- `crypto/x509/x509_trust.c`'s trust table and `X509_check_trust`, and
+ * `crypto/x509/by_store.c`/`crypto/x509/x509_d2.c`'s STORE-URI lookup and store loaders.
+ *
+ * The eight reserved rows are read back through the three getters and their names compared to the
+ * authority's own literals. `X509_TRUST_set`'s invalid id is the unit's one raise
+ * (`X509_R_INVALID_TRUST`, `11.123`). `X509_TRUST_add` installs a dynamic row, `X509_check_trust`
+ * dispatches to its checker, a second `add` modifies it in place, and `X509_TRUST_cleanup` removes
+ * the dynamic table. `X509_TRUST_set_default` is driven by installing and restoring a probe
+ * checker around an id no row claims; **the arm that would leave NULL as the fallback and then
+ * look an unknown id up is deliberately not driven**, because the authority dereferences the slot
+ * (`x509_trust.c:79`) while the candidate's `X509_check_trust` answers 0 for a NULL slot -- a fault
+ * boundary a probe cannot compare. `X509_LOOKUP_store` is driven through `X509_LOOKUP_new` and the
+ * `X509_L_ADD_STORE` command (`add_null_uri` answers 1, a bad URI answers 0 with `44.524556`, an
+ * unsupported command answers 0); `X509_STORE_load_store(_ex)` are driven through their NULL-URI
+ * refusals, because the store-taking arm needs `X509_STORE_new`, still withheld (its blocker is
+ * `X509_VERIFY_PARAM`, 11.2's) and `abort`ing in the candidate's shell.
+ * --------------------------------------------------------------------------------------------- */
+
+static int probe_check_trust(X509_TRUST *trust, X509 *x, int flags)
+{
+    (void)trust;
+    (void)x;
+    (void)flags;
+    return 11;
+}
+
+static int probe_check_trust2(X509_TRUST *trust, X509 *x, int flags)
+{
+    (void)trust;
+    (void)x;
+    (void)flags;
+    return 12;
+}
+
+static int probe_default_trust(int id, X509 *x, int flags)
+{
+    (void)id;
+    (void)x;
+    (void)flags;
+    return 21;
+}
+
+static void drive_trust(X509 *cert)
+{
+    X509_TRUST *t;
+    int slot = 42;
+    int i;
+
+    out_int("trust.get_count.initial", X509_TRUST_get_count());
+    for (i = 0; i < 8; i++) {
+        char key[32];
+
+        t = X509_TRUST_get0(i);
+        snprintf(key, sizeof key, "trust.row.%d", i);
+        printf("%s.trust=%d\n", key, X509_TRUST_get_trust(t));
+        printf("%s.flags=%d\n", key, X509_TRUST_get_flags(t));
+        printf("%s.name=", key);
+        printf("%s\n", X509_TRUST_get0_name(t));
+    }
+    out_ptr("trust.get0.negative", X509_TRUST_get0(-1));
+    out_ptr("trust.get0.past_reserved", X509_TRUST_get0(8));
+    out_int("trust.get_by_id.compat", X509_TRUST_get_by_id(1));
+    out_int("trust.get_by_id.tsa", X509_TRUST_get_by_id(8));
+    out_int("trust.get_by_id.zero", X509_TRUST_get_by_id(0));
+    out_int("trust.get_by_id.nine", X509_TRUST_get_by_id(9));
+    out_int("trust.get_by_id.absent", X509_TRUST_get_by_id(100));
+
+    out_int("trust.set.valid", X509_TRUST_set(&slot, 3));
+    out_int("trust.set.valid.read", slot);
+    ERR_clear_error();
+    out_int("trust.set.invalid", X509_TRUST_set(&slot, 99));
+    out_err("trust.set.invalid.err");
+    out_int("trust.set.invalid.read", slot);
+
+    out_int("trust.add.dynamic", X509_TRUST_add(100, 0, probe_check_trust, "probe-trust", 0, NULL));
+    out_int("trust.get_count.added", X509_TRUST_get_count());
+    out_int("trust.get_by_id.added", X509_TRUST_get_by_id(100));
+    t = X509_TRUST_get0(8);
+    out_int("trust.dynamic.trust", X509_TRUST_get_trust(t));
+    out_int("trust.dynamic.flags", X509_TRUST_get_flags(t));
+    printf("trust.dynamic.name=");
+    printf("%s\n", X509_TRUST_get0_name(t));
+    out_int("trust.check.dynamic", X509_check_trust(cert, 100, 0));
+    out_int("trust.add.modify",
+            X509_TRUST_add(100, 0, probe_check_trust2, "probe-trust-2", 0, NULL));
+    out_int("trust.get_count.modified", X509_TRUST_get_count());
+    out_int("trust.check.dynamic_modified", X509_check_trust(cert, 100, 0));
+    X509_TRUST_cleanup();
+    out_int("trust.get_count.cleaned", X509_TRUST_get_count());
+    out_int("trust.get_by_id.cleaned", X509_TRUST_get_by_id(100));
+
+    ERR_clear_error();
+    out_int("trust.check.default", X509_check_trust(cert, X509_TRUST_DEFAULT, 0));
+    out_err("trust.check.default.err");
+    ERR_clear_error();
+    out_int("trust.check.compat", X509_check_trust(cert, 1, 0));
+    out_err("trust.check.compat.err");
+    out_int("trust.check.compat.no_ss", X509_check_trust(cert, 1, 4));
+    out_int("trust.check.default.any_eku", X509_check_trust(cert, 0, 16));
+    out_int("trust.check.ssl_server", X509_check_trust(cert, 3, 0));
+    out_int("trust.check.unclaimed_id", X509_check_trust(cert, 1000, 0));
+
+    {
+        int (*saved)(int, X509 *, int) = X509_TRUST_set_default(probe_default_trust);
+
+        out_int("trust.set_default.saved_nonnull", saved != NULL);
+        out_int("trust.check.unclaimed_id.probedefault", X509_check_trust(cert, 1000, 0));
+        out_int("trust.set_default.restored_nonnull", X509_TRUST_set_default(saved) != NULL);
+        out_int("trust.check.unclaimed_id.restored", X509_check_trust(cert, 1000, 0));
+    }
+}
+
+static void drive_lookup_store(void)
+{
+    X509_LOOKUP_METHOD *m = X509_LOOKUP_store();
+    X509_LOOKUP *l;
+
+    out_ptr("store_lookup.method", m);
+    out_int("store_lookup.method_stable", X509_LOOKUP_store() == m);
+
+    l = X509_LOOKUP_new(m);
+    out_ptr("store_lookup.lookup", l);
+    ERR_clear_error();
+    out_int("store_lookup.ctrl.add_null_uri", X509_LOOKUP_ctrl(l, 3, NULL, 0, NULL));
+    out_err("store_lookup.ctrl.add_null_uri.err");
+    ERR_clear_error();
+    out_int("store_lookup.ctrl.add_bad_uri", X509_LOOKUP_ctrl(l, 3, "nosuch://void", 0, NULL));
+    out_err("store_lookup.ctrl.add_bad_uri.err");
+    ERR_clear_error();
+    out_int("store_lookup.ctrl.unsupported", X509_LOOKUP_ctrl(l, 99, "x", 0, NULL));
+    out_err("store_lookup.ctrl.unsupported.err");
+    ERR_clear_error();
+    out_int("store_lookup.ctrl_ex.add_null_uri",
+            X509_LOOKUP_ctrl_ex(l, 3, NULL, 0, NULL, NULL, NULL));
+    out_err("store_lookup.ctrl_ex.add_null_uri.err");
+    X509_LOOKUP_free(l);
+}
+
+static void drive_store_load_store(void)
+{
+    ERR_clear_error();
+    out_int("store_load_store.null_uri", X509_STORE_load_store(NULL, NULL));
+    out_err("store_load_store.null_uri.err");
+    ERR_clear_error();
+    out_int("store_load_store_ex.null_uri", X509_STORE_load_store_ex(NULL, NULL, NULL, NULL));
+    out_err("store_load_store_ex.null_uri.err");
+}
+
+/* ---------------------------------------------------------------------------------------------
  * main
  * --------------------------------------------------------------------------------------------- */
 
@@ -725,6 +1327,7 @@ int main(void)
 {
     const unsigned char *p;
     X509 *cert;
+    X509 *san;
     X509_CRL *crl;
 
     ERR_clear_error();
@@ -732,6 +1335,9 @@ int main(void)
     p = RT_X509_CERT_DER;
     cert = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
     out_ptr("fixture.cert", cert);
+    p = RT_X509_SAN_DER;
+    san = d2i_X509(NULL, &p, (long)RT_X509_SAN_DER_LEN);
+    out_ptr("fixture.san_cert", san);
     p = RT_X509_CRL_DER;
     crl = d2i_X509_CRL(NULL, &p, (long)RT_X509_CRL_DER_LEN);
     out_ptr("fixture.crl", crl);
@@ -742,7 +1348,15 @@ int main(void)
     drive_store_refusals();
     drive_set(cert);
     drive_req();
+    drive_trust(cert);
+    drive_lookup_store();
+    drive_store_load_store();
+    drive_val_prn();
+    drive_ext_print();
+    drive_v3_conf();
+    drive_v3_utl(san, cert);
 
+    X509_free(san);
     X509_CRL_free(crl);
     X509_free(cert);
     return 0;

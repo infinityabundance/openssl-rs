@@ -26,7 +26,7 @@ that read "certificates" as "the things containing them" would claim a stratum's
 "first slice" of the certificate graph forward — 10.8 through 10.16 — because its own blocked rows
 (`PKCS12_add_cert`, `PKCS12_parse`, the `OSSL_STORE` CERT/CRL arms) reach `X509_it`, `X509_free`,
 `X509_digest` and `X509_check_private_key`, and no Phase 10 row could land without them. The result
-is that **952 of this stratum's atlas-owned exports are already `implemented`** before its first
+is that **952 of this stratum's atlas-owned exports were already `implemented`** before its first
 subphase, and the 513 open names are what those landings did *not* cover: the store, the
 verification engine, the attribute certificate, the request and mutator surface, the `v3`
 functions and the PEM X.509 containers. This document is that scope, measured.
@@ -55,10 +55,12 @@ rows whose `owning_phase` is 11) rather than listed here:
 | 5 | 10 | `asn1.h` (3), `pem.h` (7) | `ASN1_add_stable_module`, `ASN1_generate_nconf`/`ASN1_generate_v3`, the five `PEM_X509_INFO_*` readers and writer, `PEM_write[_bio]_X509_REQ_NEW` |
 | 7 | 2 | `evp.h` | `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor` |
 
-That is a working set of **1,467 exports**. **Nine hundred and fifty-four of them are already
+That is a working set of **1,467 exports**. **At activation, 954 of them were already
 implemented** — 952 atlas-owned exports and 2 hand-offs — and
-`forensics/atlas/implemented-surface.json` is where each is read from. So `open_in_this_stratum` is
-**513**, not 1,467. The 952 were landed by two earlier strata rather than by this one: Phase 8's
+`forensics/atlas/implemented-surface.json` is where each is read from. So `open_in_this_stratum`
+opened at **513**, not 1,467. **That split moves as this stratum lands its own units: the ledger's
+`counts` is the live record and this section is the activation measurement.** The 952 were landed
+by two earlier strata, not by this one: Phase 8's
 8.8 chain (`crypto/evp/ameth_lib.c`, `crypto/asn1/{x_algor,x_spki,t_spki}.c`, the `pem.h` key
 readers) and Phase 10's pulled-forward X.509 subphases 10.8–10.16 (`docs/PHASE-10-SUBPHASES.md`
 §6–§7, D442–D451), which transcribed `x_x509.c`, `x_name.c`, `x_exten.c`, `x_val.c`, `x_pubkey.c`,
@@ -103,7 +105,7 @@ publishes.
 
 | # | Subphase | Owns | Depends on | Courts |
 |---|---|---|---|---|
-| 11.0 | **The plan and the census** | `docs/PHASE-11-SUBPHASES.md` and the measurement in §1. The ledger (`forensics/phase11-obligations.json`) and its generator land with it. **The runner and the reference-basis probe land with it too, and §4.3 is why they cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner and `court_coverage.py` refuses the 954 inherited `implemented` exports until a reference probe covers them, and neither can be satisfied by a later subphase without leaving the pipeline red in between. | 8.8; 10.8–10.16 | — |
+| 11.0 | **The plan and the census** | `docs/PHASE-11-SUBPHASES.md` and the measurement in §1. The ledger (`forensics/phase11-obligations.json`) and its generator land with it. **The runner and the reference-basis probe land with it too, and §4.3 is why they cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner and `court_coverage.py` refuses the inherited `implemented` exports until a reference probe covers them, and neither can be satisfied by a later subphase without leaving the pipeline red in between. | 8.8; 10.8–10.16 | — |
 | 11.1 | **The `X509_STORE` and the lookup layer** | `x509_lu.c` (73 exports), `x509_meth.c` (20), `x509_trust.c` (11), `x509_d2.c` (9), `by_file.c` (6), `by_dir.c` (1), `by_store.c` (1): the `X509_STORE` object and its registry, the four `X509_LOOKUP_METHOD`s and their file/`dir`/store implementations, `X509_OBJECT` and the `X509_STORE_get_by_subject` read path, and the trust/reject helpers. **121 open rows over 7 units, 2,555 authority lines.** | 11.0 | `RT-X509-STORE` |
 | 11.2 | **The verification engine** | `x509_vfy.c` (70), `x509_vpm.c` (39), `pcy_tree.c` (2): `X509_verify_cert`, the `X509_STORE_CTX` chain-building and check roll, the callback and error surface, `X509_VERIFY_PARAM`/`X509_VERIFY_PARAM_table` and the policy-tree construction. **111 open rows over 3 units, 5,358 authority lines** — the largest subphase, and the stratum's *purpose*: §3.2 is the decision procedure it must reproduce. | 11.1 | `RT-X509-VERIFY` |
 | 11.3 | **The attribute certificate** | `x509_acert.c` (48), `x_ietfatt.c` (14), `x509aset.c` (12), `t_acert.c` (2): the `X509_ACERT`/`X509_ACERT_INFO` item group, its issuer/serial/target/holder/attribute/extension accessors and setters, the `X509_ACERT_verify` entry and the `x509_acert.h` print and `d2i_*`/`i2d_*` surface. **76 open rows over 4 units, 1,033 authority lines** — the whole of `x509_acert.h`'s open 83. | 11.1, 11.2 | `RT-X509-ACERT` |
@@ -114,7 +116,8 @@ publishes.
 | 11.8 | **The seal** | nothing in the crate — evidence: `docs/PHASE-11-X509-SEAL.md` | 11.0–11.7 | — |
 
 The seven rows above the seal partition the 513 open exports exactly, by defining unit: 121 + 111 +
-76 + 82 + 26 + 54 + 43 = 513, and the 44 open units each appear in exactly one row. The partition
+76 + 82 + 26 + 54 + 43 = 513 (the activation partition, which moves as subphases land), and the 44
+open units each appear in exactly one row. The partition
 is derived from `forensics/atlas/export-defining-units.json` joined to the ledger's `open` list,
 not typed.
 
@@ -200,10 +203,10 @@ refuse this stratum's activation as specified, and both are measured rather than
   `forensics/tools/phase11_courts.py`, whose only runnable court until 11.1 is the reference basis.
 * `court_coverage.py` refuses the inherited `implemented` exports: "`N` implemented export(s) of a
   stratum that has begun is in none of directly-courted, indirectly-courted or non-observable".
-  **The 954 inherited exports are the number**, and 401 of them are already imported by a staged
-  candidate probe — measured with `forensics/tools/elf_symbols.py` over every
-  `artifacts/phase*/probes/*.candidate` — while the remaining **553** are named by nothing.
-  **The ledger's landing is what moves all 954 into scope**, and the commit that lands it must also
+  **The 954 inherited exports are the number at activation**, and 401 of them were already
+  imported by a staged candidate probe — measured with `forensics/tools/elf_symbols.py` over every
+  `artifacts/phase*/probes/*.candidate` — while the remaining **553** were named by nothing.
+  **The ledger's landing is what moved all 954 into scope**, and the commit that landed it also
   land a phase-11 reference-basis probe that references them by name, registered in
   `court-coverage-rows.json`'s `reference_probes` as `RT-RUNTIME-REF`, `RT-BIO-CONF-REF`,
   `RT-BN-ASN1-REF`, `RT-PROVIDER-REF`, `RT-EVP-REF` and `RT-KEYFORMAT-REF` are for theirs. The
@@ -245,19 +248,26 @@ rather than forcing the row.
 
 **Landed exports (checked against the ledger):**
 
-Nine hundred and fifty-four, and every one was landed by an earlier stratum rather than by this
-one: the 952 atlas-owned exports of Phase 8's 8.8 chain and Phase 10's pulled-forward X.509
-subphases 10.8–10.16 (D442–D451) and the two `crypto/asn1/asn1_gen.c` hand-offs Phase 5 landed. No
-export of this stratum's own work has landed, and no provider row has.
+The slices landed so far -- 11.1a, 11.1b, 11.4a and 11.5 -- are in, and every name below is in the
+ledger's implemented list: `X509_LOOKUP_store`, `X509_STORE_load_store`,
+`X509_STORE_load_store_ex`, `X509_TRUST_add`, `X509_TRUST_get0`, `X509_TRUST_get_by_id`,
+`X509_TRUST_set`, `X509_check_trust`, `X509_check_host`, `X509_check_email`, `X509_check_ip`,
+`X509_check_ip_asc`, `X509_get1_email`, `X509_get1_ocsp`, `X509_set_serialNumber`,
+`X509_set_issuer_name`, `X509_set_subject_name`, `X509_set_pubkey`, `X509_REQ_new`,
+`X509_REQ_get0_pubkey`, `X509_REQ_get_attr_count`, `X509_REQ_set_version`,
+`X509_NAME_add_entry_by_txt`, `X509V3_EXT_nconf`, `X509V3_EXT_conf`, `X509V3_EXT_add_nconf`,
+`X509V3_EXT_print`, `X509V3_EXT_print_fp`, `X509V3_extensions_print`, `X509V3_EXT_val_prn`. The
+bulk of the implemented list was landed before this stratum's first slice by Phase 8's 8.8 chain
+and Phase 10's pulled-forward X.509 subphases, with `ASN1_generate_nconf` and `ASN1_generate_v3`
+handed over by Phase 5; the ledger is the record and this sentence names only what the slices above
+added.
 
 **Open exports (checked against the ledger):**
 
-Five hundred and thirteen. The store and lookup layer is 121 of them — `X509_STORE_new`,
-`X509_LOOKUP_add_dir`, the four `X509_LOOKUP_METHOD`s, `X509_OBJECT_free` — and the verification
-engine is 111 (`X509_verify_cert`, `X509_STORE_CTX_get1_issuer`, the `X509_VERIFY_PARAM_*`
-surface). The attribute certificate is 76 (`X509_ACERT_new`, `X509_ACERT_get0_holder`,
-`X509_ACERT_verify`), the request/CRL/mutator surface is 82 (`X509_REQ_*`, `X509_set_*`,
-`X509_CRL_*`, `X509_to_X509_REQ`), the `v3` configuration layer is 26 (`X509V3_EXT_nconf`,
-`X509V3_EXT_d2i`, `X509V3_get_section`) and the PEM container surface is 54 (`PEM_read_X509`,
-`PEM_X509_INFO_read`, `PEM_write_bio_X509_REQ_NEW`). The remaining 43 are §2's 11.7, the units
-whose closure crosses into the landed strata.
+The store and verification layer is still open at `X509_STORE_new`, `X509_STORE_set1_param` and
+`X509_verify_cert`; the attribute certificate at `X509_ACERT_new` and `X509_ACERT_verify`; the
+request surface at `X509_REQ_sign`, `X509_REQ_get_extensions` and `X509_to_X509_REQ`; the PEM
+container surface at `PEM_read_X509`, `PEM_X509_INFO_read` and `PEM_write_bio_X509_REQ_NEW`; and
+the remaining shared units at `X509_get_default_cert_file` and `NETSCAPE_SPKI_print`. Every name
+here is in the ledger's open list; the counts move as the slices land, so the ledger, not this
+sentence, carries them.

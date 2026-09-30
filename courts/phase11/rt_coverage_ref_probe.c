@@ -33,6 +33,14 @@
  * probe that ran -- and never `called` (docs/DECISIONS.md D199,
  * docs/PHASE-11-SUBPHASES.md section 4.3).
  *
+ * 11.1b and 11.5 landed later (`x509_trust.c`, `by_store.c`, `x509_d2.c`, `v3_prn.c`, `v3_conf.c`'s
+ * extension-building chain, and `v3_utl.c`'s name checks and `get1_*` accessors) and added
+ * thirty-three more `implemented` exports. **Every one of them is `called` by `RT-X509-STORE`** --
+ * the behavioural court grew the arms that drive the trust table, the STORE-URI lookup, the four
+ * printers, the nine builders and the six checks -- so this reference basis is unchanged: no name
+ * is added below, the count stays 993, and those 33 are recorded `called`, the stronger true
+ * statement, from the behavioural probe's own import.
+ *
  * Some of the 993 are, independently, imported by a behavioural court -- 401 of the 954
  * by Phases 8 and 10, and 3 more (`X509_REQ_get_version`, `X509_REQ_get_subject_name`,
  * `X509_REQ_get0_signature`) by `RT-X509-STORE`, which reads them while driving the

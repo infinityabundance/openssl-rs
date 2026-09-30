@@ -21,12 +21,13 @@ Phase 11 and reports them, and it adds the symbols earlier strata handed over.
 writer family, `ASN1_generate_nconf`/`ASN1_generate_v3`, `PEM_write_[bio_]X509_REQ_NEW`,
 `ASN1_add_stable_module`, and the two `EVP_*_CTX_get_algor` accessors.
 
-**Nine hundred and fifty-four of the working set are already implemented**, and that is the
-finding this ledger exists to make visible rather than the stratum's own count: Phase 8's 8.8
-chain and Phase 10's pulled-forward X.509 subphases (10.8-10.14, D442-D451) landed 952 of the
-atlas-owned exports, and two of the hand-offs (`ASN1_generate_nconf`, `ASN1_generate_v3`)
-landed in Phase 5's ASN.1 work. So `open_in_this_stratum` is **513**, not 1,467, and a ledger
-that showed the whole working set open would be wrong in the other direction from Phase 9's.
+**The ledger does not start with its whole working set open**, and that is the finding this ledger
+exists to make visible: Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases
+(10.8-10.14, D442-D451) landed most of the atlas-owned exports, and two of the hand-offs
+(`ASN1_generate_nconf`, `ASN1_generate_v3`) landed in Phase 5's ASN.1 work. The split moves as
+this stratum lands its own units, so this docstring does not restate its counts -- the `counts`
+block below is the live record, and a ledger that showed the whole working set open would be
+wrong in the other direction from Phase 9's.
 
 The edges are discovered rather than typed: every row of every `forensics/phase*-obligations.json`
 whose `owning_phase` is 11, so a stratum that defers a symbol to this one is recorded on both
@@ -347,14 +348,14 @@ def main(argv: list[str]) -> int:
             "`complete` is true only when every export in the working set is either "
             "implemented or handed to a later stratum. `open` is the only list that blocks "
             "the stratum. Unlike every earlier activation except Phase 10, this ledger does "
-            "not start with the whole working set open: 954 of the 1,467 were landed before "
-            "this stratum was activated -- 952 atlas-owned exports by Phase 8's 8.8 chain and "
-            "Phase 10's pulled-forward X.509 subphases 10.8-10.14 (D442-D451), and two "
-            "hand-offs (`ASN1_generate_nconf`, `ASN1_generate_v3`) by Phase 5 -- and the "
-            "ledger reports them as `implemented` because `implemented-surface.json` does. "
-            "docs/PHASE-11-SUBPHASES.md section 4 is the measurement. This stratum owns "
-            "no provider registration row (`forensics/atlas/provider-algorithms.json` records "
-            "rows for owning phases 8, 9, 10 and 13 only), so `provider_rows_owned` is 0. "
+            "not start with the whole working set open: exports Phase 8's 8.8 chain and "
+            "Phase 10's pulled-forward X.509 subphases landed before activation, and the two "
+            "hand-offs Phase 5 discharged, are reported as `implemented` because "
+            "`implemented-surface.json` says so. That split moves as this stratum lands its "
+            "own units, so this note does not restate its counts; `counts` above is the live "
+            "record and `forensics/atlas/implemented-surface.json` is the authority behind "
+            "it. This stratum owns no provider registration row "
+            "(`forensics/atlas/provider-algorithms.json` records rows for owning phases 8, "
             "Nothing here is a parity claim: a symbol in `implemented` is at most "
             "`IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-SUBPHASES.md "
             "section 4 decides when the stratum may be called complete."
