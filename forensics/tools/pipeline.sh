@@ -247,7 +247,10 @@ echo "== docs consistency =="
 # that move what it compares, and after `regression_guard.py --update` would have moved the
 # baseline -- which is why `docs/CI.md` defers to that file rather than typing its figures
 # (D205): a gate whose verdict depends on where in the pipeline it sits is not a gate.
-# See docs/DECISIONS.md D203 and D208.
+# See docs/DECISIONS.md D203 and D208. `--self-test` runs first and proves the active stratum's
+# clause gate binds symbols rather than passing vacuously (D483): a plan could name a landed
+# export that was still open and pass, while the heading was found and nothing was checked.
+python3 forensics/tools/docs_consistency.py --self-test
 python3 forensics/tools/docs_consistency.py
 
 echo "== evidence determinism =="
