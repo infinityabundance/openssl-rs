@@ -1,6 +1,7 @@
 {
   "court_phases": [
     "phase10",
+    "phase11",
     "phase2",
     "phase3",
     "phase4",
@@ -443,6 +444,10 @@
       "observations": 54,
       "verdict": "pass"
     },
+    "RT-X509-REF": {
+      "observations": 954,
+      "verdict": "pass"
+    },
     "libcrypto-contamination": {
       "observations": 0,
       "verdict": "pass"
@@ -450,6 +455,7 @@
   },
   "deferred": {
     "phase10": 0,
+    "phase11": 0,
     "phase3": 43,
     "phase4": 23,
     "phase5": 91,
@@ -464,6 +470,7 @@
   },
   "open_obligations": {
     "phase10": 0,
+    "phase11": 513,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -474,6 +481,7 @@
   },
   "owned_obligations": {
     "phase10": 298,
+    "phase11": 1467,
     "phase3": 294,
     "phase4": 272,
     "phase5": 565,
@@ -486,7 +494,7 @@
     "0": "complete",
     "1": "complete",
     "10": "complete",
-    "11": "not-started",
+    "11": "in-progress",
     "12": "not-started",
     "13": "not-started",
     "14": "not-started",
