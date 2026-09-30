@@ -21,7 +21,7 @@ each of the 954's address through a `volatile` table, prints one `coverage_ref.N
 symbol, and stops. **It does not call any of them and claims no behaviour about them.** The court
 coverage atlas records every symbol covered only by it at basis `referenced`, never `called`,
 because the probe's name is in that atlas's `reference_probes` table; the atlas's `claim` is the
-weaker, true statement. See docs/DECISIONS.md D199 and docs/PHASE-11-X509-SUBPHASES.md section 4.3,
+weaker, true statement. See docs/DECISIONS.md D199 and docs/PHASE-11-SUBPHASES.md section 4.3,
 which is where this stratum's activation requires it.
 
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
@@ -37,7 +37,7 @@ bytes and the print text for the object graphs (section 3.1), the decision, erro
 callback sequence of `X509_verify_cert` (section 3.2), the lookup refusals and cache behaviour
 (section 3.3), and the PEM text and malformed-input error coordinates (section 3.4). None of them
 can claim that an object that round-trips is the authority's object: a transcription whose writer
-emits bytes its own reader accepts is a different library, and docs/PHASE-11-X509-SUBPHASES.md
+emits bytes its own reader accepts is a different library, and docs/PHASE-11-SUBPHASES.md
 section 3 records where the difference is observable. Nothing here is a parity claim about a
 certificate's meaning (section 3.5).
 
@@ -84,7 +84,7 @@ COURTS: list[tuple[str, str]] = [
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
 # pass, and each is printed with the subphase that brings it so that "not run yet" cannot be read
-# as "passed". The court names are `docs/PHASE-11-X509-SUBPHASES.md` section 2's, one per work
+# as "passed". The court names are `docs/PHASE-11-SUBPHASES.md` section 2's, one per work
 # subphase; `RT-X509` is 11.7's, over the units whose closure crosses into the landed strata.
 PENDING_COURTS: dict[str, str] = {
     "RT-X509-STORE": "11.1 -- the `X509_STORE` object, the four `X509_LOOKUP_METHOD`s, the "
@@ -280,10 +280,10 @@ def main(argv: list[str]) -> int:
             "certificate, request, `v3` or PEM surfaces exists, and a probe that called one would "
             "need the very object graph this stratum has not built. "
             "`pending_courts` names the courts the plan gives this stratum "
-            "(docs/PHASE-11-X509-SUBPHASES.md section 2) and the subphase that brings each, and "
+            "(docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings each, and "
             "every name is printed on each run so that 'not run yet' cannot be read as 'passed'. "
             "Nothing here is a parity claim: `referenced` is not `called`, and "
-            "docs/PHASE-11-X509-SUBPHASES.md section 3 records what the behavioural courts must "
+            "docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts must "
             "compare when they land."
         ),
     }

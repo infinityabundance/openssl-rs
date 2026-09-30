@@ -760,7 +760,7 @@ PHASE10_MODULES = [
 # certificate object graphs and their verification machinery (`X509`, `X509_REQ`, `X509_CRL`,
 # `X509_ACERT`, `X509_STORE`, `X509_VERIFY_PARAM`, `X509_POLICY_*`, the `X509V3_EXT_*` engine
 # and the `PEM_*_X509*` container readers and writers). Its plan is
-# `docs/PHASE-11-X509-SUBPHASES.md`, which 11.0 lands with the ledger. The modules are added by
+# `docs/PHASE-11-SUBPHASES.md`, which 11.0 lands with the ledger. The modules are added by
 # the subphase that lands them, in the same commit, so that this list is a statement about the
 # tree rather than about the plan -- which is why it names no `src/x509/` module beyond the ones
 # Phase 10's pulled-forward subphases already landed: the stratum has landed none of its own.
@@ -771,12 +771,12 @@ PHASE10_MODULES = [
 # pulled-forward X.509 subphases (10.8-10.14, D442-D451), and two hand-offs landed by Phase 5 --
 # so `phase-state.json` reports the stratum `in-progress` because its ledger has an open count,
 # not because it has a plan alone. It owns **no provider registration row**.
-# `docs/PHASE-11-X509-SUBPHASES.md` section 4 records the measurement and the precondition it
+# `docs/PHASE-11-SUBPHASES.md` section 4 records the measurement and the precondition it
 # places on the coverage join.
 PHASE11_COURTS = "artifacts/phase11/COURTS.json"
 PHASE11_OBLIGATIONS = "forensics/phase11-obligations.json"
 PHASE11_MODULES = [
-    "docs/PHASE-11-X509-SUBPHASES.md",
+    "docs/PHASE-11-SUBPHASES.md",
     "forensics/tools/phase11_obligations.py",
 ]
 
@@ -824,7 +824,7 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "pulled-forward X.509 subphases, and two hand-offs landed by Phase "
                             "5 -- rather than by this stratum, so the ledger's `open` count is "
                             "not the whole working set. The stratum owns no provider "
-                            "registration row (docs/PHASE-11-X509-SUBPHASES.md sections 1 and 4)"
+                            "registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4)"
                         )),
 }
 
