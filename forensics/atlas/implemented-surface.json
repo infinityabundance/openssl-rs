@@ -493,7 +493,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 14377,
+      "compiler_emitted_count": 14622,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -501,7 +501,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 4390,
+        "implemented": 4423,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -3969,14 +3969,26 @@
           "WHIRLPOOL_Final",
           "WHIRLPOOL_Init",
           "WHIRLPOOL_Update",
+          "X509V3_EXT_CRL_add_conf",
+          "X509V3_EXT_CRL_add_nconf",
           "X509V3_EXT_add",
           "X509V3_EXT_add_alias",
+          "X509V3_EXT_add_conf",
           "X509V3_EXT_add_list",
+          "X509V3_EXT_add_nconf",
+          "X509V3_EXT_add_nconf_sk",
           "X509V3_EXT_cleanup",
+          "X509V3_EXT_conf",
+          "X509V3_EXT_conf_nid",
           "X509V3_EXT_d2i",
           "X509V3_EXT_get",
           "X509V3_EXT_get_nid",
           "X509V3_EXT_i2d",
+          "X509V3_EXT_nconf",
+          "X509V3_EXT_nconf_nid",
+          "X509V3_EXT_print",
+          "X509V3_EXT_print_fp",
+          "X509V3_EXT_val_prn",
           "X509V3_NAME_from_section",
           "X509V3_add1_i2d",
           "X509V3_add_standard_extensions",
@@ -3986,6 +3998,7 @@
           "X509V3_add_value_int",
           "X509V3_add_value_uchar",
           "X509V3_conf_free",
+          "X509V3_extensions_print",
           "X509V3_get_d2i",
           "X509V3_get_section",
           "X509V3_get_string",
@@ -4114,6 +4127,7 @@
           "X509_LOOKUP_new",
           "X509_LOOKUP_set_method_data",
           "X509_LOOKUP_shutdown",
+          "X509_LOOKUP_store",
           "X509_NAME_ENTRY_create_by_NID",
           "X509_NAME_ENTRY_create_by_OBJ",
           "X509_NAME_ENTRY_create_by_txt",
@@ -4272,6 +4286,8 @@
           "X509_STORE_get_lookup_crls",
           "X509_STORE_get_verify",
           "X509_STORE_get_verify_cb",
+          "X509_STORE_load_store",
+          "X509_STORE_load_store_ex",
           "X509_STORE_lock",
           "X509_STORE_set_cert_crl",
           "X509_STORE_set_check_crl",
@@ -4288,6 +4304,16 @@
           "X509_STORE_set_verify_cb",
           "X509_STORE_unlock",
           "X509_STORE_up_ref",
+          "X509_TRUST_add",
+          "X509_TRUST_cleanup",
+          "X509_TRUST_get0",
+          "X509_TRUST_get0_name",
+          "X509_TRUST_get_by_id",
+          "X509_TRUST_get_count",
+          "X509_TRUST_get_flags",
+          "X509_TRUST_get_trust",
+          "X509_TRUST_set",
+          "X509_TRUST_set_default",
           "X509_VAL_free",
           "X509_VAL_it",
           "X509_VAL_new",
@@ -4304,9 +4330,14 @@
           "X509_chain_up_ref",
           "X509_check_akid",
           "X509_check_ca",
+          "X509_check_email",
+          "X509_check_host",
+          "X509_check_ip",
+          "X509_check_ip_asc",
           "X509_check_issued",
           "X509_check_private_key",
           "X509_check_purpose",
+          "X509_check_trust",
           "X509_cmp",
           "X509_delete_ext",
           "X509_digest",
@@ -4332,6 +4363,8 @@
           "X509_get0_tbs_sigalg",
           "X509_get0_trust_objects",
           "X509_get0_uids",
+          "X509_get1_email",
+          "X509_get1_ocsp",
           "X509_get_X509_PUBKEY",
           "X509_get_default_cert_dir_env",
           "X509_get_default_cert_file_env",
@@ -4894,7 +4927,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 1506
+        "scaffolded": 1473
       },
       "libssl": {
         "authority_exports": 603,
@@ -4905,18 +4938,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 4390,
-      "scaffolded": 2109
+      "implemented": 4423,
+      "scaffolded": 2076
     }
   },
-  "body_hash": "06668cce3dc5179f0ed279fdc89b14da40d5fc1cd615535c4b11b52907319643",
+  "body_hash": "667af65beff97221d9eef92e4c2c8ebe16d661a354e7471762f43b89303b1fc9",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "a6e607cf821ef5296c4b6284ca45d6ab06dae7eb017a2334c936515a843d06b2"
+      "sha256": "95045ca2ff2f910faa26ef6f98e37e28e96fc9e802fe326c2d1a7a91b0c25735"
     },
     {
       "name": "authority-exports",

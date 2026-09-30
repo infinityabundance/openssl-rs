@@ -5,10 +5,10 @@
       "in-progress"
     ],
     "census": {
-      "units_not_reached": 19
+      "units_not_reached": 16
     },
     "census_by_stratum": {
-      "11": 19
+      "11": 16
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -23,12 +23,9 @@
         "crypto/pem/pem_xaux.c",
         "crypto/x509/by_dir.c",
         "crypto/x509/by_file.c",
-        "crypto/x509/by_store.c",
         "crypto/x509/t_acert.c",
         "crypto/x509/t_crl.c",
         "crypto/x509/t_req.c",
-        "crypto/x509/v3_prn.c",
-        "crypto/x509/x509_d2.c",
         "crypto/x509/x509_r2x.c",
         "crypto/x509/x509aset.c",
         "crypto/x509/x_ietfatt.c"
@@ -50,7 +47,7 @@
       "unit_records": 96,
       "units_named_by_a_record": 98,
       "units_named_by_a_row": 375,
-      "units_reached": 356
+      "units_reached": 359
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -3627,7 +3624,9 @@
         "subphases": [
           "11:11.1"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/by_store.rs"
+        ]
       },
       "crypto/x509/pcy_cache.c": {
         "defines": [
@@ -3871,7 +3870,9 @@
         "subphases": [
           "11:11.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/v3_prn.rs"
+        ]
       },
       "crypto/x509/v3_single_use.c": {
         "defines": [
@@ -3997,7 +3998,9 @@
         "subphases": [
           "11:11.1"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/x509_d2.rs"
+        ]
       },
       "crypto/x509/x509_def.c": {
         "defines": [],
@@ -4084,7 +4087,9 @@
           "10:10.14",
           "11:11.1"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/x509_trust.rs"
+        ]
       },
       "crypto/x509/x509_txt.c": {
         "defines": [],
@@ -5470,31 +5475,31 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 437
+      "transcribed_units": 441
     }
   },
-  "body_hash": "a537144e4de470ae690442257e1b6a7cb3cf3fb4763560af4ea4888f4348a128",
+  "body_hash": "1d957b0d4ed8ea2a98dca1a3a3d42b738b8c83a779123991106657195443c1bf",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "b7b0b61344659615c124a51b15f317e55fdf355f4b469507a6b0c90fc5cac270"
+      "sha256": "c835734aa000d5103a11100b95734a9738c97bf4835c0eb43aeb3a78eeb0c221"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8668278a4192f4854096554969e84a01db780c1b857ff90961558872faf48911"
+      "sha256": "ffd745afd20eca44a5917b3e5ded0616f952c35a2825d5b8a483da3e43429716"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9617003604c254fbbda4c62a398df69a49d0ec0221e0cd08168348768df6f106"
+      "sha256": "fd7e698b28869fd1f89d2acd644ff0f1dee9d58647b71dfaa5a5de0e01e77e4a"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "937d16de0de627991da646c9497d4b0e18137b609c65c076ad04ad4afb9bdc91"
+      "sha256": "28806bef8ef8d8b49c20b415160baa0ef3525a3ceeeaee7227ea6792f6ac18f2"
     },
     {
       "name": "prerequisites",
@@ -5514,7 +5519,7 @@
     {
       "name": "plan-PHASE-11-SUBPHASES",
       "path": "docs/PHASE-11-SUBPHASES.md",
-      "sha256": "614b6322ad38af53e5a47911887a8d7aac57707b5572070c826d8154cb815541"
+      "sha256": "ebd25a87418138efe64fe8bad0bdea277e1bf5de6d8f5672f4a60b47d6a94efb"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

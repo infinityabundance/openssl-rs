@@ -338,3 +338,13 @@ pub mod x509_vfy;
 pub mod x509_lu;
 // Phase 11.4 -- `crypto/x509/x_req.c`: the `X509_REQ`/`X509_REQ_INFO` item group and lifecycle.
 pub mod x_req;
+
+// Phase 11.1b -- the four `X509_LOOKUP_METHOD` implementations and the trust helpers:
+// `crypto/x509/x509_d2.c`, `by_file.c`, `by_dir.c`, `by_store.c` and `x509_trust.c`.
+pub mod by_dir;
+pub mod by_file;
+pub mod by_store;
+pub mod x509_d2;
+pub mod x509_trust;
+// Phase 11.5 -- `crypto/x509/v3_prn.c`: the extension printers.
+pub mod v3_prn;

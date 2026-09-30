@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-X509-STORE` is a **behavioural** court: its probe calls the store/lookup/object objects 11.1a lands and the mutator surface 11.4a lands over fixed DER fixtures, and the candidate's transcript must equal the authority's observation for observation. `RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 993 exports that no behavioural court drives -- the 954 inherited `implemented` ones and the 39 of 11.1a's/11.4a's own that `RT-X509-STORE` cannot reach without a store 11.1a does not build or the opaque `X509_SIG_INFO` -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `pending_courts` names the courts the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts must compare when they land.",
+    "claim": "`RT-X509-STORE` is a **behavioural** court: its probe calls the store/lookup/object objects 11.1a lands, the mutator surface 11.4a lands, the trust table and name checks 11.1b/11.5 land and the printers and `CONF`/`X509V3_CTX` builders 11.5 lands, over fixed DER fixtures, and the candidate's transcript must equal the authority's observation for observation. `RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's exports that no behavioural court drives -- the exports earlier strata inherited and the few of this stratum's own that `RT-X509-STORE` cannot reach (they need a store 11.1a does not build, read the opaque `X509_SIG_INFO`, or would compare the crate's recorded D333/D343 divergence) -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called`, and its phase-11 slice is the live count (docs/DECISIONS.md D199). `pending_courts` names the courts the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts must compare when they land.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 204,
+        "authority_observations": 435,
         "candidate_exit_code": 0,
-        "candidate_observations": 204,
+        "candidate_observations": 435,
         "candidate_stderr_tail": [],
         "court": "RT-X509-STORE",
         "crashed": false,
@@ -64,12 +64,12 @@
     {
       "name": "probe",
       "path": "courts/phase11/rt_coverage_ref_probe.c",
-      "sha256": "669300ebee74ec3215b5beff01bbe1e834024495ecb802f8708bfed7846feee6"
+      "sha256": "eb9ee17b3bfb0c8a087a00acda455b15ac1c287a0e16806bc9663d4439c971c5"
     },
     {
       "name": "probe",
       "path": "courts/phase11/rt_x509_store_probe.c",
-      "sha256": "6c63b4f19e939f146b7ce1def3e9738504f4520f711afab6810dca30110b4427"
+      "sha256": "b81f24e8e2e902c8c2533399a46a2b1416a989a68ce1149c3ee289825e473213"
     }
   ],
   "kind": "phase11-courts",

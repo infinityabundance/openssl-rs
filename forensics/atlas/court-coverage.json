@@ -1695,7 +1695,8 @@
               "RT-MEM-INSTALL",
               "RT-PARAM",
               "RT-PUBKEY",
-              "RT-SECURE"
+              "RT-SECURE",
+              "RT-X509-STORE"
             ],
             "symbol": "CRYPTO_malloc"
           },
@@ -1860,7 +1861,8 @@
             "courts": [
               "RT-MEM",
               "RT-MEM-DEFAULT",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "CRYPTO_strdup"
           },
@@ -2814,7 +2816,8 @@
               "RT-ASN1-PRINT",
               "RT-DH",
               "RT-OBJ-STREAM",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "OBJ_txt2obj"
           },
@@ -3132,7 +3135,8 @@
               "RT-ERR",
               "RT-PKCS12",
               "RT-STACK",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "OPENSSL_sk_free"
           },
@@ -3280,7 +3284,8 @@
               "RT-CONF",
               "RT-PKCS12",
               "RT-STACK",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "OPENSSL_sk_value"
           },
@@ -3763,7 +3768,8 @@
               "RT-PEM-KEY",
               "RT-PKCS12",
               "RT-PUBKEY",
-              "RT-RAND-USERS"
+              "RT-RAND-USERS",
+              "RT-X509-STORE"
             ],
             "symbol": "BIO_ctrl"
           },
@@ -4004,7 +4010,8 @@
               "RT-PUBKEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "BIO_free"
           },
@@ -4459,7 +4466,8 @@
               "RT-PUBKEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "BIO_new"
           },
@@ -4537,7 +4545,8 @@
               "RT-OBJ-STREAM",
               "RT-PEM-KEY",
               "RT-PUBKEY",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "BIO_new_mem_buf"
           },
@@ -4788,7 +4797,8 @@
               "RT-PKCS12",
               "RT-PUBKEY",
               "RT-RUNTIME-EXT",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "BIO_s_mem"
           },
@@ -5348,7 +5358,8 @@
             "courts": [
               "RT-CONF",
               "RT-CONF-MOD",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "NCONF_free"
           },
@@ -5406,7 +5417,8 @@
             "basis": "called",
             "courts": [
               "RT-CONF",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "NCONF_load_bio"
           },
@@ -5422,7 +5434,8 @@
             "courts": [
               "RT-CONF",
               "RT-CONF-MOD",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "NCONF_new"
           },
@@ -6019,7 +6032,8 @@
               "RT-ASN1",
               "RT-ASN1-PRINT",
               "RT-DH",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "ASN1_OBJECT_free"
           },
@@ -6067,7 +6081,8 @@
               "RT-ASN1-TEMPLATE",
               "RT-DIGEST",
               "RT-KEYFORMAT",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "ASN1_OCTET_STRING_free"
           },
@@ -6411,7 +6426,8 @@
               "RT-BIO-ASN1",
               "RT-KEYFORMAT",
               "RT-PKCS12",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-STORE"
             ],
             "symbol": "ASN1_STRING_length"
           },
@@ -24633,10 +24649,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 1090,
-          "directly_courted_called": 501,
-          "directly_courted_referenced": 589,
-          "implemented": 1090,
+          "directly_courted": 1123,
+          "directly_courted_called": 536,
+          "directly_courted_referenced": 587,
+          "implemented": 1123,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -27095,6 +27111,20 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_CRL_add_conf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_CRL_add_nconf"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-STORE",
               "RT-X509-REF"
             ],
@@ -27110,6 +27140,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_add_conf"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-STORE",
               "RT-X509-REF"
             ],
@@ -27118,10 +27155,38 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_add_nconf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_add_nconf_sk"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-STORE",
               "RT-X509-REF"
             ],
             "symbol": "X509V3_EXT_cleanup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_conf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_conf_nid"
           },
           {
             "basis": "referenced",
@@ -27150,6 +27215,41 @@
               "RT-X509-REF"
             ],
             "symbol": "X509V3_EXT_i2d"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_nconf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_nconf_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_print_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_EXT_val_prn"
           },
           {
             "basis": "called",
@@ -27217,9 +27317,17 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509V3_conf_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509V3_extensions_print"
           },
           {
             "basis": "referenced",
@@ -27288,7 +27396,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509V3_set_ctx"
           },
@@ -27727,7 +27836,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_CRL_get_ext_count"
           },
@@ -27794,9 +27904,10 @@
             "symbol": "X509_CRL_match"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_CRL_new"
           },
@@ -27874,7 +27985,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_EXTENSION_create_by_NID"
           },
@@ -27882,7 +27994,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_EXTENSION_create_by_OBJ"
           },
@@ -27897,7 +28010,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_EXTENSION_free"
           },
@@ -27905,7 +28019,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_EXTENSION_get_critical"
           },
@@ -27913,7 +28028,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_EXTENSION_get_data"
           },
@@ -27921,7 +28037,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_EXTENSION_get_object"
           },
@@ -28197,6 +28314,13 @@
               "RT-X509-STORE"
             ],
             "symbol": "X509_LOOKUP_shutdown"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_LOOKUP_store"
           },
           {
             "basis": "referenced",
@@ -29348,6 +29472,20 @@
             "symbol": "X509_STORE_get_verify_cb"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_STORE_load_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_STORE_load_store_ex"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
@@ -29458,6 +29596,76 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_STORE_up_ref"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_add"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_cleanup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_get0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_get0_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_get_by_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_get_count"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_get_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_get_trust"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_set"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_TRUST_set_default"
           },
           {
             "basis": "referenced",
@@ -29578,6 +29786,34 @@
             "symbol": "X509_check_ca"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_check_email"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_check_host"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_check_ip"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_check_ip_asc"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
@@ -29598,6 +29834,13 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_check_purpose"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_check_trust"
           },
           {
             "basis": "referenced",
@@ -29642,7 +29885,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_email_free"
           },
@@ -29792,6 +30036,20 @@
             "courts": [
               "RT-X509-STORE"
             ],
+            "symbol": "X509_get1_email"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
+            "symbol": "X509_get1_ocsp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE"
+            ],
             "symbol": "X509_get_X509_PUBKEY"
           },
           {
@@ -29821,7 +30079,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_get_ext"
           },
@@ -29853,7 +30112,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "X509_get_ext_count"
           },
@@ -32469,9 +32729,10 @@
             "symbol": "i2d_X509_CRL_fp"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-STORE"
             ],
             "symbol": "i2d_X509_EXTENSION"
           },
@@ -32730,10 +32991,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 4106,
-      "directly_courted_called": 3191,
-      "directly_courted_referenced": 915,
-      "implemented": 4114,
+      "directly_courted": 4139,
+      "directly_courted_called": 3226,
+      "directly_courted_referenced": 913,
+      "implemented": 4147,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -32744,7 +33005,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9617003604c254fbbda4c62a398df69a49d0ec0221e0cd08168348768df6f106"
+      "sha256": "fd7e698b28869fd1f89d2acd644ff0f1dee9d58647b71dfaa5a5de0e01e77e4a"
     },
     {
       "name": "symbol-ownership",
@@ -32759,7 +33020,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "6fae8ebf6fd8e38d6cdd4baff27e3ee1656df4ea1c0fb0f795c4224f9ee9c9fd"
+      "sha256": "282ed65e1d03a9163584ed3e7e9725c16e4378013a0c765216763d0e5df8a0c7"
     },
     {
       "name": "phase3-courts",
@@ -32769,7 +33030,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "c376ad48b0c1bdf074f2973d3914fd2f581ffd1ee27571fc6db6c3671247bcfa"
+      "sha256": "abd5c64609ded8eeeaa163b35988cacefca34da3dda1f7006a85c1c1f97b846b"
     },
     {
       "name": "phase4-courts",
@@ -32779,7 +33040,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "fbbfda0a3bdf4ddb8b0b4b4820ba4e8d46635ab2c9d5984013d0ec3efa1c363a"
+      "sha256": "28f6889f55682193af679f4298bfd198d478acca20ed324152cc7ecc3d090f19"
     },
     {
       "name": "phase5-courts",
@@ -32789,7 +33050,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "527b4d41d06569648f074d3c96bbd4bf8938a75df3e083fbde4b2cf56a2cce85"
+      "sha256": "1dc6c0ce7a33dafe0785662420f15a6b05f58c2712fba682a32f7898126cdf38"
     },
     {
       "name": "phase6-courts",
@@ -32799,7 +33060,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "c41bfb9968d6e8a594380526f58026f5378e7797371464964b75a626533ff513"
+      "sha256": "1da359c9b9fc7b3d80ac39528aeadfa63a06d630bfda9d7e1979e25094db2cb1"
     },
     {
       "name": "phase7-courts",
@@ -32809,7 +33070,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "4250462136c47ed27cebb0d92eed5d04a78c16087a54f9cde796647a54b3de77"
+      "sha256": "9ab99bcfa23f4d0573379401458c7c603daf763d24c828e875d8bced0b2a4802"
     },
     {
       "name": "phase8-courts",
@@ -32819,7 +33080,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "c776c4504833672c9d5577ddbfa92ca1bc1343fdcea971cec8f5d7cc93eb8248"
+      "sha256": "8eb755cc5af9862b6a68d5705617ec873429159c23a12164a94e35edde13dad8"
     },
     {
       "name": "phase9-courts",
@@ -32829,7 +33090,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "2f29ba53dc5ed30ed2277afd04cb74f661a39bcbab1a66f31e739db442c1efb4"
+      "sha256": "ff852a110984a0d6a2a6be3493492195f67f0be82cb68c80d1ba623205bbd682"
     },
     {
       "name": "phase10-courts",
@@ -32839,12 +33100,12 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "0c9269b19b4b23d9f9e5b3c91af39d859277429b85beb34c702adfa6bd85a2d8"
+      "sha256": "2b4eae976ae48816bcfce5b5cc3ad6345489cc081e83e2af850a9bf8f8d9ba46"
     },
     {
       "name": "phase11-courts",
       "path": "artifacts/phase11/COURTS.json",
-      "sha256": "b0feb60a43e25278f042b71d008a07e1289d4fbe9ef637764f3945497b5bba6b"
+      "sha256": "1bba5e06ac254cb2cb6ccda6bd13bb415f97b66916fb57a4a60e8a64d489d680"
     }
   ],
   "kind": "court-coverage",

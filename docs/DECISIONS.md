@@ -33489,3 +33489,62 @@ which is the divergence's evidence rather than this unit's.
 11 with **zero unmatched** (`called=501`, `referenced=589`); `cargo test --lib` is **1119 passed**
 (up from 1117: the new request and mutator tests); `cargo fmt`/`clippy -D warnings` clean;
 `probe_hygiene` reports the new probe stable across `-O0/-O1/-O2` on both sides.
+
+## D482 -- 11.1b and 11.5 land the trust table, the store loaders, the printers and the extension builders, and the phase-11 notes stop restating counts that move
+
+**Thirty-three more exports closed.** Phase 11 implemented **1,090 -> 1,123**, open **377 -> 344**,
+and `libcrypto` implemented **4,390 -> 4,423**. The pipeline reads **111 courts and 47,545
+observations**.
+
+### 11.1b -- the trust table, the store loaders and the URI lookup
+`src/x509/x509_trust.rs` lands `crypto/x509/x509_trust.c` whole: all eleven open exports
+(`X509_TRUST_add`, `_cleanup`, `_get0`, `_get0_name`, `_get_by_id`, `_get_count`, `_get_flags`,
+`_get_trust`, `_set`, `_set_default`, `X509_check_trust`) and the six `static` helpers they are
+built on, over the writable `trstandard[]` table the authority's `X509_TRUST_add` overwrites in
+place. `src/x509/by_store.rs` lands `by_store.c`'s one export, `X509_LOOKUP_store`, with its eight
+`static` callbacks and the two `X509_L_*` `ctrl` commands. `src/x509/x509_d2.rs` lands two of
+`x509_d2.c`'s nine -- `X509_STORE_load_store_ex` and `X509_STORE_load_store` -- withholding the
+other seven by name, each with the one unlanded lookup constructor it reaches. `src/x509/by_file.rs`
+and `src/x509/by_dir.rs` become **documented modules whose every name is withheld**, each blocker
+named (11.6's PEM X.509 readers and 11.7's `x509_def.c` default paths), the shape D454 gave
+`x509rset.rs`.
+
+### 11.5 -- the printers, the host/name checks and the extension builders
+`src/x509/v3_prn.rs` (new) lands `crypto/x509/v3_prn.c` whole: `X509V3_EXT_val_prn`,
+`X509V3_EXT_print`, `X509V3_extensions_print` and `X509V3_EXT_print_fp`. `src/x509/v3_utl.rs`
+gains the six name checks and accessors (`X509_check_host`/`_email`/`_ip`/`_ip_asc`,
+`X509_get1_email`, `X509_get1_ocsp`) on the `GENERAL_NAMES` surface Phase 10 landed.
+`src/x509/v3_conf.rs` gains the nine `X509V3_EXT_*` builders (`X509V3_EXT_nconf(_nid)`,
+`X509V3_EXT_conf(_nid)`, `X509V3_EXT_add_nconf(_sk)`, `X509V3_EXT_add_conf`, the two
+`X509V3_EXT_CRL_add_*`), the `CONF`/`X509V3_CTX` chain the extension engine is driven through.
+
+### The court, extended rather than added
+`RT-X509-STORE` grew **204 -> 435 observations**, both sides byte-identical: the trust table
+through hooks the probe installs, the STORE-URI lookup and the store loaders' NULL-URI refusals,
+the four printers over fixed DER, the nine builders through a real `CONF`, and the name checks
+over the SAN-bearing fixture `rt_x509_der.h` gained. `dispatch_court.py` gained three
+`NOT_A_DISPATCH` exemptions -- `EqualFn`, `CheckTrust`, `DefaultTrustFn`, the authority's own
+`.c`-local callback-pointer types that are not symbols a version script exports, so the atlas
+records no `typedef` for them. `court_coverage.py` reports phase 11 with **zero unmatched**
+(called **536**, referenced **587**).
+
+### The notes stop restating counts that move
+Landed with the slice that falsified them. `D-DECODER-ABSENT-1`'s lesson -- a typed value standing
+where a derived one belongs -- recurred in four notes that named the *activation* split
+("954 of 1,467", "952 atlas-owned", "the 39 of 11.1a's own", "993") as though it were current:
+`forensics/tools/phase_state.py`'s `ledger_note`, `forensics/tools/phase11_obligations.py`'s module
+docstring and its ledger `note`, and `forensics/tools/phase11_courts.py`'s module docstring and its
+`COURTS.json` `claim`. The first is the worst, because `render_status.py` echoes it into three
+generated documents (`forensics/STATUS.md`, `forensics/phase-state.md`, `docs/SEAL-CENSUS.md`), so
+a stale hand-typed number printed as generated evidence. Each note now defers to the live record
+(`forensics/phase11-obligations.json`'s `counts` and `forensics/atlas/implemented-surface.json`)
+and says so, the pattern Phase 9's `ledger_note` already set. `docs/PHASE-11-SUBPHASES.md` section
+1's census is labelled the activation measurement, and its section 5 status clauses -- which
+`docs_consistency.py` binds per symbol to the ledger -- are rewritten to name only symbols whose
+ledger disposition they match.
+
+### Verification
+`PIPELINE OK` exit 0 with **111 courts and 47,545 observations**; the pipeline's `cargo fmt
+--all`, `cargo build --release`, both `cargo test --lib` runs (serial and parallel-safety) and
+`cargo clippy --all-targets -- -D warnings` are green, with **1,119 unit tests passed**;
+`probe_hygiene` stable across `-O0/-O1/-O2` on both sides.

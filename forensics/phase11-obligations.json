@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1455,
       "deferred_to_later_phase": 0,
-      "implemented": 1090,
-      "open_in_this_stratum": 377,
+      "implemented": 1123,
+      "open_in_this_stratum": 344,
       "owned": 1467,
       "received_by_handoff": 12
     },
@@ -452,14 +452,26 @@
       "USERNOTICE_free",
       "USERNOTICE_it",
       "USERNOTICE_new",
+      "X509V3_EXT_CRL_add_conf",
+      "X509V3_EXT_CRL_add_nconf",
       "X509V3_EXT_add",
       "X509V3_EXT_add_alias",
+      "X509V3_EXT_add_conf",
       "X509V3_EXT_add_list",
+      "X509V3_EXT_add_nconf",
+      "X509V3_EXT_add_nconf_sk",
       "X509V3_EXT_cleanup",
+      "X509V3_EXT_conf",
+      "X509V3_EXT_conf_nid",
       "X509V3_EXT_d2i",
       "X509V3_EXT_get",
       "X509V3_EXT_get_nid",
       "X509V3_EXT_i2d",
+      "X509V3_EXT_nconf",
+      "X509V3_EXT_nconf_nid",
+      "X509V3_EXT_print",
+      "X509V3_EXT_print_fp",
+      "X509V3_EXT_val_prn",
       "X509V3_NAME_from_section",
       "X509V3_add1_i2d",
       "X509V3_add_standard_extensions",
@@ -469,6 +481,7 @@
       "X509V3_add_value_int",
       "X509V3_add_value_uchar",
       "X509V3_conf_free",
+      "X509V3_extensions_print",
       "X509V3_get_d2i",
       "X509V3_get_section",
       "X509V3_get_string",
@@ -597,6 +610,7 @@
       "X509_LOOKUP_new",
       "X509_LOOKUP_set_method_data",
       "X509_LOOKUP_shutdown",
+      "X509_LOOKUP_store",
       "X509_NAME_ENTRY_create_by_NID",
       "X509_NAME_ENTRY_create_by_OBJ",
       "X509_NAME_ENTRY_create_by_txt",
@@ -755,6 +769,8 @@
       "X509_STORE_get_lookup_crls",
       "X509_STORE_get_verify",
       "X509_STORE_get_verify_cb",
+      "X509_STORE_load_store",
+      "X509_STORE_load_store_ex",
       "X509_STORE_lock",
       "X509_STORE_set_cert_crl",
       "X509_STORE_set_check_crl",
@@ -771,6 +787,16 @@
       "X509_STORE_set_verify_cb",
       "X509_STORE_unlock",
       "X509_STORE_up_ref",
+      "X509_TRUST_add",
+      "X509_TRUST_cleanup",
+      "X509_TRUST_get0",
+      "X509_TRUST_get0_name",
+      "X509_TRUST_get_by_id",
+      "X509_TRUST_get_count",
+      "X509_TRUST_get_flags",
+      "X509_TRUST_get_trust",
+      "X509_TRUST_set",
+      "X509_TRUST_set_default",
       "X509_VAL_free",
       "X509_VAL_it",
       "X509_VAL_new",
@@ -787,9 +813,14 @@
       "X509_chain_up_ref",
       "X509_check_akid",
       "X509_check_ca",
+      "X509_check_email",
+      "X509_check_host",
+      "X509_check_ip",
+      "X509_check_ip_asc",
       "X509_check_issued",
       "X509_check_private_key",
       "X509_check_purpose",
+      "X509_check_trust",
       "X509_cmp",
       "X509_delete_ext",
       "X509_digest",
@@ -815,6 +846,8 @@
       "X509_get0_tbs_sigalg",
       "X509_get0_trust_objects",
       "X509_get0_uids",
+      "X509_get1_email",
+      "X509_get1_ocsp",
       "X509_get_X509_PUBKEY",
       "X509_get_default_cert_dir_env",
       "X509_get_default_cert_file_env",
@@ -1206,7 +1239,7 @@
     ],
     "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
     "module_overrides": [],
-    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation except Phase 10, this ledger does not start with the whole working set open: 954 of the 1,467 were landed before this stratum was activated -- 952 atlas-owned exports by Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases 10.8-10.14 (D442-D451), and two hand-offs (`ASN1_generate_nconf`, `ASN1_generate_v3`) by Phase 5 -- and the ledger reports them as `implemented` because `implemented-surface.json` does. docs/PHASE-11-SUBPHASES.md section 4 is the measurement. This stratum owns no provider registration row (`forensics/atlas/provider-algorithms.json` records rows for owning phases 8, 9, 10 and 13 only), so `provider_rows_owned` is 0. Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation except Phase 10, this ledger does not start with the whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed before activation, and the two hand-offs Phase 5 discharged, are reported as `implemented` because `implemented-surface.json` says so. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum owns no provider registration row (`forensics/atlas/provider-algorithms.json` records rows for owning phases 8, Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-SUBPHASES.md section 4 decides when the stratum may be called complete.",
     "open": [
       {
         "declaring_header": "asn1.h",
@@ -1788,18 +1821,6 @@
         "declaring_header": "x509v3.h",
         "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
-        "symbol": "X509V3_EXT_CRL_add_conf"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_CRL_add_nconf"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
         "symbol": "X509V3_EXT_REQ_add_conf"
       },
       {
@@ -1807,72 +1828,6 @@
         "module": "src/x509/v3_conf.rs",
         "received_from_phase": null,
         "symbol": "X509V3_EXT_REQ_add_nconf"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_add_conf"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_add_nconf"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_add_nconf_sk"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_conf"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_conf_nid"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_nconf"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_conf.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_nconf_nid"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_prn.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_print"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_prn.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_print_fp"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_prn.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_EXT_val_prn"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_prn.rs",
-        "received_from_phase": null,
-        "symbol": "X509V3_extensions_print"
       },
       {
         "declaring_header": "x509_acert.h",
@@ -2269,12 +2224,6 @@
         "module": "src/x509/by_dir.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_hash_dir"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/by_store.rs",
-        "received_from_phase": null,
-        "symbol": "X509_LOOKUP_store"
       },
       {
         "declaring_header": "x509.h",
@@ -2770,18 +2719,6 @@
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_d2.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_load_store"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_d2.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_load_store_ex"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
         "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_new"
@@ -2827,66 +2764,6 @@
         "module": "src/x509/x509_lu.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_set_trust"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_add"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_cleanup"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_get0"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_get0_name"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_get_by_id"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_get_count"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_get_flags"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_get_trust"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_set"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_TRUST_set_default"
       },
       {
         "declaring_header": "x509_vfy.h",
@@ -3135,36 +3012,6 @@
         "symbol": "X509_build_chain"
       },
       {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_utl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_check_email"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_utl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_check_host"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_utl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_check_ip"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_utl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_check_ip_asc"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_trust.rs",
-        "received_from_phase": null,
-        "symbol": "X509_check_trust"
-      },
-      {
         "declaring_header": "x509.h",
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
@@ -3181,18 +3028,6 @@
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_cmp_timeframe"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_utl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_get1_email"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_utl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_get1_ocsp"
       },
       {
         "declaring_header": "x509.h",
@@ -3623,17 +3458,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "06668cce3dc5179f0ed279fdc89b14da40d5fc1cd615535c4b11b52907319643"
+      "sha256": "667af65beff97221d9eef92e4c2c8ebe16d661a354e7471762f43b89303b1fc9"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "fbbfda0a3bdf4ddb8b0b4b4820ba4e8d46635ab2c9d5984013d0ec3efa1c363a"
+      "sha256": "28f6889f55682193af679f4298bfd198d478acca20ed324152cc7ecc3d090f19"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "c41bfb9968d6e8a594380526f58026f5378e7797371464964b75a626533ff513"
+      "sha256": "1027e834553fb47a6078e49b1acf8937a9b0f64d0d78def437bfe76418752998"
     }
   ],
   "kind": "phase11-obligations",
