@@ -413,6 +413,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-PHASE22-GEMEL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-PHASE22-GENEALOGY": {
       "observations": 0,
       "verdict": "pass"
@@ -537,7 +541,7 @@
   "open_obligations": {
     "phase10": 0,
     "phase11": 335,
-    "phase22": 2,
+    "phase22": 1,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

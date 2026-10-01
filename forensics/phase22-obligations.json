@@ -4,8 +4,8 @@
     "counts": {
       "atlas_owned": 18,
       "deferred_to_later_phase": 0,
-      "implemented": 16,
-      "open_in_this_stratum": 2,
+      "implemented": 17,
+      "open_in_this_stratum": 1,
       "owned": 18,
       "received_by_handoff": 0
     },
@@ -26,15 +26,11 @@
       "22.12",
       "22.13",
       "22.14",
-      "22.15"
+      "22.15",
+      "22.16"
     ],
     "note": "`open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
     "open": [
-      {
-        "artefact": "forensics/atlas/phase22/gemel-checkpoint.json",
-        "plane": "The Gemel checkpoint and the regenerated phase ledgers",
-        "subphase": "22.16"
-      },
       {
         "artefact": "docs/PHASE-22-ATLAS-SEAL.md",
         "plane": "The Phase-22 seal",

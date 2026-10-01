@@ -32,7 +32,7 @@ renderer does not know any phase status.
 | 9 | RAND / DRBG + entropy | `complete` |  |
 | 10 | Key formats + PKCS + STORE | `complete` |  |
 | 11 | X.509 + verification | `in-progress` | 335 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. The ledger does not start with that whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed, and two Phase 5 hand-offs, are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4) |
-| 22 | Authority exhaustiveness and the whole-program compatibility atlas | `in-progress` | 2 compatibility plane(s) remain unimplemented (docs/PHASE-22-SUBPHASES.md sections 5 and 7); the closure graph records 2 UNKNOWN residual(s) intersecting a declared compatibility root. `open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding. |
+| 22 | Authority exhaustiveness and the whole-program compatibility atlas | `in-progress` | 1 compatibility plane(s) remain unimplemented (docs/PHASE-22-SUBPHASES.md sections 5 and 7); the closure graph records 2 UNKNOWN residual(s) intersecting a declared compatibility root. `open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding. |
 
 Not started: strata 12-21 (10 total).
 
@@ -131,9 +131,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 22 working set: 18
-* implemented: 16
+* implemented: 17
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 2
+* open in this stratum: 1
 
 ### Phase 3 obligation ledger
 
