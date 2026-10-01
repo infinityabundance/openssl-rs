@@ -109,7 +109,12 @@ COURTS: list[tuple[str, str]] = [
     # It drives the `X509_VERIFY_PARAM` object, table and every accessor (`x509_vpm.c`), the
     # `X509_STORE_CTX` lifecycle and every field/error/callback accessor (`x509_vfy.c`), the
     # free-standing time decision surface over a fixed verification time, the issuer lookup and
-    # `X509_policy_tree_free`. The three engine entry points are withheld by name; see the probe's
+    # `X509_policy_tree_free`. It also drives the two chain-roll arms 11.4 and 11.5 landed when
+    # they were pulled forward to unblock the engine: the `x_crl.c` CRL method/lookup surface
+    # (`X509_CRL_add0_revoked`, `..._get0_by_serial`, `..._get0_by_cert`, `..._verify`, the
+    # `X509_CRL_METHOD_*` object and `..._set_/get_meth_data`) and the RFC 3779
+    # `X509v3_{asid,addr}_validate_path` / `..._validate_resource_set`. The three engine entry
+    # points are withheld by name; see the probe's
     # header and `src/x509/x509_vfy.rs`'s module doc for the blocker.
     ("RT-X509-VERIFY", "rt_x509_verify_probe.c"),
     # "RT-X509-PEM -- the Phase 11.6 PEM X.509 container surface, driven."

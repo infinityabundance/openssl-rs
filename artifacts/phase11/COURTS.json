@@ -41,9 +41,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 135,
+        "authority_observations": 160,
         "candidate_exit_code": 0,
-        "candidate_observations": 135,
+        "candidate_observations": 160,
         "candidate_stderr_tail": [],
         "court": "RT-X509-VERIFY",
         "crashed": false,
@@ -106,7 +106,7 @@
     {
       "name": "probe",
       "path": "courts/phase11/rt_x509_verify_probe.c",
-      "sha256": "dd14d4bf06c1ca6948e562e98fe4c4c5a0fe046ddc31107532a0097ec331b64c"
+      "sha256": "9509f4f884cb3eb065d199468e6564ad2948d4f2b807cd7528c3fb97bd94bf01"
     },
     {
       "name": "probe",

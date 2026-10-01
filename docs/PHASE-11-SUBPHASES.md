@@ -295,6 +295,13 @@ units' open names are withheld, each with its blocker recorded in `src/x509/x509
 `src/x509/pcy_tree.rs`'s module docs: the engine's three entry points, the two context
 constructors, the CRL difference helper and the policy-tree entry point.
 
+11.4's `x_crl.c` CRL method and lookup surface, pulled forward to unblock the engine, adds
+`X509_CRL_add0_revoked`, `X509_CRL_verify`, `X509_CRL_get0_by_serial`, `X509_CRL_get0_by_cert`,
+`X509_CRL_set_default_method`, `X509_CRL_METHOD_new`, `X509_CRL_METHOD_free`,
+`X509_CRL_set_meth_data` and `X509_CRL_get_meth_data`; 11.5's RFC 3779 path validation adds
+`X509v3_asid_validate_path`, `X509v3_asid_validate_resource_set`, `X509v3_addr_validate_path`
+and `X509v3_addr_validate_resource_set`.
+
 **Open exports (checked against the ledger):**
 
 The store and verification layer is still open at `X509_STORE_new`, `X509_STORE_set1_param` and

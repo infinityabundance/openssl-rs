@@ -33,19 +33,19 @@
 //!   `check_policy`, `internal_verify` and the CRL cluster. Their closure is **not landed**:
 //!   `check_revocation` (`:1062`) is one half `check_cert_ocsp_resp` (`:1174`) over the
 //!   `ocsp.h` objects (Phase 12, none landed) and the other half `check_cert_crl`/`check_crl`/
-//!   `cert_crl` (`:1281-1993`) over `X509_CRL_get0_by_cert`/`X509_CRL_verify` (`x_crl.c`, still
-//!   open in `x_crl.rs`, 11.4); `x509_verify_x509`/`build_chain`/`check_trust` interleave the
+//!   `cert_crl` (`:1281-1993`) over `X509_CRL_get0_by_cert`/`X509_CRL_verify` (landed in
+//!   `x_crl.rs` by 11.4 pulled forward); `x509_verify_x509`/`build_chain`/`check_trust` interleave the
 //!   `SSL_DANE` matrix (`dane_match_cert`, `check_dane_issuer`, `check_dane_pkeys`,
 //!   `dane_verify*`, `:3087-3490`), whose `SSL_DANE` is the SSL layer's; and `verify_chain`
-//!   (`:278-284`) calls `X509v3_asid_validate_path`/`X509v3_addr_validate_path`, both withheld by
-//!   name in `v3_asid.rs`/`v3_addr.rs`. A transcription with any of those arms omitted would not
+//!   (`:278-284`) calls `X509v3_asid_validate_path`/`X509v3_addr_validate_path`, both landed in
+//!   `v3_asid.rs`/`v3_addr.rs` by 11.5 pulled forward. A transcription with any of those arms omitted would not
 //!   be the authority's function, so the names are named, not declared.
 //! * [`X509_STORE_CTX_init`] (`:2737`) and [`X509_STORE_CTX_init_rpk`] (`:2729`) install the
 //!   engine's default callbacks (`check_revocation`, `check_crl`, `cert_crl`, `check_policy` ->
 //!   `internal_verify`) into `ctx`, so they are blocked by the same closure.
-//! * [`X509_CRL_diff`] (`:2403`) is blocked by `X509_CRL_add0_revoked`/`X509_CRL_get0_by_serial`/
-//!   `X509_CRL_verify` (`x_crl.c`, open in `x_crl.rs`, 11.4) and by `X509_CRL_set_nextUpdate`,
-//!   none of which this crate models yet.
+//! * [`X509_CRL_diff`] (`:2403`) is blocked by `X509_CRL_set_nextUpdate`, which this crate does not
+//!   model yet; the `X509_CRL_add0_revoked`/`X509_CRL_get0_by_serial`/`X509_CRL_verify` it also
+//!   reads are now landed in `x_crl.rs`.
 //!
 //! [`X509_policy_tree_free`](crate::x509::pcy_tree::X509_policy_tree_free) landed with this slice,
 //! so [`X509_STORE_CTX_cleanup`] can call it; that is why the lifecycle above lands even though

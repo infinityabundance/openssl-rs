@@ -41,14 +41,15 @@
 //! does not export (`nm -D` shows no `ossl_v3_*`), so a court cannot name it; its drivable surface
 //! is the four exported item groups and the `X509v3_addr_*` API.
 //!
-//! **Also withheld by name**: the three path-validation names — `addr_validate_path_internal`
-//! (`:1212-1325`), `X509v3_addr_validate_path` (`:1332-1341`), `X509v3_addr_validate_resource_set`
-//! (`:1347-1357`) — the `validation_err` macro (`:1190-1202`) they share, and that macro's one
-//! `ERR_raise` at `:1246`. Their blocker is the unlanded `X509_STORE_CTX`:
-//! `grep -rn x509_store_ctx_st src/` finds no `struct x509_store_ctx_st` (no `chain`, `error`,
-//! `error_depth`, `current_cert` or `verify_cb` surface), and `sk_X509_num`/`sk_X509_value` are
-//! absent too, so the functions cannot be transcribed without inventing a type outside this unit.
-//! Withheld whole rather than stubbed: the names are named, not declared.
+//! **The path-validation surface landed** in this slice: `addr_validate_path_internal`
+//! (`:1212-1325`), `X509v3_addr_validate_path` (`:1332-1341`) and
+//! `X509v3_addr_validate_resource_set` (`:1347-1357`), plus the `validation_err` macro
+//! (`:1190-1202`) as a private function of the same name and one new raise site at `:1246`
+//! (`ERR_R_CRYPTO_LIB`). A `macro_rules!` body cannot name its caller's `ctx`/`x`/`i`/`rv`, so the
+//! macro's `goto done` becomes the caller's `break 'done` over the function's cleanup label. Its
+//! one-time blocker is resolved: `X509_STORE_CTX` is 11.1a's `X509StoreCtx` (`src/x509/x509_lu.rs`),
+//! whose `pub(crate)` members are read here, and the walk uses the generic `OPENSSL_sk_*` stack API
+//! (`dup`/`free`/`sort`/`find`/`set`) in place of the typed `sk_IPAddressFamily_*` wrappers.
 //!
 //! ## Naming divergence
 //!
@@ -60,7 +61,7 @@
 //!
 //! ## The raise sites
 //!
-//! `crypto/x509/v3_addr.c` is not an entry in `gen_err_raise_sites.py`, so the fifteen coordinates
+//! `crypto/x509/v3_addr.c` is not an entry in `gen_err_raise_sites.py`, so the sixteen coordinates
 //! in the landed functions are **declared locally**, their reason values read from the authority's
 //! `err.h.in`/`x509v3err.h` (not typed from memory), as `v3_bitst.rs` does. `ERR_LIB_X509V3` is
 //! `err.h.in:99`; `ERR_R_CRYPTO_LIB` and `ERR_R_X509V3_LIB` are the `err.h.in` rows `:330`/`:335`;
@@ -96,12 +97,14 @@ use crate::runtime::err::{raise_site, raise_site_data};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::runtime::obj::NID_sbgp_ipAddrBlock;
 use crate::runtime::stack::{
-    OPENSSL_sk_delete, OPENSSL_sk_find, OPENSSL_sk_new, OPENSSL_sk_new_null, OPENSSL_sk_num,
-    OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_set, OPENSSL_sk_set_cmp_func, OPENSSL_sk_sort,
-    OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_delete, OPENSSL_sk_dup, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new,
+    OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_set,
+    OPENSSL_sk_set_cmp_func, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::x509::v3_lib::X509V3ExtMethod;
 use crate::x509::v3_utl::{conf_add_error_name_value, ossl_a2i_ipadd, ossl_v3_name_cmp};
+use crate::x509::x509_lu::X509StoreCtx;
+use crate::x509::x_x509::X509;
 
 /// `ERR_LIB_X509V3` — `include/openssl/err.h.in:99`.
 const ERR_LIB_X509V3: c_int = 34;
@@ -2549,3 +2552,318 @@ pub static ossl_v3_addr: X509V3ExtMethod = X509V3ExtMethod {
     r2i: None,
     usr_data: ptr::null_mut(),
 };
+
+// ---------------------------------------------------------------------------------------------
+// Path validation -- `v3_addr.c:1187-1357`.
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `ossl_assert` under `-DNDEBUG`, which this profile sets: a plain check that
+/// returns its argument, not the `OPENSSL_die` form. `src/x509/x_pubkey.rs` carries the same helper.
+fn ossl_assert(expr: bool) -> c_int {
+    c_int::from(expr)
+}
+
+/// `X509_V_ERR_UNSPECIFIED` -- `include/openssl/x509_vfy.h.in:216`.
+const X509_V_ERR_UNSPECIFIED: c_int = 1;
+/// `X509_V_ERR_OUT_OF_MEM` -- `include/openssl/x509_vfy.h.in:232`.
+const X509_V_ERR_OUT_OF_MEM: c_int = 17;
+/// `X509_V_ERR_INVALID_EXTENSION` -- `include/openssl/x509_vfy.h.in:258`.
+const X509_V_ERR_INVALID_EXTENSION: c_int = 41;
+/// `X509_V_ERR_UNNESTED_RESOURCE` -- `include/openssl/x509_vfy.h.in:263`.
+const X509_V_ERR_UNNESTED_RESOURCE: c_int = 46;
+
+/// `addr_validate_path_internal`'s failed `sk_IPAddressFamily_dup` at `v3_addr.c:1246`
+/// (`ERR_R_CRYPTO_LIB`).
+const V3_ADDR_1246: crate::runtime::err::err_sites::ErrSite =
+    v3_addr_site(1246, c"addr_validate_path_internal", ERR_R_CRYPTO_LIB);
+
+/// `validation_err(_err_)` -- the `crypto/x509/v3_addr.c:1190-1202` macro, over this frame's `ctx`,
+/// `x` and `i`.
+///
+/// The authority spells this as a statement macro whose `goto done` leaves
+/// `addr_validate_path_internal` through its cleanup label with `rv` set to the callback's value;
+/// here it is a function returning that value (or 0 when `ctx` is NULL), which the caller stores in
+/// `rv` and breaks to `'done` from when it is zero.
+///
+/// # Safety
+///
+/// `ctx` is NULL or a live `X509StoreCtx` whose `verify_cb` is non-NULL whenever `ctx` is non-NULL;
+/// `x` is NULL or a live `X509`.
+unsafe fn validation_err(ctx: *mut X509StoreCtx, x: *mut X509, i: c_int, err: c_int) -> c_int {
+    if !ctx.is_null() {
+        // SAFETY: `ctx` is live and `verify_cb` is non-NULL per the caller's contract, and `x` is
+        // NULL or live; the callback's own contract is the `X509_STORE_CTX_verify_cb` ABI.
+        unsafe {
+            (*ctx).error = err;
+            (*ctx).error_depth = i;
+            (*ctx).current_cert = x;
+            ((*ctx).verify_cb.unwrap_unchecked())(0, ctx.cast::<c_void>())
+        }
+    } else {
+        0
+    }
+}
+
+/// `static int addr_validate_path_internal(X509_STORE_CTX *ctx, STACK_OF(X509) *chain, IPAddrBlocks *ext)` -- `crypto/x509/v3_addr.c:1212-1325`.
+///
+/// # Safety
+///
+/// `chain` is a live non-empty `STACK_OF(X509)`; `ctx` is NULL or a live `X509StoreCtx`; `ext` is
+/// NULL or a live `IPAddrBlocks`; and `ctx` is non-NULL whenever `ext` is NULL.
+unsafe fn addr_validate_path_internal(
+    ctx: *mut X509StoreCtx,
+    chain: *mut OpenSslStack,
+    mut ext: *mut OpenSslStack,
+) -> c_int {
+    let mut child: *mut OpenSslStack = ptr::null_mut();
+    let mut i: c_int;
+    let mut j: c_int;
+    let mut ret: c_int = 0;
+    let mut rv: c_int;
+    let mut x: *mut X509;
+
+    // SAFETY: `chain` is NULL or live per the contract; the `&&` short-circuits a NULL chain, and
+    // `ctx` is non-NULL on the arm that reads `verify_cb`.
+    let chain_nonempty = !chain.is_null() && unsafe { OPENSSL_sk_num(chain) } > 0;
+    let ctx_or_ext = !ctx.is_null() || !ext.is_null();
+    // SAFETY: `ctx` is non-NULL on the arm that reads `verify_cb`.
+    let cb_present = ctx.is_null() || unsafe { (*ctx).verify_cb.is_some() };
+    if ossl_assert(chain_nonempty) == 0
+        || ossl_assert(ctx_or_ext) == 0
+        || ossl_assert(cb_present) == 0
+    {
+        if !ctx.is_null() {
+            // SAFETY: `ctx` is live per the contract.
+            unsafe { (*ctx).error = X509_V_ERR_UNSPECIFIED };
+        }
+        return 0;
+    }
+
+    'done: {
+        // Figure out where to start.  If we don't have an extension to check, we're done.
+        // Otherwise, check canonical form and set up for walking up the chain.
+        if !ext.is_null() {
+            i = -1;
+            x = ptr::null_mut();
+        } else {
+            i = 0;
+            // SAFETY: `chain` is a live non-empty stack (asserted above).
+            x = unsafe { OPENSSL_sk_value(chain, i) }.cast::<X509>();
+            // SAFETY: `x` is a live certificate.
+            ext = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
+            if ext.is_null() {
+                ret = 1;
+                break 'done;
+            }
+        }
+        // SAFETY: `ext` is live.
+        if unsafe { X509v3_addr_is_canonical(ext) } == 0 {
+            // SAFETY: `validation_err`'s contract holds here.
+            rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_INVALID_EXTENSION) };
+            if rv == 0 {
+                break 'done;
+            }
+        }
+        // SAFETY: `ext` is a live stack; the comparator is over its element type.
+        unsafe { OPENSSL_sk_set_cmp_func(ext, Some(ip_address_family_cmp)) };
+        // SAFETY: `ext` is a live stack.
+        child = unsafe { OPENSSL_sk_dup(ext) };
+        if child.is_null() {
+            // SAFETY: the site is a compiled-in constant.
+            unsafe { raise_site(&V3_ADDR_1246) };
+            if !ctx.is_null() {
+                // SAFETY: `ctx` is live per the contract.
+                unsafe { (*ctx).error = X509_V_ERR_OUT_OF_MEM };
+            }
+            break 'done;
+        }
+        // SAFETY: `child` is a live stack.
+        unsafe { OPENSSL_sk_sort(child) };
+
+        // Now walk up the chain.  No cert may list resources that its parent doesn't list.
+        i += 1;
+        // SAFETY: `chain` is a live non-empty stack.
+        while i < unsafe { OPENSSL_sk_num(chain) } {
+            // SAFETY: `i` is in bounds.
+            x = unsafe { OPENSSL_sk_value(chain, i) }.cast::<X509>();
+            // SAFETY: `x` is a live certificate.
+            let x_addr = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
+            // SAFETY: `x_addr` is NULL or live.
+            if unsafe { X509v3_addr_is_canonical(x_addr) } == 0 {
+                // SAFETY: `validation_err`'s contract holds here.
+                rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_INVALID_EXTENSION) };
+                if rv == 0 {
+                    break 'done;
+                }
+            }
+            if x_addr.is_null() {
+                j = 0;
+                // SAFETY: `child` is a live stack.
+                while j < unsafe { OPENSSL_sk_num(child) } {
+                    // SAFETY: `j` is in bounds.
+                    let fc = unsafe { OPENSSL_sk_value(child, j) }.cast::<IpAddressFamily>();
+                    // SAFETY: `fc` is a live address family.
+                    if unsafe { ip_address_family_check_len(fc) } == 0 {
+                        break 'done;
+                    }
+                    // SAFETY: `fc` and its choice are live.
+                    if unsafe { (*(*fc).ipAddressChoice).type_ } != IPAddressChoice_inherit {
+                        // SAFETY: `validation_err`'s contract holds here.
+                        rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+                        if rv == 0 {
+                            break 'done;
+                        }
+                        break;
+                    }
+                    j += 1;
+                }
+                i += 1;
+                continue;
+            }
+            // SAFETY: `x_addr` is a live stack; the comparator is over its element type.
+            unsafe { OPENSSL_sk_set_cmp_func(x_addr, Some(ip_address_family_cmp)) };
+            // SAFETY: `x_addr` is a live stack.
+            unsafe { OPENSSL_sk_sort(x_addr) };
+            j = 0;
+            // SAFETY: `child` is a live stack.
+            while j < unsafe { OPENSSL_sk_num(child) } {
+                // SAFETY: `j` is in bounds.
+                let fc = unsafe { OPENSSL_sk_value(child, j) }.cast::<IpAddressFamily>();
+                // SAFETY: `x_addr` is a live stack and `fc` a live element.
+                let k = unsafe { OPENSSL_sk_find(x_addr, fc.cast::<c_void>()) };
+                // SAFETY: `k` is -1 (yielding NULL) or in bounds.
+                let fp = unsafe { OPENSSL_sk_value(x_addr, k) }.cast::<IpAddressFamily>();
+                if fp.is_null() {
+                    // SAFETY: `fc` and its choice are live.
+                    // SAFETY: `fc` and its choice are live.
+                    if unsafe { (*(*fc).ipAddressChoice).type_ }
+                        == IPAddressChoice_addressesOrRanges
+                    {
+                        // SAFETY: `validation_err`'s contract holds here.
+                        rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+                        if rv == 0 {
+                            break 'done;
+                        }
+                        break;
+                    }
+                    j += 1;
+                    continue;
+                }
+                // SAFETY: `fc` and `fp` are live address families.
+                if unsafe {
+                    ip_address_family_check_len(fc) == 0 || ip_address_family_check_len(fp) == 0
+                } {
+                    break 'done;
+                }
+                // SAFETY: `fp` and its choice are live.
+                if unsafe { (*(*fp).ipAddressChoice).type_ } == IPAddressChoice_addressesOrRanges {
+                    // SAFETY: `fc` is a live address family.
+                    let length = length_from_afi(unsafe { X509v3_addr_get_afi(fc) });
+                    // SAFETY: `fc` and `fp` are live under their selectors, and their
+                    // `addressesOrRanges` stacks are live `IPAddressOrRanges`.
+                    let contained = unsafe {
+                        (*(*fc).ipAddressChoice).type_ == IPAddressChoice_inherit
+                            || addr_contains(
+                                (*(*fp).ipAddressChoice).u.cast::<OpenSslStack>(),
+                                (*(*fc).ipAddressChoice).u.cast::<OpenSslStack>(),
+                                length,
+                            ) != 0
+                    };
+                    if contained {
+                        // SAFETY: `child` is a live stack and `j` is in bounds.
+                        unsafe { OPENSSL_sk_set(child, j, fp.cast::<c_void>()) };
+                    } else {
+                        // SAFETY: `validation_err`'s contract holds here.
+                        rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+                        if rv == 0 {
+                            break 'done;
+                        }
+                    }
+                }
+                j += 1;
+            }
+            i += 1;
+        }
+
+        // Trust anchor can't inherit.
+        // SAFETY: `x` is a live certificate.
+        let ta_addr = unsafe { (*x).rfc3779_addr }.cast::<OpenSslStack>();
+        if !ta_addr.is_null() {
+            j = 0;
+            // SAFETY: `ta_addr` is a live stack.
+            while j < unsafe { OPENSSL_sk_num(ta_addr) } {
+                // SAFETY: `j` is in bounds.
+                let fp = unsafe { OPENSSL_sk_value(ta_addr, j) }.cast::<IpAddressFamily>();
+                // SAFETY: `fp` is a live address family.
+                if unsafe { ip_address_family_check_len(fp) } == 0 {
+                    break 'done;
+                }
+                // SAFETY: `fp` and its choice are live.
+                let inherits = unsafe { (*(*fp).ipAddressChoice).type_ } == IPAddressChoice_inherit;
+                // SAFETY: `child` is a live stack; the find is reached only when `inherits` holds.
+                let found = inherits && unsafe { OPENSSL_sk_find(child, fp.cast::<c_void>()) } >= 0;
+                if found {
+                    // SAFETY: `validation_err`'s contract holds here.
+                    rv = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+                    if rv == 0 {
+                        break 'done;
+                    }
+                }
+                j += 1;
+            }
+        }
+        ret = 1;
+    }
+
+    // SAFETY: `child` is NULL or a live stack this call owns.
+    unsafe { OPENSSL_sk_free(child) };
+    ret
+}
+
+/// `int X509v3_addr_validate_path(X509_STORE_CTX *ctx)` -- `crypto/x509/v3_addr.c:1332-1341`.
+///
+/// # Safety
+///
+/// `ctx` is live.
+#[no_mangle]
+pub unsafe extern "C" fn X509v3_addr_validate_path(ctx: *mut X509StoreCtx) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let chain_is_null = unsafe { (*ctx).chain }.is_null();
+    // SAFETY: `ctx` is live and `chain` is non-NULL on the arm that reads it.
+    let chain_is_empty = !chain_is_null && unsafe { OPENSSL_sk_num((*ctx).chain) } == 0;
+    // SAFETY: `ctx` is live per the contract.
+    let no_verify_cb = unsafe { (*ctx).verify_cb.is_none() };
+    if chain_is_null || chain_is_empty || no_verify_cb {
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { (*ctx).error = X509_V_ERR_UNSPECIFIED };
+        return 0;
+    }
+    // SAFETY: `ctx` and its non-empty chain are live per the checks above.
+    unsafe { addr_validate_path_internal(ctx, (*ctx).chain, ptr::null_mut()) }
+}
+
+/// `int X509v3_addr_validate_resource_set(STACK_OF(X509) *chain, IPAddrBlocks *ext, int allow_inheritance)` -- `crypto/x509/v3_addr.c:1347-1357`.
+///
+/// # Safety
+///
+/// `chain` is NULL or a live `STACK_OF(X509)`; `ext` is NULL or a live `IPAddrBlocks`.
+#[no_mangle]
+pub unsafe extern "C" fn X509v3_addr_validate_resource_set(
+    chain: *mut OpenSslStack,
+    ext: *mut OpenSslStack,
+    allow_inheritance: c_int,
+) -> c_int {
+    if ext.is_null() {
+        return 1;
+    }
+    // SAFETY: `chain` is NULL or live and the `||` short-circuits.
+    if chain.is_null() || unsafe { OPENSSL_sk_num(chain) } == 0 {
+        return 0;
+    }
+    // SAFETY: `ext` is live per the checks above.
+    if allow_inheritance == 0 && unsafe { X509v3_addr_inherits(ext) } != 0 {
+        return 0;
+    }
+    // SAFETY: `chain` and `ext` are live per the checks above.
+    unsafe { addr_validate_path_internal(ptr::null_mut(), chain, ext) }
+}
