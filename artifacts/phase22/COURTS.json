@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "15 courts, each an FRF-style sensitivity challenge rather than a file existence check. `RT-PHASE22-BUILD-CAPTURE` runs `forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw capture and on controlled mutations of it in memory: dropping one `-D` removes exactly that element from the unit's `defines` and `args`; swapping two `-I` options reorders that unit's `includes` and leaves its `defines`; appending a synthetic unit raises `commands` and `distinct_sources` by one; and appending a build-time `-o /dev/null` assembler probe -- which is not a translation unit -- changes nothing. It also re-derives the committed `forensics/atlas/phase22/compile-commands.json` body from the raw log and requires they be equal. The other courts are each exposed by their own plane's module as `courts()` and discovered by this runner rather than listed here, and each carries the same obligation: it drives its instrument over the real artefact and over controlled mutations of it, and fails if the instrument is insensitive to its own defect class. No court claims the authority surface is complete: a plane's raw input is often a scratch product and is not tracked, so the courts tie committed artefacts to the logic that built them rather than to a fresh re-derivation, and Doxygen absence is never surface absence (docs/PHASE-22-SUBPHASES.md section 6). `pending_courts` names the courts the plan gives later subphases and every name is printed on each run, so 'not run yet' cannot be read as 'passed'.",
+    "claim": "16 courts, each an FRF-style sensitivity challenge rather than a file existence check. `RT-PHASE22-BUILD-CAPTURE` runs `forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw capture and on controlled mutations of it in memory: dropping one `-D` removes exactly that element from the unit's `defines` and `args`; swapping two `-I` options reorders that unit's `includes` and leaves its `defines`; appending a synthetic unit raises `commands` and `distinct_sources` by one; and appending a build-time `-o /dev/null` assembler probe -- which is not a translation unit -- changes nothing. It also re-derives the committed `forensics/atlas/phase22/compile-commands.json` body from the raw log and requires they be equal. The other courts are each exposed by their own plane's module as `courts()` and discovered by this runner rather than listed here, and each carries the same obligation: it drives its instrument over the real artefact and over controlled mutations of it, and fails if the instrument is insensitive to its own defect class. No court claims the authority surface is complete: a plane's raw input is often a scratch product and is not tracked, so the courts tie committed artefacts to the logic that built them rather than to a fresh re-derivation, and Doxygen absence is never surface absence (docs/PHASE-22-SUBPHASES.md section 6). `pending_courts` names the courts the plan gives later subphases and every name is printed on each run, so 'not run yet' cannot be read as 'passed'.",
     "courts": [
       {
         "captured_commands": 2201,
@@ -285,6 +285,34 @@
         "verdict": "pass"
       },
       {
+        "artefact": "forensics/atlas/phase22/gemel-checkpoint.json",
+        "census_entities": 110382,
+        "census_residuals": 75227,
+        "court": "RT-PHASE22-GEMEL",
+        "failures": [],
+        "mutations": [
+          "round-trip",
+          "change-artefact-hash",
+          "add-residual-class",
+          "add-unknown",
+          "move-ledger-state",
+          "add-obligation",
+          "restore"
+        ],
+        "obligations": 5,
+        "observations": 21,
+        "phase11_implemented": 1132,
+        "phase11_open": 335,
+        "planes_bound": 16,
+        "regenerated_changed_outputs": 5,
+        "regenerated_count_deltas": 0,
+        "summary": "16 plane hashes, 110382 entities, 5912 UNKNOWN named, 5 proposed obligations, regeneration changed 5/16 outputs with 0 count deltas",
+        "unknown_intersecting_roots": 2,
+        "unknown_total": 5912,
+        "verdict": "pass",
+        "x509_satisfied": true
+      },
+      {
         "artefact": "forensics/atlas/phase22/generated-lineage.json",
         "court": "RT-PHASE22-GENEALOGY",
         "edges": 1734,
@@ -416,13 +444,12 @@
       }
     ],
     "pending_courts": {
-      "RT-PHASE22-GEMEL": "22.16 -- the Gemel checkpoint and regenerated ledgers (`gemel-checkpoint.json`)",
       "RT-PHASE22-SEAL": "22.17 -- the Phase-22 seal (`docs/PHASE-22-ATLAS-SEAL.md`)"
     },
     "summary": {
       "fail": 0,
-      "pass": 15,
-      "total": 15
+      "pass": 16,
+      "total": 16
     }
   },
   "generator": "forensics/tools/phase22_courts.py",
@@ -491,6 +518,11 @@
       "name": "phase22_frf",
       "path": "forensics/atlas/phase22/frf-challenges.json",
       "sha256": "fd299a56f67e657c32635d6fb0d20f329bf3e8b1673dc78b922febcd2fe1ba1c"
+    },
+    {
+      "name": "phase22_gemel",
+      "path": "forensics/atlas/phase22/gemel-checkpoint.json",
+      "sha256": "3a0a3b04e252c4dc83ef9658716e610d071e12207a9b8063fece2d5ad9f1ce3f"
     },
     {
       "name": "phase22_genealogy",
