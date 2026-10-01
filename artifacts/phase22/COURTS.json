@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "6 courts, each an FRF-style sensitivity challenge rather than a file existence check. `RT-PHASE22-BUILD-CAPTURE` runs `forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw capture and on controlled mutations of it in memory: dropping one `-D` removes exactly that element from the unit's `defines` and `args`; swapping two `-I` options reorders that unit's `includes` and leaves its `defines`; appending a synthetic unit raises `commands` and `distinct_sources` by one; and appending a build-time `-o /dev/null` assembler probe -- which is not a translation unit -- changes nothing. It also re-derives the committed `forensics/atlas/phase22/compile-commands.json` body from the raw log and requires they be equal. The other courts are each exposed by their own plane's module as `courts()` and discovered by this runner rather than listed here, and each carries the same obligation: it drives its instrument over the real artefact and over controlled mutations of it, and fails if the instrument is insensitive to its own defect class. No court claims the authority surface is complete: a plane's raw input is often a scratch product and is not tracked, so the courts tie committed artefacts to the logic that built them rather than to a fresh re-derivation, and Doxygen absence is never surface absence (docs/PHASE-22-SUBPHASES.md section 6). `pending_courts` names the courts the plan gives later subphases and every name is printed on each run, so 'not run yet' cannot be read as 'passed'.",
+    "claim": "12 courts, each an FRF-style sensitivity challenge rather than a file existence check. `RT-PHASE22-BUILD-CAPTURE` runs `forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw capture and on controlled mutations of it in memory: dropping one `-D` removes exactly that element from the unit's `defines` and `args`; swapping two `-I` options reorders that unit's `includes` and leaves its `defines`; appending a synthetic unit raises `commands` and `distinct_sources` by one; and appending a build-time `-o /dev/null` assembler probe -- which is not a translation unit -- changes nothing. It also re-derives the committed `forensics/atlas/phase22/compile-commands.json` body from the raw log and requires they be equal. The other courts are each exposed by their own plane's module as `courts()` and discovered by this runner rather than listed here, and each carries the same obligation: it drives its instrument over the real artefact and over controlled mutations of it, and fails if the instrument is insensitive to its own defect class. No court claims the authority surface is complete: a plane's raw input is often a scratch product and is not tracked, so the courts tie committed artefacts to the logic that built them rather than to a fresh re-derivation, and Doxygen absence is never surface absence (docs/PHASE-22-SUBPHASES.md section 6). `pending_courts` names the courts the plan gives later subphases and every name is printed on each run, so 'not run yet' cannot be read as 'passed'.",
     "courts": [
       {
         "captured_commands": 2201,
@@ -88,6 +88,138 @@
         "version": "OpenSSL 3.6.4 25 Aug 2026 (Library: OpenSSL 3.6.4 25 Aug 2026)"
       },
       {
+        "analysis_instrument": "clang",
+        "artefact": "forensics/atlas/phase22/conditional-surface.json",
+        "classifications": {
+          "active-production": 1619,
+          "assembly-alternative": 50,
+          "demo-only": 81,
+          "deprecated-only": 10,
+          "excluded-by-production-profile": 96,
+          "fips-only": 11,
+          "generated-only": 79,
+          "platform-specific": 13,
+          "test-only": 349
+        },
+        "conditionals": 6436,
+        "court": "RT-PHASE22-CONDITIONAL",
+        "failures": [],
+        "includes": 8630,
+        "macros_defined": 2100,
+        "mutations": [
+          "round-trip",
+          "add-macro-definition",
+          "add-dead-define",
+          "add-include",
+          "add-conditional",
+          "move-surface",
+          "add-surface",
+          "classify",
+          "record"
+        ],
+        "observations": 46,
+        "producer": "gcc",
+        "skipped_ranges": 4542,
+        "summary": "1216 TUs, 2308 surfaces, 6436 conditionals, 4542 ranges",
+        "translation_units": 1216,
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/config-surface.json",
+        "config_entry_points": 56,
+        "court": "RT-PHASE22-CONFIG",
+        "default_paths": 10,
+        "directives": 115,
+        "env_sites": 66,
+        "env_vars": 51,
+        "failures": [],
+        "mutations": [
+          "round-trip",
+          "add-env-var",
+          "add-read-site",
+          "flip-reader-safe-to-unsafe",
+          "add-default-path",
+          "add-directive-scope",
+          "blind-aggregator-sensitivity"
+        ],
+        "observations": 26,
+        "summary": "51 env vars / 66 sites, 10 default paths, 115 directives",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/test-crosswalk.json",
+        "court": "RT-PHASE22-CROSSWALK",
+        "demos": 76,
+        "edges": 10039,
+        "failures": [],
+        "fuzzers": 34,
+        "mutations": [
+          "round-trip",
+          "add-test-source",
+          "add-symbol-edge",
+          "move-test-to-fuzz",
+          "add-empty-target",
+          "add-untested-export"
+        ],
+        "observations": 31,
+        "summary": "679 tests, 34 fuzzers, 76 demos, 10039 edges, 3967 untested exports",
+        "targets_with_no_edges": 327,
+        "tests": 679,
+        "untested_exported_symbols": 3967,
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/dispatch-graph.json",
+        "binary_only": 354,
+        "corroborated": 468,
+        "court": "RT-PHASE22-DISPATCH",
+        "edges": 1959,
+        "edges_by_kind": {
+          "CALLBACK_SLOT": 471,
+          "CLI_DISPATCH": 315,
+          "CONFIG_DISPATCH": 30,
+          "DISPATCH_SLOT": 722,
+          "REGISTRATION": 67,
+          "RELOCATION_REFERENCE": 354
+        },
+        "failures": [],
+        "mutations": [
+          "round-trip",
+          "add-dispatch-slot",
+          "add-callback-slot",
+          "add-registration-edge",
+          "add-cli-dispatch",
+          "delete-table",
+          "move-corroboration",
+          "promote-binary-only"
+        ],
+        "observations": 27,
+        "source_only": 1137,
+        "summary": "373 tables, 1959 edges (468 both, 1137 source-only, 354 binary-only)",
+        "tables": 373,
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/generated-lineage.json",
+        "court": "RT-PHASE22-GENEALOGY",
+        "edges": 1734,
+        "failures": [],
+        "generators": 60,
+        "mutations": [
+          "round-trip",
+          "add-output",
+          "add-declared",
+          "add-input",
+          "remove-generator",
+          "mark-input"
+        ],
+        "observations": 23,
+        "outputs": 1279,
+        "outputs_without_a_rule": 1,
+        "summary": "1279 outputs, 1734 edges, 60 generators, 1 without a rule",
+        "verdict": "pass"
+      },
+      {
         "artefact": "forensics/atlas/phase22/install-manifest.json",
         "categories": {
           "cli": 1,
@@ -128,6 +260,33 @@
         "verdict": "pass"
       },
       {
+        "artefact": "forensics/atlas/phase22/pod-contract.json",
+        "claims": 15044,
+        "court": "RT-PHASE22-POD",
+        "disagreements": 2292,
+        "failures": [],
+        "mutations": [
+          "delete-name-alias",
+          "add-synopsis-function",
+          "alter-param-type",
+          "change-return-value",
+          "add-cli-option",
+          "remove-cli-option",
+          "add-env-var",
+          "remove-env-var",
+          "add-directive",
+          "remove-directive",
+          "change-default-path",
+          "alter-deprecation",
+          "broken-extractor",
+          "broken-reconciler"
+        ],
+        "observations": 32,
+        "pages": 903,
+        "summary": "903 pages, 15044 claims, 2292 disagreements",
+        "verdict": "pass"
+      },
+      {
         "analysis_instrument": "clang",
         "artefact": "forensics/atlas/phase22/tu-ast.json",
         "call_edges": 104192,
@@ -152,21 +311,15 @@
     ],
     "pending_courts": {
       "RT-PHASE22-CLOSURE": "22.14 -- the external-root reachability closure (`compatibility-closure.json`)",
-      "RT-PHASE22-CONDITIONAL": "22.4 -- the preprocessor and conditional-compilation graph (`conditional-surface.json`)",
-      "RT-PHASE22-CONFIG": "22.10 -- the configuration, environment and default-path surface (`config-surface.json`)",
-      "RT-PHASE22-CROSSWALK": "22.13 -- the test/demo/fuzz semantic crosswalk (`test-crosswalk.json`)",
-      "RT-PHASE22-DISPATCH": "22.7 -- the indirect dispatch, callback and registration graph (`dispatch-graph.json`)",
       "RT-PHASE22-FRF": "22.15 -- the FRF challenges and FRF-Fuzz sensitivity campaigns (`frf-challenges.json`)",
       "RT-PHASE22-GEMEL": "22.16 -- the Gemel checkpoint and regenerated ledgers (`gemel-checkpoint.json`)",
-      "RT-PHASE22-GENEALOGY": "22.5 -- generated-source provenance (`generated-lineage.json`)",
-      "RT-PHASE22-POD": "22.11 -- the POD contract oracle and the POD<->runtime differential (`pod-contract.json`)",
       "RT-PHASE22-RECONCILE": "22.12 -- the cross-plane reconciliation (`reconciliation.json`)",
       "RT-PHASE22-SEAL": "22.17 -- the Phase-22 seal (`docs/PHASE-22-ATLAS-SEAL.md`)"
     },
     "summary": {
       "fail": 0,
-      "pass": 6,
-      "total": 6
+      "pass": 12,
+      "total": 12
     }
   },
   "generator": "forensics/tools/phase22_courts.py",
@@ -202,9 +355,39 @@
       "sha256": "add909b70351095a461f82da42854e9d67cf49d1ebe8508e222c7284820658de"
     },
     {
+      "name": "phase22_conditional",
+      "path": "forensics/atlas/phase22/conditional-surface.json",
+      "sha256": "6a9d0fb3cd1d3a29c222d290ff9f54f95a1ae04ddb152a8bb841488fcb573ed7"
+    },
+    {
+      "name": "phase22_config",
+      "path": "forensics/atlas/phase22/config-surface.json",
+      "sha256": "b8361cc1671a147a376a46de5f238ef5631af99047d466293e0ee278f1ba9f2d"
+    },
+    {
+      "name": "phase22_crosswalk",
+      "path": "forensics/atlas/phase22/test-crosswalk.json",
+      "sha256": "3048bd891e485e289eda2372c0dec581b0bfcab71014df54c1423489dbfba206"
+    },
+    {
+      "name": "phase22_dispatch",
+      "path": "forensics/atlas/phase22/dispatch-graph.json",
+      "sha256": "4ebeaeb87f5d765ef4ea4a9ed9db54acb4535a0dc2743a3f0661c02a9cd5708b"
+    },
+    {
+      "name": "phase22_genealogy",
+      "path": "forensics/atlas/phase22/generated-lineage.json",
+      "sha256": "924b0d9d14ff5fc93c9db8641ba63a4fa6909120c6570cefa672b22da7901521"
+    },
+    {
       "name": "phase22_install_manifest",
       "path": "forensics/atlas/phase22/install-manifest.json",
       "sha256": "e24286a7d51467027b1a8b11263adf6d5ce6f3237b215f53066be7b3531d5d67"
+    },
+    {
+      "name": "phase22_pod",
+      "path": "forensics/atlas/phase22/pod-contract.json",
+      "sha256": "655bc96f6ec085f0ceec17630b7d06c9efa87e78487c87d91c08674656f43e10"
     },
     {
       "name": "phase22_tu_ast",

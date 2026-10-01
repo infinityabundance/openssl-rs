@@ -135,6 +135,17 @@ python3 forensics/tools/phase22_build_commands.py
 # must be freshly generated from the pinned build before the court judges it. It reads the build
 # directory with a pure-Python ELF64/`ar` reader and never invokes binutils.
 python3 forensics/tools/phase22_binary_graph.py
+# 22.7's dispatch/callback/registration graph, for the same reason: `RT-PHASE22-DISPATCH`
+# re-derives the body from the committed artefact's own tables and compares, so the artefact
+# must be fresh. It scans the authority source with a pure C tokenizer and joins 22.3's
+# address-taken census and 22.6's data relocations; it needs no build and no compiler.
+python3 forensics/tools/phase22_dispatch.py
+# 22.10's configuration/environment/default-path surface, for the same reason: `RT-PHASE22-CONFIG`
+# reconstructs the raw model from the committed artefact's own rows and re-derives the whole body,
+# so the artefact must be freshly generated from the pinned source, `configdata.pm` and built
+# binary before the court judges it. It reads the authority tree and runs `openssl version -d/-e/-m`
+# with the build directory on `LD_LIBRARY_PATH`; it writes no host path.
+python3 forensics/tools/phase22_config.py
 python3 forensics/tools/run_courts.py
 
 echo "== prerequisite atlases =="
