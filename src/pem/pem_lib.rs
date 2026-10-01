@@ -244,6 +244,12 @@ pub(crate) const PEM_STRING_SM2PRIVATEKEY: *const c_char = c"SM2 PRIVATE KEY".as
 pub(crate) const PEM_STRING_SM2PARAMETERS: *const c_char = c"SM2 PARAMETERS".as_ptr();
 /// `PEM_STRING_X509` — `include/openssl/pem.h:36`.
 pub(crate) const PEM_STRING_X509: *const c_char = c"CERTIFICATE".as_ptr();
+/// `PEM_STRING_X509_REQ` — `include/openssl/pem.h:39`. The `CERTIFICATE REQUEST` header
+/// `pem_all.c`'s `IMPLEMENT_PEM_rw(X509_REQ, ...)` reads and writes.
+pub(crate) const PEM_STRING_X509_REQ: *const c_char = c"CERTIFICATE REQUEST".as_ptr();
+/// `PEM_STRING_X509_REQ_OLD` — `include/openssl/pem.h:38`. The pre-1.0 header the
+/// `X509_REQ_NEW` writers emit.
+pub(crate) const PEM_STRING_X509_REQ_OLD: *const c_char = c"NEW CERTIFICATE REQUEST".as_ptr();
 /// `PEM_STRING_X509_TRUSTED` — `include/openssl/pem.h:37`.
 pub(crate) const PEM_STRING_X509_TRUSTED: *const c_char = c"TRUSTED CERTIFICATE".as_ptr();
 /// `PEM_STRING_X509_OLD` — `include/openssl/pem.h:35`.

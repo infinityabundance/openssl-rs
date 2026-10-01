@@ -38,20 +38,52 @@
           "candidate": "artifacts/phase11/probes/rt_x509_store_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 135,
+        "candidate_exit_code": 0,
+        "candidate_observations": 135,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-VERIFY",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_verify_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_verify_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_verify_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 121,
+        "candidate_exit_code": 0,
+        "candidate_observations": 121,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-PEM",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_pem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_pem_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_pem_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "RT-X509": "11.7 -- the remaining shared units whose closure crosses into the landed strata (`x_all.c`, `p5_scrypt.c`, `nsseq.c`, `x509_def.c`, `x_info.c`, `x_pkey.c`, `evp_lib.c`, `evp_pkey.c`, `t_spki.c`, `p12_mutl.c`, `asn_mstbl.c`)",
       "RT-X509-ACERT": "11.3 -- the `X509_ACERT` item group and its accessors, setters and `X509_ACERT_verify` (`x509_acert.c`, `x509aset.c`, `x_ietfatt.c`, `t_acert.c`)",
-      "RT-X509-PEM": "11.6 -- the `PEM_read[_bio]_X509*`/`PEM_write[_bio]_X509*` and `PEM_X509_INFO_*` container surface (`pem_all.c`, `pem_pk8.c`, `pem_info.c`, `pem_x509.c`, `pem_xaux.c`)",
       "RT-X509-REQ": "11.4 -- the rest of `X509_REQ` (`x_crl.c`, `x_exten.c`, `t_*.c`): the 11.4a units 11.4 landed (`x509_req.c`, `x509_set.c`, `x_req.c`) are driven by `RT-X509-STORE`, and what remains open is the `X509_CRL_set_*` mutators, the extension accessors and `X509_to_X509_REQ`",
-      "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the `GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, `v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)",
-      "RT-X509-VERIFY": "11.2 -- `X509_verify_cert`, the `X509_STORE_CTX` chain builder, the `X509_VERIFY_PARAM_*` surface and the policy tree (`x509_vfy.c`, `x509_vpm.c`, `pcy_tree.c`)"
+      "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the `GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, `v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)"
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 4,
+      "total": 4
     }
   },
   "generator": "forensics/tools/phase11_courts.py",
@@ -70,6 +102,16 @@
       "name": "probe",
       "path": "courts/phase11/rt_x509_store_probe.c",
       "sha256": "ec33f567a5926b7a311f41bb54957af2c1bfdf13c876cbe30f4ff99886c1f9aa"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_verify_probe.c",
+      "sha256": "dd14d4bf06c1ca6948e562e98fe4c4c5a0fe046ddc31107532a0097ec331b64c"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_pem_probe.c",
+      "sha256": "fc3ba929bf0ad2a14057e04742d6c43ccc918cad2a3745cc3ce40f07d782a83b"
     }
   ],
   "kind": "phase11-courts",

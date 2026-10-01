@@ -384,6 +384,68 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase11/rt_x509_pem_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 121,
+              "-O1": 121,
+              "-O2": 121
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 121,
+              "-O1": 121,
+              "-O2": 121
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase11/rt_x509_store_probe.c",
         "sides": {
           "authority": {
@@ -438,6 +500,68 @@
               "-O0": 465,
               "-O1": 465,
               "-O2": 465
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase11/rt_x509_verify_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 135,
+              "-O1": 135,
+              "-O2": 135
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 135,
+              "-O1": 135,
+              "-O2": 135
             },
             "side": "candidate",
             "verdict": "clean"
@@ -5842,8 +5966,8 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 94,
-      "total": 94,
+      "clean": 96,
+      "total": 96,
       "unstable": 0
     }
   },
@@ -5881,8 +6005,18 @@
     },
     {
       "name": "probe",
+      "path": "courts/phase11/rt_x509_pem_probe.c",
+      "sha256": "fc3ba929bf0ad2a14057e04742d6c43ccc918cad2a3745cc3ce40f07d782a83b"
+    },
+    {
+      "name": "probe",
       "path": "courts/phase11/rt_x509_store_probe.c",
       "sha256": "ec33f567a5926b7a311f41bb54957af2c1bfdf13c876cbe30f4ff99886c1f9aa"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_verify_probe.c",
+      "sha256": "dd14d4bf06c1ca6948e562e98fe4c4c5a0fe046ddc31107532a0097ec331b64c"
     },
     {
       "name": "probe",

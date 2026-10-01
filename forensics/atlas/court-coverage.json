@@ -1404,8 +1404,8 @@
         "completed": true,
         "counts": {
           "directly_courted": 251,
-          "directly_courted_called": 162,
-          "directly_courted_referenced": 89,
+          "directly_courted_called": 163,
+          "directly_courted_referenced": 88,
           "implemented": 251,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -1640,6 +1640,7 @@
               "RT-PUBKEY",
               "RT-RSA",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "CRYPTO_free"
@@ -1983,6 +1984,7 @@
               "RT-SIGNATURE",
               "RT-STORE",
               "RT-THREADDATA",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "ERR_clear_error"
@@ -2041,6 +2043,7 @@
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "ERR_get_error"
@@ -2688,9 +2691,10 @@
             "symbol": "OBJ_create"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-RUNTIME-REF"
+              "RT-RUNTIME-REF",
+              "RT-X509-VERIFY"
             ],
             "symbol": "OBJ_dup"
           },
@@ -2754,7 +2758,8 @@
               "RT-PUBKEY",
               "RT-RSA",
               "RT-STORE",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY"
             ],
             "symbol": "OBJ_nid2obj"
           },
@@ -3136,7 +3141,8 @@
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY"
             ],
             "symbol": "OPENSSL_sk_free"
           },
@@ -3172,7 +3178,9 @@
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
-              "RT-X509-STORE"
+              "RT-X509-PEM",
+              "RT-X509-STORE",
+              "RT-X509-VERIFY"
             ],
             "symbol": "OPENSSL_sk_new_null"
           },
@@ -3191,6 +3199,7 @@
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "OPENSSL_sk_num"
@@ -3209,6 +3218,7 @@
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "OPENSSL_sk_pop_free"
@@ -3222,6 +3232,7 @@
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "OPENSSL_sk_push"
@@ -3285,6 +3296,7 @@
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "OPENSSL_sk_value"
@@ -3769,6 +3781,7 @@
               "RT-PKCS12",
               "RT-PUBKEY",
               "RT-RAND-USERS",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_ctrl"
@@ -4011,6 +4024,7 @@
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_free"
@@ -4467,6 +4481,7 @@
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_new"
@@ -4546,6 +4561,7 @@
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_new_mem_buf"
@@ -4798,6 +4814,7 @@
               "RT-PUBKEY",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_s_mem"
@@ -5811,7 +5828,8 @@
             "courts": [
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-VERIFY"
             ],
             "symbol": "ASN1_GENERALIZEDTIME_new"
           },
@@ -5834,7 +5852,8 @@
             "courts": [
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-VERIFY"
             ],
             "symbol": "ASN1_GENERALIZEDTIME_set_string"
           },
@@ -6609,7 +6628,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
-              "RT-ASN1-TIME"
+              "RT-ASN1-TIME",
+              "RT-X509-VERIFY"
             ],
             "symbol": "ASN1_TIME_free"
           },
@@ -6853,7 +6873,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
-              "RT-ASN1-TIME"
+              "RT-ASN1-TIME",
+              "RT-X509-VERIFY"
             ],
             "symbol": "ASN1_UTCTIME_new"
           },
@@ -6875,7 +6896,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
-              "RT-ASN1-TIME"
+              "RT-ASN1-TIME",
+              "RT-X509-VERIFY"
             ],
             "symbol": "ASN1_UTCTIME_set_string"
           },
@@ -14163,6 +14185,7 @@
               "RT-PUBKEY",
               "RT-SIGNATURE",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "EVP_PKEY_free"
@@ -17837,7 +17860,8 @@
               "RT-KEYFORMAT",
               "RT-PEM-KEY",
               "RT-PUBKEY",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-PEM"
             ],
             "symbol": "DSA_free"
           },
@@ -18987,7 +19011,8 @@
               "RT-KEYFORMAT",
               "RT-PEM-KEY",
               "RT-PUBKEY",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-PEM"
             ],
             "symbol": "EC_KEY_free"
           },
@@ -20058,7 +20083,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-AMETH"
+              "RT-AMETH",
+              "RT-X509-PEM"
             ],
             "symbol": "EVP_PKEY_get1_RSA"
           },
@@ -20784,7 +20810,8 @@
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-PEM"
             ],
             "symbol": "RSA_free"
           },
@@ -24649,10 +24676,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 1132,
-          "directly_courted_called": 546,
-          "directly_courted_referenced": 586,
-          "implemented": 1132,
+          "directly_courted": 1299,
+          "directly_courted_called": 715,
+          "directly_courted_referenced": 584,
+          "implemented": 1299,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -25594,6 +25621,27 @@
               "RT-X509-REF"
             ],
             "symbol": "NAMING_AUTHORITY_set0_authorityURL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "NETSCAPE_CERT_SEQUENCE_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "NETSCAPE_CERT_SEQUENCE_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "NETSCAPE_CERT_SEQUENCE_new"
           },
           {
             "basis": "referenced",
@@ -26568,6 +26616,76 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_X509_INFO_read"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_X509_INFO_read_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_X509_INFO_read_bio_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_X509_INFO_read_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_X509_INFO_write_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_DSA_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_EC_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_NETSCAPE_CERT_SEQUENCE"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_PKCS8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_PKCS8_PRIV_KEY_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PUBKEY",
               "RT-X509-REF"
             ],
@@ -26584,7 +26702,85 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_RSA_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_X509"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_X509_AUX"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_X509_CRL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_X509_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_X509_REQ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_DSA_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_EC_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_NETSCAPE_CERT_SEQUENCE"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_PKCS8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_PKCS8_PRIV_KEY_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PUBKEY",
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "PEM_read_bio_PUBKEY"
@@ -26598,11 +26794,243 @@
             "symbol": "PEM_read_bio_PUBKEY_ex"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_RSA_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_X509"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_X509_AUX"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_X509_CRL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_X509_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_read_bio_X509_REQ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_DSA_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_EC_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_NETSCAPE_CERT_SEQUENCE"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_PKCS8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_PKCS8_PRIV_KEY_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_PUBKEY_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_RSA_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_X509"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_X509_AUX"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_X509_CRL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_X509_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_X509_REQ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_X509_REQ_NEW"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_DSA_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_EC_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_NETSCAPE_CERT_SEQUENCE"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_PKCS8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_PKCS8_PRIV_KEY_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_PUBKEY_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_RSA_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_X509"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_X509_AUX"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_X509_CRL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "PEM_write_bio_X509_PUBKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_X509_REQ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "PEM_write_bio_X509_REQ_NEW"
           },
           {
             "basis": "referenced",
@@ -26672,6 +27100,7 @@
             "courts": [
               "RT-PKCS12",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "PKCS8_PRIV_KEY_INFO_free"
@@ -27762,6 +28191,7 @@
             "courts": [
               "RT-PKCS12",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -28098,6 +28528,20 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_EXTENSION_set_object"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "X509_INFO_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "X509_INFO_new"
           },
           {
             "basis": "called",
@@ -28699,6 +29143,20 @@
             "symbol": "X509_OBJECT_up_ref_count"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "X509_PKEY_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "X509_PKEY_new"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
@@ -28727,6 +29185,7 @@
             "courts": [
               "RT-PUBKEY",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "X509_PUBKEY_free"
@@ -28981,6 +29440,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "X509_REQ_free"
@@ -29314,6 +29774,7 @@
             "courts": [
               "RT-PKCS12",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "X509_SIG_free"
@@ -29347,11 +29808,88 @@
             "symbol": "X509_SIG_new"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_cleanup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get0_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get0_chain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get0_current_crl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get0_current_issuer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get0_param"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get0_parent_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get0_policy_tree"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get0_rpk"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
             ],
             "symbol": "X509_STORE_CTX_get0_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get0_untrusted"
           },
           {
             "basis": "referenced",
@@ -29361,11 +29899,25 @@
             "symbol": "X509_STORE_CTX_get1_certs"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get1_chain"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
             ],
             "symbol": "X509_STORE_CTX_get1_crls"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get1_issuer"
           },
           {
             "basis": "referenced",
@@ -29375,11 +29927,319 @@
             "symbol": "X509_STORE_CTX_get_by_subject"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_cert_crl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_check_crl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_check_issued"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_check_policy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_check_revocation"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_cleanup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_current_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_error"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_error_depth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_explicit_policy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_get_crl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_get_issuer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_lookup_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_lookup_crls"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_num_untrusted"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
             ],
             "symbol": "X509_STORE_CTX_get_obj_by_subject"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_get_verify_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_new_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_purpose_inherit"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set0_crls"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set0_dane"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set0_param"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set0_rpk"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set0_trusted_stack"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set0_untrusted"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set0_verified_chain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_current_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_current_reasons"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_default"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_depth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_error"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_error_depth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_get_crl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_ocsp_resp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_purpose"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_trust"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_STORE_CTX_set_verify_cb"
           },
           {
             "basis": "called",
@@ -29739,6 +30599,279 @@
             "symbol": "X509_VAL_new"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_add0_policy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_add0_table"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_add1_host"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_clear_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get0_email"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get0_host"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get0_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get0_peername"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get1_ip_asc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get_auth_level"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get_count"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get_depth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get_hostflags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get_inh_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get_purpose"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_get_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_inherit"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_lookup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_move_peername"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set1_email"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set1_host"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set1_ip"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set1_ip_asc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set1_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set1_policies"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set_auth_level"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set_depth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set_hostflags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set_inh_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set_purpose"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_set_trust"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_VERIFY_PARAM_table_cleanup"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
@@ -29902,6 +31035,27 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_cmp_current_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_cmp_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_cmp_timeframe"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-STORE",
               "RT-X509-REF"
             ],
@@ -29961,8 +31115,10 @@
             "courts": [
               "RT-PKCS12",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY"
             ],
             "symbol": "X509_free"
           },
@@ -30019,6 +31175,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "X509_get0_pubkey"
@@ -30230,6 +31387,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_get_pubkey_parameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PKCS12",
               "RT-STORE",
               "RT-X509-REF"
@@ -30288,6 +31452,13 @@
               "RT-X509-STORE"
             ],
             "symbol": "X509_getm_notBefore"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_gmtime_adj"
           },
           {
             "basis": "called",
@@ -30357,7 +31528,8 @@
             "courts": [
               "RT-STORE",
               "RT-X509-REF",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY"
             ],
             "symbol": "X509_new"
           },
@@ -30411,6 +31583,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_policy_tree_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-STORE",
               "RT-X509-REF"
             ],
@@ -30457,9 +31636,10 @@
             "symbol": "X509_reject_clear"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-VERIFY"
             ],
             "symbol": "X509_self_signed"
           },
@@ -30595,6 +31775,20 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_supported_extension"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_time_adj"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY"
+            ],
+            "symbol": "X509_time_adj_ex"
           },
           {
             "basis": "called",
@@ -31166,6 +32360,13 @@
             "symbol": "d2i_NAMING_AUTHORITY"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "d2i_NETSCAPE_CERT_SEQUENCE"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
@@ -31717,6 +32918,7 @@
             "courts": [
               "RT-PKCS12",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -31750,6 +32952,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "d2i_X509_AUX"
@@ -31774,6 +32977,7 @@
             "courts": [
               "RT-PKCS12",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -31858,6 +33062,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "d2i_X509_REQ"
@@ -32173,6 +33378,13 @@
               "RT-X509-REF"
             ],
             "symbol": "i2d_NAMING_AUTHORITY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-PEM"
+            ],
+            "symbol": "i2d_NETSCAPE_CERT_SEQUENCE"
           },
           {
             "basis": "referenced",
@@ -32703,6 +33915,7 @@
             "courts": [
               "RT-PKCS12",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "i2d_X509"
@@ -32734,6 +33947,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "i2d_X509_AUX"
@@ -32758,6 +33972,7 @@
             "courts": [
               "RT-PKCS12",
               "RT-STORE",
+              "RT-X509-PEM",
               "RT-X509-REF"
             ],
             "symbol": "i2d_X509_CRL"
@@ -32841,6 +34056,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-PEM",
               "RT-X509-STORE"
             ],
             "symbol": "i2d_X509_REQ"
@@ -33051,14 +34267,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 11,
-        "staged_candidate_probes": 2
+        "staged_candidate_probes": 4
       }
     ],
     "totals": {
-      "directly_courted": 4148,
-      "directly_courted_called": 3236,
-      "directly_courted_referenced": 912,
-      "implemented": 4156,
+      "directly_courted": 4315,
+      "directly_courted_called": 3406,
+      "directly_courted_referenced": 909,
+      "implemented": 4323,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -33069,7 +34285,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "92c4e254f1f55f3ca475b2e2734098673c3d0ce665e2514f54006baf3f86699f"
+      "sha256": "ef46acbe657809b66b74a236f7ea942b0439cfb1bb419ca219293b6d8fedf14b"
     },
     {
       "name": "symbol-ownership",
@@ -33084,7 +34300,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "81a3b3dcecbaedf2d4f71acec32adfba19ff53bf6da0265decc49ef7d84fb9fc"
+      "sha256": "a0585ba6cad514fa538a7beaf13b6e0e7b1042a49065d9a6e5a4bddd61fdd23c"
     },
     {
       "name": "phase3-courts",
@@ -33094,7 +34310,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "7527e8992c3d2cc85c42bdbca809ff314dbad32c017f4d5beab1cb3c13462bde"
+      "sha256": "d6e8354f2921a8cb621db6a08770b7d00e0df23988c26ec454780a040a7aa58c"
     },
     {
       "name": "phase4-courts",
@@ -33104,7 +34320,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "9b374b42b72d0be875dd626e2d62d3730287407b353984db2b6a755b8a71010d"
+      "sha256": "f2c03d2bc4ebdc4cec5b885727371851ed399a7ada872a5a441fe945bdfda4b6"
     },
     {
       "name": "phase5-courts",
@@ -33114,7 +34330,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "3f80285a49f39dcf90c7a683ecf86ed65b1a85df9c5232e131a99480e525c786"
+      "sha256": "fd88245184af74907baaec7c992c1bbf631b6e64aa5b3576306f113e7deba54d"
     },
     {
       "name": "phase6-courts",
@@ -33124,7 +34340,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "3ca3694dac2e81d6a75e20a3684fba3cc2ebabe58a3f5036c35acf9b8c9678ff"
+      "sha256": "f1f5fa7ffe56c301b6c25064835281c2712935b5d08e4f3eb6f2b1e5ec936590"
     },
     {
       "name": "phase7-courts",
@@ -33134,7 +34350,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "d1a277db20873008a4807d566a3d4755971ec2f44910c99aabfbc0e2eb1328c4"
+      "sha256": "b8da8c43c7f34566a7ffe6e42ab2740556b77492eefff793f8c353b5b04d165d"
     },
     {
       "name": "phase8-courts",
@@ -33144,7 +34360,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "f31469778e5ef7f4add082dcd0158feccb7ea2ada9b4b6592fc34f70fb021d5c"
+      "sha256": "8fba34492bdf2e6c9d6173fbceb8c03ee0c8534a47dd3c2776ef86b4432513ff"
     },
     {
       "name": "phase9-courts",
@@ -33154,7 +34370,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "50cb0bf988f1888f73fb24ea1cbd34d1ee11782b90ad6e19e5a9055916598b5e"
+      "sha256": "785b9e8263cb2b0f879e1d89065dad03f5473a1ba3d6c05fcc00d5c5cf7cc62e"
     },
     {
       "name": "phase10-courts",
@@ -33164,12 +34380,12 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "fa261093bbdb1b6810ae4e8a96dce733530f86658e6da584aa0376984cadbd04"
+      "sha256": "c83dc2cd0011ffc8dd07034645462856ec6c98e0b8732e4c5464c923f8165ed3"
     },
     {
       "name": "phase11-courts",
       "path": "artifacts/phase11/COURTS.json",
-      "sha256": "408524eb60d51bb63acdf5eb3d2b6540e42b6fee75894155c5d9130d8ce88577"
+      "sha256": "0f746fbab44fd7dd381625becb5db1a064804fdc9ac13d5ad52e3ad44a58135b"
     }
   ],
   "kind": "court-coverage",

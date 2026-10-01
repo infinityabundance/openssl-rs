@@ -171,6 +171,9 @@ pub mod x_x509a;
 // `pcy_local.h` layouts; `pcy_node.rs` withholds the six internal node operations by name.
 pub mod pcy_lib;
 pub mod pcy_node;
+// Phase 11.2 -- `crypto/x509/pcy_tree.c`: `X509_policy_tree_free`; `X509_policy_check` is
+// withheld by name (see the module doc).
+pub mod pcy_tree;
 // Phase 10.12's small `v3_*` leaves. `v3_pcia.rs` lands the two RFC 3820 items; `v3_ist.rs`
 // lands the Issuer Sign Tool item; `v3_ia5.rs` and `v3_skid.rs` land their string helpers and
 // withhold their tables; the other four withhold their table-only units whole.
@@ -331,6 +334,9 @@ pub mod x509_req;
 // Phase 10.14.12's `crypto/x509/x509_vfy.c` slice -- `X509_self_signed`, the one name the
 // `X509_add_cert` closure waits on; the rest of the verify engine is withheld by name (Phase 11).
 pub mod x509_vfy;
+// Phase 11.2 -- `crypto/x509/x509_vpm.c`: the `X509_VERIFY_PARAM` object, table, defaults and
+// every accessor, landed whole.
+pub mod x509_vpm;
 
 // Phase 11.1 -- `crypto/x509/x509_lu.c`: the `X509_STORE`, `X509_OBJECT`, `X509_LOOKUP` and
 // `X509_LOOKUP_METHOD` object model and the `X509_STORE_get_by_subject` read path. The stratum's

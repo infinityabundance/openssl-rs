@@ -33911,6 +33911,82 @@ differential.
 
 `PIPELINE OK` exit 0 with 117 courts and 47,575 observations.
 
+## D491 -- 22.11: the canonical POD contract oracle, and the claim graph that will not pretend to
+## have read the prose
+
+Phase 22's fourth plane is the documentation plane, and section 6 gives it the hardest rule in the
+stratum: use the exact 3.6.4 manual corpus, **resolve `.pod.in` the way the build does**, run
+OpenSSL's own `util/find-doc-nits` as *one instrument*, parse POD into a content-addressed claim
+graph, and reconcile it against the planes that exist -- where "undocumented is not nonexistent, and
+documented-but-divergent is evidence". `forensics/tools/phase22_pod.py` lands
+`forensics/atlas/phase22/pod-contract.json` (12 MB) and the generated `docs/POD-CENSUS.md`.
+
+### The corpus is 903 pages, 56 of them templates, and every template is resolved by `dofile.pl`
+`doc/man1` (62), `doc/man3` (679), `doc/man5` (3) and `doc/man7` (159) is **903 pages**: 6,562 `NAME`
+entries, 4,960 man3 SYNOPSIS declarations, 2,182 documented man1 options over 59 command pages, 53
+environment variables, 66 configuration directives. **56 pages are `.pod.in` templates** and are
+resolved by running the authority's own `util/dofile.pl` from the admitted build directory with the
+build's own relative input path, so the resolved text is byte-identical to the page `make` writes.
+A plane that read the templates as written would read `{- $OpenSSL::safe::opt_provider_synopsis -}`
+instead of the option block; the resolution is why 59 command pages carry the generic option blocks
+and why only one runtime option is left undocumented. Each page records its source digest, its
+resolved digest, and which resolver produced the text (`as-written`, `dofile`, `generated-pod`, or
+`unresolved`).
+
+### `find-doc-nits` is retained raw, and it is labelled as one instrument
+It is run from the admitted build directory with every check enabled; its complete stdout and stderr
+are stored verbatim with digests. It reported **1,229 libcrypto names and 30 libssl names not
+documented**, 45 undocumented macros and 27 reference-to-non-existing links. Its stderr carries the
+pinned container's git-probe usage text (that git does not implement `git config get`, and the script
+falls back); the noise is kept rather than hidden. It is deliberately **not** the oracle: it selects
+`doc/internal` too, and reads `include/openssl/*.h` rather than this plane's corpus. Its 1,259-total
+figure is the cross-check the ABI reconciliation is measured against and it agrees: this plane's
+`ATLAS_PUBLIC_NAME_NOT_IN_POD` is **1,255**.
+
+### The claim graph is 15,044 claims, and prose is not understood
+Every extracted assertion is `PODCLAIM(section:page, kind, subject, normalized)` with a class from the
+plan's vocabulary. It carries 11,516 `STRUCTURAL` (NAME entries and SYNOPSIS declarations), 2,453
+`EXECUTABLE_CLAIM` (CLI options, environment variables, directives, default paths, deprecations,
+provider identities), 172 `SEMANTIC_TEXT` (RETURN VALUES quotes) and 903 `EXPLANATORY_ONLY` (man7
+concepts). **The two prose classes are untestable and say so**: a RETURN VALUES quote is carried, not
+interpreted, and man7 behaviour prose is not turned into an assertion. `probes.untestable` names the
+reason for each.
+
+### The reconciliation: every disagreement classified, none silently resolved
+The claim graph is joined against the header/API atlas, 22.2's Doxygen graph, 22.3's AST, 22.8's
+install manifest, 22.9's CLI surface, 22.10's config surface, the provider-algorithm inventory and
+the `.num`/DSO inventories. **2,292 disagreements** are recorded across nine classes:
+`ATLAS_PUBLIC_NAME_NOT_IN_POD` 1,255 (the ABI names no man3 page documents -- the find-doc-nits
+cross-check), `POD_NAME_NOT_IN_ATLAS` 871 (man3 names the public headers and `.num` do not publish,
+annotated with whether the whole-program AST or Doxygen sees them), `POD_CLI_OPTION_MISSING` 80,
+`POD_CONFIG_DIRECTIVE_MISSING` 51, `POD_DEPRECATION_MISMATCH` 21, `POD_ENVIRONMENT_VARIABLE_MISSING`
+8, `POD_PROVIDER_ALGORITHM_MISSING` 4, `RUNTIME_CLI_OPTION_UNDOCUMENTED` 1, and 1
+`POD_DEFAULT_PATH_MISMATCH`. The header-atlas variant (19,816 public header names undocumented) is a
+count, not 19,816 rows, because that set is dominated by non-API macros and would bury the figure the
+plan names. `POD_AMBIGUOUS` is 0 here (no man3 name is claimed by two pages). **The join against
+22.8 is exact and empty of residuals**: 903 corpus pages against 903 installed manpage files and
+5,660 alias symlinks, `POD_PAGE_NOT_INSTALLED` 0, `INSTALLED_PAGE_NOT_IN_POD` 0.
+
+### The court challenges extraction and reconciliation, not a file's existence
+`RT-PHASE22-POD` adds 32 observations: a round trip (re-derive the whole claim graph and the whole
+reconciliation from the artefact's own committed page model and index and require equality) plus the
+plan's nine mutation families -- delete a `NAME` alias, add a fake public function to a SYNOPSIS,
+alter a parameter type, change a documented return value, add and remove a CLI option, add and remove
+an environment variable, add and remove a configuration directive, change a default pathname, alter a
+deprecation statement. Each is detected by the plane it belongs to: the name/declaration/return/path/
+deprecation mutations move the claim graph, and the CLI/env/directive mutations move a residual
+(`POD_CLI_OPTION_MISSING`, `POD_ENVIRONMENT_VARIABLE_MISSING`, `POD_CONFIG_DIRECTIVE_MISSING`).
+Sensitivity was proved in memory: an extractor that drops `NAME_ENTRY` claims fails 4 checks, and a
+reconciler that drops `POD_ENVIRONMENT_VARIABLE_MISSING` fails 2, each including its own mutation's
+check.
+
+### Non-claims, named rather than hidden
+man7 concept extraction is partial (NAME plus provider `Identities`, the rest EXPLANATORY_ONLY);
+RETURN VALUES semantics are not decided; deprecation and default-path extraction are narrow and
+best-effort; `find-doc-nits` is one instrument. The plan's section 5 lists a separate
+`pod-atlas-reconciliation.json`; this plane folds the reconciliation into `pod-contract.json` rather
+than emitting a second document. Two clean regenerations are byte-identical.
+
 ## D492 -- 22.2's reference identity, the 11.2 closure gate, and 22.6 as the witness for 22.1
 
 Three defects a review found, all fixed, plus one strengthening. `PIPELINE OK` exit 0 with **123
@@ -34082,78 +34158,61 @@ and not a vacuous default.
 
 `PIPELINE OK` exit 0 with **126 courts** and 47,575 observations.
 
-## D491 -- 22.11: the canonical POD contract oracle, and the claim graph that will not pretend to
-## have read the prose
+## D495 -- 11.2 and 11.6 land: the parameter, the context and the time surface around the engine,
+## and the PEM X.509 containers
 
-Phase 22's fourth plane is the documentation plane, and section 6 gives it the hardest rule in the
-stratum: use the exact 3.6.4 manual corpus, **resolve `.pod.in` the way the build does**, run
-OpenSSL's own `util/find-doc-nits` as *one instrument*, parse POD into a content-addressed claim
-graph, and reconcile it against the planes that exist -- where "undocumented is not nonexistent, and
-documented-but-divergent is evidence". `forensics/tools/phase22_pod.py` lands
-`forensics/atlas/phase22/pod-contract.json` (12 MB) and the generated `docs/POD-CENSUS.md`.
+Two subphases land together, each with a behavioural court, and the stratum's two largest remaining
+units get their first real coverage. `forensics/phase11-obligations.json` moves from 1,132 to **1,299
+implemented** of 1,467, **168 open**, and `libcrypto` from 4,254 to **4,599** exports.
 
-### The corpus is 903 pages, 56 of them templates, and every template is resolved by `dofile.pl`
-`doc/man1` (62), `doc/man3` (679), `doc/man5` (3) and `doc/man7` (159) is **903 pages**: 6,562 `NAME`
-entries, 4,960 man3 SYNOPSIS declarations, 2,182 documented man1 options over 59 command pages, 53
-environment variables, 66 configuration directives. **56 pages are `.pod.in` templates** and are
-resolved by running the authority's own `util/dofile.pl` from the admitted build directory with the
-build's own relative input path, so the resolved text is byte-identical to the page `make` writes.
-A plane that read the templates as written would read `{- $OpenSSL::safe::opt_provider_synopsis -}`
-instead of the option block; the resolution is why 59 command pages carry the generic option blocks
-and why only one runtime option is left undocumented. Each page records its source digest, its
-resolved digest, and which resolver produced the text (`as-written`, `dofile`, `generated-pod`, or
-`unresolved`).
+### 11.2 is the surface around the engine, and it says so
+104 of the three units' 111 names land. `src/x509/x509_vpm.rs` is a whole new unit (39 exports):
+`X509_VERIFY_PARAM` as a 112-byte `#[repr(C)]` struct with its `size_of`/`offset_of` assertions, the
+authority's six-row `default_table` (the named param sets) and the writable `param_table`,
+`inherit`/`set1` and every flag, purpose, trust, depth and auth-level accessor, the policy, host,
+peername, email and IP setters, and the `add0_table`/`get_count`/`get0`/`lookup`/`table_cleanup`
+group. `src/x509/pcy_tree.rs` lands `X509_policy_tree_free` and makes `ossl_policy_node_free` and
+`ossl_policy_data_free` private, because nothing else reaches them. `src/x509/x509_vfy.rs` grows the
+`X509_STORE_CTX` lifecycle (`new`, `new_ex`, `free`, `cleanup`), the `set_default`/`purpose_inherit`/
+`set_purpose`/`set_trust` group, roughly fifty field, error and callback accessors,
+`set0_trusted_stack`, `X509_STORE_CTX_get1_issuer` with its helpers, the six free-standing time
+functions (`X509_cmp_time`, `X509_cmp_current_time`, `X509_cmp_timeframe`, `X509_time_adj`,
+`X509_time_adj_ex`, `X509_gmtime_adj`), `ossl_x509_check_cert_time` and `X509_get_pubkey_parameters`.
 
-### `find-doc-nits` is retained raw, and it is labelled as one instrument
-It is run from the admitted build directory with every check enabled; its complete stdout and stderr
-are stored verbatim with digests. It reported **1,229 libcrypto names and 30 libssl names not
-documented**, 45 undocumented macros and 27 reference-to-non-existing links. Its stderr carries the
-pinned container's git-probe usage text (that git does not implement `git config get`, and the script
-falls back); the noise is kept rather than hidden. It is deliberately **not** the oracle: it selects
-`doc/internal` too, and reads `include/openssl/*.h` rather than this plane's corpus. Its 1,259-total
-figure is the cross-check the ABI reconciliation is measured against and it agrees: this plane's
-`ATLAS_PUBLIC_NAME_NOT_IN_POD` is **1,255**.
+**The seven names it withholds are the engine itself**, and each blocker is measured rather than
+guessed: the chain roll's OCSP arm is Phase 12, its CRL arm needs `X509_CRL_get0_by_cert` and
+`X509_CRL_verify` from 11.4, its DANE arm is the SSL layer, `X509v3_{asid,addr}_validate_path` are
+withheld in their own units (11.5), and `X509_policy_check` needs `pcy_cache.c`, `pcy_data.c` and
+`pcy_node.c`. So 11.2 lands the parameter, the context and the time surface the engine will read, and
+not the engine: the entry points `X509_verify_cert`, `X509_STORE_CTX_verify` and `X509_build_chain`,
+the two remaining constructors `X509_STORE_CTX_init`/`init_rpk`, `X509_CRL_diff` and
+`X509_policy_check` stay named and open.
 
-### The claim graph is 15,044 claims, and prose is not understood
-Every extracted assertion is `PODCLAIM(section:page, kind, subject, normalized)` with a class from the
-plan's vocabulary. It carries 11,516 `STRUCTURAL` (NAME entries and SYNOPSIS declarations), 2,453
-`EXECUTABLE_CLAIM` (CLI options, environment variables, directives, default paths, deprecations,
-provider identities), 172 `SEMANTIC_TEXT` (RETURN VALUES quotes) and 903 `EXPLANATORY_ONLY` (man7
-concepts). **The two prose classes are untestable and say so**: a RETURN VALUES quote is carried, not
-interpreted, and man7 behaviour prose is not turned into an assertion. `probes.untestable` names the
-reason for each.
+Two authority fault boundaries were found while reproducing the time surface: `X509_cmp_time(NULL,
+...)` dereferences `ctm`, and `X509_VERIFY_PARAM_inherit(NULL, src)` dereferences `dest`. The crate
+reproduces both. `X509_VERIFY_PARAM_add0_policy` **frees its argument**, so the crate's callers pass
+`OBJ_dup`.
 
-### The reconciliation: every disagreement classified, none silently resolved
-The claim graph is joined against the header/API atlas, 22.2's Doxygen graph, 22.3's AST, 22.8's
-install manifest, 22.9's CLI surface, 22.10's config surface, the provider-algorithm inventory and
-the `.num`/DSO inventories. **2,292 disagreements** are recorded across nine classes:
-`ATLAS_PUBLIC_NAME_NOT_IN_POD` 1,255 (the ABI names no man3 page documents -- the find-doc-nits
-cross-check), `POD_NAME_NOT_IN_ATLAS` 871 (man3 names the public headers and `.num` do not publish,
-annotated with whether the whole-program AST or Doxygen sees them), `POD_CLI_OPTION_MISSING` 80,
-`POD_CONFIG_DIRECTIVE_MISSING` 51, `POD_DEPRECATION_MISMATCH` 21, `POD_ENVIRONMENT_VARIABLE_MISSING`
-8, `POD_PROVIDER_ALGORITHM_MISSING` 4, `RUNTIME_CLI_OPTION_UNDOCUMENTED` 1, and 1
-`POD_DEFAULT_PATH_MISMATCH`. The header-atlas variant (19,816 public header names undocumented) is a
-count, not 19,816 rows, because that set is dominated by non-API macros and would bury the figure the
-plan names. `POD_AMBIGUOUS` is 0 here (no man3 name is claimed by two pages). **The join against
-22.8 is exact and empty of residuals**: 903 corpus pages against 903 installed manpage files and
-5,660 alias symlinks, `POD_PAGE_NOT_INSTALLED` 0, `INSTALLED_PAGE_NOT_IN_POD` 0.
+### 11.6 lands all 54 of its names plus the nine its closure needed
+`src/pem/pem_x509.rs` (4), `pem_xaux.rs` (4), `pem_pk8.rs` (8), and two new units: `pem_all.rs` (33)
+and `pem_info.rs` (5). The closure pulled in `src/asn1/x_info.rs` (2), `x_pkey.rs` (2) and `nsseq.rs`
+(5). The court compares **exact PEM text bytes** against the authority, and malformed inputs against
+the error coordinates, rather than trusting a round trip.
 
-### The court challenges extraction and reconciliation, not a file's existence
-`RT-PHASE22-POD` adds 32 observations: a round trip (re-derive the whole claim graph and the whole
-reconciliation from the artefact's own committed page model and index and require equality) plus the
-plan's nine mutation families -- delete a `NAME` alias, add a fake public function to a SYNOPSIS,
-alter a parameter type, change a documented return value, add and remove a CLI option, add and remove
-an environment variable, add and remove a configuration directive, change a default pathname, alter a
-deprecation statement. Each is detected by the plane it belongs to: the name/declaration/return/path/
-deprecation mutations move the claim graph, and the CLI/env/directive mutations move a residual
-(`POD_CLI_OPTION_MISSING`, `POD_ENVIRONMENT_VARIABLE_MISSING`, `POD_CONFIG_DIRECTIVE_MISSING`).
-Sensitivity was proved in memory: an extractor that drops `NAME_ENTRY` claims fails 4 checks, and a
-reconciler that drops `POD_ENVIRONMENT_VARIABLE_MISSING` fails 2, each including its own mutation's
-check.
+### Two edits outside the subphase's own units, disclosed
+`gen_err_raise_sites.py` learns `pem_info.c` and `x_pkey.c` so the error-raise census tracks the new
+units. And `forensics/prerequisites.json` loses its `ossl_x509_check_cert_time` divergence row: it was
+class `owned_by_a_later_stratum`, and 11.2 landed the helper, which is exactly the transition the row's
+own note said would make the gate report it stale until it was removed. `docs/PHASE-11-SUBPHASES.md`
+section 5 is updated so the Landed and Open clauses bind the ledger again.
 
-### Non-claims, named rather than hidden
-man7 concept extraction is partial (NAME plus provider `Identities`, the rest EXPLANATORY_ONLY);
-RETURN VALUES semantics are not decided; deprecation and default-path extraction are narrow and
-best-effort; `find-doc-nits` is one instrument. The plan's section 5 lists a separate
-`pod-atlas-reconciliation.json`; this plane folds the reconciliation into `pod-contract.json` rather
-than emitting a second document. Two clean regenerations are byte-identical.
+### The courts, and the shape of the remaining work
+`RT-X509-VERIFY` adds 135 observations and `RT-X509-PEM` 121, over the parameter/context/time surface
+and the container surface respectively. The cohort is **129 courts, 47,831 observations**, `PIPELINE
+OK` exit 0 on two consecutive runs with no drift between them. Section 3.2's decision-procedure court
+is not yet what the verify court is: it cannot run `X509_verify_cert`, so it cannot yet compare return
+value, error, depth and callback sequence, or drive a hostile-chain corpus. That court arrives with the
+engine, and it is why the engine's blockers are being pulled forward rather than worked around.
+
+Verified: `PIPELINE OK` exit 0; phase 11 in-progress at 1,299/1,467; 129 courts and 47,831
+observations.

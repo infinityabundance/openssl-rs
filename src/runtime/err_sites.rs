@@ -17262,6 +17262,76 @@ pub(crate) const PEM_PK8_258: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `X509_INFO` at `crypto/pem/pem_info.c:36` (ERR_R_BUF_LIB).
+pub(crate) const PEM_INFO_36: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+    line: 36,
+    func: c"X509_INFO",
+    lib: 9,
+    reason: 524295,
+    dynamic_reason: false,
+};
+
+/// `PEM_X509_INFO_read_bio_ex` at `crypto/pem/pem_info.c:70` (ERR_R_CRYPTO_LIB).
+pub(crate) const PEM_INFO_70: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+    line: 70,
+    func: c"PEM_X509_INFO_read_bio_ex",
+    lib: 9,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `PEM_X509_INFO_read_bio_ex` at `crypto/pem/pem_info.c:166` (ERR_R_ASN1_LIB).
+pub(crate) const PEM_INFO_166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+    line: 166,
+    func: c"PEM_X509_INFO_read_bio_ex",
+    lib: 9,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PEM_X509_INFO_read_bio_ex` at `crypto/pem/pem_info.c:170` (ERR_R_ASN1_LIB).
+pub(crate) const PEM_INFO_170: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+    line: 170,
+    func: c"PEM_X509_INFO_read_bio_ex",
+    lib: 9,
+    reason: 524301,
+    dynamic_reason: false,
+};
+
+/// `PEM_X509_INFO_write_bio` at `crypto/pem/pem_info.c:243` (PEM_R_UNSUPPORTED_CIPHER).
+pub(crate) const PEM_INFO_243: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+    line: 243,
+    func: c"PEM_X509_INFO_write_bio",
+    lib: 9,
+    reason: 113,
+    dynamic_reason: false,
+};
+
+/// `PEM_X509_INFO_write_bio` at `crypto/pem/pem_info.c:256` (PEM_R_CIPHER_IS_NULL).
+pub(crate) const PEM_INFO_256: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+    line: 256,
+    func: c"PEM_X509_INFO_write_bio",
+    lib: 9,
+    reason: 127,
+    dynamic_reason: false,
+};
+
+/// `PEM_X509_INFO_write_bio` at `crypto/pem/pem_info.c:272` (PEM_R_UNSUPPORTED_CIPHER).
+pub(crate) const PEM_INFO_272: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+    line: 272,
+    func: c"PEM_X509_INFO_write_bio",
+    lib: 9,
+    reason: 113,
+    dynamic_reason: false,
+};
+
 /// `evp_pkey_new0_key` at `crypto/pem/pvkfmt.c:85` (ERR_R_INTERNAL_ERROR).
 pub(crate) const PVKFMT_85: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/pem/pvkfmt.c",
@@ -32189,6 +32259,16 @@ pub(crate) const X_ALGOR_165: ErrSite = ErrSite {
     func: c"ossl_x509_algor_get_md",
     lib: 13,
     reason: 229,
+    dynamic_reason: false,
+};
+
+/// `X509_PKEY_new` at `crypto/asn1/x_pkey.c:28` (ERR_R_ASN1_LIB).
+pub(crate) const X_PKEY_28: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/asn1/x_pkey.c",
+    line: 28,
+    func: c"X509_PKEY_new",
+    lib: 13,
+    reason: 524301,
     dynamic_reason: false,
 };
 
@@ -47136,6 +47216,13 @@ pub(crate) static ALL: &[ErrSite] = &[
     PEM_PK8_185,
     PEM_PK8_243,
     PEM_PK8_258,
+    PEM_INFO_36,
+    PEM_INFO_70,
+    PEM_INFO_166,
+    PEM_INFO_170,
+    PEM_INFO_243,
+    PEM_INFO_256,
+    PEM_INFO_272,
     PVKFMT_85,
     PVKFMT_94,
     PVKFMT_102,
@@ -48629,6 +48716,7 @@ pub(crate) static ALL: &[ErrSite] = &[
     RSA_SP800_56B_GEN_205,
     RSA_SP800_56B_GEN_454,
     X_ALGOR_165,
+    X_PKEY_28,
     P5_PBE_39,
     P5_PBE_45,
     P5_PBE_65,
