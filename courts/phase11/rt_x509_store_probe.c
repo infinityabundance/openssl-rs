@@ -41,15 +41,18 @@
  * `X509_REQ_get1_email` and the two `X509V3_EXT_REQ_add_*` -- driven over the SAN fixture's own
  * extension set, the `ext_req` attribute it round-trips through and a `CONF` section.
  *
- * It does **not** call anything that needs an `X509_STORE` or an `X509_STORE_CTX` it cannot
- * obtain. The stratum withholds `X509_STORE_new`/`X509_STORE_CTX_new` (their blocker is
- * `X509_VERIFY_PARAM`, 11.2's `x509_vpm.c`), and the candidate's shell answers a call to either
- * with `abort` (`artifacts/phase2/shell/libcrypto.shell.rs`) -- so the store's registry
- * (`X509_STORE_add_lookup`), its object-cache readers that dereference a store
- * (`X509_STORE_get0_objects`, `X509_STORE_get0_param`), their `up_ref`/locks, the twenty-six
- * callback `set_*`/`get_*` pairs and the whole `X509_STORE_CTX_*` read path are **not driven
+ * 11.2 has since landed `X509_VERIFY_PARAM` (`x509_vpm.c`), the one blocker on the stratum's
+ * `X509_STORE_new`/`_free` lifecycle and its five verify-parameter setters
+ * (`X509_STORE_set1_param` and the four `set_flags`/`set_depth`/`set_purpose`/`set_trust`;
+ * `crypto/x509/x509_lu.c:182-254`, `:783-807`). This probe **calls** all seven: it builds a real
+ * store, drives each setter, reads the effect back through `X509_STORE_get0_param` and the public
+ * `X509_VERIFY_PARAM` getters, and releases the store (and NULL).
+ *
+ * The store's registry (`X509_STORE_add_lookup`), its object-cache readers
+ * (`X509_STORE_get0_objects`), its `up_ref`/locks, the twenty-six callback `set_*`/`get_*` pairs
+ * and the whole `X509_STORE_CTX_*` read path are still **not driven
  * here**; they are covered by `RT-X509-REF` at basis `referenced`, the weaker true statement,
- * as are `X509_SIG_INFO_get` (its argument type `X509_SIG_INFO` is opaque in `x509.h`, so
+ * together with `X509_SIG_INFO_get` (its argument type `X509_SIG_INFO` is opaque in `x509.h`, so
  * driving it means re-declaring the struct) and `X509_get_signature_info` (it runs
  * `X509_check_purpose` and then reads the cached `siginf`, whose digest-name lookup is the
  * crate's recorded `EVP_get_digestbyname` divergence D333/D343; driving it would compare that
@@ -420,6 +423,74 @@ static void drive_store_refusals(void)
     ERR_clear_error();
     out_ptr("store.get1_all_certs.null", X509_STORE_get1_all_certs(NULL));
     out_err("store.get1_all_certs.null.err");
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * Phase 11.1a -- the `X509_STORE` lifecycle and its verify-parameter setters.
+ *
+ * 11.2 has landed `X509_VERIFY_PARAM` (`x509_vpm.c`), which was the only blocker on
+ * `X509_STORE_new`/`_free`, `X509_STORE_set1_param` and the four `set_flags`/`set_depth`/
+ * `set_purpose`/`set_trust` setters (`crypto/x509/x509_lu.c:182-254`, `:783-807`). This section
+ * builds a real store, drives each setter, reads the effect back through the store's own
+ * `X509_STORE_get0_param` and the public `X509_VERIFY_PARAM` getters, then releases it. The
+ * store's `free` is also driven on NULL. Every value is an integer, a `nonnull`/`null` or an
+ * error coordinate; no address is printed.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_store_lifecycle(void)
+{
+    X509_STORE *s;
+    X509_VERIFY_PARAM *vp;
+    X509_VERIFY_PARAM *cp;
+
+    ERR_clear_error();
+    s = X509_STORE_new();
+    out_ptr("store.new", s);
+    out_err("store.new.err");
+
+    vp = X509_STORE_get0_param(s);
+    out_ptr("store.get0_param", vp);
+
+    /* `X509_STORE_set_flags` -> `X509_VERIFY_PARAM_set_flags`. */
+    ERR_clear_error();
+    out_int("store.set_flags", X509_STORE_set_flags(s, X509_V_FLAG_X509_STRICT));
+    out_int("store.set_flags.read",
+            (X509_VERIFY_PARAM_get_flags(vp) & X509_V_FLAG_X509_STRICT) != 0);
+    out_err("store.set_flags.err");
+
+    /* `X509_STORE_set_depth` -> `X509_VERIFY_PARAM_set_depth`, which returns nothing. */
+    ERR_clear_error();
+    out_int("store.set_depth", X509_STORE_set_depth(s, 11));
+    out_int("store.set_depth.read", X509_VERIFY_PARAM_get_depth(vp));
+    out_err("store.set_depth.err");
+
+    /* `X509_STORE_set_purpose` -> `X509_VERIFY_PARAM_set_purpose`. */
+    ERR_clear_error();
+    out_int("store.set_purpose", X509_STORE_set_purpose(s, X509_PURPOSE_SSL_CLIENT));
+    out_int("store.set_purpose.read", X509_VERIFY_PARAM_get_purpose(vp));
+    out_err("store.set_purpose.err");
+
+    /* `X509_STORE_set_trust` -> `X509_VERIFY_PARAM_set_trust`. */
+    ERR_clear_error();
+    out_int("store.set_trust", X509_STORE_set_trust(s, X509_TRUST_SSL_CLIENT));
+    out_err("store.set_trust.err");
+
+    /* `X509_STORE_set1_param` -> `X509_VERIFY_PARAM_set1`, observed through a fresh source. */
+    cp = X509_VERIFY_PARAM_new();
+    out_ptr("store.set1_param.src", cp);
+    X509_VERIFY_PARAM_set_flags(cp, X509_V_FLAG_CRL_CHECK);
+    X509_VERIFY_PARAM_set_depth(cp, 5);
+    ERR_clear_error();
+    out_int("store.set1_param", X509_STORE_set1_param(s, cp));
+    out_int("store.set1_param.flags.read",
+            (X509_VERIFY_PARAM_get_flags(vp) & X509_V_FLAG_CRL_CHECK) != 0);
+    out_int("store.set1_param.depth.read", X509_VERIFY_PARAM_get_depth(vp));
+    out_err("store.set1_param.err");
+    X509_VERIFY_PARAM_free(cp);
+
+    X509_STORE_free(s);
+    X509_STORE_free(NULL);
+    out_int("store.lifecycle.arms", 1);
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -1482,6 +1553,7 @@ int main(void)
     drive_lookup();
     drive_object(cert, crl);
     drive_store_refusals();
+    drive_store_lifecycle();
     drive_set(cert);
     drive_req();
     drive_trust(cert);
