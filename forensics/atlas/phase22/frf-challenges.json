@@ -304,13 +304,14 @@
             "body_sha256": "5b08ecabb94b05c1cf0dcde401b9332f24c919d0e46913f0d6be2f972a23cbe1",
             "match_committed": true,
             "run": 1,
-            "seconds": 43
+            "seconds": 44
           }
         ],
-        "seconds": 43,
+        "seconds": 44,
         "status": "verified"
       },
       {
+        "artefact": "forensics/atlas/phase22/doxygen-entities.json",
         "capture_scratch_clean": true,
         "committed_body_sha256": "98bf8731bbd02756f498cd1176933acd55660f1d635f19081916ebdfb6c06cf6",
         "method": "regenerate the raw input in a clean out-of-tree scratch with the pinned tool, run phase22_doxygen over it, hash the normalised body, and compare to the committed artefact",
@@ -321,19 +322,20 @@
             "body_sha256": "98bf8731bbd02756f498cd1176933acd55660f1d635f19081916ebdfb6c06cf6",
             "match_committed": true,
             "run": 1,
-            "seconds": 26
+            "seconds": 24
           },
           {
             "body_sha256": "98bf8731bbd02756f498cd1176933acd55660f1d635f19081916ebdfb6c06cf6",
             "match_committed": true,
             "run": 2,
-            "seconds": 28
+            "seconds": 26
           }
         ],
-        "seconds": 54,
+        "seconds": 50,
         "status": "verified"
       },
       {
+        "artefact": "forensics/atlas/phase22/tu-ast.json",
         "capture_scratch_clean": true,
         "committed_body_sha256": "6be58c6515bd40cb3637822d317f45574b71748db54049d3d20fb0a4696ca7dd",
         "method": "regenerate the raw input in a clean out-of-tree scratch with the pinned tool, run phase22_tu_ast over it, hash the normalised body, and compare to the committed artefact",
@@ -351,6 +353,7 @@
         "status": "verified"
       },
       {
+        "artefact": "forensics/atlas/phase22/conditional-surface.json",
         "capture_scratch_clean": true,
         "committed_body_sha256": "dfe386e66c133525dd588132467f77324b459e780bb9c4bcff5554e809dfd876",
         "method": "regenerate the raw input in a clean out-of-tree scratch with the pinned tool, run phase22_conditional over it, hash the normalised body, and compare to the committed artefact",
@@ -361,10 +364,10 @@
             "body_sha256": "dfe386e66c133525dd588132467f77324b459e780bb9c4bcff5554e809dfd876",
             "match_committed": true,
             "run": 1,
-            "seconds": 15
+            "seconds": 16
           }
         ],
-        "seconds": 15,
+        "seconds": 16,
         "status": "verified"
       }
     ],
@@ -504,7 +507,7 @@
     {
       "name": "phase-22-plan",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "55a1ba6d7debcb2533d2a2178856318c7f99e47092d2e45eb68fc72f3de1c6b1"
+      "sha256": "79da72f3c941471c1c81a7fe7d17c250e621af45e17d08d95d055da5ac2b3627"
     },
     {
       "name": "plane-22.2",
@@ -549,7 +552,7 @@
     {
       "name": "plane-22.10",
       "path": "forensics/atlas/phase22/config-surface.json",
-      "sha256": "198e4106948bc237e3778c30ddcd59a7d34e19bb293268853d2f3efa594ee8f2"
+      "sha256": "bbdca8b5812c5a6027f0ad8df6bce1826a85afa7da8fe6a69b4a760799438d1d"
     },
     {
       "name": "plane-22.11",
