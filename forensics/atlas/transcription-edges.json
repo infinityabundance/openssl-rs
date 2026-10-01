@@ -3431,7 +3431,7 @@
         "module": "src/x509/x509_lu.rs",
         "phase": 11,
         "phase_source": "module-declaration",
-        "share": "68/68",
+        "share": "75/75",
         "translation_unit": "crypto/x509/x509_lu.c"
       },
       {

@@ -34275,3 +34275,36 @@ which is what `docs_consistency.py` binds to the ledger.
 
 Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,312/1,467 with 155 open;
 `libcrypto` at 4,612; 129 courts and 47,856 observations.
+
+## D497 -- 11.1c lands the store object and its parameter setters, and a blocker named by a
+## module doc is discharged by the slice that removed it
+
+11.1's seven withheld store names were the cleanest kind of deferral: the module doc named the one
+unmet dependency and it was a *type*, `struct X509_VERIFY_PARAM_st`. 11.2 landed that type. So this
+slice needs no new judgement, only the transcription the blocker interrupted, and the interesting
+part is that the deferral turned itself off.
+
+`X509_STORE_new` (`x509_lu.c:182-224`), `X509_STORE_free` (`:226-254`), `X509_STORE_set1_param`
+(`:804-807`) and the four `set_flags`/`set_depth`/`set_purpose`/`set_trust` setters (`:783-802`) land
+with their five raise coordinates (`:189`/`:194`/`:199`/`:203`/`:209`) and the shared `err:` label
+(`:217-223`). Every other dependency was already present, including the 11.2 `X509_VERIFY_PARAM_set*`
+family, so nothing new was stubbed or re-derived.
+
+### One type becomes concrete, and the reason it is safe is mechanical
+`X509_STORE`'s `param` member was `*mut c_void` because its type did not exist. It is now
+`*mut X509VerifyParam`, and so is `X509_STORE_get0_param`'s return. The change is layout-preserving
+by construction -- both are pointers -- and it had exactly one reader in the file. The *context*'s
+`param` stays opaque: its retype belongs to `x509_vfy.rs`, which `.cast()`s it, and a slice that
+touched it would be editing a file it does not own.
+
+### The court drives the constructor and every setter
+`RT-X509-STORE` grows twenty observations: the constructor and its error arm, the `get0_param` read,
+and each of the four setters plus `set1_param` driven and read back through the public
+`X509_VERIFY_PARAM_get_flags`/`_get_depth`/`_get_purpose` getters. `probe_hygiene.py` is clean at
+`-O0`/`-O1`/`-O2` on both sides, 485 observations each, and no existing key moved.
+
+`docs/PHASE-11-SUBPHASES.md` section 5 still called `X509_STORE_new` and `X509_STORE_set1_param`
+open; `docs_consistency.py` binds that clause to the ledger, so both move into the landed clause.
+
+Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,319/1,467 with 148 open; 129
+courts and 47,876 observations.

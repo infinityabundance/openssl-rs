@@ -2,18 +2,22 @@
 //! registry and the `X509_OBJECT` cache. The stratum's first unit of its own work
 //! (`docs/PHASE-11-SUBPHASES.md` section 2).
 //!
-//! `crypto/x509/x509_lu.c` is 958 lines and publishes **seventy-three** functions. **This slice
-//! lands sixty-six of them** and withholds seven by name, each with the one unmet dependency
-//! that blocks it.
+//! `crypto/x509/x509_lu.c` is 958 lines and publishes **seventy-three** functions, and **this
+//! slice lands all seventy-three**. Its last seven — `X509_STORE_new`/`_free`, the four
+//! `set_flags`/`set_depth`/`set_purpose`/`set_trust` setters and `X509_STORE_set1_param`
+//! (`:182-254`, `:783-807`) — waited on `X509_VERIFY_PARAM`, 11.2's `crypto/x509/x509_vpm.c`;
+//! that unit has since landed, so the seven are transcribed here too.
 //!
 //! * **The lookup object lands whole** (`:18-158`): `X509_LOOKUP_new`/`_free`,
 //!   `X509_LOOKUP_init`/`_shutdown`, the three `ctrl` doors, the five `by_*` dispatchers and
 //!   the three method-data/store accessors. Its only dependency is the `X509_LOOKUP` layout,
 //!   defined here.
-//! * **The store's registry and accessors land** (`:256-295`, `:429-445`, `:580-618`,
-//!   `:783-958`): [`X509_STORE_up_ref`], [`X509_STORE_add_lookup`], [`X509_STORE_add_cert`]/
-//!   [`X509_STORE_add_crl`], the two object-cache readers, the twelve callback
-//!   `set`/`get` pairs, the two `ex_data` doors and the two locks.
+//! * **The store's lifecycle, registry and accessors land** (`:182-254`, `:256-295`, `:429-445`,
+//!   `:580-618`, `:783-958`): [`X509_STORE_new`]/[`X509_STORE_free`], [`X509_STORE_up_ref`],
+//!   [`X509_STORE_add_lookup`], [`X509_STORE_add_cert`]/
+//!   [`X509_STORE_add_crl`], the two object-cache readers, the five `X509_VERIFY_PARAM` setters
+//!   (`set1_param` and the four `set_flags`/`set_depth`/`set_purpose`/`set_trust`), the twelve
+//!   callback `set`/`get` pairs, the two `ex_data` doors and the two locks.
 //! * **The `X509_OBJECT` object lands whole** (`:447-781`): the constructors/destructors, the
 //!   three accessors, the two `set1_` updaters, the by-subject index/retrieve pair and
 //!   [`X509_OBJECT_retrieve_match`].
@@ -24,16 +28,18 @@
 //!   [`X509_STORE_CTX_get0_store`]. Its closure is the [`X509StoreCtx`] layout defined here (see
 //!   below); the context's *lifecycle* and verify roll are 11.2's and are not transcribed.
 //!
-//! ## Withheld by name, with the blocker
+//! ## The last seven: the blocker was discharged
 //!
-//! **The one blocker is `struct X509_VERIFY_PARAM_st` (`X509_VERIFY_PARAM`), 11.2's**
-//! (`crypto/x509/x509_vpm.c`): `X509_STORE_new` (`:182`) is the field's only constructor and
-//! `X509_STORE_free` (`:226`) its only destructor, and the four `set_flags`/`set_depth`/
-//! `set_purpose`/`set_trust` setters and `X509_STORE_set1_param` (`:783-807`) all call
-//! `X509_VERIFY_PARAM_set*`/`_set1`. None of those names is landed anywhere in the crate, so the
-//! seven are withheld. The store's `param` member is modelled as `*mut c_void` (as `x_x509.rs`
-//! models every unlanded member type); [`X509_STORE_get0_param`] (`:809`) is a bare field read
-//! and lands, returning that same opaque pointer until 11.2 gives it the real type.
+//! 11.1 originally withheld seven functions whose only unmet dependency was `struct
+//! X509_VERIFY_PARAM_st` (`X509_VERIFY_PARAM`): `X509_STORE_new` (`:182`) is the field's only
+//! constructor and `X509_STORE_free` (`:226`) its only destructor, `X509_STORE_set1_param`
+//! (`:804-807`) and the four `set_flags`/`set_depth`/`set_purpose`/`set_trust` setters
+//! (`:783-802`) all call `X509_VERIFY_PARAM_set*`/`_set1`, and [`X509_STORE_get0_param`]
+//! (`:809`) returns the field. **That blocker is discharged**: Phase 11.2's
+//! `src/x509/x509_vpm.rs` now lands the type and every setter those call sites need, so all
+//! seven are transcribed here and the store's `param` member carries its real
+//! `*mut X509VerifyParam` type instead of `*mut c_void`. It is a pointer either way, so the
+//! layout is unchanged.
 //!
 //! ## The `X509_STORE_CTX` layout is defined here, but not its lifecycle
 //!
@@ -41,10 +47,12 @@
 //! x509_store_ctx_st` from `include/crypto/x509.h:215-287`. What 11.1 does **not** land is the
 //! context's *lifecycle* (`X509_STORE_CTX_new`/`_free`/`_init`) or its verify roll; those are
 //! 11.2's (`crypto/x509/x509_vfy.c`), so no function that drives them appears here. The members
-//! whose own types are 11.2's or a later stratum's — `X509_VERIFY_PARAM *param`,
-//! `X509_POLICY_TREE *tree`, `SSL_DANE *dane`, the `OCSP_RESPONSE` stack and the twelve
-//! `X509_STORE_CTX`-typed callbacks' context parameter — are modelled as opaque pointers, exactly
-//! as the store's callbacks are; every one is a pointer, so the offsets are exact.
+//! whose own types are a later stratum's — the ctx's `X509_VERIFY_PARAM *param` (the type is
+//! landed now, but this file keeps the ctx member opaque because its retype belongs to 11.2's
+//! `x509_vfy.c`, which casts it), `X509_POLICY_TREE *tree`, `SSL_DANE *dane`, the `OCSP_RESPONSE`
+//! stack and the twelve `X509_STORE_CTX`-typed callbacks' context parameter — are modelled as
+//! opaque pointers, exactly as the store's callbacks are; every one is a pointer, so the offsets
+//! are exact.
 //!
 //! ## The substitutions: `OSSL_STACK_OF_X509_free`
 //!
@@ -64,9 +72,10 @@
 //! x509_store_ctx_st` are declared in `include/crypto/x509.h`. Their numbers below were read from
 //! the pinned authority's own compiler (the technique `courts/layout/measure-x509.c` uses; that
 //! program does not yet cover these five, and this slice may edit only its two files, so the
-//! printing programme is recorded by result rather than committed). `X509_VERIFY_PARAM *`,
-//! `X509_POLICY_TREE *`, `SSL_DANE *` and the `OCSP_RESPONSE` stack are unlanded pointer types,
-//! modelled as `*mut c_void`; each is a pointer, so every offset is exact. The two read-path
+//! printing programme is recorded by result rather than committed). `X509_POLICY_TREE *`,
+//! `SSL_DANE *` and the `OCSP_RESPONSE` stack are unlanded pointer types, modelled as
+//! `*mut c_void`, as is the ctx's `X509_VERIFY_PARAM *param` (retyped to the real type only on
+//! the store, above); each is a pointer, so every offset is exact. The two read-path
 //! members [`X509StoreCtx`] adds beyond the store — `libctx` and `propq` — are read at offsets
 //! 272 and 280.
 //!
@@ -74,10 +83,10 @@
 //!
 //! `crypto/x509/x509_lu.c` is **not** in `gen_err_raise_sites.py`'s `COVERED_FILES`, so its
 //! coordinates are **declared locally** in the `err_sites::ErrSite` shape (as `v3_purp.rs`
-//! does). Six are on landed code — [`X509_STORE_add_lookup`] (`:284`/`:292`),
+//! does). **Eleven** are on landed code — the five in [`X509_STORE_new`]
+//! (`:189`/`:194`/`:199`/`:203`/`:209`), [`X509_STORE_add_lookup`] (`:284`/`:292`),
 //! [`X509_STORE_add_cert`] (`:432`), [`X509_STORE_add_crl`] (`:441`) and the two object-cache
-//! readers (`:607`/`:627`). The five in `X509_STORE_new` (`:189`-`:209`) belong to a withheld
-//! function and are not declared. The reasons are read from `include/openssl/err.h.in`:
+//! readers (`:607`/`:627`). The reasons are read from `include/openssl/err.h.in`:
 //! `ERR_LIB_X509` = 11 (`:85`), `ERR_R_X509_LIB` = `11 | ERR_RFLAG_COMMON` (`:327`),
 //! `ERR_R_CRYPTO_LIB` = `15 | ERR_RFLAG_COMMON` (`:330`) and `ERR_R_PASSED_NULL_PARAMETER`
 //! = `258 | ERR_R_FATAL` (`:356`), with `ERR_RFLAG_COMMON` = `0x2 << 18` (`:241`),
@@ -89,7 +98,7 @@
 #![allow(non_snake_case)]
 #![allow(non_camel_case_types)]
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void, CStr};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void, CStr};
 use core::mem::{offset_of, size_of, MaybeUninit};
 use core::ptr;
 
@@ -97,20 +106,29 @@ use crate::asn1::layout::Asn1String;
 use crate::evp::pkey::EvpPkey;
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
-use crate::runtime::ex_data::{CRYPTO_get_ex_data, CRYPTO_set_ex_data, CryptoExData};
+use crate::runtime::ex_data::{
+    CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data, CryptoExData,
+    CRYPTO_EX_INDEX_X509_STORE,
+};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_zalloc};
 use crate::runtime::stack::{
     OPENSSL_sk_deep_copy, OPENSSL_sk_find, OPENSSL_sk_find_all, OPENSSL_sk_free,
-    OPENSSL_sk_is_sorted, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
+    OPENSSL_sk_is_sorted, OPENSSL_sk_new, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::runtime::thread::{
-    CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock, CRYPTO_THREAD_write_lock, CryptoRwlock,
+    CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CRYPTO_THREAD_read_lock, CRYPTO_THREAD_unlock,
+    CRYPTO_THREAD_write_lock, CryptoRwlock,
 };
 use crate::x509::x509_cmp::{
     X509_CRL_cmp, X509_CRL_match, X509_add_cert, X509_cmp, X509_subject_name_cmp,
 };
 use crate::x509::x509_set::X509_up_ref;
+use crate::x509::x509_vpm::{
+    X509VerifyParam, X509_VERIFY_PARAM_free, X509_VERIFY_PARAM_new, X509_VERIFY_PARAM_set1,
+    X509_VERIFY_PARAM_set_depth, X509_VERIFY_PARAM_set_flags, X509_VERIFY_PARAM_set_purpose,
+    X509_VERIFY_PARAM_set_trust,
+};
 use crate::x509::x_crl::{X509Crl, X509_CRL_free, X509_CRL_up_ref};
 use crate::x509::x_name::X509Name;
 use crate::x509::x_x509::{X509_free, X509};
@@ -140,6 +158,12 @@ const LINE_ZALLOC_LOOKUP: c_int = 20;
 const LINE_FREE_LOOKUP_NEW: c_int = 27;
 /// `X509_LOOKUP_free`'s `OPENSSL_free(ctx)` (`:39`).
 const LINE_FREE_LOOKUP: c_int = 39;
+/// `X509_STORE_new`'s `OPENSSL_zalloc(sizeof(*ret))` (`:184`).
+const LINE_ZALLOC_STORE: c_int = 184;
+/// `X509_STORE_new`'s error-path `OPENSSL_free(ret)` (`:222`).
+const LINE_FREE_STORE_NEW: c_int = 222;
+/// `X509_STORE_free`'s `OPENSSL_free(xs)` (`:253`).
+const LINE_FREE_STORE: c_int = 253;
 /// `X509_OBJECT_new`'s `OPENSSL_zalloc(sizeof(*ret))` (`:481`).
 const LINE_ZALLOC_OBJECT: c_int = 481;
 /// `X509_OBJECT_free`'s `OPENSSL_free(a)` (`:530`).
@@ -188,6 +212,16 @@ const X509_LU_627: ErrSite = x509_lu_site(
     ERR_LIB_X509,
     ERR_R_PASSED_NULL_PARAMETER,
 );
+/// `X509_STORE_new`'s failed `sk_X509_OBJECT_new` at `x509_lu.c:189`.
+const X509_LU_189: ErrSite = x509_lu_site(189, c"X509_STORE_new", ERR_LIB_X509, ERR_R_CRYPTO_LIB);
+/// `X509_STORE_new`'s failed `sk_X509_LOOKUP_new_null` at `x509_lu.c:194`.
+const X509_LU_194: ErrSite = x509_lu_site(194, c"X509_STORE_new", ERR_LIB_X509, ERR_R_CRYPTO_LIB);
+/// `X509_STORE_new`'s failed `X509_VERIFY_PARAM_new` at `x509_lu.c:199`.
+const X509_LU_199: ErrSite = x509_lu_site(199, c"X509_STORE_new", ERR_LIB_X509, ERR_R_X509_LIB);
+/// `X509_STORE_new`'s failed `CRYPTO_new_ex_data` at `x509_lu.c:203`.
+const X509_LU_203: ErrSite = x509_lu_site(203, c"X509_STORE_new", ERR_LIB_X509, ERR_R_CRYPTO_LIB);
+/// `X509_STORE_new`'s failed `CRYPTO_THREAD_lock_new` at `x509_lu.c:209`.
+const X509_LU_209: ErrSite = x509_lu_site(209, c"X509_STORE_new", ERR_LIB_X509, ERR_R_CRYPTO_LIB);
 
 // ---------------------------------------------------------------------------------------------
 // The callback typedefs (declared in `include/openssl/x509_vfy.h`).
@@ -427,9 +461,10 @@ const _: () = {
 /// `struct x509_store_st` — `X509_STORE`, from `crypto/x509/x509_local.h:114-149`.
 ///
 /// The trusted-object cache, the external lookup methods, the verify parameters and the twelve
-/// callbacks the verification engine reads. `X509_VERIFY_PARAM *param` and the twelve callback
-/// members' `X509_STORE_CTX` parameter are 11.2's unlanded types, modelled as opaque pointers (see
-/// the module doc); every one is a pointer, so the layout is exact.
+/// callbacks the verification engine reads. `X509_VERIFY_PARAM *param` is now the real
+/// [`X509VerifyParam`] (11.2's `crypto/x509/x509_vpm.c`); the twelve callback members' context
+/// parameter stays an opaque `*mut c_void` (see the module doc). Every one is a pointer, so the
+/// layout is exact.
 #[repr(C)]
 pub struct X509Store {
     /// `int cache` — non-zero to stash hits in `objs`.
@@ -438,8 +473,8 @@ pub struct X509Store {
     pub(crate) objs: *mut OpenSslStack,
     /// `STACK_OF(X509_LOOKUP) *get_cert_methods` — the external lookup methods.
     pub(crate) get_cert_methods: *mut OpenSslStack,
-    /// `X509_VERIFY_PARAM *param` — the verify parameters (11.2's type).
-    pub(crate) param: *mut c_void,
+    /// `X509_VERIFY_PARAM *param` — the verify parameters ([`X509VerifyParam`], `x509_vpm.c`).
+    pub(crate) param: *mut X509VerifyParam,
     /// `int (*verify)(X509_STORE_CTX *ctx)` — the chain verifier.
     pub(crate) verify: X509_STORE_CTX_verify_fn,
     /// `int (*verify_cb)(int ok, X509_STORE_CTX *ctx)` — the error callback.
@@ -1396,8 +1431,188 @@ unsafe extern "C" fn x509_crl_free_void(p: *mut c_void) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// X509_STORE — `crypto/x509/x509_lu.c:42-55`, `:256-295`, `:386-445`, `:580-652`, `:783-958`.
+// X509_STORE — `crypto/x509/x509_lu.c:42-55`, `:182-254`, `:256-295`, `:386-445`, `:580-652`,
+// `:783-958`.
 // ---------------------------------------------------------------------------------------------
+
+/// `X509_STORE *X509_STORE_new(void)` — `crypto/x509/x509_lu.c:182-224`.
+///
+/// Allocates a zeroed store, then builds its object cache, its (empty) lookup-method stack, its
+/// verify parameters, its extension block and its lock. Any of the five failing raises and reaches
+/// the authority's `err:` label, which releases what has been built and answers NULL.
+///
+/// # Safety
+///
+/// No argument is read, so this is callable from any state; the returned store is the caller's to
+/// release through [`X509_STORE_free`].
+#[no_mangle]
+pub unsafe extern "C" fn X509_STORE_new() -> *mut X509Store {
+    // SAFETY: the allocator takes the file/line for its mdbg record only.
+    let ret =
+        CRYPTO_zalloc(size_of::<X509Store>(), FILE.as_ptr(), LINE_ZALLOC_STORE).cast::<X509Store>();
+    if ret.is_null() {
+        return ptr::null_mut();
+    }
+
+    // `if ((ret->objs = sk_X509_OBJECT_new(x509_object_cmp)) == NULL)`
+    // SAFETY: the constructor takes only the comparator, which is this file's own.
+    let objs = OPENSSL_sk_new(Some(x509_object_cmp));
+    // SAFETY: `ret` is this call's own fresh allocation.
+    unsafe { (*ret).objs = objs };
+    if objs.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_LU_189) };
+        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
+        return unsafe { x509_store_new_err(ret) };
+    }
+
+    // SAFETY: `ret` is this call's own allocation.
+    unsafe { (*ret).cache = 1 };
+
+    // `if ((ret->get_cert_methods = sk_X509_LOOKUP_new_null()) == NULL)`
+    // SAFETY: the constructor takes no arguments.
+    let methods = OPENSSL_sk_new_null();
+    // SAFETY: `ret` is this call's own allocation.
+    unsafe { (*ret).get_cert_methods = methods };
+    if methods.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_LU_194) };
+        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
+        return unsafe { x509_store_new_err(ret) };
+    }
+
+    // `if ((ret->param = X509_VERIFY_PARAM_new()) == NULL)`
+    // SAFETY: the constructor takes no arguments.
+    let param = X509_VERIFY_PARAM_new();
+    // SAFETY: `ret` is this call's own allocation.
+    unsafe { (*ret).param = param };
+    if param.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_LU_199) };
+        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
+        return unsafe { x509_store_new_err(ret) };
+    }
+
+    // `if (!CRYPTO_new_ex_data(CRYPTO_EX_INDEX_X509_STORE, ret, &ret->ex_data))`
+    // SAFETY: `ret` is this call's own allocation and `ex_data` is a field of it.
+    if unsafe {
+        CRYPTO_new_ex_data(
+            CRYPTO_EX_INDEX_X509_STORE,
+            ret.cast(),
+            ptr::addr_of_mut!((*ret).ex_data),
+        )
+    } == 0
+    {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_LU_203) };
+        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
+        return unsafe { x509_store_new_err(ret) };
+    }
+
+    // `ret->lock = CRYPTO_THREAD_lock_new();`
+    // SAFETY: the constructor takes no arguments.
+    let lock = CRYPTO_THREAD_lock_new();
+    // SAFETY: `ret` is this call's own allocation.
+    unsafe { (*ret).lock = lock };
+    if lock.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_LU_209) };
+        // SAFETY: `ret` is this call's own allocation and nothing else holds it.
+        return unsafe { x509_store_new_err(ret) };
+    }
+
+    // `if (!CRYPTO_NEW_REF(&ret->references, 1)) goto err;` — the header's `HAVE_ATOMICS` arm is
+    // `refcnt->val = n; return 1;`, so the test is the assignment and the branch is unreachable
+    // rather than omitted, exactly as `X509_STORE_up_ref` transcribes its half.
+    // SAFETY: `references` is a field of this call's own allocation.
+    unsafe { (*ret).references = 1 };
+    ret
+}
+
+/// `X509_STORE_new`'s `err:` label (`crypto/x509/x509_lu.c:217-223`) — the shared failure exit.
+///
+/// Releases the four owned members in the authority's order and the block last, then answers NULL.
+/// A member the constructor has not reached is still zero, and each release accepts NULL. The
+/// authority does **not** call `CRYPTO_free_ex_data` here even when `CRYPTO_new_ex_data` succeeded
+/// (only `X509_STORE_free` does), so neither does this.
+///
+/// # Safety
+///
+/// `ret` must be a live allocation from [`CRYPTO_zalloc`] that only this call still owns.
+unsafe fn x509_store_new_err(ret: *mut X509Store) -> *mut X509Store {
+    // SAFETY: `ret` is this call's own live allocation; each member is NULL or owned by it.
+    unsafe {
+        X509_VERIFY_PARAM_free((*ret).param);
+        OPENSSL_sk_free((*ret).objs);
+        OPENSSL_sk_free((*ret).get_cert_methods);
+        CRYPTO_THREAD_lock_free((*ret).lock);
+        CRYPTO_free(ret.cast(), FILE.as_ptr(), LINE_FREE_STORE_NEW);
+    }
+    ptr::null_mut()
+}
+
+/// `void X509_STORE_free(X509_STORE *xs)` — `crypto/x509/x509_lu.c:226-254`.
+///
+/// Decrements the store's reference count; when it reaches zero, shuts down and releases every
+/// lookup method, frees the object cache, the extension block, the verify parameters and the lock,
+/// and releases the block. NULL is a no-op.
+///
+/// # Safety
+///
+/// `xs` must be NULL, or a live store and this call must retire the last reference to it.
+#[no_mangle]
+pub unsafe extern "C" fn X509_STORE_free(xs: *mut X509Store) {
+    if xs.is_null() {
+        return;
+    }
+
+    // `CRYPTO_DOWN_REF(&xs->references, &i)` — the header's `HAVE_ATOMICS` arm answers the new
+    // count. The field is a plain `c_int` here (as `X509_STORE_up_ref` transcribes the other half),
+    // so the decrement is a plain store. `REF_PRINT_COUNT` is a trace hook that expands to nothing
+    // without `REF_COUNT_DEBUG`, and `REF_ASSERT_ISNT(i < 0)` is empty under `NDEBUG`.
+    // SAFETY: `xs` is live per the contract.
+    let i = unsafe { (*xs).references.wrapping_sub(1) };
+    // SAFETY: `xs` is live and writable.
+    unsafe { (*xs).references = i };
+    if i > 0 {
+        return;
+    }
+
+    // SAFETY: `xs` is live and this is the last reference; its lookup stack is live.
+    let sk = unsafe { (*xs).get_cert_methods };
+    // SAFETY: `sk` is live or NULL, both accepted.
+    let num = unsafe { OPENSSL_sk_num(sk) };
+    for i in 0..num {
+        // SAFETY: `sk` is live and `i` is in range.
+        let lu = unsafe { OPENSSL_sk_value(sk, i).cast::<X509Lookup>() };
+        // SAFETY: `lu` is a live lookup the store owns.
+        unsafe {
+            X509_LOOKUP_shutdown(lu);
+            X509_LOOKUP_free(lu);
+        }
+    }
+    // SAFETY: `sk` is the store's own lookup stack, now empty of live elements.
+    unsafe { OPENSSL_sk_free(sk) };
+    // SAFETY: `xs` is live; its object cache is live and owns each element, released through the
+    // `void (*)(void *)` thunk over `X509_OBJECT_free`.
+    unsafe { OPENSSL_sk_pop_free((*xs).objs, Some(x509_object_free_void)) };
+
+    // SAFETY: `xs` is live and `ex_data` is a field of it.
+    unsafe {
+        CRYPTO_free_ex_data(
+            CRYPTO_EX_INDEX_X509_STORE,
+            xs.cast(),
+            ptr::addr_of_mut!((*xs).ex_data),
+        )
+    };
+    // SAFETY: `param` is NULL or the object the constructor allocated.
+    unsafe { X509_VERIFY_PARAM_free((*xs).param) };
+    // SAFETY: `lock` is NULL or the lock the constructor created.
+    unsafe { CRYPTO_THREAD_lock_free((*xs).lock) };
+    // `CRYPTO_FREE_REF(&xs->references)` is empty on this profile's arm of the header.
+    // SAFETY: `xs` is this call's own allocation, released last.
+    unsafe { CRYPTO_free(xs.cast(), FILE.as_ptr(), LINE_FREE_STORE) };
+}
 
 /// `int X509_STORE_lock(X509_STORE *xs)` — `crypto/x509/x509_lu.c:42-45`.
 ///
@@ -1703,17 +1918,89 @@ pub unsafe extern "C" fn X509_STORE_get1_all_certs(store: *mut X509Store) -> *mu
     sk
 }
 
+/// `int X509_STORE_set_flags(X509_STORE *xs, unsigned long flags)` —
+/// `crypto/x509/x509_lu.c:783-786`.
+///
+/// Sets `flags` on the store's verify parameters, answering whether the setter accepted them.
+///
+/// # Safety
+///
+/// `xs` must be a live `X509_STORE` with a live `param`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_STORE_set_flags(xs: *mut X509Store, flags: c_ulong) -> c_int {
+    // SAFETY: `xs` is live and `param` is live per the contract.
+    unsafe { X509_VERIFY_PARAM_set_flags((*xs).param, flags) }
+}
+
+/// `int X509_STORE_set_depth(X509_STORE *xs, int depth)` — `crypto/x509/x509_lu.c:788-792`.
+///
+/// Sets `depth` on the store's verify parameters and answers 1 (the authority's setter returns
+/// nothing, so success is unconditional).
+///
+/// # Safety
+///
+/// `xs` must be a live `X509_STORE` with a live `param`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_STORE_set_depth(xs: *mut X509Store, depth: c_int) -> c_int {
+    // SAFETY: `xs` is live and `param` is live per the contract.
+    unsafe { X509_VERIFY_PARAM_set_depth((*xs).param, depth) };
+    1
+}
+
+/// `int X509_STORE_set_purpose(X509_STORE *xs, int purpose)` — `crypto/x509/x509_lu.c:794-797`.
+///
+/// Sets `purpose` on the store's verify parameters, answering whether it is a known purpose.
+///
+/// # Safety
+///
+/// `xs` must be a live `X509_STORE` with a live `param`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_STORE_set_purpose(xs: *mut X509Store, purpose: c_int) -> c_int {
+    // SAFETY: `xs` is live and `param` is live per the contract.
+    unsafe { X509_VERIFY_PARAM_set_purpose((*xs).param, purpose) }
+}
+
+/// `int X509_STORE_set_trust(X509_STORE *xs, int trust)` — `crypto/x509/x509_lu.c:799-802`.
+///
+/// Sets `trust` on the store's verify parameters, answering whether it is a known trust id.
+///
+/// # Safety
+///
+/// `xs` must be a live `X509_STORE` with a live `param`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_STORE_set_trust(xs: *mut X509Store, trust: c_int) -> c_int {
+    // SAFETY: `xs` is live and `param` is live per the contract.
+    unsafe { X509_VERIFY_PARAM_set_trust((*xs).param, trust) }
+}
+
+/// `int X509_STORE_set1_param(X509_STORE *xs, const X509_VERIFY_PARAM *param)` —
+/// `crypto/x509/x509_lu.c:804-807`.
+///
+/// Copies `param` into the store's own verify parameters, answering whether the copy succeeded.
+///
+/// # Safety
+///
+/// `xs` must be a live `X509_STORE` with a live `param`; `param` must be a live
+/// `X509_VERIFY_PARAM`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_STORE_set1_param(
+    xs: *mut X509Store,
+    param: *const X509VerifyParam,
+) -> c_int {
+    // SAFETY: `xs` is live and `param` is live per the contract.
+    unsafe { X509_VERIFY_PARAM_set1((*xs).param, param) }
+}
+
 /// `X509_VERIFY_PARAM *X509_STORE_get0_param(const X509_STORE *xs)` —
 /// `crypto/x509/x509_lu.c:809-812`.
 ///
-/// The store's verify parameters, borrowed. `X509_VERIFY_PARAM` is 11.2's unlanded type
-/// (`crypto/x509/x509_vpm.c`), so the pointer is opaque here while the field it reads is exact.
+/// The store's verify parameters, borrowed.
 ///
 /// # Safety
 ///
 /// `xs` must be a live `X509_STORE`.
 #[no_mangle]
-pub unsafe extern "C" fn X509_STORE_get0_param(xs: *const X509Store) -> *mut c_void {
+pub unsafe extern "C" fn X509_STORE_get0_param(xs: *const X509Store) -> *mut X509VerifyParam {
     // SAFETY: `xs` is live per the contract.
     unsafe { (*xs).param }
 }

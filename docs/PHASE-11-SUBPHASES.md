@@ -300,12 +300,15 @@ constructors, the CRL difference helper and the policy-tree entry point.
 `X509_CRL_set_default_method`, `X509_CRL_METHOD_new`, `X509_CRL_METHOD_free`,
 `X509_CRL_set_meth_data` and `X509_CRL_get_meth_data`; 11.5's RFC 3779 path validation adds
 `X509v3_asid_validate_path`, `X509v3_asid_validate_resource_set`, `X509v3_addr_validate_path`
-and `X509v3_addr_validate_resource_set`.
+and `X509v3_addr_validate_resource_set`. 11.1c adds the store object and its parameter setters, the
+seven names the missing `X509_VERIFY_PARAM` had withheld: `X509_STORE_new`, `X509_STORE_free`,
+`X509_STORE_set1_param`, `X509_STORE_set_flags`, `X509_STORE_set_depth`, `X509_STORE_set_purpose`
+and `X509_STORE_set_trust`.
 
 **Open exports (checked against the ledger):**
 
-The store and verification layer is still open at `X509_STORE_new`, `X509_STORE_set1_param` and
-`X509_verify_cert`; the attribute certificate at `X509_ACERT_new` and `X509_ACERT_verify`; the
+The store and verification layer is still open at `X509_verify_cert`; the attribute certificate at
+`X509_ACERT_new` and `X509_ACERT_verify`; the
 request surface at `X509_REQ_sign` and `X509_to_X509_REQ`; and
 the remaining shared units at `X509_get_default_cert_file` and `NETSCAPE_SPKI_print`. Every name
 here is in the ledger's open list; the counts move as the slices land, so the ledger, not this
