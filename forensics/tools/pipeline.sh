@@ -130,6 +130,11 @@ echo "== every active stratum's courts =="
 # court to be judging a fresh artefact rather than last commit's. It is idempotent and needs only
 # the tracked capture plus the pinned `configdata.pm`.
 python3 forensics/tools/phase22_build_commands.py
+# 22.6's binary-reference graph, for the same reason: `RT-PHASE22-BINARY` reconstructs the graph's
+# raw model from the committed artefact's own rows and re-derives the whole body, so the artefact
+# must be freshly generated from the pinned build before the court judges it. It reads the build
+# directory with a pure-Python ELF64/`ar` reader and never invokes binutils.
+python3 forensics/tools/phase22_binary_graph.py
 python3 forensics/tools/run_courts.py
 
 echo "== prerequisite atlases =="

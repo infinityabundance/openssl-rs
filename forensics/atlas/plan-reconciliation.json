@@ -5500,12 +5500,12 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "9b81ba60d617770d174e9c2649b7d9e9c9f05d4581106b91ea50b7d4660c04b7"
+      "sha256": "b0195cff8742e680f7676fa2466b867d33647f2dab7ca8e926ac56d0b11af1a7"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "6dd12c146d465dcf3eff90ec13a10bc62abe5ee90268ec6661b771c1fdf1cce6"
+      "sha256": "371d77552f9594daa4a1f2434ae9c34a9fe625f421a65cd181613e1cd3ad9195"
     },
     {
       "name": "source-manifest",

@@ -4,8 +4,8 @@
     "counts": {
       "atlas_owned": 18,
       "deferred_to_later_phase": 0,
-      "implemented": 3,
-      "open_in_this_stratum": 15,
+      "implemented": 7,
+      "open_in_this_stratum": 11,
       "owned": 18,
       "received_by_handoff": 0
     },
@@ -13,15 +13,14 @@
     "implemented": [
       "22.0",
       "22.1",
-      "22.2"
+      "22.2",
+      "22.3",
+      "22.6",
+      "22.8",
+      "22.9"
     ],
     "note": "`open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
     "open": [
-      {
-        "artefact": "forensics/atlas/phase22/tu-ast.json",
-        "plane": "Every active translation unit's Clang AST and the declaration/definition graph",
-        "subphase": "22.3"
-      },
       {
         "artefact": "forensics/atlas/phase22/conditional-surface.json",
         "plane": "The preprocessor and conditional-compilation graph",
@@ -33,24 +32,9 @@
         "subphase": "22.5"
       },
       {
-        "artefact": "forensics/atlas/phase22/binary-reference-graph.json",
-        "plane": "The object, archive, DSO and provider-module symbol and relocation graph",
-        "subphase": "22.6"
-      },
-      {
         "artefact": "forensics/atlas/phase22/dispatch-graph.json",
         "plane": "The indirect dispatch, callback and registration graph",
         "subphase": "22.7"
-      },
-      {
-        "artefact": "forensics/atlas/phase22/install-manifest.json",
-        "plane": "The installed-distribution manifest",
-        "subphase": "22.8"
-      },
-      {
-        "artefact": "forensics/atlas/phase22/cli-surface.json",
-        "plane": "The CLI grammar, aliases and digest/cipher pseudo-command surface",
-        "subphase": "22.9"
       },
       {
         "artefact": "forensics/atlas/phase22/config-surface.json",

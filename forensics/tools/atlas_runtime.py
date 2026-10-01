@@ -233,28 +233,53 @@ def build_cli_inventory(auth) -> dict:
     }
 
 
-# `openssl list -options <cmd>` rows look like:
+# `openssl list -options <cmd>` rows are `name type`, one pair per line, where `type` is a
+# single character from the authority's own OPTIONS value-type vocabulary
+# (apps/include/opt.h): `-` no value, `s` string, `:` uri, `/` directory, `<` input file,
+# `>` output file, `p`/`n`/`N`/`l`/`u`/`M`/`U` integers, `f`/`F`/`E`/`A`/`a`/`c` formats and
+# `.` a parameter block. The real rows carry no leading dash, no indent and no description
+# column:
 #
-#     -in val          Input file
-#     -out val         Output file
-_OPTION_ROW = re.compile(r"^(\s*)(-[A-Za-z0-9_*?\-]+)(\s+\S+)?(\s{2,}.*)?$")
+#     help -
+#     in <
+#     provider s
+#
+# The trailing `- -` row is the authority's own `--` end-of-options marker, not an option.
+# The previous pattern matched a *help-text* shape (`-in val          Input file`), which
+# never occurs in this output, so every command's `option_count` came out zero -- the defect
+# recorded as the `cli_option_list_parse` prerequisite in forensics/prerequisites.json and
+# repaired here by Phase 22.9. See docs/PHASE-22-SUBPHASES.md section 6.
+_OPTION_VALTYPES = "-:s/<>pnNluUMEfAac."
+_OPTION_ROW = re.compile(r"^([A-Za-z0-9][A-Za-z0-9_*?.\-]*)\s+(\S)$")
 
 
 def parse_option_list(text: str) -> list[dict]:
+    """Structure the authority's `openssl list -options <cmd>` output.
+
+    Each row is `name type`; `valtype` is the authority's own value-type character and
+    `takes_value` is false only for the flag type `-`. The `- -` end-of-options marker is
+    skipped. A row that does not match the real grammar is skipped here, because this
+    function's contract is a list of options; `forensics/tools/phase22_cli_surface.py` is
+    what records the capture's structured parse *and* its refusals, so a malformed row is
+    refused loudly there rather than dropped silently.
+    """
     out: dict[str, dict] = {}
     for line in text.splitlines():
-        if not line.startswith(" "):
+        row = line.strip()
+        if not row:
             continue
-        m = _OPTION_ROW.match(line)
+        m = _OPTION_ROW.match(row)
         if not m:
             continue
-        name = m.group(2)
-        takes_value = bool(m.group(3))
-        description = (m.group(4) or "").strip()
+        name, valtype = m.group(1), m.group(2)
+        if name == "-" and valtype == "-":
+            continue
+        if valtype not in _OPTION_VALTYPES:
+            continue
         out[name] = {
             "name": name,
-            "takes_value": takes_value,
-            "description": description,
+            "takes_value": valtype != "-",
+            "valtype": valtype,
         }
     return [out[k] for k in sorted(out)]
 
