@@ -33976,6 +33976,65 @@ the witness is proven able to see a capture gap rather than merely asserted to c
 
 `PIPELINE OK` exit 0 with **123 courts** and 47,575 observations.
 
+## D493 -- 22.12 joins the planes, and 22.15 proves every instrument can see its own defect
+
+Two planes landed. The ledger reads **15 of 18**; `PIPELINE OK` exit 0 with **125 courts**.
+
+### 22.12 -- one atlas out of twelve, and no plane is allowed to win an argument
+`forensics/tools/phase22_reconciliation.py` projects every plane onto one canonical identity per
+authority thing (`sym|<name>`, `sym|<name>@<file>` so two same-named statics stay two rows -- D492's
+fix carried forward -- `src|<file>|<line>|<name>`, `install|<path>`, `cli|<name>`, `config|<name>`,
+`pod|<page>`) and joins them. **110,382 entities** (symbol 78,607, source 12,444, install 7,666,
+cli 6,616, file 3,851, POD 961, config 237), **75,227 cross-plane residuals over 15 classes**, and
+**5,912 `UNKNOWN`** entities of which **2 intersect a declared compatibility root**
+(`_openssl_ascii2ebcdic` and `_openssl_ebcdic2ascii`, declared in `ebcdic.h` and defined by no
+plane). Sixteen pairwise joins are made and five are recorded as **not made**, with the reason:
+install-to-generated (prefix-relative against build-relative paths), AST-to-assembly (no C AST;
+22.6 is the only witness), config-to-AST (a directive name has no C symbol), dispatch-to-macro-
+generated tables, and the three root families -- runtime behaviour, protocol, dynamic loading -- that
+no 22.1-22.13 plane observes at all.
+
+The residual classes are the finding the plan predicted: `DOXYGEN_ONLY` 24,126 is dominated by the
+17.6k macros Doxygen's configured view emits and the AST cannot (D488), and `AST_ONLY` 9,798 is
+enumerators and field line-mismatches. Section 1.1's rule is enforced rather than stated: a fact two
+planes contradict yields `UNKNOWN`, never a vote, and `static inline` header functions were removed
+from `DECLARED_NOT_DEFINED` only after they produced 1,003 false positives -- the corrected count
+is 2.
+
+### 22.15 -- twelve instruments, twelve defects, and one reproducibility defect found by the attempt
+`forensics/tools/phase22_frf.py` drives a challenge **per plane** through the plane's own pure
+builder: the mutation, the expected effect and the observed delta. **12 of 12 detected, 0
+not-detected, 0 not-driven.** Dropping a compile flag moves 22.1's `unit_defines` by one; restoring
+the Phase-1 broken option parser drops 22.9's structured count by 4,314; removing a single definer
+un-resolves three relocations in 22.6; two `lookup` targets stay two destinations in 22.2. The
+harness itself carries `RT-PHASE22-FRF`, which fails if a mutated challenge result is not reported
+`NOT_DETECTED` -- so the harness is not a rubber stamp, and that was proven by replacing the
+classifier with one.
+
+**The fresh-regeneration challenge ran end to end, twice, for four planes.** 22.2 was rebuilt from
+an empty scratch with both pinned Doxyfiles over the whole authority and hashed; 22.3 and 22.4
+replayed Clang; 22.1 re-ran the transparent-wrapper capture (43 s). Every one matched the committed
+artefact, and 22.2's two runs matched each other. That is the end-to-end path the plan demands and
+the Doxygen non-claim D488 recorded -- it is now executed rather than asserted.
+
+**And the attempt found a real reproducibility defect.** 22.2, 22.3 and 22.4 resolve their include
+roots from 22.1's capture, whose `directory` is the ephemeral capture scratch. The committed bodies
+correspond to that scratch being **absent**, so a 22.1 rebuild that repopulates it makes the other
+three diverge -- 22.2 jumped 70,075 to 76,222 entities on a first multi-plane run. The runner now
+removes the scratch before the extractive planes and runs 22.1 last, which reproduces the documented
+state, and the dependency and the measured deltas are recorded in the artefact's
+`body.reproducibility`. A plane whose output depends on the absence of a scratch directory is a
+latent nondeterminism, and it was found by doing the thing the plan asks for rather than by
+describing it.
+
+**FRF-Fuzz seeded six adversarial inputs against the instruments** (a malformed option row, nested
+POD `=over`/`=item`, an unresolved `#if`, a second same-spelled `static`, an object with no compile,
+a SYNOPSIS split across lines). All six produced a residual and none was silently accepted, so
+nothing was promoted -- which is the correct outcome for a healthy instrument, and is recorded as
+such rather than as an absence of evidence.
+
+`PIPELINE OK` exit 0 with **125 courts** and 47,575 observations.
+
 ## D491 -- 22.11: the canonical POD contract oracle, and the claim graph that will not pretend to
 ## have read the prose
 
