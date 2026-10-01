@@ -34399,3 +34399,39 @@ and the SAFETY comment now sits on the `unsafe` block rather than on the `if` th
 
 Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,324/1,467 with 143 open; 129
 courts and 47,916 observations.
+
+## D500 -- 11.3's attribute-certificate surface and 11.4's printers land, and the stratum falls to
+## 38 open
+
+Two subphases landed together, each with the behavioural court the plan names for it. The stratum
+moves 1,324 -> **1,429 implemented** of 1,467 and `libcrypto` 4,254 -> **4,729** exports.
+
+### 11.3 is the whole attribute certificate
+`x509_acert.c` and `x509aset.c` land their 60 exports -- the `X509_ACERT` item group, every
+accessor, the twelve setters (each observed with a read-back), the attribute container and
+`add_attr_nconf` surface and the extension doors -- `x_ietfatt.c` its 14 (`OSSL_IETF_ATTR_SYNTAX`
+and its value helpers, including the RFC 5755 mixed-choice refusal), and `x_all.c` the 16 sign,
+verify, digest and `_fp`/`_bio` faces that reach them.
+
+### 11.4 is the printers
+`t_x509.c` lands eight, including `OSSL_STACK_OF_X509_free`, `X509_print`/`_ex`/`_ex_fp`,
+`X509_aux_print`, `X509_ocspid_print` and `X509_signature_print`; `t_req.c` and `t_crl.c` land
+their three each; and `x509_r2x.c` lands `X509_REQ_to_X509`. The printers' evidence is the
+**printed text** -- exact length plus a digest of the captured bytes -- not a round trip, which is
+what section 3.1 asks for.
+
+### Six names stay withheld, and two of them are now one-line follow-ups
+`X509_ACERT_print`/`_ex` wait on `X509_signature_print`, which this slice lands; `X509_to_X509_REQ`
+was withheld on `X509_REQ_sign`, which this slice also lands. Both are therefore now landable and
+are named as such rather than left looking blocked. The other three are genuinely blocked:
+`X509_load_http`/`X509_CRL_load_http` need the `http` client unit, and
+`X509_STORE_CTX_print_verify_cb` needs the unit-internal `ossl_x509_print_ex_brief`, which is the
+`covers` name of `t_x509.c`'s divergence row -- landing it would open that row.
+
+### The courts, and one bug they caught
+`RT-X509-ACERT` adds 168 observations and `RT-X509-REQ` 67, over fixed DER fixtures with no address
+printed. The cohort is **131 courts and 48,151 observations**. The printers' text comparison caught a
+real transcription bug: `X509_print_ex` printed the version as `l` where the authority prints
+`l + 1`. That is the court doing exactly what section 3.1 says it is for.
+
+Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,429/1,467 with 38 open.

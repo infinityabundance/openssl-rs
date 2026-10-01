@@ -143,6 +143,9 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod t_x509;
+// Phase 11.4 -- `crypto/x509/t_req.c` and `t_crl.c`: the request and CRL text printers.
+pub mod t_crl;
+pub mod t_req;
 // Phase 10's `crypto/x509/x_attrib.c` -- the `X509_ATTRIBUTE` family, landed early because
 // `crypto/asn1/p8_pkey.c`'s template names `X509_ATTRIBUTE_it` (D368).
 pub mod x509_att;
@@ -330,6 +333,8 @@ pub mod v3_purp;
 // `X509_REQ_get_subject_name`, the one name `v2i_subject_alt` reads. The rest of the unit is
 // withheld by name with its blocker in the module doc.
 pub mod x509_req;
+// Phase 11.4 -- `crypto/x509/x509_r2x.c`: `X509_REQ_to_X509`, the request-to-certificate builder.
+pub mod x509_r2x;
 
 // Phase 10.14.12's `crypto/x509/x509_vfy.c` slice -- `X509_self_signed`, the one name the
 // `X509_add_cert` closure waits on; the rest of the verify engine is withheld by name (Phase 11).
@@ -354,3 +359,14 @@ pub mod x509_d2;
 pub mod x509_trust;
 // Phase 11.5 -- `crypto/x509/v3_prn.c`: the extension printers.
 pub mod v3_prn;
+
+// Phase 11.3 -- the attribute certificate (`crypto/x509/x509_acert.h`'s whole open set):
+// `crypto/x509/x509_acert.c`'s item group, accessors, attribute/extension surface and PEM
+// spellings (`x509_acert.rs`), `x509aset.c`'s setters (`x509aset.rs`) and `x_ietfatt.c`'s
+// `IetfAttrSyntax` items (`x_ietfatt.rs`). `t_acert.c`'s two printers are withheld by name --
+// their closure reaches `X509_signature_print` (`x509/t_x509.c`), still unlanded -- so
+// `t_acert.rs` is a doc-only withhold. See the module docs.
+pub mod t_acert;
+pub mod x509_acert;
+pub mod x509aset;
+pub mod x_ietfatt;
