@@ -744,6 +744,7 @@ def _fresh_tool(plane: str, module, runs: int, argv_for: Callable[[int, Path], l
     matched = all(r["match_committed"] for r in results)
     return {
         "plane": plane,
+        "artefact": module.ARTEFACT_REL,
         "status": "verified" if matched else "mismatch",
         "method": (f"regenerate the raw input in a clean out-of-tree scratch with the pinned "
                    f"tool, run {module.__name__} over it, hash the normalised body, and compare "
@@ -1082,6 +1083,26 @@ def court_frf(body: dict) -> dict:
                    "22.2" in verified))
     checks.append(("fresh: no fresh regeneration mismatched", not any(
         f.get("status") == "mismatch" for f in fresh)))
+    # **And the record must be against the artefact on disk.** A fresh run that matched last commit
+    # plus an artefact edited since is exactly the "the sentence exists" failure this check is for:
+    # the record would keep saying "verified" about bytes nobody regenerated. Each verified entry
+    # names its artefact and the body hash it saw, so the court recomputes that hash now and fails
+    # when the two disagree -- which tells the reader to re-run `--fresh` rather than to trust a
+    # stale line. Recomputing is cheap; the fresh runs themselves are not, which is why they are
+    # recorded rather than repeated here.
+    stale = []
+    for entry in fresh:
+        if entry.get("status") != "verified" or not entry.get("artefact"):
+            continue
+        try:
+            now = content_hash(_body(entry["artefact"]))
+        except (OSError, KeyError, ValueError):
+            stale.append(f"{entry['plane']} ({entry['artefact']} unreadable)")
+            continue
+        if now != entry.get("committed_body_sha256"):
+            stale.append(f"{entry['plane']} ({entry['artefact']} changed since the fresh run)")
+    checks.append(("fresh: every verified record is against the artefact on disk now",
+                   not stale))
 
     failures = [desc for desc, ok in checks if not ok]
     return {
@@ -1096,6 +1117,7 @@ def court_frf(body: dict) -> dict:
         "fresh_regeneration_planes": counts["fresh_regeneration_planes"],
         "fresh_verified": verified,
         "fresh_deferred": deferred,
+        "fresh_stale": stale,
         "sensitivity": {
             "break": ("take a registered DETECTED challenge, add 1 to one of its observed "
                       "deltas in memory, and require the harness to report NOT_DETECTED"),

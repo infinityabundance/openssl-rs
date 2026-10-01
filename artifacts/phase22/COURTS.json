@@ -258,6 +258,7 @@
         "failures": [],
         "fresh_deferred": [],
         "fresh_regeneration_planes": 4,
+        "fresh_stale": [],
         "fresh_verified": [
           "22.1",
           "22.2",
@@ -273,7 +274,7 @@
         ],
         "not_detected": 0,
         "not_driven": 0,
-        "observations": 15,
+        "observations": 16,
         "sensitivity": {
           "break": "take a registered DETECTED challenge, add 1 to one of its observed deltas in memory, and require the harness to report NOT_DETECTED",
           "mutated_plane": "22.1",
@@ -517,7 +518,7 @@
     {
       "name": "phase22_frf",
       "path": "forensics/atlas/phase22/frf-challenges.json",
-      "sha256": "fd299a56f67e657c32635d6fb0d20f329bf3e8b1673dc78b922febcd2fe1ba1c"
+      "sha256": "d9d7fdf41c5ad5e9bcbc9ffb48fe6723a5c376f13783b8f5838f2d6b5fb07d96"
     },
     {
       "name": "phase22_gemel",
