@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1455,
       "deferred_to_later_phase": 0,
-      "implemented": 1132,
-      "open_in_this_stratum": 335,
+      "implemented": 1299,
+      "open_in_this_stratum": 168,
       "owned": 1467,
       "received_by_handoff": 12
     },
@@ -243,6 +243,9 @@
       "NAMING_AUTHORITY_set0_authorityId",
       "NAMING_AUTHORITY_set0_authorityText",
       "NAMING_AUTHORITY_set0_authorityURL",
+      "NETSCAPE_CERT_SEQUENCE_free",
+      "NETSCAPE_CERT_SEQUENCE_it",
+      "NETSCAPE_CERT_SEQUENCE_new",
       "NETSCAPE_SPKAC_free",
       "NETSCAPE_SPKAC_it",
       "NETSCAPE_SPKAC_new",
@@ -377,11 +380,65 @@
       "PBMAC1PARAM_free",
       "PBMAC1PARAM_it",
       "PBMAC1PARAM_new",
+      "PEM_X509_INFO_read",
+      "PEM_X509_INFO_read_bio",
+      "PEM_X509_INFO_read_bio_ex",
+      "PEM_X509_INFO_read_ex",
+      "PEM_X509_INFO_write_bio",
+      "PEM_read_DSA_PUBKEY",
+      "PEM_read_EC_PUBKEY",
+      "PEM_read_NETSCAPE_CERT_SEQUENCE",
+      "PEM_read_PKCS8",
+      "PEM_read_PKCS8_PRIV_KEY_INFO",
       "PEM_read_PUBKEY",
       "PEM_read_PUBKEY_ex",
+      "PEM_read_RSA_PUBKEY",
+      "PEM_read_X509",
+      "PEM_read_X509_AUX",
+      "PEM_read_X509_CRL",
+      "PEM_read_X509_PUBKEY",
+      "PEM_read_X509_REQ",
+      "PEM_read_bio_DSA_PUBKEY",
+      "PEM_read_bio_EC_PUBKEY",
+      "PEM_read_bio_NETSCAPE_CERT_SEQUENCE",
+      "PEM_read_bio_PKCS8",
+      "PEM_read_bio_PKCS8_PRIV_KEY_INFO",
       "PEM_read_bio_PUBKEY",
       "PEM_read_bio_PUBKEY_ex",
+      "PEM_read_bio_RSA_PUBKEY",
+      "PEM_read_bio_X509",
+      "PEM_read_bio_X509_AUX",
+      "PEM_read_bio_X509_CRL",
+      "PEM_read_bio_X509_PUBKEY",
+      "PEM_read_bio_X509_REQ",
+      "PEM_write_DSA_PUBKEY",
+      "PEM_write_EC_PUBKEY",
+      "PEM_write_NETSCAPE_CERT_SEQUENCE",
+      "PEM_write_PKCS8",
+      "PEM_write_PKCS8_PRIV_KEY_INFO",
+      "PEM_write_PUBKEY",
+      "PEM_write_PUBKEY_ex",
+      "PEM_write_RSA_PUBKEY",
+      "PEM_write_X509",
+      "PEM_write_X509_AUX",
+      "PEM_write_X509_CRL",
+      "PEM_write_X509_PUBKEY",
+      "PEM_write_X509_REQ",
+      "PEM_write_X509_REQ_NEW",
+      "PEM_write_bio_DSA_PUBKEY",
+      "PEM_write_bio_EC_PUBKEY",
+      "PEM_write_bio_NETSCAPE_CERT_SEQUENCE",
+      "PEM_write_bio_PKCS8",
+      "PEM_write_bio_PKCS8_PRIV_KEY_INFO",
+      "PEM_write_bio_PUBKEY",
+      "PEM_write_bio_PUBKEY_ex",
+      "PEM_write_bio_RSA_PUBKEY",
+      "PEM_write_bio_X509",
+      "PEM_write_bio_X509_AUX",
+      "PEM_write_bio_X509_CRL",
       "PEM_write_bio_X509_PUBKEY",
+      "PEM_write_bio_X509_REQ",
+      "PEM_write_bio_X509_REQ_NEW",
       "PKCS5_pbe2_set",
       "PKCS5_pbe2_set_iv",
       "PKCS5_pbe2_set_iv_ex",
@@ -579,6 +636,8 @@
       "X509_EXTENSION_set_critical",
       "X509_EXTENSION_set_data",
       "X509_EXTENSION_set_object",
+      "X509_INFO_free",
+      "X509_INFO_new",
       "X509_LOOKUP_by_alias",
       "X509_LOOKUP_by_fingerprint",
       "X509_LOOKUP_by_issuer_serial",
@@ -662,6 +721,8 @@
       "X509_OBJECT_set1_X509",
       "X509_OBJECT_set1_X509_CRL",
       "X509_OBJECT_up_ref_count",
+      "X509_PKEY_free",
+      "X509_PKEY_new",
       "X509_POLICY_NODE_print",
       "X509_PUBKEY_dup",
       "X509_PUBKEY_eq",
@@ -751,11 +812,68 @@
       "X509_SIG_getm",
       "X509_SIG_it",
       "X509_SIG_new",
+      "X509_STORE_CTX_cleanup",
+      "X509_STORE_CTX_free",
+      "X509_STORE_CTX_get0_cert",
+      "X509_STORE_CTX_get0_chain",
+      "X509_STORE_CTX_get0_current_crl",
+      "X509_STORE_CTX_get0_current_issuer",
+      "X509_STORE_CTX_get0_param",
+      "X509_STORE_CTX_get0_parent_ctx",
+      "X509_STORE_CTX_get0_policy_tree",
+      "X509_STORE_CTX_get0_rpk",
       "X509_STORE_CTX_get0_store",
+      "X509_STORE_CTX_get0_untrusted",
       "X509_STORE_CTX_get1_certs",
+      "X509_STORE_CTX_get1_chain",
       "X509_STORE_CTX_get1_crls",
+      "X509_STORE_CTX_get1_issuer",
       "X509_STORE_CTX_get_by_subject",
+      "X509_STORE_CTX_get_cert_crl",
+      "X509_STORE_CTX_get_check_crl",
+      "X509_STORE_CTX_get_check_issued",
+      "X509_STORE_CTX_get_check_policy",
+      "X509_STORE_CTX_get_check_revocation",
+      "X509_STORE_CTX_get_cleanup",
+      "X509_STORE_CTX_get_current_cert",
+      "X509_STORE_CTX_get_error",
+      "X509_STORE_CTX_get_error_depth",
+      "X509_STORE_CTX_get_ex_data",
+      "X509_STORE_CTX_get_explicit_policy",
+      "X509_STORE_CTX_get_get_crl",
+      "X509_STORE_CTX_get_get_issuer",
+      "X509_STORE_CTX_get_lookup_certs",
+      "X509_STORE_CTX_get_lookup_crls",
+      "X509_STORE_CTX_get_num_untrusted",
       "X509_STORE_CTX_get_obj_by_subject",
+      "X509_STORE_CTX_get_verify",
+      "X509_STORE_CTX_get_verify_cb",
+      "X509_STORE_CTX_new",
+      "X509_STORE_CTX_new_ex",
+      "X509_STORE_CTX_purpose_inherit",
+      "X509_STORE_CTX_set0_crls",
+      "X509_STORE_CTX_set0_dane",
+      "X509_STORE_CTX_set0_param",
+      "X509_STORE_CTX_set0_rpk",
+      "X509_STORE_CTX_set0_trusted_stack",
+      "X509_STORE_CTX_set0_untrusted",
+      "X509_STORE_CTX_set0_verified_chain",
+      "X509_STORE_CTX_set_cert",
+      "X509_STORE_CTX_set_current_cert",
+      "X509_STORE_CTX_set_current_reasons",
+      "X509_STORE_CTX_set_default",
+      "X509_STORE_CTX_set_depth",
+      "X509_STORE_CTX_set_error",
+      "X509_STORE_CTX_set_error_depth",
+      "X509_STORE_CTX_set_ex_data",
+      "X509_STORE_CTX_set_flags",
+      "X509_STORE_CTX_set_get_crl",
+      "X509_STORE_CTX_set_ocsp_resp",
+      "X509_STORE_CTX_set_purpose",
+      "X509_STORE_CTX_set_time",
+      "X509_STORE_CTX_set_trust",
+      "X509_STORE_CTX_set_verify",
+      "X509_STORE_CTX_set_verify_cb",
       "X509_STORE_add_cert",
       "X509_STORE_add_crl",
       "X509_STORE_add_lookup",
@@ -807,6 +925,45 @@
       "X509_VAL_free",
       "X509_VAL_it",
       "X509_VAL_new",
+      "X509_VERIFY_PARAM_add0_policy",
+      "X509_VERIFY_PARAM_add0_table",
+      "X509_VERIFY_PARAM_add1_host",
+      "X509_VERIFY_PARAM_clear_flags",
+      "X509_VERIFY_PARAM_free",
+      "X509_VERIFY_PARAM_get0",
+      "X509_VERIFY_PARAM_get0_email",
+      "X509_VERIFY_PARAM_get0_host",
+      "X509_VERIFY_PARAM_get0_name",
+      "X509_VERIFY_PARAM_get0_peername",
+      "X509_VERIFY_PARAM_get1_ip_asc",
+      "X509_VERIFY_PARAM_get_auth_level",
+      "X509_VERIFY_PARAM_get_count",
+      "X509_VERIFY_PARAM_get_depth",
+      "X509_VERIFY_PARAM_get_flags",
+      "X509_VERIFY_PARAM_get_hostflags",
+      "X509_VERIFY_PARAM_get_inh_flags",
+      "X509_VERIFY_PARAM_get_purpose",
+      "X509_VERIFY_PARAM_get_time",
+      "X509_VERIFY_PARAM_inherit",
+      "X509_VERIFY_PARAM_lookup",
+      "X509_VERIFY_PARAM_move_peername",
+      "X509_VERIFY_PARAM_new",
+      "X509_VERIFY_PARAM_set1",
+      "X509_VERIFY_PARAM_set1_email",
+      "X509_VERIFY_PARAM_set1_host",
+      "X509_VERIFY_PARAM_set1_ip",
+      "X509_VERIFY_PARAM_set1_ip_asc",
+      "X509_VERIFY_PARAM_set1_name",
+      "X509_VERIFY_PARAM_set1_policies",
+      "X509_VERIFY_PARAM_set_auth_level",
+      "X509_VERIFY_PARAM_set_depth",
+      "X509_VERIFY_PARAM_set_flags",
+      "X509_VERIFY_PARAM_set_hostflags",
+      "X509_VERIFY_PARAM_set_inh_flags",
+      "X509_VERIFY_PARAM_set_purpose",
+      "X509_VERIFY_PARAM_set_time",
+      "X509_VERIFY_PARAM_set_trust",
+      "X509_VERIFY_PARAM_table_cleanup",
       "X509_add1_ext_i2d",
       "X509_add1_reject_object",
       "X509_add1_trust_object",
@@ -829,6 +986,9 @@
       "X509_check_purpose",
       "X509_check_trust",
       "X509_cmp",
+      "X509_cmp_current_time",
+      "X509_cmp_time",
+      "X509_cmp_timeframe",
       "X509_delete_ext",
       "X509_digest",
       "X509_digest_sig",
@@ -872,6 +1032,7 @@
       "X509_get_pathlen",
       "X509_get_proxy_pathlen",
       "X509_get_pubkey",
+      "X509_get_pubkey_parameters",
       "X509_get_serialNumber",
       "X509_get_signature_info",
       "X509_get_signature_nid",
@@ -880,6 +1041,7 @@
       "X509_get_version",
       "X509_getm_notAfter",
       "X509_getm_notBefore",
+      "X509_gmtime_adj",
       "X509_issuer_and_serial_cmp",
       "X509_issuer_and_serial_hash",
       "X509_issuer_name_cmp",
@@ -895,6 +1057,7 @@
       "X509_policy_node_get0_parent",
       "X509_policy_node_get0_policy",
       "X509_policy_node_get0_qualifiers",
+      "X509_policy_tree_free",
       "X509_policy_tree_get0_level",
       "X509_policy_tree_get0_policies",
       "X509_policy_tree_get0_user_policies",
@@ -920,6 +1083,8 @@
       "X509_subject_name_hash",
       "X509_subject_name_hash_old",
       "X509_supported_extension",
+      "X509_time_adj",
+      "X509_time_adj_ex",
       "X509_trust_clear",
       "X509_trusted",
       "X509_up_ref",
@@ -996,6 +1161,7 @@
       "d2i_ISSUER_SIGN_TOOL",
       "d2i_ISSUING_DIST_POINT",
       "d2i_NAMING_AUTHORITY",
+      "d2i_NETSCAPE_CERT_SEQUENCE",
       "d2i_NETSCAPE_SPKAC",
       "d2i_NETSCAPE_SPKI",
       "d2i_NOTICEREF",
@@ -1130,6 +1296,7 @@
       "i2d_ISSUER_SIGN_TOOL",
       "i2d_ISSUING_DIST_POINT",
       "i2d_NAMING_AUTHORITY",
+      "i2d_NETSCAPE_CERT_SEQUENCE",
       "i2d_NETSCAPE_SPKAC",
       "i2d_NETSCAPE_SPKI",
       "i2d_NOTICEREF",
@@ -1273,24 +1440,6 @@
         "module": "src/evp/evp_lib.rs",
         "received_from_phase": 7,
         "symbol": "EVP_PKEY_CTX_get_algor"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/nsseq.rs",
-        "received_from_phase": null,
-        "symbol": "NETSCAPE_CERT_SEQUENCE_free"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/nsseq.rs",
-        "received_from_phase": null,
-        "symbol": "NETSCAPE_CERT_SEQUENCE_it"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/nsseq.rs",
-        "received_from_phase": null,
-        "symbol": "NETSCAPE_CERT_SEQUENCE_new"
       },
       {
         "declaring_header": "x509.h",
@@ -1455,148 +1604,10 @@
         "symbol": "PBMAC1_get1_pbkdf2_param"
       },
       {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_info.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_X509_INFO_read"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_info.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_X509_INFO_read_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_info.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_X509_INFO_read_bio_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_info.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_X509_INFO_read_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_info.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_X509_INFO_write_bio"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_DSA_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_EC_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_NETSCAPE_CERT_SEQUENCE"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_PKCS8"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_PKCS8_PRIV_KEY_INFO"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_RSA_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_x509.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_X509"
-      },
-      {
         "declaring_header": "x509_acert.h",
         "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "PEM_read_X509_ACERT"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_xaux.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_X509_AUX"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_X509_CRL"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_X509_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_X509_REQ"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_DSA_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_EC_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_NETSCAPE_CERT_SEQUENCE"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_PKCS8"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_PKCS8_PRIV_KEY_INFO"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_RSA_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_x509.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_X509"
       },
       {
         "declaring_header": "x509_acert.h",
@@ -1605,202 +1616,16 @@
         "symbol": "PEM_read_bio_X509_ACERT"
       },
       {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_xaux.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_X509_AUX"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_X509_CRL"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_X509_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_X509_REQ"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_DSA_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_EC_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_NETSCAPE_CERT_SEQUENCE"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_PKCS8"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_PKCS8_PRIV_KEY_INFO"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_PUBKEY_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_RSA_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_x509.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_X509"
-      },
-      {
         "declaring_header": "x509_acert.h",
         "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_X509_ACERT"
       },
       {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_xaux.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_X509_AUX"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_X509_CRL"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_X509_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_X509_REQ"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_write_X509_REQ_NEW"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_DSA_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_EC_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_NETSCAPE_CERT_SEQUENCE"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_PKCS8"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_PKCS8_PRIV_KEY_INFO"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_PUBKEY_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_RSA_PUBKEY"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_x509.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_X509"
-      },
-      {
         "declaring_header": "x509_acert.h",
         "module": "src/x509/x509_acert.rs",
         "received_from_phase": null,
         "symbol": "PEM_write_bio_X509_ACERT"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_xaux.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_X509_AUX"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_X509_CRL"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_X509_REQ"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_all.rs",
-        "received_from_phase": 5,
-        "symbol": "PEM_write_bio_X509_REQ_NEW"
       },
       {
         "declaring_header": "x509.h",
@@ -2193,18 +2018,6 @@
         "symbol": "X509_CRL_verify"
       },
       {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/x_info.rs",
-        "received_from_phase": null,
-        "symbol": "X509_INFO_free"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/x_info.rs",
-        "received_from_phase": null,
-        "symbol": "X509_INFO_new"
-      },
-      {
         "declaring_header": "x509_vfy.h",
         "module": "src/x509/by_file.rs",
         "received_from_phase": null,
@@ -2215,18 +2028,6 @@
         "module": "src/x509/by_dir.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_hash_dir"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/x_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "X509_PKEY_free"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/x_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "X509_PKEY_new"
       },
       {
         "declaring_header": "x509.h",
@@ -2286,192 +2087,6 @@
         "declaring_header": "x509_vfy.h",
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_cleanup"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_free"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get0_cert"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get0_chain"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get0_current_crl"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get0_current_issuer"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get0_param"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get0_parent_ctx"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get0_policy_tree"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get0_rpk"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get0_untrusted"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get1_chain"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get1_issuer"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_cert_crl"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_check_crl"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_check_issued"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_check_policy"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_check_revocation"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_cleanup"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_current_cert"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_error"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_error_depth"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_ex_data"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_explicit_policy"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_get_crl"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_get_issuer"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_lookup_certs"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_lookup_crls"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_num_untrusted"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_verify"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_get_verify_cb"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
         "symbol": "X509_STORE_CTX_init"
       },
       {
@@ -2482,165 +2097,9 @@
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_new"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_new_ex"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
         "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_print_verify_cb"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_purpose_inherit"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set0_crls"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set0_dane"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set0_param"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set0_rpk"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set0_trusted_stack"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set0_untrusted"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set0_verified_chain"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_cert"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_current_cert"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_current_reasons"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_default"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_depth"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_error"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_error_depth"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_ex_data"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_flags"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_get_crl"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_ocsp_resp"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_purpose"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_time"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_trust"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_verify"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_set_verify_cb"
       },
       {
         "declaring_header": "x509_vfy.h",
@@ -2733,240 +2192,6 @@
         "symbol": "X509_STORE_set_trust"
       },
       {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_add0_policy"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_add0_table"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_add1_host"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_clear_flags"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_free"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get0"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get0_email"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get0_host"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get0_name"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get0_peername"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get1_ip_asc"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get_auth_level"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get_count"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get_depth"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get_flags"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get_hostflags"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get_inh_flags"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get_purpose"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_get_time"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_inherit"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_lookup"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_move_peername"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_new"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set1"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set1_email"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set1_host"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set1_ip"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set1_ip_asc"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set1_name"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set1_policies"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set_auth_level"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set_depth"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set_flags"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set_hostflags"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set_inh_flags"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set_purpose"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set_time"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_set_trust"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vpm.rs",
-        "received_from_phase": null,
-        "symbol": "X509_VERIFY_PARAM_table_cleanup"
-      },
-      {
         "declaring_header": "x509.h",
         "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
@@ -2977,24 +2202,6 @@
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_build_chain"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_cmp_current_time"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_cmp_time"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_cmp_timeframe"
       },
       {
         "declaring_header": "x509.h",
@@ -3019,18 +2226,6 @@
         "module": "src/x509/x509_def.rs",
         "received_from_phase": null,
         "symbol": "X509_get_default_private_dir"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_get_pubkey_parameters"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_gmtime_adj"
       },
       {
         "declaring_header": "x509_vfy.h",
@@ -3081,12 +2276,6 @@
         "symbol": "X509_policy_check"
       },
       {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/pcy_tree.rs",
-        "received_from_phase": null,
-        "symbol": "X509_policy_tree_free"
-      },
-      {
         "declaring_header": "x509.h",
         "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
@@ -3115,18 +2304,6 @@
         "module": "src/x509/t_x509.rs",
         "received_from_phase": null,
         "symbol": "X509_signature_print"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_time_adj"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_time_adj_ex"
       },
       {
         "declaring_header": "x509.h",
@@ -3163,12 +2340,6 @@
         "module": "src/x509/v3_asid.rs",
         "received_from_phase": null,
         "symbol": "X509v3_asid_validate_resource_set"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/nsseq.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_NETSCAPE_CERT_SEQUENCE"
       },
       {
         "declaring_header": "x509_acert.h",
@@ -3211,12 +2382,6 @@
         "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "d2i_X509_REQ_fp"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/nsseq.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_NETSCAPE_CERT_SEQUENCE"
       },
       {
         "declaring_header": "x509_acert.h",
@@ -3413,17 +2578,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "960b863ca98255d7b3eb1446ce4443eb87693cf5b61540e4a89a6ff812332ccc"
+      "sha256": "82c441948d3aea3824304b5259c8ba0723d8601d65d566891788593541e2a7c5"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "9b374b42b72d0be875dd626e2d62d3730287407b353984db2b6a755b8a71010d"
+      "sha256": "f2c03d2bc4ebdc4cec5b885727371851ed399a7ada872a5a441fe945bdfda4b6"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "ea16d5a390f33f1750a268cd09a269bd4ee51411e6a5b1429961fafdb73223bf"
+      "sha256": "f1f5fa7ffe56c301b6c25064835281c2712935b5d08e4f3eb6f2b1e5ec936590"
     }
   ],
   "kind": "phase11-obligations",

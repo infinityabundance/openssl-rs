@@ -260,18 +260,46 @@ ledger's implemented list: `X509_LOOKUP_store`, `X509_STORE_load_store`,
 adds the X509_EXTENSIONS wrapper and the request extension functions:
 `X509_EXTENSIONS_it`, `d2i_X509_EXTENSIONS`, `i2d_X509_EXTENSIONS`, `X509_REQ_get_extensions`,
 `X509_REQ_add_extensions`, `X509_REQ_add_extensions_nid`, `X509_REQ_get1_email`,
-`X509V3_EXT_REQ_add_nconf` and `X509V3_EXT_REQ_add_conf`. The
+`X509V3_EXT_REQ_add_nconf` and `X509V3_EXT_REQ_add_conf`. 11.6 adds the PEM X.509 container surface
+and the three items it needs: `PEM_read_X509`, `PEM_read_bio_X509`, `PEM_write_X509`,
+`PEM_write_bio_X509`, `PEM_read_X509_AUX`, `PEM_read_bio_X509_AUX`, `PEM_write_X509_AUX`,
+`PEM_write_bio_X509_AUX`, `PEM_read_X509_REQ`, `PEM_read_bio_X509_REQ`, `PEM_write_X509_REQ`,
+`PEM_write_bio_X509_REQ`, `PEM_write_X509_REQ_NEW`, `PEM_write_bio_X509_REQ_NEW`,
+`PEM_read_X509_CRL`, `PEM_read_bio_X509_CRL`, `PEM_write_X509_CRL`, `PEM_write_bio_X509_CRL`,
+`PEM_read_X509_PUBKEY`, `PEM_read_bio_X509_PUBKEY`, `PEM_write_X509_PUBKEY`,
+`PEM_read_NETSCAPE_CERT_SEQUENCE`, `PEM_read_bio_NETSCAPE_CERT_SEQUENCE`,
+`PEM_write_NETSCAPE_CERT_SEQUENCE`, `PEM_write_bio_NETSCAPE_CERT_SEQUENCE`, `PEM_read_RSA_PUBKEY`,
+`PEM_read_bio_RSA_PUBKEY`, `PEM_write_RSA_PUBKEY`, `PEM_write_bio_RSA_PUBKEY`,
+`PEM_read_DSA_PUBKEY`, `PEM_read_bio_DSA_PUBKEY`, `PEM_write_DSA_PUBKEY`,
+`PEM_write_bio_DSA_PUBKEY`, `PEM_read_EC_PUBKEY`, `PEM_read_bio_EC_PUBKEY`, `PEM_write_EC_PUBKEY`,
+`PEM_write_bio_EC_PUBKEY`, `PEM_write_PUBKEY`, `PEM_write_bio_PUBKEY`, `PEM_write_PUBKEY_ex`,
+`PEM_write_bio_PUBKEY_ex`, `PEM_X509_INFO_read`, `PEM_X509_INFO_read_ex`,
+`PEM_X509_INFO_read_bio`, `PEM_X509_INFO_read_bio_ex`, `PEM_X509_INFO_write_bio`, `PEM_read_PKCS8`,
+`PEM_read_bio_PKCS8`, `PEM_write_PKCS8`, `PEM_write_bio_PKCS8`, `PEM_read_PKCS8_PRIV_KEY_INFO`,
+`PEM_read_bio_PKCS8_PRIV_KEY_INFO`, `PEM_write_PKCS8_PRIV_KEY_INFO`,
+`PEM_write_bio_PKCS8_PRIV_KEY_INFO`, `NETSCAPE_CERT_SEQUENCE_new`, `NETSCAPE_CERT_SEQUENCE_free`,
+`NETSCAPE_CERT_SEQUENCE_it`, `d2i_NETSCAPE_CERT_SEQUENCE`, `i2d_NETSCAPE_CERT_SEQUENCE`,
+`X509_INFO_new`, `X509_INFO_free`, `X509_PKEY_new` and `X509_PKEY_free`. The
 bulk of the implemented list was landed before this stratum's first slice by Phase 8's 8.8 chain
 and Phase 10's pulled-forward X.509 subphases, with `ASN1_generate_nconf` and `ASN1_generate_v3`
 handed over by Phase 5; the ledger is the record and this sentence names only what the slices above
-added.
+added. 11.2 adds the verification engine's landed surface: the X509_VERIFY_PARAM object, table and
+every accessor (`X509_VERIFY_PARAM_new`, `X509_VERIFY_PARAM_free`, `X509_VERIFY_PARAM_inherit`,
+`X509_VERIFY_PARAM_set1`, `X509_VERIFY_PARAM_lookup`, `X509_VERIFY_PARAM_get0`), the
+X509_STORE_CTX lifecycle and accessors (`X509_STORE_CTX_new`, `X509_STORE_CTX_free`,
+`X509_STORE_CTX_cleanup`, `X509_STORE_CTX_get0_param`, `X509_STORE_CTX_set0_param`,
+`X509_STORE_CTX_get1_issuer`), the free-standing time surface (`X509_cmp_time`,
+`X509_cmp_current_time`, `X509_cmp_timeframe`, `X509_time_adj`, `X509_time_adj_ex`,
+`X509_gmtime_adj`), `X509_get_pubkey_parameters` and `X509_policy_tree_free`. Seven of the three
+units' open names are withheld, each with its blocker recorded in `src/x509/x509_vfy.rs`'s and
+`src/x509/pcy_tree.rs`'s module docs: the engine's three entry points, the two context
+constructors, the CRL difference helper and the policy-tree entry point.
 
 **Open exports (checked against the ledger):**
 
 The store and verification layer is still open at `X509_STORE_new`, `X509_STORE_set1_param` and
 `X509_verify_cert`; the attribute certificate at `X509_ACERT_new` and `X509_ACERT_verify`; the
-request surface at `X509_REQ_sign` and `X509_to_X509_REQ`; the PEM
-container surface at `PEM_read_X509`, `PEM_X509_INFO_read` and `PEM_write_bio_X509_REQ_NEW`; and
+request surface at `X509_REQ_sign` and `X509_to_X509_REQ`; and
 the remaining shared units at `X509_get_default_cert_file` and `NETSCAPE_SPKI_print`. Every name
 here is in the ledger's open list; the counts move as the slices land, so the ledger, not this
 sentence, carries them.

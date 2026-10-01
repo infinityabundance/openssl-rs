@@ -429,6 +429,10 @@ COVERED_FILES = [
     ("crypto/pem/pem_oth.c", "PEM_OTH"),
     ("crypto/pem/pem_pkey.c", "PEM_PKEY"),
     ("crypto/pem/pem_pk8.c", "PEM_PK8"),
+    # Phase 11.6's `crypto/pem/pem_info.c`: seven raises, the bundle reader's BIO/stack
+    # constructors (`:36`, `:70`), its two `d2i` refusals (`:166`, `:170`) and the writer's three
+    # cipher checks (`:243`, `:256`, `:272`). Every one is a coordinate.
+    ("crypto/pem/pem_info.c", "PEM_INFO"),
     # Phase 10.6: the PVK/MSBLOB unit. `pvkfmt.c` was on Phase 7's exclusion note by name ("the
     # `pem_pkey.c` and `pem_pk8.c` hand-offs Phase 5 recorded") and is the one file of the five
     # the twenty-six symbols come from that had no block; its raises are observable through the
@@ -946,6 +950,11 @@ COVERED_FILES = [
     # `ASN1_R_UNKNOWN_DIGEST` at `:165`, the coordinate a caller sees when an OID
     # resolves to no digest method.
     ("crypto/asn1/x_algor.c", "X_ALGOR"),
+    # Phase 11.6 provides the two 11.7 items the PEM bundle reader needs. `x_pkey.c` raises
+    # once, in `X509_PKEY_new`'s allocation-failure arm at `:27` (`ERR_R_ASN1_LIB`), so it
+    # carries a coordinate; `x_info.c` raises nothing and is deliberately absent, the shape
+    # `x_sig.c` is named under above.
+    ("crypto/asn1/x_pkey.c", "X_PKEY"),
     # D443's pull-forward: `crypto/asn1/p5_pbe.c` and `crypto/asn1/p5_pbev2.c` are Phase 11's
     # `x509.h` units that Phase 10 lands early (they are `PKCS8_encrypt_ex`'s closure and the
     # MAC setters' blocker). The subsystem rule applies unchanged: every raise in each file is

@@ -118,15 +118,6 @@
       {
         "class": "owned_by_a_later_stratum",
         "covers": [
-          "ossl_x509_check_cert_time"
-        ],
-        "evidence": "crypto/x509/x509_vfy.c:2084-2106 (the helper), :429, :470 and :2212 (its three in-unit callers) and crypto/x509/x509_local.h:42 (its declaration); src/x509/x509_vfy.rs's module documentation, which withholds the unit's remainder behind the missing X509_STORE_CTX; docs/DECISIONS.md D451 (the withhold-by-name rule) and D327 (the countable-unit rule)",
-        "note": "**The one name of `crypto/x509/x509_vfy.c` the crate neither lands nor can land is withheld because its closure is unmet, not overlooked.** Phase 10 lands `X509_self_signed` (`:100-115`), whose closure is whole (`ossl_x509v3_cache_extensions` from `v3_purp.c`, `X509_get0_pubkey` from `x509_cmp.c` and `X509_verify` from `x_all.rs`). The unit's other names, `ossl_x509_check_cert_time` among them, read `ctx->param->flags` (`X509_V_FLAG_USE_CHECK_TIME`/`X509_V_FLAG_NO_CHECK_TIME`) and `ctx->param->check_time`, call `X509_cmp_time` on `X509_get0_notBefore`/`X509_get0_notAfter`, and fail through `CB_FAIL_IF` -> `verify_cb_cert` -> `ctx->verify_cb`. The crate models no `struct x509_store_ctx_st` (`X509_STORE_CTX`), no `X509_VERIFY_PARAM` and no `X509_cmp_time`, so every dependency of this helper is unlanded and its stratum, Phase 11, owns it with the rest of the file. This row is what the prerequisite gate's `unwired_function_in_the_current_stratum` finding becomes once the omission is a decision rather than an oversight, and it fail-closes: land the helper and the gate reports the row stale until it is removed.",
-        "owner_module": "src/x509/x509_vfy.rs"
-      },
-      {
-        "class": "owned_by_a_later_stratum",
-        "covers": [
           "ossl_x509_print_ex_brief"
         ],
         "evidence": "docs/DECISIONS.md D349, D470; crypto/x509/t_x509.c:519-559 (now landed) and :383-411 (still withheld) against :269-290 (the slice); crypto/x509/v3_rolespec.c's `i2r_OSSL_ROLE_SPEC_CERT_ID` (the new caller of `ossl_serial_number_print`); crypto/x509/t_x509.c:424 and :493, crypto/cmp/cmp_vfy.c:57 (the brief printer's callers); src/x509/t_x509.rs's module documentation",

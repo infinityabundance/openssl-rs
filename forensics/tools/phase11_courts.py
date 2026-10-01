@@ -105,6 +105,19 @@ COURTS: list[tuple[str, str]] = [
     # `X509_REQ`/`X509_REQ_INFO` mutators, attribute accessors and lifecycle (`x509_req.c`,
     # `x_req.c`), over fixed DER fixtures and with no address or address-dependent value printed.
     ("RT-X509-STORE", "rt_x509_store_probe.c"),
+    # "RT-X509-VERIFY -- the Phase 11.2 X.509 verification surface, driven."
+    # It drives the `X509_VERIFY_PARAM` object, table and every accessor (`x509_vpm.c`), the
+    # `X509_STORE_CTX` lifecycle and every field/error/callback accessor (`x509_vfy.c`), the
+    # free-standing time decision surface over a fixed verification time, the issuer lookup and
+    # `X509_policy_tree_free`. The three engine entry points are withheld by name; see the probe's
+    # header and `src/x509/x509_vfy.rs`'s module doc for the blocker.
+    ("RT-X509-VERIFY", "rt_x509_verify_probe.c"),
+    # "RT-X509-PEM -- the Phase 11.6 PEM X.509 container surface, driven."
+    # It reads and writes a fixed certificate, CRL, request, `X509_AUX`, `X509_PUBKEY`, RSA/EC/DSA
+    # public key, `NETSCAPE_CERT_SEQUENCE`, PKCS#8 `PrivateKeyInfo`/`EncryptedPrivateKeyInfo` and
+    # `X509_INFO` bundle, prints each writer's exact PEM bytes, and prints the queue coordinate of
+    # every malformed-input refusal (truncated, wrong-header, bad-base64, wrong-container).
+    ("RT-X509-PEM", "rt_x509_pem_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -112,9 +125,6 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-11-SUBPHASES.md` section 2's, one per work
 # subphase; `RT-X509` is 11.7's, over the units whose closure crosses into the landed strata.
 PENDING_COURTS: dict[str, str] = {
-    "RT-X509-VERIFY": "11.2 -- `X509_verify_cert`, the `X509_STORE_CTX` chain builder, the "
-                      "`X509_VERIFY_PARAM_*` surface and the policy tree (`x509_vfy.c`, "
-                      "`x509_vpm.c`, `pcy_tree.c`)",
     "RT-X509-ACERT": "11.3 -- the `X509_ACERT` item group and its accessors, setters and "
                      "`X509_ACERT_verify` (`x509_acert.c`, `x509aset.c`, `x_ietfatt.c`, "
                      "`t_acert.c`)",
@@ -125,9 +135,6 @@ PENDING_COURTS: dict[str, str] = {
     "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the "
                   "`GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, "
                   "`v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)",
-    "RT-X509-PEM": "11.6 -- the `PEM_read[_bio]_X509*`/`PEM_write[_bio]_X509*` and "
-                   "`PEM_X509_INFO_*` container surface (`pem_all.c`, `pem_pk8.c`, "
-                   "`pem_info.c`, `pem_x509.c`, `pem_xaux.c`)",
     "RT-X509": "11.7 -- the remaining shared units whose closure crosses into the landed "
                "strata (`x_all.c`, `p5_scrypt.c`, `nsseq.c`, `x509_def.c`, `x_info.c`, "
                "`x_pkey.c`, `evp_lib.c`, `evp_pkey.c`, `t_spki.c`, `p12_mutl.c`, "
