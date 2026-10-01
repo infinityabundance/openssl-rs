@@ -309,11 +309,19 @@ and `X509_STORE_set_trust`; and 11.1c's file loaders add `X509_load_cert_file`,
 `X509_LOOKUP_hash_dir`, stay withheld on the `OPENSSLDIR` defaults
 `X509_get_default_cert_file`/`_dir`, which are 11.7's and Phase 16's.
 
+11.3 adds the whole attribute-certificate surface: the `X509_ACERT` item group and its accessors
+and setters (`x509_acert.c`, `x509aset.c`), the `OSSL_IETF_ATTR_SYNTAX` items (`x_ietfatt.c`) and
+the `x_all.c` sign/verify/`_fp`/`_bio` doors, leaving only the two `X509_ACERT` printers, which
+wait on `X509_signature_print`. 11.4 adds the certificate, request and CRL printers (`t_x509.c`,
+`t_req.c`, `t_crl.c`) and `X509_REQ_to_X509` (`x509_r2x.c`).
+
 **Open exports (checked against the ledger):**
 
-The store and verification layer is still open at `X509_verify_cert`; the attribute certificate at
-`X509_ACERT_new` and `X509_ACERT_verify`; the
-request surface at `X509_REQ_sign` and `X509_to_X509_REQ`; and
-the remaining shared units at `X509_get_default_cert_file` and `NETSCAPE_SPKI_print`. Every name
+The store and verification layer is still open at `X509_verify_cert`; the attribute certificate
+printers at `X509_ACERT_print_ex` and the verify-callback printer
+`X509_STORE_CTX_print_verify_cb`; the
+request surface at `X509_to_X509_REQ`; and
+the remaining shared units at `X509_get_default_cert_file`, `NETSCAPE_SPKI_print`, `X509_load_http`
+and `X509_CRL_load_http`. Every name
 here is in the ledger's open list; the counts move as the slices land, so the ledger, not this
 sentence, carries them.

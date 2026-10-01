@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1455,
       "deferred_to_later_phase": 0,
-      "implemented": 1324,
-      "open_in_this_stratum": 143,
+      "implemented": 1429,
+      "open_in_this_stratum": 38,
       "owned": 1467,
       "received_by_handoff": 12
     },
@@ -310,15 +310,39 @@
       "OSSL_HASH_free",
       "OSSL_HASH_it",
       "OSSL_HASH_new",
+      "OSSL_IETF_ATTR_SYNTAX_VALUE_free",
+      "OSSL_IETF_ATTR_SYNTAX_VALUE_it",
+      "OSSL_IETF_ATTR_SYNTAX_VALUE_new",
+      "OSSL_IETF_ATTR_SYNTAX_add1_value",
+      "OSSL_IETF_ATTR_SYNTAX_free",
+      "OSSL_IETF_ATTR_SYNTAX_get0_policyAuthority",
+      "OSSL_IETF_ATTR_SYNTAX_get0_value",
+      "OSSL_IETF_ATTR_SYNTAX_get_value_num",
+      "OSSL_IETF_ATTR_SYNTAX_it",
+      "OSSL_IETF_ATTR_SYNTAX_new",
+      "OSSL_IETF_ATTR_SYNTAX_print",
+      "OSSL_IETF_ATTR_SYNTAX_set0_policyAuthority",
       "OSSL_INFO_SYNTAX_POINTER_free",
       "OSSL_INFO_SYNTAX_POINTER_it",
       "OSSL_INFO_SYNTAX_POINTER_new",
       "OSSL_INFO_SYNTAX_free",
       "OSSL_INFO_SYNTAX_it",
       "OSSL_INFO_SYNTAX_new",
+      "OSSL_ISSUER_SERIAL_free",
+      "OSSL_ISSUER_SERIAL_get0_issuer",
+      "OSSL_ISSUER_SERIAL_get0_issuerUID",
+      "OSSL_ISSUER_SERIAL_get0_serial",
+      "OSSL_ISSUER_SERIAL_new",
+      "OSSL_ISSUER_SERIAL_set1_issuer",
+      "OSSL_ISSUER_SERIAL_set1_issuerUID",
+      "OSSL_ISSUER_SERIAL_set1_serial",
       "OSSL_NAMED_DAY_free",
       "OSSL_NAMED_DAY_it",
       "OSSL_NAMED_DAY_new",
+      "OSSL_OBJECT_DIGEST_INFO_free",
+      "OSSL_OBJECT_DIGEST_INFO_get0_digest",
+      "OSSL_OBJECT_DIGEST_INFO_new",
+      "OSSL_OBJECT_DIGEST_INFO_set1_digest",
       "OSSL_PRIVILEGE_POLICY_ID_free",
       "OSSL_PRIVILEGE_POLICY_ID_it",
       "OSSL_PRIVILEGE_POLICY_ID_new",
@@ -328,6 +352,7 @@
       "OSSL_ROLE_SPEC_CERT_ID_free",
       "OSSL_ROLE_SPEC_CERT_ID_it",
       "OSSL_ROLE_SPEC_CERT_ID_new",
+      "OSSL_STACK_OF_X509_free",
       "OSSL_TARGETING_INFORMATION_free",
       "OSSL_TARGETING_INFORMATION_it",
       "OSSL_TARGETING_INFORMATION_new",
@@ -394,6 +419,7 @@
       "PEM_read_PUBKEY_ex",
       "PEM_read_RSA_PUBKEY",
       "PEM_read_X509",
+      "PEM_read_X509_ACERT",
       "PEM_read_X509_AUX",
       "PEM_read_X509_CRL",
       "PEM_read_X509_PUBKEY",
@@ -407,6 +433,7 @@
       "PEM_read_bio_PUBKEY_ex",
       "PEM_read_bio_RSA_PUBKEY",
       "PEM_read_bio_X509",
+      "PEM_read_bio_X509_ACERT",
       "PEM_read_bio_X509_AUX",
       "PEM_read_bio_X509_CRL",
       "PEM_read_bio_X509_PUBKEY",
@@ -420,6 +447,7 @@
       "PEM_write_PUBKEY_ex",
       "PEM_write_RSA_PUBKEY",
       "PEM_write_X509",
+      "PEM_write_X509_ACERT",
       "PEM_write_X509_AUX",
       "PEM_write_X509_CRL",
       "PEM_write_X509_PUBKEY",
@@ -434,6 +462,7 @@
       "PEM_write_bio_PUBKEY_ex",
       "PEM_write_bio_RSA_PUBKEY",
       "PEM_write_bio_X509",
+      "PEM_write_bio_X509_ACERT",
       "PEM_write_bio_X509_AUX",
       "PEM_write_bio_X509_CRL",
       "PEM_write_bio_X509_PUBKEY",
@@ -553,6 +582,51 @@
       "X509V3_set_issuer_pkey",
       "X509V3_set_nconf",
       "X509V3_string_free",
+      "X509_ACERT_INFO_free",
+      "X509_ACERT_INFO_it",
+      "X509_ACERT_INFO_new",
+      "X509_ACERT_ISSUER_V2FORM_free",
+      "X509_ACERT_ISSUER_V2FORM_new",
+      "X509_ACERT_add1_attr",
+      "X509_ACERT_add1_attr_by_NID",
+      "X509_ACERT_add1_attr_by_OBJ",
+      "X509_ACERT_add1_attr_by_txt",
+      "X509_ACERT_add1_ext_i2d",
+      "X509_ACERT_add_attr_nconf",
+      "X509_ACERT_delete_attr",
+      "X509_ACERT_dup",
+      "X509_ACERT_free",
+      "X509_ACERT_get0_extensions",
+      "X509_ACERT_get0_holder_baseCertId",
+      "X509_ACERT_get0_holder_digest",
+      "X509_ACERT_get0_holder_entityName",
+      "X509_ACERT_get0_info_sigalg",
+      "X509_ACERT_get0_issuerName",
+      "X509_ACERT_get0_issuerUID",
+      "X509_ACERT_get0_notAfter",
+      "X509_ACERT_get0_notBefore",
+      "X509_ACERT_get0_serialNumber",
+      "X509_ACERT_get0_signature",
+      "X509_ACERT_get_attr",
+      "X509_ACERT_get_attr_by_NID",
+      "X509_ACERT_get_attr_by_OBJ",
+      "X509_ACERT_get_attr_count",
+      "X509_ACERT_get_ext_d2i",
+      "X509_ACERT_get_signature_nid",
+      "X509_ACERT_get_version",
+      "X509_ACERT_it",
+      "X509_ACERT_new",
+      "X509_ACERT_set0_holder_baseCertId",
+      "X509_ACERT_set0_holder_digest",
+      "X509_ACERT_set0_holder_entityName",
+      "X509_ACERT_set1_issuerName",
+      "X509_ACERT_set1_notAfter",
+      "X509_ACERT_set1_notBefore",
+      "X509_ACERT_set1_serialNumber",
+      "X509_ACERT_set_version",
+      "X509_ACERT_sign",
+      "X509_ACERT_sign_ctx",
+      "X509_ACERT_verify",
       "X509_ALGORS_it",
       "X509_ALGOR_cmp",
       "X509_ALGOR_copy",
@@ -621,6 +695,9 @@
       "X509_CRL_match",
       "X509_CRL_new",
       "X509_CRL_new_ex",
+      "X509_CRL_print",
+      "X509_CRL_print_ex",
+      "X509_CRL_print_fp",
       "X509_CRL_set1_lastUpdate",
       "X509_CRL_set1_nextUpdate",
       "X509_CRL_set_default_method",
@@ -768,6 +845,7 @@
       "X509_REQ_add_extensions_nid",
       "X509_REQ_check_private_key",
       "X509_REQ_delete_attr",
+      "X509_REQ_digest",
       "X509_REQ_dup",
       "X509_REQ_extension_nid",
       "X509_REQ_free",
@@ -789,6 +867,9 @@
       "X509_REQ_it",
       "X509_REQ_new",
       "X509_REQ_new_ex",
+      "X509_REQ_print",
+      "X509_REQ_print_ex",
+      "X509_REQ_print_fp",
       "X509_REQ_set0_distinguishing_id",
       "X509_REQ_set0_signature",
       "X509_REQ_set1_signature_algo",
@@ -796,6 +877,11 @@
       "X509_REQ_set_pubkey",
       "X509_REQ_set_subject_name",
       "X509_REQ_set_version",
+      "X509_REQ_sign",
+      "X509_REQ_sign_ctx",
+      "X509_REQ_to_X509",
+      "X509_REQ_verify",
+      "X509_REQ_verify_ex",
       "X509_REVOKED_add1_ext_i2d",
       "X509_REVOKED_add_ext",
       "X509_REVOKED_delete_ext",
@@ -988,6 +1074,7 @@
       "X509_add_ext",
       "X509_alias_get0",
       "X509_alias_set1",
+      "X509_aux_print",
       "X509_certificate_type",
       "X509_chain_check_suiteb",
       "X509_chain_up_ref",
@@ -1073,6 +1160,7 @@
       "X509_load_crl_file",
       "X509_new",
       "X509_new_ex",
+      "X509_ocspid_print",
       "X509_policy_level_get0_node",
       "X509_policy_level_node_count",
       "X509_policy_node_get0_parent",
@@ -1083,6 +1171,10 @@
       "X509_policy_tree_get0_policies",
       "X509_policy_tree_get0_user_policies",
       "X509_policy_tree_level_count",
+      "X509_print",
+      "X509_print_ex",
+      "X509_print_ex_fp",
+      "X509_print_fp",
       "X509_pubkey_digest",
       "X509_reject_clear",
       "X509_self_signed",
@@ -1100,6 +1192,7 @@
       "X509_sign",
       "X509_sign_ctx",
       "X509_signature_dump",
+      "X509_signature_print",
       "X509_subject_name_cmp",
       "X509_subject_name_hash",
       "X509_subject_name_hash_old",
@@ -1206,6 +1299,7 @@
       "d2i_OSSL_DAY_TIME",
       "d2i_OSSL_DAY_TIME_BAND",
       "d2i_OSSL_HASH",
+      "d2i_OSSL_IETF_ATTR_SYNTAX",
       "d2i_OSSL_INFO_SYNTAX",
       "d2i_OSSL_INFO_SYNTAX_POINTER",
       "d2i_OSSL_NAMED_DAY",
@@ -1261,6 +1355,9 @@
       "d2i_SXNETID",
       "d2i_USERNOTICE",
       "d2i_X509",
+      "d2i_X509_ACERT",
+      "d2i_X509_ACERT_bio",
+      "d2i_X509_ACERT_fp",
       "d2i_X509_ALGOR",
       "d2i_X509_ALGORS",
       "d2i_X509_ATTRIBUTE",
@@ -1280,6 +1377,8 @@
       "d2i_X509_PUBKEY_fp",
       "d2i_X509_REQ",
       "d2i_X509_REQ_INFO",
+      "d2i_X509_REQ_bio",
+      "d2i_X509_REQ_fp",
       "d2i_X509_REVOKED",
       "d2i_X509_SIG",
       "d2i_X509_VAL",
@@ -1341,6 +1440,7 @@
       "i2d_OSSL_DAY_TIME",
       "i2d_OSSL_DAY_TIME_BAND",
       "i2d_OSSL_HASH",
+      "i2d_OSSL_IETF_ATTR_SYNTAX",
       "i2d_OSSL_INFO_SYNTAX",
       "i2d_OSSL_INFO_SYNTAX_POINTER",
       "i2d_OSSL_NAMED_DAY",
@@ -1393,6 +1493,9 @@
       "i2d_SXNETID",
       "i2d_USERNOTICE",
       "i2d_X509",
+      "i2d_X509_ACERT",
+      "i2d_X509_ACERT_bio",
+      "i2d_X509_ACERT_fp",
       "i2d_X509_ALGOR",
       "i2d_X509_ALGORS",
       "i2d_X509_ATTRIBUTE",
@@ -1412,6 +1515,8 @@
       "i2d_X509_PUBKEY_fp",
       "i2d_X509_REQ",
       "i2d_X509_REQ_INFO",
+      "i2d_X509_REQ_bio",
+      "i2d_X509_REQ_fp",
       "i2d_X509_REVOKED",
       "i2d_X509_SIG",
       "i2d_X509_VAL",
@@ -1473,184 +1578,10 @@
         "symbol": "NETSCAPE_SPKI_print"
       },
       {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_VALUE_free"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_VALUE_it"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_VALUE_new"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_add1_value"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_free"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_get0_policyAuthority"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_get0_value"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_get_value_num"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_it"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_new"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_print"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_IETF_ATTR_SYNTAX_set0_policyAuthority"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_ISSUER_SERIAL_free"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_ISSUER_SERIAL_get0_issuer"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_ISSUER_SERIAL_get0_issuerUID"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_ISSUER_SERIAL_get0_serial"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_ISSUER_SERIAL_new"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_ISSUER_SERIAL_set1_issuer"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_ISSUER_SERIAL_set1_issuerUID"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_ISSUER_SERIAL_set1_serial"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_OBJECT_DIGEST_INFO_free"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_OBJECT_DIGEST_INFO_get0_digest"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_OBJECT_DIGEST_INFO_new"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_OBJECT_DIGEST_INFO_set1_digest"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_x509.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_STACK_OF_X509_free"
-      },
-      {
         "declaring_header": "x509.h",
         "module": "src/pkcs12/p12_mutl.rs",
         "received_from_phase": null,
         "symbol": "PBMAC1_get1_pbkdf2_param"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_X509_ACERT"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_read_bio_X509_ACERT"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_X509_ACERT"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "PEM_write_bio_X509_ACERT"
       },
       {
         "declaring_header": "x509.h",
@@ -1678,210 +1609,6 @@
       },
       {
         "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_INFO_free"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_INFO_it"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_INFO_new"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_ISSUER_V2FORM_free"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_ISSUER_V2FORM_new"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_add1_attr"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_add1_attr_by_NID"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_add1_attr_by_OBJ"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_add1_attr_by_txt"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_add1_ext_i2d"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_add_attr_nconf"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_delete_attr"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_dup"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_free"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_extensions"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_holder_baseCertId"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_holder_digest"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_holder_entityName"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_info_sigalg"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_issuerName"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_issuerUID"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_notAfter"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_notBefore"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_serialNumber"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get0_signature"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get_attr"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get_attr_by_NID"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get_attr_by_OBJ"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get_attr_count"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get_ext_d2i"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get_signature_nid"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_get_version"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_it"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_new"
-      },
-      {
-        "declaring_header": "x509_acert.h",
         "module": "src/x509/t_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_print"
@@ -1891,72 +1618,6 @@
         "module": "src/x509/t_acert.rs",
         "received_from_phase": null,
         "symbol": "X509_ACERT_print_ex"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_set0_holder_baseCertId"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_set0_holder_digest"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_set0_holder_entityName"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_set1_issuerName"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_set1_notAfter"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_set1_notBefore"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_set1_serialNumber"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509aset.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_set_version"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_sign"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_sign_ctx"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_verify"
       },
       {
         "declaring_header": "x509.h",
@@ -1971,24 +1632,6 @@
         "symbol": "X509_CRL_load_http"
       },
       {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_print"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_print_ex"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_print_fp"
-      },
-      {
         "declaring_header": "x509_vfy.h",
         "module": "src/x509/by_file.rs",
         "received_from_phase": null,
@@ -1999,60 +1642,6 @@
         "module": "src/x509/by_dir.rs",
         "received_from_phase": null,
         "symbol": "X509_LOOKUP_hash_dir"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_digest"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_req.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_print"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_req.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_print_ex"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_req.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_print_fp"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_sign"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_sign_ctx"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_r2x.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_to_X509"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_verify"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_REQ_verify_ex"
       },
       {
         "declaring_header": "x509_vfy.h",
@@ -2121,12 +1710,6 @@
         "symbol": "X509_STORE_set_default_paths_ex"
       },
       {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_x509.rs",
-        "received_from_phase": null,
-        "symbol": "X509_aux_print"
-      },
-      {
         "declaring_header": "x509_vfy.h",
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
@@ -2163,46 +1746,10 @@
         "symbol": "X509_load_http"
       },
       {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_x509.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ocspid_print"
-      },
-      {
         "declaring_header": "x509_vfy.h",
         "module": "src/x509/pcy_tree.rs",
         "received_from_phase": null,
         "symbol": "X509_policy_check"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_x509.rs",
-        "received_from_phase": null,
-        "symbol": "X509_print"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_x509.rs",
-        "received_from_phase": null,
-        "symbol": "X509_print_ex"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_x509.rs",
-        "received_from_phase": null,
-        "symbol": "X509_print_ex_fp"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_x509.rs",
-        "received_from_phase": null,
-        "symbol": "X509_print_fp"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/t_x509.rs",
-        "received_from_phase": null,
-        "symbol": "X509_signature_print"
       },
       {
         "declaring_header": "x509.h",
@@ -2217,88 +1764,16 @@
         "symbol": "X509_verify_cert"
       },
       {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_OSSL_IETF_ATTR_SYNTAX"
-      },
-      {
         "declaring_header": "x509.h",
         "module": "src/asn1/p5_scrypt.rs",
         "received_from_phase": null,
         "symbol": "d2i_SCRYPT_PARAMS"
       },
       {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_X509_ACERT"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_X509_ACERT_bio"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_X509_ACERT_fp"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_X509_REQ_bio"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_X509_REQ_fp"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_ietfatt.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_OSSL_IETF_ATTR_SYNTAX"
-      },
-      {
         "declaring_header": "x509.h",
         "module": "src/asn1/p5_scrypt.rs",
         "received_from_phase": null,
         "symbol": "i2d_SCRYPT_PARAMS"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x509_acert.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_X509_ACERT"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_X509_ACERT_bio"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_X509_ACERT_fp"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_X509_REQ_bio"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_X509_REQ_fp"
       }
     ],
     "owned_by_header": {
@@ -2453,17 +1928,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "8b90bbdd5490b59bc12a330190d8c29c1d02c48e87f2eb1be3557732759ff810"
+      "sha256": "3db09eb6d59cb65713a7dcf8e8b0616d03ca9d7eb2a7747f3284ff85771de119"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2bdaf12e7f8cb607fdffb2a32f4ee6a31b40c8daaa4c4631438d0e101f1c14f4"
+      "sha256": "97f1603b213f67c26b36063218cf2c2ac79d04cbee93f46ca02e33809570c8ac"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "2809194baedf93c9005cf19f5456f8a2d1e544ac73251e1c3ff0be97b1bb8110"
+      "sha256": "741ab3f4072a1f7136e7b383947adfeba69142bcbe9f0d47f2ad0677f55a16b4"
     }
   ],
   "kind": "phase11-obligations",

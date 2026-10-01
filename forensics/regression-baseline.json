@@ -509,12 +509,20 @@
       "observations": 54,
       "verdict": "pass"
     },
+    "RT-X509-ACERT": {
+      "observations": 168,
+      "verdict": "pass"
+    },
     "RT-X509-PEM": {
       "observations": 121,
       "verdict": "pass"
     },
     "RT-X509-REF": {
       "observations": 993,
+      "verdict": "pass"
+    },
+    "RT-X509-REQ": {
+      "observations": 67,
       "verdict": "pass"
     },
     "RT-X509-STORE": {
@@ -543,12 +551,12 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4624,
+    "libcrypto": 4729,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
-    "phase11": 143,
+    "phase11": 38,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -599,7 +607,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 37,
     "findings": 0,
-    "language_census": 7188,
+    "language_census": 7265,
     "sealed_census": 52
   },
   "provider_implemented": [

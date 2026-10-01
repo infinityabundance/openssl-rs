@@ -1640,6 +1640,7 @@
               "RT-PUBKEY",
               "RT-RSA",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-STORE"
             ],
@@ -1697,6 +1698,7 @@
               "RT-PARAM",
               "RT-PUBKEY",
               "RT-SECURE",
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "CRYPTO_malloc"
@@ -1984,7 +1986,9 @@
               "RT-SIGNATURE",
               "RT-STORE",
               "RT-THREADDATA",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "ERR_clear_error"
@@ -2043,6 +2047,7 @@
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-STORE"
             ],
@@ -2758,6 +2763,8 @@
               "RT-PUBKEY",
               "RT-RSA",
               "RT-STORE",
+              "RT-X509-ACERT",
+              "RT-X509-REQ",
               "RT-X509-STORE",
               "RT-X509-VERIFY"
             ],
@@ -3178,7 +3185,9 @@
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE",
               "RT-X509-VERIFY"
             ],
@@ -3199,7 +3208,9 @@
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "OPENSSL_sk_num"
@@ -3232,7 +3243,9 @@
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "OPENSSL_sk_push"
@@ -3781,7 +3794,9 @@
               "RT-PKCS12",
               "RT-PUBKEY",
               "RT-RAND-USERS",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_ctrl"
@@ -4024,7 +4039,9 @@
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_free"
@@ -4481,7 +4498,9 @@
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_new"
@@ -4561,7 +4580,9 @@
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_new_mem_buf"
@@ -4814,7 +4835,9 @@
               "RT-PUBKEY",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "BIO_s_mem"
@@ -5376,6 +5399,7 @@
               "RT-CONF",
               "RT-CONF-MOD",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "NCONF_free"
@@ -5435,6 +5459,7 @@
             "courts": [
               "RT-CONF",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "NCONF_load_bio"
@@ -5452,6 +5477,7 @@
               "RT-CONF",
               "RT-CONF-MOD",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "NCONF_new"
@@ -5617,7 +5643,8 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
               "RT-KEYFORMAT",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-ACERT"
             ],
             "symbol": "ASN1_BIT_STRING_free"
           },
@@ -5651,6 +5678,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-KEYFORMAT",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "ASN1_BIT_STRING_new"
@@ -5811,7 +5839,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
-              "RT-ASN1-TIME"
+              "RT-ASN1-TIME",
+              "RT-X509-ACERT"
             ],
             "symbol": "ASN1_GENERALIZEDTIME_free"
           },
@@ -5829,6 +5858,7 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-VERIFY"
             ],
             "symbol": "ASN1_GENERALIZEDTIME_new"
@@ -5853,6 +5883,7 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-VERIFY"
             ],
             "symbol": "ASN1_GENERALIZEDTIME_set_string"
@@ -5926,6 +5957,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-EVP-PEM",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE",
               "RT-X509-VERIFY"
             ],
@@ -5939,6 +5971,7 @@
               "RT-PKCS12",
               "RT-RSA",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "ASN1_INTEGER_get"
@@ -5976,6 +6009,7 @@
               "RT-EVP-PEM",
               "RT-RSA",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE",
               "RT-X509-VERIFY"
             ],
@@ -5989,6 +6023,7 @@
               "RT-EVP-PEM",
               "RT-RSA",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE",
               "RT-X509-VERIFY"
             ],
@@ -6104,6 +6139,7 @@
               "RT-DIGEST",
               "RT-KEYFORMAT",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "ASN1_OCTET_STRING_free"
@@ -6130,6 +6166,7 @@
               "RT-DIGEST",
               "RT-KEYFORMAT",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "ASN1_OCTET_STRING_new"
@@ -6141,6 +6178,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-BIO-ASN1",
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "ASN1_OCTET_STRING_set"
@@ -12684,7 +12722,8 @@
               "RT-EVP-PKEY",
               "RT-FETCH",
               "RT-SIGNATURE",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-ACERT"
             ],
             "symbol": "EVP_MD_CTX_free"
           },
@@ -12758,7 +12797,8 @@
               "RT-EVP-PKEY",
               "RT-FETCH",
               "RT-SIGNATURE",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-ACERT"
             ],
             "symbol": "EVP_MD_CTX_new"
           },
@@ -12790,7 +12830,8 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY",
-              "RT-FETCH"
+              "RT-FETCH",
+              "RT-X509-ACERT"
             ],
             "symbol": "EVP_MD_CTX_set_pkey_ctx"
           },
@@ -13515,7 +13556,8 @@
               "RT-EVP-PKEY-OPS",
               "RT-KEYMGMT",
               "RT-RSA",
-              "RT-SIGNATURE"
+              "RT-SIGNATURE",
+              "RT-X509-ACERT"
             ],
             "symbol": "EVP_PKEY_CTX_new_from_name"
           },
@@ -14159,7 +14201,8 @@
             "courts": [
               "RT-EVP-PKEY-OPS",
               "RT-EVP-REF",
-              "RT-KEYMGMT"
+              "RT-KEYMGMT",
+              "RT-X509-REQ"
             ],
             "symbol": "EVP_PKEY_eq"
           },
@@ -14189,6 +14232,7 @@
               "RT-SIGNATURE",
               "RT-STORE",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "EVP_PKEY_free"
@@ -16003,7 +16047,8 @@
               "RT-KEYMGMT",
               "RT-PKCS12",
               "RT-SIGNATURE",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-X509-ACERT"
             ],
             "symbol": "EVP_sha256"
           },
@@ -24679,10 +24724,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 1324,
-          "directly_courted_called": 743,
-          "directly_courted_referenced": 581,
-          "implemented": 1324,
+          "directly_courted": 1429,
+          "directly_courted_called": 853,
+          "directly_courted_referenced": 576,
+          "implemented": 1429,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -25343,6 +25388,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-REF"
             ],
             "symbol": "GENERAL_NAME_new"
@@ -25364,8 +25410,9 @@
             "symbol": "GENERAL_NAME_set0_othername"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-X509-ACERT",
               "RT-X509-REF"
             ],
             "symbol": "GENERAL_NAME_set0_value"
@@ -26109,6 +26156,90 @@
             "symbol": "OSSL_HASH_new"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_VALUE_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_VALUE_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_VALUE_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_add1_value"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_get0_policyAuthority"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_get0_value"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_get_value_num"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_IETF_ATTR_SYNTAX_set0_policyAuthority"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
@@ -26153,6 +26284,62 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_ISSUER_SERIAL_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_ISSUER_SERIAL_get0_issuer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_ISSUER_SERIAL_get0_issuerUID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_ISSUER_SERIAL_get0_serial"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_ISSUER_SERIAL_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_ISSUER_SERIAL_set1_issuer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_ISSUER_SERIAL_set1_issuerUID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_ISSUER_SERIAL_set1_serial"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-STORE",
               "RT-X509-REF"
             ],
@@ -26172,6 +26359,34 @@
               "RT-X509-REF"
             ],
             "symbol": "OSSL_NAMED_DAY_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_OBJECT_DIGEST_INFO_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_OBJECT_DIGEST_INFO_get0_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_OBJECT_DIGEST_INFO_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "OSSL_OBJECT_DIGEST_INFO_set1_digest"
           },
           {
             "basis": "referenced",
@@ -26235,6 +26450,13 @@
               "RT-X509-REF"
             ],
             "symbol": "OSSL_ROLE_SPEC_CERT_ID_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "OSSL_STACK_OF_X509_free"
           },
           {
             "basis": "referenced",
@@ -26719,6 +26941,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "PEM_read_X509_ACERT"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-X509-PEM"
             ],
             "symbol": "PEM_read_X509_AUX"
@@ -26813,6 +27042,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "PEM_read_bio_X509_ACERT"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-X509-PEM"
             ],
             "symbol": "PEM_read_bio_X509_AUX"
@@ -26900,6 +27136,13 @@
               "RT-X509-PEM"
             ],
             "symbol": "PEM_write_X509"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "PEM_write_X509_ACERT"
           },
           {
             "basis": "called",
@@ -26998,6 +27241,13 @@
               "RT-X509-PEM"
             ],
             "symbol": "PEM_write_bio_X509"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "PEM_write_bio_X509_ACERT"
           },
           {
             "basis": "called",
@@ -27874,6 +28124,321 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_INFO_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_INFO_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_INFO_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_ISSUER_V2FORM_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_ISSUER_V2FORM_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_add1_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_add1_attr_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_add1_attr_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_add1_attr_by_txt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_add1_ext_i2d"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_add_attr_nconf"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_delete_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_extensions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_holder_baseCertId"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_holder_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_holder_entityName"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_info_sigalg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_issuerName"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_issuerUID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_notAfter"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_notBefore"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_serialNumber"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get0_signature"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get_attr_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get_attr_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get_attr_count"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get_ext_d2i"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get_signature_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_get_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_set0_holder_baseCertId"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_set0_holder_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_set0_holder_entityName"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_set1_issuerName"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_set1_notAfter"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_set1_notBefore"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_set1_serialNumber"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_set_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_sign_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_ACERT_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-ASN1-TEMPLATE",
               "RT-X509-REF"
             ],
@@ -27909,6 +28474,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-KEYFORMAT",
               "RT-PKCS12",
+              "RT-X509-ACERT",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -27939,6 +28505,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-KEYFORMAT",
               "RT-RSA",
+              "RT-X509-ACERT",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -27982,6 +28549,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-X509-ACERT",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -28014,6 +28582,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-X509-ACERT",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -28217,6 +28786,7 @@
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-REF",
+              "RT-X509-REQ",
               "RT-X509-STORE",
               "RT-X509-VERIFY"
             ],
@@ -28408,6 +28978,27 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_CRL_new_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_CRL_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_CRL_print_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_CRL_print_fp"
           },
           {
             "basis": "called",
@@ -28965,8 +29556,9 @@
             "symbol": "X509_NAME_add_entry_by_OBJ"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-X509-ACERT",
               "RT-X509-REF"
             ],
             "symbol": "X509_NAME_add_entry_by_txt"
@@ -28976,6 +29568,7 @@
             "courts": [
               "RT-STORE",
               "RT-X509-REF",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "X509_NAME_cmp"
@@ -29014,6 +29607,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -29091,6 +29685,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-X509-ACERT",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -29445,6 +30040,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "X509_REQ_add1_attr_by_NID"
@@ -29494,6 +30090,13 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_REQ_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-X509-STORE"
             ],
             "symbol": "X509_REQ_dup"
@@ -29508,7 +30111,9 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "X509_REQ_free"
@@ -29523,6 +30128,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "X509_REQ_get0_pubkey"
@@ -29573,6 +30179,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "X509_REQ_get_attr_count"
@@ -29609,6 +30216,7 @@
             "basis": "called",
             "courts": [
               "RT-X509-REF",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "X509_REQ_get_subject_name"
@@ -29631,6 +30239,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
             "symbol": "X509_REQ_new"
@@ -29641,6 +30250,27 @@
               "RT-X509-STORE"
             ],
             "symbol": "X509_REQ_new_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_REQ_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_REQ_print_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_REQ_print_fp"
           },
           {
             "basis": "called",
@@ -29690,6 +30320,41 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_REQ_set_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_REQ_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_REQ_sign_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_REQ_to_X509"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_REQ_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "X509_REQ_verify_ex"
           },
           {
             "basis": "referenced",
@@ -31007,16 +31672,18 @@
             "symbol": "X509_add1_ext_i2d"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-REQ"
             ],
             "symbol": "X509_add1_reject_object"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-REQ"
             ],
             "symbol": "X509_add1_trust_object"
           },
@@ -31054,9 +31721,17 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-REQ"
             ],
             "symbol": "X509_alias_set1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_aux_print"
           },
           {
             "basis": "called",
@@ -31245,6 +31920,7 @@
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-REF",
+              "RT-X509-REQ",
               "RT-X509-STORE",
               "RT-X509-VERIFY"
             ],
@@ -31304,7 +31980,8 @@
             "courts": [
               "RT-STORE",
               "RT-X509-PEM",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-REQ"
             ],
             "symbol": "X509_get0_pubkey"
           },
@@ -31332,9 +32009,10 @@
             "symbol": "X509_get0_serialNumber"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-REQ"
             ],
             "symbol": "X509_get0_signature"
           },
@@ -31348,6 +32026,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "X509_get0_tbs_sigalg"
@@ -31478,6 +32157,7 @@
             "courts": [
               "RT-STORE",
               "RT-X509-REF",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "X509_get_issuer_name"
@@ -31539,7 +32219,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-REQ"
             ],
             "symbol": "X509_get_signature_nid"
           },
@@ -31555,6 +32236,7 @@
             "courts": [
               "RT-STORE",
               "RT-X509-REF",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "X509_get_subject_name"
@@ -31563,7 +32245,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-REQ"
             ],
             "symbol": "X509_get_version"
           },
@@ -31647,7 +32330,8 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-REQ"
             ],
             "symbol": "X509_keyid_set1"
           },
@@ -31702,6 +32386,13 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_new_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_ocspid_print"
           },
           {
             "basis": "called",
@@ -31781,6 +32472,34 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_policy_tree_level_count"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_print_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_print_ex_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_print_fp"
           },
           {
             "basis": "called",
@@ -31908,6 +32627,13 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_signature_dump"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-REQ"
+            ],
+            "symbol": "X509_signature_print"
           },
           {
             "basis": "called",
@@ -32694,6 +33420,13 @@
             "symbol": "d2i_OSSL_HASH"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "d2i_OSSL_IETF_ATTR_SYNTAX"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
@@ -33112,9 +33845,31 @@
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-REF",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "d2i_X509"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "d2i_X509_ACERT"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "d2i_X509_ACERT_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "d2i_X509_ACERT_fp"
           },
           {
             "basis": "called",
@@ -33171,6 +33926,7 @@
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-REF",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "d2i_X509_CRL"
@@ -33254,7 +34010,9 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-ACERT",
               "RT-X509-PEM",
+              "RT-X509-REQ",
               "RT-X509-STORE"
             ],
             "symbol": "d2i_X509_REQ"
@@ -33265,6 +34023,20 @@
               "RT-X509-STORE"
             ],
             "symbol": "d2i_X509_REQ_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "d2i_X509_REQ_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "d2i_X509_REQ_fp"
           },
           {
             "basis": "referenced",
@@ -33715,6 +34487,13 @@
             "symbol": "i2d_OSSL_HASH"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "i2d_OSSL_IETF_ATTR_SYNTAX"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-X509-REF"
@@ -34115,6 +34894,27 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "i2d_X509_ACERT"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "i2d_X509_ACERT_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "i2d_X509_ACERT_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-ASN1-TEMPLATE",
               "RT-X509-REF"
             ],
@@ -34259,6 +35059,20 @@
               "RT-X509-STORE"
             ],
             "symbol": "i2d_X509_REQ_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "i2d_X509_REQ_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-ACERT"
+            ],
+            "symbol": "i2d_X509_REQ_fp"
           },
           {
             "basis": "referenced",
@@ -34459,14 +35273,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 11,
-        "staged_candidate_probes": 4
+        "staged_candidate_probes": 6
       }
     ],
     "totals": {
-      "directly_courted": 4340,
-      "directly_courted_called": 3434,
-      "directly_courted_referenced": 906,
-      "implemented": 4348,
+      "directly_courted": 4445,
+      "directly_courted_called": 3544,
+      "directly_courted_referenced": 901,
+      "implemented": 4453,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -34477,7 +35291,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "33424db9137b9e327e3e119797788a547158f137092a6a1290b535580fc4f881"
+      "sha256": "47429c4f5df02f343abe32cbd7845ce689cddf67fd9fb29b3c429a2879a6da35"
     },
     {
       "name": "symbol-ownership",
@@ -34492,7 +35306,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "8380719c4cff0906ec5b9eb0dbf38c924df171b9393ded142125da94ffa6139c"
+      "sha256": "b5b4950ba039e02878adfcfb836da05774749f5345858e1359b730accbbc679b"
     },
     {
       "name": "phase3-courts",
@@ -34502,7 +35316,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "077b73d930c9e222c371101e5d9b21f1a60ed1eddfd657def6a0b5d0533416c0"
+      "sha256": "cfa518899437c876df1abccca566bcd46fcf7e1893def20ace7b3b02a723a032"
     },
     {
       "name": "phase4-courts",
@@ -34512,7 +35326,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "2bdaf12e7f8cb607fdffb2a32f4ee6a31b40c8daaa4c4631438d0e101f1c14f4"
+      "sha256": "97f1603b213f67c26b36063218cf2c2ac79d04cbee93f46ca02e33809570c8ac"
     },
     {
       "name": "phase5-courts",
@@ -34522,7 +35336,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "11e53d84cf762fd16149a9651c05860649b4d2b58b24e098de0c073174ff8c21"
+      "sha256": "adc85192f9f8015d48bcc230a9643dd3c1edf538a7582665fa9343045bf70a2b"
     },
     {
       "name": "phase6-courts",
@@ -34532,7 +35346,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "69fde24dd92b364beff29a9640ced48b46d2eafcf93fe92cc4ee872c594092ec"
+      "sha256": "6d1838b52935216b6d8badbf0f16262cda8f1816549d3386ff3a1d2eeafb94b6"
     },
     {
       "name": "phase7-courts",
@@ -34542,7 +35356,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "ee6119f136b1cd1c74312fab283e3d511a1facf68a00fa1d13e2bbb0b9914ba0"
+      "sha256": "de9e531d2c9605935a4a2d98639ec073898906592351d3683c187a50a1e04afc"
     },
     {
       "name": "phase8-courts",
@@ -34552,7 +35366,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "8ae90f6c131b3257cc1f8d3a5769ce978499f43894169fd7c0e5eac2003ca696"
+      "sha256": "90fbab8dd532922610c174f6f23b04d4d01511899a0b3a347aedbad9000b07e0"
     },
     {
       "name": "phase9-courts",
@@ -34562,7 +35376,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "61a8e4616b5508504478b9b34dcd85e10eda03b4aff4f644330222a221dab727"
+      "sha256": "0e4f73c87aa46426fd8a102b3cb900525eb67972c701222add54a16bf8d06f65"
     },
     {
       "name": "phase10-courts",
@@ -34572,12 +35386,12 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "96fbc92ac757a47388689d474c6f00e220ee492a33b74db6e60749c12158b04a"
+      "sha256": "b34a3e2f5b6cf5ba00712badd46b0a1628895306aebd45c1b93b7498322f10e3"
     },
     {
       "name": "phase11-courts",
       "path": "artifacts/phase11/COURTS.json",
-      "sha256": "e89926ced8dbe77d769165838c4f9b64c68f9131ba95470dd5eaf03464f9d504"
+      "sha256": "d142a55a904ced114694d86195397afd852771c505a0fb5e6fc1d0ad1a88e3c7"
     }
   ],
   "kind": "court-coverage",

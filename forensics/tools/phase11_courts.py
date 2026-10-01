@@ -123,6 +123,16 @@ COURTS: list[tuple[str, str]] = [
     # `X509_INFO` bundle, prints each writer's exact PEM bytes, and prints the queue coordinate of
     # every malformed-input refusal (truncated, wrong-header, bad-base64, wrong-container).
     ("RT-X509-PEM", "rt_x509_pem_probe.c"),
+    # "RT-X509-ACERT -- the Phase 11.3 attribute-certificate surface, driven."
+    # The `X509_ACERT`/`OSSL_ISSUER_SERIAL`/`OSSL_OBJECT_DIGEST_INFO` item groups, their
+    # accessors and setters, the `X509_ACERT` extension surface, the `x_ietfatt.c` syntax items and
+    # the `d2i`/`i2d`/print/lifecycle faces, over fixed DER fixtures.
+    ("RT-X509-ACERT", "rt_x509_acert_probe.c"),
+    # "RT-X509-REQ -- the Phase 11.4 request/CRL/mutator remainder, driven."
+    # The `X509_REQ` sign/verify/digest and `_fp`/`_bio` faces and its printers, the `X509_CRL`
+    # mutators and printers, `X509_to_X509_REQ`/`X509_REQ_to_X509`, the `X509_ACERT` sign/verify
+    # doors and the extension accessors, over fixed DER fixtures.
+    ("RT-X509-REQ", "rt_x509_req_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -130,13 +140,6 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-11-SUBPHASES.md` section 2's, one per work
 # subphase; `RT-X509` is 11.7's, over the units whose closure crosses into the landed strata.
 PENDING_COURTS: dict[str, str] = {
-    "RT-X509-ACERT": "11.3 -- the `X509_ACERT` item group and its accessors, setters and "
-                     "`X509_ACERT_verify` (`x509_acert.c`, `x509aset.c`, `x_ietfatt.c`, "
-                     "`t_acert.c`)",
-    "RT-X509-REQ": "11.4 -- the rest of `X509_REQ` (`x_crl.c`, `x_exten.c`, `t_*.c`): the "
-                   "11.4a units 11.4 landed (`x509_req.c`, `x509_set.c`, `x_req.c`) are driven "
-                   "by `RT-X509-STORE`, and what remains open is the `X509_CRL_set_*` mutators, "
-                   "the extension accessors and `X509_to_X509_REQ`",
     "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the "
                   "`GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, "
                   "`v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)",
