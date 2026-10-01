@@ -541,7 +541,7 @@
   "open_obligations": {
     "phase10": 0,
     "phase11": 335,
-    "phase22": 1,
+    "phase22": 0,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -578,7 +578,7 @@
     "2": "complete",
     "20": "not-started",
     "21": "not-started",
-    "22": "in-progress",
+    "22": "complete",
     "3": "complete",
     "4": "complete",
     "5": "complete",

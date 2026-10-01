@@ -4,8 +4,8 @@
     "counts": {
       "atlas_owned": 18,
       "deferred_to_later_phase": 0,
-      "implemented": 17,
-      "open_in_this_stratum": 1,
+      "implemented": 18,
+      "open_in_this_stratum": 0,
       "owned": 18,
       "received_by_handoff": 0
     },
@@ -27,16 +27,11 @@
       "22.13",
       "22.14",
       "22.15",
-      "22.16"
+      "22.16",
+      "22.17"
     ],
     "note": "`open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
-    "open": [
-      {
-        "artefact": "docs/PHASE-22-ATLAS-SEAL.md",
-        "plane": "The Phase-22 seal",
-        "subphase": "22.17"
-      }
-    ],
+    "open": [],
     "rule": "the stratum's working set is its compatibility planes, one per subphase of docs/PHASE-22-SUBPHASES.md, and a plane is implemented when the artefact it names exists on disk; this stratum owns no export, so its unit is a plane rather than a symbol",
     "unit": "compatibility plane"
   },
@@ -45,7 +40,7 @@
     {
       "name": "phase-22-plan",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "55a1ba6d7debcb2533d2a2178856318c7f99e47092d2e45eb68fc72f3de1c6b1"
+      "sha256": "79da72f3c941471c1c81a7fe7d17c250e621af45e17d08d95d055da5ac2b3627"
     }
   ],
   "kind": "phase22-obligations",

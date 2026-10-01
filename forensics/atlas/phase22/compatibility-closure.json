@@ -95609,10 +95609,7 @@
           "sym|xso_update_options@ssl/quic/quic_impl.c",
           "sym|yield_secret_cb@ssl/quic/quic_tls_api.c"
         ],
-        "unknown": [
-          "sym|_openssl_ascii2ebcdic",
-          "sym|_openssl_ebcdic2ascii"
-        ]
+        "unknown": []
       }
     },
     "counts": {
@@ -95650,7 +95647,7 @@
         "source-api": {
           "members": 25919,
           "reachable": 32921,
-          "unknown": 2
+          "unknown": 0
         }
       },
       "edge_kinds": {
@@ -95672,7 +95669,7 @@
       "root_members": 27495,
       "roots": 7,
       "roots_declared": 10,
-      "unknown_intersecting_roots": 2,
+      "unknown_intersecting_roots": 0,
       "unpopulated_families": [
         "dynamic-loading",
         "protocol",
@@ -137840,8 +137837,8 @@
       "sym|_nist_p_384_sqr@crypto/bn/bn_nist.c": "INTERNAL_UNREACHABLE_PROFILE",
       "sym|_nist_p_521@crypto/bn/bn_nist.c": "INTERNAL_UNREACHABLE_PROFILE",
       "sym|_nist_p_521_sqr@crypto/bn/bn_nist.c": "INTERNAL_UNREACHABLE_PROFILE",
-      "sym|_openssl_ascii2ebcdic": "UNKNOWN",
-      "sym|_openssl_ebcdic2ascii": "UNKNOWN",
+      "sym|_openssl_ascii2ebcdic": "AUTHORITY_BUG_BOUNDARY",
+      "sym|_openssl_ebcdic2ascii": "AUTHORITY_BUG_BOUNDARY",
       "sym|_openssl_os_toascii": "REQUIRED_COMPATIBILITY",
       "sym|_openssl_os_toebcdic": "REQUIRED_COMPATIBILITY",
       "sym|_ossl_get_avail_threads@crypto/thread/internal.c": "INTERNAL_UNREACHABLE_PROFILE",
@@ -388472,10 +388469,7 @@
       }
     },
     "sort_key": "roots by family; members sorted; edges sorted by (kind, src, dst); by_root reachable/unknown sorted; every list sorted",
-    "unknown_intersecting_root_keys": [
-      "sym|_openssl_ascii2ebcdic",
-      "sym|_openssl_ebcdic2ascii"
-    ],
+    "unknown_intersecting_root_keys": [],
     "unpopulated": [
       {
         "family": "runtime-behaviour",
@@ -392971,7 +392965,7 @@
     {
       "name": "reconciliation",
       "path": "forensics/atlas/phase22/reconciliation.json",
-      "sha256": "cbc4dde6292aa99c3895fac6c9a67a14ad2b4cc5219c62f636d15112a3382acc"
+      "sha256": "1515eb1ad09c1163e859e39e964aa5be15784b3a0d6946abfa18ed757b6f018b"
     },
     {
       "name": "binary-reference-graph",

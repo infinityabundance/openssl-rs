@@ -47,7 +47,7 @@ declared owner; this is that assignment.
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
-| 22 | Authority exhaustiveness and the whole-program compatibility atlas | `in-progress` | 0 | 18 | 17 | 0 | 1 |
+| 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
 
 ## Phase 3 — Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects
 
@@ -386,15 +386,14 @@ Courts: `all pass`, 2 court(s), **1458** authority observation(s) over 2 transcr
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
-* state: `in-progress`
-* blocking: 1 compatibility plane(s) remain unimplemented (docs/PHASE-22-SUBPHASES.md sections 5 and 7); the closure graph records 2 UNKNOWN residual(s) intersecting a declared compatibility root. `open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.
-* seal: none written yet (`unnamed`)
+* state: `complete`
+* seal: `docs/PHASE-22-ATLAS-SEAL.md`
 * ledger: `forensics/phase22-obligations.json`
 * atlas-owned: 18
 * owned working set: 18
-* implemented: 17
+* implemented: 18
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 1**
+* **open in this stratum: 0**
 
 Courts: `all pass`, 16 court(s), **0** authority observation(s) over 0 transcript court(s).
 

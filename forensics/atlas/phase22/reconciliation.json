@@ -3,7 +3,7 @@
   "body": {
     "counts": {
       "by_disposition": {
-        "AUTHORITY_BUG_BOUNDARY": 0,
+        "AUTHORITY_BUG_BOUNDARY": 2,
         "DEMO_ONLY": 88,
         "EXCLUDED_BY_BUILD_PROFILE": 220,
         "GENERATED_INTERMEDIATE": 8849,
@@ -13,7 +13,7 @@
         "REQUIRED_COMPATIBILITY": 31895,
         "TEST_ONLY": 1318,
         "TOOLING_ONLY": 9,
-        "UNKNOWN": 5912
+        "UNKNOWN": 5910
       },
       "by_owner_phase": {
         "10": 272,
@@ -76,8 +76,8 @@
         "POD_ONLY": 9182
       },
       "root_reachable": 31960,
-      "unknown": 5912,
-      "unknown_intersecting_roots": 2
+      "unknown": 5910,
+      "unknown_intersecting_roots": 0
     },
     "dispositions": [
       "REQUIRED_COMPATIBILITY",
@@ -459657,11 +459657,11 @@
         "s": "symbol"
       },
       {
-        "C": "SOURCE-API,UNRESOLVED",
-        "D": "UNKNOWN",
+        "C": "SOURCE-API",
+        "D": "AUTHORITY_BUG_BOUNDARY",
         "R": "source-api",
         "d": "function",
-        "e": "contradiction,public,vendor",
+        "e": "bug,public,vendor",
         "f": "include/openssl/ebcdic.h",
         "k": "sym|_openssl_ascii2ebcdic",
         "l": 34,
@@ -459671,11 +459671,11 @@
         "s": "symbol"
       },
       {
-        "C": "SOURCE-API,UNRESOLVED",
-        "D": "UNKNOWN",
+        "C": "SOURCE-API",
+        "D": "AUTHORITY_BUG_BOUNDARY",
         "R": "source-api",
         "d": "function",
-        "e": "contradiction,public,vendor",
+        "e": "bug,public,vendor",
         "f": "include/openssl/ebcdic.h",
         "k": "sym|_openssl_ebcdic2ascii",
         "l": 33,
@@ -1361180,7 +1361180,7 @@
       },
       {
         "class": "DECLARED_NOT_DEFINED",
-        "disposition": "UNKNOWN",
+        "disposition": "AUTHORITY_BUG_BOUNDARY",
         "key": "sym|_openssl_ascii2ebcdic",
         "planes": [
           "doxygen",
@@ -1361189,7 +1361189,7 @@
       },
       {
         "class": "DECLARED_NOT_DEFINED",
-        "disposition": "UNKNOWN",
+        "disposition": "AUTHORITY_BUG_BOUNDARY",
         "key": "sym|_openssl_ebcdic2ascii",
         "planes": [
           "doxygen",
