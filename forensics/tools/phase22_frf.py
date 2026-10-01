@@ -765,56 +765,64 @@ def fresh_22_2(jobs: int) -> dict:
 
 
 def fresh_22_3(jobs: int) -> dict:
-    """22.3 -- replay 22.1's captured invocations with Clang into scratch."""
-    return _fresh_tool("22.3", ptu, 1, lambda i, s: ["--jobs", str(jobs)], jobs)
+    """22.3 -- replay 22.1's captured invocations with Clang into scratch, twice."""
+    return _fresh_tool("22.3", ptu, 2, lambda i, s: ["--jobs", str(jobs)], jobs)
 
 
 def fresh_22_4(jobs: int) -> dict:
-    """22.4 -- replay the same captured invocations through Clang's preprocessor."""
-    return _fresh_tool("22.4", pcond, 1, lambda i, s: ["--jobs", str(jobs)], jobs)
+    """22.4 -- replay the same captured invocations through Clang's preprocessor, twice."""
+    return _fresh_tool("22.4", pcond, 2, lambda i, s: ["--jobs", str(jobs)], jobs)
 
 
 def fresh_22_1(jobs: int) -> dict:
-    """22.1 -- rebuild the raw execution capture in the original scratch, then normalise.
+    """22.1 -- rebuild the raw execution capture in the original scratch, then normalise, twice.
 
     The generated `Makefile` bakes the scratch directory into the `configure` argv and into
     each compile's `directory`, so a capture is only reproducible in the *same* scratch the
     authority used (`/tmp/phase22-recapture`); the build's own parallel log order does not
-    matter because the normaliser sorts by (source, output).
+    matter because the normaliser sorts by (source, output). `phase22_capture_build` removes and
+    re-`Configure`s that scratch on every invocation, so the second run is a second clean build
+    in the same directory rather than an incremental no-op.
     """
     plane = "22.1"
     committed_body = _body(pbc.OUT_REL)
     committed_hash = content_hash(committed_body)
     scratch = Path("/tmp/phase22-recapture")
-    log = Path("/tmp/phase22-frf-fresh-22_1.jsonl")
-    if log.exists():
-        log.unlink()
-    started = time.monotonic()
     import phase22_capture_build as pcapture  # local: only needed by the fresh path
-    saved_pcc_capture = pcapture.CAPTURE_REL
-    try:
-        pcapture.CAPTURE_REL = str(log)
-        pcapture.main(["--scratch", str(scratch), "--jobs", str(jobs)])
-    finally:
-        pcapture.CAPTURE_REL = saved_pcc_capture
-    # `build_body` is exactly what `pbc.main` runs; calling it directly keeps the fresh raw
-    # log, which lives outside the repository, out of the envelope's InputRef path handling.
     configdata = REPO_ROOT / pbc.BUILD_DIR_REL / "configdata.pm"
     producer = pbc.read_producer(configdata) if configdata.is_file() else "unknown"
-    body = pbc.build_body(pbc.load_raw(log), producer)
-    seconds = int(round(time.monotonic() - started))
-    digest = content_hash(body)
+    results = []
+    for i in range(2):
+        log = Path(f"/tmp/phase22-frf-fresh-22_1-run{i + 1}.jsonl")
+        if log.exists():
+            log.unlink()
+        started = time.monotonic()
+        saved_pcc_capture = pcapture.CAPTURE_REL
+        try:
+            pcapture.CAPTURE_REL = str(log)
+            pcapture.main(["--scratch", str(scratch), "--jobs", str(jobs)])
+        finally:
+            pcapture.CAPTURE_REL = saved_pcc_capture
+        # `build_body` is exactly what `pbc.main` runs; calling it directly keeps the fresh raw
+        # log, which lives outside the repository, out of the envelope's InputRef path handling.
+        body = pbc.build_body(pbc.load_raw(log), producer)
+        seconds = int(round(time.monotonic() - started))
+        digest = content_hash(body)
+        results.append({"run": i + 1, "body_sha256": digest, "seconds": seconds,
+                        "match_committed": digest == committed_hash})
+    matched = all(r["match_committed"] for r in results)
     return {
         "plane": plane,
-        "status": "verified" if digest == committed_hash else "mismatch",
+        "status": "verified" if matched else "mismatch",
         "method": (f"rebuild the execution capture with the transparent compiler wrapper in "
                    f"a clean scratch, normalise it with phase22_build_commands, hash the body, "
                    f"and compare to the committed artefact"),
-        "runs": [{"run": 1, "body_sha256": digest, "seconds": seconds,
-                  "match_committed": digest == committed_hash}],
+        "runs": results,
         "committed_body_sha256": committed_hash,
-        "seconds": seconds,
-        "note": "single regeneration (the capture rebuild is the expensive half)",
+        "seconds": sum(r["seconds"] for r in results),
+        "note": ("2 fresh regenerations; REQUIRED: every run equals the committed body"
+                 if matched else
+                 "2 fresh regenerations; a run did NOT equal the committed body"),
     }
 
 

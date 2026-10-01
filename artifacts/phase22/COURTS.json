@@ -105,10 +105,10 @@
           "drop-root-family"
         ],
         "observations": 21,
-        "reachable_entities": 35436,
+        "reachable_entities": 35432,
         "root_families": 7,
         "root_members": 27495,
-        "summary": "7 root families, 27495 members, 35436 reachable, 0 unknown-in-roots, x509 satisfied=True",
+        "summary": "7 root families, 27495 members, 35432 reachable, 0 unknown-in-roots, x509 satisfied=True",
         "unknown_intersecting_roots": 0,
         "verdict": "pass",
         "x509_satisfied": true
@@ -287,8 +287,8 @@
       },
       {
         "artefact": "forensics/atlas/phase22/gemel-checkpoint.json",
-        "census_entities": 110382,
-        "census_residuals": 75227,
+        "census_entities": 98753,
+        "census_residuals": 62936,
         "court": "RT-PHASE22-GEMEL",
         "failures": [],
         "mutations": [
@@ -302,14 +302,14 @@
         ],
         "obligations": 5,
         "observations": 21,
-        "phase11_implemented": 1132,
-        "phase11_open": 335,
+        "phase11_implemented": 1319,
+        "phase11_open": 148,
         "planes_bound": 16,
-        "regenerated_changed_outputs": 6,
-        "regenerated_count_deltas": 7,
-        "summary": "16 plane hashes, 110382 entities, 5910 UNKNOWN named, 5 proposed obligations, regeneration changed 6/16 outputs with 7 count deltas",
+        "regenerated_changed_outputs": 1,
+        "regenerated_count_deltas": 5,
+        "summary": "16 plane hashes, 98753 entities, 167 UNKNOWN named, 5 proposed obligations, regeneration changed 1/16 outputs with 5 count deltas",
         "unknown_intersecting_roots": 0,
-        "unknown_total": 5910,
+        "unknown_total": 167,
         "verdict": "pass",
         "x509_satisfied": true
       },
@@ -375,9 +375,9 @@
       },
       {
         "artefact": "forensics/atlas/phase22/pod-contract.json",
-        "claims": 15044,
+        "claims": 15045,
         "court": "RT-PHASE22-POD",
-        "disagreements": 2292,
+        "disagreements": 2293,
         "failures": [],
         "mutations": [
           "delete-name-alias",
@@ -397,27 +397,28 @@
         ],
         "observations": 32,
         "pages": 903,
-        "summary": "903 pages, 15044 claims, 2292 disagreements",
+        "summary": "903 pages, 15045 claims, 2293 disagreements",
         "verdict": "pass"
       },
       {
         "artefact": "forensics/atlas/phase22/reconciliation.json",
         "court": "RT-PHASE22-RECONCILE",
-        "entities": 110382,
+        "entities": 98753,
         "failures": [],
         "joins": 16,
         "mutations": [
           "round-trip",
+          "pod-identity",
           "add-one-plane-entity",
           "move-disposition",
           "add-contradiction",
           "add-unknown-root",
           "remove-plane"
         ],
-        "observations": 28,
-        "residuals": 75227,
-        "summary": "110382 entities, 75227 residuals, 5910 unknown, 0 unknown-in-roots",
-        "unknown": 5910,
+        "observations": 30,
+        "residuals": 62936,
+        "summary": "98753 entities, 62936 residuals, 167 unknown, 0 unknown-in-roots",
+        "unknown": 167,
         "unknown_intersecting_roots": 0,
         "verdict": "pass"
       },
@@ -473,7 +474,7 @@
     {
       "name": "phase-22-plan",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "79da72f3c941471c1c81a7fe7d17c250e621af45e17d08d95d055da5ac2b3627"
+      "sha256": "9c5bff3c85e95c206bc39ccdf0d000e0ca36115211bba3d4fdad65e3650dad9a"
     },
     {
       "name": "phase22_binary_graph",
@@ -488,7 +489,7 @@
     {
       "name": "phase22_closure",
       "path": "forensics/atlas/phase22/compatibility-closure.json",
-      "sha256": "db0690b7f0dc47af0409954cf16c60cdf73a343ba91665e367731b9a406eca0d"
+      "sha256": "58734faebbd0b99bfdd612a0b799c1892eb2bcf8f0288ddefc9c97917d1183a6"
     },
     {
       "name": "phase22_conditional",
@@ -498,7 +499,7 @@
     {
       "name": "phase22_config",
       "path": "forensics/atlas/phase22/config-surface.json",
-      "sha256": "bbdca8b5812c5a6027f0ad8df6bce1826a85afa7da8fe6a69b4a760799438d1d"
+      "sha256": "432020454908e7bfb40d8df7e4cdd7fdb3a0e0ef988364d1bc3ed32c003bede8"
     },
     {
       "name": "phase22_crosswalk",
@@ -518,12 +519,12 @@
     {
       "name": "phase22_frf",
       "path": "forensics/atlas/phase22/frf-challenges.json",
-      "sha256": "d9d7fdf41c5ad5e9bcbc9ffb48fe6723a5c376f13783b8f5838f2d6b5fb07d96"
+      "sha256": "7c4006d863224456e63df4475fef487f95989a070b86f2a4aaced622d7f2b413"
     },
     {
       "name": "phase22_gemel",
       "path": "forensics/atlas/phase22/gemel-checkpoint.json",
-      "sha256": "edb60f2ef1d7d198a478ee9d26b7c5d5c1855ffa5e2422444d1b90b1cdb83d06"
+      "sha256": "5942d9ac609df20a2bf602e704f6bc31254980a9c57d171ab39e0e00756ca9ce"
     },
     {
       "name": "phase22_genealogy",
@@ -538,12 +539,12 @@
     {
       "name": "phase22_pod",
       "path": "forensics/atlas/phase22/pod-contract.json",
-      "sha256": "655bc96f6ec085f0ceec17630b7d06c9efa87e78487c87d91c08674656f43e10"
+      "sha256": "895ba11713e0bafc2b2bcdcf49e02ccf899e802d66c1885bf360d00af5914744"
     },
     {
       "name": "phase22_reconciliation",
       "path": "forensics/atlas/phase22/reconciliation.json",
-      "sha256": "1515eb1ad09c1163e859e39e964aa5be15784b3a0d6946abfa18ed757b6f018b"
+      "sha256": "a9d17ba2e4602221d244701d002004d04218977021745bcc83cba1220cfffcba"
     },
     {
       "name": "phase22_tu_ast",

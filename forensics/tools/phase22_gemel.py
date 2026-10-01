@@ -723,26 +723,34 @@ def court_gemel(body: dict) -> dict:
                    got["counts"]["unknown_by_class"][cls]
                    == counts["unknown_by_class"][cls] + 1))
 
-    # 4. move a plane between open and implemented.
+    # 4. move a plane between implemented and open. The direction is chosen from the ledger so the
+    #    mutation is always available: once every plane is complete there is no open plane to
+    #    close, so an implemented plane is reopened and the derivation must move the other way.
+    #    (Depending on an open plane being present made this check silently hostage to a stale
+    #    committed checkpoint.)
     if src["plane_ledger"]["open"]:
-        moved = src["plane_ledger"]["open"][0]
-        probe = copy.deepcopy(src)
-        probe["plane_ledger"]["open"] = [
-            x for x in probe["plane_ledger"]["open"] if x != moved]
-        probe["plane_ledger"]["implemented"] = sorted(
-            set(probe["plane_ledger"]["implemented"]) | {moved})
-        got = build_checkpoint(probe)
-        checks.append(("move-ledger-state: implemented rises by one",
-                       got["counts"]["plane_ledger_implemented"]
-                       == counts["plane_ledger_implemented"] + 1))
-        checks.append(("move-ledger-state: open falls by one",
-                       got["counts"]["plane_ledger_open"]
-                       == counts["plane_ledger_open"] - 1))
-        checks.append(("move-ledger-state: the plane changed lists",
-                       moved in got["plane_ledger"]["implemented"]
-                       and moved not in got["plane_ledger"]["open"]))
+        moved = sorted(src["plane_ledger"]["open"])[0]
+        new_open = [x for x in src["plane_ledger"]["open"] if x != moved]
+        new_impl = sorted(set(src["plane_ledger"]["implemented"]) | {moved})
+        expect_impl = counts["plane_ledger_implemented"] + 1
+        expect_open = counts["plane_ledger_open"] - 1
     else:
-        checks.append(("move-ledger-state: an open plane was found", False))
+        moved = sorted(src["plane_ledger"]["implemented"])[0]
+        new_open = sorted(set(src["plane_ledger"]["open"]) | {moved})
+        new_impl = [x for x in src["plane_ledger"]["implemented"] if x != moved]
+        expect_impl = counts["plane_ledger_implemented"] - 1
+        expect_open = counts["plane_ledger_open"] + 1
+    probe = copy.deepcopy(src)
+    probe["plane_ledger"]["open"] = new_open
+    probe["plane_ledger"]["implemented"] = new_impl
+    got = build_checkpoint(probe)
+    checks.append(("move-ledger-state: implemented moved by one",
+                   got["counts"]["plane_ledger_implemented"] == expect_impl))
+    checks.append(("move-ledger-state: open moved by one",
+                   got["counts"]["plane_ledger_open"] == expect_open))
+    checks.append(("move-ledger-state: the plane's list membership followed",
+                   (moved in got["plane_ledger"]["implemented"]) == (moved in new_impl)
+                   and (moved in got["plane_ledger"]["open"]) == (moved in new_open)))
 
     # 5. add a proposed obligation.
     probe = copy.deepcopy(src)

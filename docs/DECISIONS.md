@@ -34308,3 +34308,64 @@ open; `docs_consistency.py` binds that clause to the ledger, so both move into t
 
 Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,319/1,467 with 148 open; 129
 courts and 47,876 observations.
+
+## D498 -- the whole-program join resolves a POD claim by its identity, and the `UNKNOWN` census
+## collapses from 5,912 to 167
+
+22.12 is the plane where every independent measurement becomes one truth model, so a bug there
+weighs more than its size. It had one, and it was an identity bug: `claim.get("normalized") or
+claim.get("subject")` resolved a POD claim by its *declaration* whenever a SYNOPSIS declaration had
+one. `subject` is the identity; `normalized` is the declaration text. Looking up
+`int EVP_FOO(EVP_CTX *ctx)` as a name made thousands of declarations read as missing symbols, which
+is why 22.11's dedicated oracle said 871 and this plane said 5,910.
+
+### Three projection gaps compounded the identity bug
+* `Universe.name_index` was built **once**, right after the source-semantic pass, so a name whose
+  only witness was the binary, the dispatch graph, the Phase-1 atlas or 22.13's crosswalk could
+  never resolve. `add` now maintains it, so identity is established by whatever plane establishes
+  it and the join, which runs last, sees all of them.
+* The Phase-1 projection read `functions`/`variables`/`macros`/`typedefs`/`structs` and omitted
+  `enums.json`, so three documented enum names (`BIO_hostserv_priorities`, `BIO_lookup_type`,
+  `UI_string_types`) came out missing here while 22.11 found them in the header/API atlas. The
+  projection reads enums too.
+* **Only a man3 page names a symbol.** Every section's NAME entry was projected into symbol space,
+  inventing obligations for man1 commands, man5 config files and man7 concepts. `mac`, `rand`,
+  `rsa` and `ssl` -- provider pages -- became `UNKNOWN` entities reachable from an X.509 root and
+  closed the gate. The projection is scoped to section 3, which is what 22.11's own
+  reverse-direction measurement already did.
+
+### What the fix changes, and the invariant that now guards it
+The join resolves on `subject`; a residual is a name that no plane **other than the POD projection**
+saw (so an ambiguous documented name two statics share is in the atlas and is joined). Entities fall
+110,382 -> **98,753**, residuals 75,227 -> **62,936**, and `UNKNOWN` 5,912 -> **167**. The 167 are man3
+template names no implementation defines -- `PEM_read_bio_TYPE`, `OSSL_PARAM_get_TYPE`, `TYPE_new` --
+which are genuinely documented and genuinely absent, and they are exactly what the plane is for.
+
+The review's cross-plane invariant is enforced rather than stated: `pod_cross_plane` records how many
+of 22.11's missing names this wider join resolves (382) and, crucially, every name it calls missing
+that 22.11 does **not** (`only_here_unexplained`). That list is empty, and `main` fails the run if it
+is ever non-empty, so a projection gap cannot hide behind a plausible total. `RT-PHASE22-RECONCILE`
+carries a declaration-keyed mutation as a sensitivity case, and its self-test requires the court to
+name that specific check rather than merely fail.
+
+### Two further defects the same pass exposed
+22.11's `parse_name` joined the whole NAME block, so `=for openssl names: openssl-cmds` -- a POD
+directive that *declares* names -- was captured as one name. It now takes the directive's argument
+list as names and drops any other directive line. And `RT-PHASE22-GEMEL`'s `move-ledger-state`
+mutation required an open plane, which made it hostage to the committed checkpoint: the checkpoint
+was stale at 17/18 since the 22.17 seal, and regenerating it at 18/18 exposed that the mutation had
+only ever run one way. It now takes its direction from the ledger.
+
+### The regeneration criterion is literal, not narrowed
+The review offered narrowing the plan's "two clean regenerations are byte-identical" or making it
+true. 22.1, 22.3 and 22.4 join 22.2 in regenerating twice into a clean scratch, and the FRF record
+shows four planes verified with two runs each (86s / 50s / 268s / 32s), every run equal to the
+committed body. `phase22_capture_build` re-`Configure`s its scratch on every invocation, so the
+second 22.1 run is a second clean build and not an incremental no-op.
+
+`docs/PHASE-22-ATLAS-SEAL.md` is corrected and resealed with the new figures and with the correction
+recorded beside them; `docs/PHASE-22-SUBPHASES.md` states the criterion precisely. The gate reopens:
+`phase22_x509_gate.py` reports the X.509 slice satisfied, `unknown_intersecting_roots` is 0, and
+Phase 11.2 may proceed.
+
+Verified: `PIPELINE OK` exit 0 on repeated runs; 129 courts and 47,876 observations.

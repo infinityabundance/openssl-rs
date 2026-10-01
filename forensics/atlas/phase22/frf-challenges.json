@@ -297,17 +297,23 @@
         "capture_scratch_clean": true,
         "committed_body_sha256": "5b08ecabb94b05c1cf0dcde401b9332f24c919d0e46913f0d6be2f972a23cbe1",
         "method": "rebuild the execution capture with the transparent compiler wrapper in a clean scratch, normalise it with phase22_build_commands, hash the body, and compare to the committed artefact",
-        "note": "single regeneration (the capture rebuild is the expensive half)",
+        "note": "2 fresh regenerations; REQUIRED: every run equals the committed body",
         "plane": "22.1",
         "runs": [
           {
             "body_sha256": "5b08ecabb94b05c1cf0dcde401b9332f24c919d0e46913f0d6be2f972a23cbe1",
             "match_committed": true,
             "run": 1,
-            "seconds": 44
+            "seconds": 43
+          },
+          {
+            "body_sha256": "5b08ecabb94b05c1cf0dcde401b9332f24c919d0e46913f0d6be2f972a23cbe1",
+            "match_committed": true,
+            "run": 2,
+            "seconds": 43
           }
         ],
-        "seconds": 44,
+        "seconds": 86,
         "status": "verified"
       },
       {
@@ -339,7 +345,7 @@
         "capture_scratch_clean": true,
         "committed_body_sha256": "6be58c6515bd40cb3637822d317f45574b71748db54049d3d20fb0a4696ca7dd",
         "method": "regenerate the raw input in a clean out-of-tree scratch with the pinned tool, run phase22_tu_ast over it, hash the normalised body, and compare to the committed artefact",
-        "note": "1 fresh regeneration(s); REQUIRED: every run equals the committed body",
+        "note": "2 fresh regeneration(s); REQUIRED: every run equals the committed body",
         "plane": "22.3",
         "runs": [
           {
@@ -347,9 +353,15 @@
             "match_committed": true,
             "run": 1,
             "seconds": 127
+          },
+          {
+            "body_sha256": "6be58c6515bd40cb3637822d317f45574b71748db54049d3d20fb0a4696ca7dd",
+            "match_committed": true,
+            "run": 2,
+            "seconds": 141
           }
         ],
-        "seconds": 127,
+        "seconds": 268,
         "status": "verified"
       },
       {
@@ -357,7 +369,7 @@
         "capture_scratch_clean": true,
         "committed_body_sha256": "dfe386e66c133525dd588132467f77324b459e780bb9c4bcff5554e809dfd876",
         "method": "regenerate the raw input in a clean out-of-tree scratch with the pinned tool, run phase22_conditional over it, hash the normalised body, and compare to the committed artefact",
-        "note": "1 fresh regeneration(s); REQUIRED: every run equals the committed body",
+        "note": "2 fresh regeneration(s); REQUIRED: every run equals the committed body",
         "plane": "22.4",
         "runs": [
           {
@@ -365,9 +377,15 @@
             "match_committed": true,
             "run": 1,
             "seconds": 16
+          },
+          {
+            "body_sha256": "dfe386e66c133525dd588132467f77324b459e780bb9c4bcff5554e809dfd876",
+            "match_committed": true,
+            "run": 2,
+            "seconds": 16
           }
         ],
-        "seconds": 16,
+        "seconds": 32,
         "status": "verified"
       }
     ],
@@ -507,7 +525,7 @@
     {
       "name": "phase-22-plan",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "79da72f3c941471c1c81a7fe7d17c250e621af45e17d08d95d055da5ac2b3627"
+      "sha256": "9c5bff3c85e95c206bc39ccdf0d000e0ca36115211bba3d4fdad65e3650dad9a"
     },
     {
       "name": "plane-22.2",
@@ -557,7 +575,7 @@
     {
       "name": "plane-22.11",
       "path": "forensics/atlas/phase22/pod-contract.json",
-      "sha256": "655bc96f6ec085f0ceec17630b7d06c9efa87e78487c87d91c08674656f43e10"
+      "sha256": "895ba11713e0bafc2b2bcdcf49e02ccf899e802d66c1885bf360d00af5914744"
     },
     {
       "name": "plane-22.13",

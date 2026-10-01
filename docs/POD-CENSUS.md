@@ -7,7 +7,7 @@ Generated from `forensics/atlas/phase22/pod-contract.json` by
 
 - manual pages: **903** (man1 62, man3 679, man5 3, man7 159)
 - generated from a `.pod.in` template: **56** (resolved the way the build does)
-- `NAME` entries: **6562**
+- `NAME` entries: **6563**
 - SYNOPSIS declarations (man3): **4960**
 - man1 command pages: **59**, documented CLI options: **2182**
 - environment variables: **53**
@@ -19,7 +19,7 @@ Generated from `forensics/atlas/phase22/pod-contract.json` by
 
 ## The claim graph
 
-- claims: **15044**
+- claims: **15045**
 
 | kind | class | claims |
 |---|---|---|
@@ -29,7 +29,7 @@ Generated from `forensics/atlas/phase22/pod-contract.json` by
 | DEFAULT_PATH | EXECUTABLE_CLAIM | 3 |
 | DEPRECATION | EXECUTABLE_CLAIM | 58 |
 | ENV_VAR | EXECUTABLE_CLAIM | 53 |
-| NAME_ENTRY | STRUCTURAL | 6562 |
+| NAME_ENTRY | STRUCTURAL | 6563 |
 | PROVIDER_ALGORITHM | EXECUTABLE_CLAIM | 91 |
 | RETURN_VALUE | SEMANTIC_TEXT | 172 |
 | SYNOPSIS_DECL | STRUCTURAL | 4954 |
@@ -39,7 +39,7 @@ Generated from `forensics/atlas/phase22/pod-contract.json` by
 | EXECUTABLE_CLAIM | 2453 |
 | EXPLANATORY_ONLY | 903 |
 | SEMANTIC_TEXT | 172 |
-| STRUCTURAL | 11516 |
+| STRUCTURAL | 11517 |
 
 ## Testability
 
@@ -50,7 +50,7 @@ Generated from `forensics/atlas/phase22/pod-contract.json` by
 | DEFAULT_PATH | config-surface(default_paths) | 3 |
 | DEPRECATION | num(DEPRECATEDIN)+tu-ast(attributes) | 58 |
 | ENV_VAR | config-surface | 53 |
-| NAME_ENTRY | header-atlas+num+tu-ast | 6562 |
+| NAME_ENTRY | header-atlas+num+tu-ast | 6563 |
 | PROVIDER_ALGORITHM | provider-algorithms | 91 |
 | SYNOPSIS_DECL | header-atlas+num+tu-ast | 4954 |
 
@@ -61,7 +61,7 @@ Generated from `forensics/atlas/phase22/pod-contract.json` by
 
 ## The reconciliation
 
-- disagreements: **2292**
+- disagreements: **2293**
 - man3 `NAME` entries documented: **6202**
 - `.num` ABI names in the admitted profile: **6538**
 - installed manpage files (22.8's manifest): **903** plus **5660** alias symlinks
@@ -75,7 +75,7 @@ Generated from `forensics/atlas/phase22/pod-contract.json` by
 | POD_DEFAULT_PATH_MISMATCH | 1 |
 | POD_DEPRECATION_MISMATCH | 21 |
 | POD_ENVIRONMENT_VARIABLE_MISSING | 8 |
-| POD_NAME_NOT_IN_ATLAS | 871 |
+| POD_NAME_NOT_IN_ATLAS | 872 |
 | POD_PROVIDER_ALGORITHM_MISSING | 4 |
 | RUNTIME_CLI_OPTION_UNDOCUMENTED | 1 |
 
