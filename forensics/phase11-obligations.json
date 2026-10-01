@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1455,
       "deferred_to_later_phase": 0,
-      "implemented": 1429,
-      "open_in_this_stratum": 38,
+      "implemented": 1446,
+      "open_in_this_stratum": 21,
       "owned": 1467,
       "received_by_handoff": 12
     },
@@ -141,6 +141,7 @@
       "ASIdentifiers_free",
       "ASIdentifiers_it",
       "ASIdentifiers_new",
+      "ASN1_add_stable_module",
       "ASN1_digest",
       "ASN1_generate_nconf",
       "ASN1_generate_v3",
@@ -180,8 +181,11 @@
       "EDIPARTYNAME_free",
       "EDIPARTYNAME_it",
       "EDIPARTYNAME_new",
+      "EVP_CIPHER_CTX_get_algor",
       "EVP_PKCS82PKEY",
+      "EVP_PKCS82PKEY_ex",
       "EVP_PKEY2PKCS8",
+      "EVP_PKEY_CTX_get_algor",
       "EVP_PKEY_add1_attr",
       "EVP_PKEY_add1_attr_by_NID",
       "EVP_PKEY_add1_attr_by_OBJ",
@@ -255,6 +259,7 @@
       "NETSCAPE_SPKI_get_pubkey",
       "NETSCAPE_SPKI_it",
       "NETSCAPE_SPKI_new",
+      "NETSCAPE_SPKI_print",
       "NETSCAPE_SPKI_set_pubkey",
       "NETSCAPE_SPKI_sign",
       "NETSCAPE_SPKI_verify",
@@ -405,6 +410,7 @@
       "PBMAC1PARAM_free",
       "PBMAC1PARAM_it",
       "PBMAC1PARAM_new",
+      "PBMAC1_get1_pbkdf2_param",
       "PEM_X509_INFO_read",
       "PEM_X509_INFO_read_bio",
       "PEM_X509_INFO_read_bio_ex",
@@ -471,6 +477,7 @@
       "PKCS5_pbe2_set",
       "PKCS5_pbe2_set_iv",
       "PKCS5_pbe2_set_iv_ex",
+      "PKCS5_pbe2_set_scrypt",
       "PKCS5_pbe_set",
       "PKCS5_pbe_set0_algor",
       "PKCS5_pbe_set0_algor_ex",
@@ -521,6 +528,9 @@
       "PROXY_POLICY_free",
       "PROXY_POLICY_it",
       "PROXY_POLICY_new",
+      "SCRYPT_PARAMS_free",
+      "SCRYPT_PARAMS_it",
+      "SCRYPT_PARAMS_new",
       "SXNETID_free",
       "SXNETID_it",
       "SXNETID_new",
@@ -616,6 +626,8 @@
       "X509_ACERT_get_version",
       "X509_ACERT_it",
       "X509_ACERT_new",
+      "X509_ACERT_print",
+      "X509_ACERT_print_ex",
       "X509_ACERT_set0_holder_baseCertId",
       "X509_ACERT_set0_holder_digest",
       "X509_ACERT_set0_holder_entityName",
@@ -668,6 +680,7 @@
       "X509_CRL_check_suiteb",
       "X509_CRL_cmp",
       "X509_CRL_delete_ext",
+      "X509_CRL_diff",
       "X509_CRL_digest",
       "X509_CRL_dup",
       "X509_CRL_free",
@@ -1161,6 +1174,7 @@
       "X509_new",
       "X509_new_ex",
       "X509_ocspid_print",
+      "X509_policy_check",
       "X509_policy_level_get0_node",
       "X509_policy_level_node_count",
       "X509_policy_node_get0_parent",
@@ -1199,6 +1213,7 @@
       "X509_supported_extension",
       "X509_time_adj",
       "X509_time_adj_ex",
+      "X509_to_X509_REQ",
       "X509_trust_clear",
       "X509_trusted",
       "X509_up_ref",
@@ -1351,6 +1366,7 @@
       "d2i_RSA_PUBKEY",
       "d2i_RSA_PUBKEY_bio",
       "d2i_RSA_PUBKEY_fp",
+      "d2i_SCRYPT_PARAMS",
       "d2i_SXNET",
       "d2i_SXNETID",
       "d2i_USERNOTICE",
@@ -1489,6 +1505,7 @@
       "i2d_RSA_PUBKEY",
       "i2d_RSA_PUBKEY_bio",
       "i2d_RSA_PUBKEY_fp",
+      "i2d_SCRYPT_PARAMS",
       "i2d_SXNET",
       "i2d_SXNETID",
       "i2d_USERNOTICE",
@@ -1547,84 +1564,6 @@
     "module_overrides": [],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation except Phase 10, this ledger does not start with the whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed before activation, and the two hand-offs Phase 5 discharged, are reported as `implemented` because `implemented-surface.json` says so. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum owns no provider registration row (`forensics/atlas/provider-algorithms.json` records rows for owning phases 8, Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-SUBPHASES.md section 4 decides when the stratum may be called complete.",
     "open": [
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/asn_mstbl.rs",
-        "received_from_phase": 5,
-        "symbol": "ASN1_add_stable_module"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/evp_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_CIPHER_CTX_get_algor"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/evp/evp_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "EVP_PKCS82PKEY_ex"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/evp_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_CTX_get_algor"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/t_spki.rs",
-        "received_from_phase": null,
-        "symbol": "NETSCAPE_SPKI_print"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/pkcs12/p12_mutl.rs",
-        "received_from_phase": null,
-        "symbol": "PBMAC1_get1_pbkdf2_param"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/p5_scrypt.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS5_pbe2_set_scrypt"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/p5_scrypt.rs",
-        "received_from_phase": null,
-        "symbol": "SCRYPT_PARAMS_free"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/p5_scrypt.rs",
-        "received_from_phase": null,
-        "symbol": "SCRYPT_PARAMS_it"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/p5_scrypt.rs",
-        "received_from_phase": null,
-        "symbol": "SCRYPT_PARAMS_new"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/t_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_print"
-      },
-      {
-        "declaring_header": "x509_acert.h",
-        "module": "src/x509/t_acert.rs",
-        "received_from_phase": null,
-        "symbol": "X509_ACERT_print_ex"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_diff"
-      },
       {
         "declaring_header": "x509.h",
         "module": "src/x509/x_all.rs",
@@ -1747,33 +1686,9 @@
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/x509/pcy_tree.rs",
-        "received_from_phase": null,
-        "symbol": "X509_policy_check"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_req.rs",
-        "received_from_phase": null,
-        "symbol": "X509_to_X509_REQ"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_verify_cert"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/p5_scrypt.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_SCRYPT_PARAMS"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/asn1/p5_scrypt.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_SCRYPT_PARAMS"
       }
     ],
     "owned_by_header": {
@@ -1928,7 +1843,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "3db09eb6d59cb65713a7dcf8e8b0616d03ca9d7eb2a7747f3284ff85771de119"
+      "sha256": "7875eaff965fbebe196f33557fc68a7764e3fa17b2ae5fe29a7e02bb6c5d230f"
     },
     {
       "name": "phase5-obligations",
@@ -1938,7 +1853,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "741ab3f4072a1f7136e7b383947adfeba69142bcbe9f0d47f2ad0677f55a16b4"
+      "sha256": "6d1838b52935216b6d8badbf0f16262cda8f1816549d3386ff3a1d2eeafb94b6"
     }
   ],
   "kind": "phase11-obligations",

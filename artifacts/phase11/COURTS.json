@@ -41,9 +41,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 160,
+        "authority_observations": 197,
         "candidate_exit_code": 0,
-        "candidate_observations": 160,
+        "candidate_observations": 197,
         "candidate_stderr_tail": [],
         "court": "RT-X509-VERIFY",
         "crashed": false,
@@ -75,9 +75,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 168,
+        "authority_observations": 178,
         "candidate_exit_code": 0,
-        "candidate_observations": 168,
+        "candidate_observations": 178,
         "candidate_stderr_tail": [],
         "court": "RT-X509-ACERT",
         "crashed": false,
@@ -92,9 +92,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 67,
+        "authority_observations": 76,
         "candidate_exit_code": 0,
-        "candidate_observations": 67,
+        "candidate_observations": 76,
         "candidate_stderr_tail": [],
         "court": "RT-X509-REQ",
         "crashed": false,
@@ -106,16 +106,32 @@
           "candidate": "artifacts/phase11/probes/rt_x509_req_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 52,
+        "candidate_exit_code": 0,
+        "candidate_observations": 52,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_misc_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_misc_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_misc_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
-      "RT-X509": "11.7 -- the remaining shared units whose closure crosses into the landed strata (`x_all.c`, `p5_scrypt.c`, `nsseq.c`, `x509_def.c`, `x_info.c`, `x_pkey.c`, `evp_lib.c`, `evp_pkey.c`, `t_spki.c`, `p12_mutl.c`, `asn_mstbl.c`)",
       "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the `GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, `v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)"
     },
     "summary": {
       "fail": 0,
-      "pass": 6,
-      "total": 6
+      "pass": 7,
+      "total": 7
     }
   },
   "generator": "forensics/tools/phase11_courts.py",
@@ -138,7 +154,7 @@
     {
       "name": "probe",
       "path": "courts/phase11/rt_x509_verify_probe.c",
-      "sha256": "9509f4f884cb3eb065d199468e6564ad2948d4f2b807cd7528c3fb97bd94bf01"
+      "sha256": "da86c77975013811a0bb1f6ca6ce355fd94c2066a9f0216cdefc54bff1036cc5"
     },
     {
       "name": "probe",
@@ -148,12 +164,17 @@
     {
       "name": "probe",
       "path": "courts/phase11/rt_x509_acert_probe.c",
-      "sha256": "9563505cf95857665ee4bb7b4f3a8a81f995dd90551f2328451a27f8518ad960"
+      "sha256": "fb8ac40130c74db77f414b2b0f1295d7aa04e2c5e0c12f8e7db383f146eb8cbb"
     },
     {
       "name": "probe",
       "path": "courts/phase11/rt_x509_req_probe.c",
-      "sha256": "8e98d9efb867e6ef02ba11c0db78f13f82208566b67b18d414aeacc325a0937d"
+      "sha256": "cdcb90f11f5930f519a54191d5b596189a4c9b55d2f70b5c673dd4073dc1cc22"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_misc_probe.c",
+      "sha256": "6ae7b564e13659ad6f69d785473d46a410d5123fd819132c18e098da2fee7baf"
     }
   ],
   "kind": "phase11-courts",

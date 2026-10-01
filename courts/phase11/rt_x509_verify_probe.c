@@ -26,6 +26,14 @@
  * malformed field, `NO_CHECK_TIME`/`USE_CHECK_TIME`), the whole parameter and
  * context surface the decision would read and report, and the two landed arms above.
  *
+ * Two further 11.2 exports have landed in this slice and are driven below: the delta-CRL builder
+ * `X509_CRL_diff` (its `X509_CRL_set1_nextUpdate` blocker is discharged) and the policy-tree entry
+ * point `X509_policy_check` with its whole `pcy_*` graph. Their arms are the ones the public API
+ * can reach: `X509_CRL_diff` can only be driven into its missing-CRL-number refusal (a fresh CRL
+ * carries no `crl_number`, which only the withheld `crl_cb` decode fills), and `X509_policy_check`
+ * is driven over the trust-anchor, policy-free and real-CertificatePolicies stacks, so its
+ * `tree_init`/`tree_evaluate`/`tree_calculate_*` graph runs.
+ *
  * No wall clock
  * -------------
  * Every time comparison is against a time set explicitly through
@@ -47,6 +55,7 @@
 #include <time.h>
 
 #include <openssl/asn1.h>
+#include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
@@ -54,6 +63,25 @@
 #include <openssl/x509_vfy.h>
 
 #define PTR(p) ((p) != NULL ? "nonnull" : "null")
+
+/* The first error on the queue as `lib.reason`, then the queue is cleared. */
+static void out_err(const char *key)
+{
+    unsigned long e = ERR_get_error();
+
+    if (e == 0) {
+        printf("%s=none\n", key);
+        return;
+    }
+    printf("%s=%d.%d\n", key, ERR_GET_LIB(e), ERR_GET_REASON(e));
+    ERR_clear_error();
+}
+
+/* A nonnull/null observation. */
+static void out_ptr(const char *key, const void *p)
+{
+    printf("%s=%s\n", key, p != NULL ? "nonnull" : "null");
+}
 
 /* 2024-01-01T00:00:00Z, the reference instant every comparison below is anchored to. */
 static const time_t REF = (time_t)1704067200;
@@ -607,6 +635,234 @@ static void path_surface(void)
     X509_STORE_CTX_free(ctx);
 }
 
+/*
+ * The delta-CRL builder, `X509_CRL_diff` (`x509_vfy.c:2403-2522`).
+ *
+ * A CRL's `crl_number` and `base_crl_number` are filled only by `crl_cb`'s `ASN1_OP_D2I_POST`
+ * decode and no public setter reaches them, so the only arm the public API can drive is the
+ * missing-CRL-number refusal: both CRLs are fresh, so the already-delta guard is passed and the
+ * CRL-number guard raises `X509_R_NO_CRL_NUMBER`. The return and the queued reason are the
+ * observations.
+ */
+static void crl_diff_surface(void)
+{
+    X509_CRL *base = X509_CRL_new();
+    X509_CRL *newer = X509_CRL_new();
+
+    if (base == NULL || newer == NULL) {
+        printf("crl_diff.alloc=0\n");
+        return;
+    }
+    printf("crl_diff.alloc=1\n");
+
+    /* Start from an empty queue so the queued reason is this call's own. */
+    ERR_clear_error();
+    out_ptr("crl_diff.no_number", X509_CRL_diff(base, newer, NULL, NULL, 0));
+    out_err("crl_diff.no_number.err");
+
+    /* The same CRL twice is the same refusal: the CRL-number guard precedes the issuer compare. */
+    out_ptr("crl_diff.self", X509_CRL_diff(base, base, NULL, NULL, 0));
+    out_err("crl_diff.self.err");
+
+    X509_CRL_free(base);
+    X509_CRL_free(newer);
+}
+
+/*
+ * A certificate carrying a single `CertificatePolicies` extension with the OID `oid`, built
+ * through the public API (`X509_add1_ext_i2d` over a decoded `CERTIFICATEPOLICIES`). Both the
+ * authority and the candidate decode it back in `ossl_policy_cache_set`.
+ */
+static X509 *make_policy_cert(const char *oid)
+{
+    X509 *x = X509_new();
+    CERTIFICATEPOLICIES *cps;
+    POLICYINFO *pi;
+
+    if (x == NULL)
+        return NULL;
+    cps = sk_POLICYINFO_new_null();
+    pi = POLICYINFO_new();
+    if (cps == NULL || pi == NULL) {
+        sk_POLICYINFO_free(cps);
+        POLICYINFO_free(pi);
+        X509_free(x);
+        return NULL;
+    }
+    pi->policyid = OBJ_txt2obj(oid, 1);
+    if (pi->policyid == NULL || !sk_POLICYINFO_push(cps, pi)) {
+        POLICYINFO_free(pi);
+        sk_POLICYINFO_free(cps);
+        X509_free(x);
+        return NULL;
+    }
+    if (!X509_add1_ext_i2d(x, NID_certificate_policies, cps, 0, 0)) {
+        sk_POLICYINFO_pop_free(cps, POLICYINFO_free);
+        X509_free(x);
+        return NULL;
+    }
+    sk_POLICYINFO_pop_free(cps, POLICYINFO_free);
+    return x;
+}
+
+/*
+ * The built tree's shape: the level count, the authority- and user-policy-set sizes, and each
+ * level's node count. Every value is an integer, so the transcript is stable and address-free.
+ */
+static void out_tree(const char *key, X509_POLICY_TREE *tree)
+{
+    int i, nlevel;
+
+    out_ptr(key, tree);
+    if (tree == NULL)
+        return;
+    nlevel = X509_policy_tree_level_count(tree);
+    printf("%s.levels=%d\n", key, nlevel);
+    printf("%s.policies=%d\n", key,
+           sk_X509_POLICY_NODE_num(X509_policy_tree_get0_policies(tree)));
+    printf("%s.user=%d\n", key,
+           sk_X509_POLICY_NODE_num(X509_policy_tree_get0_user_policies(tree)));
+    for (i = 0; i < nlevel; i++)
+        printf("%s.level%d=%d\n", key, i,
+               X509_policy_level_node_count(X509_policy_tree_get0_level(tree, i)));
+}
+
+/*
+ * The policy-tree entry point, `X509_policy_check` (`crypto/x509/pcy_tree.c:658-726`), driven over
+ * the trust-anchor, policy-free and real-`CertificatePolicies` stacks. The return word is
+ * `X509_PCY_TREE_{VALID,EMPTY,EXPLICIT,FAILURE,INVALID,INTERNAL}` (a bitmask), reported with the
+ * explicit-policy out-parameter and, on VALID, the tree's shape.
+ */
+static void policy_surface(void)
+{
+    X509_POLICY_TREE *tree;
+    int explicit_policy;
+
+    /* NULL certs: `sk_X509_num(NULL)` is -1, so n = -2 < 0: X509_PCY_TREE_INTERNAL. */
+    tree = NULL;
+    explicit_policy = -1;
+    printf("policy.null_certs.ret=%d\n",
+           X509_policy_check(&tree, &explicit_policy, NULL, NULL, 0));
+    out_ptr("policy.null_certs.tree", tree);
+    printf("policy.null_certs.explicit=%d\n", explicit_policy);
+
+    /* Empty certs: n = -1: X509_PCY_TREE_INTERNAL. */
+    {
+        STACK_OF(X509) *empty = sk_X509_new_null();
+
+        tree = NULL;
+        explicit_policy = -1;
+        printf("policy.empty_certs.ret=%d\n",
+               X509_policy_check(&tree, &explicit_policy, empty, NULL, 0));
+        out_ptr("policy.empty_certs.tree", tree);
+        printf("policy.empty_certs.explicit=%d\n", explicit_policy);
+        sk_X509_free(empty);
+    }
+
+    /* One trust anchor: n = 0: X509_PCY_TREE_EMPTY, answered VALID with a NULL tree. */
+    {
+        X509 *ta = X509_new();
+        STACK_OF(X509) *one = sk_X509_new_null();
+
+        sk_X509_push(one, ta);
+        tree = NULL;
+        explicit_policy = -1;
+        printf("policy.one_ta.ret=%d\n",
+               X509_policy_check(&tree, &explicit_policy, one, NULL, 0));
+        out_tree("policy.one_ta.tree", tree);
+        printf("policy.one_ta.explicit=%d\n", explicit_policy);
+        sk_X509_free(one);
+        X509_free(ta);
+    }
+
+    /* Two policy-free certs, default flags: EMPTY, answered VALID with a NULL tree. */
+    {
+        X509 *a = X509_new();
+        X509 *b = X509_new();
+        STACK_OF(X509) *two = sk_X509_new_null();
+
+        sk_X509_push(two, a);
+        sk_X509_push(two, b);
+        tree = NULL;
+        explicit_policy = -1;
+        printf("policy.no_policies.ret=%d\n",
+               X509_policy_check(&tree, &explicit_policy, two, NULL, 0));
+        out_tree("policy.no_policies.tree", tree);
+        printf("policy.no_policies.explicit=%d\n", explicit_policy);
+        sk_X509_free(two);
+        X509_free(a);
+        X509_free(b);
+    }
+
+    /* Two policy-free certs, X509_V_FLAG_EXPLICIT_POLICY: X509_PCY_TREE_FAILURE. */
+    {
+        X509 *a = X509_new();
+        X509 *b = X509_new();
+        STACK_OF(X509) *two = sk_X509_new_null();
+
+        sk_X509_push(two, a);
+        sk_X509_push(two, b);
+        tree = NULL;
+        explicit_policy = -1;
+        printf("policy.explicit.ret=%d\n",
+               X509_policy_check(&tree, &explicit_policy, two, NULL,
+                                 X509_V_FLAG_EXPLICIT_POLICY));
+        out_tree("policy.explicit.tree", tree);
+        printf("policy.explicit.explicit=%d\n", explicit_policy);
+        sk_X509_free(two);
+        X509_free(a);
+        X509_free(b);
+    }
+
+    /* A real leaf policy (1.2.3.4) over a trust anchor: the tree is built and VALID. */
+    {
+        X509 *leaf = make_policy_cert("1.2.3.4");
+        X509 *ta = X509_new();
+        STACK_OF(X509) *two = sk_X509_new_null();
+
+        printf("policy.cert=%s\n", PTR((void *)leaf));
+        if (leaf != NULL) {
+            sk_X509_push(two, leaf);
+            sk_X509_push(two, ta);
+            tree = NULL;
+            explicit_policy = -1;
+            printf("policy.tree.ret=%d\n",
+                   X509_policy_check(&tree, &explicit_policy, two, NULL, 0));
+            out_tree("policy.tree", tree);
+            printf("policy.tree.explicit=%d\n", explicit_policy);
+            X509_policy_tree_free(tree);
+        }
+        sk_X509_free(two);
+        X509_free(leaf);
+        X509_free(ta);
+    }
+
+    /* The same leaf, asking for the user set to contain 1.2.3.4. */
+    {
+        X509 *leaf = make_policy_cert("1.2.3.4");
+        X509 *ta = X509_new();
+        STACK_OF(X509) *two = sk_X509_new_null();
+        STACK_OF(ASN1_OBJECT) *oids = sk_ASN1_OBJECT_new_null();
+
+        sk_ASN1_OBJECT_push(oids, OBJ_txt2obj("1.2.3.4", 1));
+        if (leaf != NULL) {
+            sk_X509_push(two, leaf);
+            sk_X509_push(two, ta);
+            tree = NULL;
+            explicit_policy = -1;
+            printf("policy.user.ret=%d\n",
+                   X509_policy_check(&tree, &explicit_policy, two, oids, 0));
+            out_tree("policy.user.tree", tree);
+            printf("policy.user.explicit=%d\n", explicit_policy);
+            X509_policy_tree_free(tree);
+        }
+        sk_ASN1_OBJECT_pop_free(oids, ASN1_OBJECT_free);
+        sk_X509_free(two);
+        X509_free(leaf);
+        X509_free(ta);
+    }
+}
+
 int main(void)
 {
     /* `X509_self_signed` is the one name 11.2 inherits; NULL is its error arm. */
@@ -618,5 +874,7 @@ int main(void)
     ctx_surface();
     crl_surface();
     path_surface();
+    crl_diff_surface();
+    policy_surface();
     return 0;
 }

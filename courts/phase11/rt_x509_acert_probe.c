@@ -143,6 +143,38 @@ static void emit_mem(const char *key, BIO *b)
     BIO_reset(b);
 }
 
+/* A 64-bit FNV-1a digest of a byte span: a stable function of the printed text alone. */
+static unsigned long long fnv1a(const unsigned char *b, size_t n)
+{
+    unsigned long long h = 1469598103934665603ULL;
+    size_t i;
+
+    for (i = 0; i < n; i++) {
+        h ^= (unsigned long long)b[i];
+        h *= 1099511628211ULL;
+    }
+    return h;
+}
+
+/* The exact bytes a printer produced, as length and digest. */
+static void out_text(const char *key, const unsigned char *buf, long len)
+{
+    if (len < 0)
+        len = 0;
+    printf("%s.len=%ld\n", key, len);
+    printf("%s.fnv=%016llx\n", key, fnv1a(buf, (size_t)len));
+}
+
+/* Print the contents of a memory BIO as length and digest, then rewind it. */
+static void out_mem(const char *key, BIO *b)
+{
+    char *data = NULL;
+    long len = BIO_get_mem_data(b, &data);
+
+    out_text(key, (const unsigned char *)data, len);
+    BIO_reset(b);
+}
+
 static CONF *mk_acert_conf(void)
 {
     static const char text[] = "[attrs]\n"
@@ -850,6 +882,45 @@ static void drive_xall(void)
     }
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Phase 11.7 -- `crypto/x509/t_acert.c`: the two attribute-certificate printers.
+ *
+ * Both write to a memory BIO and are reduced to the exact length and digest of the text they
+ * produced; `X509_ACERT_print` is the `XN_FLAG_COMPAT`/`X509_FLAG_COMPAT` spelling and
+ * `X509_ACERT_print_ex` is driven with multiline names and no sigdump suppression.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_acert_print(void)
+{
+    const unsigned char *p = RT_X509_ACERT_DER;
+    X509_ACERT *a = d2i_X509_ACERT(NULL, &p, (long)sizeof RT_X509_ACERT_DER);
+    BIO *b;
+
+    out_ptr("acert.print.acert", a);
+    if (a == NULL)
+        return;
+
+    b = BIO_new(BIO_s_mem());
+    out_int("acert.print.ret", X509_ACERT_print(b, a));
+    out_mem("acert.print", b);
+    BIO_free(b);
+
+    b = BIO_new(BIO_s_mem());
+    out_int("acert.print_ex.ret",
+            X509_ACERT_print_ex(b, a, XN_FLAG_SEP_MULTILINE | XN_FLAG_FN_LN, 0));
+    out_mem("acert.print_ex", b);
+    BIO_free(b);
+
+    /* A suppressed-signature spelling: the sigdump arm is skipped. */
+    b = BIO_new(BIO_s_mem());
+    out_int("acert.print_nosig.ret",
+            X509_ACERT_print_ex(b, a, XN_FLAG_COMPAT, X509_FLAG_NO_SIGDUMP));
+    out_mem("acert.print_nosig", b);
+    BIO_free(b);
+
+    X509_ACERT_free(a);
+}
+
 int main(void)
 {
     ERR_clear_error();
@@ -860,6 +931,7 @@ int main(void)
     drive_acert_pem();
     drive_ietfatt();
     drive_xall();
+    drive_acert_print();
 
     return 0;
 }

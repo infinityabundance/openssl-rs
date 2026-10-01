@@ -50,7 +50,8 @@
 //!
 //! The function's content is seven calls, and the authority's comment — `/* Add builtin
 //! modules here */` — is the whole of its design. `ASN1_add_oid_module` is this block's (6.10d)
-//! and is called. `ASN1_add_stable_module` (Phase 11, whose handler needs `X509V3_parse_list`),
+//! and is called, and `ASN1_add_stable_module` (Phase 11, whose handler needs
+//! `X509V3_parse_list`; landed in 11.7) is called beside it, in the authority's own order.
 //! `EVP_add_alg_module` (Phase 7), `ossl_config_add_ssl_module` (libssl, Phase 14),
 //! `ossl_provider_add_conf_module` (6.8d), `ossl_random_add_conf_module` (Phase 9) and
 //! `ENGINE_add_conf_module` (Phase 13) are not.
@@ -1386,13 +1387,15 @@ pub unsafe extern "C" fn CONF_module_set_usr_data(pmod: *mut ConfModule, usr_dat
 /// a behaviour a configuration file can observe, so it must be *stated* rather than faked.
 ///
 /// `ASN1_add_oid_module` is 6.10d, `ossl_config_add_ssl_module` is 6.10e and
-/// `ossl_provider_add_conf_module` is 6.8d; all three are called. `ENGINE_add_conf_module`
-/// (Phase 13), `EVP_add_alg_module` (Phase 7), `ossl_random_add_conf_module` (Phase 9) and
-/// `ASN1_add_stable_module` (Phase 11) are not.
+/// `ossl_provider_add_conf_module` is 6.8d; all three are called. `ASN1_add_stable_module`
+/// (Phase 11) is called with them, in the authority's own position after `ASN1_add_oid_module`.
+/// `ENGINE_add_conf_module` (Phase 13), `EVP_add_alg_module` (Phase 7) and
+/// `ossl_random_add_conf_module` (Phase 9) are not.
 #[no_mangle]
 pub extern "C" fn OPENSSL_load_builtin_modules() {
     guard_ffi((), || {
         crate::runtime::confmod::asn1::ASN1_add_oid_module();
+        crate::asn1::asn_mstbl::ASN1_add_stable_module();
         crate::runtime::conf::conf_ssl::ossl_config_add_ssl_module();
         crate::provider::conf::ossl_provider_add_conf_module();
     })

@@ -95,6 +95,13 @@ pub mod nsseq;
 // the `PBMAC1PARAM` group). See the module docs and `docs/DECISIONS.md` D442's precedent.
 pub mod p5_pbe;
 pub mod p5_pbev2;
+// Phase 11.7's `crypto/asn1/p5_scrypt.c` half -- the `SCRYPT_PARAMS` item and
+// `PKCS5_pbe2_set_scrypt`; the unit's Phase 7 half is `src/evp/p5_scrypt.rs`.
+pub mod p5_scrypt;
+// Phase 11.7's `crypto/asn1/t_spki.c` and `crypto/asn1/asn_mstbl.c` -- the SPKI printer and the
+// `stbl_section` configuration module.
+pub mod asn_mstbl;
+pub mod t_spki;
 // Phase 8.8's `crypto/asn1/p8_pkey.c` pair, `PKCS8_pkey_set0`/`PKCS8_pkey_get0`, and the
 // `PKCS8_PRIV_KEY_INFO` layout (D349). D368 completes the unit's item half; the `add1_attr`
 // family lands with `crypto/x509/x509_att.c`.

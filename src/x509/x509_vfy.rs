@@ -3,10 +3,10 @@
 //! issuer lookup, the time-comparison surface and the free-standing parameters helper; the three
 //! engine entry points are withheld by name with their blocker (below).
 //!
-//! `crypto/x509/x509_vfy.c` is 3,984 lines. **This module lands sixty-four of its seventy open
-//! exports** — everything whose closure is already landed — and withholds six by name:
-//! [`X509_verify_cert`], [`X509_STORE_CTX_verify`], [`X509_build_chain`], [`X509_STORE_CTX_init`],
-//! [`X509_STORE_CTX_init_rpk`] and [`X509_CRL_diff`]. The landed surface:
+//! `crypto/x509/x509_vfy.c` is 3,984 lines. **This module lands sixty-five of its seventy open
+//! exports** — everything whose closure is already landed — and withholds five by name:
+//! [`X509_verify_cert`], [`X509_STORE_CTX_verify`], [`X509_build_chain`], [`X509_STORE_CTX_init`]
+//! and [`X509_STORE_CTX_init_rpk`]. The landed surface:
 //!
 //! * **The context lifecycle** (`:2693-2908`): [`X509_STORE_CTX_new_ex`]/[`X509_STORE_CTX_new`],
 //!   [`X509_STORE_CTX_free`], the idempotent [`X509_STORE_CTX_cleanup`] and the `set_default` /
@@ -21,6 +21,11 @@
 //!   [`X509_gmtime_adj`], plus the internal `ossl_x509_check_cert_time` (`:2084-2108`) the issuer
 //!   lookup calls.
 //! * **The parameters helper** [`X509_get_pubkey_parameters`] (`:2364-2397`).
+//! * **The delta-CRL builder** [`X509_CRL_diff`] (`:2403-2522`), whose former blocker
+//!   (`X509_CRL_set_nextUpdate`, absent) is discharged: the crate now names
+//!   `X509_CRL_set1_lastUpdate`/`X509_CRL_set1_nextUpdate` (`x509cset.rs`), and every other callee was
+//!   already landed in `x_crl.rs`/`x509_ext.rs`/`x509cset.rs`. Its file-local helper
+//!   `crl_extension_match` (`:1479-1505`) lands with it.
 //!
 //! ## Withheld by name, with the blocker
 //!
@@ -42,10 +47,14 @@
 //!   be the authority's function, so the names are named, not declared.
 //! * [`X509_STORE_CTX_init`] (`:2737`) and [`X509_STORE_CTX_init_rpk`] (`:2729`) install the
 //!   engine's default callbacks (`check_revocation`, `check_crl`, `cert_crl`, `check_policy` ->
-//!   `internal_verify`) into `ctx`, so they are blocked by the same closure.
-//! * [`X509_CRL_diff`] (`:2403`) is blocked by `X509_CRL_set_nextUpdate`, which this crate does not
-//!   model yet; the `X509_CRL_add0_revoked`/`X509_CRL_get0_by_serial`/`X509_CRL_verify` it also
-//!   reads are now landed in `x_crl.rs`.
+//!   `internal_verify`) into `ctx`, so they are blocked by the same closure. `check_revocation`
+//!   (`:1062`) keeps the `#ifndef OPENSSL_NO_OCSP` arm, and this admitted build does **not** define
+//!   `OPENSSL_NO_OCSP` (only `OPENSSL_NO_TRACE` is set, `configuration.h:134-135`), so a faithful
+//!   transcription must call `check_cert_ocsp_resp` (`:1174`), whose callees
+//!   (`OCSP_response_get1_basic`, `OCSP_basic_verify`, `OCSP_cert_to_id`, `OCSP_resp_find_status`,
+//!   `OCSP_check_validity`, ...) are Phase 12's and absent from `src/ocsp/`. The CRL half is now
+//!   landable, the OCSP half is not, and the two cannot be separated without changing the
+//!   function.
 //!
 //! [`X509_policy_tree_free`](crate::x509::pcy_tree::X509_policy_tree_free) landed with this slice,
 //! so [`X509_STORE_CTX_cleanup`] can call it; that is why the lifecycle above lands even though
@@ -75,14 +84,18 @@ use core::ptr;
 use crate::asn1::layout::{
     Asn1String, ASN1_STRING_FLAG_MSTRING, V_ASN1_GENERALIZEDTIME, V_ASN1_UTCTIME,
 };
-use crate::asn1::string::ASN1_TIME_free;
+use crate::asn1::prim::ASN1_INTEGER_cmp;
+use crate::asn1::string::{ASN1_OCTET_STRING_cmp, ASN1_TIME_free};
 use crate::asn1::time::{
     ASN1_GENERALIZEDTIME_adj, ASN1_TIME_adj, ASN1_TIME_diff, ASN1_UTCTIME_adj,
 };
+use crate::evp::digest::EvpMd;
 use crate::evp::pkey::{EVP_PKEY_copy_parameters, EVP_PKEY_missing_parameters, EvpPkey};
 use crate::runtime::bio::sys::time;
 use crate::runtime::ctype::ossl_isdigit;
 use crate::runtime::err::err_reasons::{
+    X509_R_AKID_MISMATCH, X509_R_CRL_ALREADY_DELTA, X509_R_CRL_VERIFY_FAILURE, X509_R_IDP_MISMATCH,
+    X509_R_ISSUER_MISMATCH, X509_R_NEWER_CRL_NOT_NEWER, X509_R_NO_CRL_NUMBER,
     X509_R_UNABLE_TO_FIND_PARAMETERS_IN_CHAIN, X509_R_UNABLE_TO_GET_CERTS_PUBLIC_KEY,
     X509_R_UNKNOWN_PURPOSE_ID, X509_R_UNKNOWN_TRUST_ID,
 };
@@ -92,6 +105,9 @@ use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_set_ex_data, CRYPTO_EX_INDEX_X509_STORE_CTX,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::obj::{
+    NID_authority_key_identifier, NID_delta_crl, NID_issuing_distribution_point,
+};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value, OpenSslStack,
 };
@@ -106,6 +122,10 @@ use crate::x509::x509_cmp::{
     X509_NAME_cmp, X509_add_cert, X509_chain_up_ref, X509_cmp, X509_get0_pubkey,
     X509_get_issuer_name, X509_get_subject_name,
 };
+use crate::x509::x509_ext::{
+    X509_CRL_add1_ext_i2d, X509_CRL_add_ext, X509_CRL_get_ext, X509_CRL_get_ext_by_NID,
+    X509_CRL_get_ext_count,
+};
 use crate::x509::x509_lu::{
     ossl_x509_store_ctx_get_by_subject, X509StoreCtx, X509_OBJECT_free, X509_OBJECT_new,
     X509_STORE_CTX_cert_crl_fn, X509_STORE_CTX_check_crl_fn, X509_STORE_CTX_check_issued_fn,
@@ -116,13 +136,22 @@ use crate::x509::x509_lu::{
 };
 use crate::x509::x509_set::{X509_get0_notAfter, X509_get0_notBefore, X509_up_ref};
 use crate::x509::x509_trust::X509_TRUST_get_by_id;
+use crate::x509::x509_v3::X509_EXTENSION_get_data;
 use crate::x509::x509_vpm::{
     X509VerifyParam, X509_VERIFY_PARAM_free, X509_VERIFY_PARAM_get_flags,
     X509_VERIFY_PARAM_get_time, X509_VERIFY_PARAM_inherit, X509_VERIFY_PARAM_lookup,
     X509_VERIFY_PARAM_set_depth, X509_VERIFY_PARAM_set_flags, X509_VERIFY_PARAM_set_time,
 };
-use crate::x509::x_all::X509_verify;
-use crate::x509::x_crl::X509Crl;
+use crate::x509::x509cset::{
+    X509_CRL_get0_lastUpdate, X509_CRL_get0_nextUpdate, X509_CRL_get_REVOKED, X509_CRL_get_issuer,
+    X509_CRL_set1_lastUpdate, X509_CRL_set1_nextUpdate, X509_CRL_set_issuer_name,
+    X509_CRL_set_version,
+};
+use crate::x509::x_all::{X509_CRL_sign, X509_verify};
+use crate::x509::x_crl::{
+    X509Crl, X509Revoked, X509_CRL_add0_revoked, X509_CRL_free, X509_CRL_get0_by_serial,
+    X509_CRL_new_ex, X509_CRL_verify, X509_REVOKED_dup, X509_REVOKED_free,
+};
 use crate::x509::x_name::X509Name;
 use crate::x509::x_x509::{X509_free, X509};
 
@@ -201,6 +230,46 @@ const X509_VFY_3065: ErrSite = x509_vfy_site(
     c"X509_STORE_CTX_set_default",
     X509_R_UNKNOWN_PURPOSE_ID,
 );
+
+/// `ERR_R_X509_LIB` — `err.h`, `(ERR_LIB_X509 | ERR_RFLAG_COMMON)`.
+const ERR_R_X509_LIB: c_int = ERR_LIB_X509 | (0x2 << 18);
+/// `ERR_R_ASN1_LIB` — `err.h`, `(ERR_LIB_ASN1 | ERR_RFLAG_COMMON)`.
+const ERR_R_ASN1_LIB: c_int = 13 | (0x2 << 18);
+/// `X509_CRL_VERSION_2` — `include/openssl/x509.h.in:736`, `1`.
+const X509_CRL_VERSION_2: c_long = 1;
+
+/// `X509_CRL_diff`'s already-delta input at `x509_vfy.c:2412`.
+const X509_VFY_2412: ErrSite = x509_vfy_site(2412, c"X509_CRL_diff", X509_R_CRL_ALREADY_DELTA);
+/// `X509_CRL_diff`'s missing CRL number at `x509_vfy.c:2417`.
+const X509_VFY_2417: ErrSite = x509_vfy_site(2417, c"X509_CRL_diff", X509_R_NO_CRL_NUMBER);
+/// `X509_CRL_diff`'s issuer mismatch at `x509_vfy.c:2424`.
+const X509_VFY_2424: ErrSite = x509_vfy_site(2424, c"X509_CRL_diff", X509_R_ISSUER_MISMATCH);
+/// `X509_CRL_diff`'s AKID mismatch at `x509_vfy.c:2429`.
+const X509_VFY_2429: ErrSite = x509_vfy_site(2429, c"X509_CRL_diff", X509_R_AKID_MISMATCH);
+/// `X509_CRL_diff`'s IDP mismatch at `x509_vfy.c:2434`.
+const X509_VFY_2434: ErrSite = x509_vfy_site(2434, c"X509_CRL_diff", X509_R_IDP_MISMATCH);
+/// `X509_CRL_diff`'s not-newer input at `x509_vfy.c:2438`.
+const X509_VFY_2438: ErrSite = x509_vfy_site(2438, c"X509_CRL_diff", X509_R_NEWER_CRL_NOT_NEWER);
+/// `X509_CRL_diff`'s verify failure at `x509_vfy.c:2443`.
+const X509_VFY_2443: ErrSite = x509_vfy_site(2443, c"X509_CRL_diff", X509_R_CRL_VERIFY_FAILURE);
+/// `X509_CRL_diff`'s failed new/version at `x509_vfy.c:2449`.
+const X509_VFY_2449: ErrSite = x509_vfy_site(2449, c"X509_CRL_diff", ERR_R_X509_LIB);
+/// `X509_CRL_diff`'s failed issuer set at `x509_vfy.c:2454`.
+const X509_VFY_2454: ErrSite = x509_vfy_site(2454, c"X509_CRL_diff", ERR_R_X509_LIB);
+/// `X509_CRL_diff`'s failed lastUpdate set at `x509_vfy.c:2459`.
+const X509_VFY_2459: ErrSite = x509_vfy_site(2459, c"X509_CRL_diff", ERR_R_X509_LIB);
+/// `X509_CRL_diff`'s failed nextUpdate set at `x509_vfy.c:2463`.
+const X509_VFY_2463: ErrSite = x509_vfy_site(2463, c"X509_CRL_diff", ERR_R_X509_LIB);
+/// `X509_CRL_diff`'s failed delta-CRL extension at `x509_vfy.c:2469`.
+const X509_VFY_2469: ErrSite = x509_vfy_site(2469, c"X509_CRL_diff", ERR_R_X509_LIB);
+/// `X509_CRL_diff`'s failed extension copy at `x509_vfy.c:2481`.
+const X509_VFY_2481: ErrSite = x509_vfy_site(2481, c"X509_CRL_diff", ERR_R_X509_LIB);
+/// `X509_CRL_diff`'s failed revoked dup at `x509_vfy.c:2501`.
+const X509_VFY_2501: ErrSite = x509_vfy_site(2501, c"X509_CRL_diff", ERR_R_ASN1_LIB);
+/// `X509_CRL_diff`'s failed add0_revoked at `x509_vfy.c:2506`.
+const X509_VFY_2506: ErrSite = x509_vfy_site(2506, c"X509_CRL_diff", ERR_R_X509_LIB);
+/// `X509_CRL_diff`'s failed sign at `x509_vfy.c:2513`.
+const X509_VFY_2513: ErrSite = x509_vfy_site(2513, c"X509_CRL_diff", ERR_R_X509_LIB);
 
 /// The `X509_free` element thunk for `sk_X509_pop_free`.
 ///
@@ -783,6 +852,221 @@ pub unsafe extern "C" fn X509_get_pubkey_parameters(
         return unsafe { EVP_PKEY_copy_parameters(pkey, ktmp) };
     }
     1
+}
+
+// ---------------------------------------------------------------------------------------------
+// `crl_extension_match` and `X509_CRL_diff` — `x509_vfy.c:1479-1505`, `:2403-2522`.
+// ---------------------------------------------------------------------------------------------
+
+/// `static int crl_extension_match(X509_CRL *a, X509_CRL *b, int nid)` —
+/// `crypto/x509/x509_vfy.c:1479-1505`.
+///
+/// The file-local helper `X509_CRL_diff` uses to require that two CRLs' AKID and IDP extensions
+/// agree byte for byte. It refuses a repeated extension.
+///
+/// # Safety
+///
+/// `a` and `b` must be live `X509_CRL`.
+unsafe fn crl_extension_match(a: *mut X509Crl, b: *mut X509Crl, nid: c_int) -> c_int {
+    let mut exta: *mut Asn1String = ptr::null_mut();
+    let mut extb: *mut Asn1String = ptr::null_mut();
+
+    // SAFETY: `a` is live per the contract.
+    let mut i = unsafe { X509_CRL_get_ext_by_NID(a, nid, -1) };
+    if i >= 0 {
+        // Can't have multiple occurrences.
+        // SAFETY: `a` is live.
+        if unsafe { X509_CRL_get_ext_by_NID(a, nid, i) } != -1 {
+            return 0;
+        }
+        // SAFETY: `a` is live; `i` is a valid extension index.
+        exta = unsafe { X509_EXTENSION_get_data(X509_CRL_get_ext(a, i)) };
+    }
+
+    // SAFETY: `b` is live per the contract.
+    i = unsafe { X509_CRL_get_ext_by_NID(b, nid, -1) };
+    if i >= 0 {
+        // SAFETY: `b` is live.
+        if unsafe { X509_CRL_get_ext_by_NID(b, nid, i) } != -1 {
+            return 0;
+        }
+        // SAFETY: `b` is live; `i` is a valid extension index.
+        extb = unsafe { X509_EXTENSION_get_data(X509_CRL_get_ext(b, i)) };
+    }
+
+    if exta.is_null() && extb.is_null() {
+        return 1;
+    }
+    if exta.is_null() || extb.is_null() {
+        return 0;
+    }
+    // SAFETY: both are live `ASN1_OCTET_STRING`.
+    c_int::from(unsafe { ASN1_OCTET_STRING_cmp(exta, extb) } == 0)
+}
+
+/// `X509_CRL *X509_CRL_diff(X509_CRL *base, X509_CRL *newer, EVP_PKEY *skey, const EVP_MD *md, unsigned int flags)`
+/// — `crypto/x509/x509_vfy.c:2403-2522`.
+///
+/// Builds the delta CRL that turns `base` into `newer`: it validates the two are comparable (not
+/// already deltas, both numbered, same issuer, matching AKID/IDP, `newer` strictly newer, and, when
+/// `skey` is given, both verify), then copies `newer`'s extensions and the revoked entries absent
+/// from `base`, and signs with `skey`/`md` when both are supplied. Any failure raises and answers
+/// NULL; the `flags` argument is unused by the authority.
+///
+/// # Safety
+///
+/// `base` and `newer` must be live `X509_CRL`; `skey`/`md` are NULL or live. The returned CRL is
+/// owned by the caller.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_diff(
+    base: *mut X509Crl,
+    newer: *mut X509Crl,
+    skey: *mut EvpPkey,
+    md: *const EvpMd,
+    _flags: c_uint,
+) -> *mut X509Crl {
+    // CRLs can't be delta already.
+    // SAFETY: `base` and `newer` are live per the contract.
+    if unsafe { !(*base).base_crl_number.is_null() || !(*newer).base_crl_number.is_null() } {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_VFY_2412) };
+        return ptr::null_mut();
+    }
+    // Base and new CRL must have a CRL number.
+    // SAFETY: `base` and `newer` are live.
+    if unsafe { (*base).crl_number }.is_null() || unsafe { (*newer).crl_number }.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_VFY_2417) };
+        return ptr::null_mut();
+    }
+    // Issuer names must match.
+    // SAFETY: `base` and `newer` are live.
+    if unsafe { X509_NAME_cmp(X509_CRL_get_issuer(base), X509_CRL_get_issuer(newer)) } != 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_VFY_2424) };
+        return ptr::null_mut();
+    }
+    // AKID and IDP must match.
+    // SAFETY: `base` and `newer` are live.
+    if unsafe { crl_extension_match(base, newer, NID_authority_key_identifier) } == 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_VFY_2429) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `base` and `newer` are live.
+    if unsafe { crl_extension_match(base, newer, NID_issuing_distribution_point) } == 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_VFY_2434) };
+        return ptr::null_mut();
+    }
+    // Newer CRL number must exceed full CRL number.
+    // SAFETY: both numbers are non-null here.
+    if unsafe { ASN1_INTEGER_cmp((*newer).crl_number, (*base).crl_number) } <= 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_VFY_2438) };
+        return ptr::null_mut();
+    }
+    // CRLs must verify.
+    if !skey.is_null() {
+        // SAFETY: `base`, `newer` and `skey` are live.
+        if unsafe { X509_CRL_verify(base, skey) <= 0 || X509_CRL_verify(newer, skey) <= 0 } {
+            // SAFETY: a compile-time-constant site.
+            unsafe { raise_site(&X509_VFY_2443) };
+            return ptr::null_mut();
+        }
+    }
+
+    // Create new CRL.
+    // SAFETY: `base` is live.
+    let crl = unsafe { X509_CRL_new_ex((*base).libctx, (*base).propq) };
+    let mut failed = false;
+    'body: {
+        // SAFETY: `crl` is NULL or a fresh object; `newer` is live.
+        unsafe {
+            if crl.is_null() || X509_CRL_set_version(crl, X509_CRL_VERSION_2) == 0 {
+                raise_site(&X509_VFY_2449);
+                failed = true;
+                break 'body;
+            }
+            // Set issuer name.
+            if X509_CRL_set_issuer_name(crl, X509_CRL_get_issuer(newer)) == 0 {
+                raise_site(&X509_VFY_2454);
+                failed = true;
+                break 'body;
+            }
+            if X509_CRL_set1_lastUpdate(crl, X509_CRL_get0_lastUpdate(newer)) == 0 {
+                raise_site(&X509_VFY_2459);
+                failed = true;
+                break 'body;
+            }
+            if X509_CRL_set1_nextUpdate(crl, X509_CRL_get0_nextUpdate(newer)) == 0 {
+                raise_site(&X509_VFY_2463);
+                failed = true;
+                break 'body;
+            }
+            // Set base CRL number: must be critical.
+            if X509_CRL_add1_ext_i2d(
+                crl,
+                NID_delta_crl,
+                (*base).crl_number.cast::<c_void>(),
+                1,
+                0,
+            ) <= 0
+            {
+                raise_site(&X509_VFY_2469);
+                failed = true;
+                break 'body;
+            }
+
+            // Copy extensions across from newest CRL to delta.
+            let nunm = X509_CRL_get_ext_count(newer);
+            for i in 0..nunm {
+                let ext = X509_CRL_get_ext(newer, i);
+                if X509_CRL_add_ext(crl, ext, -1) == 0 {
+                    raise_site(&X509_VFY_2481);
+                    failed = true;
+                    break 'body;
+                }
+            }
+
+            // Go through revoked entries, copying as needed.
+            let revs = X509_CRL_get_REVOKED(newer);
+            let nrev = OPENSSL_sk_num(revs);
+            for i in 0..nrev {
+                let rvn = OPENSSL_sk_value(revs, i).cast::<X509Revoked>();
+                let mut rvtmp: *mut X509Revoked = ptr::null_mut();
+                if X509_CRL_get0_by_serial(base, &raw mut rvtmp, &raw const (*rvn).serialNumber)
+                    == 0
+                {
+                    let dup = X509_REVOKED_dup(rvn);
+                    if dup.is_null() {
+                        raise_site(&X509_VFY_2501);
+                        failed = true;
+                        break 'body;
+                    }
+                    if X509_CRL_add0_revoked(crl, dup) == 0 {
+                        X509_REVOKED_free(dup);
+                        raise_site(&X509_VFY_2506);
+                        failed = true;
+                        break 'body;
+                    }
+                }
+            }
+
+            if !skey.is_null() && !md.is_null() && X509_CRL_sign(crl, skey, md) == 0 {
+                raise_site(&X509_VFY_2513);
+                failed = true;
+                break 'body;
+            }
+        }
+    }
+
+    if failed {
+        // SAFETY: `crl` is NULL or owned here.
+        unsafe { X509_CRL_free(crl) };
+        return ptr::null_mut();
+    }
+    crl
 }
 
 // ---------------------------------------------------------------------------------------------
