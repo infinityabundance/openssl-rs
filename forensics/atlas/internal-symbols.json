@@ -292,7 +292,6 @@
       "src/store/store_result.rs",
       "src/test_support.rs",
       "src/x509/by_dir.rs",
-      "src/x509/by_file.rs",
       "src/x509/mod.rs",
       "src/x509/v3_akid.rs",
       "src/x509/v3_audit_id.rs",

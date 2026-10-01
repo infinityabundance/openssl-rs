@@ -1394,6 +1394,183 @@ static void drive_store_load_store(void)
 }
 
 /* ---------------------------------------------------------------------------------------------
+ * Phase 11.7 -- `crypto/x509/by_file.c`'s five landed loaders
+ * (`X509_load_cert_file(_ex)`, `X509_load_crl_file`, `X509_load_cert_crl_file(_ex)`).
+ *
+ * Each reads a certificate/CRL file into a lookup's store. The PEM and DER fixtures are built at
+ * run time from the embedded DER by the tiny base64 writer below, so the bytes both sides read are
+ * the probe's own and a transcript difference can only be the loader's. The lookup is the
+ * store-URI method's (the `X509_LOOKUP_METHOD` row the ctrl slot lives in is opaque):
+ * `X509_STORE_add_lookup` gives it the live `store_ctx` the loaders read, which is all they need.
+ * The `X509_FILETYPE_DEFAULT` arm of `X509_LOOKUP_file`'s ctrl is deliberately not driven: that
+ * method is withheld (see `src/x509/by_file.rs`), and the default-path name it needs is a
+ * scaffolded abort on the candidate.
+ * --------------------------------------------------------------------------------------------- */
+
+static void emit_b64(FILE *f, const unsigned char *p, size_t n)
+{
+    static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    size_t i;
+    int col = 0;
+
+    for (i = 0; i < n; i += 3) {
+        unsigned long v = (unsigned long)p[i] << 16;
+        int rem = (int)(n - i);
+
+        if (rem > 1)
+            v |= (unsigned long)p[i + 1] << 8;
+        if (rem > 2)
+            v |= (unsigned long)p[i + 2];
+        fputc(b64[(v >> 18) & 63], f);
+        fputc(b64[(v >> 12) & 63], f);
+        fputc(rem > 1 ? b64[(v >> 6) & 63] : '=', f);
+        fputc(rem > 2 ? b64[v & 63] : '=', f);
+        col += 4;
+        if (col == 64) {
+            fputc('\n', f);
+            col = 0;
+        }
+    }
+    if (col != 0)
+        fputc('\n', f);
+}
+
+static int write_pem(const char *path, const char *label,
+                     const unsigned char *der, size_t len)
+{
+    FILE *f = fopen(path, "wb");
+
+    if (f == NULL)
+        return 0;
+    fprintf(f, "-----BEGIN %s-----\n", label);
+    emit_b64(f, der, len);
+    fprintf(f, "-----END %s-----\n", label);
+    return fclose(f) == 0;
+}
+
+static int append_pem(const char *path, const char *label,
+                      const unsigned char *der, size_t len)
+{
+    FILE *f = fopen(path, "ab");
+
+    if (f == NULL)
+        return 0;
+    fprintf(f, "-----BEGIN %s-----\n", label);
+    emit_b64(f, der, len);
+    fprintf(f, "-----END %s-----\n", label);
+    return fclose(f) == 0;
+}
+
+static int write_der(const char *path, const unsigned char *der, size_t len)
+{
+    FILE *f = fopen(path, "wb");
+
+    if (f == NULL)
+        return 0;
+    if (fwrite(der, 1, len, f) != len) {
+        fclose(f);
+        return 0;
+    }
+    return fclose(f) == 0;
+}
+
+static void drive_file_loaders(void)
+{
+    const char *cert_pem = "/tmp/rt_x509_store_cert.pem";
+    const char *cert_der = "/tmp/rt_x509_store_cert.der";
+    const char *crl_pem = "/tmp/rt_x509_store_crl.pem";
+    const char *crl_der = "/tmp/rt_x509_store_crl.der";
+    const char *mixed_pem = "/tmp/rt_x509_store_mixed.pem";
+    const char *empty_pem = "/tmp/rt_x509_store_empty.pem";
+    const char *missing = "/tmp/rt_x509_store_no_such_file";
+    X509_STORE *store;
+    X509_LOOKUP *lu;
+    FILE *f;
+
+    out_int("file_loaders.fixture.cert_pem",
+            write_pem(cert_pem, "CERTIFICATE", RT_X509_CERT_DER, RT_X509_CERT_DER_LEN));
+    out_int("file_loaders.fixture.cert_der",
+            write_der(cert_der, RT_X509_CERT_DER, RT_X509_CERT_DER_LEN));
+    out_int("file_loaders.fixture.crl_pem",
+            write_pem(crl_pem, "X509 CRL", RT_X509_CRL_DER, RT_X509_CRL_DER_LEN));
+    out_int("file_loaders.fixture.crl_der",
+            write_der(crl_der, RT_X509_CRL_DER, RT_X509_CRL_DER_LEN));
+    out_int("file_loaders.fixture.mixed_pem",
+            write_pem(mixed_pem, "CERTIFICATE", RT_X509_CERT_DER, RT_X509_CERT_DER_LEN)
+                && append_pem(mixed_pem, "X509 CRL", RT_X509_CRL_DER, RT_X509_CRL_DER_LEN));
+    f = fopen(empty_pem, "wb");
+    out_int("file_loaders.fixture.empty_pem", f != NULL && fclose(f) == 0);
+
+    store = X509_STORE_new();
+    out_ptr("file_loaders.store", store);
+    lu = store != NULL ? X509_STORE_add_lookup(store, X509_LOOKUP_store()) : NULL;
+    out_ptr("file_loaders.lookup", lu);
+    if (lu == NULL) {
+        X509_STORE_free(store);
+        return;
+    }
+
+    /* `X509_load_cert_file`: the PEM and ASN.1 arms, then the three refusals. */
+    ERR_clear_error();
+    out_int("load_cert_file.pem", X509_load_cert_file(lu, cert_pem, X509_FILETYPE_PEM));
+    out_err("load_cert_file.pem.err");
+    ERR_clear_error();
+    out_int("load_cert_file.der", X509_load_cert_file(lu, cert_der, X509_FILETYPE_ASN1));
+    out_err("load_cert_file.der.err");
+    ERR_clear_error();
+    out_int("load_cert_file.null", X509_load_cert_file(lu, NULL, X509_FILETYPE_PEM));
+    out_err("load_cert_file.null.err");
+    ERR_clear_error();
+    out_int("load_cert_file.bad_type", X509_load_cert_file(lu, cert_pem, 99));
+    out_err("load_cert_file.bad_type.err");
+    ERR_clear_error();
+    out_int("load_cert_file.missing", X509_load_cert_file(lu, missing, X509_FILETYPE_PEM));
+    out_err("load_cert_file.missing.err");
+    ERR_clear_error();
+    out_int("load_cert_file.empty", X509_load_cert_file(lu, empty_pem, X509_FILETYPE_PEM));
+    out_err("load_cert_file.empty.err");
+
+    ERR_clear_error();
+    out_int("load_cert_file_ex.pem",
+            X509_load_cert_file_ex(lu, cert_pem, X509_FILETYPE_PEM, NULL, NULL));
+    out_err("load_cert_file_ex.pem.err");
+
+    /* `X509_load_crl_file`: the PEM and ASN.1 arms, then the three refusals. */
+    ERR_clear_error();
+    out_int("load_crl_file.pem", X509_load_crl_file(lu, crl_pem, X509_FILETYPE_PEM));
+    out_err("load_crl_file.pem.err");
+    ERR_clear_error();
+    out_int("load_crl_file.der", X509_load_crl_file(lu, crl_der, X509_FILETYPE_ASN1));
+    out_err("load_crl_file.der.err");
+    ERR_clear_error();
+    out_int("load_crl_file.null", X509_load_crl_file(lu, NULL, X509_FILETYPE_PEM));
+    out_err("load_crl_file.null.err");
+    ERR_clear_error();
+    out_int("load_crl_file.bad_type", X509_load_crl_file(lu, crl_pem, 99));
+    out_err("load_crl_file.bad_type.err");
+    ERR_clear_error();
+    out_int("load_crl_file.empty", X509_load_crl_file(lu, empty_pem, X509_FILETYPE_PEM));
+    out_err("load_crl_file.empty.err");
+
+    /* `X509_load_cert_crl_file(_ex)`: a cert+CRL bundle, and the ASN.1 delegation. */
+    ERR_clear_error();
+    out_int("load_cert_crl_file.pem", X509_load_cert_crl_file(lu, mixed_pem, X509_FILETYPE_PEM));
+    out_err("load_cert_crl_file.pem.err");
+    ERR_clear_error();
+    out_int("load_cert_crl_file_ex.pem",
+            X509_load_cert_crl_file_ex(lu, mixed_pem, X509_FILETYPE_PEM, NULL, NULL));
+    out_err("load_cert_crl_file_ex.pem.err");
+    ERR_clear_error();
+    out_int("load_cert_crl_file.asn1", X509_load_cert_crl_file(lu, cert_der, X509_FILETYPE_ASN1));
+    out_err("load_cert_crl_file.asn1.err");
+    ERR_clear_error();
+    out_int("load_cert_crl_file.empty", X509_load_cert_crl_file(lu, empty_pem, X509_FILETYPE_PEM));
+    out_err("load_cert_crl_file.empty.err");
+
+    X509_STORE_free(store);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * Phase 11.4b -- `crypto/x509/x_exten.c`'s `X509_EXTENSIONS` wrapper, `x509_req.c`'s three
  * extension functions, `v3_utl.c`'s `X509_REQ_get1_email` and `v3_conf.c`'s two request wrappers.
  *
@@ -1559,6 +1736,7 @@ int main(void)
     drive_trust(cert);
     drive_lookup_store();
     drive_store_load_store();
+    drive_file_loaders();
     drive_val_prn();
     drive_ext_print();
     drive_v3_conf();

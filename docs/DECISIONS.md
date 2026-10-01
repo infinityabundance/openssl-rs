@@ -34369,3 +34369,33 @@ recorded beside them; `docs/PHASE-22-SUBPHASES.md` states the criterion precisel
 Phase 11.2 may proceed.
 
 Verified: `PIPELINE OK` exit 0 on repeated runs; 129 courts and 47,876 observations.
+
+## D499 -- 11.1c's file loaders land, and the two lookup-method constructors are the remainder
+
+`by_file.c`'s five loaders waited on the store constructor 11.1c landed in D497, so this slice is the
+next link of the same chain. `X509_load_cert_file` (`:167-170`), `X509_load_cert_file_ex` (`:90-165`),
+`X509_load_crl_file` (`:172-230`), `X509_load_cert_crl_file` (`:281-284`) and
+`X509_load_cert_crl_file_ex` (`:232-279`) land with the unit's seventeen raise coordinates.
+
+### What remains, and it is one blocker named twice
+`X509_LOOKUP_file` (`by_file.c:41-44`) and `X509_LOOKUP_hash_dir` (`by_dir.c:77-80`) stay withheld:
+both ctrl doors' `X509_FILETYPE_DEFAULT` arm calls `X509_get_default_cert_file`/`_dir`, the
+compile-time `OPENSSLDIR` constants 11.7 withholds under D451. The candidate reports `OPENSSLDIR:
+N/A` and the directory plane is Phase 16's, so a transcription would diverge on every default-path
+load -- the D452 class, where a name is withheld because the thing it would have to return does not
+exist yet rather than because the work is hard. `by_dir.rs`'s module doc now records the narrowed
+blocker (`X509_get_default_cert_dir` alone; the two `by_file` loads it once also named are landed).
+
+### The court drives every loader and its refusals
+`RT-X509-STORE` grows by forty observations: six fixed fixtures (certificate and CRL in both PEM and
+DER, a mixed bundle, an empty file) and, per loader, its success arm plus the refusal coordinate for
+NULL, a wrong-typed file, a missing file and an empty file. The candidate distribution shell was
+rebuilt so the five come from the implementation rather than a scaffolded abort.
+
+**A process note that belongs in the record.** The slice's own `cargo build` was clean, but two
+`clippy::undocumented_unsafe_blocks` errors in the `BIO_read_filename` expansions survived it and
+were caught by the pipeline's clippy gate. That is the gate doing its job: a build is not a lint,
+and the SAFETY comment now sits on the `unsafe` block rather than on the `if` that encloses it.
+
+Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,324/1,467 with 143 open; 129
+courts and 47,916 observations.
