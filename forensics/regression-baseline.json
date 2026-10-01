@@ -405,6 +405,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-PHASE22-FRF": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-PHASE22-GENEALOGY": {
       "observations": 0,
       "verdict": "pass"
@@ -414,6 +418,10 @@
       "verdict": "pass"
     },
     "RT-PHASE22-POD": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-RECONCILE": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -525,7 +533,7 @@
   "open_obligations": {
     "phase10": 0,
     "phase11": 335,
-    "phase22": 5,
+    "phase22": 3,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
