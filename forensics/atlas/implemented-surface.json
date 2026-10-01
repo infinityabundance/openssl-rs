@@ -493,7 +493,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 14974,
+      "compiler_emitted_count": 15011,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -501,7 +501,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 4729,
+        "implemented": 4746,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -719,6 +719,7 @@
           "ASN1_VISIBLESTRING_it",
           "ASN1_VISIBLESTRING_new",
           "ASN1_add_oid_module",
+          "ASN1_add_stable_module",
           "ASN1_bn_print",
           "ASN1_buf_print",
           "ASN1_check_infinite_end",
@@ -1944,6 +1945,7 @@
           "EVP_CIPHER_CTX_free",
           "EVP_CIPHER_CTX_get0_cipher",
           "EVP_CIPHER_CTX_get1_cipher",
+          "EVP_CIPHER_CTX_get_algor",
           "EVP_CIPHER_CTX_get_algor_params",
           "EVP_CIPHER_CTX_get_app_data",
           "EVP_CIPHER_CTX_get_block_size",
@@ -2244,6 +2246,7 @@
           "EVP_PBE_scrypt",
           "EVP_PBE_scrypt_ex",
           "EVP_PKCS82PKEY",
+          "EVP_PKCS82PKEY_ex",
           "EVP_PKEY2PKCS8",
           "EVP_PKEY_CTX_add1_hkdf_info",
           "EVP_PKEY_CTX_add1_tls1_prf_seed",
@@ -2263,6 +2266,7 @@
           "EVP_PKEY_CTX_get0_rsa_oaep_label",
           "EVP_PKEY_CTX_get1_id",
           "EVP_PKEY_CTX_get1_id_len",
+          "EVP_PKEY_CTX_get_algor",
           "EVP_PKEY_CTX_get_algor_params",
           "EVP_PKEY_CTX_get_app_data",
           "EVP_PKEY_CTX_get_cb",
@@ -2809,6 +2813,7 @@
           "NETSCAPE_SPKI_get_pubkey",
           "NETSCAPE_SPKI_it",
           "NETSCAPE_SPKI_new",
+          "NETSCAPE_SPKI_print",
           "NETSCAPE_SPKI_set_pubkey",
           "NETSCAPE_SPKI_sign",
           "NETSCAPE_SPKI_verify",
@@ -3448,6 +3453,7 @@
           "PBMAC1PARAM_free",
           "PBMAC1PARAM_it",
           "PBMAC1PARAM_new",
+          "PBMAC1_get1_pbkdf2_param",
           "PEM_ASN1_read",
           "PEM_ASN1_read_bio",
           "PEM_ASN1_write",
@@ -3669,6 +3675,7 @@
           "PKCS5_pbe2_set",
           "PKCS5_pbe2_set_iv",
           "PKCS5_pbe2_set_iv_ex",
+          "PKCS5_pbe2_set_scrypt",
           "PKCS5_pbe_set",
           "PKCS5_pbe_set0_algor",
           "PKCS5_pbe_set0_algor_ex",
@@ -3907,6 +3914,9 @@
           "RSA_verify_ASN1_OCTET_STRING",
           "RSA_verify_PKCS1_PSS",
           "RSA_verify_PKCS1_PSS_mgf1",
+          "SCRYPT_PARAMS_free",
+          "SCRYPT_PARAMS_it",
+          "SCRYPT_PARAMS_new",
           "SCT_LIST_free",
           "SCT_LIST_print",
           "SCT_LIST_validate",
@@ -4133,6 +4143,8 @@
           "X509_ACERT_get_version",
           "X509_ACERT_it",
           "X509_ACERT_new",
+          "X509_ACERT_print",
+          "X509_ACERT_print_ex",
           "X509_ACERT_set0_holder_baseCertId",
           "X509_ACERT_set0_holder_digest",
           "X509_ACERT_set0_holder_entityName",
@@ -4185,6 +4197,7 @@
           "X509_CRL_check_suiteb",
           "X509_CRL_cmp",
           "X509_CRL_delete_ext",
+          "X509_CRL_diff",
           "X509_CRL_digest",
           "X509_CRL_dup",
           "X509_CRL_free",
@@ -4678,6 +4691,7 @@
           "X509_new",
           "X509_new_ex",
           "X509_ocspid_print",
+          "X509_policy_check",
           "X509_policy_level_get0_node",
           "X509_policy_level_node_count",
           "X509_policy_node_get0_parent",
@@ -4716,6 +4730,7 @@
           "X509_supported_extension",
           "X509_time_adj",
           "X509_time_adj_ex",
+          "X509_to_X509_REQ",
           "X509_trust_clear",
           "X509_trusted",
           "X509_up_ref",
@@ -4955,6 +4970,7 @@
           "d2i_RSA_PUBKEY",
           "d2i_RSA_PUBKEY_bio",
           "d2i_RSA_PUBKEY_fp",
+          "d2i_SCRYPT_PARAMS",
           "d2i_SCT_LIST",
           "d2i_SXNET",
           "d2i_SXNETID",
@@ -5171,6 +5187,7 @@
           "i2d_RSA_PUBKEY",
           "i2d_RSA_PUBKEY_bio",
           "i2d_RSA_PUBKEY_fp",
+          "i2d_SCRYPT_PARAMS",
           "i2d_SCT_LIST",
           "i2d_SXNET",
           "i2d_SXNETID",
@@ -5233,7 +5250,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 1167
+        "scaffolded": 1150
       },
       "libssl": {
         "authority_exports": 603,
@@ -5244,18 +5261,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 4729,
-      "scaffolded": 1770
+      "implemented": 4746,
+      "scaffolded": 1753
     }
   },
-  "body_hash": "3db09eb6d59cb65713a7dcf8e8b0616d03ca9d7eb2a7747f3284ff85771de119",
+  "body_hash": "7875eaff965fbebe196f33557fc68a7764e3fa17b2ae5fe29a7e02bb6c5d230f",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "482586d0aad5ea9ee4c4442a6c948e69a58311088d87235a9b3ad9cbc377150c"
+      "sha256": "4ad91d5997c359c90d6272cdcc909b935f9a919f91c03fb25ecb757389511c36"
     },
     {
       "name": "authority-exports",

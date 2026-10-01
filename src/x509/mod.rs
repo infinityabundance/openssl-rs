@@ -170,12 +170,17 @@ pub mod x509_txt;
 // Phase 10.12's `crypto/x509/x_x509a.c` -- the `X509_CERT_AUX` item and the trust/alias/key-id
 // surface that unblocks `d2i_X509_AUX` in `x_x509.rs`.
 pub mod x_x509a;
-// Phase 10.12's policy graph: `pcy_lib.rs` lands the tree/level/node accessors and the four
-// `pcy_local.h` layouts; `pcy_node.rs` withholds the six internal node operations by name.
+// Phase 10.12's policy graph: `pcy_lib.rs` lands the tree/level/node accessors and the five
+// `pcy_local.h` layouts; `pcy_node.rs` lands the six internal node operations (Phase 11.2).
 pub mod pcy_lib;
 pub mod pcy_node;
-// Phase 11.2 -- `crypto/x509/pcy_tree.c`: `X509_policy_tree_free`; `X509_policy_check` is
-// withheld by name (see the module doc).
+// Phase 11.2's `crypto/x509/pcy_data.c` and `crypto/x509/pcy_cache.c`: the policy-data
+// constructor/destructor and the per-certificate policy cache. `pcy_cache.rs` also carries
+// `pcy_map.c`'s one function (see its module doc).
+pub mod pcy_cache;
+pub mod pcy_data;
+// Phase 11.2 -- `crypto/x509/pcy_tree.c`: the whole graph plus `X509_policy_check` (see the
+// module doc).
 pub mod pcy_tree;
 // Phase 10.12's small `v3_*` leaves. `v3_pcia.rs` lands the two RFC 3820 items; `v3_ist.rs`
 // lands the Issuer Sign Tool item; `v3_ia5.rs` and `v3_skid.rs` land their string helpers and

@@ -3,8 +3,8 @@
 //! `crypto/x509/v3_san.c`'s `v2i_subject_alt` reaches: `X509_REQ_get_subject_name`,
 //! `X509_REQ_get_version` and `X509_REQ_get0_signature`); **Phase 11.4 lands the rest**.
 //!
-//! `crypto/x509/x509_req.c` is 350 lines. This unit lands **twenty-three of its twenty-four
-//! remaining exports**: the public-key accessors (`X509_REQ_get_pubkey`/`_get0_pubkey`/
+//! `crypto/x509/x509_req.c` is 350 lines. This unit lands **all twenty-four of its remaining
+//! exports**: the public-key accessors (`X509_REQ_get_pubkey`/`_get0_pubkey`/
 //! `_get_X509_PUBKEY`), `X509_REQ_check_private_key`, the three extension-NID table functions
 //! (`X509_REQ_extension_nid`/`_get_extension_nids`/`_set_extension_nids`), the attribute surface
 //! (`X509_REQ_get_attr_count`/`_get_attr_by_NID`/`_get_attr_by_OBJ`/`_get_attr`/`_delete_attr` and
@@ -12,7 +12,8 @@
 //! `X509_REQ_set1_signature_algo`, `X509_REQ_get_signature_nid`), `i2d_re_X509_REQ_tbs` and --
 //! 11.4b's addition, on the `X509_EXTENSIONS` item `crate::x509::x_exten` lands --
 //! `X509_REQ_get_extensions`, `X509_REQ_add_extensions_nid` and `X509_REQ_add_extensions`.
-//! **One is withheld by name, with its blocker, below.**
+//! `X509_to_X509_REQ` joined them once 11.4 landed `X509_REQ_sign` (`crypto/x509/x_all.c`);
+//! **nothing in the unit is withheld now.**
 //!
 //! The `X509_REQ` object's lifecycle and its `ASN1_ITEM` descriptors -- `X509_REQ_new_ex`,
 //! `X509_REQ_free`, `X509_REQ_INFO_it`, `d2i_X509_REQ`, `i2d_X509_REQ`, ... -- are
@@ -57,14 +58,13 @@
 //! **56** bytes and `X509_REQ` is **120**, the interesting one being `references`, four bytes at
 //! 80, so 84..88 is padding before the pointer `lock` at 88.
 //!
-//! ## Withheld by name, with the name's blocker
+//! ## `X509_to_X509_REQ` landed last
 //!
-//! One of the twenty-four open exports this unit still owes:
-//!
-//! * `X509_to_X509_REQ` (`crypto/x509/x509_req.c:22-61`) -- calls `X509_REQ_sign`
-//!   (`crypto/x509/x_all.c`), withheld by name in `src/x509/x_all.rs` as a Phase 11.7 face. Every
-//!   other callee it names (`X509_REQ_new_ex`, `X509_REQ_set_subject_name`, `X509_get_subject_name`,
-//!   `X509_get0_pubkey`, `X509_REQ_set_pubkey`, `X509_REQ_free`) is landed.
+//! `X509_to_X509_REQ` (`crypto/x509/x509_req.c:22-61`) was withheld by name while `X509_REQ_sign`
+//! (`crypto/x509/x_all.c`) was unlanded, which `src/x509/x_all.rs` recorded as a Phase 11.7 face.
+//! 11.4 landed that signer and 11.7 lands this, over the whole landed closure (`X509_REQ_new_ex`,
+//! `X509_REQ_set_subject_name`, `X509_get_subject_name`, `X509_get0_pubkey`, `X509_REQ_set_pubkey`,
+//! `X509_REQ_free`).
 //!
 //! The four extension functions 11.4b lands depend on `X509_EXTENSIONS`, which
 //! `crate::x509::x_exten` withheld through Phase 10.8 and now publishes; `get_extensions_by_nid`
@@ -86,10 +86,11 @@ use crate::asn1::layout::{Asn1Encoding, Asn1String, V_ASN1_SEQUENCE};
 use crate::asn1::prim::ASN1_INTEGER_get;
 use crate::asn1::string::ASN1_BIT_STRING_free;
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_copy};
+use crate::evp::digest::EvpMd;
 use crate::evp::pkey::EvpPkey;
 use crate::runtime::err::err_reasons::X509_R_WRONG_TYPE;
 use crate::runtime::err::{err_sites::ErrSite, raise_site};
-use crate::runtime::mem::CRYPTO_free;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::obj::{Asn1Object, NID_ext_req, NID_ms_ext_req, NID_undef, OBJ_obj2nid};
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OpenSslStack,
@@ -100,12 +101,16 @@ use crate::x509::x509_att::{
     X509at_get_attr_by_OBJ, X509at_get_attr_count,
 };
 use crate::x509::x509_cmp::ossl_x509_check_private_key;
+use crate::x509::x509_cmp::{X509_get0_pubkey, X509_get_subject_name};
 use crate::x509::x509_v3::X509v3_add_extensions;
+use crate::x509::x509rset::{X509_REQ_set_pubkey, X509_REQ_set_subject_name};
+use crate::x509::x_all::X509_REQ_sign;
 use crate::x509::x_attrib::{X509Attribute, X509_ATTRIBUTE_free};
 use crate::x509::x_exten::{X509_EXTENSIONS_it, X509_EXTENSION_free};
 use crate::x509::x_name::X509Name;
 use crate::x509::x_pubkey::{X509Pubkey, X509_PUBKEY_get, X509_PUBKEY_get0};
-use crate::x509::x_req::i2d_X509_REQ_INFO;
+use crate::x509::x_req::{i2d_X509_REQ_INFO, X509_REQ_free, X509_REQ_new_ex};
+use crate::x509::x_x509::X509;
 
 /// `X509_REQ_VERSION_1` -- `include/openssl/x509.h:695`, `0`. The only version
 /// `X509_REQ_set_version` (`src/x509/x509rset.rs`) accepts.
@@ -281,11 +286,101 @@ const X509_REQ_345: ErrSite = x509_req_site(345, c"i2d_re_X509_REQ_tbs");
 const X509_REQ_133: ErrSite =
     x509_req_site_reason(133, c"get_extensions_by_nid", X509_R_WRONG_TYPE);
 
+/// `ERR_R_ASN1_LIB` — `include/openssl/err.h.in`, the reason `X509_to_X509_REQ`'s one raise
+/// carries. Declared locally because this unit's raises are not in `gen_err_raise_sites.py`'s
+/// covered set (see the module doc).
+const ERR_R_ASN1_LIB: c_int = 524301;
+/// `X509_to_X509_REQ`'s `ERR_raise(ERR_LIB_X509, ERR_R_ASN1_LIB)` at
+/// `crypto/x509/x509_req.c:31`.
+const X509_REQ_31: ErrSite = x509_req_site_reason(31, c"X509_to_X509_REQ", ERR_R_ASN1_LIB);
+
 /// `crypto/x509/x509_req.c` — the file the one allocator release below names.
 const FILE: &core::ffi::CStr = c"crypto/x509/x509_req.c";
 /// The authority's `OPENSSL_free(ext)` in `X509_REQ_add_extensions_nid`, at
 /// `crypto/x509/x509_req.c:199`.
 const LINE_FREE_EXT: c_int = 199;
+/// `X509_to_X509_REQ`'s `ri->version->data = OPENSSL_malloc(1)` at
+/// `crypto/x509/x509_req.c:38`.
+const LINE_MALLOC_VERSION: c_int = 38;
+
+/// The authority's `err:` tail of [`X509_to_X509_REQ`]: free the request and answer NULL.
+///
+/// # Safety
+/// `req` is NULL or this call's own request.
+unsafe fn to_req_err(req: *mut X509Req) -> *mut X509Req {
+    // SAFETY: `req` is NULL or this frame's own object.
+    unsafe { X509_REQ_free(req) };
+    ptr::null_mut()
+}
+
+/// `X509_REQ *X509_to_X509_REQ(X509 *x, EVP_PKEY *pkey, const EVP_MD *md)` —
+/// `crypto/x509/x509_req.c:22-61`.
+///
+/// Builds a certificate request from a certificate's subject and public key, signing it when a
+/// key is supplied. The version is forced to v1 (`0`) by writing the integer's content directly,
+/// which is the authority's own spelling: `X509_REQ_new_ex` leaves `version` NULL (the v1
+/// default), so the two fields are set on the embedded integer. Every later refusal is the
+/// `X509_REQ_free`-and-NULL tail; only the request's own construction raises.
+///
+/// # Safety
+/// `x` must be a live `X509`; `pkey` NULL or live; `md` NULL or live. The answer is owned by the
+/// caller.
+#[no_mangle]
+#[allow(non_snake_case)]
+pub unsafe extern "C" fn X509_to_X509_REQ(
+    x: *mut X509,
+    pkey: *mut EvpPkey,
+    md: *const EvpMd,
+) -> *mut X509Req {
+    // SAFETY: `x` is live per the contract and its two context fields are read from it.
+    let ret = unsafe { X509_REQ_new_ex((*x).libctx, (*x).propq) };
+    if ret.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X509_REQ_31) };
+        return ptr::null_mut();
+    }
+
+    /* `ri->version->length = 1; ri->version->data = OPENSSL_malloc(1); ... = 0;` — the version is
+     * written as a one-byte zero rather than through `ASN1_INTEGER_set`, which is the authority's
+     * own shape. */
+    // SAFETY: `ret` is live and its `version` is the fresh item's own integer.
+    unsafe {
+        (*(*ret).req_info.version).length = 1;
+        (*(*ret).req_info.version).data =
+            CRYPTO_malloc(1, FILE.as_ptr(), LINE_MALLOC_VERSION).cast::<c_uchar>();
+        if (*(*ret).req_info.version).data.is_null() {
+            return to_req_err(ret);
+        }
+        *(*(*ret).req_info.version).data = 0;
+    }
+
+    // SAFETY: `ret` and `x` are live.
+    if unsafe { X509_REQ_set_subject_name(ret, X509_get_subject_name(x)) } == 0 {
+        // SAFETY: `ret` is this call's own request.
+        return unsafe { to_req_err(ret) };
+    }
+
+    // SAFETY: `x` is live.
+    let pktmp = unsafe { X509_get0_pubkey(x) };
+    if pktmp.is_null() {
+        // SAFETY: `ret` is this call's own request.
+        return unsafe { to_req_err(ret) };
+    }
+    // SAFETY: `ret` is live and `pktmp` is the certificate's own key.
+    if unsafe { X509_REQ_set_pubkey(ret, pktmp) } == 0 {
+        // SAFETY: `ret` is this call's own request.
+        return unsafe { to_req_err(ret) };
+    }
+
+    if !pkey.is_null() {
+        // SAFETY: `ret` is live; `pkey` and `md` are the caller's per the contract.
+        if unsafe { X509_REQ_sign(ret, pkey, md) } == 0 {
+            // SAFETY: `ret` is this call's own request.
+            return unsafe { to_req_err(ret) };
+        }
+    }
+    ret
+}
 
 /// `EVP_PKEY *X509_REQ_get_pubkey(X509_REQ *req)` — `crypto/x509/x509_req.c:63-68`.
 ///

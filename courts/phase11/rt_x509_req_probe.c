@@ -342,6 +342,55 @@ static void drive_r2x(void)
     X509_REQ_free(r);
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * `x509_req.c` -- `X509_to_X509_REQ`.
+ * --------------------------------------------------------------------------------------------- */
+
+static void drive_to_req(void)
+{
+    BIO *kb = BIO_new_mem_buf(pkcs8_plain_pem, (int)(sizeof pkcs8_plain_pem - 1));
+    EVP_PKEY *k = PEM_read_bio_PrivateKey(kb, NULL, NULL, NULL);
+    const unsigned char *p = RT_X509_CERT_DER;
+    X509 *x = d2i_X509(NULL, &p, (long)RT_X509_CERT_DER_LEN);
+    X509_REQ *r;
+
+    out_ptr("toreq.key", k);
+    out_ptr("toreq.cert", x);
+
+    /* The signed construction. */
+    r = X509_to_X509_REQ(x, k, EVP_sha256());
+    out_ptr("toreq.req", r);
+    if (r != NULL) {
+        const ASN1_BIT_STRING *sig = NULL;
+        const X509_ALGOR *alg = NULL;
+
+        out_int("toreq.version", X509_REQ_get_version(r));
+        out_int("toreq.subject_eq",
+                X509_NAME_cmp(X509_REQ_get_subject_name(r), X509_get_subject_name(x)) == 0);
+        out_int("toreq.pubkey_eq",
+                EVP_PKEY_eq(X509_REQ_get0_pubkey(r), X509_get0_pubkey(x)));
+        X509_REQ_get0_signature(r, &sig, &alg);
+        out_ptr("toreq.sig", sig);
+        X509_REQ_free(r);
+    }
+
+    /* A NULL signing key builds the request but leaves it unsigned. */
+    r = X509_to_X509_REQ(x, NULL, NULL);
+    out_ptr("toreq.unsigned", r);
+    if (r != NULL) {
+        const ASN1_BIT_STRING *sig = NULL;
+        const X509_ALGOR *alg = NULL;
+
+        X509_REQ_get0_signature(r, &sig, &alg);
+        out_ptr("toreq.unsigned.sig", sig);
+        X509_REQ_free(r);
+    }
+
+    X509_free(x);
+    EVP_PKEY_free(k);
+    BIO_free(kb);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IOLBF, 0);
@@ -350,6 +399,7 @@ int main(void)
     drive_req();
     drive_crl();
     drive_r2x();
+    drive_to_req();
 
     return 0;
 }

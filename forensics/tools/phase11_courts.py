@@ -133,6 +133,12 @@ COURTS: list[tuple[str, str]] = [
     # mutators and printers, `X509_to_X509_REQ`/`X509_REQ_to_X509`, the `X509_ACERT` sign/verify
     # doors and the extension accessors, over fixed DER fixtures.
     ("RT-X509-REQ", "rt_x509_req_probe.c"),
+    # "RT-X509 -- the Phase 11.7 shared remainder, driven."
+    # The units whose closure crosses into the landed strata: the PKCS#5 scrypt scheme
+    # (`p5_scrypt.c`), the two `EVP_*_CTX_get_algor` hand-offs (`evp_lib.c`),
+    # `ASN1_add_stable_module` (`asn_mstbl.c`), `EVP_PKCS82PKEY_ex` (`evp_pkey.c`),
+    # `NETSCAPE_SPKI_print` (`t_spki.c`) and `PBMAC1_get1_pbkdf2_param` (`p12_mutl.c`).
+    ("RT-X509", "rt_x509_misc_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -143,10 +149,6 @@ PENDING_COURTS: dict[str, str] = {
     "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the "
                   "`GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, "
                   "`v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)",
-    "RT-X509": "11.7 -- the remaining shared units whose closure crosses into the landed "
-               "strata (`x_all.c`, `p5_scrypt.c`, `nsseq.c`, `x509_def.c`, `x_info.c`, "
-               "`x_pkey.c`, `evp_lib.c`, `evp_pkey.c`, `t_spki.c`, `p12_mutl.c`, "
-               "`asn_mstbl.c`)",
 }
 
 

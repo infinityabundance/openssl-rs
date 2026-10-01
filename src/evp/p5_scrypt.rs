@@ -4,7 +4,9 @@
 //! strata: its two keygen exports are declared in `evp.h` and are therefore **Phase 7's**
 //! (`forensics/atlas/symbol-ownership.json`), while `PKCS5_pbe2_set_scrypt` and the
 //! `SCRYPT_PARAMS_*`/`d2i_SCRYPT_PARAMS` accessors are declared in `x509.h` and are Phase 11's.
-//! This module transcribes the Phase 7 half; the Phase 11 half stays in the ledger.
+//! This module transcribes the Phase 7 half; **the Phase 11 half landed in `src/asn1/p5_scrypt.rs`
+//! with 11.7**, over a `SCRYPT_PARAMS` descriptor of its own (the private one below stays
+//! private, so no symbol is defined twice).
 //!
 //! It is a module of its own rather than a second half of `src/evp/pbe.rs` because the convention
 //! this stratum follows is one crate file per authority unit, and `crypto/asn1/*` units already
@@ -12,7 +14,8 @@
 //! `crypto/asn1/ameth_lib.c`). The two `SCRYPT_PARAMS` *templates* are transcribed here as
 //! file-local statics for the reason `src/asn1/evp_asn1.rs` records for its pair items: the item
 //! is `static const` inside the authority's own accessor, nothing outside the unit can name it, and
-//! the exported accessor is Phase 11's.
+//! the exported accessor was Phase 11's when this half landed (it is `src/asn1/p5_scrypt.rs`'s
+//! now).
 //!
 //! ## Five ways to refuse, and one that is a *probe* rather than a derivation
 //!

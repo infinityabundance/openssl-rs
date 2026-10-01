@@ -8,7 +8,8 @@
 //! [`PKCS12_key_gen_utf8_ex`](crate::pkcs12::p12_key::PKCS12_key_gen_utf8_ex) — the PKCS#12 KDF —
 //! and that subphase landed it, so the four land now, together with the four internal helpers
 //! they call: `PBMAC1_get1_pbkdf2_param`, `PBMAC1_PBKDF2_HMAC`, `pkcs12_gen_gost_mac_key` and the
-//! `pkcs12_pbmac1_pbkdf2_key_gen` callback.
+//! `pkcs12_pbmac1_pbkdf2_key_gen` callback. Phase 11.7 published the first of the four as the
+//! `x509.h` export [`PBMAC1_get1_pbkdf2_param`], over the same body.
 //!
 //! **Their closure was measured, not assumed.** `nm --undefined-only` over the authority's own
 //! `libcrypto-lib-p12_mutl.o` lists every name the unit reaches; every one is a landed crate
@@ -301,6 +302,22 @@ unsafe fn pbmac1_get1_pbkdf2_param(macalg: *const X509Algor) -> *mut Pbkdf2Param
     // SAFETY: `param` is this frame's own.
     unsafe { PBMAC1PARAM_free(param) };
     pbkdf2_param
+}
+
+/// `PBKDF2PARAM *PBMAC1_get1_pbkdf2_param(const X509_ALGOR *macalg)` —
+/// `crypto/pkcs12/p12_mutl.c:82-106`.
+///
+/// **The export face of the file-local helper above**, added by Phase 11.7: `x509.h` declares the
+/// name and the atlas assigns the row to this stratum, while `PBMAC1_PBKDF2_HMAC` reaches the same
+/// body directly. It is one call, because the body and its two refusals' coordinates are already
+/// transcribed.
+///
+/// # Safety
+/// `macalg` is a live `X509_ALGOR`. The answer is owned by the caller.
+#[no_mangle]
+pub unsafe extern "C" fn PBMAC1_get1_pbkdf2_param(macalg: *const X509Algor) -> *mut Pbkdf2Param {
+    // SAFETY: `macalg` is live per the contract.
+    unsafe { pbmac1_get1_pbkdf2_param(macalg) }
 }
 
 /// `static int PBMAC1_PBKDF2_HMAC(OSSL_LIB_CTX *ctx, const char *propq, const char *pass,

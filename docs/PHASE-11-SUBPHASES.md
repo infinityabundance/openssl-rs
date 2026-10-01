@@ -313,15 +313,18 @@ and `X509_STORE_set_trust`; and 11.1c's file loaders add `X509_load_cert_file`,
 and setters (`x509_acert.c`, `x509aset.c`), the `OSSL_IETF_ATTR_SYNTAX` items (`x_ietfatt.c`) and
 the `x_all.c` sign/verify/`_fp`/`_bio` doors, leaving only the two `X509_ACERT` printers, which
 wait on `X509_signature_print`. 11.4 adds the certificate, request and CRL printers (`t_x509.c`,
-`t_req.c`, `t_crl.c`) and `X509_REQ_to_X509` (`x509_r2x.c`).
+`t_req.c`, `t_crl.c`) and `X509_REQ_to_X509` (`x509_r2x.c`). 11.7 adds the shared remainder --
+`p5_scrypt.rs`, `evp_lib.rs`, `asn_mstbl.rs`, `evp_pkey.rs`, `t_spki.rs` and `p12_mutl.rs` -- and
+closes the two follow-ups the previous commit left: `X509_to_X509_REQ` (`x509_req.rs`) and the two
+`X509_ACERT` printers (`t_acert.rs`), now that `X509_REQ_sign` and `X509_signature_print` are
+landed. 11.2 adds `X509_CRL_diff` and `X509_policy_check` with its `pcy_*` internals.
 
 **Open exports (checked against the ledger):**
 
 The store and verification layer is still open at `X509_verify_cert`; the attribute certificate
-printers at `X509_ACERT_print_ex` and the verify-callback printer
-`X509_STORE_CTX_print_verify_cb`; the
-request surface at `X509_to_X509_REQ`; and
-the remaining shared units at `X509_get_default_cert_file`, `NETSCAPE_SPKI_print`, `X509_load_http`
+surface is closed but for the verify-callback printer
+`X509_STORE_CTX_print_verify_cb`; and
+the remaining shared units at `X509_get_default_cert_file`, `X509_load_http`
 and `X509_CRL_load_http`. Every name
 here is in the ledger's open list; the counts move as the slices land, so the ledger, not this
 sentence, carries them.

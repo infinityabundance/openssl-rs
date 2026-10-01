@@ -58,6 +58,10 @@ pub mod evp_pbe;
 // step `pem_read_bio_key_legacy` reaches. A partial module -- the unit's encoder half and the
 // `EVP_PKCS82PKEY*` exports are Phase 10's and are withheld with their coordinates.
 pub mod evp_pkey;
+// Phase 11.7's `crypto/evp/evp_lib.c` hand-offs -- the two `X509_ALGOR **` getters that need
+// `d2i_X509_ALGOR` (11's codec) and so could not land with their `_params` siblings in
+// `cipher_ctx.rs`/`pkey_ctx.rs`.
+pub mod evp_lib;
 pub mod exchange;
 pub mod fetch;
 pub mod kdf;

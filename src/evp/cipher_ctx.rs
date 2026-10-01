@@ -45,15 +45,15 @@
 //!   * the field itself is kept, so `EVP_CIPHER_CTX_copy`'s byte copy and any future
 //!     Phase-13 code see the same layout.
 //!
-//! ## One export is handed to Phase 11, and it is the only one
+//! ## One export was handed to Phase 11, and it landed with 11.7
 //!
 //! `EVP_CIPHER_CTX_get_algor` takes an `X509_ALGOR **` and fills it with `d2i_X509_ALGOR`, which
 //! is Phase 11's (`X509_ALGOR_it`, `d2i_X509_ALGOR`, `i2d_X509_ALGOR`). Its two siblings,
 //! `EVP_CIPHER_CTX_get_algor_params` and `_set_algor_params`, take the *struct* rather than a
 //! decoder and need no Phase-11 function — only the layout, which is declared here — so they land
-//! with this slice. The deferral is in `forensics/tools/phase7_obligations.py`'s `HANDED_ON` with
-//! the dependency named, which is the mechanism the ledger documents for a symbol whose reader
-//! arrives with another stratum.
+//! with this slice. The deferral was in `forensics/tools/phase7_obligations.py`'s `HANDED_ON` with
+//! the dependency named; 11.7 retired it when it wrote `EVP_CIPHER_CTX_get_algor` (and its
+//! `EVP_PKEY_CTX` twin) in `src/evp/evp_lib.rs`.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
