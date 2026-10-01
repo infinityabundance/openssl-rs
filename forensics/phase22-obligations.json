@@ -4,8 +4,8 @@
     "counts": {
       "atlas_owned": 18,
       "deferred_to_later_phase": 0,
-      "implemented": 7,
-      "open_in_this_stratum": 11,
+      "implemented": 13,
+      "open_in_this_stratum": 5,
       "owned": 18,
       "received_by_handoff": 0
     },
@@ -15,46 +15,22 @@
       "22.1",
       "22.2",
       "22.3",
+      "22.4",
+      "22.5",
       "22.6",
+      "22.7",
       "22.8",
-      "22.9"
+      "22.9",
+      "22.10",
+      "22.11",
+      "22.13"
     ],
     "note": "`open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
     "open": [
       {
-        "artefact": "forensics/atlas/phase22/conditional-surface.json",
-        "plane": "The preprocessor and conditional-compilation graph",
-        "subphase": "22.4"
-      },
-      {
-        "artefact": "forensics/atlas/phase22/generated-lineage.json",
-        "plane": "The generated-source and build genealogy",
-        "subphase": "22.5"
-      },
-      {
-        "artefact": "forensics/atlas/phase22/dispatch-graph.json",
-        "plane": "The indirect dispatch, callback and registration graph",
-        "subphase": "22.7"
-      },
-      {
-        "artefact": "forensics/atlas/phase22/config-surface.json",
-        "plane": "The configuration, environment and default-path surface",
-        "subphase": "22.10"
-      },
-      {
-        "artefact": "forensics/atlas/phase22/pod-contract.json",
-        "plane": "The canonical POD contract oracle and the POD-runtime differential",
-        "subphase": "22.11"
-      },
-      {
         "artefact": "forensics/atlas/phase22/reconciliation.json",
         "plane": "The cross-plane reconciliation",
         "subphase": "22.12"
-      },
-      {
-        "artefact": "forensics/atlas/phase22/test-crosswalk.json",
-        "plane": "The test, demo and fuzz semantic crosswalk",
-        "subphase": "22.13"
       },
       {
         "artefact": "forensics/atlas/phase22/compatibility-closure.json",
@@ -85,7 +61,7 @@
     {
       "name": "phase-22-plan",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "ed4af2df27639b451535d13ecb801a27860b36f21f5ca7e6aa83e358350efc24"
+      "sha256": "55a1ba6d7debcb2533d2a2178856318c7f99e47092d2e45eb68fc72f3de1c6b1"
     }
   ],
   "kind": "phase22-obligations",

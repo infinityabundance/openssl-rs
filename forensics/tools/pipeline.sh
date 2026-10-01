@@ -187,6 +187,16 @@ echo "== ledgers =="
 # matching the glob, not an entry in a list somebody has to remember to extend.
 for f in forensics/tools/phase*_obligations.py; do python3 "$f"; done
 
+# The Phase-11.2 / Phase-22 X.509 closure gate. It is **after** the ledgers because it reads
+# `forensics/phase11-obligations.json`'s implemented set, and it **fails closed**: a new export of
+# Phase 11.2's three units while the Phase-22 X.509 closure slice is unsatisfied is the thing the
+# stratum-level `REQUIRES` edge cannot see, because that edge only fires on a `complete`
+# (`docs/PHASE-22-SUBPHASES.md` section 8, `docs/PHASE-11-SUBPHASES.md` section 2 row 11.2).
+# `--self-test` runs first and proves the rule fires, since a gate never seen to fire is not
+# evidence.
+python3 forensics/tools/phase22_x509_gate.py --self-test
+python3 forensics/tools/phase22_x509_gate.py
+
 # The Phase 8 remainder projection (`docs/PHASE-8-REMAINING.md`), immediately after the
 # loop above because it is a projection of the ledger that loop writes: run before it,
 # it would render the previous generation's ledger. `evidence_determinism.py` re-runs it

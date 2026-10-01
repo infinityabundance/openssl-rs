@@ -33911,6 +33911,71 @@ differential.
 
 `PIPELINE OK` exit 0 with 117 courts and 47,575 observations.
 
+## D492 -- 22.2's reference identity, the 11.2 closure gate, and 22.6 as the witness for 22.1
+
+Three defects a review found, all fixed, plus one strengthening. `PIPELINE OK` exit 0 with **123
+courts**.
+
+### 22.2 dropped the Doxygen `refid`, so two distinct targets could share an identity
+The extractor emitted each reference edge with the target's display **name** and discarded the
+Doxygen `refid`, and `_adjacency` then stored the destination by that name. Two `static int
+lookup` in different files would have collapsed into one destination -- an information loss in a
+plane whose purpose is that no reachable path is lost. `phase22_doxygen.py` now indexes every
+`memberdef` `id` while parsing and resolves each edge to a real identity
+(`{kind, file, line, name}`, or an explicit `resolved: false` with the raw name and refid for a
+target outside the tree), and `_adjacency` keys on the identity on both ends. Unresolved targets are
+recorded, never dropped: **319,253 of 323,306 edges resolve (98.75%)**.
+
+**The defect was latent in this corpus, and that is recorded rather than dressed up.** Re-keying by
+spelling over the raw XML gives the same 323,306 destinations for OpenSSL 3.6.4, because Doxygen's
+spelling happens to be unique per source and relation here. What the fix buys is that the invariant
+is now structural rather than accidental -- there are **980 source slots holding two or more
+destinations that share a member name but differ in identity** (for example
+`function|apps/include/apps_ui.h|19|password_callback` and
+`function|apps/req.c|1164|prompt_info`), and the court's new `same-spelling` mutation adds a caller
+naming `lookup` in two files and requires **two** destinations. Reverting `_adjacency` to name
+keying in memory turns the court to `fail` on four of its checks.
+
+### Phase 11.2 is now gated on the Phase-22 X.509 closure slice
+The stratum-level `REQUIRES` edge stops Phase 11 being `complete` while Phase 22 is open. It does
+not stop somebody implementing `X509_verify_cert`, `x509_vpm.c` and `pcy_tree.c` tomorrow, which is
+what the dependency is for. `forensics/tools/phase22_x509_gate.py` is the subphase-level half: a
+fail-closed pipeline gate that reads the exports `x509_vfy.c`, `x509_vpm.c` and `pcy_tree.c` define,
+compares their implemented set against the frozen baseline
+`forensics/phase22/x509-closure-slice-baseline.json`, and **refuses any growth while the X.509
+closure slice is unsatisfied**, naming the exports that grew.
+
+The baseline is frozen rather than zero because Phase 10's pulled-forward subphases legitimately
+landed part of those units before Phase 22 existed -- one export is already implemented -- and a gate
+that fired on work already done could not be passed. The gate has its own `--self-test`, which
+reconstructs the shape it exists to stop and requires the rule to refuse it, because a gate never
+seen to fire is not evidence. The contract it reads is now written down
+(`docs/PHASE-22-SUBPHASES.md` section 8): 22.14 must publish
+`compatibility-closure.json`'s `body.x509_slice` with `roots`, `satisfied` and `unknown_residuals`,
+and `satisfied` is true exactly when no `UNKNOWN` residual intersects an X.509 root.
+`docs/PHASE-11-SUBPHASES.md` section 2's row 11.2 now names the dependency in its own column.
+
+### The state line said "residuals" where it meant "instruments"
+`phase_state.py` described the unlanded Phase-22 planes as *"N unresolved atlas residual(s)"*. That
+conflates two different quantities: until 22.14's closure exists there are no `UNKNOWN` residuals to
+count, and what is open is instruments not yet built. The line now reads *"N compatibility plane(s)
+remain unimplemented"*, and appends the `UNKNOWN`-residual count **only** when the closure artefact
+exists to read it from. A state line that overstates the atlas to describe unfinished work is the
+same class of defect D482 and D483 removed from the notes.
+
+### 22.6 became the independent witness for 22.1
+A compiler wrapper proves what went *through the wrapper*; it cannot prove that everything which
+produced the authority went through it. 22.6 now closes that: it joins 22.1's captured outputs
+against every object it walks and gives each object exactly one explanation --
+`CAPTURED_COMPILER_OUTPUT` (1,082), `PERLASM_OUTPUT` (41), `LINK_OUTPUT` (10), with
+`GENERATED_ASSEMBLY_OUTPUT`, `ARCHIVE_MEMBER` and `EXPLICIT_NONCOMPILER_BUILD_STEP` empty in this
+corpus. **1,133 of 1,133 objects are explained and 0 are unexplained**, and an object with no
+captured invocation would now land in a named `unexplained` array rather than appear in no list at
+all. The court blinds the captured-output join in memory and requires the probe to fail there, so
+the witness is proven able to see a capture gap rather than merely asserted to close.
+
+`PIPELINE OK` exit 0 with **123 courts** and 47,575 observations.
+
 ## D491 -- 22.11: the canonical POD contract oracle, and the claim graph that will not pretend to
 ## have read the prose
 

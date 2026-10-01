@@ -40,12 +40,30 @@ for, and the entities it found located *outside* the authority (system headers r
 `#include`) that this tool deliberately does not harvest, because they are not the authority's
 surface and their paths are the container's, not the repository's.
 
+Reference resolution, and why the `refid` is resolved rather than dropped
+-------------------------------------------------------------------------
+A `<references>`/`<referencedby>` occurrence names its target with Doxygen's internal `refid`, and
+only incidentally with a display spelling. Recording the spelling alone would collapse two
+different authority entities that share it -- the canonical case being two `static` functions
+named `lookup` in different files -- into one destination, which is precisely the information loss
+this plane exists to prevent: a compatibility path that cannot name its target is a path that can
+be lost. So the parse accumulates an index from every recorded `memberdef` and compound `id` to its
+`(kind, name, file, line)` identity, and each edge is resolved against that index after the whole
+view has been read (the index is only complete once every compound has been visited). A resolved
+edge carries the full target identity; an edge whose `refid` is not in the index -- an external or
+system target, an enum value, a compound kind this tool does not record -- is persisted explicitly
+unresolved with its `refid` and spelling, never dropped. `body.counts.reference_edges_resolved` and
+`reference_edges_unresolved` record how much of the graph resolved; an unresolved target is a
+measurement, not a failure.
+
 Determinism
 -----------
 `body.entities` is sorted by `(kind, name, file, line)` and every file path is repository-relative.
-No timestamp, PID or scratch path is written. The same source tree produces byte-identical JSON,
-which is what lets `forensics/tools/phase22_courts.py`'s `RT-PHASE22-DOXYGEN` mutate the parsed
-rows in memory and check that the merge and classification logic moves in exactly the expected way.
+`body.references` is keyed by the resolved `kind|file|line|name` identity, its resolved target lists
+and each source's keys are sorted, and its unresolved targets are sorted by `(refid, name)`. No
+timestamp, PID or scratch path is written. The same source tree produces byte-identical JSON,
+which is what lets this module's own `courts()` mutate the parsed rows in memory and check that the
+merge, resolution and classification logic moves in exactly the expected way.
 
 Output
 ------
@@ -57,6 +75,7 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import os
 import re
@@ -81,7 +100,9 @@ from atlas_common import (  # noqa: E402
 
 GENERATOR = "forensics/tools/phase22_doxygen.py"
 CAPTURE_REL = "forensics/atlas/phase22/compile-commands.json"
-OUT_REL = "forensics/atlas/phase22/doxygen-entities.json"
+ARTEFACT_REL = "forensics/atlas/phase22/doxygen-entities.json"
+OUT_REL = ARTEFACT_REL
+COURT = "RT-PHASE22-DOXYGEN"
 
 # The view order is fixed; it is the order the views are run in and the order they are rendered.
 VIEWS = ("configured", "lexical")
@@ -244,11 +265,38 @@ def doxygen_version() -> str:
 # XML normalization
 # ---------------------------------------------------------------------------
 
+def _identity(kind: str, name: str, file: str | None, line: int | None) -> dict:
+    """A target's identity, in the same field order as `body.entities`."""
+    return {"kind": kind, "name": name, "file": file, "line": line}
+
+
+def _identity_str(ident: dict) -> str:
+    """The `kind|file|line|name` key an identity is keyed by, everywhere it is stored.
+
+    `line` is empty for an entity Doxygen gave no line (a file compound), so the split is total:
+    no file path or entity name contains a `|`.
+    """
+    line = ident["line"] if ident["line"] is not None else ""
+    return f"{ident['kind']}|{ident['file'] or ''}|{line}|{ident['name']}"
+
+
+def _ident_from_str(key: str) -> dict:
+    """The inverse of `_identity_str`, for the round-trip the court drives."""
+    kind, file, line, name = key.split("|", 3)
+    return _identity(kind, name, file or None, int(line) if line else None)
+
+
 def _member_rows(compound: ET.Element, parent_kind: str, src_root: Path,
-                 external: list[int]) -> tuple[list[dict], list[dict]]:
-    """Rows for every memberdef of one compound, plus that compound's outgoing edges."""
+                 external: list[int]) -> tuple[list[dict], list[dict], dict[str, dict]]:
+    """One compound's member rows, its raw outgoing edges, and its `id -> identity` index entries.
+
+    Edges are returned **unresolved**: they carry the target `refid` and spelling but not the
+    target's identity, because the identity index is only complete once every compound in the view
+    has been visited. `parse_view` resolves them after the loop.
+    """
     rows: list[dict] = []
     edges: list[dict] = []
+    index: dict[str, dict] = {}
     for member in compound.findall("sectiondef/memberdef"):
         mkind = member.get("kind")
         if mkind == "enumvalue":
@@ -285,28 +333,53 @@ def _member_rows(compound: ET.Element, parent_kind: str, src_root: Path,
             "documented": documented,
         }
         rows.append(row)
+        ident = _identity(kind, name, rel_file, line)
+        member_id = member.get("id")
+        if member_id:
+            index[member_id] = ident
         for rel_kind, tag in (("references", "references"), ("referenced_by", "referencedby")):
             for ref in member.findall(tag):
                 edges.append({
-                    "from_kind": kind,
-                    "from_name": name,
-                    "from_file": rel_file,
-                    "from_line": line,
+                    "from": ident,
                     "relation": rel_kind,
-                    "name": _plain(ref),
+                    "target_name": _plain(ref),
+                    "target_refid": ref.get("refid"),
                 })
-    return rows, edges
+    return rows, edges, index
+
+
+def _resolve_edge(raw: dict, index: dict[str, dict]) -> dict:
+    """Resolve a raw edge's `refid` against the identity index, or mark it unresolved.
+
+    A missing `refid`, or one the index does not hold, is recorded as an unresolved target with
+    both its spelling and its `refid`. An external or system target is real information about the
+    graph even though it is not this authority's surface, and an unparsed internal one is a
+    measurement of what the index could not name; neither is a silent drop.
+    """
+    refid = raw["target_refid"]
+    target = index.get(refid) if refid else None
+    if target is not None:
+        return {"from": raw["from"], "relation": raw["relation"],
+                "target": target, "resolved": True}
+    return {"from": raw["from"], "relation": raw["relation"], "target_name": raw["target_name"],
+            "target_refid": refid, "resolved": False}
 
 
 def parse_view(xml_dir: Path, src_root: Path) -> dict:
-    """Parse one view's Doxygen XML into entity rows, edges and coverage counters.
+    """Parse one view's Doxygen XML into entity rows, resolved edges and coverage counters.
 
     Every compound file is read independently (the full XML is ~200 MB, and a single parse of all
     compounds would hold it in memory for no benefit). `index.xml` is skipped: it is the summary,
     and the compound files carry the descriptions, locations and references this tool needs.
+
+    The `id -> identity` index is accumulated while the compounds are read, because a reference may
+    point forward to a compound not yet visited; edges are therefore resolved only after the whole
+    view has been seen. It is a single pass over the XML, with a second pass over the edges in
+    memory (the edge list is a fraction of the XML).
     """
     rows: list[dict] = []
-    edges: list[dict] = []
+    raw_edges: list[dict] = []
+    index: dict[str, dict] = {}
     directories: list[str] = []
     files: list[str] = []
     external = [0]
@@ -350,6 +423,10 @@ def parse_view(xml_dir: Path, src_root: Path) -> dict:
             files.append(rel_file)
         if not name:
             continue
+        ident = _identity(kind, name, rel_file, line)
+        compound_id = compound.get("id")
+        if compound_id:
+            index[compound_id] = ident
         brief = _plain(compound.find("briefdescription"))
         documented = bool(brief or _plain(compound.find("detaileddescription")))
         rows.append({
@@ -361,13 +438,17 @@ def parse_view(xml_dir: Path, src_root: Path) -> dict:
             "is_static": False,
             "documented": documented,
         })
-        member_rows, member_edges = _member_rows(
+        member_rows, member_edges, member_index = _member_rows(
             compound, "struct" if kind in ("struct", "union") else "file", src_root,
             external)
         rows.extend(member_rows)
-        edges.extend(member_edges)
+        raw_edges.extend(member_edges)
+        index.update(member_index)
+    edges = [_resolve_edge(e, index) for e in raw_edges]
+    resolved = sum(1 for e in edges if e["resolved"])
     return {"rows": rows, "edges": edges, "directories": sorted(set(directories)),
-            "files": sorted(set(files)), "external": external[0]}
+            "files": sorted(set(files)), "external": external[0],
+            "edges_resolved": resolved, "edges_unresolved": len(edges) - resolved}
 
 
 # ---------------------------------------------------------------------------
@@ -419,29 +500,49 @@ def split_views(entities: list[dict]) -> tuple[list[dict], list[dict]]:
     return configured, lexical
 
 
-def _adjacency(edges: list[dict]) -> dict[str, dict[str, list[str]]]:
-    """Collapse the configured view's references into a per-entity adjacency map.
+def _adjacency(edges: list[dict]) -> dict[str, dict[str, list]]:
+    """Collapse the configured view's resolved edges into a per-source adjacency map.
 
-    Doxygen gives the same `caller -> callee` reference once per reference site and gives the
-    relation from both ends (`references` on the caller, `referenced_by` on the callee), so the
-    raw XML holds ~323k occurrences over ~70k entities. Written out one JSON object per
-    occurrence the artefact reached 127 MB; the same information as a per-source-entity adjacency
-    with de-duplicated target names is a fraction of that, and the Doxygen-internal `refid`, which
-    means nothing to any consumer, is dropped. The key is `kind|file|line|name` -- the entity
-    identity, in the same field order as `body.entities`.
+    Doxygen gives a reference from both ends (`references` on the caller, `referenced_by` on the
+    callee) and may repeat it per reference site, so the raw XML holds ~323k occurrences over ~70k
+    entities; written out one JSON object per occurrence the artefact reached 127 MB, and the same
+    information as a per-source adjacency is a fraction of that. Both the source key and every
+    resolved destination are the `kind|file|line|name` identity, in the same field order as
+    `body.entities`: keying a destination by its display spelling alone would merge two different
+    entities that share one -- two `static` functions named `lookup` in different files -- into a
+    single compatibility destination, which is exactly the loss this plane exists to prevent. A
+    destination whose `refid` did not resolve is kept under `<relation>_unresolved` as `{name,
+    refid}`, so an external or unparsed target is recorded rather than dropped. Every list is
+    de-duplicated and sorted (`(refid, name)` for the unresolved ones).
     """
-    out: dict[str, dict[str, set[str]]] = {}
+    out: dict[str, dict[str, set]] = {}
     for e in edges:
-        line = e["from_line"] if e["from_line"] is not None else ""
-        key = f"{e['from_kind']}|{e['from_file'] or ''}|{line}|{e['from_name']}"
-        slot = out.setdefault(key, {"references": set(), "referenced_by": set()})
-        if e["name"]:
-            slot[e["relation"]].add(e["name"])
-    return {
-        key: {rel: sorted(vals) for rel, vals in slot.items()}
-        for key, slot in sorted(out.items())
-        if slot["references"] or slot["referenced_by"]
-    }
+        key = _identity_str(e["from"])
+        slot = out.setdefault(key, {"references": set(), "referenced_by": set(),
+                                    "references_unresolved": set(),
+                                    "referenced_by_unresolved": set()})
+        rel = e["relation"]
+        if e.get("resolved"):
+            slot[rel].add(_identity_str(e["target"]))
+        else:
+            slot[f"{rel}_unresolved"].add((e.get("target_refid") or "", e.get("target_name") or ""))
+    result: dict[str, dict[str, list]] = {}
+    for key, slot in sorted(out.items()):
+        references = sorted(slot["references"])
+        referenced_by = sorted(slot["referenced_by"])
+        refs_unresolved = [{"name": name, "refid": refid}
+                           for refid, name in sorted(slot["references_unresolved"])]
+        refby_unresolved = [{"name": name, "refid": refid}
+                            for refid, name in sorted(slot["referenced_by_unresolved"])]
+        if not (references or referenced_by or refs_unresolved or refby_unresolved):
+            continue
+        entry: dict[str, list] = {"references": references, "referenced_by": referenced_by}
+        if refs_unresolved:
+            entry["references_unresolved"] = refs_unresolved
+        if refby_unresolved:
+            entry["referenced_by_unresolved"] = refby_unresolved
+        result[key] = entry
+    return result
 
 
 def _key_list(rows: list[dict]) -> list[list]:
@@ -456,8 +557,8 @@ def _key_list(rows: list[dict]) -> list[list]:
 def build_body(configured_rows: list[dict], lexical_rows: list[dict], edges: list[dict]) -> dict:
     """The atlas body from two views' rows and the configured view's edges. A pure function.
 
-    `forensics/tools/phase22_courts.py`'s `RT-PHASE22-DOXYGEN` calls this on the committed
-    artefact's own rows and on controlled in-memory mutations, so it must stay free of I/O.
+    This module's own `courts()` calls it on the committed artefact's own rows and edges and on
+    controlled in-memory mutations of them, so it must stay free of I/O.
     """
     entities = merge_views(configured_rows, lexical_rows)
     lexical_only = [e for e in entities if e["views"] == ["lexical"]]
@@ -471,8 +572,12 @@ def build_body(configured_rows: list[dict], lexical_rows: list[dict], edges: lis
         return dict(sorted(out.items()))
 
     references = _adjacency(edges)
-    edge_total = sum(len(v["references"]) + len(v["referenced_by"])
-                     for v in references.values())
+    resolved_total = sum(len(v["references"]) + len(v["referenced_by"])
+                         for v in references.values())
+    unresolved_total = sum(len(v.get("references_unresolved", []))
+                           + len(v.get("referenced_by_unresolved", []))
+                           for v in references.values())
+    edge_total = resolved_total + unresolved_total
     return {
         "entities": entities,
         "references": references,
@@ -489,6 +594,10 @@ def build_body(configured_rows: list[dict], lexical_rows: list[dict], edges: lis
             "static": sum(1 for e in entities if e["is_static"]),
             "reference_sources": len(references),
             "reference_edges": edge_total,
+            "reference_edges_resolved": resolved_total,
+            "reference_edges_unresolved": unresolved_total,
+            "reference_resolution_rate": (round(resolved_total / edge_total, 6)
+                                         if edge_total else None),
             "entities_by_kind": kind_counts(entities),
             "lexical_only_by_kind": kind_counts(lexical_only),
             "configured_only_by_kind": kind_counts(configured_only),
@@ -590,6 +699,17 @@ def main(argv: list[str]) -> int:
     )
     body["sort_key"] = "(kind, name, file, line); file is repository-relative; line is null only " \
                        "for compounds Doxygen gives no line (files)"
+    body["reference_note"] = (
+        "`references` is keyed by the resolved `kind|file|line|name` identity of the referencing "
+        "entity, and each resolved destination is that same identity, so two different entities "
+        "that happen to share a spelling remain two destinations. A destination whose Doxygen "
+        "`refid` was not in the member/compound index is recorded unresolved under "
+        "`<relation>_unresolved` as `{name, refid}` rather than dropped; "
+        "`counts.reference_edges_resolved`/`reference_edges_unresolved` give the split. Only the "
+        "configured view's references are modeled: a reference resolved with preprocessing "
+        "disabled is a lexical coincidence, not the authority's include resolution "
+        "(Doxyfile.lexical sets REFERENCES_RELATION = NO, so the lexical view yields no edges)."
+    )
 
     doc = envelope(
         kind="phase22-doxygen-entities",
@@ -609,9 +729,272 @@ def main(argv: list[str]) -> int:
           f"(configured={c['configured']}, lexical={c['lexical']}, shared={c['shared']}, "
           f"lexical_only={c['lexical_only']}, configured_only={c['configured_only']})")
     print(f"[phase22-doxygen] references: {c['reference_sources']} source entities, "
-          f"{c['reference_edges']} deduplicated edges; documented={c['documented']} "
+          f"{c['reference_edges']} deduplicated edges "
+          f"({c['reference_edges_resolved']} resolved, {c['reference_edges_unresolved']} "
+          f"unresolved); documented={c['documented']} "
           f"static={c['static']} -> {rel(REPO_ROOT / OUT_REL)}")
     return 0
+
+
+# ---------------------------------------------------------------------------
+# the court (discovered by forensics/tools/phase22_courts.py; see D490)
+# ---------------------------------------------------------------------------
+
+def _identity_list(row: dict) -> list:
+    return [row["kind"], row["name"], row["file"], row["line"]]
+
+
+def _entities_by_identity(entities: list[dict]) -> dict[tuple, dict]:
+    return {tuple(_identity_list(e)): e for e in entities}
+
+
+def _edges_from_references(references: dict) -> list[dict]:
+    """Rebuild the flat resolved edge list that `_adjacency` collapsed.
+
+    The round trip re-derives the adjacency from the committed artefact and compares, so the court
+    judges the resolver and the collapse rather than trusting the stored copy. A resolved
+    destination is an identity string; an unresolved one is a `{name, refid}` object.
+    """
+    out: list[dict] = []
+    for key, slot in references.items():
+        src = _ident_from_str(key)
+        for relation in ("references", "referenced_by"):
+            for dst in slot.get(relation, []):
+                out.append({"from": src, "relation": relation, "target": _ident_from_str(dst),
+                            "resolved": True})
+            for entry in slot.get(f"{relation}_unresolved", []):
+                out.append({"from": src, "relation": relation, "resolved": False,
+                            "target_refid": entry["refid"], "target_name": entry["name"]})
+    return out
+
+
+def _stable(base: dict, new: dict, moved: set) -> bool:
+    """Every entity except those named by `moved` is byte-for-byte identical."""
+    a, b = _entities_by_identity(base["entities"]), _entities_by_identity(new["entities"])
+    return all(a.get(k) == b.get(k) for k in (set(a) | set(b)) - moved)
+
+
+def _mutation_add_entity(configured, lexical, edges, base, checks) -> None:
+    synth = {"kind": "function", "name": "phase22_synthetic_probe",
+             "file": "synthetic/phase22_probe.c", "line": 1, "brief": "",
+             "is_static": True, "documented": False}
+    new = build_body(configured + [synth], lexical, edges)
+    checks.append(("add-entity: entities rose by one",
+                   new["counts"]["entities"] == base["counts"]["entities"] + 1))
+    checks.append(("add-entity: configured rose by one",
+                   new["counts"]["configured"] == base["counts"]["configured"] + 1))
+    checks.append(("add-entity: configured_only rose by one",
+                   new["counts"]["configured_only"] == base["counts"]["configured_only"] + 1))
+    row = _entities_by_identity(new["entities"]).get(tuple(_identity_list(synth)))
+    checks.append(("add-entity: the unit is present and configured-only",
+                   row is not None and row["views"] == ["configured"]))
+    checks.append(("add-entity: nothing else moved",
+                   _stable(base, new, {tuple(_identity_list(synth))})))
+
+
+def _mutation_add_lexical_only(configured, lexical, edges, base, checks) -> None:
+    synth = {"kind": "function", "name": "phase22_synthetic_lexical_probe",
+             "file": "synthetic/phase22_probe.c", "line": 2, "brief": "",
+             "is_static": False, "documented": False}
+    new = build_body(configured, lexical + [synth], edges)
+    checks.append(("add-lexical-only: entities rose by one",
+                   new["counts"]["entities"] == base["counts"]["entities"] + 1))
+    checks.append(("add-lexical-only: lexical_only rose by one",
+                   new["counts"]["lexical_only"] == base["counts"]["lexical_only"] + 1))
+    row = _entities_by_identity(new["entities"]).get(tuple(_identity_list(synth)))
+    checks.append(("add-lexical-only: the unit is present and lexical-only",
+                   row is not None and row["views"] == ["lexical"]))
+
+
+def _mutation_clear_documented(configured, lexical, edges, base, checks) -> None:
+    idx = next((i for i, e in enumerate(configured) if e["documented"]), None)
+    if idx is None:
+        checks.append(("clear-documented: a documented configured entity was found", False))
+        return
+    target = tuple(_identity_list(configured[idx]))
+    mutated = copy.deepcopy(configured)
+    mutated[idx]["documented"] = False
+    new = build_body(mutated, lexical, edges)
+    checks.append(("clear-documented: documented count fell by one",
+                   new["counts"]["documented"] == base["counts"]["documented"] - 1))
+    row = _entities_by_identity(new["entities"]).get(target)
+    checks.append(("clear-documented: the entity now reads undocumented",
+                   row is not None and not row["documented"]))
+    checks.append(("clear-documented: entity count unchanged",
+                   new["counts"]["entities"] == base["counts"]["entities"]))
+    checks.append(("clear-documented: no other entity moved", _stable(base, new, {target})))
+
+
+def _mutation_move_location(configured, lexical, edges, base, checks) -> None:
+    """Moving a shared entity's line breaks the identity join between the two views."""
+    configured_keys = {tuple(_identity_list(e)) for e in configured}
+    idx = next((i for i, e in enumerate(lexical) if tuple(_identity_list(e)) in configured_keys),
+               None)
+    if idx is None:
+        checks.append(("move-location: a shared entity was found", False))
+        return
+    mutated = copy.deepcopy(lexical)
+    old = tuple(_identity_list(mutated[idx]))
+    mutated[idx]["line"] = (mutated[idx]["line"] or 0) + 10_000_000
+    new = build_body(configured, mutated, edges)
+    checks.append(("move-location: entities rose by one (the join split)",
+                   new["counts"]["entities"] == base["counts"]["entities"] + 1))
+    checks.append(("move-location: shared fell by one",
+                   new["counts"]["shared"] == base["counts"]["shared"] - 1))
+    checks.append(("move-location: lexical_only rose by one",
+                   new["counts"]["lexical_only"] == base["counts"]["lexical_only"] + 1))
+    checks.append(("move-location: configured_only rose by one",
+                   new["counts"]["configured_only"] == base["counts"]["configured_only"] + 1))
+    by_id = _entities_by_identity(new["entities"])
+    old_row = by_id.get(old)
+    new_row = by_id.get(tuple(_identity_list(mutated[idx])))
+    checks.append(("move-location: the original key is now configured-only",
+                   old_row is not None and old_row["views"] == ["configured"]))
+    checks.append(("move-location: the moved key is now lexical-only",
+                   new_row is not None and new_row["views"] == ["lexical"]))
+
+
+def _mutation_add_edge(configured, lexical, edges, base, checks) -> None:
+    src = _identity("function", "phase22_probe_fn", "synthetic/phase22_probe.c", 3)
+    dst = _identity("function", "EVP_DigestInit_ex", "crypto/evp/digest.c", 1)
+    new = build_body(configured, lexical, edges + [
+        {"from": src, "relation": "references", "target": dst, "resolved": True}])
+    checks.append(("add-edge: reference_sources rose by one",
+                   new["counts"]["reference_sources"] == base["counts"]["reference_sources"] + 1))
+    checks.append(("add-edge: reference_edges rose by one",
+                   new["counts"]["reference_edges"] == base["counts"]["reference_edges"] + 1))
+    checks.append(("add-edge: reference_edges_resolved rose by one",
+                   new["counts"]["reference_edges_resolved"]
+                   == base["counts"]["reference_edges_resolved"] + 1))
+    key = _identity_str(src)
+    checks.append(("add-edge: the adjacency gained the source with the resolved identity",
+                   key in new["references"]
+                   and new["references"][key]["references"] == [_identity_str(dst)]))
+
+
+def _mutation_same_spelling(configured, lexical, edges, base, checks) -> None:
+    """Two entities that share a spelling must be two destinations, not one.
+
+    This is the mutation that proves the defect class directly. The canonical case is two `static`
+    functions named `lookup` in different files: the extractor resolves each `refid` to a distinct
+    identity, so the caller has two destinations. If `_adjacency` keyed targets by the bare name
+    the two edges below would collapse into one `lookup`, `len(refs)` would be 1, and every check
+    here would fail -- which is what makes this evidence rather than a code change.
+    """
+    caller = _identity("function", "phase22_spelling_caller", "synthetic/phase22_probe.c", 7)
+    a = _identity("function", "lookup", "crypto/phase22_a.c", 11)
+    b = _identity("function", "lookup", "crypto/phase22_b.c", 22)
+    new = build_body(configured, lexical, edges + [
+        {"from": caller, "relation": "references", "target": a, "resolved": True},
+        {"from": caller, "relation": "references", "target": b, "resolved": True},
+    ])
+    refs = new["references"].get(_identity_str(caller), {}).get("references", [])
+    checks.append(("same-spelling: two same-named targets are two destinations, not one",
+                   len(refs) == 2))
+    checks.append(("same-spelling: both target identities are present",
+                   _identity_str(a) in refs and _identity_str(b) in refs))
+    checks.append(("same-spelling: the two destinations differ",
+                   len(refs) == 2 and refs[0] != refs[1]))
+    checks.append(("same-spelling: reference_edges rose by two",
+                   new["counts"]["reference_edges"] == base["counts"]["reference_edges"] + 2))
+
+
+def _mutation_unresolved_edge(configured, lexical, edges, base, checks) -> None:
+    """A target whose `refid` did not resolve is recorded, not silently dropped."""
+    caller = _identity("function", "phase22_external_caller", "synthetic/phase22_probe.c", 9)
+    new = build_body(configured, lexical, edges + [
+        {"from": caller, "relation": "references", "resolved": False,
+         "target_refid": "external_refid_1", "target_name": "printf"}])
+    slot = new["references"].get(_identity_str(caller), {})
+    checks.append(("unresolved-edge: the unresolved target is recorded with its refid and name",
+                   slot.get("references_unresolved")
+                   == [{"name": "printf", "refid": "external_refid_1"}]))
+    checks.append(("unresolved-edge: reference_edges rose by one",
+                   new["counts"]["reference_edges"] == base["counts"]["reference_edges"] + 1))
+    checks.append(("unresolved-edge: reference_edges_resolved did not move",
+                   new["counts"]["reference_edges_resolved"]
+                   == base["counts"]["reference_edges_resolved"]))
+    checks.append(("unresolved-edge: reference_edges_unresolved rose by one",
+                   new["counts"]["reference_edges_unresolved"]
+                   == base["counts"]["reference_edges_unresolved"] + 1))
+
+
+def court_doxygen(body: dict) -> dict:
+    """`RT-PHASE22-DOXYGEN`: the extractor's view-merge, reference resolution and classification."""
+    configured, lexical = split_views(copy.deepcopy(body["entities"]))
+    edges = _edges_from_references(body["references"])
+    checks: list[tuple[str, bool]] = []
+    c = body["counts"]
+
+    checks.append(("baseline: the artefact has entities", c["entities"] > 0))
+    checks.append(("baseline: the artefact has reference edges", c["reference_edges"] > 0))
+    checks.append(("baseline: both views contributed entities",
+                   len(configured) > 0 and len(lexical) > 0))
+    checks.append(("baseline: some reference targets resolved",
+                   c.get("reference_edges_resolved", 0) > 0))
+
+    # Round-trip: re-derive the whole body from the artefact's own rows and edges. This is the
+    # freshness gate a tracked raw input would give; here it ties the committed artefact to the
+    # logic that produced it rather than to a copy of its output.
+    rebuilt = build_body(copy.deepcopy(configured), copy.deepcopy(lexical), edges)
+    checks.append(("round-trip: entities equal", rebuilt["entities"] == body["entities"]))
+    checks.append(("round-trip: references equal", rebuilt["references"] == body["references"]))
+    checks.append(("round-trip: lexical_only equal",
+                   rebuilt["lexical_only"] == body["lexical_only"]))
+    checks.append(("round-trip: configured_only equal",
+                   rebuilt["configured_only"] == body["configured_only"]))
+    checks.append(("round-trip: counts equal", rebuilt["counts"] == c))
+
+    base = build_body(copy.deepcopy(configured), copy.deepcopy(lexical), edges)
+    _mutation_add_entity(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base, checks)
+    _mutation_add_lexical_only(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base,
+                               checks)
+    _mutation_clear_documented(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base,
+                               checks)
+    _mutation_move_location(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base,
+                            checks)
+    _mutation_add_edge(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base, checks)
+    _mutation_same_spelling(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base, checks)
+    _mutation_unresolved_edge(copy.deepcopy(configured), copy.deepcopy(lexical), edges, base,
+                              checks)
+
+    failures = [desc for desc, ok in checks if not ok]
+    return {
+        "court": COURT,
+        "artefact": ARTEFACT_REL,
+        "doxygen_version": body.get("doxygen_version"),
+        "entities": c["entities"],
+        "lexical_only": c["lexical_only"],
+        "reference_edges": c["reference_edges"],
+        "reference_edges_resolved": c.get("reference_edges_resolved"),
+        "reference_edges_unresolved": c.get("reference_edges_unresolved"),
+        "mutations": ["round-trip", "add-entity", "add-lexical-only", "clear-documented",
+                      "move-location", "add-edge", "same-spelling", "unresolved-edge"],
+        "observations": len(checks),
+        "failures": failures,
+        "verdict": "pass" if not failures else "fail",
+        "summary": (f"{c['entities']} entities, {c['lexical_only']} lexical-only, "
+                    f"{c['reference_edges']} reference edges "
+                    f"({c.get('reference_edges_resolved')} resolved / "
+                    f"{c.get('reference_edges_unresolved')} unresolved)"),
+    }
+
+
+def courts() -> list[dict]:
+    """`RT-PHASE22-DOXYGEN`, or `[]` while the artefact has not landed.
+
+    Discovered by `forensics/tools/phase22_courts.py` rather than listed there, so landing this
+    plane adds a file and nothing else (docs/DECISIONS.md D490).
+    """
+    path = REPO_ROOT / ARTEFACT_REL
+    if not path.is_file():
+        return []
+    try:
+        body = json.loads(path.read_text(encoding="utf-8"))["body"]
+    except Exception as exc:  # a court that cannot read its artefact is a failing court
+        return [{"court": COURT, "artefact": ARTEFACT_REL, "verdict": "fail",
+                 "stage": "artefact-unreadable", "observations": 0, "failures": [str(exc)]}]
+    return [court_doxygen(body)]
 
 
 if __name__ == "__main__":
