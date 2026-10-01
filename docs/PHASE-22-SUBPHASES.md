@@ -219,6 +219,21 @@ The claim it licenses, verbatim:
 
 Not: "proof that nothing can possibly be missing."
 
+**And the claim carries its own bound, which the seal must state rather than bury.** Of the ten
+compatibility-root families section 2 declares, seven are observable by a Phase 22 instrument and
+are closed; three -- `runtime-behaviour`, `protocol` and `dynamic-loading` -- are **declared and not
+observable**: no plane in 22.1-22.13 reads runtime errors/state/ownership/concurrency, the
+TLS/DTLS/QUIC wire, or the `dlopen`/`dlsym` lookup path. They are therefore recorded as unpopulated
+rather than closed, and the claim reads exactly:
+
+> **closure-complete over the admitted OpenSSL 3.6.4 source archive, exact production build profile,
+> installed distribution, and the seven declared compatibility-root families this stratum's
+> instruments observe, with zero unexplained cross-plane residuals; and explicitly bounded on
+> `runtime-behaviour`, `protocol` and `dynamic-loading`, which no Phase 22 instrument observes.**
+
+A closure claim that silently counted three unobserved families as closed would be the exact
+failure this stratum exists to prevent, so the bound is part of the claim and not a footnote to it.
+
 ## 8. Dependency, and the one consequence for Phase 11
 
 Phase 22's evidence must exist **before** Phase 11 finishes, because the verification engine is

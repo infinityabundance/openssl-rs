@@ -108,8 +108,8 @@
         "reachable_entities": 35436,
         "root_families": 7,
         "root_members": 27495,
-        "summary": "7 root families, 27495 members, 35436 reachable, 2 unknown-in-roots, x509 satisfied=True",
-        "unknown_intersecting_roots": 2,
+        "summary": "7 root families, 27495 members, 35436 reachable, 0 unknown-in-roots, x509 satisfied=True",
+        "unknown_intersecting_roots": 0,
         "verdict": "pass",
         "x509_satisfied": true
       },
@@ -304,11 +304,11 @@
         "phase11_implemented": 1132,
         "phase11_open": 335,
         "planes_bound": 16,
-        "regenerated_changed_outputs": 5,
-        "regenerated_count_deltas": 0,
-        "summary": "16 plane hashes, 110382 entities, 5912 UNKNOWN named, 5 proposed obligations, regeneration changed 5/16 outputs with 0 count deltas",
-        "unknown_intersecting_roots": 2,
-        "unknown_total": 5912,
+        "regenerated_changed_outputs": 6,
+        "regenerated_count_deltas": 7,
+        "summary": "16 plane hashes, 110382 entities, 5910 UNKNOWN named, 5 proposed obligations, regeneration changed 6/16 outputs with 7 count deltas",
+        "unknown_intersecting_roots": 0,
+        "unknown_total": 5910,
         "verdict": "pass",
         "x509_satisfied": true
       },
@@ -415,9 +415,9 @@
         ],
         "observations": 28,
         "residuals": 75227,
-        "summary": "110382 entities, 75227 residuals, 5912 unknown, 2 unknown-in-roots",
-        "unknown": 5912,
-        "unknown_intersecting_roots": 2,
+        "summary": "110382 entities, 75227 residuals, 5910 unknown, 0 unknown-in-roots",
+        "unknown": 5910,
+        "unknown_intersecting_roots": 0,
         "verdict": "pass"
       },
       {
@@ -472,7 +472,7 @@
     {
       "name": "phase-22-plan",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "55a1ba6d7debcb2533d2a2178856318c7f99e47092d2e45eb68fc72f3de1c6b1"
+      "sha256": "79da72f3c941471c1c81a7fe7d17c250e621af45e17d08d95d055da5ac2b3627"
     },
     {
       "name": "phase22_binary_graph",
@@ -487,7 +487,7 @@
     {
       "name": "phase22_closure",
       "path": "forensics/atlas/phase22/compatibility-closure.json",
-      "sha256": "fbf879ef85b1a62262e38ad443076ff96f55929448d0033cb129a14c0d347894"
+      "sha256": "db0690b7f0dc47af0409954cf16c60cdf73a343ba91665e367731b9a406eca0d"
     },
     {
       "name": "phase22_conditional",
@@ -497,7 +497,7 @@
     {
       "name": "phase22_config",
       "path": "forensics/atlas/phase22/config-surface.json",
-      "sha256": "198e4106948bc237e3778c30ddcd59a7d34e19bb293268853d2f3efa594ee8f2"
+      "sha256": "bbdca8b5812c5a6027f0ad8df6bce1826a85afa7da8fe6a69b4a760799438d1d"
     },
     {
       "name": "phase22_crosswalk",
@@ -522,7 +522,7 @@
     {
       "name": "phase22_gemel",
       "path": "forensics/atlas/phase22/gemel-checkpoint.json",
-      "sha256": "3a0a3b04e252c4dc83ef9658716e610d071e12207a9b8063fece2d5ad9f1ce3f"
+      "sha256": "edb60f2ef1d7d198a478ee9d26b7c5d5c1855ffa5e2422444d1b90b1cdb83d06"
     },
     {
       "name": "phase22_genealogy",
@@ -542,7 +542,7 @@
     {
       "name": "phase22_reconciliation",
       "path": "forensics/atlas/phase22/reconciliation.json",
-      "sha256": "cbc4dde6292aa99c3895fac6c9a67a14ad2b4cc5219c62f636d15112a3382acc"
+      "sha256": "1515eb1ad09c1163e859e39e964aa5be15784b3a0d6946abfa18ed757b6f018b"
     },
     {
       "name": "phase22_tu_ast",

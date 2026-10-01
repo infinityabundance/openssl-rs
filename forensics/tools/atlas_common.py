@@ -76,6 +76,10 @@ SEAL_DOCS: dict[int, str] = {
     8: "docs/PHASE-8-CRYPTO-SEAL.md",
     9: "docs/PHASE-9-RAND-DRBG-SEAL.md",
     10: "docs/PHASE-10-KEYFORMATS-SEAL.md",
+    # Phase 22 is an atlas stratum rather than an export stratum, but its seal is the same kind of
+    # document and `phase_state.py` records its sha256 the same way. Its `evidence_for` branch is
+    # its own because its ledger's unit is a compatibility plane, not a symbol (D485).
+    22: "docs/PHASE-22-ATLAS-SEAL.md",
 }
 
 

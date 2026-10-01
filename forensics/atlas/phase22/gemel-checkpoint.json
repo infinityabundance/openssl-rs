@@ -10,19 +10,18 @@
       "obligations": 5,
       "phase11_implemented": 1132,
       "phase11_open": 335,
-      "plane_ledger_implemented": 16,
-      "plane_ledger_open": 2,
+      "plane_ledger_implemented": 17,
+      "plane_ledger_open": 1,
       "planes_bound": 16,
-      "regenerated_changed_outputs": 5,
-      "regenerated_count_deltas": 0,
+      "regenerated_changed_outputs": 6,
+      "regenerated_count_deltas": 7,
       "regenerated_generators": 13,
       "regenerated_outputs": 16,
       "unknown_by_class": {
-        "DECLARED_NOT_DEFINED": 2,
         "POD_NAME_NOT_IN_ATLAS": 5910
       },
-      "unknown_intersecting_roots": 2,
-      "unknown_total": 5912,
+      "unknown_intersecting_roots": 0,
+      "unknown_total": 5910,
       "x509_gate_baseline": 1,
       "x509_gate_current": 1,
       "x509_gate_grown": 0,
@@ -32,7 +31,7 @@
       "atlas": {
         "binary-reference-graph": "9b3ff1b523ca31271c631b6a128c59a40a78d193d50503f633bdc0bd4dc3b681",
         "cli-surface": "add909b70351095a461f82da42854e9d67cf49d1ebe8508e222c7284820658de",
-        "compatibility-closure": "fbf879ef85b1a62262e38ad443076ff96f55929448d0033cb129a14c0d347894",
+        "compatibility-closure": "db0690b7f0dc47af0409954cf16c60cdf73a343ba91665e367731b9a406eca0d",
         "compile-commands": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e",
         "compile-commands-raw": "3bc7b1adcf8e49c0468c251d9775a6f8a191b2d2db803f1cbd2d97ea5307b69d",
         "conditional-surface": "6a9d0fb3cd1d3a29c222d290ff9f54f95a1ae04ddb152a8bb841488fcb573ed7",
@@ -43,12 +42,12 @@
         "generated-lineage": "924b0d9d14ff5fc93c9db8641ba63a4fa6909120c6570cefa672b22da7901521",
         "install-manifest": "e24286a7d51467027b1a8b11263adf6d5ce6f3237b215f53066be7b3531d5d67",
         "pod-contract": "655bc96f6ec085f0ceec17630b7d06c9efa87e78487c87d91c08674656f43e10",
-        "reconciliation": "cbc4dde6292aa99c3895fac6c9a67a14ad2b4cc5219c62f636d15112a3382acc",
+        "reconciliation": "1515eb1ad09c1163e859e39e964aa5be15784b3a0d6946abfa18ed757b6f018b",
         "test-crosswalk": "3048bd891e485e289eda2372c0dec581b0bfcab71014df54c1423489dbfba206",
         "tu-ast": "865dd968b445bebcfdb87d6ea062cd048e3b79ecbf37507a2830e57efa5b5bc5"
       },
       "authority": "openssl-3.6.4-production",
-      "checkpoint_state_hash": "299c881c08c95c7b2f185f1dc66e540bda27e99e37f2db0efdebb87886a9d4cb",
+      "checkpoint_state_hash": "0ffeb141766bb47bf7a1e7c2482a9e3282f07b59f2a9be3a25534e7b0faf6b96",
       "plan": {
         "path": "docs/PHASE-22-SUBPHASES.md",
         "sha256": "55a1ba6d7debcb2533d2a2178856318c7f99e47092d2e45eb68fc72f3de1c6b1"
@@ -178,8 +177,8 @@
       "counts": {
         "atlas_owned": 18,
         "deferred_to_later_phase": 0,
-        "implemented": 16,
-        "open_in_this_stratum": 2,
+        "implemented": 17,
+        "open_in_this_stratum": 1,
         "owned": 18,
         "received_by_handoff": 0
       },
@@ -192,6 +191,7 @@
         "22.13",
         "22.14",
         "22.15",
+        "22.16",
         "22.2",
         "22.3",
         "22.4",
@@ -202,7 +202,6 @@
         "22.9"
       ],
       "open": [
-        "22.16",
         "22.17"
       ],
       "unit": "compatibility plane"
@@ -221,7 +220,7 @@
       {
         "name": "compatibility-closure",
         "path": "forensics/atlas/phase22/compatibility-closure.json",
-        "sha256": "fbf879ef85b1a62262e38ad443076ff96f55929448d0033cb129a14c0d347894"
+        "sha256": "db0690b7f0dc47af0409954cf16c60cdf73a343ba91665e367731b9a406eca0d"
       },
       {
         "name": "compile-commands",
@@ -276,7 +275,7 @@
       {
         "name": "reconciliation",
         "path": "forensics/atlas/phase22/reconciliation.json",
-        "sha256": "cbc4dde6292aa99c3895fac6c9a67a14ad2b4cc5219c62f636d15112a3382acc"
+        "sha256": "1515eb1ad09c1163e859e39e964aa5be15784b3a0d6946abfa18ed757b6f018b"
       },
       {
         "name": "test-crosswalk",
@@ -293,11 +292,12 @@
       "changed_paths": [
         "forensics/phase10-obligations.json",
         "forensics/phase11-obligations.json",
+        "forensics/phase22-obligations.json",
         "forensics/phase7-obligations.json",
         "forensics/phase8-obligations.json",
         "forensics/phase9-obligations.json"
       ],
-      "conclusion": "regeneration moves NO obligation count: 5 of 16 output(s) differ byte-wise, and every difference is a recorded input hash rather than a body value, so the export universe is unchanged; the differing files are forensics/phase10-obligations.json, forensics/phase11-obligations.json, forensics/phase7-obligations.json, forensics/phase8-obligations.json, forensics/phase9-obligations.json. The deltas are recorded inline in each output's scalar_deltas",
+      "conclusion": "regeneration WOULD move counts: 7 body scalar delta(s) across 1 output(s); the deltas are recorded inline in each output's body_scalar_deltas and must be dispositioned before the ledger is committed",
       "generators": [
         {
           "args": [],
@@ -399,13 +399,13 @@
               "path": "forensics/phase7-obligations.json",
               "scalar_deltas": [
                 {
-                  "after": "6e0d870ef2f6bb80aba0ded5cde62ef94ab66f35f843196dab22231628d277a2",
-                  "before": "f92b3ecbe63e2424dfbd89d50c4483a47a94929168430eb0a905e31e90feac60",
+                  "after": "dad9c7535e876a9bb6581cb226d1d49dece0f42a371933dc7986d792ea35629b",
+                  "before": "6e0d870ef2f6bb80aba0ded5cde62ef94ab66f35f843196dab22231628d277a2",
                   "path": ".inputs[8].sha256"
                 }
               ],
-              "sha256_after": "bd85eb408eab29d9759ed82832ffb7ba47df3c7a1b5c26cad160e0c49c48158d",
-              "sha256_before": "61e760ad9f559820b0cd84c4e16fb794da415f36a88a1728d76dd96a52714069"
+              "sha256_after": "ea16d5a390f33f1750a268cd09a269bd4ee51411e6a5b1429961fafdb73223bf",
+              "sha256_before": "bd85eb408eab29d9759ed82832ffb7ba47df3c7a1b5c26cad160e0c49c48158d"
             }
           ],
           "returncode": 0
@@ -420,13 +420,13 @@
               "path": "forensics/phase8-obligations.json",
               "scalar_deltas": [
                 {
-                  "after": "bd85eb408eab29d9759ed82832ffb7ba47df3c7a1b5c26cad160e0c49c48158d",
-                  "before": "61e760ad9f559820b0cd84c4e16fb794da415f36a88a1728d76dd96a52714069",
+                  "after": "ea16d5a390f33f1750a268cd09a269bd4ee51411e6a5b1429961fafdb73223bf",
+                  "before": "bd85eb408eab29d9759ed82832ffb7ba47df3c7a1b5c26cad160e0c49c48158d",
                   "path": ".inputs[4].sha256"
                 }
               ],
-              "sha256_after": "13aa03b235e80e58bf061644d6657b8d14c9b19ebfbe6fc981f7312ae0a6b5b3",
-              "sha256_before": "1bceefad5b039019923dcdde30072eca3f079d2dd9ab1de4d97111a0717ff089"
+              "sha256_after": "6b0571e8445f8729cc2575362ac31b0bb1accc126ab4857ffe433c61d29481aa",
+              "sha256_before": "13aa03b235e80e58bf061644d6657b8d14c9b19ebfbe6fc981f7312ae0a6b5b3"
             }
           ],
           "returncode": 0
@@ -441,13 +441,13 @@
               "path": "forensics/phase9-obligations.json",
               "scalar_deltas": [
                 {
-                  "after": "bd85eb408eab29d9759ed82832ffb7ba47df3c7a1b5c26cad160e0c49c48158d",
-                  "before": "61e760ad9f559820b0cd84c4e16fb794da415f36a88a1728d76dd96a52714069",
+                  "after": "ea16d5a390f33f1750a268cd09a269bd4ee51411e6a5b1429961fafdb73223bf",
+                  "before": "bd85eb408eab29d9759ed82832ffb7ba47df3c7a1b5c26cad160e0c49c48158d",
                   "path": ".inputs[6].sha256"
                 }
               ],
-              "sha256_after": "b689a80003a8566cc175151f6b92a24fa977b5ed852a19e3b8b69da9f5e0ec30",
-              "sha256_before": "54a8588ecc02329df2a4e536083653225fca0eaec7f3611cf39b49e1b451e775"
+              "sha256_after": "31b31f30e15dae3c99314eb5fde0301e75399860a3b396a5dfd2603c19f698b0",
+              "sha256_before": "b689a80003a8566cc175151f6b92a24fa977b5ed852a19e3b8b69da9f5e0ec30"
             }
           ],
           "returncode": 0
@@ -462,13 +462,13 @@
               "path": "forensics/phase10-obligations.json",
               "scalar_deltas": [
                 {
-                  "after": "bd85eb408eab29d9759ed82832ffb7ba47df3c7a1b5c26cad160e0c49c48158d",
-                  "before": "18b20d75110823355c4261d133c6b28f08c38717af3cfc4736facfc94e21f8ce",
+                  "after": "ea16d5a390f33f1750a268cd09a269bd4ee51411e6a5b1429961fafdb73223bf",
+                  "before": "61e760ad9f559820b0cd84c4e16fb794da415f36a88a1728d76dd96a52714069",
                   "path": ".inputs[5].sha256"
                 }
               ],
-              "sha256_after": "83328557487fdb26f46ebbccbc8a5e1ae40ef778928da340323f8ab6af368746",
-              "sha256_before": "40816586b2472842f702a709ec28b94a52cc051f8648b646b4def64f54fa01b2"
+              "sha256_after": "50cb0bf988f1888f73fb24ea1cbd34d1ee11782b90ad6e19e5a9055916598b5e",
+              "sha256_before": "0f1c043b9fa5d25a227ec97b485628f40f8e952880b33eed337b57575b6cbaec"
             }
           ],
           "returncode": 0
@@ -483,13 +483,13 @@
               "path": "forensics/phase11-obligations.json",
               "scalar_deltas": [
                 {
-                  "after": "bd85eb408eab29d9759ed82832ffb7ba47df3c7a1b5c26cad160e0c49c48158d",
-                  "before": "18b20d75110823355c4261d133c6b28f08c38717af3cfc4736facfc94e21f8ce",
+                  "after": "ea16d5a390f33f1750a268cd09a269bd4ee51411e6a5b1429961fafdb73223bf",
+                  "before": "61e760ad9f559820b0cd84c4e16fb794da415f36a88a1728d76dd96a52714069",
                   "path": ".inputs[7].sha256"
                 }
               ],
-              "sha256_after": "ab8b01b93e3407c0547bfaadbfc13b72246a3b958e4b2707e8b2b6be6bf441f1",
-              "sha256_before": "b1fb23d1cb19d990efb470e962c39dd205b6fafa4d19cd1094a50e30c9a12b99"
+              "sha256_after": "fa261093bbdb1b6810ae4e8a96dce733530f86658e6da584aa0376984cadbd04",
+              "sha256_before": "eb65d85ede41506cb56a538b27281ee63b9b00f9cec985723b331d8461374f87"
             }
           ],
           "returncode": 0
@@ -499,12 +499,84 @@
           "generator": "forensics/tools/phase22_obligations.py",
           "outputs": [
             {
-              "body_scalar_deltas": [],
-              "changed": false,
+              "body_scalar_deltas": [
+                {
+                  "after": 16,
+                  "before": 17,
+                  "path": "body.counts.implemented"
+                },
+                {
+                  "after": 2,
+                  "before": 1,
+                  "path": "body.counts.open_in_this_stratum"
+                },
+                {
+                  "after": 16,
+                  "before": 17,
+                  "path": "body.implemented.length"
+                },
+                {
+                  "after": 2,
+                  "before": 1,
+                  "path": "body.open.length"
+                },
+                {
+                  "after": "forensics/atlas/phase22/gemel-checkpoint.json",
+                  "before": "docs/PHASE-22-ATLAS-SEAL.md",
+                  "path": "body.open[0].artefact"
+                },
+                {
+                  "after": "The Gemel checkpoint and the regenerated phase ledgers",
+                  "before": "The Phase-22 seal",
+                  "path": "body.open[0].plane"
+                },
+                {
+                  "after": "22.16",
+                  "before": "22.17",
+                  "path": "body.open[0].subphase"
+                }
+              ],
+              "changed": true,
               "path": "forensics/phase22-obligations.json",
-              "scalar_deltas": [],
+              "scalar_deltas": [
+                {
+                  "after": 16,
+                  "before": 17,
+                  "path": ".body.counts.implemented"
+                },
+                {
+                  "after": 2,
+                  "before": 1,
+                  "path": ".body.counts.open_in_this_stratum"
+                },
+                {
+                  "after": 16,
+                  "before": 17,
+                  "path": ".body.implemented.length"
+                },
+                {
+                  "after": 2,
+                  "before": 1,
+                  "path": ".body.open.length"
+                },
+                {
+                  "after": "forensics/atlas/phase22/gemel-checkpoint.json",
+                  "before": "docs/PHASE-22-ATLAS-SEAL.md",
+                  "path": ".body.open[0].artefact"
+                },
+                {
+                  "after": "The Gemel checkpoint and the regenerated phase ledgers",
+                  "before": "The Phase-22 seal",
+                  "path": ".body.open[0].plane"
+                },
+                {
+                  "after": "22.16",
+                  "before": "22.17",
+                  "path": ".body.open[0].subphase"
+                }
+              ],
               "sha256_after": "abe65645499f89bf22a2e692fb3ee6618a70e3d30c8c0e98acc1811112e6d75a",
-              "sha256_before": "abe65645499f89bf22a2e692fb3ee6618a70e3d30c8c0e98acc1811112e6d75a"
+              "sha256_before": "c7c2b05d4d4751589e83fe2bf934fa403da2fba42d0bc7a62b7e6817952fa1e2"
             }
           ],
           "returncode": 0
@@ -555,13 +627,13 @@
       "method": "each generator is run in the repository, its declared outputs are compared with the bytes found before the run, and the bytes found before the run are restored -- so this is a measurement that leaves the tree as it found it",
       "normalization": "gemel-checkpoint.json is hidden while the generators run, because forensics/phase22-obligations.json names it as its 22.16 plane; with the checkpoint present, that one plane would move from open to implemented by construction rather than by any export changing",
       "summary": {
-        "body_count_deltas": 0,
-        "changed_outputs": 5,
-        "changed_outputs_with_body_delta": 0,
+        "body_count_deltas": 7,
+        "changed_outputs": 6,
+        "changed_outputs_with_body_delta": 1,
         "generators": 13,
         "generators_failed": 0,
         "outputs": 16,
-        "scalar_deltas": 5
+        "scalar_deltas": 12
       }
     },
     "residual_census": {
@@ -583,7 +655,7 @@
         "POD_ONLY": 9182
       },
       "by_disposition": {
-        "AUTHORITY_BUG_BOUNDARY": 0,
+        "AUTHORITY_BUG_BOUNDARY": 2,
         "DEMO_ONLY": 88,
         "EXCLUDED_BY_BUILD_PROFILE": 220,
         "GENERATED_INTERMEDIATE": 8849,
@@ -593,13 +665,10 @@
         "REQUIRED_COMPATIBILITY": 31895,
         "TEST_ONLY": 1318,
         "TOOLING_ONLY": 9,
-        "UNKNOWN": 5912
+        "UNKNOWN": 5910
       },
       "entities": 110382,
-      "intersecting_root_keys": [
-        "sym|_openssl_ascii2ebcdic",
-        "sym|_openssl_ebcdic2ascii"
-      ],
+      "intersecting_root_keys": [],
       "joins": 16,
       "residuals": 75227,
       "root_families_unpopulated": [
@@ -636,10 +705,6 @@
         }
       ],
       "unknown_sets": {
-        "DECLARED_NOT_DEFINED": [
-          "sym|_openssl_ascii2ebcdic",
-          "sym|_openssl_ebcdic2ascii"
-        ],
         "POD_NAME_NOT_IN_ATLAS": [
           "sym|pod-doc:/* * TYPE in function names is one of: * double, int, int32, int64, long, size_t, time_t, uint, uint32, uint64, ulong * Corresponding TYPE in function arguments is one of: * double, int, int32_t, int64_t, long, size_t, time_t, unsigned int, uint32_t, * uint64_t, unsigned long */ { (key), (type), (addr), (sz), OSSL_PARAM_UNMODIFIED } OSSL_PARAM OSSL_PARAM_construct_TYPE(const char *key, TYPE *buf)",
           "sym|pod-doc:/* Aliases */ void X509_STORE_set_verify_cb_func(X509_STORE *st, X509_STORE_CTX_verify_cb verify_cb)",
@@ -6598,12 +6663,12 @@
     {
       "name": "phase22-obligations",
       "path": "forensics/phase22-obligations.json",
-      "sha256": "abe65645499f89bf22a2e692fb3ee6618a70e3d30c8c0e98acc1811112e6d75a"
+      "sha256": "c7c2b05d4d4751589e83fe2bf934fa403da2fba42d0bc7a62b7e6817952fa1e2"
     },
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "b1fb23d1cb19d990efb470e962c39dd205b6fafa4d19cd1094a50e30c9a12b99"
+      "sha256": "eb65d85ede41506cb56a538b27281ee63b9b00f9cec985723b331d8461374f87"
     },
     {
       "name": "export-defining-units",
@@ -6633,7 +6698,7 @@
     {
       "name": "compatibility-closure",
       "path": "forensics/atlas/phase22/compatibility-closure.json",
-      "sha256": "fbf879ef85b1a62262e38ad443076ff96f55929448d0033cb129a14c0d347894"
+      "sha256": "db0690b7f0dc47af0409954cf16c60cdf73a343ba91665e367731b9a406eca0d"
     },
     {
       "name": "compile-commands",
@@ -6688,7 +6753,7 @@
     {
       "name": "reconciliation",
       "path": "forensics/atlas/phase22/reconciliation.json",
-      "sha256": "cbc4dde6292aa99c3895fac6c9a67a14ad2b4cc5219c62f636d15112a3382acc"
+      "sha256": "1515eb1ad09c1163e859e39e964aa5be15784b3a0d6946abfa18ed757b6f018b"
     },
     {
       "name": "test-crosswalk",
@@ -6733,22 +6798,22 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "61e760ad9f559820b0cd84c4e16fb794da415f36a88a1728d76dd96a52714069"
+      "sha256": "bd85eb408eab29d9759ed82832ffb7ba47df3c7a1b5c26cad160e0c49c48158d"
     },
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "1bceefad5b039019923dcdde30072eca3f079d2dd9ab1de4d97111a0717ff089"
+      "sha256": "13aa03b235e80e58bf061644d6657b8d14c9b19ebfbe6fc981f7312ae0a6b5b3"
     },
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "54a8588ecc02329df2a4e536083653225fca0eaec7f3611cf39b49e1b451e775"
+      "sha256": "b689a80003a8566cc175151f6b92a24fa977b5ed852a19e3b8b69da9f5e0ec30"
     },
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "40816586b2472842f702a709ec28b94a52cc051f8648b646b4def64f54fa01b2"
+      "sha256": "0f1c043b9fa5d25a227ec97b485628f40f8e952880b33eed337b57575b6cbaec"
     },
     {
       "name": "parity-obligations",

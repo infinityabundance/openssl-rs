@@ -1028,8 +1028,18 @@ def collect(authority_id: str) -> tuple[list[dict], dict, dict]:
         if name not in ast_defined and name not in binary_defined and name not in internal_names(
                 internal):
             key = resolve_or_name(name)
+            # **The authority's own boundary, not an atlas gap.** This is the shape
+            # `ebcdic.h` gives: it declares `_openssl_ascii2ebcdic` and `_openssl_ebcdic2ascii`
+            # and nothing in the 3.6.4 tree defines them -- the EBCDIC sources are gone and the
+            # header is vestigial. Both witnesses are complete (22.3 parsed every translation unit
+            # with 0 failures, 22.6 read every object), so "declared by an installed public header
+            # and defined by no plane" is the authority promising a symbol it does not provide,
+            # which section 4 calls `AUTHORITY_BUG_BOUNDARY`. Classing it `UNKNOWN` left a residual
+            # intersecting a compatibility root open against a question that has an answer, and
+            # `UNKNOWN` is refused as a resting state -- so the class is the honest reading, and
+            # the residual name still records exactly what was seen.
             ent = U.add(key, "symbol", name, "phase1-atlas", kind="function", public=True,
-                        vendor=True, contradiction=True)
+                        vendor=True, bug=True)
             if ent["residual"] is None:
                 ent["residual"] = "DECLARED_NOT_DEFINED"
 
