@@ -22,30 +22,29 @@
         "verdict": "pass"
       },
       {
-        "artefact": "forensics/atlas/phase22/doxygen-entities.json",
-        "court": "RT-PHASE22-DOXYGEN",
-        "doxygen_version": "1.9.4",
-        "entities": 70075,
-        "failures": [],
-        "lexical_only": 4670,
-        "mutations": [
-          "round-trip",
-          "add-entity",
-          "add-lexical-only",
-          "clear-documented",
-          "move-location",
-          "add-edge"
-        ],
-        "observations": 29,
-        "reference_edges": 323306,
-        "verdict": "pass"
-      },
-      {
         "archive_members": 1123,
         "artefact": "forensics/atlas/phase22/binary-reference-graph.json",
         "artefacts": 12,
         "court": "RT-PHASE22-BINARY",
+        "explanation_counts": {
+          "ARCHIVE_MEMBER": 0,
+          "CAPTURED_COMPILER_OUTPUT": 1082,
+          "EXPLICIT_NONCOMPILER_BUILD_STEP": 0,
+          "GENERATED_ASSEMBLY_OUTPUT": 0,
+          "LINK_OUTPUT": 10,
+          "PERLASM_OUTPUT": 41
+        },
         "failures": [],
+        "genealogy_sensitivity": {
+          "break": "the captured-output join is blinded in memory (every captured output treated as unmatched)",
+          "probe_checks_failed_when_blinded": [
+            "genealogy add-unexplained-object: `objects_unexplained` rises by one and `objects_explained` does not move",
+            "genealogy add-explaining-invocation: the object moves out of `unexplained`",
+            "genealogy add-explaining-invocation: it is CAPTURED_COMPILER_OUTPUT carrying the captured command",
+            "genealogy add-explaining-invocation: `objects_explained` rises by one and `objects_unexplained` returns to baseline"
+          ],
+          "verdict_when_blinded": "fail"
+        },
         "mutations": [
           "round-trip",
           "add-defined-symbol",
@@ -54,14 +53,19 @@
           "add-unresolved-edge",
           "remove-archive-member",
           "flip-linkage",
-          "remove-definition"
+          "remove-definition",
+          "genealogy-add-unexplained-object",
+          "genealogy-add-explaining-invocation",
+          "genealogy-blind-join-sensitivity"
         ],
         "objects": 1133,
-        "observations": 21,
+        "objects_explained": 1133,
+        "objects_unexplained": 0,
+        "observations": 30,
         "perlasm_objects": 41,
         "relocation_edges": 35809,
         "resolved_edges": 34484,
-        "summary": "1133 objects, 50772 defined, 35809 relocation edges (34484 resolved)",
+        "summary": "1133 objects, 50772 defined, 35809 relocation edges (34484 resolved); 1133 explained, 0 unexplained",
         "verdict": "pass"
       },
       {
@@ -197,6 +201,30 @@
         "source_only": 1137,
         "summary": "373 tables, 1959 edges (468 both, 1137 source-only, 354 binary-only)",
         "tables": 373,
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/doxygen-entities.json",
+        "court": "RT-PHASE22-DOXYGEN",
+        "doxygen_version": "1.9.4",
+        "entities": 70075,
+        "failures": [],
+        "lexical_only": 4670,
+        "mutations": [
+          "round-trip",
+          "add-entity",
+          "add-lexical-only",
+          "clear-documented",
+          "move-location",
+          "add-edge",
+          "same-spelling",
+          "unresolved-edge"
+        ],
+        "observations": 39,
+        "reference_edges": 323306,
+        "reference_edges_resolved": 319253,
+        "reference_edges_unresolved": 4053,
+        "summary": "70075 entities, 4670 lexical-only, 323306 reference edges (319253 resolved / 4053 unresolved)",
         "verdict": "pass"
       },
       {
@@ -337,17 +365,17 @@
     {
       "name": "doxygen-entities",
       "path": "forensics/atlas/phase22/doxygen-entities.json",
-      "sha256": "b4aca03b1afda8cdb53b671ebe6df0e15f4349806e655206ab31983d4bf9277a"
+      "sha256": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97"
     },
     {
       "name": "phase-22-plan",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "ed4af2df27639b451535d13ecb801a27860b36f21f5ca7e6aa83e358350efc24"
+      "sha256": "55a1ba6d7debcb2533d2a2178856318c7f99e47092d2e45eb68fc72f3de1c6b1"
     },
     {
       "name": "phase22_binary_graph",
       "path": "forensics/atlas/phase22/binary-reference-graph.json",
-      "sha256": "4039f6a2c6b4ef5cb549ec2b73cece4fa40af4676d59c011234d5bdb0c11e2e4"
+      "sha256": "9b3ff1b523ca31271c631b6a128c59a40a78d193d50503f633bdc0bd4dc3b681"
     },
     {
       "name": "phase22_cli_surface",
@@ -362,7 +390,7 @@
     {
       "name": "phase22_config",
       "path": "forensics/atlas/phase22/config-surface.json",
-      "sha256": "b8361cc1671a147a376a46de5f238ef5631af99047d466293e0ee278f1ba9f2d"
+      "sha256": "198e4106948bc237e3778c30ddcd59a7d34e19bb293268853d2f3efa594ee8f2"
     },
     {
       "name": "phase22_crosswalk",
@@ -372,7 +400,12 @@
     {
       "name": "phase22_dispatch",
       "path": "forensics/atlas/phase22/dispatch-graph.json",
-      "sha256": "4ebeaeb87f5d765ef4ea4a9ed9db54acb4535a0dc2743a3f0661c02a9cd5708b"
+      "sha256": "3116fdb3b6eceb9bb13d50a48d562e6c7ed481d6c500416f94ac6fcc6ba05253"
+    },
+    {
+      "name": "phase22_doxygen",
+      "path": "forensics/atlas/phase22/doxygen-entities.json",
+      "sha256": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97"
     },
     {
       "name": "phase22_genealogy",

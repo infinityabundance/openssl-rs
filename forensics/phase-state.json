@@ -627,7 +627,7 @@
         "stratum": "Maintenance delta machinery"
       },
       {
-        "blocking": "11 unresolved atlas residual(s) recorded in forensics/phase22-obligations.json; the Phase-22 seal is refused while any UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7). `open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
+        "blocking": "5 compatibility plane(s) remain unimplemented (docs/PHASE-22-SUBPHASES.md sections 5 and 7). `open` is the only list that blocks this stratum, and its count is a count of instruments not yet built rather than of exports not yet written. The Phase-22 seal additionally requires that no UNKNOWN residual intersects a declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7); that condition is read from `forensics/atlas/phase22/compatibility-closure.json` once 22.14 lands it, not from this file. Nothing here is a parity claim: a landed plane says an instrument ran and left an artefact, never that the artefact is complete -- 22.15's FRF challenges are what tests that, and a failed challenge is a finding.",
         "deferred": [],
         "evidence_absent": [
           "docs/PHASE-22-ATLAS-SEAL.md"
@@ -652,7 +652,7 @@
       "not_started": 10
     }
   },
-  "body_hash": "8a38090014957fc166d2a64f34f519d0466c5160a77bf80c2eb7acded350a2ff",
+  "body_hash": "c111172e4f10392a41c4e67d39e0bcac48b742bc2a2dabfb26664f39e00c7eb5",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

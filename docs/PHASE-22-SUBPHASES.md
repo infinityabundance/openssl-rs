@@ -234,6 +234,36 @@ The conservation order is therefore no longer a numeric chain. Phase 22 declares
 Phase numbers remain as historical names; the dependency is represented by the dependency.
 `phase_state.py` implements this explicitly rather than special-casing phase 22.
 
+**The stratum-level edge is necessary and not sufficient.** `requires[11] = (10, 22)` stops Phase 11
+being called `complete` while Phase 22 is open; it does not stop somebody from implementing
+`X509_verify_cert`, `x509_vpm.c` and `pcy_tree.c` tomorrow, which is the thing the dependency is
+*for*. The subphase-level half is `forensics/tools/phase22_x509_gate.py`, a fail-closed pipeline
+gate: it reads the exports `crypto/x509/x509_vfy.c`, `x509_vpm.c` and `pcy_tree.c` define, compares
+their implemented set against the frozen baseline
+`forensics/phase22/x509-closure-slice-baseline.json`, and **refuses any growth while the X.509
+closure slice is unsatisfied**, naming the exports that grew. The baseline is frozen rather than
+zero because Phase 10's pulled-forward subphases legitimately landed part of those units before
+Phase 22 existed, and a gate that fired on work already done could not be passed. The gate has its
+own `--self-test`, because a gate never seen to fire is not evidence.
+
+**The contract 22.14 must satisfy**, and the thing the gate reads:
+
+```json
+// forensics/atlas/phase22/compatibility-closure.json
+"body": {
+  "x509_slice": {
+    "roots": [ /* X509, X509_STORE, X509_STORE_CTX, X509_VERIFY_PARAM, X509_verify_cert,
+                  the policy tree, trust, purpose, CRL, name constraints, the callbacks */ ],
+    "satisfied": true,
+    "unknown_residuals": []
+  }
+}
+```
+
+`satisfied` is true exactly when no `UNKNOWN` residual intersects any of those roots. Until 22.14
+lands the document the gate reports the slice unsatisfied and lists the closure as the missing
+piece, so the dependency is visible from the day it exists rather than from the day it is enforced.
+
 Phase 11 may consume a **Phase-11 POD slice** of 22.11 once that slice has zero unexplained
 POD↔atlas and POD↔runtime residuals and its newly discovered obligations have propagated into
 the Phase-11 ledger. That allowance does not weaken the whole-Phase-22 seal.

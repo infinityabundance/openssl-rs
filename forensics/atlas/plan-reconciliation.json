@@ -5500,7 +5500,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "b0195cff8742e680f7676fa2466b867d33647f2dab7ca8e926ac56d0b11af1a7"
+      "sha256": "f44ea1324570ed05963ff88cfd5a4de22f4cd87255b9bcc2e72ef65715b04d24"
     },
     {
       "name": "prerequisites",
@@ -5520,12 +5520,12 @@
     {
       "name": "plan-PHASE-11-SUBPHASES",
       "path": "docs/PHASE-11-SUBPHASES.md",
-      "sha256": "d4ab6256e098de9e6e1c8d347416b4c7afc377abcf933dd4c94803d6816bc665"
+      "sha256": "c4d5d265bc7df03aacb6d02db079260231830da5859794c0299fdd26521977e9"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",
       "path": "docs/PHASE-22-SUBPHASES.md",
-      "sha256": "ed4af2df27639b451535d13ecb801a27860b36f21f5ca7e6aa83e358350efc24"
+      "sha256": "55a1ba6d7debcb2533d2a2178856318c7f99e47092d2e45eb68fc72f3de1c6b1"
     },
     {
       "name": "plan-PHASE-5-SUBPHASES",

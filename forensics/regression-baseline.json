@@ -385,11 +385,35 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-PHASE22-CONDITIONAL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-CONFIG": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-CROSSWALK": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-DISPATCH": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-PHASE22-DOXYGEN": {
       "observations": 0,
       "verdict": "pass"
     },
+    "RT-PHASE22-GENEALOGY": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-PHASE22-INSTALL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-POD": {
       "observations": 0,
       "verdict": "pass"
     },
@@ -501,7 +525,7 @@
   "open_obligations": {
     "phase10": 0,
     "phase11": 335,
-    "phase22": 11,
+    "phase22": 5,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,

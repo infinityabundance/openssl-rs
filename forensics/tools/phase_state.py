@@ -208,13 +208,23 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
             present.append(PHASE22_LEDGER)
             open_count = ledger["body"]["counts"]["open_in_this_stratum"]
             if open_count:
+                # **The two quantities this stratum blocks on are different things** and the state
+                # line must not conflate them. Until 22.14's closure exists there are no
+                # `UNKNOWN` residuals to count -- what is open is *instruments not yet built* --
+                # and calling them "residuals" overstates the atlas and understates the work. Once
+                # the closure artefact exists the residual count is read from it and reported
+                # beside the plane count, which is the pair a reader needs.
                 blocking = (
-                    f"{open_count} unresolved atlas residual(s) recorded in {PHASE22_LEDGER}; "
-                    f"the Phase-22 seal is refused while any UNKNOWN residual intersects a "
-                    f"declared compatibility root (docs/PHASE-22-SUBPHASES.md sections 4 and 7)"
-                    + (f". {ledger['body'].get('note', '')}"
-                       if ledger["body"].get("note") else "")
+                    f"{open_count} compatibility plane(s) remain unimplemented "
+                    f"(docs/PHASE-22-SUBPHASES.md sections 5 and 7)"
                 )
+                closure = read_json(PHASE22_CLOSURE)
+                if closure:
+                    unknown = closure["body"]["counts"].get("unknown_intersecting_roots", 0)
+                    blocking += (f"; the closure graph records {unknown} UNKNOWN residual(s) "
+                                 f"intersecting a declared compatibility root")
+                if ledger["body"].get("note"):
+                    blocking += f". {ledger['body']['note']}"
         else:
             absent.append(PHASE22_LEDGER)
         courts = read_json(PHASE22_COURTS)
@@ -853,6 +863,7 @@ PHASE22_MODULES = [
 ]
 PHASE22_LEDGER = "forensics/phase22-obligations.json"
 PHASE22_COURTS = "artifacts/phase22/COURTS.json"
+PHASE22_CLOSURE = "forensics/atlas/phase22/compatibility-closure.json"
 PHASE22_SEAL = "docs/PHASE-22-ATLAS-SEAL.md"
 
 
