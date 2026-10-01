@@ -483,7 +483,7 @@
         "stratum": "Key formats + PKCS + STORE"
       },
       {
-        "blocking": "148 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. The ledger does not start with that whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed, and two Phase 5 hand-offs, are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4)",
+        "blocking": "143 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. The ledger does not start with that whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed, and two Phase 5 hand-offs, are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -651,7 +651,7 @@
       "not_started": 10
     }
   },
-  "body_hash": "ff8e0fa3253645301087ee867837b9d70e6ce4a801e84eb19d99ec99eb63d5a3",
+  "body_hash": "da9a5bc51d99f724b438d9f3fa7f61e3db0021b5ea915904adab0817f9fd1b89",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

@@ -303,7 +303,11 @@ constructors, the CRL difference helper and the policy-tree entry point.
 and `X509v3_addr_validate_resource_set`. 11.1c adds the store object and its parameter setters, the
 seven names the missing `X509_VERIFY_PARAM` had withheld: `X509_STORE_new`, `X509_STORE_free`,
 `X509_STORE_set1_param`, `X509_STORE_set_flags`, `X509_STORE_set_depth`, `X509_STORE_set_purpose`
-and `X509_STORE_set_trust`.
+and `X509_STORE_set_trust`; and 11.1c's file loaders add `X509_load_cert_file`,
+`X509_load_cert_file_ex`, `X509_load_crl_file`, `X509_load_cert_crl_file` and
+`X509_load_cert_crl_file_ex`. The two lookup-method constructors, `X509_LOOKUP_file` and
+`X509_LOOKUP_hash_dir`, stay withheld on the `OPENSSLDIR` defaults
+`X509_get_default_cert_file`/`_dir`, which are 11.7's and Phase 16's.
 
 **Open exports (checked against the ledger):**
 
