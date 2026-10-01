@@ -647,17 +647,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "3db09eb6d59cb65713a7dcf8e8b0616d03ca9d7eb2a7747f3284ff85771de119"
+      "sha256": "7875eaff965fbebe196f33557fc68a7764e3fa17b2ae5fe29a7e02bb6c5d230f"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "97f1603b213f67c26b36063218cf2c2ac79d04cbee93f46ca02e33809570c8ac"
+      "sha256": "15f984aebc2e8903aace374b5dbe6743dbde1d686c07a916f0d142ddc84886cb"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "741ab3f4072a1f7136e7b383947adfeba69142bcbe9f0d47f2ad0677f55a16b4"
+      "sha256": "66228b2f3f06f576db4d9d40e3cb50b10a8f0699b4aae2801b2438e2bddbbe98"
     }
   ],
   "kind": "phase10-obligations",

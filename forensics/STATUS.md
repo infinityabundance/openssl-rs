@@ -31,12 +31,18 @@ renderer does not know any phase status.
 | 8 | Native cryptographic primitives | `complete` |  |
 | 9 | RAND / DRBG + entropy | `complete` |  |
 | 10 | Key formats + PKCS + STORE | `complete` |  |
-| 11 | X.509 + verification | `in-progress` | 38 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. The ledger does not start with that whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed, and two Phase 5 hand-offs, are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4) |
+| 11 | X.509 + verification | `in-progress` | 21 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. The ledger does not start with that whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed, and two Phase 5 hand-offs, are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4) |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 12-21 (10 total).
 
-## Atlas census
+## Phase-1 public API / ABI atlas census
+
+The **contract**: what the installed public headers, the `.num` inventories and
+the distribution shell promise. `cli commands` and `config files` below are the
+Phase-1 capture's own; the Phase-22 section after this one is the whole-program
+archaeology around them, which is where the CLI and configuration surfaces are
+actually enumerated.
 
 | surface | count |
 |---|---|
@@ -50,6 +56,36 @@ Not started: strata 12-21 (10 total).
 | symbols exported | 6499 |
 | typedefs | 1162 |
 | variables | 2 |
+
+## Phase-22 whole-program compatibility atlas
+
+| surface | count |
+|---|---|
+| translation units (captured compiler invocations) | 2201 |
+| distinct source files | 1232 |
+| Clang AST entities | 35838 |
+| direct-call edges | 104192 |
+| address-taken functions | 3896 |
+| Doxygen entities | 70075 |
+| Doxygen reference edges | 323306 |
+| dispatch/registration tables | 373 |
+| indirect typed edges | 1959 |
+| CLI commands | 120 |
+| CLI structured options | 4314 |
+| environment variables | 51 |
+| configuration directives | 115 |
+| installed distribution entries | 7666 |
+| POD manual pages | 903 |
+| POD claims | 15045 |
+| unified entities | 98753 |
+| cross-plane residuals | 62936 |
+| `UNKNOWN` residuals | 167 |
+| compatibility graph edges | 148275 |
+| root-reachable entities | 35432 |
+
+> These are plane measurements, not contract claims: a `UNKNOWN` residual
+> is a name Phase 22 found and did not classify, and 
+> `docs/PHASE-22-ATLAS-SEAL.md` records the bound of the claim.
 
 ## Obligations
 
@@ -87,9 +123,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 4729 | 1167 |
+| libcrypto | 5896 | 4746 | 1150 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **4729** | **1770** |
+| **total** | **6499** | **4746** | **1753** |
 
 ### Phase 10 obligation ledger
 
@@ -115,9 +151,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 11 working set: 1467
-* implemented: 1429
+* implemented: 1446
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 38
+* open in this stratum: 21
 
 Hand-offs from phase 5 discharged by this stratum: `ASN1_add_stable_module`, `ASN1_generate_nconf`, `ASN1_generate_v3`, `PEM_X509_INFO_read`, `PEM_X509_INFO_read_bio`, `PEM_X509_INFO_read_bio_ex`, `PEM_X509_INFO_read_ex`, `PEM_X509_INFO_write_bio`, `PEM_write_X509_REQ_NEW`, `PEM_write_bio_X509_REQ_NEW`
 

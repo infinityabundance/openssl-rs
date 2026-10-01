@@ -45,7 +45,7 @@
         "candidate_exit_code": 0,
         "candidate_observations": 197,
         "candidate_stderr_tail": [],
-        "court": "RT-X509-VERIFY",
+        "court": "RT-X509-VERIFY-SURFACE",
         "crashed": false,
         "probe": "courts/phase11/rt_x509_verify_probe.c",
         "residual_count": 0,
@@ -126,7 +126,8 @@
       }
     ],
     "pending_courts": {
-      "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the `GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, `v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)"
+      "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the `GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, `v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)",
+      "RT-X509-VERIFY-ENGINE": "11.2 -- the decision procedure itself: `X509_verify_cert`, `X509_STORE_CTX_verify` and `X509_build_chain` (with `X509_STORE_CTX_init`/`init_rpk`), compared per docs/PHASE-11-SUBPHASES.md section 3.2 on the return value, the error code, the error depth, the `verify_cb` callback sequence and the constructed chain, over a hostile-chain corpus. Registered as pending while those three names stay withheld on the OCSP and DANE arms; `RT-X509-VERIFY-SURFACE` is the court that covers everything around them and its `pass` is not this claim"
     },
     "summary": {
       "fail": 0,
@@ -154,7 +155,7 @@
     {
       "name": "probe",
       "path": "courts/phase11/rt_x509_verify_probe.c",
-      "sha256": "da86c77975013811a0bb1f6ca6ce355fd94c2066a9f0216cdefc54bff1036cc5"
+      "sha256": "ac27c00bfe1f1cf588823ec8ff1d8dbb7b497b32953cd0c3adc76c3625af2e29"
     },
     {
       "name": "probe",

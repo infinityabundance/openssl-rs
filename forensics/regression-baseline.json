@@ -509,8 +509,12 @@
       "observations": 54,
       "verdict": "pass"
     },
+    "RT-X509": {
+      "observations": 52,
+      "verdict": "pass"
+    },
     "RT-X509-ACERT": {
-      "observations": 168,
+      "observations": 178,
       "verdict": "pass"
     },
     "RT-X509-PEM": {
@@ -522,15 +526,15 @@
       "verdict": "pass"
     },
     "RT-X509-REQ": {
-      "observations": 67,
+      "observations": 76,
       "verdict": "pass"
     },
     "RT-X509-STORE": {
       "observations": 525,
       "verdict": "pass"
     },
-    "RT-X509-VERIFY": {
-      "observations": 160,
+    "RT-X509-VERIFY-SURFACE": {
+      "observations": 197,
       "verdict": "pass"
     },
     "libcrypto-contamination": {
@@ -551,12 +555,12 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4729,
+    "libcrypto": 4746,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
-    "phase11": 38,
+    "phase11": 21,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -607,7 +611,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 37,
     "findings": 0,
-    "language_census": 7265,
+    "language_census": 7316,
     "sealed_census": 52
   },
   "provider_implemented": [

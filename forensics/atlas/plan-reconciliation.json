@@ -5,18 +5,15 @@
       "in-progress"
     ],
     "census": {
-      "units_not_reached": 4
+      "units_not_reached": 1
     },
     "census_by_stratum": {
-      "11": 4
+      "11": 1
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
       "units_not_reached": [
-        "crypto/asn1/asn_mstbl.c",
-        "crypto/asn1/t_spki.c",
-        "crypto/x509/by_dir.c",
-        "crypto/x509/t_acert.c"
+        "crypto/x509/by_dir.c"
       ]
     },
     "checked": {
@@ -36,7 +33,7 @@
       "unit_records": 96,
       "units_named_by_a_record": 98,
       "units_named_by_a_row": 375,
-      "units_reached": 371
+      "units_reached": 374
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -141,7 +138,9 @@
         "subphases": [
           "11:11.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/asn1/asn_mstbl.rs"
+        ]
       },
       "crypto/asn1/d2i_param.c": {
         "defines": [],
@@ -208,6 +207,7 @@
           "11:11.7"
         ],
         "transcribed_by": [
+          "src/asn1/p5_scrypt.rs",
           "src/evp/p5_scrypt.rs"
         ]
       },
@@ -228,7 +228,9 @@
         "subphases": [
           "11:11.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/asn1/t_spki.rs"
+        ]
       },
       "crypto/asn1/tasn_typ.c": {
         "defines": [],
@@ -2018,7 +2020,8 @@
           "7:7.4e"
         ],
         "transcribed_by": [
-          "src/evp/digest.rs"
+          "src/evp/digest.rs",
+          "src/evp/evp_lib.rs"
         ]
       },
       "crypto/evp/evp_pbe.c": {
@@ -3642,7 +3645,9 @@
         "subphases": [
           "10:10.14"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/pcy_cache.rs"
+        ]
       },
       "crypto/x509/pcy_data.c": {
         "defines": [
@@ -3653,7 +3658,9 @@
         "subphases": [
           "10:10.14"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/pcy_data.rs"
+        ]
       },
       "crypto/x509/pcy_lib.c": {
         "defines": [],
@@ -3688,7 +3695,9 @@
         "subphases": [
           "10:10.12"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/pcy_node.rs"
+        ]
       },
       "crypto/x509/pcy_tree.c": {
         "defines": [],
@@ -3707,7 +3716,9 @@
         "subphases": [
           "11:11.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/t_acert.rs"
+        ]
       },
       "crypto/x509/t_crl.c": {
         "defines": [],
@@ -5495,31 +5506,31 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 456
+      "transcribed_units": 462
     }
   },
-  "body_hash": "92cc33f9548e945319bf3b2028d5a40618413c636f4bf67c19db9ab7078cfbac",
+  "body_hash": "cf60de60ec5ef002f0c0033ad07e147d840e5addba05eb97064e447566bfa293",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "5faa0ef4c26ec5ecf2b93a7dd7fe8c23a679305caeb50efc9a1db843379582e2"
+      "sha256": "28466c2f0b4fb987ebafd18c63b934463361ce6553a8d19301154201ea73e815"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "8027a178424f2ac2440c01cc748e4601e3cddc30a8003edd736c97c57bf22f3d"
+      "sha256": "288af3598049882dbbc9d2509456463d0b068a7a8b192c377e79a857a566ed5f"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "47429c4f5df02f343abe32cbd7845ce689cddf67fd9fb29b3c429a2879a6da35"
+      "sha256": "69102cea10950ac5db7652287043a11e16014fde3e37ea5eb7721fee5f02afc7"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "268e035fb51d24a3c0ea548884b496f0b10c0ed21d6f1973a9ac54eeca4ec9f6"
+      "sha256": "1705282e96dfb3778759a53c1de49025f7d67bc26cc2d075b854a3de6387660b"
     },
     {
       "name": "prerequisites",
@@ -5539,7 +5550,7 @@
     {
       "name": "plan-PHASE-11-SUBPHASES",
       "path": "docs/PHASE-11-SUBPHASES.md",
-      "sha256": "60d97725ae5e1910e0ab21e906d768dcd2e9fc55cf9564f749366241d5492527"
+      "sha256": "b1c1dd7118d8206ef6c32ab7d885283d4d10fe9cabc3f146319f5b0552c094f7"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",
