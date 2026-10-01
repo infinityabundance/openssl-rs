@@ -34035,6 +34035,53 @@ such rather than as an absence of evidence.
 
 `PIPELINE OK` exit 0 with **125 courts** and 47,575 observations.
 
+## D494 -- 22.14 closes the graph, and the X.509 slice opens Phase 11.2
+
+`forensics/tools/phase22_closure.py` declares the plan's ten compatibility-root families, derives a
+concrete member list for each from the authority, and traverses the typed edge graph from every
+member to its reachable closure.
+
+**16 of 18 planes.** `PIPELINE OK` exit 0 with **126 courts**.
+
+The roots: **source-api 25,919** (the Phase-1 header/API atlas), **binary-abi 6,512** (22.6's DSO,
+provider and engine exports), **modules 770** and **callbacks 332** (22.7's dispatch and callback
+slots), **cli 120** (22.9), **configuration 176** (22.10), **distribution 162** (22.8's
+`REQUIRED_COMPATIBILITY` rows). **27,495 distinct members**, every offered name resolved. The graph
+is **148,275 typed edges over 12 kinds** and the union reachable from the roots is **35,436
+entities**. Three families stay **unpopulated**, and that is recorded rather than faked: no
+22.1-22.13 plane observes runtime errors/state/ownership/concurrency, the TLS/DTLS/QUIC wire, or the
+`dlopen`/`dlsym` lookup path -- 22.6 sees `DT_NEEDED` and 22.7 sees engine registration, but neither
+sees the lookup itself.
+
+### The X.509 slice is satisfied, and the gate it feeds is therefore open
+```json
+{"roots": ["X509", "X509_STORE", "X509_STORE_CTX", "X509_VERIFY_PARAM", "X509_verify_cert",
+           "policy-tree", "trust", "purpose", "crl", "name-constraints",
+           "verification-callbacks"],
+ "satisfied": true, "unknown_residuals": []}
+```
+The membership is derived, not chosen: the names are matched against 22.12's declared-root members by
+the `X509*` prefix and by the authority's own `crypto/x509/` units (`pcy_*.c`, `x509_trust.c`,
+`v3_purp.c`, `x_crl.c`/`v3_crld.c`, `v3_ncons.c`) plus the callback-slot targets. That is **1,294
+members** and **12,313 reachable entities** with **0 `UNKNOWN`**. The two `UNKNOWN` entities 22.12
+records -- `_openssl_ascii2ebcdic` and `_openssl_ebcdic2ascii` from `ebcdic.h` -- are matched by no
+X.509 rule and are the target of no call, address-taken, relocation or dispatch edge anywhere in the
+atlas, so they genuinely do not reach the slice.
+
+`phase22_x509_gate.py` now reads that block and reports:
+
+    [x509-gate] ok: 1 implemented export(s) of Phase 11.2's units, 0 beyond the frozen baseline;
+    the closure graph records the X.509 slice satisfied
+
+**So the dependency D492 built is discharged, and Phase 11.2 may proceed.** That is the point of
+building it as a gate rather than as a sentence: the block was real while the closure did not exist,
+and it lifted because the evidence arrived, not because somebody edited a flag. The court proves the
+slice *can* be unsatisfied -- it makes an `UNKNOWN` reachable from an X.509 root in memory and
+requires `satisfied` to flip false and `unknown_residuals` to fill -- so `true` here is a measurement
+and not a vacuous default.
+
+`PIPELINE OK` exit 0 with **126 courts** and 47,575 observations.
+
 ## D491 -- 22.11: the canonical POD contract oracle, and the claim graph that will not pretend to
 ## have read the prose
 
