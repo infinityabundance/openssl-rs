@@ -522,7 +522,7 @@
       "verdict": "pass"
     },
     "RT-X509-VERIFY": {
-      "observations": 135,
+      "observations": 160,
       "verdict": "pass"
     },
     "libcrypto-contamination": {
@@ -543,12 +543,12 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4599,
+    "libcrypto": 4612,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
-    "phase11": 168,
+    "phase11": 155,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -599,7 +599,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 37,
     "findings": 0,
-    "language_census": 7199,
+    "language_census": 7179,
     "sealed_census": 52
   },
   "provider_implemented": [

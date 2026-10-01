@@ -3137,7 +3137,7 @@
         "module": "src/x509/v3_addr.rs",
         "phase": 11,
         "phase_source": "export-ownership",
-        "share": "29/29",
+        "share": "31/31",
         "translation_unit": "crypto/x509/v3_addr.c"
       },
       {
@@ -3158,7 +3158,7 @@
         "module": "src/x509/v3_asid.rs",
         "phase": 11,
         "phase_source": "export-ownership",
-        "share": "26/26",
+        "share": "28/28",
         "translation_unit": "crypto/x509/v3_asid.c"
       },
       {
@@ -3550,7 +3550,7 @@
         "module": "src/x509/x_crl.rs",
         "phase": 11,
         "phase_source": "export-ownership",
-        "share": "19/20",
+        "share": "28/29",
         "translation_unit": "crypto/x509/x_crl.c"
       },
       {

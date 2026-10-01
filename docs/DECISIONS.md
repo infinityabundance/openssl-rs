@@ -34216,3 +34216,62 @@ engine, and it is why the engine's blockers are being pulled forward rather than
 
 Verified: `PIPELINE OK` exit 0; phase 11 in-progress at 1,299/1,467; 129 courts and 47,831
 observations.
+
+## D496 -- the engine's revocation and name-constraint arms land, pulled forward from 11.4 and
+## 11.5
+
+D495 named seven withheld engine names and measured each blocker rather than guessing it. Three of
+those measurements pointed outside 11.2: the chain roll's CRL arm needed `X509_CRL_get0_by_cert`,
+`X509_CRL_get0_by_serial` and `X509_CRL_verify` from `x_crl.c`, and its RFC 3779 arm called
+`X509v3_asid_validate_path` and `X509v3_addr_validate_path`, withheld in their own units. This
+commit pulls both forward, so the engine's remaining closure is the OCSP arm (Phase 12), the DANE
+arm (the SSL layer) and `pcy_cache.c`/`pcy_data.c`/`pcy_node.c` behind `X509_policy_check`.
+
+### 11.4's `x_crl.c` was blocked from inside itself
+`x_crl.rs` withheld nine names on "the method vtable's unlanded entries" and the method object. Both
+are in `x_crl.c`: the vtable is the `static X509_CRL_METHOD int_crl_meth = { 0, def_crl_lookup,
+ def_crl_verify }` at `:33-38`, and the lookup/verify pair are the unit's own statics at `:405-480`.
+So the slice is self-contained. `X509_CRL_add0_revoked`, the three accessors, the `X509_CRL_METHOD`
+allocator/free pair, `X509_CRL_set_default_method` and the `meth_data` pair land with
+`def_crl_verify`, `crl_revoked_issuer_match` and `def_crl_lookup`.
+
+`default_crl_method` is a mutable authority global, and it is modelled as an `AtomicPtr` rather than
+a `static mut`; the precedent is `src/asn1/a_strnid.rs:140-147`, which chose the same shape for a
+bare authority pointer "so that reading it never forms a reference to mutable static storage".
+`crl_cb`'s `ASN1_OP_NEW_POST` arm reads it, so a CRL created after `X509_CRL_set_default_method(m)`
+carries `m` and a CRL created after `set_default_method(NULL)` carries `int_crl_meth`, exactly as
+`:40` and `:482-488` decide.
+
+### 11.5's path validation was the last of its open set
+`X509v3_asid_validate_path`/`..._validate_resource_set` (`v3_asid.c:844-869`) and
+`X509v3_addr_validate_path`/`..._validate_resource_set` (`v3_addr.c:1332-1357`) land with
+`asid_validate_path_internal` (`:719-837`) and `addr_validate_path_internal` (`:1212-1325`). Every
+primitive they need was already in the crate -- the extended structures, the range containment
+helpers and the stack ops -- so nothing was stubbed. **11.5's open set is now empty.**
+
+### Three divergences, each named with its reason
+`def_crl_lookup`'s stack-local `X509_REVOKED rtmp` is a `MaybeUninit` with only `serialNumber`
+byte-copied in, because a C struct-copy is not expressible in Rust over a non-`Copy` field; the
+comparator reads nothing else, so the observation is identical. The three vtable accessors add a
+`meth.is_null()` guard the authority omits -- observable only on a hand-zeroed object, and matching
+the guard `crl_cb`'s `D2I_PRE` arm already uses. And `validation_err`, which the authority writes as
+a macro closing over the caller's `ctx`/`x`/`i` and a `goto done`, is a private `unsafe fn`: a
+`macro_rules!` body cannot name a caller's locals. Both call sites turn `goto done` into an early
+return.
+
+### The court drives the new arms, and the two sides agree
+`RT-X509-VERIFY` grows from 135 to 160 observations. It drives the **real** `def_crl_lookup` through
+`add0_revoked` and `get0_by_serial`/`get0_by_cert` over two fixed serials, the vtable dispatch
+through a probe method on a second CRL, the `meth_data` round trip, and the four RFC 3779 doors: a
+chain-less context returns 0 and leaves `X509_V_ERR_UNSPECIFIED` -- an error coordinate, not a
+boolean -- and a NULL extension set returns 1. `X509_CRL_verify` is called only through the probe
+method, because the default `def_crl_verify` would run `ASN1_item_verify_ex` on a fabricated keyless
+signature. The authority and candidate transcripts match observation for observation, which is the
+first behavioural evidence either unit has.
+
+`src/x509/x509_vfy.rs`'s module doc listed these names as withheld; that prose is now false and is
+corrected to say where the arms landed. `docs/PHASE-11-SUBPHASES.md` section 5 names the 13 exports,
+which is what `docs_consistency.py` binds to the ledger.
+
+Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,312/1,467 with 155 open;
+`libcrypto` at 4,612; 129 courts and 47,856 observations.

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1455,
       "deferred_to_later_phase": 0,
-      "implemented": 1299,
-      "open_in_this_stratum": 168,
+      "implemented": 1312,
+      "open_in_this_stratum": 155,
       "owned": 1467,
       "received_by_handoff": 12
     },
@@ -586,6 +586,9 @@
       "X509_CRL_INFO_free",
       "X509_CRL_INFO_it",
       "X509_CRL_INFO_new",
+      "X509_CRL_METHOD_free",
+      "X509_CRL_METHOD_new",
+      "X509_CRL_add0_revoked",
       "X509_CRL_add1_ext_i2d",
       "X509_CRL_add_ext",
       "X509_CRL_check_suiteb",
@@ -594,6 +597,8 @@
       "X509_CRL_digest",
       "X509_CRL_dup",
       "X509_CRL_free",
+      "X509_CRL_get0_by_cert",
+      "X509_CRL_get0_by_serial",
       "X509_CRL_get0_extensions",
       "X509_CRL_get0_lastUpdate",
       "X509_CRL_get0_nextUpdate",
@@ -608,6 +613,7 @@
       "X509_CRL_get_ext_d2i",
       "X509_CRL_get_issuer",
       "X509_CRL_get_lastUpdate",
+      "X509_CRL_get_meth_data",
       "X509_CRL_get_nextUpdate",
       "X509_CRL_get_signature_nid",
       "X509_CRL_get_version",
@@ -617,12 +623,15 @@
       "X509_CRL_new_ex",
       "X509_CRL_set1_lastUpdate",
       "X509_CRL_set1_nextUpdate",
+      "X509_CRL_set_default_method",
       "X509_CRL_set_issuer_name",
+      "X509_CRL_set_meth_data",
       "X509_CRL_set_version",
       "X509_CRL_sign",
       "X509_CRL_sign_ctx",
       "X509_CRL_sort",
       "X509_CRL_up_ref",
+      "X509_CRL_verify",
       "X509_EXTENSIONS_it",
       "X509_EXTENSION_create_by_NID",
       "X509_EXTENSION_create_by_OBJ",
@@ -1111,12 +1120,16 @@
       "X509v3_addr_inherits",
       "X509v3_addr_is_canonical",
       "X509v3_addr_subset",
+      "X509v3_addr_validate_path",
+      "X509v3_addr_validate_resource_set",
       "X509v3_asid_add_id_or_range",
       "X509v3_asid_add_inherit",
       "X509v3_asid_canonize",
       "X509v3_asid_inherits",
       "X509v3_asid_is_canonical",
       "X509v3_asid_subset",
+      "X509v3_asid_validate_path",
+      "X509v3_asid_validate_resource_set",
       "X509v3_delete_ext",
       "X509v3_get_ext",
       "X509v3_get_ext_by_NID",
@@ -1935,45 +1948,9 @@
       },
       {
         "declaring_header": "x509.h",
-        "module": "src/x509/x_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_METHOD_free"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_METHOD_new"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_add0_revoked"
-      },
-      {
-        "declaring_header": "x509.h",
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_diff"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_get0_by_cert"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_get0_by_serial"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_get_meth_data"
       },
       {
         "declaring_header": "x509.h",
@@ -1998,24 +1975,6 @@
         "module": "src/x509/t_crl.rs",
         "received_from_phase": null,
         "symbol": "X509_CRL_print_fp"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_set_default_method"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_set_meth_data"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_crl.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_verify"
       },
       {
         "declaring_header": "x509_vfy.h",
@@ -2318,30 +2277,6 @@
         "symbol": "X509_verify_cert"
       },
       {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_addr.rs",
-        "received_from_phase": null,
-        "symbol": "X509v3_addr_validate_path"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_addr.rs",
-        "received_from_phase": null,
-        "symbol": "X509v3_addr_validate_resource_set"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_asid.rs",
-        "received_from_phase": null,
-        "symbol": "X509v3_asid_validate_path"
-      },
-      {
-        "declaring_header": "x509v3.h",
-        "module": "src/x509/v3_asid.rs",
-        "received_from_phase": null,
-        "symbol": "X509v3_asid_validate_resource_set"
-      },
-      {
         "declaring_header": "x509_acert.h",
         "module": "src/x509/x_ietfatt.rs",
         "received_from_phase": null,
@@ -2578,17 +2513,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "82c441948d3aea3824304b5259c8ba0723d8601d65d566891788593541e2a7c5"
+      "sha256": "23c8c978bc95026f604158eb384a15ce63d99fff256972b96645d7f28787cd37"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "f2c03d2bc4ebdc4cec5b885727371851ed399a7ada872a5a441fe945bdfda4b6"
+      "sha256": "353696acb3733065598ba14767efdeb8115397eac133e70fd5e10e72e00849d6"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "f1f5fa7ffe56c301b6c25064835281c2712935b5d08e4f3eb6f2b1e5ec936590"
+      "sha256": "95dc88c0980d3f44622a29825c8382feb1d69547b5b9faa076e22cb5f0c3b930"
     }
   ],
   "kind": "phase11-obligations",

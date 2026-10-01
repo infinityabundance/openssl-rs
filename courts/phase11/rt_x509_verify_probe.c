@@ -13,11 +13,18 @@
  * recorded in `src/x509/x509_vfy.rs`'s module doc (the chain roll's OCSP arm is
  * Phase 12's, its CRL arm is `x_crl.rs`'s, its DANE arm is the SSL layer's, and
  * `X509v3_{asid,addr}_validate_path` are withheld in their own units). `pcy_tree.c`'s
- * `X509_policy_check` is withheld in the same way. So this probe does NOT run the
+ * `X509_policy_check` is withheld in the same way. **Two of the chain roll's arms have since
+ * landed and are driven below**: the `x_crl.c` CRL method/lookup surface
+ * (`X509_CRL_add0_revoked`, `X509_CRL_get0_by_serial`, `X509_CRL_get0_by_cert`, `X509_CRL_verify`,
+ * the `X509_CRL_METHOD_*` object and `X509_CRL_set_/get_meth_data`), landed when 11.4 was pulled
+ * forward to unblock the engine, and the RFC 3779 path validation
+ * `X509v3_{asid,addr}_validate_path` and `..._validate_resource_set` of 11.5's
+ * `v3_asid.c`/`v3_addr.c`. The OCSP and DANE arms remain Phase 12's and the SSL layer's. So this
+ * probe does NOT run the
  * decision procedure `docs/PHASE-11-SUBPHASES.md` section 3.2 describes; it runs the
  * *time* half of that decision (the boundary instants, the two encodings, the
- * malformed field, `NO_CHECK_TIME`/`USE_CHECK_TIME`) and the whole parameter and
- * context surface the decision would read and report.
+ * malformed field, `NO_CHECK_TIME`/`USE_CHECK_TIME`), the whole parameter and
+ * context surface the decision would read and report, and the two landed arms above.
  *
  * No wall clock
  * -------------
@@ -40,6 +47,7 @@
 #include <time.h>
 
 #include <openssl/asn1.h>
+#include <openssl/evp.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
@@ -463,6 +471,142 @@ static void ctx_surface(void)
     printf("policy_tree_free.null=1\n");
 }
 
+/*
+ * The CRL method/lookup surface -- the engine's revocation arm, `x_crl.c`.
+ *
+ * A fresh `X509_CRL_new` carries the authority's default method, so
+ * `X509_CRL_add0_revoked` / `X509_CRL_get0_by_serial` / `X509_CRL_get0_by_cert` run the real
+ * `def_crl_lookup` (the sort, the lock, the serial binary search and the issuer match). A
+ * second CRL is created after `X509_CRL_set_default_method` installs a probe method, so the
+ * vtable dispatch through `X509_CRL_verify` / `..._get0_by_serial` / `..._get0_by_cert` is
+ * driven too. `X509_CRL_verify` is called only through the probe method (which returns 9): the
+ * default `def_crl_verify` runs `ASN1_item_verify_ex` and is not called with a fabricated
+ * keyless signature. Every observation is an integer, a nonnull/null or a pointer equality.
+ */
+static int rt_crl_init(X509_CRL *crl) { (void)crl; return 1; }
+static int rt_crl_free(X509_CRL *crl) { (void)crl; return 1; }
+
+static int rt_crl_lookup(X509_CRL *crl, X509_REVOKED **ret,
+                         const ASN1_INTEGER *ser, const X509_NAME *issuer)
+{
+    (void)crl;
+    (void)ret;
+    (void)ser;
+    (void)issuer;
+    return 7; /* a marker no authority default returns, so the dispatch is unambiguous */
+}
+
+static int rt_crl_verify(X509_CRL *crl, EVP_PKEY *pk)
+{
+    (void)crl;
+    (void)pk;
+    return 9;
+}
+
+static void crl_surface(void)
+{
+    static int marker;
+    ASN1_INTEGER *s = ASN1_INTEGER_new();
+    X509_CRL *crl = X509_CRL_new();
+    X509_REVOKED *r1 = X509_REVOKED_new();
+    X509_REVOKED *r2 = X509_REVOKED_new();
+    X509 *x = X509_new();
+
+    if (s == NULL || crl == NULL || r1 == NULL || r2 == NULL || x == NULL) {
+        printf("crl.alloc=0\n");
+        return;
+    }
+    printf("crl.alloc=1\n");
+
+    /* Two revoked entries with fixed serials, through the real default method. */
+    ASN1_INTEGER_set(X509_REVOKED_get0_serialNumber(r1), 0x1234);
+    ASN1_INTEGER_set(X509_REVOKED_get0_serialNumber(r2), 0x5678);
+    printf("crl.add0_revoked.first=%d\n", X509_CRL_add0_revoked(crl, r1));
+    printf("crl.add0_revoked.second=%d\n", X509_CRL_add0_revoked(crl, r2));
+
+    ASN1_INTEGER_set(s, 0x1234);
+    {
+        X509_REVOKED *got = NULL;
+        printf("crl.get0_by_serial.hit=%d\n", X509_CRL_get0_by_serial(crl, &got, s));
+        printf("crl.get0_by_serial.hit_identity=%d\n", got == r1);
+    }
+    ASN1_INTEGER_set(s, 0x9999);
+    {
+        X509_REVOKED *got = NULL;
+        printf("crl.get0_by_serial.miss=%d\n", X509_CRL_get0_by_serial(crl, &got, s));
+        printf("crl.get0_by_serial.miss_null=%d\n", got == NULL);
+    }
+
+    /* By certificate: a fresh `X509` with the matching serial and the empty issuer both objects
+     * carry, so `crl_revoked_issuer_match` takes its no-indirect-issuer path. */
+    ASN1_INTEGER_set(s, 0x1234);
+    X509_set_serialNumber(x, s);
+    {
+        X509_REVOKED *got = NULL;
+        printf("crl.get0_by_cert.hit=%d\n", X509_CRL_get0_by_cert(crl, &got, x));
+        printf("crl.get0_by_cert.hit_identity=%d\n", got == r1);
+    }
+    ASN1_INTEGER_set(s, 0x9999);
+    X509_set_serialNumber(x, s);
+    {
+        X509_REVOKED *got = NULL;
+        printf("crl.get0_by_cert.miss=%d\n", X509_CRL_get0_by_cert(crl, &got, x));
+    }
+
+    /* The method object and the vtable dispatch, over a second CRL. */
+    {
+        X509_CRL_METHOD *m = X509_CRL_METHOD_new(rt_crl_init, rt_crl_free,
+                                                 rt_crl_lookup, rt_crl_verify);
+        X509_CRL *c3;
+        printf("crl.method_new=%s\n", PTR(m));
+        X509_CRL_set_default_method(m);
+        c3 = X509_CRL_new();
+        printf("crl.method.crl=%s\n", PTR(c3));
+        printf("crl.verify.custom=%d\n", X509_CRL_verify(c3, NULL));
+        {
+            X509_REVOKED *got = NULL;
+            printf("crl.get0_by_serial.custom=%d\n", X509_CRL_get0_by_serial(c3, &got, s));
+            printf("crl.get0_by_cert.custom=%d\n", X509_CRL_get0_by_cert(c3, &got, x));
+        }
+        /* The CRL frees before the method it points at, so `crl_free` never sees freed storage. */
+        X509_CRL_free(c3);
+        X509_CRL_METHOD_free(m);
+        X509_CRL_set_default_method(NULL);
+        printf("crl.method.reset=1\n");
+    }
+
+    printf("crl.meth_data.null=%d\n", X509_CRL_get_meth_data(crl) == NULL);
+    X509_CRL_set_meth_data(crl, (void *)&marker);
+    printf("crl.meth_data.round_trip=%d\n", X509_CRL_get_meth_data(crl) == (void *)&marker);
+
+    X509_free(x);
+    X509_CRL_free(crl);
+    ASN1_INTEGER_free(s);
+}
+
+/*
+ * The RFC 3779 path validation doors, `v3_asid.c` and `v3_addr.c`. A context with no chain is
+ * the authority's own first test, so each entry returns 0 and leaves `X509_V_ERR_UNSPECIFIED`
+ * on the context -- an error coordinate, not a boolean. The `..._validate_resource_set` doors
+ * are entered with a NULL extension, their `ext == NULL` arm returning 1.
+ */
+static void path_surface(void)
+{
+    X509_STORE_CTX *ctx = X509_STORE_CTX_new();
+
+    printf("path.ctx=%s\n", PTR(ctx));
+    printf("asid.validate_path.empty_chain=%d\n", X509v3_asid_validate_path(ctx));
+    printf("asid.validate_path.error=%d\n", X509_STORE_CTX_get_error(ctx));
+    printf("addr.validate_path.empty_chain=%d\n", X509v3_addr_validate_path(ctx));
+    printf("addr.validate_path.error=%d\n", X509_STORE_CTX_get_error(ctx));
+    printf("asid.validate_resource_set.null_ext=%d\n",
+           X509v3_asid_validate_resource_set(NULL, NULL, 0));
+    printf("addr.validate_resource_set.null_ext=%d\n",
+           X509v3_addr_validate_resource_set(NULL, NULL, 0));
+
+    X509_STORE_CTX_free(ctx);
+}
+
 int main(void)
 {
     /* `X509_self_signed` is the one name 11.2 inherits; NULL is its error arm. */
@@ -472,5 +616,7 @@ int main(void)
     inherit_surface();
     table_surface();
     ctx_surface();
+    crl_surface();
+    path_surface();
     return 0;
 }

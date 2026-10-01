@@ -493,7 +493,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 14523,
+      "compiler_emitted_count": 14822,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -501,7 +501,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 4599,
+        "implemented": 4612,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -4103,6 +4103,9 @@
           "X509_CRL_INFO_free",
           "X509_CRL_INFO_it",
           "X509_CRL_INFO_new",
+          "X509_CRL_METHOD_free",
+          "X509_CRL_METHOD_new",
+          "X509_CRL_add0_revoked",
           "X509_CRL_add1_ext_i2d",
           "X509_CRL_add_ext",
           "X509_CRL_check_suiteb",
@@ -4111,6 +4114,8 @@
           "X509_CRL_digest",
           "X509_CRL_dup",
           "X509_CRL_free",
+          "X509_CRL_get0_by_cert",
+          "X509_CRL_get0_by_serial",
           "X509_CRL_get0_extensions",
           "X509_CRL_get0_lastUpdate",
           "X509_CRL_get0_nextUpdate",
@@ -4125,6 +4130,7 @@
           "X509_CRL_get_ext_d2i",
           "X509_CRL_get_issuer",
           "X509_CRL_get_lastUpdate",
+          "X509_CRL_get_meth_data",
           "X509_CRL_get_nextUpdate",
           "X509_CRL_get_signature_nid",
           "X509_CRL_get_version",
@@ -4134,12 +4140,15 @@
           "X509_CRL_new_ex",
           "X509_CRL_set1_lastUpdate",
           "X509_CRL_set1_nextUpdate",
+          "X509_CRL_set_default_method",
           "X509_CRL_set_issuer_name",
+          "X509_CRL_set_meth_data",
           "X509_CRL_set_version",
           "X509_CRL_sign",
           "X509_CRL_sign_ctx",
           "X509_CRL_sort",
           "X509_CRL_up_ref",
+          "X509_CRL_verify",
           "X509_EXTENSIONS_it",
           "X509_EXTENSION_create_by_NID",
           "X509_EXTENSION_create_by_OBJ",
@@ -4628,12 +4637,16 @@
           "X509v3_addr_inherits",
           "X509v3_addr_is_canonical",
           "X509v3_addr_subset",
+          "X509v3_addr_validate_path",
+          "X509v3_addr_validate_resource_set",
           "X509v3_asid_add_id_or_range",
           "X509v3_asid_add_inherit",
           "X509v3_asid_canonize",
           "X509v3_asid_inherits",
           "X509v3_asid_is_canonical",
           "X509v3_asid_subset",
+          "X509v3_asid_validate_path",
+          "X509v3_asid_validate_resource_set",
           "X509v3_delete_ext",
           "X509v3_get_ext",
           "X509v3_get_ext_by_NID",
@@ -5103,7 +5116,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 1297
+        "scaffolded": 1284
       },
       "libssl": {
         "authority_exports": 603,
@@ -5114,18 +5127,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 4599,
-      "scaffolded": 1900
+      "implemented": 4612,
+      "scaffolded": 1887
     }
   },
-  "body_hash": "82c441948d3aea3824304b5259c8ba0723d8601d65d566891788593541e2a7c5",
+  "body_hash": "23c8c978bc95026f604158eb384a15ce63d99fff256972b96645d7f28787cd37",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "ed108bb6515c15876f4183de50e3aa8737d3a0f34b994d27bbd0e49ce4ca6d20"
+      "sha256": "1e8d3a952475cf1141447bc4c37b3c542864d6f686807c230df5514d48e0e84f"
     },
     {
       "name": "authority-exports",

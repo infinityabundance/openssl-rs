@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 4599 | 1297 |
+| libcrypto | 5896 | 4612 | 1284 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **4599** | **1900** |
+| **total** | **6499** | **4612** | **1887** |
 
 ## Ownership atlas, by stratum
 
@@ -36,7 +36,7 @@ declared owner; this is that assignment.
 | 8 | Native cryptographic primitives | `complete` | 759 | 786 | 786 | 0 | 0 |
 | 9 | RAND / DRBG + entropy | `complete` | 25 | 69 | 69 | 0 | 0 |
 | 10 | Key formats + PKCS + STORE | `complete` | 272 | 298 | 298 | 0 | 0 |
-| 11 | X.509 + verification | `in-progress` | 1455 | 1467 | 1299 | 0 | 168 |
+| 11 | X.509 + verification | `in-progress` | 1455 | 1467 | 1312 | 0 | 155 |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
 | 13 | Legacy / deprecated compatibility | `not-started` | 189 | — | — | — | — |
 | 14 | TLS / DTLS (libssl) | `not-started` | 600 | — | — | — | — |
@@ -363,27 +363,27 @@ The other 1 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 11 — X.509 + verification
 
 * state: `in-progress`
-* blocking: 168 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. The ledger does not start with that whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed, and two Phase 5 hand-offs, are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4)
+* blocking: 155 open obligation(s) of this stratum recorded in forensics/phase11-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand four hundred and fifty-five of the exports it owns are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, `x509_acert.h`, `pem.h`) and the twelve remainder arrive as recorded hand-offs from phases 5 and 7. The ledger does not start with that whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed, and two Phase 5 hand-offs, are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-11-SUBPHASES.md sections 1 and 4)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase11-obligations.json`
 * atlas-owned: 1455
 * owned working set: 1467
-* implemented: 1299
+* implemented: 1312
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 168**
+* **open in this stratum: 155**
 
 Hand-offs received and discharged:
 
 * from phase 5: 10 symbol(s) — `ASN1_add_stable_module`, `ASN1_generate_nconf`, `ASN1_generate_v3`, `PEM_X509_INFO_read`, `PEM_X509_INFO_read_bio`, `PEM_X509_INFO_read_bio_ex`, `PEM_X509_INFO_read_ex`, `PEM_X509_INFO_write_bio`, `PEM_write_X509_REQ_NEW`, `PEM_write_bio_X509_REQ_NEW`
 * from phase 7: 2 symbol(s) — `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor`
 
-Courts: `all pass`, 4 court(s), **1714** authority observation(s) over 4 transcript court(s).
+Courts: `all pass`, 4 court(s), **1739** authority observation(s) over 4 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-X509-REF | `pass` | 993 |
 | RT-X509-STORE | `pass` | 465 |
-| RT-X509-VERIFY | `pass` | 135 |
+| RT-X509-VERIFY | `pass` | 160 |
 | RT-X509-PEM | `pass` | 121 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
@@ -441,8 +441,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 8 | 786 | 778 | 778 | 0 | 8 | 0 | 0 |
 | 9 | 69 | 69 | 69 | 0 | 0 | 0 | 0 |
 | 10 | 298 | 298 | 237 | 61 | 0 | 0 | 0 |
-| 11 | 1299 | 1299 | 715 | 584 | 0 | 0 | 0 |
-| **total** | **4323** | **4315** | **3406** | **909** | **8** | **0** | **0** |
+| 11 | 1312 | 1312 | 729 | 583 | 0 | 0 | 0 |
+| **total** | **4336** | **4328** | **3420** | **908** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 
