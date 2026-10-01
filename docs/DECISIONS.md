@@ -33811,6 +33811,53 @@ reconcile.
 `PIPELINE OK` exit 0 with **113 courts** and 47,575 observations; the phase-22 ledger reads 3 of 18
 planes implemented, 15 open.
 
+## D489 -- 22.6: the binary-reference graph, and the one plane that sees perlasm
+
+Phase 22's third plane reads the binaries the admitted build produced, not the source. The plan's
+section 6 gives it its reason: "22.6 exists because assembly and perlasm are invisible to Clang, and
+because link-time resolution is where the real dependency graph is confirmed."
+`forensics/tools/phase22_binary_graph.py` walks the whole distribution the authority built --
+`libcrypto.so.3`, `libssl.so.3`, `libcrypto.a`, `libssl.a`, `apps/openssl`, the one provider module
+(`providers/legacy.so`) and the six engine modules -- and writes
+`forensics/atlas/phase22/binary-reference-graph.json`: **12 artefacts**, **1,133 objects** (the 10
+standalone ELF objects plus **1,123 archive members**), **50,772 defined** symbols (17,872 global /
+32,899 local / 1 weak), **27,788 undefined**, **35,809 `RELOCATION_REFERENCE` edges** of which
+**34,484 resolve** to an object that defines their symbol, **9,523 versioned symbols**, **20 alias
+groups**, **18 DT_NEEDED** edges across the objects that have a dynamic section, and **41
+perlasm objects** -- archive members joined back to 22.1's `compile-commands.json` as built from a
+`.s`/`.S` source, the units Clang never parses.
+
+### Reading is pure Python, and resolution is over link-visible definitions only
+`elf_symbols.py` already established that binutils' LLVM-bitcode plugin makes the same archive yield
+different symbol sets on different machines (D30, D33), so a relocation graph read through `objdump`
+would inherit that non-determinism. This tool parses ELF64 and `ar` with `struct`, reusing
+`elf_symbols`' constants and string helper, and never invokes binutils. The definition index that
+resolves an edge is built from **link-binding definitions only**; a `static` name such as `init` is
+file-local and is defined in hundreds of objects, so indexing locals made a single reference
+"resolve" to 765 objects and the document 204 MB. With locals excluded from the index and a local
+reference resolved to its own object, the document is 33 MB. Relocation entries are collapsed to one
+edge per `(object, symbol)` carrying the sorted set of relocation types seen -- a libcrypto archive
+carries ~134,000 such entries -- and the collapse is recorded in `body.reduction` rather than done
+silently.
+
+### The court challenges the classifier and the resolver
+`RT-PHASE22-BINARY` adds 21 observations: a round trip (reconstruct the raw model from the
+artefact's own `defined`/`undefined`/`relocations` and re-derive the whole body, requiring equality)
+plus eight mutations -- add a defined symbol (the definition index gains it), add an undefined symbol
+(and the index does not), add a relocation that resolves (both edge counts rise), add one that does
+not (`relocation_edges` rises and `resolved_edges` does not), remove an archive member (`objects`,
+`archive_members` and the member's own `defined` count all fall), flip a linkage bit (`defined_global`
+falls and `defined_local` rises while `defined` holds), and remove a definition a live edge resolved
+to (exactly its edges stop resolving). Sensitivity was proved by breaking the resolver, the alias
+classifier, the undefined classifier, the member count and the binding breakdown in memory: each
+broke the round trip and turned the court to `fail`, and it returned to `pass` on restore.
+
+`tls` is **0**: neither the shared objects nor any archive member defines a single `STT_TLS` symbol,
+confirmed independently with `nm` over all twelve artefacts. That is a fact about this profile, not a
+gap in the reader, and the requirement that TLS objects be inventoried is met by reporting the empty
+set rather than by omitting the field. `libcrypto.so.3`'s 18,338 defined symbols equal
+`nm --defined-only` exactly.
+
 ## D490 -- 22.3, 22.8 and 22.9 land, and the runner discovers its courts
 
 Four planes landed in one wave. The ledger now reads **7 of 18**. `PIPELINE OK` exit 0 with **117
@@ -33864,49 +33911,78 @@ differential.
 
 `PIPELINE OK` exit 0 with 117 courts and 47,575 observations.
 
-## D489 -- 22.6: the binary-reference graph, and the one plane that sees perlasm
+## D491 -- 22.11: the canonical POD contract oracle, and the claim graph that will not pretend to
+## have read the prose
 
-Phase 22's third plane reads the binaries the admitted build produced, not the source. The plan's
-section 6 gives it its reason: "22.6 exists because assembly and perlasm are invisible to Clang, and
-because link-time resolution is where the real dependency graph is confirmed."
-`forensics/tools/phase22_binary_graph.py` walks the whole distribution the authority built --
-`libcrypto.so.3`, `libssl.so.3`, `libcrypto.a`, `libssl.a`, `apps/openssl`, the one provider module
-(`providers/legacy.so`) and the six engine modules -- and writes
-`forensics/atlas/phase22/binary-reference-graph.json`: **12 artefacts**, **1,133 objects** (the 10
-standalone ELF objects plus **1,123 archive members**), **50,772 defined** symbols (17,872 global /
-32,899 local / 1 weak), **27,788 undefined**, **35,809 `RELOCATION_REFERENCE` edges** of which
-**34,484 resolve** to an object that defines their symbol, **9,523 versioned symbols**, **20 alias
-groups**, **18 DT_NEEDED** edges across the objects that have a dynamic section, and **41
-perlasm objects** -- archive members joined back to 22.1's `compile-commands.json` as built from a
-`.s`/`.S` source, the units Clang never parses.
+Phase 22's fourth plane is the documentation plane, and section 6 gives it the hardest rule in the
+stratum: use the exact 3.6.4 manual corpus, **resolve `.pod.in` the way the build does**, run
+OpenSSL's own `util/find-doc-nits` as *one instrument*, parse POD into a content-addressed claim
+graph, and reconcile it against the planes that exist -- where "undocumented is not nonexistent, and
+documented-but-divergent is evidence". `forensics/tools/phase22_pod.py` lands
+`forensics/atlas/phase22/pod-contract.json` (12 MB) and the generated `docs/POD-CENSUS.md`.
 
-### Reading is pure Python, and resolution is over link-visible definitions only
-`elf_symbols.py` already established that binutils' LLVM-bitcode plugin makes the same archive yield
-different symbol sets on different machines (D30, D33), so a relocation graph read through `objdump`
-would inherit that non-determinism. This tool parses ELF64 and `ar` with `struct`, reusing
-`elf_symbols`' constants and string helper, and never invokes binutils. The definition index that
-resolves an edge is built from **link-binding definitions only**; a `static` name such as `init` is
-file-local and is defined in hundreds of objects, so indexing locals made a single reference
-"resolve" to 765 objects and the document 204 MB. With locals excluded from the index and a local
-reference resolved to its own object, the document is 33 MB. Relocation entries are collapsed to one
-edge per `(object, symbol)` carrying the sorted set of relocation types seen -- a libcrypto archive
-carries ~134,000 such entries -- and the collapse is recorded in `body.reduction` rather than done
-silently.
+### The corpus is 903 pages, 56 of them templates, and every template is resolved by `dofile.pl`
+`doc/man1` (62), `doc/man3` (679), `doc/man5` (3) and `doc/man7` (159) is **903 pages**: 6,562 `NAME`
+entries, 4,960 man3 SYNOPSIS declarations, 2,182 documented man1 options over 59 command pages, 53
+environment variables, 66 configuration directives. **56 pages are `.pod.in` templates** and are
+resolved by running the authority's own `util/dofile.pl` from the admitted build directory with the
+build's own relative input path, so the resolved text is byte-identical to the page `make` writes.
+A plane that read the templates as written would read `{- $OpenSSL::safe::opt_provider_synopsis -}`
+instead of the option block; the resolution is why 59 command pages carry the generic option blocks
+and why only one runtime option is left undocumented. Each page records its source digest, its
+resolved digest, and which resolver produced the text (`as-written`, `dofile`, `generated-pod`, or
+`unresolved`).
 
-### The court challenges the classifier and the resolver
-`RT-PHASE22-BINARY` adds 21 observations: a round trip (reconstruct the raw model from the
-artefact's own `defined`/`undefined`/`relocations` and re-derive the whole body, requiring equality)
-plus eight mutations -- add a defined symbol (the definition index gains it), add an undefined symbol
-(and the index does not), add a relocation that resolves (both edge counts rise), add one that does
-not (`relocation_edges` rises and `resolved_edges` does not), remove an archive member (`objects`,
-`archive_members` and the member's own `defined` count all fall), flip a linkage bit (`defined_global`
-falls and `defined_local` rises while `defined` holds), and remove a definition a live edge resolved
-to (exactly its edges stop resolving). Sensitivity was proved by breaking the resolver, the alias
-classifier, the undefined classifier, the member count and the binding breakdown in memory: each
-broke the round trip and turned the court to `fail`, and it returned to `pass` on restore.
+### `find-doc-nits` is retained raw, and it is labelled as one instrument
+It is run from the admitted build directory with every check enabled; its complete stdout and stderr
+are stored verbatim with digests. It reported **1,229 libcrypto names and 30 libssl names not
+documented**, 45 undocumented macros and 27 reference-to-non-existing links. Its stderr carries the
+pinned container's git-probe usage text (that git does not implement `git config get`, and the script
+falls back); the noise is kept rather than hidden. It is deliberately **not** the oracle: it selects
+`doc/internal` too, and reads `include/openssl/*.h` rather than this plane's corpus. Its 1,259-total
+figure is the cross-check the ABI reconciliation is measured against and it agrees: this plane's
+`ATLAS_PUBLIC_NAME_NOT_IN_POD` is **1,255**.
 
-`tls` is **0**: neither the shared objects nor any archive member defines a single `STT_TLS` symbol,
-confirmed independently with `nm` over all twelve artefacts. That is a fact about this profile, not a
-gap in the reader, and the requirement that TLS objects be inventoried is met by reporting the empty
-set rather than by omitting the field. `libcrypto.so.3`'s 18,338 defined symbols equal
-`nm --defined-only` exactly.
+### The claim graph is 15,044 claims, and prose is not understood
+Every extracted assertion is `PODCLAIM(section:page, kind, subject, normalized)` with a class from the
+plan's vocabulary. It carries 11,516 `STRUCTURAL` (NAME entries and SYNOPSIS declarations), 2,453
+`EXECUTABLE_CLAIM` (CLI options, environment variables, directives, default paths, deprecations,
+provider identities), 172 `SEMANTIC_TEXT` (RETURN VALUES quotes) and 903 `EXPLANATORY_ONLY` (man7
+concepts). **The two prose classes are untestable and say so**: a RETURN VALUES quote is carried, not
+interpreted, and man7 behaviour prose is not turned into an assertion. `probes.untestable` names the
+reason for each.
+
+### The reconciliation: every disagreement classified, none silently resolved
+The claim graph is joined against the header/API atlas, 22.2's Doxygen graph, 22.3's AST, 22.8's
+install manifest, 22.9's CLI surface, 22.10's config surface, the provider-algorithm inventory and
+the `.num`/DSO inventories. **2,292 disagreements** are recorded across nine classes:
+`ATLAS_PUBLIC_NAME_NOT_IN_POD` 1,255 (the ABI names no man3 page documents -- the find-doc-nits
+cross-check), `POD_NAME_NOT_IN_ATLAS` 871 (man3 names the public headers and `.num` do not publish,
+annotated with whether the whole-program AST or Doxygen sees them), `POD_CLI_OPTION_MISSING` 80,
+`POD_CONFIG_DIRECTIVE_MISSING` 51, `POD_DEPRECATION_MISMATCH` 21, `POD_ENVIRONMENT_VARIABLE_MISSING`
+8, `POD_PROVIDER_ALGORITHM_MISSING` 4, `RUNTIME_CLI_OPTION_UNDOCUMENTED` 1, and 1
+`POD_DEFAULT_PATH_MISMATCH`. The header-atlas variant (19,816 public header names undocumented) is a
+count, not 19,816 rows, because that set is dominated by non-API macros and would bury the figure the
+plan names. `POD_AMBIGUOUS` is 0 here (no man3 name is claimed by two pages). **The join against
+22.8 is exact and empty of residuals**: 903 corpus pages against 903 installed manpage files and
+5,660 alias symlinks, `POD_PAGE_NOT_INSTALLED` 0, `INSTALLED_PAGE_NOT_IN_POD` 0.
+
+### The court challenges extraction and reconciliation, not a file's existence
+`RT-PHASE22-POD` adds 32 observations: a round trip (re-derive the whole claim graph and the whole
+reconciliation from the artefact's own committed page model and index and require equality) plus the
+plan's nine mutation families -- delete a `NAME` alias, add a fake public function to a SYNOPSIS,
+alter a parameter type, change a documented return value, add and remove a CLI option, add and remove
+an environment variable, add and remove a configuration directive, change a default pathname, alter a
+deprecation statement. Each is detected by the plane it belongs to: the name/declaration/return/path/
+deprecation mutations move the claim graph, and the CLI/env/directive mutations move a residual
+(`POD_CLI_OPTION_MISSING`, `POD_ENVIRONMENT_VARIABLE_MISSING`, `POD_CONFIG_DIRECTIVE_MISSING`).
+Sensitivity was proved in memory: an extractor that drops `NAME_ENTRY` claims fails 4 checks, and a
+reconciler that drops `POD_ENVIRONMENT_VARIABLE_MISSING` fails 2, each including its own mutation's
+check.
+
+### Non-claims, named rather than hidden
+man7 concept extraction is partial (NAME plus provider `Identities`, the rest EXPLANATORY_ONLY);
+RETURN VALUES semantics are not decided; deprecation and default-path extraction are narrow and
+best-effort; `find-doc-nits` is one instrument. The plan's section 5 lists a separate
+`pod-atlas-reconciliation.json`; this plane folds the reconciliation into `pod-contract.json` rather
+than emitting a second document. Two clean regenerations are byte-identical.
