@@ -34472,3 +34472,49 @@ after a human had read that declaration and believed it, which is the argument f
 
 Verified: `PIPELINE OK` exit 0 on two consecutive runs; 132 courts and 48,259 observations;
 `docs_consistency.py` ok.
+
+## D503 -- the verifier's dependency knot is measured, and the rule that resolves it is written
+## down
+
+Phase 11's purpose is `X509_verify_cert`, and its remaining closure crosses *forward* into strata
+that come after it. This entry records the measurement and the rule so the next slice does not have
+to re-derive either.
+
+### The knot, measured rather than argued
+`src/x509/x509_vfy.rs`'s own module doc already named it, and the authority confirms it line by
+line: `check_revocation` (`x509_vfy.c:1062`) keeps its `#ifndef OPENSSL_NO_OCSP` arm, and this
+admitted build does **not** define `OPENSSL_NO_OCSP` (`configuration.h:134-135` sets only
+`OPENSSL_NO_TRACE`), so a faithful transcription of the function must call `check_cert_ocsp_resp`
+(`:1174`). Its callees are `crypto/ocsp/`'s and `src/ocsp/` does not exist. The CRL half of the same
+function is now landable -- its blocker was discharged in D496 -- and the two halves cannot be
+separated without the transcription ceasing to be the authority's function. `verify_chain`
+interleaves the same problem once more through the `SSL_DANE` matrix (`:3087-3490`).
+
+So the obvious answer, "`X509_verify_cert` waits for Phase 12", is not available: the dependency
+order is `22 -> 11 -> 12 -> ...`, and a stratum cannot be completed by waiting for one that cannot
+start until it is complete. That is a cycle, not a schedule.
+
+### The rule
+> **Pull the implementation dependency forward, not the public ownership.**
+
+A stratum owns the *exports* the atlas assigns it; it may borrow the *internals* it needs. Phase 11
+pulls forward the minimum internal substrate the verifier's arms reach -- landed as internal
+transcriptions, recorded in `forensics/prerequisites.json` as pulled forward rather than owned --
+and Phase 12 and the SSL layer later implement their own exported surfaces around an already-landed
+internal core. This is the mechanism the project has already used for cross-stratum closures; the
+only new thing is naming it as the general answer to a forward dependency.
+
+### The measured OCSP closure, and what is left
+The substrate `check_cert_ocsp_resp` needs is eleven functions -- `OCSP_response_status`,
+`OCSP_response_get1_basic`, `OCSP_cert_to_id`, `OCSP_id_cmp`, `OCSP_id_get0_info`,
+`OCSP_resp_count`, `OCSP_resp_find_status`, `OCSP_resp_get0`, `OCSP_SINGLERESP_get0_id`,
+`OCSP_check_validity`, `OCSP_basic_verify` -- plus the four item types (`OCSP_RESPONSE`,
+`OCSP_BASICRESP`, `OCSP_SINGLERESP`, `OCSP_CERTID`), their `d2i`/`i2d` and their free doors;
+`OCSP_basic_verify` in turn needs `ocsp_vfy.c`'s signer checks. `docs/PHASE-11-SUBPHASES.md` section
+2.1 records the same list beside the subphase table, so the plan and the decision carry one figure.
+
+That substrate, plus the `SSL_DANE` representation the DANE arm reads, is the whole of what stands
+between this stratum and its purpose. It is a large slice and it is not attempted in this commit;
+what this commit does is make it impossible to mistake the remaining work for ordinary leftovers.
+
+Verified: documentation only; no code, court or ledger changes in this commit.

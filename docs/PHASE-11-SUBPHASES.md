@@ -121,6 +121,32 @@ open units each appear in exactly one row. The partition
 is derived from `forensics/atlas/export-defining-units.json` joined to the ledger's `open` list,
 not typed.
 
+**2.1 The verifier's dependency knot, and the rule that resolves it.** `X509_verify_cert`'s
+remaining closure crosses into strata that come *after* this one. `check_revocation`
+(`x509_vfy.c:1062`) keeps its `#ifndef OPENSSL_NO_OCSP` arm, and this admitted build does **not**
+define `OPENSSL_NO_OCSP`, so a faithful transcription must call `check_cert_ocsp_resp` (`:1174`),
+whose callees are `crypto/ocsp/`'s and absent from the crate. `verify_chain` likewise interleaves
+the `SSL_DANE` matrix (`:3087-3490`), whose `SSL_DANE` is the SSL layer's. Since the dependency
+order is `22 -> 11 -> 12 -> ...`, "`X509_verify_cert` waits for Phase 12" is not available: Phase 12
+cannot progress before Phase 11 closes. The rule is:
+
+> **Pull the implementation dependency forward, not the public ownership.**
+
+Ownership of the `ocsp.h` and SSL exports stays where `forensics/atlas/symbol-ownership.json` puts
+it (Phases 12 and 14). What this stratum pulls forward is the **minimum internal substrate** the
+verifier's arms reach -- landed as internal transcriptions, recorded in
+`forensics/prerequisites.json` as pulled forward rather than owned -- so the later stratum
+implements its own exported surface around an already-landed internal core.
+
+The measured OCSP closure of `check_cert_ocsp_resp` is `OCSP_response_status`,
+`OCSP_response_get1_basic`, `OCSP_cert_to_id`, `OCSP_id_cmp`, `OCSP_id_get0_info`,
+`OCSP_resp_count`, `OCSP_resp_find_status`, `OCSP_resp_get0`, `OCSP_SINGLERESP_get0_id`,
+`OCSP_check_validity` and `OCSP_basic_verify`, plus the four item types (`OCSP_RESPONSE`,
+`OCSP_BASICRESP`, `OCSP_SINGLERESP`, `OCSP_CERTID`) and their `d2i`/`i2d` and free doors;
+`OCSP_basic_verify` additionally needs `crypto/ocsp/ocsp_vfy.c`'s signer checks. That substrate, and
+the `SSL_DANE` representation the DANE arm reads, are the only things between this stratum and its
+purpose.
+
 The order is forced twice over, and the second forcing is the same one Phase 10 recorded. **11.1
 before 11.2** because `X509_verify_cert` reads chains through `X509_STORE_CTX_get1_issuer` and
 `X509_STORE_get_by_subject` (`crypto/x509/x509_vfy.c`'s own first calls), so a verification engine
