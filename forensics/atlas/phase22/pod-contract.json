@@ -1464,9 +1464,9 @@
       },
       {
         "class": "EXPLANATORY_ONLY",
-        "id": "PODCLAIM(1:openssl-cmds, CONCEPT, openssl-cmds, OpenSSL application commands =for openssl foreign manual apropos(1))",
+        "id": "PODCLAIM(1:openssl-cmds, CONCEPT, openssl-cmds, OpenSSL application commands)",
         "kind": "CONCEPT",
-        "normalized": "OpenSSL application commands =for openssl foreign manual apropos(1)",
+        "normalized": "OpenSSL application commands",
         "page": "openssl-cmds",
         "probe": null,
         "section": 1,
@@ -1474,13 +1474,13 @@
       },
       {
         "class": "STRUCTURAL",
-        "id": "PODCLAIM(1:openssl-cmds, NAME_ENTRY, =for openssl names: openssl-cmds asn1parse, =for openssl names: openssl-cmds asn1parse)",
+        "id": "PODCLAIM(1:openssl-cmds, NAME_ENTRY, asn1parse, asn1parse)",
         "kind": "NAME_ENTRY",
-        "normalized": "=for openssl names: openssl-cmds asn1parse",
+        "normalized": "asn1parse",
         "page": "openssl-cmds",
         "probe": "header-atlas+num+tu-ast",
         "section": 1,
-        "subject": "=for openssl names: openssl-cmds asn1parse"
+        "subject": "asn1parse"
       },
       {
         "class": "STRUCTURAL",
@@ -1711,6 +1711,16 @@
         "probe": "header-atlas+num+tu-ast",
         "section": 1,
         "subject": "ocsp"
+      },
+      {
+        "class": "STRUCTURAL",
+        "id": "PODCLAIM(1:openssl-cmds, NAME_ENTRY, openssl-cmds, openssl-cmds)",
+        "kind": "NAME_ENTRY",
+        "normalized": "openssl-cmds",
+        "page": "openssl-cmds",
+        "probe": "header-atlas+num+tu-ast",
+        "section": 1,
+        "subject": "openssl-cmds"
       },
       {
         "class": "STRUCTURAL",
@@ -150459,12 +150469,12 @@
     },
     "counts": {
       "atlas_header_names_not_in_pod": 19816,
-      "claims": 15044,
+      "claims": 15045,
       "claims_by_class": {
         "EXECUTABLE_CLAIM": 2453,
         "EXPLANATORY_ONLY": 903,
         "SEMANTIC_TEXT": 172,
-        "STRUCTURAL": 11516
+        "STRUCTURAL": 11517
       },
       "claims_by_kind": {
         "CLI_OPTION": 2182,
@@ -150473,7 +150483,7 @@
         "DEFAULT_PATH": 3,
         "DEPRECATION": 58,
         "ENV_VAR": 53,
-        "NAME_ENTRY": 6562,
+        "NAME_ENTRY": 6563,
         "PROVIDER_ALGORITHM": 91,
         "RETURN_VALUE": 172,
         "SYNOPSIS_DECL": 4954
@@ -150483,7 +150493,7 @@
       "config_directives": 66,
       "default_paths": 3,
       "deprecations": 58,
-      "disagreements": 2292,
+      "disagreements": 2293,
       "disagreements_by_class": {
         "ATLAS_PUBLIC_NAME_NOT_IN_POD": 1255,
         "POD_CLI_OPTION_MISSING": 80,
@@ -150491,7 +150501,7 @@
         "POD_DEFAULT_PATH_MISMATCH": 1,
         "POD_DEPRECATION_MISMATCH": 21,
         "POD_ENVIRONMENT_VARIABLE_MISSING": 8,
-        "POD_NAME_NOT_IN_ATLAS": 871,
+        "POD_NAME_NOT_IN_ATLAS": 872,
         "POD_PROVIDER_ALGORITHM_MISSING": 4,
         "RUNTIME_CLI_OPTION_UNDOCUMENTED": 1
       },
@@ -150499,7 +150509,7 @@
       "environment_variables": 53,
       "installed_manpage_symlinks": 5660,
       "installed_manpages": 903,
-      "names": 6562,
+      "names": 6563,
       "num_names_total": 6538,
       "pages": 903,
       "pages_by_section": {
@@ -150925,9 +150935,9 @@
         "directives": [],
         "environment": [],
         "identities": [],
-        "name_description": "OpenSSL application commands =for openssl foreign manual apropos(1)",
+        "name_description": "OpenSSL application commands",
         "names": [
-          "=for openssl names: openssl-cmds asn1parse",
+          "asn1parse",
           "ca",
           "ciphers",
           "cmp",
@@ -150976,7 +150986,8 @@
           "ts",
           "verify",
           "version",
-          "x509"
+          "x509",
+          "openssl-cmds"
         ],
         "options": [
           "-help"
@@ -186312,7 +186323,7 @@
         "DEFAULT_PATH": 3,
         "DEPRECATION": 58,
         "ENV_VAR": 53,
-        "NAME_ENTRY": 6562,
+        "NAME_ENTRY": 6563,
         "PROVIDER_ALGORITHM": 91,
         "SYNOPSIS_DECL": 4954
       },
@@ -186345,7 +186356,7 @@
         "POD_DEFAULT_PATH_MISMATCH": 1,
         "POD_DEPRECATION_MISMATCH": 21,
         "POD_ENVIRONMENT_VARIABLE_MISSING": 8,
-        "POD_NAME_NOT_IN_ATLAS": 871,
+        "POD_NAME_NOT_IN_ATLAS": 872,
         "POD_PROVIDER_ALGORITHM_MISSING": 4,
         "RUNTIME_CLI_OPTION_UNDOCUMENTED": 1
       },
@@ -199110,7 +199121,7 @@
           "class": "POD_NAME_NOT_IN_ATLAS",
           "detail": "not in the public header/API atlas nor the .num ABI inventory; absent from the other joined planes as well",
           "page": "openssl-cmds",
-          "subject": "=for openssl names: openssl-cmds asn1parse"
+          "subject": "asn1parse"
         },
         {
           "class": "POD_NAME_NOT_IN_ATLAS",
@@ -199249,6 +199260,12 @@
           "detail": "not in the public header/API atlas nor the .num ABI inventory; absent from the other joined planes as well",
           "page": "openssl-cmds",
           "subject": "ocsp"
+        },
+        {
+          "class": "POD_NAME_NOT_IN_ATLAS",
+          "detail": "not in the public header/API atlas nor the .num ABI inventory; absent from the other joined planes as well",
+          "page": "openssl-cmds",
+          "subject": "openssl-cmds"
         },
         {
           "class": "POD_NAME_NOT_IN_ATLAS",
@@ -310520,7 +310537,7 @@
     {
       "name": "doxygen-entities",
       "path": "forensics/atlas/phase22/doxygen-entities.json",
-      "sha256": "b4aca03b1afda8cdb53b671ebe6df0e15f4349806e655206ab31983d4bf9277a"
+      "sha256": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97"
     },
     {
       "name": "tu-ast",
@@ -310540,7 +310557,7 @@
     {
       "name": "config-surface",
       "path": "forensics/atlas/phase22/config-surface.json",
-      "sha256": "b8361cc1671a147a376a46de5f238ef5631af99047d466293e0ee278f1ba9f2d"
+      "sha256": "bbdca8b5812c5a6027f0ad8df6bce1826a85afa7da8fe6a69b4a760799438d1d"
     },
     {
       "name": "provider-algorithms",

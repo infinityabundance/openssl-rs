@@ -255,6 +255,9 @@ def _name_and_notation(head: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 _RE_INCLUDE = re.compile(r"^#\s*(include|define|if|endif|ifdef|ifndef|else|pragma)\b")
+# `=for openssl names: a b c` -- OpenSSL's alias directive inside a NAME block
+# (`doc/man1/openssl-cmds.pod.in` writes one); its arguments are names, not prose.
+_FOR_NAMES = re.compile(r"^=for\s+openssl\s+names:\s*(.*\S)\s*$")
 _RE_DECL_SYM = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 _RE_SYNOPSIS_OPT = re.compile(r"B<(-[A-Za-z0-9][A-Za-z0-9_?.\-]*)>")
 _RE_ENV_TOKEN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -525,14 +528,30 @@ def parse_name(lines: list[str]) -> tuple[list[str], str]:
     The corpus writes `name1, name2, name3 - description` across lines; the first ` - ` separates
     the name list from the description. The canonical page is the *file* name, so the names here
     are all the symbols the page answers to.
+
+    A `=for openssl names: a b c` directive may also sit in the block (OpenSSL writes one in
+    `openssl-cmds.pod.in` to declare the page's extra names); its argument list is part of the
+    name set, and the directive line itself must not leak into it. Any other POD directive line is
+    dropped rather than joined, so a `=for`/`=begin` never becomes a name.
     """
-    text = _norm(" ".join(line.strip() for line in lines if line.strip()))
+    named: list[str] = []
+    prose: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        m = _FOR_NAMES.match(stripped)
+        if m:
+            named.extend(t for t in re.split(r"[\s,]+", m.group(1)) if t)
+            continue
+        if stripped.startswith("="):
+            continue
+        prose.append(line)
+    text = _norm(" ".join(line.strip() for line in prose if line.strip()))
     if " - " in text:
         left, description = text.split(" - ", 1)
     else:
         left, description = text, ""
     names = [strip_pod_markup(n).strip() for n in left.split(",")]
-    return [n for n in names if n], _norm(strip_pod_markup(description))
+    return [n for n in (names + named) if n], _norm(strip_pod_markup(description))
 
 
 # ---------------------------------------------------------------------------

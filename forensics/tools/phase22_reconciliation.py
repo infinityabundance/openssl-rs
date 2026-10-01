@@ -161,6 +161,51 @@ SINGLE_PLANE_CLASS: dict[str, str] = {
     "phase1-atlas": "PHASE1_ONLY",
 }
 
+# The shape that betrays a declaration used as an identity. A POD claim's `subject` is an entity
+# name -- which may legitimately be loose (`EVP_CIPHER-AES`, a provider algorithm name; `CA.pl`, a
+# script) -- while a declaration (`int EVP_FOO(EVP_CTX *ctx)`) carries whitespace or declaration
+# punctuation. Joining on the declaration is the identity bug this plane was corrected for, so the
+# check is that no POD residual's key carries that shape.
+DECLARATION_TELLS = re.compile(r"[\s()*;]")
+POD_RESIDUAL_CLASS = "POD_NAME_NOT_IN_ATLAS"
+POD_DOC_PREFIX = "sym|pod-doc:"
+
+
+def pod_identity_violations(residuals: list[dict]) -> list[str]:
+    """Every POD residual key that is not a bare entity identity, sorted.
+
+    A NAME entry carries `subject` = the name and a SYNOPSIS declaration carries `subject` = the
+    name with `normalized` = the declaration text. The whole-program join resolves a claim by
+    **identity**, so `normalized` is a payload and is never a key; a residual whose key carries a
+    declaration's shape is a claim that joined on its declaration, which is the defect.
+    """
+    bad: list[str] = []
+    for r in residuals:
+        if r.get("class") != POD_RESIDUAL_CLASS:
+            continue
+        key = r.get("key", "")
+        subject = key[len(POD_DOC_PREFIX):] if key.startswith(POD_DOC_PREFIX) else key
+        if DECLARATION_TELLS.search(subject):
+            bad.append(key)
+    return sorted(bad)
+
+
+def pod_cross_plane(pod11_missing: set[str], here_missing: set[str]) -> dict:
+    """The 22.11/22.12 POD invariant.
+
+    The dedicated POD oracle and this whole-program join answer the same question with different
+    witness sets. This join sees **more** -- the binary, the dispatch graph, the Phase-1 atlas and
+    22.13's crosswalk -- so a name this plane calls missing should also be missing to 22.11. A name
+    it calls missing that 22.11 found in the header/API atlas is a projection gap *here*, and is
+    recorded (not ignored) so it cannot hide.
+    """
+    return {
+        "pod11_missing": len(pod11_missing),
+        "pod12_missing": len(here_missing),
+        "resolved_by_wider_witness": len(pod11_missing - here_missing),
+        "only_here_unexplained": sorted(here_missing - pod11_missing),
+    }
+
 # The pairwise joins this plane performs, each on the key the two planes actually share. A join
 # whose `space` is `file` joins on the authority-relative source path; `source` on the exact
 # file+line+name identity; everything else on the entity's name in that key space.
@@ -599,6 +644,14 @@ class Universe:
     def __init__(self, prefixes: tuple[str, ...]) -> None:
         self.prefixes = prefixes
         self.e: dict[str, dict] = {}
+        # The name -> canonical-key index. **Maintained by `add`, not built once.** Identity is
+        # established by planes that arrive across the whole collection -- 22.6's binary
+        # definitions, 22.7's dispatch targets and the Phase-1 atlas publish symbols the
+        # source-semantic pass cannot see -- and the POD whole-program join runs after all of them.
+        # Building the index once, right after pass 1, left every later symbol invisible to
+        # `resolve`, which is half of why a name whose only witness was the binary or the atlas
+        # came out `POD_NAME_NOT_IN_ATLAS`.
+        self.name_index: dict[str, set[str]] = {}
 
     def add(self, key: str, space: str, name: str, plane: str, *, file=None, line=None,
             kind=None, owner_phase=None, residual=None, **flags) -> dict:
@@ -622,6 +675,8 @@ class Universe:
         for flag, present in flags.items():
             if present:
                 ent["evidence"].add(flag)
+        if space == "symbol" and name:
+            self.name_index.setdefault(name, set()).add(key)
         return ent
 
     def annotate(self, key: str, plane: str, **flags) -> None:
@@ -633,13 +688,31 @@ class Universe:
             if present:
                 ent["evidence"].add(flag)
 
+    def keys_for(self, name: str) -> tuple[str, ...]:
+        """Every canonical symbol key this name maps to, in a stable order."""
+        return tuple(sorted(self.name_index.get(name, ())))
+
     def resolve(self, name: str) -> str | None:
         """The unique canonical key a symbol name maps to, or None when ambiguous/unknown."""
-        if self.name_index and len(self.name_index.get(name, ())) == 1:
-            return next(iter(self.name_index[name]))
+        keys = self.name_index.get(name)
+        if keys is not None and len(keys) == 1:
+            return next(iter(keys))
         return None
 
-    name_index: dict[str, set[str]] = {}
+    def known(self, name: str) -> bool:
+        """True when a plane **other than the POD projection** established this name.
+
+        The residual question is 'did any implementation, binary, dispatch or Phase-1 plane *see*
+        the name', not 'is the name unique': a documented name two statics share is in the atlas
+        and is not a `POD_NAME_NOT_IN_ATLAS` residual. Because a joined entity keeps its real
+        planes alongside `pod-contract`, a back-reference to the POD claim itself never counts as
+        a witness of its own presence.
+        """
+        for key in self.name_index.get(name, ()):
+            ent = self.e.get(key)
+            if ent is not None and any(p != "pod-contract" for p in ent["planes"]):
+                return True
+        return False
 
 
 def _load(path: Path) -> dict:
@@ -718,12 +791,8 @@ def collect(authority_id: str) -> tuple[list[dict], dict, dict]:
         add_source_entity("tu-ast", kind, e["name"], e.get("file"), e.get("line"), internal,
                           **flags)
 
-    # Build the name -> canonical-key index from the symbol-space entities pass 1 produced.
-    name_index: dict[str, set[str]] = {}
-    for key, ent in U.e.items():
-        if ent["space"] == "symbol":
-            name_index.setdefault(ent["name"], set()).add(key)
-    U.name_index = name_index
+    # The name index is maintained by `Universe.add`, so a symbol a later plane publishes is
+    # resolvable the moment it lands; there is nothing to build here.
 
     def resolve_or_name(name: str) -> str:
         return U.resolve(name) or f"sym|{name}"
@@ -874,16 +943,16 @@ def collect(authority_id: str) -> tuple[list[dict], dict, dict]:
                   kind="page-command", documented=True)
     for claim in pod["claims"]:
         kind = claim["kind"]
+        if kind in ("NAME_ENTRY", "SYNOPSIS_DECL"):
+            # A man3 NAME entry and a SYNOPSIS declaration both name a **symbol**, and a symbol is
+            # joined only after every identity-bearing plane has landed -- see the POD join below,
+            # which runs last. The claim's identity is its `subject`; `normalized` is the
+            # declaration text and is carried as a payload, never resolved as a name.
+            continue
         norm = claim.get("normalized") or claim.get("subject")
         if not norm:
             continue
-        if kind == "NAME_ENTRY":
-            key = resolve_or_name(norm)
-            U.add(key, "symbol", norm, "pod-contract", kind="documented-name", documented=True)
-        elif kind == "SYNOPSIS_DECL":
-            key = resolve_or_name(norm)
-            U.add(key, "symbol", norm, "pod-contract", kind="synopsis-decl", documented=True)
-        elif kind == "CLI_OPTION":
+        if kind == "CLI_OPTION":
             U.add(f"cli-opt|{claim['page']}|{norm.lstrip('-')}", "cli",
                   f"{claim['page']}:{norm.lstrip('-')}", "pod-contract", kind="documented-option",
                   documented=True)
@@ -993,6 +1062,14 @@ def collect(authority_id: str) -> tuple[list[dict], dict, dict]:
     structs = _load(prod / "structs.json")["body"]
     for r in structs["records"]:
         add_phase1_symbol(r["name"], r.get("tag", "struct"), r.get("header"), r.get("line"))
+    # `enums.json` is a Phase-1 plane like the others, and 22.11's POD join already reads it.
+    # Leaving it out of this projection is what made three documented enum names
+    # (`BIO_hostserv_priorities`, `BIO_lookup_type`, `UI_string_types`, named by `enums.json` and
+    # by no source-semantic plane) come out `POD_NAME_NOT_IN_ATLAS` here while the dedicated POD
+    # oracle found them in the header/API atlas.
+    enums = _load(prod / "enums.json")["body"]
+    for r in enums["records"]:
+        add_phase1_symbol(r["name"], "enum", r.get("header"), r.get("line"))
 
     for lib in ("libcrypto", "libssl"):
         sym = _load(prod / f"symbols-{lib}.json")["body"]
@@ -1055,24 +1132,50 @@ def collect(authority_id: str) -> tuple[list[dict], dict, dict]:
                 if ent["residual"] is None:
                     ent["residual"] = "NUM_DECLARED_NONEXISTENT_BUT_DEFINED"
 
-    # 3. a POD-documented name no implementation plane saw.
+    # 3. the POD join: a man3 NAME entry or SYNOPSIS declaration, joined by its `subject`.
+    #
+    # This runs last, after every identity-bearing plane, because a documented name's witnesses
+    # include symbols that only the binary, the dispatch graph or the Phase-1 atlas publish. A
+    # claim whose subject **no** plane saw is the one residual this rule records, and it is
+    # recorded against the subject name -- the claim's identity -- never against its declaration
+    # text. A name that is merely ambiguous (two statics share it) is in the atlas and is joined.
     for claim in pod["claims"]:
         if claim["kind"] not in ("NAME_ENTRY", "SYNOPSIS_DECL"):
             continue
-        norm = claim.get("normalized") or claim.get("subject")
-        if not norm:
+        # **Only a man3 page names a symbol.** A man1 NAME entry names a command, a man5 entry a
+        # config file and a man7 entry a concept (`mac`, `rand`, `rsa`, `ssl` are provider pages);
+        # projecting those into symbol space invents obligations that are not API, and made a
+        # concept name "reachable" from a compatibility root. 22.11's own reverse-direction
+        # measurement already scopes to section 3 for the same reason.
+        if claim.get("section") != 3:
             continue
-        key = U.resolve(norm)
-        if key is None:
-            ent = U.add(f"sym|pod-doc:{norm}", "symbol", norm, "pod-contract",
-                        kind="documented-name", documented=True, contradiction=True)
-            if ent["residual"] is None:
-                ent["residual"] = "POD_NAME_NOT_IN_ATLAS"
+        subject = claim.get("subject")
+        if not subject:
+            continue
+        if U.known(subject):
+            for key in U.keys_for(subject):
+                U.annotate(key, "pod-contract", documented=True)
+            continue
+        ent = U.add(f"sym|pod-doc:{subject}", "symbol", subject, "pod-contract",
+                    kind="documented-name", documented=True, contradiction=True)
+        if ent["residual"] is None:
+            ent["residual"] = "POD_NAME_NOT_IN_ATLAS"
+
+    # The cross-plane invariant against 22.11's dedicated POD oracle (the review's section 6).
+    # Both answer "which documented name does no plane implement", with different witness sets;
+    # this join sees more, so a name it calls missing that 22.11 found in the header/API atlas is
+    # a projection gap here and is recorded rather than ignored.
+    pod11_missing = {d["subject"] for d in pod["reconciliation"]["disagreements"]
+                     if d["class"] == POD_RESIDUAL_CLASS}
+    here_missing = {e["name"] for e in U.e.values()
+                    if e.get("residual") == POD_RESIDUAL_CLASS}
+    cross = pod_cross_plane(pod11_missing, here_missing)
 
     return [finalize(e) for e in U.e.values()], owner, {
         "compile-commands": cc, "pod": pod, "manifest": manifest, "genealogy": genealogy,
         "installed_pages": installed_pages, "pod_pages": pod_pages, "cli_names": cli_names,
         "config_names": config_names, "dispatch": dispatch, "binary": binary,
+        "pod_cross_plane": cross,
     }
 
 
@@ -1132,6 +1235,9 @@ def main(argv: list[str]) -> int:
     entities, owner, aux = collect(args.authority)
     roots = build_roots(entities)
     body = build_body(entities, roots)
+    # Recorded beside `counts`, not inside it: it is a cross-plane record, not a derivation of the
+    # entity classification, and `build_body` must stay able to reproduce `counts` exactly.
+    body["pod_cross_plane"] = aux.get("pod_cross_plane") or {}
 
     inputs = [InputRef(name="plan", path=REPO_ROOT / "docs" / "PHASE-22-SUBPHASES.md")]
     for plane, relpath in sorted(PLANE_ARTEFACTS.items()):
@@ -1158,6 +1264,20 @@ def main(argv: list[str]) -> int:
     print(f"[phase22-reconciliation] residuals={c['residuals']} "
           f"classes={len(c['residuals_by_class'])} unknown={c['unknown']} "
           f"unknown_intersecting_roots={c['unknown_intersecting_roots']}")
+    cross = body.get("pod_cross_plane") or {}
+    print(f"[phase22-reconciliation] pod-cross-plane={cross}")
+    # The cross-plane invariant is hard: a documented name this join calls missing while 22.11's
+    # dedicated oracle found it in the header/API atlas is a gap in this projection, not a finding.
+    unexplained = cross.get("only_here_unexplained") or []
+    if unexplained:
+        print("[phase22-reconciliation] FATAL: POD residual(s) not shared with 22.11 "
+              f"(projection gap): {unexplained[:20]}")
+        return 1
+    bad = pod_identity_violations(body["residuals"])
+    if bad:
+        print("[phase22-reconciliation] FATAL: POD residual(s) keyed on a declaration, not an "
+              f"identity: {bad[:20]}")
+        return 1
     print(f"[phase22-reconciliation] owner_assigned={c['owner_assigned']} "
           f"joins={c['joins']} -> {rel(OUT)}")
     return 0
@@ -1199,6 +1319,17 @@ def court_reconcile(body: dict, roots: dict) -> dict:
     for key in ("entities", "joins", "residuals", "counts", "roots", "dispositions",
                 "root_families_unpopulated", "unjoined"):
         checks.append((f"round-trip: {key} equal", base[key] == body[key]))
+
+    # 0. the POD identity rule: a residual is an entity identity, never a declaration, and the join
+    #    actually happened (some documented name carries a witness plane beside `pod-contract`).
+    bad_pod = pod_identity_violations(body["residuals"])
+    checks.append((f"pod-identity: {len(bad_pod)} POD residual(s) keyed on a declaration",
+                   not bad_pod))
+    joined_pod = [e for e in body["entities"]
+                  if "pod-contract" in e["planes"]
+                  and any(p != "pod-contract" for p in e["planes"])]
+    checks.append((f"pod-join: {len(joined_pod)} documented name(s) joined a witness plane",
+                   len(joined_pod) > 0))
 
     # 1. add an entity seen by one plane only.
     mutated = copy.deepcopy(stripped)
@@ -1292,7 +1423,7 @@ def court_reconcile(body: dict, roots: dict) -> dict:
         "unknown": c["unknown"],
         "unknown_intersecting_roots": c["unknown_intersecting_roots"],
         "joins": c["joins"],
-        "mutations": ["round-trip", "add-one-plane-entity", "move-disposition",
+        "mutations": ["round-trip", "pod-identity", "add-one-plane-entity", "move-disposition",
                       "add-contradiction", "add-unknown-root", "remove-plane"],
         "observations": len(checks),
         "failures": failures,
@@ -1344,6 +1475,33 @@ def self_test(body: dict) -> bool:
         if court_reconcile(committed, roots)["verdict"] != "fail":
             print("  self-test: a blind _key_set() was not caught")
         ok = ok and True
+
+        # The POD identity rule: a declaration keyed as a residual must be caught, and the court
+        # must name the specific check that caught it. A bare identifier must not be flagged.
+        globals()["_key_set"] = original_key_set
+        decl_key = POD_DOC_PREFIX + "int EVP_FOO(EVP_CTX *ctx)"
+        if not pod_identity_violations([{"class": POD_RESIDUAL_CLASS, "key": decl_key}]):
+            print("  self-test: pod_identity_violations did not flag a declaration key")
+            ok = False
+        if pod_identity_violations([{"class": POD_RESIDUAL_CLASS, "key": POD_DOC_PREFIX + "EVP_FOO"}]):
+            print("  self-test: pod_identity_violations flagged a bare identifier")
+            ok = False
+        broken = dict(committed)
+        broken["residuals"] = list(committed["residuals"]) + [
+            {"class": POD_RESIDUAL_CLASS, "key": decl_key, "planes": ["pod-contract"],
+             "disposition": "UNKNOWN"}]
+        res = court_reconcile(broken, roots)
+        if not any("pod-identity" in f for f in res.get("failures", [])):
+            print("  self-test: the court did not name the pod-identity check for a declaration key")
+            ok = False
+
+        # The cross-plane invariant: a name this join calls missing that 22.11 did not is recorded.
+        if pod_cross_plane({"A"}, {"A", "B"})["only_here_unexplained"] != ["B"]:
+            print("  self-test: pod_cross_plane did not record the unexplained extra")
+            ok = False
+        if pod_cross_plane({"A", "B"}, {"A"})["resolved_by_wider_witness"] != 1:
+            print("  self-test: pod_cross_plane did not record the wider-witness resolution")
+            ok = False
     finally:
         globals()["classify"] = original_classify
         globals()["parity_for"] = original_parity

@@ -639,7 +639,7 @@
         "name": "whole-program-atlas",
         "phase": 22,
         "provider_rows": null,
-        "seal_sha256": "bb57af294c2890c95fa26e7fcbe0bf70fed452f8a0dc19474a71d1c1f13be015",
+        "seal_sha256": "1503b5ae2e719d08854be9b32a41e59eccde4b52f911e4347c7249a836417e91",
         "state": "complete",
         "stratum": "Authority exhaustiveness and the whole-program compatibility atlas"
       }
@@ -651,7 +651,7 @@
       "not_started": 10
     }
   },
-  "body_hash": "611e796e0a1403b9ddfb956a31bd60efaaf8b7981f35220b47c518724aa41c07",
+  "body_hash": "ff8e0fa3253645301087ee867837b9d70e6ce4a801e84eb19d99ec99eb63d5a3",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

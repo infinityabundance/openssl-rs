@@ -207,7 +207,8 @@ The seal requires all of the following.
     every reachable surface has an owner phase, required parity dimensions, current status and court family
     zero UNKNOWN residuals intersect the claimed production profile
     the FRF sensitivity challenges pass
-    two clean regenerations are byte-identical
+    every raw-input acquisition plane is regenerated twice into a clean scratch
+        and both runs are byte-identical to the committed artefact
     the Gemel checkpoint exists
     the Phase-11 ledger has been regenerated from the new atlas
 

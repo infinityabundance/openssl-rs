@@ -89,7 +89,7 @@ directives, 10 default paths**. 22.8 ran the authority's own install and disposi
 **7,666 installed entries with 0 `UNKNOWN`**, including the two CMake config files and three
 pkg-config files the constitution had not modelled.
 
-**Contract.** 22.11 inventoried **903 canonical POD pages** and extracted **15,044 claims**,
+**Contract.** 22.11 inventoried **903 canonical POD pages** and extracted **15,045 claims**,
 ran OpenSSL's own `util/find-doc-nits` and retained its output, and classified **2,292
 disagreements** between the manuals and the atlas. 22.13 mapped **679 tests, 34 fuzzers and 76
 demos** to **10,039 edges**, and names **3,967 exported symbols no test reaches** and 17 of 34
@@ -97,21 +97,34 @@ fuzz targets attacking parser surfaces.
 
 ## 4. The reconciliation, and what it refuses to do
 
-22.12 joined the planes on one canonical identity per authority thing — **110,382 entities**
+22.12 joined the planes on one canonical identity per authority thing — **98,753 entities**
 across symbol, source, install, cli, file, POD and config spaces — making **16 joins** and
-recording **5 unjoined** with their reasons. It found **75,227 cross-plane residuals over 15
-classes** and **5,910 `UNKNOWN`** entities. Ten-thousand-plus `DOXYGEN_ONLY` residuals are the
+recording **5 unjoined** with their reasons. It found **62,936 cross-plane residuals over 15
+classes** and **167 `UNKNOWN`** entities. Ten-thousand-plus `DOXYGEN_ONLY` residuals are the
 macros the configured Doxygen view emits and the AST cannot; `AST_ONLY` is enumerators and
 field line-mismatches; neither is a defect, and both are the point of taking two views.
 
 Section 1.1's rule is enforced, not stated: **a fact two planes contradict yields `UNKNOWN`,
 never a vote.** `UNKNOWN` is refused as a resting state, so the count matters and is watched.
 
+**The POD identity correction.** 22.12's first cut resolved a POD claim by `normalized` when it
+was present, so a man3 SYNOPSIS declaration (`int EVP_FOO(EVP_CTX *ctx)`) was looked up as an
+*identity* and thousands of declarations came out as missing symbols. Two projection gaps
+compounded it: the name index was built once, before the binary, dispatch and Phase-1 planes
+landed, so a name only they publish could not resolve; and the Phase-1 projection omitted
+`enums.json`. The join now resolves on `subject` (the identity, for a NAME entry and a SYNOPSIS
+declaration alike), the index is maintained by every `add`, and a residual is a man3 name that no
+plane **other than the POD projection itself** saw. The count is **167**, every member of which
+22.11's dedicated oracle also calls missing (`pod_cross_plane.only_here_unexplained` is empty),
+and `RT-PHASE22-RECONCILE` carries a declaration-keyed mutation as a sensitivity case. The same
+pass found 22.11 had swallowed a `=for openssl names:` directive as a NAME entry, which
+`parse_name` now handles.
+
 ## 5. The closure, and its bound
 
 22.14 declared the plan's ten compatibility-root families, derived a concrete member list for
 each, and traversed the typed edge graph — **148,275 edges over 12 kinds** — from **27,495
-members** to **35,436 reachable entities**.
+members** to **35,432 reachable entities**.
 
 Seven families closed: source-api (25,919 members), binary-abi (6,512), modules (770),
 callbacks (332), cli (120), configuration (176), distribution (162).
@@ -129,7 +142,7 @@ than closing them:
 translation unit or object — were re-classified from `UNKNOWN` to section 4's
 `AUTHORITY_BUG_BOUNDARY`: both complete witnesses agree the authority declares a symbol it does
 not define, which is the authority's boundary and not an atlas gap. The X.509 closure slice is
-**satisfied** (1,294 members, 12,313 reachable, 0 `UNKNOWN`), and `phase22_x509_gate.py`
+**satisfied** (1,294 members, 12,309 reachable, 0 `UNKNOWN`), and `phase22_x509_gate.py`
 therefore permits Phase 11.2.
 
 ## 6. FRF: the instruments were challenged, and one defect was found by doing so
@@ -166,7 +179,7 @@ regeneration is a no-op on counts, and the checkpoint says so with the measureme
 
 What Phase 22 found that an export ledger has **no unit for** is recorded as a proposal rather
 than silently written into the ledgers: the CLI surface (120 commands / 4,314 options against
-the Phase-1 capture's 55 / 0), the configuration/environment/filesystem surface (176), 5,910
+the Phase-1 capture's 55 / 0), the configuration/environment/filesystem surface (176), 167
 POD-documented names with no implementation, 162 installed entries dispositioned
 `REQUIRED_COMPATIBILITY`, and 1,189 dispatch/callback slots with no source-level caller. Each
 names a proposed owning phase (CLI/config/filesystem and distribution → 16; POD-documented API
