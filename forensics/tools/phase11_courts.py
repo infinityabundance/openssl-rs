@@ -47,7 +47,7 @@ later activation established.
 
 What the pending courts will establish, and what they will not
 --------------------------------------------------------------
-`RT-X509-VERIFY`, `RT-X509-ACERT`, `RT-X509-REQ`, `RT-X509-V3`, `RT-X509-PEM` and `RT-X509`
+`RT-X509-VERIFY-SURFACE`, `RT-X509-ACERT`, `RT-X509-REQ`, `RT-X509-V3`, `RT-X509-PEM` and `RT-X509`
 compare the authority's *behaviour* for the subphases that land them: the container bytes and the
 print text for the object graphs (section 3.1), the decision, error code, depth and callback
 sequence of `X509_verify_cert` (section 3.2), the lookup refusals and cache behaviour (section
@@ -105,18 +105,23 @@ COURTS: list[tuple[str, str]] = [
     # `X509_REQ`/`X509_REQ_INFO` mutators, attribute accessors and lifecycle (`x509_req.c`,
     # `x_req.c`), over fixed DER fixtures and with no address or address-dependent value printed.
     ("RT-X509-STORE", "rt_x509_store_probe.c"),
-    # "RT-X509-VERIFY -- the Phase 11.2 X.509 verification surface, driven."
-    # It drives the `X509_VERIFY_PARAM` object, table and every accessor (`x509_vpm.c`), the
+    # "RT-X509-VERIFY-SURFACE -- the Phase 11.2 X.509 verification *surface*, driven."
+    # **The name says SURFACE, and the engine is a separate, still-pending court.** This probe
+    # drives the `X509_VERIFY_PARAM` object, table and every accessor (`x509_vpm.c`), the
     # `X509_STORE_CTX` lifecycle and every field/error/callback accessor (`x509_vfy.c`), the
     # free-standing time decision surface over a fixed verification time, the issuer lookup and
     # `X509_policy_tree_free`. It also drives the two chain-roll arms 11.4 and 11.5 landed when
     # they were pulled forward to unblock the engine: the `x_crl.c` CRL method/lookup surface
     # (`X509_CRL_add0_revoked`, `..._get0_by_serial`, `..._get0_by_cert`, `..._verify`, the
     # `X509_CRL_METHOD_*` object and `..._set_/get_meth_data`) and the RFC 3779
-    # `X509v3_{asid,addr}_validate_path` / `..._validate_resource_set`. The three engine entry
-    # points are withheld by name; see the probe's
-    # header and `src/x509/x509_vfy.rs`'s module doc for the blocker.
-    ("RT-X509-VERIFY", "rt_x509_verify_probe.c"),
+    # `X509v3_{asid,addr}_validate_path` / `..._validate_resource_set`.
+    # **It does NOT run the decision procedure** `docs/PHASE-11-SUBPHASES.md` section 3.2
+    # describes: `X509_verify_cert` and its two siblings are still withheld, so the return value,
+    # error code, error depth, callback sequence and constructed chain are not compared by any
+    # court yet. That is what `RT-X509-VERIFY-ENGINE` (pending) will establish, and the two names
+    # are deliberately different so that this court's `pass` cannot be read as "the verifier is
+    # verified".
+    ("RT-X509-VERIFY-SURFACE", "rt_x509_verify_probe.c"),
     # "RT-X509-PEM -- the Phase 11.6 PEM X.509 container surface, driven."
     # It reads and writes a fixed certificate, CRL, request, `X509_AUX`, `X509_PUBKEY`, RSA/EC/DSA
     # public key, `NETSCAPE_CERT_SEQUENCE`, PKCS#8 `PrivateKeyInfo`/`EncryptedPrivateKeyInfo` and
@@ -146,6 +151,14 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-11-SUBPHASES.md` section 2's, one per work
 # subphase; `RT-X509` is 11.7's, over the units whose closure crosses into the landed strata.
 PENDING_COURTS: dict[str, str] = {
+    "RT-X509-VERIFY-ENGINE": (
+        "11.2 -- the decision procedure itself: `X509_verify_cert`, `X509_STORE_CTX_verify` and "
+        "`X509_build_chain` (with `X509_STORE_CTX_init`/`init_rpk`), compared per "
+        "docs/PHASE-11-SUBPHASES.md section 3.2 on the return value, the error code, the error "
+        "depth, the `verify_cb` callback sequence and the constructed chain, over a hostile-chain "
+        "corpus. Registered as pending while those three names stay withheld on the OCSP and DANE "
+        "arms; `RT-X509-VERIFY-SURFACE` is the court that covers everything around them and its "
+        "`pass` is not this claim"),
     "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the "
                   "`GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, "
                   "`v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)",

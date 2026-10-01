@@ -367,7 +367,7 @@ pub unsafe extern "C" fn PKCS5_pbe2_set_scrypt(
     cipher: *const EvpCipher,
     salt: *const c_uchar,
     saltlen: c_int,
-    aiv: *const c_uchar,
+    aiv: *mut c_uchar,
     n: u64,
     r: u64,
     p: u64,

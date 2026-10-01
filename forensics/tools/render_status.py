@@ -32,6 +32,52 @@ def load(path: Path):
     return json.loads(path.read_text()) if path.exists() else None
 
 
+def _phase22_figures(p22: Path) -> list[tuple[str, int]]:
+    """The Phase-22 plane figures, read from the committed artefacts.
+
+    The Phase-1 census above is the public contract; this is the whole-program archaeology
+    around it. The two are separate planes and are rendered separately, because a single
+    "atlas census" row of `cli commands | 55` is true of the Phase-1 capture and false of
+    the atlas Phase 22 measured. A plane that has not landed is skipped rather than
+    rendered as a zero.
+    """
+    def body(name: str) -> dict:
+        return ((load(p22 / name) or {}).get("body") or {})
+
+    def count(name: str, key: str):
+        return (body(name).get("counts") or {}).get(key)
+
+    def length(name: str, key: str):
+        seq = body(name).get(key)
+        return len(seq) if isinstance(seq, list) else None
+
+    rows: list[tuple[str, object]] = [
+        ("translation units (captured compiler invocations)",
+         count("compile-commands.json", "commands")),
+        ("distinct source files", count("compile-commands.json", "distinct_sources")),
+        ("Clang AST entities", count("tu-ast.json", "entities")),
+        ("direct-call edges", count("tu-ast.json", "call_edges")),
+        ("address-taken functions", count("tu-ast.json", "address_taken")),
+        ("Doxygen entities", count("doxygen-entities.json", "entities")),
+        ("Doxygen reference edges", count("doxygen-entities.json", "reference_edges")),
+        ("dispatch/registration tables", count("dispatch-graph.json", "tables")),
+        ("indirect typed edges", count("dispatch-graph.json", "edges")),
+        ("CLI commands", count("cli-surface.json", "commands")),
+        ("CLI structured options", count("cli-surface.json", "options_structured")),
+        ("environment variables", count("config-surface.json", "env_vars")),
+        ("configuration directives", count("config-surface.json", "directives")),
+        ("installed distribution entries", length("install-manifest.json", "entries")),
+        ("POD manual pages", count("pod-contract.json", "pages")),
+        ("POD claims", count("pod-contract.json", "claims")),
+        ("unified entities", count("reconciliation.json", "entities")),
+        ("cross-plane residuals", count("reconciliation.json", "residuals")),
+        ("`UNKNOWN` residuals", count("reconciliation.json", "unknown")),
+        ("compatibility graph edges", count("compatibility-closure.json", "edges")),
+        ("root-reachable entities", count("compatibility-closure.json", "reachable_entities")),
+    ]
+    return [(label, value) for label, value in rows if isinstance(value, int)]
+
+
 def main() -> int:
     outdir = authority_atlas_dir(PRODUCTION_AUTHORITY)
     coverage = load(outdir / "coverage.json")
@@ -112,13 +158,36 @@ def main() -> int:
                  "`forensics/tools/phase_state.py`.")
     L.append("")
 
-    L.append("## Atlas census")
+    L.append("## Phase-1 public API / ABI atlas census")
+    L.append("")
+    L.append("The **contract**: what the installed public headers, the `.num` inventories and")
+    L.append("the distribution shell promise. `cli commands` and `config files` below are the")
+    L.append("Phase-1 capture's own; the Phase-22 section after this one is the whole-program")
+    L.append("archaeology around them, which is where the CLI and configuration surfaces are")
+    L.append("actually enumerated.")
     L.append("")
     L.append("| surface | count |")
     L.append("|---|---|")
     for k in sorted(c):
         L.append(f"| {k.replace('_', ' ')} | {c[k]} |")
     L.append("")
+
+    L.append("## Phase-22 whole-program compatibility atlas")
+    L.append("")
+    figures = _phase22_figures(ATLAS / "phase22")
+    if figures:
+        L.append("| surface | count |")
+        L.append("|---|---|")
+        for label, value in figures:
+            L.append(f"| {label} | {value} |")
+        L.append("")
+        L.append("> These are plane measurements, not contract claims: a `UNKNOWN` residual")
+        L.append("> is a name Phase 22 found and did not classify, and ")
+        L.append("> `docs/PHASE-22-ATLAS-SEAL.md` records the bound of the claim.")
+        L.append("")
+    else:
+        L.append("Not generated (run the Phase-22 planes).")
+        L.append("")
 
     L.append("## Obligations")
     L.append("")

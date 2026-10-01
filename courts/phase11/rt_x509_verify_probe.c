@@ -1,5 +1,5 @@
 /*
- * RT-X509-VERIFY -- the Phase 11.2 court: the `X509_VERIFY_PARAM` surface, the
+ * RT-X509-VERIFY-SURFACE -- the Phase 11.2 court: the `X509_VERIFY_PARAM` surface, the
  * `X509_STORE_CTX` object's lifecycle and accessor surface, the free-standing time
  * decision surface and the issuer lookup, driven against the authority and the
  * candidate and compared observation for observation.
