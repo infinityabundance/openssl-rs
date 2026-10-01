@@ -33810,3 +33810,103 @@ reconcile.
 
 `PIPELINE OK` exit 0 with **113 courts** and 47,575 observations; the phase-22 ledger reads 3 of 18
 planes implemented, 15 open.
+
+## D490 -- 22.3, 22.8 and 22.9 land, and the runner discovers its courts
+
+Four planes landed in one wave. The ledger now reads **7 of 18**. `PIPELINE OK` exit 0 with **117
+courts**.
+
+### The runner discovers its courts, so a plane is one file
+`phase22_courts.py` listed its courts, which meant every new plane edited the same file -- and this
+wave ran four planes at once. Each plane tool now exposes `ARTEFACT_REL` and `courts()`, and the
+runner imports every `phase22_*.py` and collects them. A plane that has not landed returns `[]`; a
+module that raises on import is a hard failure, because a court that cannot be loaded is not a court
+that passed. `pending_courts` is now the plan's list minus whatever is registered, so it shrinks by
+itself, and each plane's artefact is content-addressed into the court document's `inputs`. The
+summary line was also made court-agnostic: it prints `35 observations; 35 observations` and
+`35838 entities, None lexical-only` before the fix, and a court whose own pass line misrepresents it
+is evidence a reader reads first and should not have to decode.
+
+### 22.3 -- every translation unit, read by Clang as a shadow instrument
+`forensics/tools/phase22_tu_ast.py` replays 22.1's captured invocations with
+`clang -fsyntax-only -Xclang -ast-dump=json`. **1,216 of 1,216 C translation units parsed, 0 failed**,
+in 121 s with four jobs; a serial extrapolation of ~10 minutes said no narrowing was needed. Four
+arguments per source deduplicate 2,114 invocations to 1,216 logical units. **35,838 entities**
+(24,702 functions, 3,833 variables, 808 records, 528 typedefs, 3,302 fields, 2,564 enumerators),
+**16,573 static**, **104,192 direct-call edges**, **3,896 address-taken**, 9,000
+definitions-without-declaration; the 43 assembly units are recorded as `non_c_translation_units`
+because they cannot have a C AST -- and 22.6 is where they are seen. Byte-identical across three
+regenerations.
+
+### 22.8 -- the authority's own install defines the distribution surface
+`forensics/tools/phase22_install_manifest.py` runs `make install DESTDIR=<scratch>` and walks the
+result: **7,666 entries** (1,976 files, 27 directories, 5,663 symlinks, 8 ELF), **0 UNKNOWN
+dispositions**, and all sixteen surfaces the plan named present -- including the two
+`lib/cmake/OpenSSL/OpenSSLConfig*.cmake` files and the three pkg-config files the constitution had
+not modelled. The reconciliation against the **pinned** prefix is a finding rather than a hidden
+one: the pinned prefix has 169 entries because it was installed with `install_sw`, so
+`only_in_pinned=0`, `changed=0` and `only_in_manifest=7,497` (man symlinks, HTML docs, man pages).
+The pinned prefix under-represents the distribution surface, and the manifest says so.
+
+### 22.9 -- the CLI is 120 commands, not 55, and the recorded parser defect is repaired
+The plan's rule (section 6) is that the CLI is not "the 55 standard commands". Enumerated from the
+authority's own built binary: **120 commands** -- 54 standard, 1 deprecated (`rsautl`), **18 digest
+aliases** and **47 cipher aliases** -- with **4,314 structured options**, **0 refused rows** and
+**0 commands with zero options**. The archaeology defect recorded as `cli_option_list_parse` is
+repaired rather than re-deferred: `parse_option_list` matched `openssl list -options <cmd>` rows
+against a help-text shape (`-in val        Input file`) that the output never produces, while the
+real rows are `name type` pairs (`help -`, `in <`, `provider s`), so every structured
+`option_count` was 0. The parser was rewritten to the authority's real grammar, `RT-PHASE22-CLI`
+proves it reads a real row and refuses a malformed one, and the prerequisite row is kept with its
+closure text: what remains for Phase 16 is regenerating the **Phase-1** capture in lockstep with the
+historical authority, since regenerating production alone would leave a spurious option-set
+differential.
+
+`PIPELINE OK` exit 0 with 117 courts and 47,575 observations.
+
+## D489 -- 22.6: the binary-reference graph, and the one plane that sees perlasm
+
+Phase 22's third plane reads the binaries the admitted build produced, not the source. The plan's
+section 6 gives it its reason: "22.6 exists because assembly and perlasm are invisible to Clang, and
+because link-time resolution is where the real dependency graph is confirmed."
+`forensics/tools/phase22_binary_graph.py` walks the whole distribution the authority built --
+`libcrypto.so.3`, `libssl.so.3`, `libcrypto.a`, `libssl.a`, `apps/openssl`, the one provider module
+(`providers/legacy.so`) and the six engine modules -- and writes
+`forensics/atlas/phase22/binary-reference-graph.json`: **12 artefacts**, **1,133 objects** (the 10
+standalone ELF objects plus **1,123 archive members**), **50,772 defined** symbols (17,872 global /
+32,899 local / 1 weak), **27,788 undefined**, **35,809 `RELOCATION_REFERENCE` edges** of which
+**34,484 resolve** to an object that defines their symbol, **9,523 versioned symbols**, **20 alias
+groups**, **18 DT_NEEDED** edges across the objects that have a dynamic section, and **41
+perlasm objects** -- archive members joined back to 22.1's `compile-commands.json` as built from a
+`.s`/`.S` source, the units Clang never parses.
+
+### Reading is pure Python, and resolution is over link-visible definitions only
+`elf_symbols.py` already established that binutils' LLVM-bitcode plugin makes the same archive yield
+different symbol sets on different machines (D30, D33), so a relocation graph read through `objdump`
+would inherit that non-determinism. This tool parses ELF64 and `ar` with `struct`, reusing
+`elf_symbols`' constants and string helper, and never invokes binutils. The definition index that
+resolves an edge is built from **link-binding definitions only**; a `static` name such as `init` is
+file-local and is defined in hundreds of objects, so indexing locals made a single reference
+"resolve" to 765 objects and the document 204 MB. With locals excluded from the index and a local
+reference resolved to its own object, the document is 33 MB. Relocation entries are collapsed to one
+edge per `(object, symbol)` carrying the sorted set of relocation types seen -- a libcrypto archive
+carries ~134,000 such entries -- and the collapse is recorded in `body.reduction` rather than done
+silently.
+
+### The court challenges the classifier and the resolver
+`RT-PHASE22-BINARY` adds 21 observations: a round trip (reconstruct the raw model from the
+artefact's own `defined`/`undefined`/`relocations` and re-derive the whole body, requiring equality)
+plus eight mutations -- add a defined symbol (the definition index gains it), add an undefined symbol
+(and the index does not), add a relocation that resolves (both edge counts rise), add one that does
+not (`relocation_edges` rises and `resolved_edges` does not), remove an archive member (`objects`,
+`archive_members` and the member's own `defined` count all fall), flip a linkage bit (`defined_global`
+falls and `defined_local` rises while `defined` holds), and remove a definition a live edge resolved
+to (exactly its edges stop resolving). Sensitivity was proved by breaking the resolver, the alias
+classifier, the undefined classifier, the member count and the binding breakdown in memory: each
+broke the round trip and turned the court to `fail`, and it returned to `pass` on restore.
+
+`tls` is **0**: neither the shared objects nor any archive member defines a single `STT_TLS` symbol,
+confirmed independently with `nm` over all twelve artefacts. That is a fact about this profile, not a
+gap in the reader, and the requirement that TLS objects be inventoried is met by reporting the empty
+set rather than by omitting the field. `libcrypto.so.3`'s 18,338 defined symbols equal
+`nm --defined-only` exactly.

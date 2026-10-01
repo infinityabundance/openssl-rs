@@ -476,11 +476,64 @@ def court_doxygen() -> dict:
 
 
 def _summary(r: dict) -> str:
-    """A one-line, court-specific figure for the pass line (the courts differ)."""
-    if r["court"] == "RT-PHASE22-BUILD-CAPTURE":
-        return f"{r.get('captured_commands')} commands / {r.get('distinct_sources')} sources"
-    return (f"{r.get('entities')} entities, {r.get('lexical_only')} lexical-only, "
-            f"{r.get('reference_edges')} reference edges")
+    """A one-line, court-specific figure for the pass line.
+
+    Courts differ, and a court that carries an explicit `summary` is preferred; the fallbacks below
+    assemble one from whatever keys the record has, so a court that adds a figure does not have to
+    edit this function to appear in the line. The fallbacks exist because a court printed as
+    "35 observations; 35 observations" or "35838 entities, None lexical-only" is a court whose own
+    line misrepresents it, and the pass line is evidence a reader reads first.
+    """
+    if "summary" in r:
+        return str(r["summary"])
+    parts: list[str] = []
+    if "captured_commands" in r:
+        parts.append(f"{r['captured_commands']} commands / {r.get('distinct_sources')} sources")
+    if "entities" in r:
+        parts.append(f"{r['entities']} entities")
+        for key, label in (("lexical_only", "lexical-only"),
+                           ("reference_edges", "reference edges")):
+            if r.get(key) is not None:
+                parts.append(f"{r[key]} {label}")
+    if "objects" in r:
+        parts.append(f"{r['objects']} objects")
+    if "defined" in r:
+        parts.append(f"{r['defined']} defined")
+    if "relocation_edges" in r:
+        parts.append(f"{r['relocation_edges']} relocation edges")
+    if "entries" in r:
+        parts.append(f"{r['entries']} entries")
+    if "commands" in r and "captured_commands" not in r:
+        parts.append(f"{r['commands']} commands")
+    return ", ".join(parts) if parts else f"{r.get('observations', 0)} observations"
+
+
+# ---------------------------------------------------------------------------------------------
+# The plane courts, discovered rather than listed
+# ---------------------------------------------------------------------------------------------
+#
+# Every Phase 22 plane owns exactly one file and exposes `courts()` from it, returning a list of
+# court records once its artefact exists and `None` or `[]` while the plane has not landed. This
+# runner discovers those modules instead of listing them, so a new plane adds a file and nothing
+# else -- which is also what lets several planes be built at once without every one of them editing
+# this runner. A module that raises on import is a hard failure and not a silently skipped court,
+# because a court that cannot be loaded is not a court that passed.
+#
+# `ARTEFACT_REL` is optional and, when a module declares it, the artefact is content-addressed into
+# this document's `inputs` the way the two built-in courts' artefacts already are.
+PLANE_MODULES_EXCLUDED = {"phase22_courts.py", "phase22_obligations.py"}
+
+
+def plane_modules() -> list:
+    """Every `phase22_*.py` plane tool, imported."""
+    import importlib
+
+    out = []
+    for path in sorted((REPO_ROOT / "forensics" / "tools").glob("phase22_*.py")):
+        if path.name in PLANE_MODULES_EXCLUDED:
+            continue
+        out.append(importlib.import_module(path.stem))
+    return out
 
 
 def main(argv: list[str]) -> int:
@@ -504,7 +557,15 @@ def main(argv: list[str]) -> int:
                   "stage": "raw-capture-missing", "raw_capture": rel(RAW), "observations": 0,
                   "failures": [f"raw capture missing: {rel(RAW)}"]}
 
+    planes = plane_modules()
     records_out = [record, court_doxygen()]
+    for module in planes:
+        fn = getattr(module, "courts", None)
+        if callable(fn):
+            records_out.extend(fn() or [])
+
+    registered = {r["court"] for r in records_out}
+    pending = {name: needs for name, needs in PENDING_COURTS.items() if name not in registered}
     passed = sum(1 for r in records_out if r["verdict"] == "pass")
     body = {
         "all_pass": passed == len(records_out),
@@ -512,10 +573,10 @@ def main(argv: list[str]) -> int:
         "courts": records_out,
         "summary": {"total": len(records_out), "pass": passed,
                     "fail": len(records_out) - passed},
-        "pending_courts": PENDING_COURTS,
+        "pending_courts": pending,
         "claim": (
-            "Two courts, each an FRF-style sensitivity challenge rather than a file existence "
-            "check. `RT-PHASE22-BUILD-CAPTURE` runs "
+            f"{len(records_out)} courts, each an FRF-style sensitivity challenge rather than a "
+            "file existence check. `RT-PHASE22-BUILD-CAPTURE` runs "
             "`forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw "
             "capture and on controlled mutations of it in memory: dropping one `-D` removes "
             "exactly that element from the unit's `defines` and `args`; swapping two `-I` options "
@@ -524,20 +585,13 @@ def main(argv: list[str]) -> int:
             "`-o /dev/null` assembler probe -- which is not a translation unit -- changes "
             "nothing. It also re-derives the committed "
             "`forensics/atlas/phase22/compile-commands.json` body from the raw log and requires "
-            "they be equal. `RT-PHASE22-DOXYGEN` runs "
-            "`forensics/tools/phase22_doxygen.py`'s own view-merge and classification logic on "
-            "the committed `forensics/atlas/phase22/doxygen-entities.json` and on controlled "
-            "mutations of its rows: it re-derives the whole body (entities, references, the "
-            "`lexical_only`/`configured_only` differences, every count) from the artefact's own "
-            "`entities` and requires it to equal the committed artefact; adding a configured "
-            "entity raises `entities`/`configured`/`configured_only` by one; adding a "
-            "lexical-only entity raises `entities`/`lexical`/`lexical_only` by one; clearing a "
-            "`documented` flag lowers `documented` by one and moves nothing else; moving a shared "
-            "entity's line splits its two views so `shared` falls while `entities`, "
-            "`configured_only` and `lexical_only` each rise; and adding an edge raises the "
-            "reference counts. Neither court claims the authority surface is complete: the "
-            "Doxygen XML is a scratch product and is not tracked, so `RT-PHASE22-DOXYGEN` ties "
-            "the artefact to the logic that built it rather than to a fresh re-derivation, and "
+            "they be equal. The other courts are each exposed by their own plane's module as "
+            "`courts()` and discovered by this runner rather than listed here, and each carries "
+            "the same obligation: it drives its instrument over the real artefact and over "
+            "controlled mutations of it, and fails if the instrument is insensitive to its own "
+            "defect class. No court claims the authority surface is complete: a plane's raw "
+            "input is often a scratch product and is not tracked, so the courts tie committed "
+            "artefacts to the logic that built them rather than to a fresh re-derivation, and "
             "Doxygen absence is never surface absence (docs/PHASE-22-SUBPHASES.md section 6). "
             "`pending_courts` names the courts the plan gives later subphases and every name is "
             "printed on each run, so 'not run yet' cannot be read as 'passed'."
@@ -550,21 +604,25 @@ def main(argv: list[str]) -> int:
         InputRef(name="doxygen-entities", path=DOXYGEN_ARTEFACT),
         InputRef(name="phase-22-plan", path=REPO_ROOT / "docs" / "PHASE-22-SUBPHASES.md"),
     ]
+    for module in planes:
+        rel_ = getattr(module, "ARTEFACT_REL", None)
+        if rel_ and (REPO_ROOT / rel_).exists():
+            inputs.append(InputRef(name=module.__name__, path=REPO_ROOT / rel_))
     doc = envelope(kind="phase22-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
     for r in records_out:
         if r["verdict"] == "pass":
-            print(f"  {r['court']:<26} pass   ({r['observations']} observations; "
+            print(f"  {r['court']:<28} pass   ({r['observations']} observations; "
                   f"{_summary(r)})")
         else:
-            print(f"  {r['court']:<26} FAIL   "
+            print(f"  {r['court']:<28} FAIL   "
                   f"stage={r.get('stage', 'sensitivity')}")
             for f in r.get("failures", []):
                 print(f"      {f}")
-    for name, needs in PENDING_COURTS.items():
-        print(f"  {name:<26} PENDING (not registered as passing) -- {needs}")
+    for name, needs in pending.items():
+        print(f"  {name:<28} PENDING (not registered as passing) -- {needs}")
     print(f"  -> {rel(OUT)} all_pass={body['all_pass']} over {len(records_out)} court(s)")
     return 0 if body["all_pass"] else 1
 

@@ -3,7 +3,7 @@
   "body": {
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
-      "cli_option_list_parse -> phase 16 (cli option-list parse yields zero structured options. The authority CLI archaeology capture is incomplete in this checkable way: parse_option_list() (forensics/tools/atlas_runtime.py:243) matches _OPTION_ROW (:240) against a shape resembling `-in val        Input file`, but the real `openssl list -options <cmd>` capture is unsorted `name type` pairs (`help -`, `in <`, `out >`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count is 0 and all 2,008 raw rows stay unstructured. Named rather than repaired: Phase 16 (cli-config) owns the CLI and its archaeology is 16.0, while the conservation order puts Phase 11 first. Closure: parse_option_list() reads the authority's actual option shape and the capture's total structured option_count is non-zero.)",
+      "cli_option_list_parse -> phase 16 (Transferred to 22.9 and repaired there; what remains deferred to Phase 16 is regenerating the Phase-1 capture with the fixed parser. parse_option_list() (forensics/tools/atlas_runtime.py) matched the authority's `openssl list -options <cmd>` rows against a help-text shape (`-in val        Input file`) that the output never produces, and the real rows are `name type` pairs (`help -`, `in <`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count was 0 and all 2,008 raw rows stayed unstructured. 22.9 rewrote the parser to the authority's actual grammar and re-enumerated the whole namespace from the authority's own built binary (forensics/authorities/build/openssl-3.6.4-production/apps/openssl): forensics/atlas/phase22/cli-surface.json now carries 120 commands with 4,314 structured options, 0 refused rows and 0 commands_with_zero_options, and RT-PHASE22-CLI proves the repaired parser reads a real row and refuses a malformed one (and turns to fail when the parser is broken in memory). The Phase-16-owned Phase-1 capture forensics/atlas/openssl-3.6.4-production/cli-commands.json still carries option_count 0 on all 55 commands: it is Phase 16 (cli-config) that owns the CLI stratum and would regenerate production and historical in lockstep, since regenerating only the production authority would leave a spurious option-set differential against the historical one. Closure: parse_option_list() reads the authority's actual option shape and the structured surface (22.9's cli-surface.json now, and the Phase-16 capture once regenerated) has a non-zero structured option_count for every command.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
@@ -711,7 +711,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "a168bf959dc1f21a5e6747dc6d0c1c8c33c61eb48837f913652ca57a367c84fa",
+  "body_hash": "a2d446517a52a5f47910d4ec98365341ebcb3f40e3bd4ddffb1cded4b9baf29b",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -752,12 +752,12 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "9b81ba60d617770d174e9c2649b7d9e9c9f05d4581106b91ea50b7d4660c04b7"
+      "sha256": "b0195cff8742e680f7676fa2466b867d33647f2dab7ca8e926ac56d0b11af1a7"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "6dd12c146d465dcf3eff90ec13a10bc62abe5ee90268ec6661b771c1fdf1cce6"
+      "sha256": "371d77552f9594daa4a1f2434ae9c34a9fe625f421a65cd181613e1cd3ad9195"
     },
     {
       "name": "crate-source-tree",
