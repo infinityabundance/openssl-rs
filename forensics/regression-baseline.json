@@ -222,6 +222,10 @@
       "observations": 247,
       "verdict": "pass"
     },
+    "RT-CRMF": {
+      "observations": 138,
+      "verdict": "pass"
+    },
     "RT-DH": {
       "observations": 589,
       "verdict": "pass"
@@ -256,6 +260,10 @@
     },
     "RT-ERR-BIO": {
       "observations": 17,
+      "verdict": "pass"
+    },
+    "RT-ESS": {
+      "observations": 47,
       "verdict": "pass"
     },
     "RT-EVP-BIO": {
@@ -593,13 +601,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 5462,
+    "libcrypto": 5584,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
-    "phase12": 187,
+    "phase12": 65,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -649,9 +657,9 @@
   },
   "prerequisites": {
     "blocking_dependencies": 60,
-    "divergence_names_covered": 40,
+    "divergence_names_covered": 47,
     "findings": 0,
-    "language_census": 8609,
+    "language_census": 8741,
     "sealed_census": 51
   },
   "provider_implemented": [

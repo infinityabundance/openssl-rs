@@ -879,11 +879,13 @@
               "RT-CMS",
               "RT-CODEC",
               "RT-CONF",
+              "RT-CRMF",
               "RT-DH",
               "RT-DSA",
               "RT-DSO",
               "RT-EC",
               "RT-ECX",
+              "RT-ESS",
               "RT-EVP-MAC",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
@@ -1211,6 +1213,7 @@
               "RT-CODEC",
               "RT-COMP",
               "RT-CONF-MOD",
+              "RT-CRMF",
               "RT-DH",
               "RT-DIGEST",
               "RT-DSA",
@@ -1218,6 +1221,7 @@
               "RT-EC",
               "RT-ERR",
               "RT-ERR-BIO",
+              "RT-ESS",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
               "RT-EVP-CLASS",
@@ -1661,10 +1665,12 @@
               "RT-CMP",
               "RT-COMP",
               "RT-CONF",
+              "RT-CRMF",
               "RT-DIGEST",
               "RT-DSO",
               "RT-ERR",
               "RT-ERR-BIO",
+              "RT-ESS",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
               "RT-EVP-CLASS",
@@ -2487,6 +2493,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMS",
               "RT-ERR",
+              "RT-ESS",
               "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -2517,6 +2524,7 @@
               "RT-CMP",
               "RT-CMS",
               "RT-CONF",
+              "RT-ESS",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STACK",
@@ -2544,6 +2552,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMP",
               "RT-CMS",
+              "RT-ESS",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STACK",
@@ -2562,7 +2571,9 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
               "RT-CMS",
+              "RT-CRMF",
               "RT-ERR",
+              "RT-ESS",
               "RT-OCSP",
               "RT-PKCS12",
               "RT-STACK",
@@ -5545,6 +5556,7 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
               "RT-CMP",
+              "RT-CRMF",
               "RT-DIGEST",
               "RT-KEYFORMAT",
               "RT-OCSP",
@@ -5575,6 +5587,7 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
               "RT-CMP",
+              "RT-CRMF",
               "RT-DIGEST",
               "RT-KEYFORMAT",
               "RT-OCSP",
@@ -5592,6 +5605,7 @@
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
               "RT-BIO-ASN1",
+              "RT-CRMF",
               "RT-OCSP",
               "RT-PKCS7",
               "RT-STORE",
@@ -5903,6 +5917,7 @@
               "RT-ASN1-TIME",
               "RT-BIO-ASN1",
               "RT-CMS",
+              "RT-CRMF",
               "RT-KEYFORMAT",
               "RT-OCSP",
               "RT-PKCS12",
@@ -5959,6 +5974,7 @@
               "RT-ASN1-STR",
               "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
+              "RT-CRMF",
               "RT-DIGEST",
               "RT-KEYFORMAT",
               "RT-OCSP",
@@ -6111,7 +6127,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
-              "RT-ASN1-TIME"
+              "RT-ASN1-TIME",
+              "RT-CRMF"
             ],
             "symbol": "ASN1_TIME_new"
           },
@@ -6147,7 +6164,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
-              "RT-ASN1-TIME"
+              "RT-ASN1-TIME",
+              "RT-CRMF"
             ],
             "symbol": "ASN1_TIME_set_string"
           },
@@ -6376,6 +6394,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
+              "RT-CRMF",
               "RT-STORE"
             ],
             "symbol": "ASN1_UTF8STRING_free"
@@ -6392,6 +6411,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
+              "RT-CRMF",
               "RT-STORE"
             ],
             "symbol": "ASN1_UTF8STRING_new"
@@ -12461,6 +12481,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ESS",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_is_a"
@@ -13669,6 +13690,7 @@
               "RT-ASYM-CIPHER",
               "RT-CMS",
               "RT-CODEC",
+              "RT-CRMF",
               "RT-ECX",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
@@ -15480,6 +15502,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ESS",
               "RT-EVP-INTROSPECT",
               "RT-OCSP",
               "RT-STORE"
@@ -15497,7 +15520,9 @@
             "basis": "called",
             "courts": [
               "RT-CMS",
+              "RT-CRMF",
               "RT-DIGEST",
+              "RT-ESS",
               "RT-EVP-INTROSPECT",
               "RT-KEYMGMT",
               "RT-OCSP",
@@ -24184,8 +24209,8 @@
         "completed": true,
         "counts": {
           "directly_courted": 1465,
-          "directly_courted_called": 937,
-          "directly_courted_referenced": 528,
+          "directly_courted_called": 939,
+          "directly_courted_referenced": 526,
           "implemented": 1465,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -24888,6 +24913,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CRMF",
               "RT-STORE",
               "RT-TS",
               "RT-X509-ACERT",
@@ -26467,6 +26493,8 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CRMF",
+              "RT-ESS",
               "RT-OCSP",
               "RT-X509-PEM"
             ],
@@ -28699,6 +28727,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CRMF",
               "RT-OCSP",
               "RT-STORE",
               "RT-TS",
@@ -29221,8 +29250,9 @@
             "symbol": "X509_NAME_digest"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-CRMF",
               "RT-X509-REF"
             ],
             "symbol": "X509_NAME_dup"
@@ -31664,6 +31694,8 @@
             "courts": [
               "RT-CMP",
               "RT-CMS",
+              "RT-CRMF",
+              "RT-ESS",
               "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -31755,6 +31787,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CRMF",
               "RT-STORE",
               "RT-X509-REF",
               "RT-X509-STORE"
@@ -31815,6 +31848,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CRMF",
               "RT-X509-STORE"
             ],
             "symbol": "X509_get_X509_PUBKEY"
@@ -31968,6 +32002,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CRMF",
               "RT-STORE",
               "RT-X509-REF",
               "RT-X509-STORE"
@@ -32017,6 +32052,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CRMF",
               "RT-OCSP",
               "RT-STORE",
               "RT-X509-REF",
@@ -32502,8 +32538,9 @@
             "symbol": "X509_trusted"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ESS",
               "RT-X509-REF"
             ],
             "symbol": "X509_up_ref"
@@ -35142,10 +35179,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 846,
-          "directly_courted_called": 714,
+          "directly_courted": 968,
+          "directly_courted_called": 836,
           "directly_courted_referenced": 132,
-          "implemented": 846,
+          "implemented": 968,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -36291,6 +36328,125 @@
               "RT-PHASE12-REF"
             ],
             "symbol": "CT_POLICY_EVAL_CTX_set_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_CERT_ID_V2_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_CERT_ID_V2_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_CERT_ID_V2_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_CERT_ID_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_CERT_ID_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_CERT_ID_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_ISSUER_SERIAL_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_ISSUER_SERIAL_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_ISSUER_SERIAL_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_SIGNING_CERT_V2_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_SIGNING_CERT_V2_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_SIGNING_CERT_V2_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_SIGNING_CERT_V2_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_SIGNING_CERT_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_SIGNING_CERT_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_SIGNING_CERT_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "ESS_SIGNING_CERT_new"
           },
           {
             "basis": "called",
@@ -38224,6 +38380,545 @@
               "RT-CMP"
             ],
             "symbol": "OSSL_CMP_validate_cert_path"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ATTRIBUTETYPEANDVALUE_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ATTRIBUTETYPEANDVALUE_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTID_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTID_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTID_gen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTID_get0_issuer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTID_get0_serialNumber"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTID_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTID_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_fill"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_get0_extensions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_get0_issuer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_get0_publicKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_get0_serialNumber"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_get0_subject"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_CERTTEMPLATE_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDKEY_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDKEY_get1_encCert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDKEY_get1_pkey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDKEY_init_envdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDKEY_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDKEY_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDVALUE_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDVALUE_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDVALUE_get1_encCert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDVALUE_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_ENCRYPTEDVALUE_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSGS_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSGS_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSGS_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSGS_verify_popo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_PKIPublicationInfo_push0_SinglePubInfo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_centralkeygen_requested"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_create_popo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_get0_regCtrl_authenticator"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_get0_regCtrl_oldCertID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_get0_regCtrl_pkiPublicationInfo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_get0_regCtrl_protocolEncrKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_get0_regCtrl_regToken"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_get0_regInfo_certReq"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_get0_regInfo_utf8Pairs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_get0_tmpl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_get_certReqId"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_push0_extension"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set0_SinglePubInfo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set0_extensions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set0_validity"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set1_regCtrl_authenticator"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set1_regCtrl_oldCertID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set1_regCtrl_pkiPublicationInfo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set1_regCtrl_protocolEncrKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set1_regCtrl_regToken"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set1_regInfo_certReq"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set1_regInfo_utf8Pairs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set_PKIPublicationInfo_action"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_MSG_set_certReqId"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_PBMPARAMETER_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_PBMPARAMETER_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_PBMPARAMETER_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_PKIPUBLICATIONINFO_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_PKIPUBLICATIONINFO_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_PKIPUBLICATIONINFO_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_SINGLEPUBINFO_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_SINGLEPUBINFO_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_SINGLEPUBINFO_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_pbm_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "OSSL_CRMF_pbmp_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "OSSL_ESS_check_signing_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "OSSL_ESS_signing_cert_new_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "OSSL_ESS_signing_cert_v2_new_init"
           },
           {
             "basis": "called",
@@ -40394,6 +41089,41 @@
             "symbol": "d2i_CMS_bio"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "d2i_ESS_CERT_ID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "d2i_ESS_CERT_ID_V2"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "d2i_ESS_ISSUER_SERIAL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "d2i_ESS_SIGNING_CERT"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "d2i_ESS_SIGNING_CERT_V2"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE12-REF"
@@ -40534,6 +41264,69 @@
               "RT-CMP"
             ],
             "symbol": "d2i_OSSL_CMP_PKISI"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "d2i_OSSL_CRMF_CERTID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "d2i_OSSL_CRMF_CERTTEMPLATE"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "d2i_OSSL_CRMF_ENCRYPTEDKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "d2i_OSSL_CRMF_ENCRYPTEDVALUE"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "d2i_OSSL_CRMF_MSG"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "d2i_OSSL_CRMF_MSGS"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "d2i_OSSL_CRMF_PBMPARAMETER"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "d2i_OSSL_CRMF_PKIPUBLICATIONINFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "d2i_OSSL_CRMF_SINGLEPUBINFO"
           },
           {
             "basis": "called",
@@ -40739,6 +41532,41 @@
             "symbol": "i2d_CMS_bio_stream"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "i2d_ESS_CERT_ID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "i2d_ESS_CERT_ID_V2"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "i2d_ESS_ISSUER_SERIAL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "i2d_ESS_SIGNING_CERT"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ESS"
+            ],
+            "symbol": "i2d_ESS_SIGNING_CERT_V2"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE12-REF"
@@ -40880,6 +41708,69 @@
               "RT-CMP"
             ],
             "symbol": "i2d_OSSL_CMP_PKISI"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "i2d_OSSL_CRMF_CERTID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "i2d_OSSL_CRMF_CERTTEMPLATE"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "i2d_OSSL_CRMF_ENCRYPTEDKEY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "i2d_OSSL_CRMF_ENCRYPTEDVALUE"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "i2d_OSSL_CRMF_MSG"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "i2d_OSSL_CRMF_MSGS"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "i2d_OSSL_CRMF_PBMPARAMETER"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "i2d_OSSL_CRMF_PKIPUBLICATIONINFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CRMF"
+            ],
+            "symbol": "i2d_OSSL_CRMF_SINGLEPUBINFO"
           },
           {
             "basis": "called",
@@ -41102,14 +41993,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 12,
-        "staged_candidate_probes": 7
+        "staged_candidate_probes": 9
       }
     ],
     "totals": {
-      "directly_courted": 5327,
-      "directly_courted_called": 4342,
-      "directly_courted_referenced": 985,
-      "implemented": 5335,
+      "directly_courted": 5449,
+      "directly_courted_called": 4466,
+      "directly_courted_referenced": 983,
+      "implemented": 5457,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -41120,7 +42011,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d7c20c24c6c0f970dbc8a7bd587fbea75e257a680da2f673a3a03595e2231dce"
+      "sha256": "9e5f055e5f6fa53e3da24a438ce13175f9db21671248e35805ccb7cee366b922"
     },
     {
       "name": "symbol-ownership",
@@ -41135,7 +42026,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "3ec458b183cde49c0952d7ce79834c2fe65a3b64ba7130d07408f5423c32d19d"
+      "sha256": "6c08341089d19d51ad29dded7893f1f84593028399a214508fb353845d898f64"
     },
     {
       "name": "phase3-courts",
@@ -41145,7 +42036,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "69d4aeb16f5dd55a0afa214cb338d1c11eb4c30c867225796884f5663321d165"
+      "sha256": "c77a87c65c96cc32420fdf09c6c2e9c0b17633da4603109f14eac0439fc7153b"
     },
     {
       "name": "phase4-courts",
@@ -41155,7 +42046,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "110010df947ee672f0fa84c731e0b61d9cd40240362c44f98303655a2b83f936"
+      "sha256": "26d9fd0dd1c7fd871ac45868b8e46d2200656440ab291910ce87b77b46777a6a"
     },
     {
       "name": "phase5-courts",
@@ -41165,7 +42056,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "51c1ab1c6bb8f12f716cf09a83631a230194957431cad439c5f7832b18208392"
+      "sha256": "9bf2ebb4ac013d71260209cd4484b4735ae0ed1e2bf737f0690d772a7b0d94c4"
     },
     {
       "name": "phase6-courts",
@@ -41175,7 +42066,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "91cffff06546862feb3e2fd0f406fae1b06510a21d6c9e0338d3c163a6500734"
+      "sha256": "9dd163a38d8ffbf29d19fa530fd8eec45048095728d60812773d93c3cd7910c4"
     },
     {
       "name": "phase7-courts",
@@ -41185,7 +42076,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "81d2c352e3fe99862802978bb7a5d49854e026f0f01858a26225744ce54a68bb"
+      "sha256": "f23c2c11e0387c892a42e583205036370f6562c81b9c73e9c1d72c0a8d1f994e"
     },
     {
       "name": "phase8-courts",
@@ -41195,7 +42086,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "c9dcbd98d1f541857a46841ec1414452bd31f5e6b0d04a71cbf9cb9859f3d0f4"
+      "sha256": "632310bcbb6a2bdf09740af457721a55865d00d4277053955afa32c3caf70e5a"
     },
     {
       "name": "phase9-courts",
@@ -41205,7 +42096,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "ce83152307a9a8b11c8e34151c46efa02ae948216bff9c7304a6c54427afe3db"
+      "sha256": "82e99fc7a501f89fb777ae9e4a9ea4c5e82679f4e3c5f5485828da21224ac4de"
     },
     {
       "name": "phase10-courts",
@@ -41215,7 +42106,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "551c449e5b8207f3fd6b5333365b4932190ac0d271d0cc0f22eb2213266e3e91"
+      "sha256": "69b3a0e3474420b76136efbd9dacc3ac276961e2f8606bbcc13547b471f7f622"
     },
     {
       "name": "phase11-courts",
@@ -41225,12 +42116,12 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "54de0cf0fdeff7b16227f1b231a28126576a48c61143c1ef198433786d6600f0"
+      "sha256": "946c12e49d222ada8e061f3b9787eccf276a8663110132443930ec47e4e0b746"
     },
     {
       "name": "phase12-courts",
       "path": "artifacts/phase12/COURTS.json",
-      "sha256": "8adc2c28d048194c41d648ee8065a610bcbad813b9149f4aca114ebfd875bc55"
+      "sha256": "12d63ad22aa085f236a4f4f4c319584c3f27c90de8bfc08f90c2805d4b8fb41a"
     }
   ],
   "kind": "court-coverage",

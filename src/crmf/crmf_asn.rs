@@ -1,24 +1,30 @@
-//! `crypto/crmf/crmf_asn.c` — the CRMF item groups, landed **internally** by Phase 12.4.
+//! `crypto/crmf/crmf_asn.c` — the CRMF item groups. Phase 12.4 laid the layout crate-internally;
+//! Phase 12.7 publishes `crmf_asn.c`'s exports.
 //!
 //! `cmp_asn.c`'s message engine carries `OSSL_CRMF` certificate requests: `OSSL_CMP_PKIBODY`
 //! CHOICEs `OSSL_CRMF_MSGS`, `OSSL_CMP_ITAV`'s `ANY DEFINED BY` table names
 //! `OSSL_CRMF_ENCRYPTEDVALUE`, and `OSSL_CMP_ATAVS` is a `SEQUENCE OF`
 //! `OSSL_CRMF_ATTRIBUTETYPEANDVALUE`. The plan orders 12.4 before 12.7 for exactly this reason
-//! (`docs/PHASE-12-SUBPHASES.md` §2.1), so the item groups those CMP definitions name are
-//! transcribed here, crate-internal and **without** the `OSSL_CRMF_*` exports: the public CRMF
-//! surface is 12.7's, and its 92 open rows stay open. What lands here is the layout and the
-//! templates, so that `crmf_asn.c`'s exports can be published by 12.7 without moving a byte.
+//! (`docs/PHASE-12-SUBPHASES.md` §2.1), so 12.4 transcribed the layout and the templates with the
+//! structs and item descriptors `pub(crate)`, and 12.7 adds the `#[no_mangle]` entry points over
+//! them without moving a byte of the object model.
 //!
 //! Every struct is `crmf_local.h`'s spelling in its order and every template is its
-//! `ASN1_SEQUENCE`/`ASN1_CHOICE`/`ASN1_ADB` macro expanded by hand.
+//! `ASN1_SEQUENCE`/`ASN1_CHOICE`/`ASN1_ADB` macro expanded by hand. `crmf_asn.c` exports ten item
+//! groups; the layout of `OSSL_CRMF_POPO`/`OSSL_CRMF_POPOSIGNINGKEY`/`OSSL_CRMF_POPOPRIVKEY` etc.
+//! is transcribed even though `crmf_asn.h` declares no functions for them, because the
+//! `crmf_asn.c` objects the exported groups embed them.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 #![allow(dead_code, non_snake_case)]
 
-use core::ffi::{c_int, c_long, c_void};
+use core::ffi::{c_int, c_long, c_uchar, c_void};
 use core::ptr;
 
+use crate::asn1::a_dup::ASN1_item_dup;
+use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::fre::ASN1_item_free;
+use crate::asn1::i2d::ASN1_item_i2d;
 use crate::asn1::items::{
     ASN1_ANY_it, ASN1_BIT_STRING_it, ASN1_INTEGER_it, ASN1_NULL_it, ASN1_OBJECT_it,
     ASN1_OCTET_STRING_it, ASN1_TIME_it, ASN1_UTF8STRING_it,
@@ -63,168 +69,168 @@ unsafe impl<const N: usize> Sync for SyncAdbTable<N> {}
 
 /// `OSSL_CRMF_PRIVATEKEYINFO` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfPrivateKeyInfo {
-    version: *mut Asn1String,
-    private_key_algorithm: *mut X509Algor,
-    private_key: *mut Asn1String,
-    attributes: *mut OpenSslStack,
+pub struct CrmfPrivateKeyInfo {
+    pub(crate) version: *mut Asn1String,
+    pub(crate) private_key_algorithm: *mut X509Algor,
+    pub(crate) private_key: *mut Asn1String,
+    pub(crate) attributes: *mut OpenSslStack,
 }
 
 /// `OSSL_CRMF_ENCKEYWITHID_IDENTIFIER` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfEncKeyWithIdIdentifier {
-    type_: c_int,
-    value: CrmfEncKeyWithIdIdentifierValue,
+pub struct CrmfEncKeyWithIdIdentifier {
+    pub(crate) type_: c_int,
+    pub(crate) value: CrmfEncKeyWithIdIdentifierValue,
 }
 
 /// The `ENCKEYWITHID_IDENTIFIER` union.
 #[repr(C)]
-pub(crate) union CrmfEncKeyWithIdIdentifierValue {
-    string: *mut Asn1String,
-    general_name: *mut c_void,
+pub union CrmfEncKeyWithIdIdentifierValue {
+    pub(crate) string: *mut Asn1String,
+    pub(crate) general_name: *mut c_void,
 }
 
 /// `OSSL_CRMF_ENCKEYWITHID` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfEncKeyWithId {
-    private_key: *mut CrmfPrivateKeyInfo,
-    identifier: *mut CrmfEncKeyWithIdIdentifier,
+pub struct CrmfEncKeyWithId {
+    pub(crate) private_key: *mut CrmfPrivateKeyInfo,
+    pub(crate) identifier: *mut CrmfEncKeyWithIdIdentifier,
 }
 
 /// `OSSL_CRMF_CERTID` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfCertId {
-    issuer: *mut c_void,
-    serial_number: *mut Asn1String,
+pub struct CrmfCertId {
+    pub(crate) issuer: *mut c_void,
+    pub(crate) serial_number: *mut Asn1String,
 }
 
 /// `OSSL_CRMF_ENCRYPTEDVALUE` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfEncryptedValue {
-    intended_alg: *mut X509Algor,
-    symm_alg: *mut X509Algor,
-    enc_symm_key: *mut Asn1String,
-    key_alg: *mut X509Algor,
-    value_hint: *mut Asn1String,
-    enc_value: *mut Asn1String,
+pub struct CrmfEncryptedValue {
+    pub(crate) intended_alg: *mut X509Algor,
+    pub(crate) symm_alg: *mut X509Algor,
+    pub(crate) enc_symm_key: *mut Asn1String,
+    pub(crate) key_alg: *mut X509Algor,
+    pub(crate) value_hint: *mut Asn1String,
+    pub(crate) enc_value: *mut Asn1String,
 }
 
 /// `OSSL_CRMF_ENCRYPTEDKEY` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfEncryptedKey {
-    type_: c_int,
-    value: CrmfEncryptedKeyValue,
+pub struct CrmfEncryptedKey {
+    pub(crate) type_: c_int,
+    pub(crate) value: CrmfEncryptedKeyValue,
 }
 
 /// The `ENCRYPTEDKEY` union.
 #[repr(C)]
-pub(crate) union CrmfEncryptedKeyValue {
-    encrypted_value: *mut CrmfEncryptedValue,
-    enveloped_data: *mut c_void,
+pub union CrmfEncryptedKeyValue {
+    pub(crate) encrypted_value: *mut CrmfEncryptedValue,
+    pub(crate) enveloped_data: *mut c_void,
 }
 
 /// `OSSL_CRMF_SINGLEPUBINFO` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfSinglePubInfo {
-    pub_method: *mut Asn1String,
-    pub_location: *mut c_void,
+pub struct CrmfSinglePubInfo {
+    pub(crate) pub_method: *mut Asn1String,
+    pub(crate) pub_location: *mut c_void,
 }
 
 /// `OSSL_CRMF_PKIPUBLICATIONINFO` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfPkiPublicationInfo {
-    action: *mut Asn1String,
-    pub_infos: *mut OpenSslStack,
+pub struct CrmfPkiPublicationInfo {
+    pub(crate) action: *mut Asn1String,
+    pub(crate) pub_infos: *mut OpenSslStack,
 }
 
 /// `OSSL_CRMF_PKMACVALUE` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfPkmacValue {
-    alg_id: *mut X509Algor,
-    value: *mut Asn1String,
+pub struct CrmfPkmacValue {
+    pub(crate) alg_id: *mut X509Algor,
+    pub(crate) value: *mut Asn1String,
 }
 
 /// `OSSL_CRMF_POPOPRIVKEY` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfPopoPrivKey {
-    type_: c_int,
-    value: CrmfPopoPrivKeyValue,
+pub struct CrmfPopoPrivKey {
+    pub(crate) type_: c_int,
+    pub(crate) value: CrmfPopoPrivKeyValue,
 }
 
 /// The `POPOPRIVKEY` union.
 #[repr(C)]
-pub(crate) union CrmfPopoPrivKeyValue {
-    this_message: *mut Asn1String,
-    subsequent_message: *mut Asn1String,
-    dh_mac: *mut Asn1String,
-    agree_mac: *mut CrmfPkmacValue,
-    encrypted_key: *mut Asn1String,
+pub union CrmfPopoPrivKeyValue {
+    pub(crate) this_message: *mut Asn1String,
+    pub(crate) subsequent_message: *mut Asn1String,
+    pub(crate) dh_mac: *mut Asn1String,
+    pub(crate) agree_mac: *mut CrmfPkmacValue,
+    pub(crate) encrypted_key: *mut Asn1String,
 }
 
 /// `OSSL_CRMF_PBMPARAMETER` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfPbmParameter {
-    salt: *mut Asn1String,
-    owf: *mut X509Algor,
-    iteration_count: *mut Asn1String,
-    mac: *mut X509Algor,
+pub struct CrmfPbmParameter {
+    pub(crate) salt: *mut Asn1String,
+    pub(crate) owf: *mut X509Algor,
+    pub(crate) iteration_count: *mut Asn1String,
+    pub(crate) mac: *mut X509Algor,
 }
 
 /// `OSSL_CRMF_POPOSIGNINGKEYINPUT_AUTHINFO` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfPopoSigningKeyInputAuthInfo {
-    type_: c_int,
-    value: CrmfPopoSigningKeyInputAuthInfoValue,
+pub struct CrmfPopoSigningKeyInputAuthInfo {
+    pub(crate) type_: c_int,
+    pub(crate) value: CrmfPopoSigningKeyInputAuthInfoValue,
 }
 
 /// The `POPOSIGNINGKEYINPUT_AUTHINFO` union.
 #[repr(C)]
-pub(crate) union CrmfPopoSigningKeyInputAuthInfoValue {
-    sender: *mut c_void,
-    public_key_mac: *mut CrmfPkmacValue,
+pub union CrmfPopoSigningKeyInputAuthInfoValue {
+    pub(crate) sender: *mut c_void,
+    pub(crate) public_key_mac: *mut CrmfPkmacValue,
 }
 
 /// `OSSL_CRMF_POPOSIGNINGKEYINPUT` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfPopoSigningKeyInput {
-    auth_info: *mut CrmfPopoSigningKeyInputAuthInfo,
-    public_key: *mut c_void,
+pub struct CrmfPopoSigningKeyInput {
+    pub(crate) auth_info: *mut CrmfPopoSigningKeyInputAuthInfo,
+    pub(crate) public_key: *mut c_void,
 }
 
 /// `OSSL_CRMF_POPOSIGNINGKEY` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfPopoSigningKey {
-    poposk_input: *mut CrmfPopoSigningKeyInput,
-    algorithm_identifier: *mut X509Algor,
-    signature: *mut Asn1String,
+pub struct CrmfPopoSigningKey {
+    pub(crate) poposk_input: *mut CrmfPopoSigningKeyInput,
+    pub(crate) algorithm_identifier: *mut X509Algor,
+    pub(crate) signature: *mut Asn1String,
 }
 
 /// `OSSL_CRMF_POPO` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfPopo {
-    type_: c_int,
-    value: CrmfPopoValue,
+pub struct CrmfPopo {
+    pub(crate) type_: c_int,
+    pub(crate) value: CrmfPopoValue,
 }
 
 /// The `POPO` union.
 #[repr(C)]
-pub(crate) union CrmfPopoValue {
-    ra_verified: *mut Asn1String,
-    signature: *mut CrmfPopoSigningKey,
-    key_encipherment: *mut CrmfPopoPrivKey,
-    key_agreement: *mut CrmfPopoPrivKey,
+pub union CrmfPopoValue {
+    pub(crate) ra_verified: *mut Asn1String,
+    pub(crate) signature: *mut CrmfPopoSigningKey,
+    pub(crate) key_encipherment: *mut CrmfPopoPrivKey,
+    pub(crate) key_agreement: *mut CrmfPopoPrivKey,
 }
 
 /// `OSSL_CRMF_ATTRIBUTETYPEANDVALUE` — `internal/crmf.h`.
 #[repr(C)]
-pub(crate) struct CrmfAttributeTypeAndValue {
+pub struct CrmfAttributeTypeAndValue {
     pub(crate) type_: *mut Asn1Object,
     pub(crate) value: CrmfAttributeTypeAndValueValue,
 }
 
 /// The `ATTRIBUTETYPEANDVALUE` union.
 #[repr(C)]
-pub(crate) union CrmfAttributeTypeAndValueValue {
+pub union CrmfAttributeTypeAndValueValue {
     pub(crate) reg_token: *mut Asn1String,
     pub(crate) authenticator: *mut Asn1String,
     pub(crate) pki_publication_info: *mut CrmfPkiPublicationInfo,
@@ -239,40 +245,40 @@ pub(crate) union CrmfAttributeTypeAndValueValue {
 
 /// `OSSL_CRMF_OPTIONALVALIDITY` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfOptionalValidity {
-    not_before: *mut Asn1String,
-    not_after: *mut Asn1String,
+pub struct CrmfOptionalValidity {
+    pub(crate) not_before: *mut Asn1String,
+    pub(crate) not_after: *mut Asn1String,
 }
 
 /// `OSSL_CRMF_CERTTEMPLATE` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfCertTemplate {
-    version: *mut Asn1String,
-    serial_number: *mut Asn1String,
-    signing_alg: *mut X509Algor,
-    issuer: *mut X509Name,
-    validity: *mut CrmfOptionalValidity,
-    subject: *mut X509Name,
-    public_key: *mut c_void,
-    issuer_uid: *mut Asn1String,
-    subject_uid: *mut Asn1String,
-    extensions: *mut OpenSslStack,
+pub struct CrmfCertTemplate {
+    pub(crate) version: *mut Asn1String,
+    pub(crate) serial_number: *mut Asn1String,
+    pub(crate) signing_alg: *mut X509Algor,
+    pub(crate) issuer: *mut X509Name,
+    pub(crate) validity: *mut CrmfOptionalValidity,
+    pub(crate) subject: *mut X509Name,
+    pub(crate) public_key: *mut c_void,
+    pub(crate) issuer_uid: *mut Asn1String,
+    pub(crate) subject_uid: *mut Asn1String,
+    pub(crate) extensions: *mut OpenSslStack,
 }
 
 /// `OSSL_CRMF_CERTREQUEST` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfCertRequest {
-    cert_req_id: *mut Asn1String,
-    cert_template: *mut CrmfCertTemplate,
-    controls: *mut OpenSslStack,
+pub struct CrmfCertRequest {
+    pub(crate) cert_req_id: *mut Asn1String,
+    pub(crate) cert_template: *mut CrmfCertTemplate,
+    pub(crate) controls: *mut OpenSslStack,
 }
 
 /// `OSSL_CRMF_MSG` — `crmf_local.h`.
 #[repr(C)]
-pub(crate) struct CrmfMsg {
-    cert_req: *mut CrmfCertRequest,
-    popo: *mut CrmfPopo,
-    reg_info: *mut OpenSslStack,
+pub struct CrmfMsg {
+    pub(crate) cert_req: *mut CrmfCertRequest,
+    pub(crate) popo: *mut CrmfPopo,
+    pub(crate) reg_info: *mut OpenSslStack,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1219,4 +1225,620 @@ pub(crate) unsafe fn certtemplate_dup(p: *const CrmfCertTemplate) -> *mut CrmfCe
 pub(crate) unsafe fn certid_dup(p: *const CrmfCertId) -> *mut CrmfCertId {
     // SAFETY: `p` is NULL or a live value; the item layer duplicates it.
     unsafe { crate::asn1::a_dup::ASN1_item_dup(crmf_certid_it(), p.cast()) }.cast()
+}
+
+// ---------------------------------------------------------------------------------------------
+// The exported item groups — `DECLARE_ASN1_FUNCTIONS` / `DECLARE_ASN1_DUP_FUNCTION` in
+// `include/openssl/crmf.h.in`, expanded by `IMPLEMENT_ASN1_*` at the cited lines of
+// `crypto/crmf/crmf_asn.c`. Ten groups publish `_it`/`_new`/`_free`/`d2i_`/`i2d_`, and the two
+// `crmf.h` gives a `DECLARE_ASN1_DUP_FUNCTION` (`OSSL_CRMF_ATTRIBUTETYPEANDVALUE`,
+// `OSSL_CRMF_CERTID`, `OSSL_CRMF_CERTTEMPLATE`, `OSSL_CRMF_MSG`) also publish `_dup`.
+// ---------------------------------------------------------------------------------------------
+
+/// `const ASN1_ITEM *OSSL_CRMF_CERTID_it(void)` — `crmf_asn.c:44`, the `ASN1_SEQUENCE_END` that
+/// publishes the item.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_CERTID_it() -> *const Asn1Item {
+    crmf_certid_it()
+}
+
+/// `OSSL_CRMF_CERTID *OSSL_CRMF_CERTID_new(void)` — `crmf_asn.c:44`, the `_new` half of
+/// `IMPLEMENT_ASN1_FUNCTIONS`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_CERTID_new() -> *mut CrmfCertId {
+    // SAFETY: `crmf_certid_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(crmf_certid_it()) }.cast::<CrmfCertId>()
+}
+
+/// `void OSSL_CRMF_CERTID_free(OSSL_CRMF_CERTID *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_CERTID_free(a: *mut CrmfCertId) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_certid_it()) };
+}
+
+/// `OSSL_CRMF_CERTID *d2i_OSSL_CRMF_CERTID(OSSL_CRMF_CERTID **a, const unsigned char **in, long`
+/// `len)` — `crmf_asn.c:44`, the decoder half.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_OSSL_CRMF_CERTID(
+    a: *mut *mut CrmfCertId,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut CrmfCertId {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_d2i(a.cast(), in_, len, crmf_certid_it()).cast::<CrmfCertId>() }
+}
+
+/// `int i2d_OSSL_CRMF_CERTID(const OSSL_CRMF_CERTID *a, unsigned char **out)` — the encoder half.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_OSSL_CRMF_CERTID(
+    a: *const CrmfCertId,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, crmf_certid_it()) }
+}
+
+/// `OSSL_CRMF_CERTID *OSSL_CRMF_CERTID_dup(const OSSL_CRMF_CERTID *a)` — `crmf_asn.c:45`, the
+/// `IMPLEMENT_ASN1_DUP_FUNCTION`.
+///
+/// # Safety
+/// `a` is NULL or a live `OSSL_CRMF_CERTID`.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_CERTID_dup(a: *const CrmfCertId) -> *mut CrmfCertId {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_dup(crmf_certid_it(), a.cast()) }.cast::<CrmfCertId>()
+}
+
+/// `const ASN1_ITEM *OSSL_CRMF_CERTTEMPLATE_it(void)` — `crmf_asn.c:210`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_CERTTEMPLATE_it() -> *const Asn1Item {
+    crmf_certtemplate_it()
+}
+
+/// `OSSL_CRMF_CERTTEMPLATE *OSSL_CRMF_CERTTEMPLATE_new(void)` — `crmf_asn.c:211-212`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_CERTTEMPLATE_new() -> *mut CrmfCertTemplate {
+    // SAFETY: `crmf_certtemplate_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(crmf_certtemplate_it()) }.cast::<CrmfCertTemplate>()
+}
+
+/// `void OSSL_CRMF_CERTTEMPLATE_free(OSSL_CRMF_CERTTEMPLATE *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_CERTTEMPLATE_free(a: *mut CrmfCertTemplate) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_certtemplate_it()) };
+}
+
+/// `OSSL_CRMF_CERTTEMPLATE *d2i_OSSL_CRMF_CERTTEMPLATE(OSSL_CRMF_CERTTEMPLATE **a, const`
+/// `unsigned char **in, long len)` — the decoder half.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_OSSL_CRMF_CERTTEMPLATE(
+    a: *mut *mut CrmfCertTemplate,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut CrmfCertTemplate {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_d2i(a.cast(), in_, len, crmf_certtemplate_it()).cast::<CrmfCertTemplate>() }
+}
+
+/// `int i2d_OSSL_CRMF_CERTTEMPLATE(const OSSL_CRMF_CERTTEMPLATE *a, unsigned char **out)`.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_OSSL_CRMF_CERTTEMPLATE(
+    a: *const CrmfCertTemplate,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, crmf_certtemplate_it()) }
+}
+
+/// `OSSL_CRMF_CERTTEMPLATE *OSSL_CRMF_CERTTEMPLATE_dup(const OSSL_CRMF_CERTTEMPLATE *a)` —
+/// `crmf_asn.c:212`.
+///
+/// # Safety
+/// `a` is NULL or a live `OSSL_CRMF_CERTTEMPLATE`.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_CERTTEMPLATE_dup(
+    a: *const CrmfCertTemplate,
+) -> *mut CrmfCertTemplate {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_dup(crmf_certtemplate_it(), a.cast()) }.cast::<CrmfCertTemplate>()
+}
+
+/// `const ASN1_ITEM *OSSL_CRMF_ENCRYPTEDVALUE_it(void)` — `crmf_asn.c:54`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_it() -> *const Asn1Item {
+    crmf_encryptedvalue_it()
+}
+
+/// `OSSL_CRMF_ENCRYPTEDVALUE *OSSL_CRMF_ENCRYPTEDVALUE_new(void)` — `crmf_asn.c:55`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_new() -> *mut CrmfEncryptedValue {
+    // SAFETY: `crmf_encryptedvalue_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(crmf_encryptedvalue_it()) }.cast::<CrmfEncryptedValue>()
+}
+
+/// `void OSSL_CRMF_ENCRYPTEDVALUE_free(OSSL_CRMF_ENCRYPTEDVALUE *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDVALUE_free(a: *mut CrmfEncryptedValue) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_encryptedvalue_it()) };
+}
+
+/// `OSSL_CRMF_ENCRYPTEDVALUE *d2i_OSSL_CRMF_ENCRYPTEDVALUE(OSSL_CRMF_ENCRYPTEDVALUE **a, const`
+/// `unsigned char **in, long len)` — the decoder half.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_OSSL_CRMF_ENCRYPTEDVALUE(
+    a: *mut *mut CrmfEncryptedValue,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut CrmfEncryptedValue {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe {
+        ASN1_item_d2i(a.cast(), in_, len, crmf_encryptedvalue_it()).cast::<CrmfEncryptedValue>()
+    }
+}
+
+/// `int i2d_OSSL_CRMF_ENCRYPTEDVALUE(const OSSL_CRMF_ENCRYPTEDVALUE *a, unsigned char **out)`.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_OSSL_CRMF_ENCRYPTEDVALUE(
+    a: *const CrmfEncryptedValue,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, crmf_encryptedvalue_it()) }
+}
+
+/// `const ASN1_ITEM *OSSL_CRMF_ENCRYPTEDKEY_it(void)` — `crmf_asn.c:69`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_ENCRYPTEDKEY_it() -> *const Asn1Item {
+    crmf_encryptedkey_it()
+}
+
+/// `OSSL_CRMF_ENCRYPTEDKEY *OSSL_CRMF_ENCRYPTEDKEY_new(void)` — `crmf_asn.c:70`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_ENCRYPTEDKEY_new() -> *mut CrmfEncryptedKey {
+    // SAFETY: `crmf_encryptedkey_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(crmf_encryptedkey_it()) }.cast::<CrmfEncryptedKey>()
+}
+
+/// `void OSSL_CRMF_ENCRYPTEDKEY_free(OSSL_CRMF_ENCRYPTEDKEY *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_ENCRYPTEDKEY_free(a: *mut CrmfEncryptedKey) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_encryptedkey_it()) };
+}
+
+/// `OSSL_CRMF_ENCRYPTEDKEY *d2i_OSSL_CRMF_ENCRYPTEDKEY(OSSL_CRMF_ENCRYPTEDKEY **a, const`
+/// `unsigned char **in, long len)` — the decoder half.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_OSSL_CRMF_ENCRYPTEDKEY(
+    a: *mut *mut CrmfEncryptedKey,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut CrmfEncryptedKey {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_d2i(a.cast(), in_, len, crmf_encryptedkey_it()).cast::<CrmfEncryptedKey>() }
+}
+
+/// `int i2d_OSSL_CRMF_ENCRYPTEDKEY(const OSSL_CRMF_ENCRYPTEDKEY *a, unsigned char **out)`.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_OSSL_CRMF_ENCRYPTEDKEY(
+    a: *const CrmfEncryptedKey,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, crmf_encryptedkey_it()) }
+}
+
+/// `const ASN1_ITEM *OSSL_CRMF_SINGLEPUBINFO_it(void)` — `crmf_asn.c:75`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_SINGLEPUBINFO_it() -> *const Asn1Item {
+    crmf_singlepubinfo_it()
+}
+
+/// `OSSL_CRMF_SINGLEPUBINFO *OSSL_CRMF_SINGLEPUBINFO_new(void)` — `crmf_asn.c:76`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_SINGLEPUBINFO_new() -> *mut CrmfSinglePubInfo {
+    // SAFETY: `crmf_singlepubinfo_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(crmf_singlepubinfo_it()) }.cast::<CrmfSinglePubInfo>()
+}
+
+/// `void OSSL_CRMF_SINGLEPUBINFO_free(OSSL_CRMF_SINGLEPUBINFO *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_SINGLEPUBINFO_free(a: *mut CrmfSinglePubInfo) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_singlepubinfo_it()) };
+}
+
+/// `OSSL_CRMF_SINGLEPUBINFO *d2i_OSSL_CRMF_SINGLEPUBINFO(OSSL_CRMF_SINGLEPUBINFO **a, const`
+/// `unsigned char **in, long len)` — the decoder half.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_OSSL_CRMF_SINGLEPUBINFO(
+    a: *mut *mut CrmfSinglePubInfo,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut CrmfSinglePubInfo {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe {
+        ASN1_item_d2i(a.cast(), in_, len, crmf_singlepubinfo_it()).cast::<CrmfSinglePubInfo>()
+    }
+}
+
+/// `int i2d_OSSL_CRMF_SINGLEPUBINFO(const OSSL_CRMF_SINGLEPUBINFO *a, unsigned char **out)`.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_OSSL_CRMF_SINGLEPUBINFO(
+    a: *const CrmfSinglePubInfo,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, crmf_singlepubinfo_it()) }
+}
+
+/// `const ASN1_ITEM *OSSL_CRMF_PKIPUBLICATIONINFO_it(void)` — `crmf_asn.c:82`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_PKIPUBLICATIONINFO_it() -> *const Asn1Item {
+    crmf_pkipublicationinfo_it()
+}
+
+/// `OSSL_CRMF_PKIPUBLICATIONINFO *OSSL_CRMF_PKIPUBLICATIONINFO_new(void)` — `crmf_asn.c:83`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_PKIPUBLICATIONINFO_new() -> *mut CrmfPkiPublicationInfo {
+    // SAFETY: `crmf_pkipublicationinfo_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(crmf_pkipublicationinfo_it()) }.cast::<CrmfPkiPublicationInfo>()
+}
+
+/// `void OSSL_CRMF_PKIPUBLICATIONINFO_free(OSSL_CRMF_PKIPUBLICATIONINFO *a)` — the free half.
+///
+/// # Safety
+/// `a` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_PKIPUBLICATIONINFO_free(a: *mut CrmfPkiPublicationInfo) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_pkipublicationinfo_it()) };
+}
+
+/// `OSSL_CRMF_PKIPUBLICATIONINFO *d2i_OSSL_CRMF_PKIPUBLICATIONINFO(OSSL_CRMF_PKIPUBLICATIONINFO`
+/// `**a, const unsigned char **in, long len)` — `crmf_asn.c:83`, the decoder half.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_OSSL_CRMF_PKIPUBLICATIONINFO(
+    a: *mut *mut CrmfPkiPublicationInfo,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut CrmfPkiPublicationInfo {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe {
+        ASN1_item_d2i(a.cast(), in_, len, crmf_pkipublicationinfo_it())
+            .cast::<CrmfPkiPublicationInfo>()
+    }
+}
+
+/// `int i2d_OSSL_CRMF_PKIPUBLICATIONINFO(const OSSL_CRMF_PKIPUBLICATIONINFO *a, unsigned char`
+/// `**out)` — the encoder half.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_OSSL_CRMF_PKIPUBLICATIONINFO(
+    a: *const CrmfPkiPublicationInfo,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, crmf_pkipublicationinfo_it()) }
+}
+
+/// `const ASN1_ITEM *OSSL_CRMF_PBMPARAMETER_it(void)` — `crmf_asn.c:107`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_PBMPARAMETER_it() -> *const Asn1Item {
+    crmf_pbmparameter_it()
+}
+
+/// `OSSL_CRMF_PBMPARAMETER *OSSL_CRMF_PBMPARAMETER_new(void)` — `crmf_asn.c:108`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_PBMPARAMETER_new() -> *mut CrmfPbmParameter {
+    // SAFETY: `crmf_pbmparameter_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(crmf_pbmparameter_it()) }.cast::<CrmfPbmParameter>()
+}
+
+/// `void OSSL_CRMF_PBMPARAMETER_free(OSSL_CRMF_PBMPARAMETER *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_PBMPARAMETER_free(a: *mut CrmfPbmParameter) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_pbmparameter_it()) };
+}
+
+/// `OSSL_CRMF_PBMPARAMETER *d2i_OSSL_CRMF_PBMPARAMETER(OSSL_CRMF_PBMPARAMETER **a, const`
+/// `unsigned char **in, long len)` — the decoder half.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_OSSL_CRMF_PBMPARAMETER(
+    a: *mut *mut CrmfPbmParameter,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut CrmfPbmParameter {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_d2i(a.cast(), in_, len, crmf_pbmparameter_it()).cast::<CrmfPbmParameter>() }
+}
+
+/// `int i2d_OSSL_CRMF_PBMPARAMETER(const OSSL_CRMF_PBMPARAMETER *a, unsigned char **out)`.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_OSSL_CRMF_PBMPARAMETER(
+    a: *const CrmfPbmParameter,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, crmf_pbmparameter_it()) }
+}
+
+/// `const ASN1_ITEM *OSSL_CRMF_MSG_it(void)` — `crmf_asn.c:228`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_MSG_it() -> *const Asn1Item {
+    crmf_msg_it()
+}
+
+/// `OSSL_CRMF_MSG *OSSL_CRMF_MSG_new(void)` — `crmf_asn.c:229`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_MSG_new() -> *mut CrmfMsg {
+    // SAFETY: `crmf_msg_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(crmf_msg_it()) }.cast::<CrmfMsg>()
+}
+
+/// `void OSSL_CRMF_MSG_free(OSSL_CRMF_MSG *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_MSG_free(a: *mut CrmfMsg) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_msg_it()) };
+}
+
+/// `OSSL_CRMF_MSG *d2i_OSSL_CRMF_MSG(OSSL_CRMF_MSG **a, const unsigned char **in, long len)` —
+/// `crmf_asn.c:229`, the decoder half.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_OSSL_CRMF_MSG(
+    a: *mut *mut CrmfMsg,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut CrmfMsg {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_d2i(a.cast(), in_, len, crmf_msg_it()).cast::<CrmfMsg>() }
+}
+
+/// `int i2d_OSSL_CRMF_MSG(const OSSL_CRMF_MSG *a, unsigned char **out)` — the encoder half.
+///
+/// # Safety
+/// `a` is NULL or a live value; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_OSSL_CRMF_MSG(a: *const CrmfMsg, out: *mut *mut c_uchar) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, crmf_msg_it()) }
+}
+
+/// `OSSL_CRMF_MSG *OSSL_CRMF_MSG_dup(const OSSL_CRMF_MSG *a)` — `crmf_asn.c:230`.
+///
+/// # Safety
+/// `a` is NULL or a live `OSSL_CRMF_MSG`.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_MSG_dup(a: *const CrmfMsg) -> *mut CrmfMsg {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_dup(crmf_msg_it(), a.cast()) }.cast::<CrmfMsg>()
+}
+
+/// `const ASN1_ITEM *OSSL_CRMF_MSGS_it(void)` — `crmf_asn.c:235`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_MSGS_it() -> *const Asn1Item {
+    crmf_msgs_it()
+}
+
+/// `OSSL_CRMF_MSGS *OSSL_CRMF_MSGS_new(void)` — `crmf_asn.c:235`: a fresh empty
+/// `SEQUENCE OF OSSL_CRMF_MSG`.
+#[no_mangle]
+pub extern "C" fn OSSL_CRMF_MSGS_new() -> *mut OpenSslStack {
+    // SAFETY: `crmf_msgs_it()` answers a static item the crate owns.
+    unsafe { ASN1_item_new(crmf_msgs_it()) }.cast::<OpenSslStack>()
+}
+
+/// `void OSSL_CRMF_MSGS_free(OSSL_CRMF_MSGS *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a stack this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_MSGS_free(a: *mut OpenSslStack) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_msgs_it()) };
+}
+
+/// `OSSL_CRMF_MSGS *d2i_OSSL_CRMF_MSGS(OSSL_CRMF_MSGS **a, const unsigned char **in, long len)`.
+///
+/// # Safety
+/// `a` is NULL or a writable slot; `in_` points at a readable cursor; `len` describes the input.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_OSSL_CRMF_MSGS(
+    a: *mut *mut OpenSslStack,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut OpenSslStack {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_d2i(a.cast(), in_, len, crmf_msgs_it()).cast::<OpenSslStack>() }
+}
+
+/// `int i2d_OSSL_CRMF_MSGS(const OSSL_CRMF_MSGS *a, unsigned char **out)` — the encoder half.
+///
+/// # Safety
+/// `a` is NULL or a live stack; `out` is NULL or a writable cursor.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_OSSL_CRMF_MSGS(
+    a: *const OpenSslStack,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_i2d(a.cast(), out, crmf_msgs_it()) }
+}
+
+/// `void OSSL_CRMF_ATTRIBUTETYPEANDVALUE_free(OSSL_CRMF_ATTRIBUTETYPEANDVALUE *v)` —
+/// `include/internal/crmf.h:48`, the free half of `DECLARE_ASN1_FUNCTIONS`.
+///
+/// # Safety
+/// `v` is NULL or a value this item layer built.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_ATTRIBUTETYPEANDVALUE_free(a: *mut CrmfAttributeTypeAndValue) {
+    // SAFETY: `a` is NULL or a live item value per the contract.
+    unsafe { ASN1_item_free(a.cast(), crmf_atav_it()) };
+}
+
+/// `OSSL_CRMF_ATTRIBUTETYPEANDVALUE *OSSL_CRMF_ATTRIBUTETYPEANDVALUE_dup(const`
+/// `OSSL_CRMF_ATTRIBUTETYPEANDVALUE *v)` — `include/internal/crmf.h:49`, the
+/// `IMPLEMENT_ASN1_DUP_FUNCTION` at `crmf_asn.c:179`.
+///
+/// # Safety
+/// `a` is NULL or a live `OSSL_CRMF_ATTRIBUTETYPEANDVALUE`.
+#[no_mangle]
+pub unsafe extern "C" fn OSSL_CRMF_ATTRIBUTETYPEANDVALUE_dup(
+    a: *const CrmfAttributeTypeAndValue,
+) -> *mut CrmfAttributeTypeAndValue {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for every pointer here.
+    unsafe { ASN1_item_dup(crmf_atav_it(), a.cast()) }.cast::<CrmfAttributeTypeAndValue>()
+}
+
+// ---------------------------------------------------------------------------------------------
+// The crate-internal alloc/dup/free helpers `crmf_lib.c` reaches by name but `crmf.h` does not
+// declare. They are the same `IMPLEMENT_ASN1_*` expansions the exported groups publish, answered
+// under Rust names because these types stay crate-internal.
+// ---------------------------------------------------------------------------------------------
+
+/// `OSSL_CRMF_PKIPUBLICATIONINFO *OSSL_CRMF_PKIPUBLICATIONINFO_dup(const`
+/// `OSSL_CRMF_PKIPUBLICATIONINFO *a)` — the `IMPLEMENT_ASN1_DUP_FUNCTION` at `crmf_asn.c:84`.
+///
+/// # Safety
+/// `a` is NULL or a live `OSSL_CRMF_PKIPUBLICATIONINFO`.
+pub(crate) unsafe fn pkipublicationinfo_dup(
+    a: *const CrmfPkiPublicationInfo,
+) -> *mut CrmfPkiPublicationInfo {
+    // SAFETY: the caller's contract; the item layer duplicates the value.
+    unsafe { ASN1_item_dup(crmf_pkipublicationinfo_it(), a.cast()) }
+        .cast::<CrmfPkiPublicationInfo>()
+}
+
+/// `OSSL_CRMF_CERTREQUEST *OSSL_CRMF_CERTREQUEST_dup(const OSSL_CRMF_CERTREQUEST *a)` — the
+/// `IMPLEMENT_ASN1_DUP_FUNCTION` at `crmf_asn.c:221`.
+///
+/// # Safety
+/// `a` is NULL or a live `OSSL_CRMF_CERTREQUEST`.
+pub(crate) unsafe fn certrequest_dup(a: *const CrmfCertRequest) -> *mut CrmfCertRequest {
+    // SAFETY: the caller's contract; the item layer duplicates the value.
+    unsafe { ASN1_item_dup(crmf_certrequest_it(), a.cast()) }.cast::<CrmfCertRequest>()
+}
+
+/// `OSSL_CRMF_OPTIONALVALIDITY *OSSL_CRMF_OPTIONALVALIDITY_new(void)` — `crmf_asn.c:185`.
+///
+/// # Safety
+/// The returned value is freshly built; release it with the matching free.
+pub(crate) unsafe fn optionalvalidity_new() -> *mut CrmfOptionalValidity {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(crmf_optionalvalidity_it()) }.cast::<CrmfOptionalValidity>()
+}
+
+/// `OSSL_CRMF_POPO *OSSL_CRMF_POPO_new(void)` — `crmf_asn.c:139`.
+///
+/// # Safety
+/// The returned value is freshly built; release it with [`popo_free`].
+pub(crate) unsafe fn popo_new() -> *mut CrmfPopo {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(crmf_popo_it()) }.cast::<CrmfPopo>()
+}
+
+/// `void OSSL_CRMF_POPO_free(OSSL_CRMF_POPO *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a value the item layer built.
+pub(crate) unsafe fn popo_free(a: *mut CrmfPopo) {
+    // SAFETY: `a` is NULL or a live item value.
+    unsafe { ASN1_item_free(a.cast(), crmf_popo_it()) };
+}
+
+/// `OSSL_CRMF_POPOSIGNINGKEY *OSSL_CRMF_POPOSIGNINGKEY_new(void)` — `crmf_asn.c:131`.
+///
+/// # Safety
+/// The returned value is freshly built; release it with [`poposigningkey_free`].
+pub(crate) unsafe fn poposigningkey_new() -> *mut CrmfPopoSigningKey {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(crmf_poposigningkey_it()) }.cast::<CrmfPopoSigningKey>()
+}
+
+/// `void OSSL_CRMF_POPOSIGNINGKEY_free(OSSL_CRMF_POPOSIGNINGKEY *a)` — the same macro's free half.
+///
+/// # Safety
+/// `a` is NULL or a value the item layer built.
+pub(crate) unsafe fn poposigningkey_free(a: *mut CrmfPopoSigningKey) {
+    // SAFETY: `a` is NULL or a live item value.
+    unsafe { ASN1_item_free(a.cast(), crmf_poposigningkey_it()) };
+}
+
+/// `OSSL_CRMF_POPOPRIVKEY *OSSL_CRMF_POPOPRIVKEY_new(void)` — `crmf_asn.c:100`.
+///
+/// # Safety
+/// The returned value is freshly built; release it with the owning `POPO`.
+pub(crate) unsafe fn popoprivkey_new() -> *mut CrmfPopoPrivKey {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(crmf_popoprivkey_it()) }.cast::<CrmfPopoPrivKey>()
 }
