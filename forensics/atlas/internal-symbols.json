@@ -294,7 +294,7 @@
       "src/status.rs",
       "src/store/store_result.rs",
       "src/test_support.rs",
-      "src/x509/by_dir.rs",
+      "src/x509/dane.rs",
       "src/x509/mod.rs",
       "src/x509/pcy_cache.rs",
       "src/x509/pcy_data.rs",

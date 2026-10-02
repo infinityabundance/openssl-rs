@@ -3605,7 +3605,9 @@
         "subphases": [
           "11:11.1"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/x509/by_dir.rs"
+        ]
       },
       "crypto/x509/by_file.c": {
         "defines": [],
@@ -5503,21 +5505,21 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 462
+      "transcribed_units": 467
     }
   },
-  "body_hash": "162aca3b0f9d31ca3520272eca885720fe55462f1daa188c00c6cc6e4a3c4cce",
+  "body_hash": "7220fa2fe5b9d2c0a837ab1430bf41fe5f849d2320b07a7265b124ff417bfbc2",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "28466c2f0b4fb987ebafd18c63b934463361ce6553a8d19301154201ea73e815"
+      "sha256": "a863a1ed32f0e870e3506e1a28da859719e91805dea3cd5ab1fa78f80880d82d"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "288af3598049882dbbc9d2509456463d0b068a7a8b192c377e79a857a566ed5f"
+      "sha256": "0223ac4902777fdcfb7391ecf6b3514a12662c9b8711c17137c0f131fd1f93d8"
     },
     {
       "name": "implemented-surface",
