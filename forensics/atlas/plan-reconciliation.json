@@ -6,10 +6,10 @@
     ],
     "census": {
       "names_a_basename_the_authority_repeats": 1,
-      "units_not_reached": 41
+      "units_not_reached": 40
     },
     "census_by_stratum": {
-      "12": 42
+      "12": 41
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -29,7 +29,6 @@
         "crypto/cmp/cmp_status.c",
         "crypto/cmp/cmp_util.c",
         "crypto/cmp/cmp_vfy.c",
-        "crypto/cms/cms_ess.c",
         "crypto/cms/cms_io.c",
         "crypto/cms/cms_smime.c",
         "crypto/crmf/crmf_asn.c",
@@ -78,7 +77,7 @@
       "unit_records": 97,
       "units_named_by_a_record": 99,
       "units_named_by_a_row": 432,
-      "units_reached": 391
+      "units_reached": 392
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -6232,7 +6231,7 @@
       "transcribed_units": 467
     }
   },
-  "body_hash": "ab83c3c9b2476c268b043a5b7297fc19fb369fd510404d9e87e15e7958b73ca9",
+  "body_hash": "4b86f3bf54d90675bcebf0d39ddb58645b189bfbc5b9bcf4707eaeaab477541b",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -6248,12 +6247,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9dbf184740d81f6b7704d23502c92f36ae9e3179bf9cbc125b8c8e3a2e1d0fc8"
+      "sha256": "5f2a3bff9dd0d7672c959a0712094e4d9fdc16e3ab4bde1be6cdf5d0425f3e7b"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "4694b6a34b7439a7d357c03c0435f0d6feda481d77840b6072dc91076fb192e7"
+      "sha256": "56dab399de6aebe53f71a90b1a928180cd07f1a13ec5ba5e089c9227302f58de"
     },
     {
       "name": "prerequisites",
@@ -6278,7 +6277,7 @@
     {
       "name": "plan-PHASE-12-SUBPHASES",
       "path": "docs/PHASE-12-SUBPHASES.md",
-      "sha256": "433deb26c2cc46a1aa4dd294393ae75d681e917a8b6fcc6057858e5e633ce9df"
+      "sha256": "3aef8217d8b345de23fd4fe4e6f43418df74165c4f1511087555af29098dc129"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

@@ -40,11 +40,11 @@ pub(crate) mod cms_sd;
 pub(crate) mod cms_smime;
 
 // The defining units the authority keeps outside the open 153: the per-key envelope arm
-// (`cms_dh.c`, `cms_ec.c`, `cms_rsa.c`, `cms_kem.c`) and the DigestedData/CompressedData content
-// builders (`cms_dd.c`, `cms_cd.c`). They define no export the atlas attributes to this stratum,
-// so the ledger does not name them; they are pulled forward because `cms_env.c` and `cms_sd.c`
-// reach them and they are cms-local.
-pub(crate) mod cms_cd;
+// (`cms_dh.c`, `cms_ec.c`, `cms_rsa.c`, `cms_kem.c`) and the DigestedData content builder
+// (`cms_dd.c`). They define no export the atlas attributes to this stratum, so the ledger does not
+// name them; they are pulled forward because `cms_env.c` and `cms_sd.c` reach them and they are
+// cms-local. `cms_cd.c` is absent: the authority is built `OPENSSL_NO_ZLIB`, so that unit defines
+// nothing and `CMS_compress`/`CMS_uncompress` are the refusal arms (`cms_smime.c:1041-1052`).
 pub(crate) mod cms_dd;
 pub(crate) mod cms_dh;
 pub(crate) mod cms_ec;

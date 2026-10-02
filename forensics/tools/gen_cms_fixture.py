@@ -26,7 +26,7 @@ OUT = REPO / "courts" / "phase12" / "rt_cms_der.h"
 WORK = Path("/tmp/cms_fixture")
 
 
-def generate() -> tuple[bytes, bytes]:
+def generate() -> tuple[bytes, bytes, bytes, bytes]:
     WORK.mkdir(parents=True, exist_ok=True)
     content = WORK / "content.bin"
     content.write_bytes(b"cms fixed content\n")
@@ -48,7 +48,9 @@ def generate() -> tuple[bytes, bytes]:
         ],
         check=True, env=env,
     )
-    return signed.read_bytes(), enveloped.read_bytes()
+    cert_pem = (SRC / "test/certs/root-cert.pem").read_bytes()
+    key_pem = (SRC / "test/certs/root-key.pem").read_bytes()
+    return signed.read_bytes(), enveloped.read_bytes(), cert_pem, key_pem
 
 
 def array(name: str, data: bytes) -> str:
@@ -83,10 +85,13 @@ HEADER = """/*
 
 
 def main() -> int:
-    signed, enveloped = generate()
+    signed, enveloped, cert_pem, key_pem = generate()
     OUT.write_text(HEADER + "\n" + array("rt_cms_signed_der", signed) + "\n\n"
-                   + array("rt_cms_enveloped_der", enveloped) + "\n", encoding="utf-8")
-    print(f"wrote {OUT} ({len(signed)} + {len(enveloped)} bytes)")
+                   + array("rt_cms_enveloped_der", enveloped) + "\n\n"
+                   + array("rt_cms_cert_pem", cert_pem + b"\x00") + "\n\n"
+                   + array("rt_cms_key_pem", key_pem + b"\x00") + "\n", encoding="utf-8")
+    print(f"wrote {OUT} ({len(signed)} + {len(enveloped)} bytes; "
+          f"cert {len(cert_pem)} B, key {len(key_pem)} B)")
     return 0
 
 

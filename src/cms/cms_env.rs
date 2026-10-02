@@ -589,7 +589,10 @@ pub(crate) unsafe extern "C" fn CMS_EnvelopedData_decrypt(
         // SAFETY: `secret` is live.
         let slen = unsafe { ASN1_STRING_length(secret) };
         // SAFETY: `ci` is live; `data` is readable for `slen`.
-        if unsafe { CMS_decrypt_set1_password(ci, data, slen as isize) } != 1 {
+        if unsafe {
+            super::cms_smime::CMS_decrypt_set1_password(ci, data.cast_mut(), slen as isize)
+        } != 1
+        {
             // SAFETY: `ci` is live and owned here.
             unsafe {
                 (*ci).d = ptr::null_mut();
@@ -602,7 +605,7 @@ pub(crate) unsafe extern "C" fn CMS_EnvelopedData_decrypt(
     }
     // SAFETY: `ci` is live.
     res = unsafe {
-        CMS_decrypt(
+        super::cms_smime::CMS_decrypt(
             ci,
             if secret.is_null() {
                 pkey
@@ -2771,22 +2774,3 @@ const ERR_CMS_R_NOT_KEY_TRANSPORT: c_int =
     crate::runtime::err::err_reasons::CMS_R_NOT_KEY_TRANSPORT;
 /// `CMS_R_NOT_KEK` — `include/openssl/cmserr.h`.
 const ERR_CMS_R_NOT_KEK: c_int = crate::runtime::err::err_reasons::CMS_R_NOT_KEK;
-
-// `CMS_decrypt` and `CMS_decrypt_set1_password` are `cms_smime.c`'s exports; they land with that
-// unit. The declarations here are the authority's own prototypes, so the delegation above is the
-// source's, not a stub.
-extern "C" {
-    fn CMS_decrypt(
-        cms: *mut CmsContentInfo,
-        pkey: *mut EvpPkey,
-        cert: *mut X509,
-        detached_data: *mut Bio,
-        out: *mut Bio,
-        flags: c_uint,
-    ) -> c_int;
-    fn CMS_decrypt_set1_password(
-        cms: *mut CmsContentInfo,
-        pass: *const c_uchar,
-        passlen: isize,
-    ) -> c_int;
-}

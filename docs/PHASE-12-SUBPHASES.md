@@ -302,22 +302,36 @@ accessors, the certificate and CRL choice builders and `CMS_dataInit`/`CMS_dataF
 of `cms_att.c` (the twenty `CMS_{signed,unsigned}_*` attribute exports); `cms_io.c`'s `CMS_stream`;
 and `cms_enc.c`'s `CMS_EncryptedData_set1_key`. That is **107 of the 153 open rows**. The S/MIME
 entry points (`cms_smime.c`), the receipt surface (`cms_ess.c`) and the `PEM_*_CMS` readers
-(`cms_io.c`) still open here and are this subphase's remaining pass; the forty-six CMS
-rows that remain open are recorded in the ledger. `RT-CMS` (`courts/phase12/rt_cms_probe.c`) drives the
+(`cms_io.c`) were this subphase's remaining pass and land with 12.3c below; with them CMS has no
+open row. `RT-CMS` (`courts/phase12/rt_cms_probe.c`) drives the
 landed surface over the fixed DER fixtures `courts/phase12/rt_cms_der.h` embeds: the decode/encode
 round trip, the accessors, the certificate/CRL choices, `CMS_stream`, the `data` container's
 init/final cycle, `CMS_SharedInfo_encode` and the `CMS_EncryptedData_set1_key` refusal arms. The
 twenty attribute exports are referenced and driven only through the accessor that reaches a
-`CMS_SignerInfo`, which is part of the remaining pass, so their behaviour is named `pending` in the
-probe rather than hidden.
+`CMS_SignerInfo`, so their behaviour is named `pending` in the probe where the fetched-identity
+divergence (`EVP_MD_get_type`/`EVP_CIPHER_get_type`) makes a value un-comparable.
+
+Subphase 12.3c lands the CMS remainder and closes the subphase: `cms_smime.c`'s 25 exports (the
+plain-content surface `CMS_data`/`_create`/`_create_ex`, `CMS_digest_verify`/`_create`/`_create_ex`,
+`CMS_EncryptedData_decrypt`/`_encrypt`/`_encrypt_ex`, the top-level `CMS_sign`/`_ex`,
+`CMS_verify`/`CMS_verify_receipt`, `CMS_sign_receipt`, `CMS_encrypt`/`_ex`, `CMS_decrypt` and its
+four `set1_*`, `CMS_final`/`CMS_final_digest` and `CMS_compress`/`CMS_uncompress`), `cms_io.c`'s
+remaining 12 (`d2i_CMS_bio`/`i2d_CMS_bio`, `BIO_new_CMS`, `i2d_CMS_bio_stream`,
+`PEM_write_bio_CMS_stream`, the four `PEM_read[_bio]_CMS`/`PEM_write[_bio]_CMS` and the three
+`SMIME_read/write_CMS*`) and `cms_ess.c`'s 9 (`CMS_ReceiptRequest_new`/`_free`/`_create0`/
+`_create0_ex`/`_get0_values`, `d2i_/i2d_CMS_ReceiptRequest`, `CMS_get1_ReceiptRequest` and
+`CMS_add1_ReceiptRequest`). `CMS_compress`/`CMS_uncompress` are the `OPENSSL_NO_ZLIB` refusal arms,
+the configuration the admitted authority was built with (`cms_smime.c:1041-1052`); the unit
+`cms_cd.c` therefore defines nothing and is not carried. Every one of the 46 is now implemented, so
+CMS has no open row. `RT-CMS` extends to drive the signer/verifier, enveloped and receipt engines
+and the BIO/PEM readers over the fixed cert+key.
 
 Subphase 12.3b lands the signer and recipient engines in full: `cms_sd.c`'s `CMS_get0_SignerInfos`, `CMS_get0_signers`, `CMS_SignerInfo_get0_algs`/`_get0_md_ctx`/`_get0_pkey_ctx`/`_get0_signature`/`_get0_signer_id`/`_set1_signer_cert`/`_cert_cmp`/`_sign`/`_verify`/`_verify_content`, `CMS_SignedData_init`/`_verify`, `CMS_add1_signer`, `CMS_add_smimecap`, `CMS_add_simple_smimecap`, `CMS_add_standard_smimecap` and `CMS_set1_signers_certs`; `cms_env.c`'s `CMS_get0_RecipientInfos`, `CMS_RecipientInfo_type`/`_get0_pkey_ctx`/`_ktri_get0_algs`/`_ktri_get0_signer_id`/`_ktri_cert_cmp`/`_set0_pkey`/`_kekri_id_cmp`/`_kekri_get0_id`/`_set0_key`/`_decrypt`/`_encrypt`, `CMS_add0_recipient_key`/`_add0_recipient_password`/`_add1_recipient`/`_add1_recipient_cert` and `CMS_EnvelopedData_create`/`_create_ex`/`_decrypt` and `CMS_AuthEnvelopedData_create`/`_create_ex`; `cms_kari.c`'s key-agreement surface (`CMS_RecipientInfo_kari_get0_alg`/`_get0_reks`/`_get0_orig_id`/`_orig_id_cmp`/`_get0_ctx`/`_set0_pkey`/`_set0_pkey_and_peer`/`_decrypt` and `CMS_RecipientEncryptedKey_get0_id`/`_cert_cmp`); `cms_kemri.c`'s `CMS_RecipientInfo_kemri_cert_cmp`/`_get0_ctx`/`_get0_kdf_alg`/`_set0_pkey`/`_set_ukm`; and `cms_pwri.c`'s `CMS_RecipientInfo_set0_password` and `CMS_add0_recipient_password`. Every one of the 106 further CMS rows is now implemented rather than open; `RT-CMS` drives the signer/recipient surface over the same fixed DER fixtures.
 
 **Open exports (checked against the ledger):**
 
-Open is the 651-name remainder, and it is the whole of the container and protocol surface 12.2's
-PKCS#7 landing left. CMS opens 12.3 with `CMS_sign`, `CMS_verify`, `CMS_EncryptedData_encrypt`
-and `PEM_read_CMS`. CMP opens 12.4 with `OSSL_CMP_ATAV_create`,
+Open is the 605-name remainder. CMS has closed: every one of its 149 `cms.h` rows is now
+implemented and no CMS name appears here. CMP opens 12.4 with `OSSL_CMP_ATAV_create`,
 `OSSL_CMP_ATAVS_new` and `OSSL_CMP_ATAVS_free`. TS opens 12.5 with `TS_REQ_new`, `TS_RESP_CTX_new`
 and `TS_RESP_create_response`. OCSP opens 12.6 with `OCSP_request_sign`, `OCSP_basic_verify`,
 `OCSP_response_status`, `OCSP_cert_to_id`, `OCSP_check_validity` and `OCSP_resp_count`. CRMF opens
