@@ -2,6 +2,7 @@
   "court_phases": [
     "phase10",
     "phase11",
+    "phase12",
     "phase2",
     "phase22",
     "phase3",
@@ -373,6 +374,10 @@
       "observations": 102,
       "verdict": "pass"
     },
+    "RT-PHASE12-REF": {
+      "observations": 149,
+      "verdict": "pass"
+    },
     "RT-PHASE22-BINARY": {
       "observations": 0,
       "verdict": "pass"
@@ -553,6 +558,7 @@
   "deferred": {
     "phase10": 0,
     "phase11": 2,
+    "phase12": 0,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -569,6 +575,7 @@
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
+    "phase12": 884,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -581,6 +588,7 @@
   "owned_obligations": {
     "phase10": 298,
     "phase11": 1467,
+    "phase12": 1033,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -595,7 +603,7 @@
     "1": "complete",
     "10": "complete",
     "11": "complete",
-    "12": "not-started",
+    "12": "in-progress",
     "13": "not-started",
     "14": "not-started",
     "15": "not-started",
