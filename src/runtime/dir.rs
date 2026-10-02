@@ -71,6 +71,13 @@ extern "C" {
     /// `stat(3)` restricted to the one question the include logic asks:
     /// -1 error (in `*err`), 0 not a directory, 1 a directory.
     fn openssl_rs_stat_is_dir(path: *const c_char, err: *mut c_int) -> c_int;
+    /// `lstat(3)` restricted to the one question `by_dir`'s hashed-directory scan
+    /// asks: 0 the path exists (as itself or as a symlink), -1 it does not. Only
+    /// the sign is used, never a field of `struct stat`.
+    pub(crate) fn openssl_rs_lstat_exists(path: *const c_char) -> c_int;
+    /// `stat(3)` restricted to the same existence question, following a symlink:
+    /// 0 the path (or its target) exists, -1 it does not (a dangling symlink).
+    pub(crate) fn openssl_rs_stat_exists(path: *const c_char) -> c_int;
 }
 
 /// Sets the thread's `errno`, as the authority's `LP_find_file` does directly.

@@ -7,9 +7,9 @@
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 993,
+        "authority_observations": 1007,
         "candidate_exit_code": 0,
-        "candidate_observations": 993,
+        "candidate_observations": 1007,
         "candidate_stderr_tail": [],
         "court": "RT-X509-REF",
         "crashed": false,
@@ -145,7 +145,7 @@
     {
       "name": "probe",
       "path": "courts/phase11/rt_coverage_ref_probe.c",
-      "sha256": "eb9ee17b3bfb0c8a087a00acda455b15ac1c287a0e16806bc9663d4439c971c5"
+      "sha256": "5d0f1c54ec4ce1a4be908a474cb5ba7360b47a754174919c4368315c978ba477"
     },
     {
       "name": "probe",

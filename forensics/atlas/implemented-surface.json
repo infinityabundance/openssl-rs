@@ -267,6 +267,8 @@
         "openssl_rs_err_set_error",
         "openssl_rs_err_take_data",
         "openssl_rs_evp_pkey_q_keygen",
+        "openssl_rs_lstat_exists",
+        "openssl_rs_stat_exists",
         "openssl_rs_stat_is_dir",
         "openssl_rs_store_vctrl",
         "openssl_rs_va_fp",
@@ -493,7 +495,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 15041,
+      "compiler_emitted_count": 14969,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -501,7 +503,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 4746,
+        "implemented": 4760,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -4261,9 +4263,11 @@
           "X509_LOOKUP_by_subject_ex",
           "X509_LOOKUP_ctrl",
           "X509_LOOKUP_ctrl_ex",
+          "X509_LOOKUP_file",
           "X509_LOOKUP_free",
           "X509_LOOKUP_get_method_data",
           "X509_LOOKUP_get_store",
+          "X509_LOOKUP_hash_dir",
           "X509_LOOKUP_init",
           "X509_LOOKUP_meth_free",
           "X509_LOOKUP_meth_get_ctrl",
@@ -4475,6 +4479,7 @@
           "X509_STORE_CTX_get_verify_cb",
           "X509_STORE_CTX_new",
           "X509_STORE_CTX_new_ex",
+          "X509_STORE_CTX_print_verify_cb",
           "X509_STORE_CTX_purpose_inherit",
           "X509_STORE_CTX_set0_crls",
           "X509_STORE_CTX_set0_dane",
@@ -4520,6 +4525,11 @@
           "X509_STORE_get_lookup_crls",
           "X509_STORE_get_verify",
           "X509_STORE_get_verify_cb",
+          "X509_STORE_load_file",
+          "X509_STORE_load_file_ex",
+          "X509_STORE_load_locations",
+          "X509_STORE_load_locations_ex",
+          "X509_STORE_load_path",
           "X509_STORE_load_store",
           "X509_STORE_load_store_ex",
           "X509_STORE_lock",
@@ -4531,6 +4541,8 @@
           "X509_STORE_set_check_policy",
           "X509_STORE_set_check_revocation",
           "X509_STORE_set_cleanup",
+          "X509_STORE_set_default_paths",
+          "X509_STORE_set_default_paths_ex",
           "X509_STORE_set_depth",
           "X509_STORE_set_ex_data",
           "X509_STORE_set_flags",
@@ -4649,8 +4661,12 @@
           "X509_get1_email",
           "X509_get1_ocsp",
           "X509_get_X509_PUBKEY",
+          "X509_get_default_cert_area",
+          "X509_get_default_cert_dir",
           "X509_get_default_cert_dir_env",
+          "X509_get_default_cert_file",
           "X509_get_default_cert_file_env",
+          "X509_get_default_private_dir",
           "X509_get_ex_data",
           "X509_get_ext",
           "X509_get_ext_by_NID",
@@ -5250,7 +5266,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 1150
+        "scaffolded": 1136
       },
       "libssl": {
         "authority_exports": 603,
@@ -5261,18 +5277,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 4746,
-      "scaffolded": 1753
+      "implemented": 4760,
+      "scaffolded": 1739
     }
   },
-  "body_hash": "7875eaff965fbebe196f33557fc68a7764e3fa17b2ae5fe29a7e02bb6c5d230f",
+  "body_hash": "5cb34c12a0c7701e4656034c22f29e62921d9f9e23da226432b8af778f1ae047",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "cc867b37bc51972d144b8b1a5f517c7c8eb3cd3e5fdaba945a3aa8955ec92d75"
+      "sha256": "6e5ea88e49ce9c484a6d3a266131d539843c14c98679047d0b31114d21f59e73"
     },
     {
       "name": "authority-exports",

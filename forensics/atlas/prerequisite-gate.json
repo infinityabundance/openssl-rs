@@ -9,8 +9,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 75,
-      "language_surface_not_modelled_by_name": 7316,
+      "covered_by_a_divergence": 74,
+      "language_surface_not_modelled_by_name": 7296,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -38,7 +38,6 @@
         "ossl_lib_ctx_unlock": 2,
         "ossl_lib_ctx_write_lock": 2,
         "ossl_release_default_drbg_ctx": 2,
-        "ossl_x509_print_ex_brief": 1,
         "out_len": 1,
         "outlen": 1,
         "pkcs7_get0_certificates": 1,
@@ -154,7 +153,7 @@
         "crypto/conf/conf_api.c": 22,
         "crypto/conf/conf_def.c": 38,
         "crypto/conf/conf_lib.c": 19,
-        "crypto/conf/conf_mod.c": 33,
+        "crypto/conf/conf_mod.c": 32,
         "crypto/conf/conf_sap.c": 3,
         "crypto/conf/conf_ssl.c": 13,
         "crypto/context.c": 22,
@@ -430,7 +429,7 @@
         "crypto/ui/ui_openssl.c": 9,
         "crypto/ui/ui_util.c": 13,
         "crypto/whrlpool/wp_dgst.c": 3,
-        "crypto/x509/by_file.c": 18,
+        "crypto/x509/by_file.c": 14,
         "crypto/x509/by_store.c": 16,
         "crypto/x509/pcy_cache.c": 16,
         "crypto/x509/pcy_data.c": 10,
@@ -440,7 +439,7 @@
         "crypto/x509/t_acert.c": 20,
         "crypto/x509/t_crl.c": 10,
         "crypto/x509/t_req.c": 17,
-        "crypto/x509/t_x509.c": 29,
+        "crypto/x509/t_x509.c": 28,
         "crypto/x509/v3_aaa.c": 26,
         "crypto/x509/v3_ac_tgt.c": 38,
         "crypto/x509/v3_addr.c": 52,
@@ -483,8 +482,8 @@
         "crypto/x509/x509_acert.c": 44,
         "crypto/x509/x509_att.c": 19,
         "crypto/x509/x509_cmp.c": 19,
-        "crypto/x509/x509_d2.c": 16,
-        "crypto/x509/x509_def.c": 13,
+        "crypto/x509/x509_d2.c": 6,
+        "crypto/x509/x509_def.c": 9,
         "crypto/x509/x509_ext.c": 8,
         "crypto/x509/x509_lu.c": 38,
         "crypto/x509/x509_meth.c": 6,
@@ -621,8 +620,8 @@
       "crate_modules": 643,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
-      "divergence_names_covered": 37,
-      "divergence_rows": 11,
+      "divergence_names_covered": 36,
+      "divergence_rows": 10,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -731,7 +730,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "b1cc47ed37b2a6abed9a4a0c421fdfadb3999c53fc5fc1b370fcd8c759a0290a",
+  "body_hash": "c8299480da55570bc3d2ae299f1dbe8dbf1c03e4bced01cfba74c9530454bcf0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -767,17 +766,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "69102cea10950ac5db7652287043a11e16014fde3e37ea5eb7721fee5f02afc7"
+      "sha256": "d2014cb9cf269846b70c095689dba6b35f2eb6ba67cc95739d93e47ecc6653d1"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "1705282e96dfb3778759a53c1de49025f7d67bc26cc2d075b854a3de6387660b"
+      "sha256": "4e279fec1308905ca80ab1696e8770a5d58e3e58ce63360696cf99f9cb8e728e"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "5037a4abc7068b09e81d2b4467c5940092ba3dfbf6c562a9f3c51e1a6beb032d"
+      "sha256": "9d31085b652bc9287250af4055a5f09e4b7ec8375a0542c048e4860d9a820c74"
     },
     {
       "name": "crate-source-tree",
