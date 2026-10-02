@@ -4,14 +4,29 @@
     "complete": false,
     "counts": {
       "atlas_owned": 1455,
-      "deferred_to_later_phase": 0,
+      "deferred_to_later_phase": 2,
       "implemented": 1460,
-      "open_in_this_stratum": 7,
+      "open_in_this_stratum": 5,
       "owned": 1467,
       "received_by_handoff": 12
     },
-    "deferred": [],
-    "deferred_by_phase": {},
+    "deferred": [
+      {
+        "declaring_header": "x509.h",
+        "owning_phase": 12,
+        "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it; `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are `http.h`'s and Phase 12's (`forensics/atlas/symbol-ownership.json`, owner_phase 12), and this crate deliberately withholds the http/punycode units (docs/DECISIONS.md D455; `src/http/http_lib.rs` lands only `OSSL_parse_url`), so pulling the whole HTTP client forward to satisfy two convenience wrappers is disproportionate",
+        "symbol": "X509_CRL_load_http"
+      },
+      {
+        "declaring_header": "x509.h",
+        "owning_phase": 12,
+        "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it; `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are `http.h`'s and Phase 12's (`forensics/atlas/symbol-ownership.json`, owner_phase 12), and this crate deliberately withholds the http/punycode units (docs/DECISIONS.md D455; `src/http/http_lib.rs` lands only `OSSL_parse_url`), so pulling the whole HTTP client forward to satisfy two convenience wrappers is disproportionate",
+        "symbol": "X509_load_http"
+      }
+    ],
+    "deferred_by_phase": {
+      "12": 2
+    },
     "handoffs_discharged": {
       "5": [
         "ASN1_add_stable_module",
@@ -1579,12 +1594,6 @@
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation except Phase 10, this ledger does not start with the whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed before activation, and the two hand-offs Phase 5 discharged, are reported as `implemented` because `implemented-surface.json` says so. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum owns no provider registration row (`forensics/atlas/provider-algorithms.json` records rows for owning phases 8, Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-SUBPHASES.md section 4 decides when the stratum may be called complete.",
     "open": [
       {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_CRL_load_http"
-      },
-      {
         "declaring_header": "x509_vfy.h",
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
@@ -1607,12 +1616,6 @@
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_build_chain"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "X509_load_http"
       },
       {
         "declaring_header": "x509_vfy.h",
@@ -1778,12 +1781,12 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "15f984aebc2e8903aace374b5dbe6743dbde1d686c07a916f0d142ddc84886cb"
+      "sha256": "4292962c7454cf3d957e12628b0bd2da575136d8fd13dd8069dee4ad6f06f00a"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "7f029e7789b497fd96c840c692c7df1efb866938e8c17102e4f69780cd4b96e4"
+      "sha256": "b200cd59b570328957c7d3b4455bd31a4d1034efe66429b8ebcd4ff9a1c982a9"
     }
   ],
   "kind": "phase11-obligations",

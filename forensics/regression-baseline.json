@@ -544,7 +544,7 @@
   },
   "deferred": {
     "phase10": 0,
-    "phase11": 0,
+    "phase11": 2,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -560,7 +560,7 @@
   },
   "open_obligations": {
     "phase10": 0,
-    "phase11": 7,
+    "phase11": 5,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
