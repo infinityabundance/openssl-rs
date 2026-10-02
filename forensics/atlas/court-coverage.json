@@ -949,6 +949,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMS",
               "RT-CODEC",
               "RT-DH",
               "RT-EC",
@@ -5825,6 +5826,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-ASN1-TIME",
               "RT-BIO-ASN1",
+              "RT-CMS",
               "RT-KEYFORMAT",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -35012,10 +35014,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 326,
-          "directly_courted_called": 181,
+          "directly_courted": 382,
+          "directly_courted_called": 237,
           "directly_courted_referenced": 145,
-          "implemented": 326,
+          "implemented": 382,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -35027,6 +35029,20 @@
               "RT-PKCS7"
             ],
             "symbol": "BIO_new_PKCS7"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_AuthEnvelopedData_create"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_AuthEnvelopedData_create_ex"
           },
           {
             "basis": "called",
@@ -35075,6 +35091,27 @@
             "courts": [
               "RT-CMS"
             ],
+            "symbol": "CMS_EnvelopedData_create"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_EnvelopedData_create_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_EnvelopedData_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
             "symbol": "CMS_EnvelopedData_dup"
           },
           {
@@ -35096,6 +35133,195 @@
             "courts": [
               "RT-CMS"
             ],
+            "symbol": "CMS_RecipientEncryptedKey_cert_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientEncryptedKey_get0_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_encrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_get0_pkey_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kari_decrypt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kari_get0_alg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kari_get0_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kari_get0_orig_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kari_get0_reks"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kari_orig_id_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kari_set0_pkey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kari_set0_pkey_and_peer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kekri_get0_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kekri_id_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kemri_cert_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kemri_get0_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kemri_get0_kdf_alg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kemri_set0_pkey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_kemri_set_ukm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_ktri_cert_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_ktri_get0_algs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_ktri_get0_signer_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_set0_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_set0_password"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_set0_pkey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_RecipientInfo_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
             "symbol": "CMS_SharedInfo_encode"
           },
           {
@@ -35110,7 +35336,91 @@
             "courts": [
               "RT-CMS"
             ],
+            "symbol": "CMS_SignedData_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
             "symbol": "CMS_SignedData_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignedData_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_cert_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_get0_algs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_get0_md_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_get0_pkey_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_get0_signature"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_get0_signer_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_set1_signer_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignerInfo_verify_content"
           },
           {
             "basis": "called",
@@ -35145,6 +35455,20 @@
             "courts": [
               "RT-CMS"
             ],
+            "symbol": "CMS_add0_recipient_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add0_recipient_password"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
             "symbol": "CMS_add1_cert"
           },
           {
@@ -35153,6 +35477,48 @@
               "RT-CMS"
             ],
             "symbol": "CMS_add1_crl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add1_recipient"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add1_recipient_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add1_signer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add_simple_smimecap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add_smimecap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add_standard_smimecap"
           },
           {
             "basis": "called",
@@ -35173,6 +35539,20 @@
             "courts": [
               "RT-CMS"
             ],
+            "symbol": "CMS_get0_RecipientInfos"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_get0_SignerInfos"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
             "symbol": "CMS_get0_content"
           },
           {
@@ -35181,6 +35561,13 @@
               "RT-CMS"
             ],
             "symbol": "CMS_get0_eContentType"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_get0_signers"
           },
           {
             "basis": "called",
@@ -35216,6 +35603,13 @@
               "RT-CMS"
             ],
             "symbol": "CMS_set1_eContentType"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_set1_signers_certs"
           },
           {
             "basis": "called",
@@ -37318,10 +37712,10 @@
       }
     ],
     "totals": {
-      "directly_courted": 4807,
-      "directly_courted_called": 3809,
+      "directly_courted": 4863,
+      "directly_courted_called": 3865,
       "directly_courted_referenced": 998,
-      "implemented": 4815,
+      "implemented": 4871,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -37332,7 +37726,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e05bb5442a5f0d4ec9d5f6dce192407babc77cd16171aa604d911dcf97769516"
+      "sha256": "9dbf184740d81f6b7704d23502c92f36ae9e3179bf9cbc125b8c8e3a2e1d0fc8"
     },
     {
       "name": "symbol-ownership",
@@ -37347,7 +37741,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "0c7cc1e7f8d0773282cf72483281b8e2d23b6f8953f28dbaf75e929b78ca1149"
+      "sha256": "fb51eaa0e57ad6ea5374f7933648c9fd3dd4220442cf175e9cbf626ffb072f79"
     },
     {
       "name": "phase3-courts",
@@ -37357,7 +37751,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "e82c66d9b42b64f140fb186b73c33e644c9c968a71ce8505c0fa1537716c9391"
+      "sha256": "d3196e3ecf905dceb97d2b2e9fad76ba5897084722f40064b0803b5d080460b1"
     },
     {
       "name": "phase4-courts",
@@ -37367,7 +37761,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "6d4e8c2ae02bfb55acec3c25d3e8b4fc31a54a328f27eb55c0b0a0ec1bdec05d"
+      "sha256": "92f7043939953e7ae55191210e43a9991cad618b3d94f23a4a658f7b21ffd6ba"
     },
     {
       "name": "phase5-courts",
@@ -37377,7 +37771,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "5b8191bb8fd6016ff94434864b72017a02d8d920fa2e782e3a6b9ef71a52a1b4"
+      "sha256": "b920721c546a0083fded3a38e13cb676517f362b34d1a0ea70039afe63984ad0"
     },
     {
       "name": "phase6-courts",
@@ -37387,7 +37781,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "725ae0dec53af12be93c218f600e9682407faadae0023c5b589486f8678b22b2"
+      "sha256": "e25dcc7a04fa5b71861dd09cf1dc6857bc8bf06e0c01f7f08eb2c96fb8212e78"
     },
     {
       "name": "phase7-courts",
@@ -37397,7 +37791,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "f7a67ec1883fa53025d5eb255a7992c041861db564e387238d1099e32829d682"
+      "sha256": "294a988f146ec1a60681b0d4521f9192767b294a97d5092305fb86afa90d6a73"
     },
     {
       "name": "phase8-courts",
@@ -37407,7 +37801,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "2b1c1c42ec494cfb17eaaa33e4c215ae7920fcf51a88d1b5405d90e042797045"
+      "sha256": "96606087cc6f8fdf2665c6d14997a57133aac1e023728e3f3ec7100123489624"
     },
     {
       "name": "phase9-courts",
@@ -37417,7 +37811,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "5531eb2b2874d5db9044c79db79225968bcc746489d1fa593e54e46a458fdfcb"
+      "sha256": "01f2a311d159095e1271a8a602878dd6169e0e42b53b7847925b159745c19baf"
     },
     {
       "name": "phase10-courts",
@@ -37427,7 +37821,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "98f7a02a436a31986d39ce85bc3687405b218caab79dcb0983497a6ddb02ab41"
+      "sha256": "1b2e097768c3f67991d06b51640b1815df5d6914aa742c0711cb1403b9b06060"
     },
     {
       "name": "phase11-courts",
@@ -37437,12 +37831,12 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "697a1f235e5bcd9629c6528bd4896d8144909a6c4410e325da9d198b9622a409"
+      "sha256": "b07364a7fed12e9387ee26cdf43fe388ac7f18fb38e5177dabcaa8e86cd0965c"
     },
     {
       "name": "phase12-courts",
       "path": "artifacts/phase12/COURTS.json",
-      "sha256": "933133d4a81ad292e85764417d88914ad33119aa2cb700dfc7763b63083d1352"
+      "sha256": "4cf158836a741c2f94d74d37375d2c7b33f0e88abdf940d7d30591d07eea1f28"
     }
   ],
   "kind": "court-coverage",

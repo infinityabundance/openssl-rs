@@ -12,6 +12,7 @@
 //! projection of the authority's `cms_asn1.c`: the item groups the exported surface does not yet
 //! reach are the part of the contract the later subphases read, not dead code.
 #![allow(dead_code, non_snake_case)]
+#![allow(unused_assignments)]
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
@@ -676,6 +677,20 @@ pub(crate) struct Asn1StreamArg {
 pub(crate) unsafe fn OPENSSL_clear_free(ptr_: *mut c_uchar, len: usize) {
     // SAFETY: the caller's contract; `CRYPTO_clear_free` zeroes before releasing.
     unsafe { crate::runtime::mem::CRYPTO_clear_free(ptr_.cast(), len, core::ptr::null(), 0) };
+}
+
+/// `ossl_asn1_string_set_bits_left(ASN1_STRING *str, unsigned int num)` —
+/// `crypto/asn1/asn1_lib.c:251-255`. Internal.
+///
+/// # Safety
+/// `str` is live.
+pub(crate) unsafe fn ossl_asn1_string_set_bits_left(str: *mut Asn1String, num: c_long) {
+    // SAFETY: `str` is live; the low three bits carry the unused-bit count and `0x08` marks it
+    // present (`ASN1_STRING_FLAG_BITS_LEFT`, `include/openssl/asn1.h:141`).
+    unsafe {
+        (*str).flags &= !0x07;
+        (*str).flags |= 0x08 | (num & 0x07);
+    }
 }
 
 /// The `Sync` wrapper for the `ASN1_ADB` statics, as `pk7_asn1.rs` does.

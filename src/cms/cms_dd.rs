@@ -6,6 +6,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 #![allow(dead_code, non_snake_case)]
+#![allow(unused_assignments)]
 
 use core::ffi::c_int;
 use core::ptr;
