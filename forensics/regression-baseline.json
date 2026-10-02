@@ -199,7 +199,7 @@
       "verdict": "pass"
     },
     "RT-CMS": {
-      "observations": 76,
+      "observations": 126,
       "verdict": "pass"
     },
     "RT-CODEC": {
@@ -581,13 +581,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4942,
+    "libcrypto": 4998,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
-    "phase12": 707,
+    "phase12": 651,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -639,8 +639,8 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 35,
     "findings": 0,
-    "language_census": 7263,
-    "sealed_census": 52
+    "language_census": 7251,
+    "sealed_census": 51
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",

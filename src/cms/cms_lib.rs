@@ -4,6 +4,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 #![allow(dead_code, non_snake_case)]
+#![allow(unused_assignments)]
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
@@ -171,10 +172,14 @@ pub(crate) unsafe extern "C" fn d2i_CMS_ContentInfo(
     }
     .cast::<CmsContentInfo>();
     if !ci.is_null() {
+        // The authority wraps the libctx resolution in an error mark so the lookups it makes
+        // cannot leak their refusals onto the caller's queue (`cms_lib.c:41-43`).
+        crate::runtime::err::ERR_set_mark();
         // SAFETY: `ci` is a live decoded value.
         unsafe {
             ossl_cms_resolve_libctx(ci);
         }
+        crate::runtime::err::ERR_pop_to_mark();
     }
     ci
 }

@@ -10,7 +10,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 73,
-      "language_surface_not_modelled_by_name": 7263,
+      "language_surface_not_modelled_by_name": 7251,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -241,7 +241,7 @@
         "crypto/engine/tb_asnmth.c": 13,
         "crypto/engine/tb_digest.c": 10,
         "crypto/engine/tb_pkmeth.c": 10,
-        "crypto/err/err.c": 66,
+        "crypto/err/err.c": 65,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 18,
@@ -379,21 +379,21 @@
         "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
         "crypto/ripemd/rmd_dgst.c": 342,
-        "crypto/rsa/rsa_ameth.c": 30,
+        "crypto/rsa/rsa_ameth.c": 29,
         "crypto/rsa/rsa_asn1.c": 21,
-        "crypto/rsa/rsa_backend.c": 23,
-        "crypto/rsa/rsa_gen.c": 17,
-        "crypto/rsa/rsa_lib.c": 25,
+        "crypto/rsa/rsa_backend.c": 22,
+        "crypto/rsa/rsa_gen.c": 16,
+        "crypto/rsa/rsa_lib.c": 24,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
-        "crypto/rsa/rsa_ossl.c": 19,
-        "crypto/rsa/rsa_pmeth.c": 17,
-        "crypto/rsa/rsa_prn.c": 6,
-        "crypto/rsa/rsa_pss.c": 9,
+        "crypto/rsa/rsa_ossl.c": 18,
+        "crypto/rsa/rsa_pmeth.c": 16,
+        "crypto/rsa/rsa_prn.c": 5,
+        "crypto/rsa/rsa_pss.c": 8,
         "crypto/rsa/rsa_schemes.c": 4,
-        "crypto/rsa/rsa_sign.c": 6,
-        "crypto/rsa/rsa_sp800_56b_check.c": 5,
-        "crypto/rsa/rsa_sp800_56b_gen.c": 9,
+        "crypto/rsa/rsa_sign.c": 5,
+        "crypto/rsa/rsa_sp800_56b_check.c": 4,
+        "crypto/rsa/rsa_sp800_56b_gen.c": 8,
         "crypto/seed/seed.c": 7,
         "crypto/self_test_core.c": 17,
         "crypto/sha/sha1dgst.c": 2,
@@ -636,7 +636,6 @@
       "by_defining_unit": {
         "crypto/asn1/asn1_lib.c": [
           "ossl_asn1_string_embed_free",
-          "ossl_asn1_string_set_bits_left",
           "ossl_sk_ASN1_UTF8STRING2text"
         ],
         "crypto/asn1/tasn_fre.c": [
@@ -724,7 +723,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 52
+      "names": 51
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -734,7 +733,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "665ab5f8237b08ec93cb79a5b15b291e06dc2f16cfc2fe65f8629dafc62be4a1",
+  "body_hash": "2ff5146573b28258447379ebf6e21b450024852eaf10b615161e1e5815eef569",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -770,12 +769,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "e05bb5442a5f0d4ec9d5f6dce192407babc77cd16171aa604d911dcf97769516"
+      "sha256": "9dbf184740d81f6b7704d23502c92f36ae9e3179bf9cbc125b8c8e3a2e1d0fc8"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "b2e10a2210431a3f2f1df8ffb6139404563966e7e57d601cde3bb5780402d90e"
+      "sha256": "4694b6a34b7439a7d357c03c0435f0d6feda481d77840b6072dc91076fb192e7"
     },
     {
       "name": "prerequisites",
