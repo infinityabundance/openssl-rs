@@ -530,6 +530,10 @@
       "observations": 54,
       "verdict": "pass"
     },
+    "RT-TS": {
+      "observations": 231,
+      "verdict": "pass"
+    },
     "RT-X509": {
       "observations": 52,
       "verdict": "pass"
@@ -585,13 +589,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 5190,
+    "libcrypto": 5368,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
-    "phase12": 459,
+    "phase12": 281,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -643,7 +647,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 35,
     "findings": 0,
-    "language_census": 7248,
+    "language_census": 7243,
     "sealed_census": 51
   },
   "provider_implemented": [

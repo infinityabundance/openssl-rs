@@ -34937,3 +34937,23 @@ Verified (container): `RT-CMP` 230 observations, 0 residuals; `probe_hygiene.py`
 `cargo clippy --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean;
 `cargo test --lib` 1131 passed; `build_phase2.sh` all-ABI pass; the whole gate chain green;
 `regression_guard.py --require-current` ok (139 courts, 49,564 observations).
+
+## D516 -- the TS stratum lands, and six rows point forward
+
+12.5 lands 178 of `ts.h`'s 184 exports in a new `src/ts/` (`ts_asn1.c`, `ts_rsp_utils.c`,
+`ts_req_utils.c`, `ts_rsp_sign.c`, `ts_conf.c`, `ts_verify_ctx.c`, `ts_lib.c`, `ts_rsp_print.c`,
+`ts_req_print.c`), replacing the shell's `TS_TST_INFO`/`TS_STATUS_INFO` scaffolds with the real
+transcription. `open_in_this_stratum` falls 459 -> 281 and `RT-TS` drives 231 observations with 0
+residuals.
+
+Six rows are held and named: `TS_RESP_create_response`, `TS_RESP_verify_response`,
+`TS_RESP_verify_signature` and `TS_RESP_verify_token` need the ESS item group and
+`OSSL_ESS_*` helpers, which are **12.7**'s by `ess.h` and not ts-local; `TS_CONF_set_crypto_device`
+and `TS_CONF_set_default_engine` need `ENGINE_by_id`/`ENGINE_set_default`, which are **Phase 13**'s
+and absent by design. Three status-info setters are referenced rather than called (no landed entry
+point can make `ctx->response` non-NULL).
+
+Verified (container): `RT-TS` 231 observations, 0 residuals; `probe_hygiene.py` clean;
+`cargo clippy --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean;
+`cargo test --lib` 1131 passed; `build_phase2.sh` all-ABI pass; the whole gate chain green;
+`regression_guard.py --require-current` ok.

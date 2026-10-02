@@ -203,6 +203,11 @@ pub mod status;
 // `ossl_store_handle_load_result`) in its module doc. The `file_store.c` provider row is the
 // only whole unit still withheld.
 pub mod store;
+// Phase 12.5 — `crypto/ts/`: the RFC 3161 timestamping surface. The item groups, accessors,
+// print text, verify context and `CONF` readers land here; `TS_RESP_create_response` and the
+// verify entry points wait on the Phase 12.7 ESS item group and the two engine-reading `CONF`
+// setters wait on Phase 13's `ENGINE_by_id`. See `src/ts/mod.rs`.
+pub mod ts;
 // Test-only: the one process-wide lock that serialises tests touching the crate's
 // process-global state (init/cleanup, the default `OSSL_LIB_CTX`, the memory
 // functions, the error registry, the object database, the property/method stores,

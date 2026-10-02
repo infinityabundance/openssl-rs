@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 684,
+      "crate_files_read": 694,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,12 +12,12 @@
       "identities_authority_only": 45,
       "identities_checked": 232,
       "identities_mismatches": 0,
-      "links_convention": 283,
+      "links_convention": 286,
       "links_documented": 25,
       "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 304,
-      "signatures_checked": 334,
+      "signatures_authority_only": 301,
+      "signatures_checked": 337,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 211,
       "signatures_unlinked": 0,
@@ -1610,9 +1610,6 @@
         "SSL_psk_server_cb_func",
         "SSL_psk_use_session_cb_func",
         "SSL_verify_cb",
-        "TS_extension_cb",
-        "TS_serial_cb",
-        "TS_time_cb",
         "X509V3_EXT_FREE",
         "X509V3_EXT_R2I",
         "bio_info_cb",
@@ -4275,6 +4272,30 @@
           "authority": "OSSL_STORE_post_process_info_fn",
           "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque))",
           "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "TsSerialCb",
+          "at": "src/ts/ts_rsp_sign.rs",
+          "authority": "TS_serial_cb",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "TsTimeCb",
+          "at": "src/ts/ts_rsp_sign.rs",
+          "authority": "TS_time_cb",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(int:8:s), ptr(int:8:s))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(int:8:s), ptr(int:8:s))",
+          "how": "convention"
+        },
+        {
+          "alias": "TsExtensionCb",
+          "at": "src/ts/ts_rsp_sign.rs",
+          "authority": "TS_extension_cb",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque))",
           "how": "convention"
         },
         {

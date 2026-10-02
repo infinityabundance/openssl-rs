@@ -29,12 +29,11 @@ The behavioural courts the plan gives the later subphases
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" — the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-PKCS7`, `RT-CMS`, `RT-CMP`, `RT-TS`, `RT-OCSP`, `RT-CRMF`,
-`RT-ESS` and `RT-SRP` are the remaining subphases' own courts, and `RT-CMS-REMAINDER` is 12.9's for
-the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs. `RT-HTTP` was among them and
-is registered by 12.1: `courts/phase12/rt_http_probe.c` drives the request/response engine over
-memory BIOs (no socket, no clock). Each court not yet registered is printed with its subphase on
-every run.
+later activation established. `RT-PKCS7`, `RT-CMS`, `RT-CMP`, `RT-OCSP`, `RT-CRMF`, `RT-ESS` and
+`RT-SRP` are the remaining subphases' own courts, and `RT-CMS-REMAINDER` is 12.9's for the CT
+remainder, the shared `x_all.c` dispatch and the nine hand-offs. `RT-HTTP` was among them and is
+registered by 12.1, and `RT-TS` is registered by 12.5; each court not yet registered is printed
+with its subphase on every run.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -89,6 +88,7 @@ COURTS: list[tuple[str, str]] = [
     ("RT-PKCS7", "rt_pkcs7_probe.c"),
     ("RT-CMS", "rt_cms_probe.c"),
     ("RT-CMP", "rt_cmp_probe.c"),
+    ("RT-TS", "rt_ts_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -97,7 +97,6 @@ COURTS: list[tuple[str, str]] = [
 # subphase; `RT-CRMF` and `RT-ESS` are the two courts of 12.7, whose two families share a
 # subphase but not a court.
 PENDING_COURTS: dict[str, str] = {
-    "RT-TS": "12.5 -- the timestamping surface (`ts.h`)",
     "RT-OCSP": "12.6 -- the OCSP request/response surface (`ocsp.h`'s 94 open exports)",
     "RT-CRMF": "12.7 -- the CRMF certificate-request surface (`crmf.h`)",
     "RT-ESS": "12.7 -- the ESS signing-certificate surface (`ess.h`)",

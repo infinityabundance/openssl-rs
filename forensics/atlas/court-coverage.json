@@ -900,6 +900,7 @@
               "RT-PUBKEY",
               "RT-RSA",
               "RT-STORE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -961,6 +962,7 @@
               "RT-PARAM",
               "RT-PUBKEY",
               "RT-SECURE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-STORE"
@@ -1254,6 +1256,7 @@
               "RT-SIGNATURE",
               "RT-STORE",
               "RT-THREADDATA",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -1687,7 +1690,8 @@
               "RT-PROVIDER-3P",
               "RT-RUNTIME-EXT",
               "RT-SELFTEST",
-              "RT-THREADDATA"
+              "RT-THREADDATA",
+              "RT-TS"
             ],
             "symbol": "ERR_peek_error"
           },
@@ -2046,6 +2050,7 @@
               "RT-PUBKEY",
               "RT-RSA",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-REQ",
               "RT-X509-STORE",
@@ -2072,6 +2077,7 @@
               "RT-PUBKEY",
               "RT-RSA",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-STORE",
               "RT-X509-V3"
             ],
@@ -2115,6 +2121,7 @@
               "RT-DH",
               "RT-OBJ-STREAM",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-STORE",
               "RT-X509-VERIFY-SURFACE"
             ],
@@ -2437,6 +2444,7 @@
               "RT-PKCS7",
               "RT-STACK",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-STORE",
               "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
@@ -2477,6 +2485,7 @@
               "RT-PKCS7",
               "RT-STACK",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-REQ",
@@ -3111,6 +3120,7 @@
               "RT-PKCS7",
               "RT-PUBKEY",
               "RT-RAND-USERS",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -3362,6 +3372,7 @@
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -3829,6 +3840,7 @@
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -3916,6 +3928,7 @@
               "RT-PKCS7",
               "RT-PUBKEY",
               "RT-STORE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -4177,6 +4190,7 @@
               "RT-PUBKEY",
               "RT-RUNTIME-EXT",
               "RT-STORE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -4746,6 +4760,7 @@
               "RT-CONF",
               "RT-CONF-MOD",
               "RT-STORE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-STORE"
@@ -4807,6 +4822,7 @@
             "courts": [
               "RT-CONF",
               "RT-STORE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-STORE"
@@ -4826,6 +4842,7 @@
               "RT-CONF",
               "RT-CONF-MOD",
               "RT-STORE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-STORE"
@@ -5191,6 +5208,7 @@
             "courts": [
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
+              "RT-TS",
               "RT-X509-ACERT"
             ],
             "symbol": "ASN1_GENERALIZEDTIME_free"
@@ -5209,6 +5227,7 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-VERIFY-SURFACE"
             ],
@@ -5234,6 +5253,7 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-VERIFY-SURFACE"
             ],
@@ -5282,7 +5302,8 @@
             "courts": [
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-TS"
             ],
             "symbol": "ASN1_IA5STRING_new"
           },
@@ -5309,6 +5330,7 @@
               "RT-CMP",
               "RT-EVP-PEM",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-STORE",
               "RT-X509-V3",
@@ -5324,6 +5346,7 @@
               "RT-PKCS12",
               "RT-RSA",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-STORE",
               "RT-X509-V3",
@@ -5365,6 +5388,7 @@
               "RT-EVP-PEM",
               "RT-RSA",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-STORE",
               "RT-X509-V3",
@@ -5381,6 +5405,7 @@
               "RT-EVP-PEM",
               "RT-RSA",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-STORE",
               "RT-X509-V3",
@@ -5449,6 +5474,7 @@
               "RT-ASN1-PRINT",
               "RT-DH",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-STORE",
               "RT-X509-VERIFY-SURFACE"
             ],
@@ -5500,6 +5526,7 @@
               "RT-DIGEST",
               "RT-KEYFORMAT",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
@@ -5529,6 +5556,7 @@
               "RT-KEYFORMAT",
               "RT-PKCS7",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
@@ -5542,6 +5570,7 @@
               "RT-BIO-ASN1",
               "RT-PKCS7",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-STORE"
             ],
@@ -5853,6 +5882,7 @@
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-STORE",
               "RT-X509-V3"
             ],
@@ -5905,7 +5935,8 @@
               "RT-ASN1-TIME",
               "RT-DIGEST",
               "RT-KEYFORMAT",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-TS"
             ],
             "symbol": "ASN1_STRING_set"
           },
@@ -6161,7 +6192,8 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMP",
               "RT-EVP-PBE",
-              "RT-PKCS7"
+              "RT-PKCS7",
+              "RT-TS"
             ],
             "symbol": "ASN1_TYPE_new"
           },
@@ -6176,7 +6208,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
-              "RT-PKCS7"
+              "RT-PKCS7",
+              "RT-TS"
             ],
             "symbol": "ASN1_TYPE_set"
           },
@@ -13617,6 +13650,7 @@
               "RT-PUBKEY",
               "RT-SIGNATURE",
               "RT-STORE",
+              "RT-TS",
               "RT-X509",
               "RT-X509-PEM",
               "RT-X509-REQ",
@@ -15438,6 +15472,7 @@
               "RT-PKCS7",
               "RT-SIGNATURE",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-REQ"
             ],
@@ -24788,6 +24823,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-TS",
               "RT-X509-REF"
             ],
             "symbol": "GENERAL_NAME_free"
@@ -24820,6 +24856,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-REF"
             ],
@@ -24844,6 +24881,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-REF"
             ],
@@ -27989,6 +28027,7 @@
               "RT-KEYFORMAT",
               "RT-PKCS12",
               "RT-PKCS7",
+              "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-REF",
@@ -28023,6 +28062,7 @@
               "RT-CMS",
               "RT-KEYFORMAT",
               "RT-RSA",
+              "RT-TS",
               "RT-X509-ACERT",
               "RT-X509-REF",
               "RT-X509-STORE"
@@ -28038,6 +28078,7 @@
               "RT-KEYFORMAT",
               "RT-RSA",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -28625,6 +28666,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-TS",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -28634,6 +28676,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-TS",
               "RT-X509-REF",
               "RT-X509-STORE"
             ],
@@ -28651,6 +28694,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-TS",
               "RT-X509-REF",
               "RT-X509-STORE",
               "RT-X509-V3"
@@ -28681,6 +28725,7 @@
             "basis": "called",
             "courts": [
               "RT-STORE",
+              "RT-TS",
               "RT-X509-REF",
               "RT-X509-STORE",
               "RT-X509-V3"
@@ -30782,6 +30827,7 @@
             "basis": "called",
             "courts": [
               "RT-CMP",
+              "RT-TS",
               "RT-X509-STORE",
               "RT-X509-VERIFY-ENGINE"
             ],
@@ -31581,6 +31627,7 @@
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STORE",
+              "RT-TS",
               "RT-X509-PEM",
               "RT-X509-REF",
               "RT-X509-REQ",
@@ -35052,10 +35099,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 574,
-          "directly_courted_called": 429,
+          "directly_courted": 752,
+          "directly_courted_called": 607,
           "directly_courted_referenced": 145,
-          "implemented": 574,
+          "implemented": 752,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -38126,7 +38173,8 @@
             "courts": [
               "RT-PHASE12-REF",
               "RT-PKCS12",
-              "RT-PKCS7"
+              "RT-PKCS7",
+              "RT-TS"
             ],
             "symbol": "PKCS7_free"
           },
@@ -38191,7 +38239,8 @@
             "courts": [
               "RT-PHASE12-REF",
               "RT-PKCS12",
-              "RT-PKCS7"
+              "RT-PKCS7",
+              "RT-TS"
             ],
             "symbol": "PKCS7_new"
           },
@@ -38233,7 +38282,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-PKCS7"
+              "RT-PKCS7",
+              "RT-TS"
             ],
             "symbol": "PKCS7_set_content"
           },
@@ -38256,7 +38306,8 @@
             "courts": [
               "RT-PHASE12-REF",
               "RT-PKCS12",
-              "RT-PKCS7"
+              "RT-PKCS7",
+              "RT-TS"
             ],
             "symbol": "PKCS7_set_type"
           },
@@ -38301,6 +38352,13 @@
               "RT-PKCS7"
             ],
             "symbol": "PKCS7_stream"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "PKCS7_to_TS_TST_INFO"
           },
           {
             "basis": "called",
@@ -38564,6 +38622,1049 @@
           {
             "basis": "called",
             "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ACCURACY_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ACCURACY_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ACCURACY_get_micros"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ACCURACY_get_millis"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ACCURACY_get_seconds"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ACCURACY_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ACCURACY_set_micros"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ACCURACY_set_millis"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ACCURACY_set_seconds"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ASN1_INTEGER_print_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_get_tsa_section"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_load_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_load_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_load_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_accuracy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_clock_precision_digits"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_def_policy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_digests"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_ess_cert_id_chain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_ess_cert_id_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_ordering"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_policies"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_serial"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_signer_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_signer_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_signer_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_CONF_set_tsa_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_MSG_IMPRINT_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_MSG_IMPRINT_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_MSG_IMPRINT_get_algo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_MSG_IMPRINT_get_msg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_MSG_IMPRINT_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_MSG_IMPRINT_print_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_MSG_IMPRINT_set_algo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_MSG_IMPRINT_set_msg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_OBJ_print_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_add_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_delete_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_ext_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_cert_req"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_ext_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_ext_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_ext_by_critical"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_ext_count"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_ext_d2i"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_exts"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_msg_imprint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_nonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_policy_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_get_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_print_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_set_cert_req"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_set_msg_imprint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_set_nonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_set_policy_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_set_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_REQ_to_TS_VERIFY_CTX"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_add_failure_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_add_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_add_md"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_add_policy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_get_request"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_get_tst_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_new_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_accuracy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_clock_precision_digits"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_def_policy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_ess_cert_id_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_extension_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_serial_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_signer_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_signer_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_signer_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_status_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_status_info_cond"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_CTX_set_time_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_get_status_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_get_token"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_get_tst_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_print_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_set_status_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_RESP_set_tst_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_STATUS_INFO_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_STATUS_INFO_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_STATUS_INFO_get0_failure_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_STATUS_INFO_get0_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_STATUS_INFO_get0_text"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_STATUS_INFO_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_STATUS_INFO_print_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_STATUS_INFO_set_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_add_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_delete_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_ext_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_accuracy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_ext_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_ext_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_ext_by_critical"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_ext_count"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_ext_d2i"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_exts"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_msg_imprint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_nonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_ordering"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_policy_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_serial"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_tsa"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_get_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_print_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_set_accuracy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_set_msg_imprint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_set_nonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_set_ordering"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_set_policy_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_set_serial"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_set_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_set_tsa"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_TST_INFO_set_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_add_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_cleanup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_set0_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_set0_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_set0_imprint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_set0_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_set_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_set_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_set_imprint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_VERIFY_CTX_set_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_X509_ALGOR_print_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "TS_ext_print_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-CMS"
             ],
             "symbol": "d2i_CMS_ContentInfo"
@@ -38798,6 +39899,104 @@
               "RT-PHASE12-REF"
             ],
             "symbol": "d2i_SCT_LIST"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_ACCURACY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_MSG_IMPRINT"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_MSG_IMPRINT_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_MSG_IMPRINT_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_REQ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_REQ_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_REQ_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_RESP"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_RESP_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_RESP_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_STATUS_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_TST_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_TST_INFO_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "d2i_TS_TST_INFO_fp"
           },
           {
             "basis": "called",
@@ -39059,6 +40258,104 @@
             "symbol": "i2d_SCT_LIST"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_ACCURACY"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_MSG_IMPRINT"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_MSG_IMPRINT_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_MSG_IMPRINT_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_REQ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_REQ_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_REQ_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_RESP"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_RESP_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_RESP_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_STATUS_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_TST_INFO"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_TST_INFO_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TS"
+            ],
+            "symbol": "i2d_TS_TST_INFO_fp"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE12-REF"
@@ -39090,14 +40387,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 12,
-        "staged_candidate_probes": 5
+        "staged_candidate_probes": 6
       }
     ],
     "totals": {
-      "directly_courted": 5055,
-      "directly_courted_called": 4057,
+      "directly_courted": 5233,
+      "directly_courted_called": 4235,
       "directly_courted_referenced": 998,
-      "implemented": 5063,
+      "implemented": 5241,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -39108,7 +40405,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a9652fa69de30bf63250e5d2fa79e798f030307563250df29e01a6e354d9d19a"
+      "sha256": "8601d4ec00808f97cebf5c9ee0d925fede3c665cc28c8012a98224cf84c012c3"
     },
     {
       "name": "symbol-ownership",
@@ -39123,7 +40420,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "3dab87cfb5937fefaab462413fd4351b35a95029fa3501d93d5d23b463c2d4b4"
+      "sha256": "019abe66f39b922ffe3ba4365d7d54857524831baea9702227b675980718b5e8"
     },
     {
       "name": "phase3-courts",
@@ -39133,7 +40430,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "a1a5dc58dbec00c32ba4433529b9cbe72e0d347e5bdb8206006d01440c640cb7"
+      "sha256": "4675d38dfee5b3f63dea8d4afaafb778d76f54cde93f77e78d2f3739969f80f0"
     },
     {
       "name": "phase4-courts",
@@ -39143,7 +40440,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "d9b8a994f63780d685a3fb504782aa42b867dcd31bf5a29e4241ec83b8cb75c4"
+      "sha256": "6caf99f38cfea41509c8c52665619baad85255ba33b7b0bbb389825cf034b0db"
     },
     {
       "name": "phase5-courts",
@@ -39153,7 +40450,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "5c18bbfa3bd6d63790ba4d9f1005f6576b07abe0084cf88750fbbb106d2b2d38"
+      "sha256": "1bddd0fcd047925fbe44feadbd8fbfa1f769babcb00172f3fbfe2c1bc031ffe1"
     },
     {
       "name": "phase6-courts",
@@ -39163,7 +40460,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "dd4fa64c1498838db496f857d5db3a68c85fbd908050f1232e31cb0514bd1a3f"
+      "sha256": "9a134cfe933000f17e6c05db73723524d17c8d94a7ee88fbff4ff96dbad5a748"
     },
     {
       "name": "phase7-courts",
@@ -39173,7 +40470,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "4ae998dbfc544ea60d7a1049d71366cd8b5b958ea6a5f297fb2f1949a3fdbefd"
+      "sha256": "740e46375b53ff90faadb6ab2001c4bf4f39a3d6967b5fa701b0b3bcdb1f6000"
     },
     {
       "name": "phase8-courts",
@@ -39183,7 +40480,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "d837bd9bdedf1c3141afbd2a1b32c37517c2f9a2e7f657713f5b2d90b82c4f36"
+      "sha256": "fbc071157b5f12543f4e7f7e55e55c748b74c897257b3b91e0fe9a53b0cf86b3"
     },
     {
       "name": "phase9-courts",
@@ -39193,7 +40490,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "4ee1e28e5a0199cb0987f9366ba5eea116b462ecba757ba362703049030f6cbf"
+      "sha256": "993e04ebe2dc88cfe0322b92cb8cefe45641360a24bfbf91a80fbd4eac2f1105"
     },
     {
       "name": "phase10-courts",
@@ -39203,7 +40500,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "81032df90cac1d38216229fefa23ce51c06a1e9d24dc97dd3de3a6e2a8ba49c8"
+      "sha256": "0cec2dcc23fb34279dd72e3f87d3d9d3c7692e4c5724162a632c0712ff761ec9"
     },
     {
       "name": "phase11-courts",
@@ -39213,12 +40510,12 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "6eff26392b9d65f4eb69da494642eed98a4368fe4e5d24ca6b98a2e6dc99a0ef"
+      "sha256": "d59e0762d6dd5e8d048bf4a5341bbf9182a1c60b560d0285aaaf95399011e0ff"
     },
     {
       "name": "phase12-courts",
       "path": "artifacts/phase12/COURTS.json",
-      "sha256": "16e71ce064051520e3f9c6aa37d1d44d4698386745f1eb8b06ee0a1723dc624a"
+      "sha256": "040e8dce5a25195fb5ce897caf57d5570f86f2317de336f4f1b7b9b6c788c153"
     }
   ],
   "kind": "court-coverage",
