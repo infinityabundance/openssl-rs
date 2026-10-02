@@ -38,6 +38,23 @@
           "candidate": "artifacts/phase12/probes/rt_http_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 126,
+        "candidate_exit_code": 0,
+        "candidate_observations": 126,
+        "candidate_stderr_tail": [],
+        "court": "RT-PKCS7",
+        "crashed": false,
+        "probe": "courts/phase12/rt_pkcs7_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase12/probes/rt_pkcs7_probe.authority",
+          "candidate": "artifacts/phase12/probes/rt_pkcs7_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
@@ -47,14 +64,13 @@
       "RT-CRMF": "12.7 -- the CRMF certificate-request surface (`crmf.h`)",
       "RT-ESS": "12.7 -- the ESS signing-certificate surface (`ess.h`)",
       "RT-OCSP": "12.6 -- the OCSP request/response surface (`ocsp.h`'s 94 open exports)",
-      "RT-PKCS7": "12.2 -- the `pkcs7.h` remainder and the `PEM_*_PKCS7` container readers",
       "RT-SRP": "12.8 -- the SRP verifier and library surface (`srp.h`)",
       "RT-TS": "12.5 -- the timestamping surface (`ts.h`)"
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "generator": "forensics/tools/phase12_courts.py",
@@ -73,6 +89,11 @@
       "name": "probe",
       "path": "courts/phase12/rt_http_probe.c",
       "sha256": "33b64d754f2c0f9889a094e9f2020320953b2c64c88551f8fa4b19ebc76397f8"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_pkcs7_probe.c",
+      "sha256": "d97beb62e7a182d3b2b34ac40469debdbff1b2d5571dc62319d878c75a0502c5"
     }
   ],
   "kind": "phase12-courts",

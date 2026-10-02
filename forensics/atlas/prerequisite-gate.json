@@ -9,8 +9,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 74,
-      "language_surface_not_modelled_by_name": 7352,
+      "covered_by_a_divergence": 73,
+      "language_surface_not_modelled_by_name": 7310,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -40,7 +40,6 @@
         "ossl_release_default_drbg_ctx": 2,
         "out_len": 1,
         "outlen": 1,
-        "pkcs7_get0_certificates": 1,
         "pkt": 1,
         "sleep": 1,
         "src": 1,
@@ -71,7 +70,7 @@
         "crypto/asn1/ameth_lib.c": 23,
         "crypto/asn1/asn1_gen.c": 18,
         "crypto/asn1/asn1_lib.c": 11,
-        "crypto/asn1/asn_mime.c": 40,
+        "crypto/asn1/asn_mime.c": 35,
         "crypto/asn1/asn_moid.c": 10,
         "crypto/asn1/asn_mstbl.c": 10,
         "crypto/asn1/asn_pack.c": 5,
@@ -337,9 +336,9 @@
         "crypto/params_dup.c": 12,
         "crypto/params_from_text.c": 9,
         "crypto/passphrase.c": 22,
-        "crypto/pem/pem_all.c": 22,
+        "crypto/pem/pem_all.c": 21,
         "crypto/pem/pem_info.c": 17,
-        "crypto/pem/pem_lib.c": 28,
+        "crypto/pem/pem_lib.c": 27,
         "crypto/pem/pem_oth.c": 5,
         "crypto/pem/pem_pk8.c": 14,
         "crypto/pem/pem_pkey.c": 29,
@@ -361,8 +360,8 @@
         "crypto/pkcs12/p12_p8e.c": 8,
         "crypto/pkcs12/p12_sbag.c": 14,
         "crypto/pkcs12/p12_utl.c": 7,
-        "crypto/pkcs7/pk7_asn1.c": 58,
-        "crypto/pkcs7/pk7_lib.c": 72,
+        "crypto/pkcs7/pk7_asn1.c": 53,
+        "crypto/pkcs7/pk7_lib.c": 42,
         "crypto/poly1305/poly1305.c": 5,
         "crypto/property/defn_cache.c": 7,
         "crypto/property/property.c": 25,
@@ -622,11 +621,11 @@
     },
     "checked": {
       "authority_units": 467,
-      "crate_modules": 649,
+      "crate_modules": 654,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
-      "divergence_names_covered": 36,
-      "divergence_rows": 10,
+      "divergence_names_covered": 35,
+      "divergence_rows": 9,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -735,7 +734,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "b5c1bd04304bfd0403631ec3caa720b7e8171c2ca1e4eb35342e2dc2afed180f",
+  "body_hash": "52f6ca71bf4e4f0fe5eaa10797a775239dc4619f278fb820db6317951efb6e6d",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -771,17 +770,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "077ef77b525bda1347cbd3dfb9a975f65fdf00e0a772be357913faedb344584f"
+      "sha256": "9f061698703d21bd57cdaa6bd595fd2b47096b5443748669c5cb483209f63bd2"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d44c8ddde51b7d09971728a432b50b64a1aff65499f4c0e183b824a31c76302e"
+      "sha256": "4c9e571403ed77281a4cd1c7449940d8950208e7ba387d9ed8441b7308b6c5c2"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "ffa52dd07956d18fa118aac6adcdb60b63299c86e9d7cdd5629b029e51012dc7"
+      "sha256": "98f7653f716ef0aebc67861dc5a8694980bd2490aa33a39b7034a8c705643074"
     },
     {
       "name": "crate-source-tree",

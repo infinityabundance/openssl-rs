@@ -68,6 +68,7 @@ use crate::pem::pem_lib::{
     PEM_STRING_X509_CRL, PEM_STRING_X509_REQ, PEM_STRING_X509_REQ_OLD,
 };
 use crate::pem::pem_oth::PEM_ASN1_read_bio;
+use crate::pkcs7::pk7_asn1::{d2i_PKCS7, i2d_PKCS7, Pkcs7};
 use crate::rsa::Rsa;
 use crate::runtime::bio::Bio;
 use crate::x509::x509_req::X509Req;
@@ -139,6 +140,8 @@ i2d_shim!(
     i2d_NETSCAPE_CERT_SEQUENCE,
     NetScapeCertSequence
 );
+d2i_shim!(d2i_void_pkcs7, d2i_PKCS7, Pkcs7);
+i2d_shim!(i2d_void_pkcs7, i2d_PKCS7, Pkcs7);
 d2i_shim!(d2i_void_rsa_pubkey, d2i_RSA_PUBKEY, Rsa);
 i2d_shim!(i2d_void_rsa_pubkey, i2d_RSA_PUBKEY, Rsa);
 d2i_shim!(d2i_void_dsa_pubkey, d2i_DSA_PUBKEY, Dsa);
@@ -455,6 +458,66 @@ pub unsafe extern "C" fn PEM_write_bio_NETSCAPE_CERT_SEQUENCE(
 ) -> c_int {
     // SAFETY: `out`/`x` are the caller's and `i2d_void_nsseq` is the encoder.
     unsafe { plain_write_bio(i2d_void_nsseq, PEM_STRING_X509, out, x.cast()) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// `IMPLEMENT_PEM_rw(PKCS7, PKCS7, PEM_STRING_PKCS7, PKCS7)` — `pem_all.c:42`.
+// ---------------------------------------------------------------------------------------------
+
+/// `PEM_STRING_PKCS7` — `include/openssl/pem.h:47`.
+const PEM_STRING_PKCS7: *const c_char = c"PKCS7".as_ptr();
+
+/// `PKCS7 *PEM_read_PKCS7(FILE *fp, PKCS7 **x, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_all.c:42`.
+///
+/// # Safety
+/// `fp` an open readable stream; `x` the decoder's destination; `cb`/`u` passed to the reader.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_PKCS7(
+    fp: *mut c_void,
+    x: *mut *mut Pkcs7,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut Pkcs7 {
+    // SAFETY: `d2i_PKCS7` is the decoder and the arguments are the caller's.
+    unsafe { PEM_ASN1_read(d2i_void_pkcs7, PEM_STRING_PKCS7, fp, x.cast(), cb, u) }.cast::<Pkcs7>()
+}
+
+/// `PKCS7 *PEM_read_bio_PKCS7(BIO *bp, PKCS7 **x, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_all.c:42`.
+///
+/// # Safety
+/// `bp` a live readable BIO; `x` the decoder's destination; `cb`/`u` passed to the reader.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_bio_PKCS7(
+    bp: *mut Bio,
+    x: *mut *mut Pkcs7,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut Pkcs7 {
+    // SAFETY: `d2i_PKCS7` is the decoder and the arguments are the caller's.
+    unsafe { PEM_ASN1_read_bio(d2i_void_pkcs7, PEM_STRING_PKCS7, bp, x.cast(), cb, u) }
+        .cast::<Pkcs7>()
+}
+
+/// `int PEM_write_PKCS7(FILE *out, const PKCS7 *x)` — `crypto/pem/pem_all.c:42`.
+///
+/// # Safety
+/// `out` an open writable stream; `x` a live container.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_PKCS7(out: *mut c_void, x: *const Pkcs7) -> c_int {
+    // SAFETY: `out`/`x` are the caller's and `i2d_void_pkcs7` is the encoder.
+    unsafe { plain_write(i2d_void_pkcs7, PEM_STRING_PKCS7, out, x.cast()) }
+}
+
+/// `int PEM_write_bio_PKCS7(BIO *out, const PKCS7 *x)` — `crypto/pem/pem_all.c:42`.
+///
+/// # Safety
+/// `out` a live writable BIO; `x` a live container.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_PKCS7(out: *mut Bio, x: *const Pkcs7) -> c_int {
+    // SAFETY: `out`/`x` are the caller's and `i2d_void_pkcs7` is the encoder.
+    unsafe { plain_write_bio(i2d_void_pkcs7, PEM_STRING_PKCS7, out, x.cast()) }
 }
 
 // ---------------------------------------------------------------------------------------------

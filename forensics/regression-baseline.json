@@ -450,6 +450,10 @@
       "observations": 353,
       "verdict": "pass"
     },
+    "RT-PKCS7": {
+      "observations": 126,
+      "verdict": "pass"
+    },
     "RT-PROVIDER": {
       "observations": 83,
       "verdict": "pass"
@@ -573,13 +577,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4788,
+    "libcrypto": 4891,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
-    "phase12": 861,
+    "phase12": 758,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -629,9 +633,9 @@
   },
   "prerequisites": {
     "blocking_dependencies": 5,
-    "divergence_names_covered": 36,
+    "divergence_names_covered": 35,
     "findings": 0,
-    "language_census": 7352,
+    "language_census": 7310,
     "sealed_census": 52
   },
   "provider_implemented": [
