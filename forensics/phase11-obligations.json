@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 1455,
       "deferred_to_later_phase": 2,
-      "implemented": 1460,
-      "open_in_this_stratum": 5,
+      "implemented": 1465,
+      "open_in_this_stratum": 0,
       "owned": 1467,
       "received_by_handoff": 12
     },
@@ -973,6 +973,8 @@
       "X509_STORE_CTX_get_obj_by_subject",
       "X509_STORE_CTX_get_verify",
       "X509_STORE_CTX_get_verify_cb",
+      "X509_STORE_CTX_init",
+      "X509_STORE_CTX_init_rpk",
       "X509_STORE_CTX_new",
       "X509_STORE_CTX_new_ex",
       "X509_STORE_CTX_print_verify_cb",
@@ -1000,6 +1002,7 @@
       "X509_STORE_CTX_set_trust",
       "X509_STORE_CTX_set_verify",
       "X509_STORE_CTX_set_verify_cb",
+      "X509_STORE_CTX_verify",
       "X509_STORE_add_cert",
       "X509_STORE_add_crl",
       "X509_STORE_add_lookup",
@@ -1113,6 +1116,7 @@
       "X509_alias_get0",
       "X509_alias_set1",
       "X509_aux_print",
+      "X509_build_chain",
       "X509_certificate_type",
       "X509_chain_check_suiteb",
       "X509_chain_up_ref",
@@ -1247,6 +1251,7 @@
       "X509_trusted",
       "X509_up_ref",
       "X509_verify",
+      "X509_verify_cert",
       "X509_verify_cert_error_string",
       "X509at_add1_attr",
       "X509at_add1_attr_by_NID",
@@ -1592,38 +1597,7 @@
     "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
     "module_overrides": [],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation except Phase 10, this ledger does not start with the whole working set open: exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases landed before activation, and the two hand-offs Phase 5 discharged, are reported as `implemented` because `implemented-surface.json` says so. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum owns no provider registration row (`forensics/atlas/provider-algorithms.json` records rows for owning phases 8, Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-11-SUBPHASES.md section 4 decides when the stratum may be called complete.",
-    "open": [
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_init"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_init_rpk"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_verify"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_build_chain"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "X509_verify_cert"
-      }
-    ],
+    "open": [],
     "owned_by_header": {
       "asn1.h": 3,
       "evp.h": 2,
@@ -1776,17 +1750,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "5cb34c12a0c7701e4656034c22f29e62921d9f9e23da226432b8af778f1ae047"
+      "sha256": "4b75a701a30bd01a07c22669376456e3080aeb9cb217118b74f12871e40a48ad"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "4292962c7454cf3d957e12628b0bd2da575136d8fd13dd8069dee4ad6f06f00a"
+      "sha256": "890510d7b80caee4039c895155fe7768206698024c85bd6079ef13812dc2ac56"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "2cef3ee0c505844308066e272f64d0aac04e6658e7f74875fb61a6c36bb2b635"
+      "sha256": "d9b2bd7181d42a03b7fe061c421446575eba69740e2f925eb40fa219f707f5fb"
     }
   ],
   "kind": "phase11-obligations",

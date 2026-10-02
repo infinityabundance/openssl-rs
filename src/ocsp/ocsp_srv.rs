@@ -13,14 +13,12 @@
 //! `OCSP_basic_add1_status`, `OCSP_basic_sign*`, `OCSP_RESPID_set_by_*`, `OCSP_RESPID_match*`) is
 //! not part of this pull-forward; it is the responder's builder and belongs with Phase 12's exports.
 //!
-//! The one function carries `#![allow(dead_code)]` because its landing caller is the Phase-11
-//! engine's OCSP arm; the allowance retires with the engine commit.
+//! The one function's landing caller is the Phase-11 engine's OCSP arm.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-#![allow(dead_code)] // reached only from the Phase-11 engine's OCSP arm (11.2c)
 
 use core::ffi::c_int;
 

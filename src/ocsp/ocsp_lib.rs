@@ -14,8 +14,8 @@
 //! * `OCSP_CERTID_dup` (`:113`, `IMPLEMENT_ASN1_DUP_FUNCTION(OCSP_CERTID)`) — the ASN.1 duplicate.
 //!
 //! The sibling `OCSP_cert_to_id`/`OCSP_cert_id_new` are reached by the Phase-11 verification
-//! engine's OCSP arm (`X509_vfy.c`'s `check_cert_ocsp_resp`), which lands in the engine slice.
-//! The module carries one `#![allow(dead_code)]` for that reason, retired by the engine commit.
+//! engine's OCSP arm (`X509_vfy.c`'s `check_cert_ocsp_resp`). `OCSP_CERTID_dup` awaits Phase 12's
+//! exports and carries its own item-level allow.
 //!
 //! ## The raise sites
 //!
@@ -32,7 +32,6 @@
 
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-#![allow(dead_code)] // reached only from the Phase-11 engine's OCSP arm (11.2c)
 
 use core::ffi::{c_int, c_uint, c_void};
 use core::ptr;
@@ -258,6 +257,7 @@ pub(crate) unsafe extern "C" fn OCSP_id_cmp(a: *const OcspCertId, b: *const Ocsp
 ///
 /// # Safety
 /// `x` must be NULL or a live `OCSP_CERTID`.
+#[allow(dead_code)] // the engine's OCSP arm reads `OCSP_id_cmp`; the dup awaits Phase 12's exports
 pub(crate) unsafe extern "C" fn OCSP_CERTID_dup(x: *const OcspCertId) -> *mut OcspCertId {
     // SAFETY: `x` is NULL-or-live per the contract; `OCSP_CERTID_it()` is this crate's static item.
     unsafe { ASN1_item_dup(OCSP_CERTID_it(), x.cast()).cast::<OcspCertId>() }

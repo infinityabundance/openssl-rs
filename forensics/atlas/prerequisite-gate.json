@@ -10,7 +10,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 74,
-      "language_surface_not_modelled_by_name": 7275,
+      "language_surface_not_modelled_by_name": 7233,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -119,7 +119,7 @@
         "crypto/bio/bio_sock2.c": 18,
         "crypto/bio/bss_acpt.c": 19,
         "crypto/bio/bss_bio.c": 15,
-        "crypto/bio/bss_conn.c": 43,
+        "crypto/bio/bss_conn.c": 42,
         "crypto/bio/bss_core.c": 16,
         "crypto/bio/bss_dgram.c": 32,
         "crypto/bio/bss_dgram_pair.c": 22,
@@ -132,7 +132,7 @@
         "crypto/bn/bn_blind.c": 12,
         "crypto/bn/bn_ctx.c": 14,
         "crypto/bn/bn_dh.c": 3,
-        "crypto/bn/bn_exp.c": 21,
+        "crypto/bn/bn_exp.c": 20,
         "crypto/bn/bn_gf2m.c": 16,
         "crypto/bn/bn_intern.c": 6,
         "crypto/bn/bn_kron.c": 4,
@@ -203,7 +203,7 @@
         "crypto/dso/dso_dlfcn.c": 16,
         "crypto/dso/dso_lib.c": 15,
         "crypto/ec/curve448/curve448.c": 22,
-        "crypto/ec/ec2_smpl.c": 13,
+        "crypto/ec/ec2_smpl.c": 12,
         "crypto/ec/ec_ameth.c": 27,
         "crypto/ec/ec_asn1.c": 43,
         "crypto/ec/ec_backend.c": 35,
@@ -211,11 +211,11 @@
         "crypto/ec/ec_curve.c": 19,
         "crypto/ec/ec_cvt.c": 4,
         "crypto/ec/ec_deprecated.c": 9,
-        "crypto/ec/ec_key.c": 20,
+        "crypto/ec/ec_key.c": 19,
         "crypto/ec/ec_kmeth.c": 21,
-        "crypto/ec/ec_lib.c": 38,
+        "crypto/ec/ec_lib.c": 37,
         "crypto/ec/ec_mult.c": 18,
-        "crypto/ec/ec_oct.c": 10,
+        "crypto/ec/ec_oct.c": 9,
         "crypto/ec/ec_pmeth.c": 17,
         "crypto/ec/ec_print.c": 7,
         "crypto/ec/ecdh_kdf.c": 6,
@@ -242,7 +242,7 @@
         "crypto/engine/tb_asnmth.c": 13,
         "crypto/engine/tb_digest.c": 10,
         "crypto/engine/tb_pkmeth.c": 10,
-        "crypto/err/err.c": 70,
+        "crypto/err/err.c": 69,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 19,
@@ -295,7 +295,7 @@
         "crypto/ffc/ffc_params_validate.c": 9,
         "crypto/getenv.c": 2,
         "crypto/hmac/hmac.c": 6,
-        "crypto/hpke/hpke.c": 21,
+        "crypto/hpke/hpke.c": 20,
         "crypto/http/http_lib.c": 17,
         "crypto/idea/i_cbc.c": 4,
         "crypto/indicator_core.c": 5,
@@ -493,7 +493,7 @@
         "crypto/x509/x509_set.c": 19,
         "crypto/x509/x509_trust.c": 19,
         "crypto/x509/x509_v3.c": 10,
-        "crypto/x509/x509_vfy.c": 94,
+        "crypto/x509/x509_vfy.c": 66,
         "crypto/x509/x509_vpm.c": 33,
         "crypto/x509/x509aset.c": 19,
         "crypto/x509/x509cset.c": 15,
@@ -503,7 +503,7 @@
         "crypto/x509/x509type.c": 1,
         "crypto/x509/x_all.c": 52,
         "crypto/x509/x_attrib.c": 14,
-        "crypto/x509/x_crl.c": 62,
+        "crypto/x509/x_crl.c": 56,
         "crypto/x509/x_exten.c": 13,
         "crypto/x509/x_ietfatt.c": 25,
         "crypto/x509/x_name.c": 38,
@@ -730,7 +730,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "294dc97f95bf435f45cec64c796905dd303cd6bc7afa0f9984d85b86942612e2",
+  "body_hash": "c4ecbe22faff7fda995c4a015cf38381e337fe868160e0416d407af56107fb3b",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -766,17 +766,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "25c8936bf9dba9b432910d3291d98afa29ba14b1b9cd9f7be60a27e474253f30"
+      "sha256": "85ceed173f37c513b8e578b21c9a8075c72f1bdfb9ebe3ff175008d3f7c5e7ad"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "6c3880ab3e13ef6e26f0b73d944c088bea32812203ed353bec2445a44d75bf8a"
+      "sha256": "447996072baa744d5b666997d138ab432d82fa751db1716a7cf2997c7a4bd720"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "9d31085b652bc9287250af4055a5f09e4b7ec8375a0542c048e4860d9a820c74"
+      "sha256": "ffa52dd07956d18fa118aac6adcdb60b63299c86e9d7cdd5629b029e51012dc7"
     },
     {
       "name": "crate-source-tree",

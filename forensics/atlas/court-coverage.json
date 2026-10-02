@@ -11,12 +11,11 @@
       7,
       8,
       9,
-      10
-    ],
-    "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
-    "in_progress": [
+      10,
       11
     ],
+    "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
+    "in_progress": [],
     "not_yet_begun": [
       {
         "owing_phase": 12,
@@ -1993,6 +1992,7 @@
               "RT-X509-PEM",
               "RT-X509-REQ",
               "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "ERR_clear_error"
@@ -2055,6 +2055,7 @@
               "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "ERR_get_error"
@@ -3156,6 +3157,7 @@
               "RT-STACK",
               "RT-STORE",
               "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "OPENSSL_sk_free"
@@ -3196,6 +3198,7 @@
               "RT-X509-PEM",
               "RT-X509-REQ",
               "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "OPENSSL_sk_new_null"
@@ -3219,6 +3222,7 @@
               "RT-X509-PEM",
               "RT-X509-REQ",
               "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "OPENSSL_sk_num"
@@ -3239,6 +3243,7 @@
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "OPENSSL_sk_pop_free"
@@ -3256,6 +3261,7 @@
               "RT-X509-PEM",
               "RT-X509-REQ",
               "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "OPENSSL_sk_push"
@@ -3320,7 +3326,8 @@
               "RT-STACK",
               "RT-STORE",
               "RT-X509-PEM",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "OPENSSL_sk_value"
           },
@@ -5990,7 +5997,8 @@
               "RT-RSA",
               "RT-STORE",
               "RT-X509-ACERT",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "ASN1_INTEGER_get"
           },
@@ -24753,12 +24761,12 @@
         "staged_candidate_probes": 5
       },
       {
-        "completed": false,
+        "completed": true,
         "counts": {
-          "directly_courted": 1460,
-          "directly_courted_called": 875,
+          "directly_courted": 1465,
+          "directly_courted_called": 880,
           "directly_courted_referenced": 585,
-          "implemented": 1460,
+          "implemented": 1465,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -29714,7 +29722,8 @@
               "RT-STORE",
               "RT-X509-REF",
               "RT-X509-REQ",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "X509_NAME_cmp"
           },
@@ -30699,6 +30708,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_free"
@@ -30706,6 +30716,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get0_cert"
@@ -30713,6 +30724,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get0_chain"
@@ -30734,6 +30746,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get0_param"
@@ -30755,6 +30768,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get0_rpk"
@@ -30769,6 +30783,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get0_untrusted"
@@ -30783,6 +30798,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get1_chain"
@@ -30860,6 +30876,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get_error"
@@ -30867,6 +30884,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get_error_depth"
@@ -30916,6 +30934,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get_num_untrusted"
@@ -30937,6 +30956,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_get_verify_cb"
@@ -30944,6 +30964,21 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE"
+            ],
+            "symbol": "X509_STORE_CTX_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY-ENGINE"
+            ],
+            "symbol": "X509_STORE_CTX_init_rpk"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_new"
@@ -31077,6 +31112,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_set_flags"
@@ -31105,6 +31141,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_set_time"
@@ -31126,6 +31163,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_STORE_CTX_set_verify_cb"
@@ -31133,7 +31171,15 @@
           {
             "basis": "called",
             "courts": [
-              "RT-X509-STORE"
+              "RT-X509-VERIFY-ENGINE"
+            ],
+            "symbol": "X509_STORE_CTX_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "X509_STORE_add_cert"
           },
@@ -31155,7 +31201,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "X509_STORE_free"
           },
@@ -31338,7 +31385,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "X509_STORE_new"
           },
@@ -31611,6 +31659,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_VERIFY_PARAM_clear_flags"
@@ -31770,6 +31819,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_VERIFY_PARAM_set1_host"
@@ -31821,6 +31871,7 @@
             "basis": "called",
             "courts": [
               "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_VERIFY_PARAM_set_flags"
@@ -31936,6 +31987,13 @@
               "RT-X509-REQ"
             ],
             "symbol": "X509_aux_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY-ENGINE"
+            ],
+            "symbol": "X509_build_chain"
           },
           {
             "basis": "called",
@@ -32126,6 +32184,7 @@
               "RT-X509-REF",
               "RT-X509-REQ",
               "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "X509_free"
@@ -32185,7 +32244,8 @@
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-REF",
-              "RT-X509-REQ"
+              "RT-X509-REQ",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "X509_get0_pubkey"
           },
@@ -32390,7 +32450,8 @@
               "RT-STORE",
               "RT-X509-REF",
               "RT-X509-REQ",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "X509_get_issuer_name"
           },
@@ -32436,7 +32497,8 @@
             "courts": [
               "RT-PKCS12",
               "RT-STORE",
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "X509_get_serialNumber"
           },
@@ -32469,7 +32531,8 @@
               "RT-STORE",
               "RT-X509-REF",
               "RT-X509-REQ",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "X509_get_subject_name"
           },
@@ -32961,6 +33024,13 @@
               "RT-X509-REF"
             ],
             "symbol": "X509_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-X509-VERIFY-ENGINE"
+            ],
+            "symbol": "X509_verify_cert"
           },
           {
             "basis": "called",
@@ -34104,7 +34174,8 @@
               "RT-X509-PEM",
               "RT-X509-REF",
               "RT-X509-REQ",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "d2i_X509"
           },
@@ -35541,14 +35612,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 11,
-        "staged_candidate_probes": 7
+        "staged_candidate_probes": 8
       }
     ],
     "totals": {
-      "directly_courted": 4476,
-      "directly_courted_called": 3566,
+      "directly_courted": 4481,
+      "directly_courted_called": 3571,
       "directly_courted_referenced": 910,
-      "implemented": 4484,
+      "implemented": 4489,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -35559,7 +35630,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "25c8936bf9dba9b432910d3291d98afa29ba14b1b9cd9f7be60a27e474253f30"
+      "sha256": "85ceed173f37c513b8e578b21c9a8075c72f1bdfb9ebe3ff175008d3f7c5e7ad"
     },
     {
       "name": "symbol-ownership",
@@ -35574,7 +35645,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "b64f77d5ba20a9b21ffcff744e4d0a5a6247acb7eec151baab0e11ccedb1e5ed"
+      "sha256": "5456dff7fe8b93e03e77b6474e8d9e16c68599066001a686401eb9d28f95c95b"
     },
     {
       "name": "phase3-courts",
@@ -35584,7 +35655,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "daaa3c0c5399ae0cef3996540bd6559016675b16d9c604b2aa4e733733edf1e9"
+      "sha256": "f34eb665962ffd84eb542785f164a98593e4c6a3588ef927d47f05289e44801a"
     },
     {
       "name": "phase4-courts",
@@ -35594,7 +35665,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "4292962c7454cf3d957e12628b0bd2da575136d8fd13dd8069dee4ad6f06f00a"
+      "sha256": "890510d7b80caee4039c895155fe7768206698024c85bd6079ef13812dc2ac56"
     },
     {
       "name": "phase5-courts",
@@ -35604,7 +35675,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "d6af94ba83190ae1a8165f579e87c9f437185dba794da577c5516562773a0cad"
+      "sha256": "47c98e566e5b86aaaf8b097aabd03efd64b5d6b9d7922830086b077e5f28e687"
     },
     {
       "name": "phase6-courts",
@@ -35614,7 +35685,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "082b2d24c08f141ea30d50db93053af3a5907ac43925466d7792d7ae79366872"
+      "sha256": "5be5df48f366a80e0254cbd964b7381b1dd00ea43717a069a054c89d916fdd78"
     },
     {
       "name": "phase7-courts",
@@ -35624,7 +35695,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "26bf52e59c1879078d10a038c503b187abcad11403572c6160e534c8903bf24e"
+      "sha256": "98a2ebbeac92e81f89e09d9790117ad9150362c852830a775950e4711bd9d3a0"
     },
     {
       "name": "phase8-courts",
@@ -35634,7 +35705,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "cce9a5f3b2edb5d57143eda41ccd558a536c613d23d7da53baee4dcf06d4afde"
+      "sha256": "3b79bf2a970187d194dbb9aaca0c21b6876368262365001330102bd3d3daf47e"
     },
     {
       "name": "phase9-courts",
@@ -35644,7 +35715,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "0f756716eaff74dcc2f6cc8946ea65e331b739fb3f36c826daea2b83991ea3f1"
+      "sha256": "09f34d258d9ed91f44e5eff7f7a9113008688419731a2183d96072cd23ecb5c8"
     },
     {
       "name": "phase10-courts",
@@ -35654,12 +35725,12 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "5d1987db725a678574df62c64a3184e6ced8b587b4f67cba3b661d2e97df8965"
+      "sha256": "07b462b225251b7b500299c54b04b85cecedf75fb0cffa5460359f6a78f4bdb5"
     },
     {
       "name": "phase11-courts",
       "path": "artifacts/phase11/COURTS.json",
-      "sha256": "07a98343c5861f11667f9dc6b6d75e1e1f255d257a5164064020d943c64bb0af"
+      "sha256": "2877edf66a610a75a9ab5f25fe83b52bf6f9e5cbb08bfe5050585a98e5ab84e5"
     }
   ],
   "kind": "court-coverage",
