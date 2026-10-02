@@ -283,7 +283,10 @@ in: `OSSL_HTTP_REQ_CTX_new`, `OSSL_HTTP_REQ_CTX_free`, `OSSL_HTTP_REQ_CTX_get0_m
 `OSSL_HTTP_get`, `OSSL_HTTP_transfer`, `OSSL_HTTP_close` and `OSSL_HTTP_proxy_connect` -- and
 `http_lib.c`'s remaining two `http.h` names, `OSSL_HTTP_parse_url` and `OSSL_HTTP_adapt_proxy`,
 land with it. Every one of the 23 is now implemented rather than open; `RT-HTTP`
-(`courts/phase12/rt_http_probe.c`) drives them.
+(`courts/phase12/rt_http_probe.c`) drives them. Subphase 12.6 lands the whole OCSP surface, so
+`OCSP_request_sign`, `OCSP_basic_verify`, `OCSP_cert_to_id`, `OCSP_check_validity`, `OCSP_resp_count`
+and `OCSP_response_status` -- the six `ocsp.h` names the open clause below carried -- are now
+implemented rather than open, joining the `ocsp_asn.c` item group above.
 
 Subphase 12.2 lands the PKCS#7 remainder: `pk7_asn1.c`'s other three `ANY DEFINED BY` arms
 (`signed`, `enveloped`, `signedAndEnveloped`) and the streaming callback's four arms, the whole of
@@ -332,6 +335,31 @@ Subphase 12.4 opens CMP and has landed, so far, 146 of its 161 rows: the whole o
 
 Subphase 12.5 lands the RFC 3161 timestamping surface. The whole of `ts_asn1.c` (six item groups, the `IMPLEMENT_ASN1_FUNCTIONS` accessors, the BIO and FILE stream wrappers and `PKCS7_to_TS_TST_INFO`), `ts_req_utils.c` and `ts_rsp_utils.c` (the `TS_REQ`/`TS_TST_INFO`/`TS_RESP`/`TS_STATUS_INFO`/`TS_ACCURACY` accessor families and their extension stacks), `ts_lib.c`'s five print helpers, `ts_req_print.c`'s `TS_REQ_print_bio`, `ts_rsp_print.c`'s three print entry points, `ts_verify_ctx.c` (the whole `TS_VERIFY_CTX` lifecycle and `TS_REQ_to_TS_VERIFY_CTX`) and `ts_rsp_sign.c`'s context-management surface (`TS_RESP_CTX_new`/`_new_ex`/`_free`, the signer/chain/policy/digest/accuracy setters, the three callbacks and `TS_RESP_CTX_set_status_info` and friends) are implemented -- **178 of the 184 `ts.h` rows**. `RT-TS` (`courts/phase12/rt_ts_probe.c`) drives them over in-process fixtures: the DER byte round trips and the BIO/FILE wrappers, the accessors, the print text compared byte for byte, `PKCS7_to_TS_TST_INFO` over a hand-built signed token carrying a `TST_INFO` and its refusal arms, the verify context, and the configuration readers over a fixed configuration and a fixed cert+key written at run time. The fetched-`EVP_MD` identity divergence the later CPS/CMS courts already name leaves the `EVP_get_digestbyname`-dependent configuration readers `pending`. The three `TS_RESP_CTX_set_status_info`, `TS_RESP_CTX_set_status_info_cond` and `TS_RESP_CTX_add_failure_info` names are referenced from a volatile table rather than called, because no landed entry point can make `ctx->response` non-NULL; the atlas records them at the honest `referenced` basis. The six rows still open are named in the next section.
 
+Subphase 12.6 lands the whole OCSP surface. The four extension wrapper families `ocsp_ext.c`
+defines (nine functions each over the request, single-request, basic-response and single-response
+extension stacks), the nonce handling (`OCSP_request_add1_nonce`, `OCSP_basic_add1_nonce`,
+`OCSP_check_nonce`, `OCSP_copy_nonce`) and the four constructors (`OCSP_crlID_new`,
+`OCSP_accept_responses_new`, `OCSP_archive_cutoff_new`, `OCSP_url_svcloc_new`); the whole of
+`ocsp_cl.c` (the request builder `OCSP_request_add0_id`/`_set1_name`/`_add1_cert`/`_sign`, the
+response reader `OCSP_response_status`/`_get1_basic`, the accessor families
+`OCSP_resp_get0_*`/`_get1_id`/`_find`/`_find_status`, `OCSP_single_get0_status`,
+`OCSP_check_validity` and `OCSP_SINGLERESP_get0_id`); and the whole of `ocsp_srv.c` (the request
+accessors, `OCSP_response_create`, `OCSP_basic_add1_status`/`_add1_cert`/`_sign_ctx`/`_sign` and
+the `OCSP_RESPID_set_by_*`/`match*` pair) are implemented, joining the `ocsp_lib.c`, `ocsp_vfy.c`,
+`ocsp_prn.c` and `ocsp_http.c` bodies Phase 11 had pulled forward as internal `pub(crate)`
+transcriptions, which this subphase promotes to the exported surface. **94 of the 94 `ocsp.h` rows
+are now implemented.** `RT-OCSP` (`courts/phase12/rt_ocsp_probe.c`) drives them in-process over
+hand-built object graphs and the fixed DER `courts/phase12/rt_ocsp_der.h` embeds: the `CertID`
+builder and comparators, the request and responder builders, the response reader and its
+accessors, `OCSP_basic_verify`/`OCSP_resp_get0_signer`/`OCSP_request_verify`, the wrapper families
+and the four constructors, the nonce handling, the two printers compared byte for byte and
+`OCSP_sendreq_new`'s in-process request arm and `OCSP_sendreq_bio`'s memory-BIO refusal arm. The
+signature-verifying arm of `OCSP_basic_verify` (which reaches `ASN1_item_verify_ctx`'s
+`EVP_get_digestbyname` identity divergence the CMS and TS courts already name) and `OCSP_basic_verify`
+over a response with no responder name (the authority dereferences the unset name, a fault
+boundary) are named `pending` rather than driven. The response's signed body is built with the CMS
+signer-infrastructure 12.3 landed, per section 2.1.
+
 **Open exports (checked against the ledger):**
 
 Open is the 459-name remainder. CMS has closed: every one of its 149 `cms.h` rows is now
@@ -341,8 +369,13 @@ and `OSSL_CMP_MSG_update_recipNonce` (`cmp_msg.c`), `OSSL_CMP_SRV_process_reques
 `OSSL_CMP_CTX_server_perform` (`cmp_server.c`), `OSSL_CMP_try_certreq`, `OSSL_CMP_exec_certreq`,
 `OSSL_CMP_exec_RR_ses` and `OSSL_CMP_exec_GENM_ses` (`cmp_client.c`), `OSSL_CMP_get1_caCerts`,
 `OSSL_CMP_get1_certReqTemplate`, `OSSL_CMP_get1_crlUpdate` and `OSSL_CMP_get1_rootCaKeyUpdate`
-(`cmp_genm.c`), and `OSSL_CMP_validate_msg` (`cmp_vfy.c`). TS opens 12.5 with the two engine-reading configuration setters `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` (blocked on Phase 13's ENGINE_by_id/ENGINE_set_default), and `TS_RESP_create_response` with the three verify entry points `TS_RESP_verify_response`/`TS_RESP_verify_signature`/`TS_RESP_verify_token` (blocked on the Phase-12.7 ESS item group and its OSSL_ESS helpers through the SigningCertificate signed attribute). OCSP opens 12.6 with `OCSP_request_sign`, `OCSP_basic_verify`,
-`OCSP_response_status`, `OCSP_cert_to_id`, `OCSP_check_validity` and `OCSP_resp_count`. CRMF opens
+(`cmp_genm.c`), and `OSSL_CMP_validate_msg` (`cmp_vfy.c`). TS opens 12.5 with the two engine-reading
+configuration setters `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` (blocked on
+Phase 13's ENGINE_by_id/ENGINE_set_default), and `TS_RESP_create_response` with the three verify
+entry points `TS_RESP_verify_response`/`TS_RESP_verify_signature`/`TS_RESP_verify_token` (blocked on
+the Phase-12.7 ESS item group and its OSSL_ESS helpers through the SigningCertificate signed
+attribute). OCSP has closed: every one of its 94 `ocsp.h` rows is now implemented and no OCSP name
+appears here. CRMF opens
 12.7 with `OSSL_CRMF_CERTID_gen` and `OSSL_CRMF_CERTID_get0_issuer`, and ESS with `ESS_CERT_ID_new`,
 `ESS_SIGNING_CERT_new` and `ESS_ISSUER_SERIAL_free`. SRP opens 12.8 with `SRP_create_verifier`,
 `SRP_user_pwd_new`, `SRP_VBASE_new` and `SRP_Calc_A`. 12.9 opens the CT remainder with

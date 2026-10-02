@@ -110,19 +110,35 @@
           "candidate": "artifacts/phase12/probes/rt_ts_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 266,
+        "candidate_exit_code": 0,
+        "candidate_observations": 266,
+        "candidate_stderr_tail": [],
+        "court": "RT-OCSP",
+        "crashed": false,
+        "probe": "courts/phase12/rt_ocsp_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase12/probes/rt_ocsp_probe.authority",
+          "candidate": "artifacts/phase12/probes/rt_ocsp_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs",
       "RT-CRMF": "12.7 -- the CRMF certificate-request surface (`crmf.h`)",
       "RT-ESS": "12.7 -- the ESS signing-certificate surface (`ess.h`)",
-      "RT-OCSP": "12.6 -- the OCSP request/response surface (`ocsp.h`'s 94 open exports)",
       "RT-SRP": "12.8 -- the SRP verifier and library surface (`srp.h`)"
     },
     "summary": {
       "fail": 0,
-      "pass": 6,
-      "total": 6
+      "pass": 7,
+      "total": 7
     }
   },
   "generator": "forensics/tools/phase12_courts.py",
@@ -161,6 +177,11 @@
       "name": "probe",
       "path": "courts/phase12/rt_ts_probe.c",
       "sha256": "632306f0410557614c10edefb5d1f67bb4c9bdc89ee879d47c7e3f1327791c52"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_ocsp_probe.c",
+      "sha256": "397b7ea8c6f83d2c8664b55645d2d6b4544c770dbbae1f717d0f9c7254727f1b"
     }
   ],
   "kind": "phase12-courts",

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1024,
       "deferred_to_later_phase": 0,
-      "implemented": 752,
-      "open_in_this_stratum": 281,
+      "implemented": 846,
+      "open_in_this_stratum": 187,
       "owned": 1033,
       "received_by_handoff": 9
     },
@@ -251,9 +251,19 @@
       "CT_POLICY_EVAL_CTX_set1_issuer",
       "CT_POLICY_EVAL_CTX_set_shared_CTLOG_STORE",
       "CT_POLICY_EVAL_CTX_set_time",
+      "OCSP_BASICRESP_add1_ext_i2d",
+      "OCSP_BASICRESP_add_ext",
+      "OCSP_BASICRESP_delete_ext",
       "OCSP_BASICRESP_free",
+      "OCSP_BASICRESP_get1_ext_d2i",
+      "OCSP_BASICRESP_get_ext",
+      "OCSP_BASICRESP_get_ext_by_NID",
+      "OCSP_BASICRESP_get_ext_by_OBJ",
+      "OCSP_BASICRESP_get_ext_by_critical",
+      "OCSP_BASICRESP_get_ext_count",
       "OCSP_BASICRESP_it",
       "OCSP_BASICRESP_new",
+      "OCSP_CERTID_dup",
       "OCSP_CERTID_free",
       "OCSP_CERTID_it",
       "OCSP_CERTID_new",
@@ -263,15 +273,34 @@
       "OCSP_CRLID_free",
       "OCSP_CRLID_it",
       "OCSP_CRLID_new",
+      "OCSP_ONEREQ_add1_ext_i2d",
+      "OCSP_ONEREQ_add_ext",
+      "OCSP_ONEREQ_delete_ext",
       "OCSP_ONEREQ_free",
+      "OCSP_ONEREQ_get1_ext_d2i",
+      "OCSP_ONEREQ_get_ext",
+      "OCSP_ONEREQ_get_ext_by_NID",
+      "OCSP_ONEREQ_get_ext_by_OBJ",
+      "OCSP_ONEREQ_get_ext_by_critical",
+      "OCSP_ONEREQ_get_ext_count",
       "OCSP_ONEREQ_it",
       "OCSP_ONEREQ_new",
       "OCSP_REQINFO_free",
       "OCSP_REQINFO_it",
       "OCSP_REQINFO_new",
+      "OCSP_REQUEST_add1_ext_i2d",
+      "OCSP_REQUEST_add_ext",
+      "OCSP_REQUEST_delete_ext",
       "OCSP_REQUEST_free",
+      "OCSP_REQUEST_get1_ext_d2i",
+      "OCSP_REQUEST_get_ext",
+      "OCSP_REQUEST_get_ext_by_NID",
+      "OCSP_REQUEST_get_ext_by_OBJ",
+      "OCSP_REQUEST_get_ext_by_critical",
+      "OCSP_REQUEST_get_ext_count",
       "OCSP_REQUEST_it",
       "OCSP_REQUEST_new",
+      "OCSP_REQUEST_print",
       "OCSP_RESPBYTES_free",
       "OCSP_RESPBYTES_it",
       "OCSP_RESPBYTES_new",
@@ -280,10 +309,16 @@
       "OCSP_RESPDATA_new",
       "OCSP_RESPID_free",
       "OCSP_RESPID_it",
+      "OCSP_RESPID_match",
+      "OCSP_RESPID_match_ex",
       "OCSP_RESPID_new",
+      "OCSP_RESPID_set_by_key",
+      "OCSP_RESPID_set_by_key_ex",
+      "OCSP_RESPID_set_by_name",
       "OCSP_RESPONSE_free",
       "OCSP_RESPONSE_it",
       "OCSP_RESPONSE_new",
+      "OCSP_RESPONSE_print",
       "OCSP_REVOKEDINFO_free",
       "OCSP_REVOKEDINFO_it",
       "OCSP_REVOKEDINFO_new",
@@ -293,9 +328,68 @@
       "OCSP_SIGNATURE_free",
       "OCSP_SIGNATURE_it",
       "OCSP_SIGNATURE_new",
+      "OCSP_SINGLERESP_add1_ext_i2d",
+      "OCSP_SINGLERESP_add_ext",
+      "OCSP_SINGLERESP_delete_ext",
       "OCSP_SINGLERESP_free",
+      "OCSP_SINGLERESP_get0_id",
+      "OCSP_SINGLERESP_get1_ext_d2i",
+      "OCSP_SINGLERESP_get_ext",
+      "OCSP_SINGLERESP_get_ext_by_NID",
+      "OCSP_SINGLERESP_get_ext_by_OBJ",
+      "OCSP_SINGLERESP_get_ext_by_critical",
+      "OCSP_SINGLERESP_get_ext_count",
       "OCSP_SINGLERESP_it",
       "OCSP_SINGLERESP_new",
+      "OCSP_accept_responses_new",
+      "OCSP_archive_cutoff_new",
+      "OCSP_basic_add1_cert",
+      "OCSP_basic_add1_nonce",
+      "OCSP_basic_add1_status",
+      "OCSP_basic_sign",
+      "OCSP_basic_sign_ctx",
+      "OCSP_basic_verify",
+      "OCSP_cert_id_new",
+      "OCSP_cert_status_str",
+      "OCSP_cert_to_id",
+      "OCSP_check_nonce",
+      "OCSP_check_validity",
+      "OCSP_copy_nonce",
+      "OCSP_crlID_new",
+      "OCSP_crl_reason_str",
+      "OCSP_id_cmp",
+      "OCSP_id_get0_info",
+      "OCSP_id_issuer_cmp",
+      "OCSP_onereq_get0_id",
+      "OCSP_request_add0_id",
+      "OCSP_request_add1_cert",
+      "OCSP_request_add1_nonce",
+      "OCSP_request_is_signed",
+      "OCSP_request_onereq_count",
+      "OCSP_request_onereq_get0",
+      "OCSP_request_set1_name",
+      "OCSP_request_sign",
+      "OCSP_request_verify",
+      "OCSP_resp_count",
+      "OCSP_resp_find",
+      "OCSP_resp_find_status",
+      "OCSP_resp_get0",
+      "OCSP_resp_get0_certs",
+      "OCSP_resp_get0_id",
+      "OCSP_resp_get0_produced_at",
+      "OCSP_resp_get0_respdata",
+      "OCSP_resp_get0_signature",
+      "OCSP_resp_get0_signer",
+      "OCSP_resp_get0_tbs_sigalg",
+      "OCSP_resp_get1_id",
+      "OCSP_response_create",
+      "OCSP_response_get1_basic",
+      "OCSP_response_status",
+      "OCSP_response_status_str",
+      "OCSP_sendreq_bio",
+      "OCSP_sendreq_new",
+      "OCSP_single_get0_status",
+      "OCSP_url_svcloc_new",
       "OSSL_CMP_ATAVS_free",
       "OSSL_CMP_ATAVS_it",
       "OSSL_CMP_ATAVS_new",
@@ -964,570 +1058,6 @@
         "module": "src/ess/ess_asn1.rs",
         "received_from_phase": null,
         "symbol": "ESS_SIGNING_CERT_new"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_BASICRESP_add1_ext_i2d"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_BASICRESP_add_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_BASICRESP_delete_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_BASICRESP_get1_ext_d2i"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_BASICRESP_get_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_BASICRESP_get_ext_by_NID"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_BASICRESP_get_ext_by_OBJ"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_BASICRESP_get_ext_by_critical"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_BASICRESP_get_ext_count"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_lib.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_CERTID_dup"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_ONEREQ_add1_ext_i2d"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_ONEREQ_add_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_ONEREQ_delete_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_ONEREQ_get1_ext_d2i"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_ONEREQ_get_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_ONEREQ_get_ext_by_NID"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_ONEREQ_get_ext_by_OBJ"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_ONEREQ_get_ext_by_critical"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_ONEREQ_get_ext_count"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_add1_ext_i2d"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_add_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_delete_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_get1_ext_d2i"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_get_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_get_ext_by_NID"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_get_ext_by_OBJ"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_get_ext_by_critical"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_get_ext_count"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_prn.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_REQUEST_print"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_RESPID_match"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_RESPID_match_ex"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_RESPID_set_by_key"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_RESPID_set_by_key_ex"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_RESPID_set_by_name"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_prn.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_RESPONSE_print"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_add1_ext_i2d"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_add_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_delete_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_get0_id"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_get1_ext_d2i"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_get_ext"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_get_ext_by_NID"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_get_ext_by_OBJ"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_get_ext_by_critical"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_SINGLERESP_get_ext_count"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_accept_responses_new"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_archive_cutoff_new"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_basic_add1_cert"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_basic_add1_nonce"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_basic_add1_status"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_basic_sign"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_basic_sign_ctx"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_basic_verify"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_lib.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_cert_id_new"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_prn.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_cert_status_str"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_lib.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_cert_to_id"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_check_nonce"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_check_validity"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_copy_nonce"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_crlID_new"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_prn.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_crl_reason_str"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_lib.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_id_cmp"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_id_get0_info"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_lib.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_id_issuer_cmp"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_onereq_get0_id"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_request_add0_id"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_request_add1_cert"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_request_add1_nonce"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_request_is_signed"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_request_onereq_count"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_request_onereq_get0"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_request_set1_name"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_request_sign"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_request_verify"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_count"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_find"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_find_status"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_get0"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_get0_certs"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_get0_id"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_get0_produced_at"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_get0_respdata"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_get0_signature"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_get0_signer"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_get0_tbs_sigalg"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_resp_get1_id"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_srv.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_response_create"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_response_get1_basic"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_response_status"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_prn.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_response_status_str"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_http.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_sendreq_bio"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_http.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_sendreq_new"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_cl.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_single_get0_status"
-      },
-      {
-        "declaring_header": "ocsp.h",
-        "module": "src/ocsp/ocsp_ext.rs",
-        "received_from_phase": null,
-        "symbol": "OCSP_url_svcloc_new"
       },
       {
         "declaring_header": "cmp.h",
@@ -2651,17 +2181,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "3a9196ca50063d6fad1ce583c57d57165ea26ee1a80ad3cab64d87b3bf8c644c"
+      "sha256": "6d55cccf9830b759d5217add76e6960b1beddbfc7a2bd6d7ee2a6a93a084f5e6"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "6caf99f38cfea41509c8c52665619baad85255ba33b7b0bbb389825cf034b0db"
+      "sha256": "110010df947ee672f0fa84c731e0b61d9cd40240362c44f98303655a2b83f936"
     },
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "0cec2dcc23fb34279dd72e3f87d3d9d3c7692e4c5724162a632c0712ff761ec9"
+      "sha256": "c19321c2374b739ed4635dd1ca6a11d9a4b6bfe6e5a86295cb5aa763c7735601"
     }
   ],
   "kind": "phase12-obligations",
