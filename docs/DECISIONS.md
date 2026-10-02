@@ -34883,3 +34883,37 @@ Verified (court container): `RT-PKCS7` 126 observations, 0 residuals; `probe_hyg
 `evidence_determinism.py` (32 artefacts) green; `regression_guard.py --require-current` ok
 (137 courts, 49,158 observations); `cargo clippy --all-targets -- -D warnings` and
 `cargo fmt --all -- --check` clean; `cargo test --lib` 1131 passed.
+
+## D514 -- the CMS stratum lands whole
+
+12.3 lands all of `crypto/cms/` in three slices, and `open_in_this_stratum` falls 758 -> 605 with no
+CMS row left open. The object model and item graph (12.3a, `cms_asn1.c`/`cms_lib.c`/`cms_att.c` et
+al.), the signer and recipient engines (12.3b, `cms_sd.c`/`cms_env.c`/`cms_kari.c`/`cms_kemri.c`/
+`cms_pwri.c`/`cms_enc.c` and the envelope arms) and the remainder (12.3c, `cms_smime.c`'s
+`CMS_sign`/`CMS_verify`/`CMS_encrypt`/`CMS_decrypt`/data/digest surface, `cms_io.c`'s PEM/BIO readers
+and `cms_ess.c`'s receipt surface). `RT-CMS` drives 176 observations with 0 residuals, including
+fixed in-memory `CMS_sign`/`CMS_verify`/`CMS_encrypt`/`CMS_decrypt` round-trips.
+
+Two corrections were found by measurement rather than assumed, and both are recorded because they
+are evidence about the authority, not the candidate:
+
+* **`OPENSSL_NO_ZLIB` is defined** in the admitted authority's `configuration.h`, so
+  `CMS_compress`/`CMS_uncompress` are the `#else` refusal arms, `cms_cd.c` defines nothing, and the
+  `compressedData` dispatch arm is guarded out (`cms_lib.c:170-173`). The crate follows the
+  authority; the ZLIB-enabled premise was wrong.
+* **The `ASN1_STREAM_ARG` field order** in the crate's `Asn1StreamArg` was `{out, boundary, ndef_bio}`
+  where the authority's `asn1t.h.in:711-718` is `{out, ndef_bio, boundary}`. The 12.3a streaming
+  callback wrote the boundary into the `ndef_bio` slot and corrupted the heap, segfaulting in
+  `BIO_new_CMS`/`i2d_CMS_bio_stream`; fixed at 12.3c. A pre-existing latent bug the new caller
+  exposed.
+
+`SMIME_{read,write}_CMS{,_ex}` and `SMIME_text` delegate to `crypto/asn1/asn_mime.c`, Phase 5's
+hand-off to 12.9, and stay open there rather than stubbed. Named `pending.` lines carry the reasons
+for arms that cannot be compared: the fetched-`EVP_MD`/`EVP_CIPHER` identity divergence
+(`EVP_MD_get_type`/`EVP_CIPHER_get_type` answer 0), the legacy `OBJ_NAME` smimecap lookup, the
+`CMS_add0_recipient_password`/PBE path, and the Phase-11 `X509_NAME` printer divergence.
+
+Verified (container): `RT-CMS` 176 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `build_phase2.sh` all-ABI pass; the whole gate
+chain green; `regression_guard.py --require-current` ok (138 courts, 49,284 observations);
+`probe_hygiene.py` clean.

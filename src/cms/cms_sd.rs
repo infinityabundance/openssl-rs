@@ -129,14 +129,6 @@ extern "C" {
         iss: *const OpenSslStack,
         set_issuer_serial: c_int,
     ) -> *mut c_void;
-    fn CMS_verify(
-        cms: *mut CmsContentInfo,
-        certs: *mut OpenSslStack,
-        store: *mut X509Store,
-        dcont: *mut Bio,
-        out: *mut Bio,
-        flags: c_int,
-    ) -> c_int;
 }
 
 /// `CMS_SignedData *cms_get0_signed(CMS_ContentInfo *cms)` — `cms_sd.c:27-34`.
@@ -2052,7 +2044,7 @@ pub(crate) unsafe extern "C" fn CMS_SignedData_verify(
                 return ptr::null_mut();
             }
         }
-        res = CMS_verify(ci, scerts, store, detached_data, bio, flags as c_int);
+        res = super::cms_smime::CMS_verify(ci, scerts, store, detached_data, bio, flags);
         (*ci).d = ptr::null_mut();
         CMS_ContentInfo_free(ci);
     }

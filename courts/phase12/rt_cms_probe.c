@@ -28,6 +28,19 @@
  * `g_refs`), so the coverage atlas records them without the probe pretending to have exercised
  * an arm reachable only with a live private key or an EC/DH peer.
  *
+ * The 12.3c surface lands whole in this pass: the top-level `cms_smime.c` engines (`CMS_data*`,
+ * `CMS_digest*`, `CMS_EncryptedData_*`, `CMS_compress`/`CMS_uncompress`, `CMS_final*`,
+ * `CMS_sign*`/`CMS_verify*`, `CMS_encrypt*`/`CMS_decrypt*`), the `CMS_ReceiptRequest` surface
+ * (`cms_ess.c`) and the BIO/PEM/S/MIME readers (`cms_io.c`). The plain-content, `CMS_compress`
+ * refusal, BIO/PEM and receipt arms are compared; the digest-, signer- and cipher-bearing arms are
+ * driven (their calls run) but named `pending.` because the fetched-identity divergence
+ * (`EVP_MD_get_type`/`EVP_CIPHER_get_type` answer 0 for a fetched algorithm on the candidate where
+ * the authority answers the NID, the same divergence `pk7_smime.rs` records) makes the result
+ * un-comparable. The arms that reach a Phase-12.9 `asn_mime.c` hand-off (`SMIME_write_CMS`/
+ * `SMIME_read_CMS*` through `SMIME_*_ASN1_ex`, and `SMIME_text` under `CMS_TEXT`), the legacy
+ * `OBJ_NAME` smimecap lookup and the `-noattr` receipt-signing wrappers are likewise named
+ * `pending.` with their reasons.
+ *
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -36,11 +49,13 @@
 
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
+#include <openssl/pem.h>
 #include <openssl/cms.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/objects.h>
 #include <openssl/x509.h>
+#include <openssl/x509v3.h>
 
 #include "rt_cms_der.h"
 
@@ -198,6 +213,54 @@ static const void *volatile g_refs[] = {
     (const void *) CMS_get0_SignerInfos,
     (const void *) CMS_get0_signers,
     (const void *) CMS_set1_signers_certs,
+    /* Phase 12.3c: the plain-content/plain-digest surface, the top-level sign/verify/encrypt/
+     * decrypt engines, the receipt surface and the BIO/PEM/S/MIME readers. */
+    (const void *) CMS_EncryptedData_decrypt,
+    (const void *) CMS_EncryptedData_encrypt,
+    (const void *) CMS_EncryptedData_encrypt_ex,
+    (const void *) CMS_ReceiptRequest_create0,
+    (const void *) CMS_ReceiptRequest_create0_ex,
+    (const void *) CMS_ReceiptRequest_free,
+    (const void *) CMS_ReceiptRequest_get0_values,
+    (const void *) CMS_ReceiptRequest_new,
+    (const void *) CMS_add1_ReceiptRequest,
+    (const void *) CMS_compress,
+    (const void *) CMS_data,
+    (const void *) CMS_data_create,
+    (const void *) CMS_data_create_ex,
+    (const void *) CMS_decrypt,
+    (const void *) CMS_decrypt_set1_key,
+    (const void *) CMS_decrypt_set1_password,
+    (const void *) CMS_decrypt_set1_pkey,
+    (const void *) CMS_decrypt_set1_pkey_and_peer,
+    (const void *) CMS_digest_create,
+    (const void *) CMS_digest_create_ex,
+    (const void *) CMS_digest_verify,
+    (const void *) CMS_encrypt,
+    (const void *) CMS_encrypt_ex,
+    (const void *) CMS_final,
+    (const void *) CMS_final_digest,
+    (const void *) CMS_get1_ReceiptRequest,
+    (const void *) CMS_sign,
+    (const void *) CMS_sign_ex,
+    (const void *) CMS_sign_receipt,
+    (const void *) CMS_uncompress,
+    (const void *) CMS_verify,
+    (const void *) CMS_verify_receipt,
+    (const void *) BIO_new_CMS,
+    (const void *) PEM_read_CMS,
+    (const void *) PEM_read_bio_CMS,
+    (const void *) PEM_write_CMS,
+    (const void *) PEM_write_bio_CMS,
+    (const void *) PEM_write_bio_CMS_stream,
+    (const void *) SMIME_read_CMS,
+    (const void *) SMIME_read_CMS_ex,
+    (const void *) SMIME_write_CMS,
+    (const void *) d2i_CMS_ReceiptRequest,
+    (const void *) d2i_CMS_bio,
+    (const void *) i2d_CMS_ReceiptRequest,
+    (const void *) i2d_CMS_bio,
+    (const void *) i2d_CMS_bio_stream,
 };
 
 /* ---------------------------------------------------------------------------------------------
@@ -214,11 +277,49 @@ static const unsigned char rt_cms_data_der[] = {
 };
 #define rt_cms_data_der_len (sizeof rt_cms_data_der)
 
+/* The fixed content the fixtures embed and the round trips below re-derive. */
+static const unsigned char rt_cms_content[] = "cms fixed content\n";
+#define rt_cms_content_len (sizeof rt_cms_content - 1)
+
 static CMS_ContentInfo *decode(const unsigned char *der, size_t len)
 {
     const unsigned char *p = der;
 
     return d2i_CMS_ContentInfo(NULL, &p, (long)len);
+}
+
+/* The fixed certificate and its private key, read from the embedded PEM. */
+static X509 *load_cert(void)
+{
+    BIO *b = BIO_new_mem_buf(rt_cms_cert_pem, (int)rt_cms_cert_pem_len);
+    X509 *x;
+
+    if (b == NULL)
+        return NULL;
+    x = PEM_read_bio_X509(b, NULL, NULL, NULL);
+    BIO_free(b);
+    return x;
+}
+
+static EVP_PKEY *load_key(void)
+{
+    BIO *b = BIO_new_mem_buf(rt_cms_key_pem, (int)rt_cms_key_pem_len);
+    EVP_PKEY *k;
+
+    if (b == NULL)
+        return NULL;
+    k = PEM_read_bio_PrivateKey(b, NULL, NULL, NULL);
+    BIO_free(b);
+    return k;
+}
+
+/* Whether a memory BIO's bytes equal the fixed content. */
+static int mem_bio_eq(BIO *b, const unsigned char *ref, size_t n)
+{
+    char *data = NULL;
+    long len = BIO_ctrl(b, BIO_CTRL_INFO, 0, &data);
+
+    return len == (long)n && data != NULL && memcmp(data, ref, n) == 0;
 }
 
 /* The decode -> encode round trip and the container's read-only accessors. */
@@ -565,10 +666,363 @@ static void arm_recipients(void)
     ERR_clear_error();
 }
 
+    /* The plain-content surface (`CMS_data*`, `CMS_digest*`, `CMS_EncryptedData_*`,
+ * `CMS_compress`/`CMS_uncompress`, `CMS_final`/`CMS_final_digest`) and the top-level
+ * signer/verifier/enveloped engines (`cms_smime.c`) over the fixed content and the fixed
+ * cert+key. Every arm uses `CMS_BINARY` so the reachable `SMIME_text` hand-off (12.9's scaffold)
+ * is never touched, and `CMS_NO_SIGNING_TIME` so a signed container is a fixed instant; RSA
+ * PKCS#1 v1.5 makes the encoded signer deterministic. */
+static void arm_plain_ops(void)
+{
+    X509 *cert = load_cert();
+    EVP_PKEY *key = load_key();
+    EVP_CIPHER *cbc = EVP_CIPHER_fetch(NULL, "AES-128-CBC", NULL);
+    static const unsigned char ekey[16] = {
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+    };
+    static const unsigned char mdbuf[32] = { 0 };
+    BIO *in, *out;
+    CMS_ContentInfo *cms, *part;
+    STACK_OF(X509) *sk = NULL;
+    unsigned char *buf = NULL;
+    int n;
+
+    out_ptr("ops.cert", cert);
+    out_ptr("ops.key", key);
+    out_ptr("ops.cbc", cbc);
+
+    /* CMS_data_create + CMS_data */
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_data_create(in, CMS_BINARY);
+    BIO_free(in);
+    out_ptr("ops.data_create", cms);
+    n = cms != NULL ? i2d_CMS_ContentInfo(cms, &buf) : -1;
+    out_int("ops.data_der_len", n);
+    if (n > 0)
+        out_int("ops.data_der_hash", (long)fnv(buf, (size_t)n));
+    OPENSSL_free(buf);
+    buf = NULL;
+    out = BIO_new(BIO_s_mem());
+    out_int("ops.data", cms != NULL ? CMS_data(cms, out, CMS_BINARY) : -1);
+    out_int("ops.data_eq", mem_bio_eq(out, rt_cms_content, rt_cms_content_len));
+    BIO_free(out);
+    CMS_ContentInfo_free(cms);
+
+    /* CMS_data_create_ex */
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_data_create_ex(in, CMS_BINARY, NULL, NULL);
+    BIO_free(in);
+    out_ptr("ops.data_create_ex", cms);
+    CMS_ContentInfo_free(cms);
+
+    /* The digest surface reaches `ossl_cms_DigestAlgorithm_find_ctx`'s `EVP_MD_get_type`; on the
+     * candidate a fetched `EVP_MD` reports type 0 where the authority reports the digest NID (the
+     * fetched-identity divergence recorded against Phase 8 and reached again by `pk7_smime.rs`'s
+     * `pending.digest_dataInit`), so the result is named rather than compared. The calls still run,
+     * so each export is exercised. */
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_digest_create(in, EVP_sha256(), CMS_BINARY);
+    BIO_free(in);
+    if (cms != NULL) {
+        out = BIO_new(BIO_s_mem());
+        (void)CMS_digest_verify(cms, NULL, out, CMS_BINARY);
+        BIO_free(out);
+    }
+    CMS_ContentInfo_free(cms);
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_digest_create_ex(in, NULL, CMS_BINARY, NULL, NULL);
+    BIO_free(in);
+    CMS_ContentInfo_free(cms);
+    printf("pending.ops.digest=%s\n", "evp-md-fetch-type");
+    ERR_clear_error();
+
+    /* The encrypted-content surface reaches `EVP_CIPHER_get_type` through the content cipher, and
+     * the same fetched-identity divergence applies; the result is named. */
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_EncryptedData_encrypt(in, cbc, ekey, 16, CMS_BINARY);
+    BIO_free(in);
+    if (cms != NULL) {
+        out = BIO_new(BIO_s_mem());
+        (void)CMS_EncryptedData_decrypt(cms, ekey, 16, NULL, out, CMS_BINARY);
+        BIO_free(out);
+    }
+    CMS_ContentInfo_free(cms);
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_EncryptedData_encrypt_ex(in, cbc, ekey, 16, CMS_BINARY, NULL, NULL);
+    BIO_free(in);
+    CMS_ContentInfo_free(cms);
+    printf("pending.ops.encdata=%s\n", "evp-cipher-get-type");
+    ERR_clear_error();
+
+    /* `CMS_compress`/`CMS_uncompress` are the `OPENSSL_NO_ZLIB` refusal arms in the admitted
+     * authority (verified against its `openssl cms -compress`), so both sides must refuse
+     * identically; the refusal dereferences none of its arguments. */
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    ERR_clear_error();
+    cms = CMS_compress(in, 0, CMS_BINARY);
+    BIO_free(in);
+    out_ptr("ops.compress", cms);
+    out_err("ops.compress_err");
+    out = BIO_new(BIO_s_mem());
+    ERR_clear_error();
+    out_int("ops.uncompress", CMS_uncompress(cms, NULL, out, CMS_BINARY));
+    out_err("ops.uncompress_err");
+    BIO_free(out);
+    CMS_ContentInfo_free(cms);
+
+    /* The signer/verifier and the content finalisers reach the same digest fetch; the results are
+     * named. `CMS_final_digest` and `CMS_final` are still called so the two exports are exercised. */
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_sign_ex(cert, key, NULL, in, CMS_BINARY | CMS_NO_SIGNING_TIME, NULL, NULL);
+    BIO_free(in);
+    if (cms != NULL) {
+        out = BIO_new(BIO_s_mem());
+        (void)CMS_verify(cms, NULL, NULL, NULL, out, CMS_BINARY | CMS_NO_SIGNER_CERT_VERIFY);
+        BIO_free(out);
+    }
+    CMS_ContentInfo_free(cms);
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_sign(cert, key, NULL, in, CMS_BINARY | CMS_NO_SIGNING_TIME);
+    BIO_free(in);
+    CMS_ContentInfo_free(cms);
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    part = CMS_sign(cert, key, NULL, in,
+                    CMS_BINARY | CMS_NO_SIGNING_TIME | CMS_PARTIAL | CMS_STREAM);
+    BIO_free(in);
+    if (part != NULL) {
+        in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+        (void)CMS_final(part, in, NULL, CMS_BINARY | CMS_NO_SIGNING_TIME);
+        BIO_free(in);
+        out = BIO_new(BIO_s_mem());
+        (void)CMS_verify(part, NULL, NULL, NULL, out, CMS_BINARY | CMS_NO_SIGNER_CERT_VERIFY);
+        BIO_free(out);
+    }
+    CMS_ContentInfo_free(part);
+    printf("pending.ops.sign=%s\n", "evp-md-fetch-type");
+    ERR_clear_error();
+
+    /* `CMS_digest_create` with `CMS_STREAM` does not fetch the digest, so the partial container's
+     * non-null answer is comparable; the finaliser is named with the rest of the digest surface. */
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    part = CMS_digest_create(in, EVP_sha256(), CMS_BINARY | CMS_PARTIAL | CMS_STREAM);
+    BIO_free(in);
+    out_ptr("ops.digest_partial", part);
+    if (part != NULL)
+        (void)CMS_final_digest(part, mdbuf, 32, NULL, CMS_BINARY);
+    CMS_ContentInfo_free(part);
+    printf("pending.ops.final_digest=%s\n", "evp-md-fetch-type");
+    ERR_clear_error();
+
+    /* The enveloped engine reaches `EVP_CIPHER_get_type`; the results are named. `CMS_decrypt`,
+     * `CMS_decrypt_set1_pkey` and `CMS_encrypt_ex` still run so the exports are exercised. */
+    sk = sk_X509_new_null();
+    sk_X509_push(sk, cert);
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_encrypt(sk, in, cbc, CMS_BINARY);
+    BIO_free(in);
+    if (cms != NULL) {
+        out = BIO_new(BIO_s_mem());
+        (void)CMS_decrypt(cms, key, cert, NULL, out, CMS_BINARY);
+        BIO_free(out);
+    }
+    CMS_ContentInfo_free(cms);
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_encrypt(sk, in, cbc, CMS_BINARY);
+    BIO_free(in);
+    if (cms != NULL) {
+        (void)CMS_decrypt_set1_pkey(cms, key, cert);
+        out = BIO_new(BIO_s_mem());
+        (void)CMS_decrypt(cms, NULL, NULL, NULL, out, CMS_BINARY);
+        BIO_free(out);
+    }
+    CMS_ContentInfo_free(cms);
+    in = BIO_new_mem_buf(rt_cms_content, (int)rt_cms_content_len);
+    cms = CMS_encrypt_ex(sk, in, cbc, CMS_BINARY, NULL, NULL);
+    BIO_free(in);
+    CMS_ContentInfo_free(cms);
+    printf("pending.ops.encrypt=%s\n", "evp-cipher-get-type");
+
+    sk_X509_free(sk);
+    EVP_CIPHER_free(cbc);
+    EVP_PKEY_free(key);
+    X509_free(cert);
+    ERR_clear_error();
+}
+
+/* The `CMS_ReceiptRequest` surface (`cms_ess.c`). The request is built over a fixed content
+ * identifier so its DER is a fixed instant; the receipt-signing wrappers need a signer whose
+ * signed attributes carry the request and content type, which the fixed `-noattr` fixture cannot
+ * supply, so they are referenced (`g_refs`) and named pending. */
+static void arm_receipt(void)
+{
+    CMS_ContentInfo *cms = decode(rt_cms_signed_der, rt_cms_signed_der_len);
+    STACK_OF(CMS_SignerInfo) *sis = cms != NULL ? CMS_get0_SignerInfos(cms) : NULL;
+    CMS_SignerInfo *si = sis != NULL ? sk_CMS_SignerInfo_value(sis, 0) : NULL;
+    unsigned char *rcid = OPENSSL_malloc(4);
+    CMS_ReceiptRequest *rr = NULL, *rr2 = NULL, *got = NULL;
+    ASN1_STRING *cid = NULL;
+    STACK_OF(GENERAL_NAMES) *to = NULL;
+    const unsigned char *p;
+    unsigned char *der = NULL;
+    int allorfirst = -99;
+    int n;
+
+    if (rcid != NULL) {
+        rcid[0] = 0xde; rcid[1] = 0xad; rcid[2] = 0xbe; rcid[3] = 0xef;
+    }
+
+    out_int("receipt.get1_absent", si != NULL ? CMS_get1_ReceiptRequest(si, &got) : -1);
+    out_int("receipt.get1_absent_null", got == NULL);
+    out_err("receipt.get1_absent_err");
+
+    rr = CMS_ReceiptRequest_create0(rcid, 4, 1, NULL, NULL);
+    out_ptr("receipt.create0", rr);
+    n = rr != NULL ? i2d_CMS_ReceiptRequest(rr, &der) : -1;
+    out_int("receipt.der_len", n);
+    if (n > 0) {
+        out_int("receipt.der_hash", (long)fnv(der, (size_t)n));
+        p = der;
+        rr2 = d2i_CMS_ReceiptRequest(NULL, &p, (long)n);
+        out_ptr("receipt.d2i", rr2);
+    }
+    OPENSSL_free(der);
+
+    CMS_ReceiptRequest_get0_values(rr, &cid, &allorfirst, NULL, &to);
+    out_int("receipt.cid_len", cid != NULL ? ASN1_STRING_length(cid) : -1);
+    out_int("receipt.allorfirst", allorfirst);
+    out_int("receipt.to_null", to == NULL);
+
+    out_int("receipt.add1",
+            si != NULL ? CMS_add1_ReceiptRequest(si, rr2 != NULL ? rr2 : rr) : -1);
+    out_int("receipt.get1_present", si != NULL ? CMS_get1_ReceiptRequest(si, &got) : -1);
+    if (got != NULL) {
+        ASN1_STRING *cid2 = NULL;
+
+        CMS_ReceiptRequest_get0_values(got, &cid2, NULL, NULL, NULL);
+        out_int("receipt.got_cid_len", cid2 != NULL ? ASN1_STRING_length(cid2) : -1);
+        CMS_ReceiptRequest_free(got);
+    }
+
+    /* `CMS_sign_receipt`/`CMS_verify_receipt` need a signer whose signed attributes carry the
+     * request and a content type; the fixed `-noattr` fixture has neither, so the two wrappers
+     * are referenced and named pending. */
+    printf("pending.receipt.sign=%s\n", "no-attr-fixture-cannot-supply-receipt-signer");
+
+    CMS_ReceiptRequest_free(rr2);
+    CMS_ReceiptRequest_free(rr);
+    CMS_ContentInfo_free(cms);
+    ERR_clear_error();
+}
+
+/* The BIO/PEM readers (`cms_io.c`) over the fixed signed fixture. The two S/MIME wrappers
+ * delegate to the 12.9 `asn_mime.c` hand-off, whose shell is a scaffold that aborts the
+ * candidate, so they are referenced (`g_refs`) and named pending rather than called. */
+static void arm_io_ops(void)
+{
+    CMS_ContentInfo *cms = decode(rt_cms_signed_der, rt_cms_signed_der_len);
+    CMS_ContentInfo *back;
+    BIO *out, *in;
+    char *data = NULL;
+    unsigned char *der = NULL;
+    long len;
+    int n;
+
+    /* i2d_CMS_bio + d2i_CMS_bio */
+    out = BIO_new(BIO_s_mem());
+    out_int("io.i2d_bio", cms != NULL ? i2d_CMS_bio(out, cms) : -1);
+    len = BIO_ctrl(out, BIO_CTRL_INFO, 0, &data);
+    out_int("io.i2d_bio_len", len);
+    in = BIO_new_mem_buf(data, (int)len);
+    back = d2i_CMS_bio(in, NULL);
+    out_ptr("io.d2i_bio", back);
+    if (back != NULL) {
+        n = i2d_CMS_ContentInfo(back, &der);
+        out_int("io.d2i_bio_der_len", n);
+        OPENSSL_free(der);
+        CMS_ContentInfo_free(back);
+    }
+    BIO_free(in);
+    BIO_free(out);
+
+    /* PEM_write_bio_CMS + PEM_read_bio_CMS */
+    out = BIO_new(BIO_s_mem());
+    out_int("io.pem_write_bio", cms != NULL ? PEM_write_bio_CMS(out, cms) : -1);
+    len = BIO_ctrl(out, BIO_CTRL_INFO, 0, &data);
+    out_int("io.pem_text_len", len);
+    out_int("io.pem_first", data != NULL ? (unsigned char)data[0] : -1);
+    in = BIO_new_mem_buf(data, (int)len);
+    back = PEM_read_bio_CMS(in, NULL, NULL, NULL);
+    out_ptr("io.pem_read_bio", back);
+    if (back != NULL) {
+        out_int("io.pem_read_bio_len", i2d_CMS_ContentInfo(back, NULL));
+        CMS_ContentInfo_free(back);
+    }
+    BIO_free(in);
+    BIO_free(out);
+    ERR_clear_error();
+
+    /* PEM_write_CMS + PEM_read_CMS through a temp FILE */
+    {
+        FILE *fp = tmpfile();
+
+        out_ptr("io.tmpfile", fp);
+        if (fp != NULL) {
+            out_int("io.pem_write", cms != NULL ? PEM_write_CMS(fp, cms) : -1);
+            rewind(fp);
+            back = PEM_read_CMS(fp, NULL, NULL, NULL);
+            out_ptr("io.pem_read", back);
+            if (back != NULL)
+                CMS_ContentInfo_free(back);
+            fclose(fp);
+        }
+        ERR_clear_error();
+    }
+
+    /* BIO_new_CMS */
+    {
+        BIO *sv = BIO_new(BIO_s_mem());
+        BIO *b = BIO_new_CMS(sv, cms);
+
+        out_ptr("io.bio_new_cms", b);
+        if (b != NULL)
+            BIO_free(b);
+        else
+            BIO_free(sv);
+    }
+
+    /* i2d_CMS_bio_stream and PEM_write_bio_CMS_stream */
+    {
+        BIO *so = BIO_new(BIO_s_mem());
+        BIO *si = BIO_new(BIO_s_mem());
+
+        out_int("io.i2d_stream", cms != NULL ? i2d_CMS_bio_stream(so, cms, si, 0) : -1);
+        out_int("io.i2d_stream_len", (long)BIO_ctrl(so, BIO_CTRL_INFO, 0, NULL));
+        BIO_free(si);
+        BIO_free(so);
+    }
+    {
+        BIO *so = BIO_new(BIO_s_mem());
+        BIO *si = BIO_new(BIO_s_mem());
+
+        out_int("io.pem_stream", cms != NULL ? PEM_write_bio_CMS_stream(so, cms, si, 0) : -1);
+        out_int("io.pem_stream_len", (long)BIO_ctrl(so, BIO_CTRL_INFO, 0, NULL));
+        BIO_free(si);
+        BIO_free(so);
+    }
+    ERR_clear_error();
+
+    printf("pending.io.smime=%s\n", "12.9-asn_mime-scaffold");
+
+    CMS_ContentInfo_free(cms);
+    ERR_clear_error();
+}
+
 int main(void)
 {
     /* Reference every export this pass implements, so the coverage atlas reads each. */
     volatile const void *sink = g_refs[0];
+
+    setvbuf(stdout, NULL, _IOLBF, 0);
 
     (void)sink;
 
@@ -584,6 +1038,9 @@ int main(void)
     arm_pending();
     arm_signers();
     arm_recipients();
+    arm_plain_ops();
+    arm_receipt();
+    arm_io_ops();
 
     return 0;
 }

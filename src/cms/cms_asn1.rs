@@ -661,12 +661,14 @@ unsafe extern "C" fn cms_cb(
 /// `EVP_CIPHER_CTX_FLAG_WRAP_ALLOW` — `crypto/evp/evp_local.h:94`.
 const EVP_CIPHER_CTX_FLAG_WRAP_ALLOW: c_int = 0x1;
 
-/// `ASN1_STREAM_ARG` — the streaming callback's argument.
+/// `ASN1_STREAM_ARG` — the streaming callback's argument, `asn1t.h.in:711-718`. The field order is
+/// the authority's: `out` then `ndef_bio` then `boundary`; the streaming encoder passes a value of
+/// that exact layout to the callback, so a different order here reads and writes the wrong slots.
 #[repr(C)]
 pub(crate) struct Asn1StreamArg {
     pub(crate) out: *mut Bio,
-    pub(crate) boundary: *mut *mut u8,
     pub(crate) ndef_bio: *mut Bio,
+    pub(crate) boundary: *mut *mut u8,
 }
 
 /// `OPENSSL_clear_free` — release and zero.

@@ -49,7 +49,6 @@ use crate::x509::x_name::X509_NAME_set;
 use crate::x509::x_x509::{ossl_x509_set0_libctx, X509_free, X509};
 
 use super::cms_asn1::*;
-use super::cms_cd::ossl_cms_CompressedData_init_bio;
 use super::cms_dd::{ossl_cms_DigestedData_do_final, ossl_cms_DigestedData_init_bio};
 use super::cms_enc::ossl_cms_EncryptedData_init_bio;
 use super::cms_env::{
@@ -390,10 +389,10 @@ pub(crate) unsafe extern "C" fn CMS_dataInit(
             // SAFETY: `cms` is live per the contract.
             unsafe { ossl_cms_DigestedData_init_bio(cms) }
         }
-        crate::runtime::obj::NID_id_smime_ct_compressedData => {
-            // SAFETY: `cms` is live per the contract.
-            unsafe { ossl_cms_CompressedData_init_bio(cms) }
-        }
+        // The authority's `NID_id_smime_ct_compressedData` case is inside `#ifndef
+        // OPENSSL_NO_ZLIB` (`cms_lib.c:170-173`); the admitted authority is built
+        // `OPENSSL_NO_ZLIB`, so that case is absent and a compressed container reaches the
+        // `_` arm below, which raises `CMS_R_UNSUPPORTED_TYPE`.
         crate::runtime::obj::NID_pkcs7_encrypted => {
             // SAFETY: `cms` is live per the contract.
             unsafe { ossl_cms_EncryptedData_init_bio(cms) }

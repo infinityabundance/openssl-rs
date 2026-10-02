@@ -58,9 +58,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 126,
+        "authority_observations": 176,
         "candidate_exit_code": 0,
-        "candidate_observations": 126,
+        "candidate_observations": 176,
         "candidate_stderr_tail": [],
         "court": "RT-CMS",
         "crashed": false,
@@ -114,7 +114,7 @@
     {
       "name": "probe",
       "path": "courts/phase12/rt_cms_probe.c",
-      "sha256": "10f9e407085567ffa63b55e1e99b27345d4554890ef77bfe904a25f1cc5afd5f"
+      "sha256": "ab731db081cf6aa4d6dd0a74f0a63164b0e022fd10fe7829204419ccd9aeba3a"
     }
   ],
   "kind": "phase12-courts",
