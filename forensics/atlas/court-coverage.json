@@ -875,6 +875,7 @@
               "RT-BIO-RESOLVE",
               "RT-BIO-SOCK",
               "RT-BN",
+              "RT-CMP",
               "RT-CMS",
               "RT-CODEC",
               "RT-CONF",
@@ -1202,6 +1203,7 @@
               "RT-CIPHER",
               "RT-CIPHER-MEM",
               "RT-CMAC",
+              "RT-CMP",
               "RT-CMS",
               "RT-CODEC",
               "RT-COMP",
@@ -1651,6 +1653,7 @@
               "RT-BIO-SOCK",
               "RT-BN",
               "RT-CMAC",
+              "RT-CMP",
               "RT-COMP",
               "RT-CONF",
               "RT-DIGEST",
@@ -2034,6 +2037,7 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-CMS",
               "RT-EVP-PBE",
               "RT-KEYFORMAT",
@@ -2107,6 +2111,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-PRINT",
+              "RT-CMP",
               "RT-DH",
               "RT-OBJ-STREAM",
               "RT-STORE",
@@ -2493,6 +2498,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-CMS",
               "RT-CONF",
               "RT-PKCS12",
@@ -2520,6 +2526,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-CMS",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -3089,6 +3096,7 @@
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
               "RT-BIO-PRINT",
+              "RT-CMP",
               "RT-CMS",
               "RT-CONF",
               "RT-DH",
@@ -3335,6 +3343,7 @@
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
               "RT-BIO-PRINT",
+              "RT-CMP",
               "RT-CMS",
               "RT-CONF",
               "RT-DH",
@@ -3801,6 +3810,7 @@
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
               "RT-BIO-PRINT",
+              "RT-CMP",
               "RT-CMS",
               "RT-CONF",
               "RT-DH",
@@ -4149,6 +4159,7 @@
               "RT-BIO-DEBUG",
               "RT-BIO-FILTER",
               "RT-BIO-PRINT",
+              "RT-CMP",
               "RT-CMS",
               "RT-CONF",
               "RT-DH",
@@ -4426,6 +4437,7 @@
               "RT-BIO-FILE",
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
+              "RT-CMP",
               "RT-CMS",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
@@ -5294,6 +5306,7 @@
               "RT-ASN1",
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-EVP-PEM",
               "RT-STORE",
               "RT-X509-ACERT",
@@ -5348,6 +5361,7 @@
               "RT-ASN1",
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-EVP-PEM",
               "RT-RSA",
               "RT-STORE",
@@ -5363,6 +5377,7 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-EVP-PEM",
               "RT-RSA",
               "RT-STORE",
@@ -5481,6 +5496,7 @@
               "RT-ASN1",
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-DIGEST",
               "RT-KEYFORMAT",
               "RT-STORE",
@@ -5508,6 +5524,7 @@
               "RT-ASN1",
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-DIGEST",
               "RT-KEYFORMAT",
               "RT-PKCS7",
@@ -6142,6 +6159,7 @@
             "courts": [
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-EVP-PBE",
               "RT-PKCS7"
             ],
@@ -6414,7 +6432,8 @@
             "courts": [
               "RT-ASN1-MIME",
               "RT-ASN1-TEMPLATE",
-              "RT-BIO-ASN1"
+              "RT-BIO-ASN1",
+              "RT-CMP"
             ],
             "symbol": "ASN1_item_d2i"
           },
@@ -6495,6 +6514,7 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
               "RT-BIO-ASN1",
+              "RT-CMP",
               "RT-HTTP"
             ],
             "symbol": "ASN1_item_free"
@@ -6504,7 +6524,8 @@
             "courts": [
               "RT-ASN1-MIME",
               "RT-ASN1-TEMPLATE",
-              "RT-BIO-ASN1"
+              "RT-BIO-ASN1",
+              "RT-CMP"
             ],
             "symbol": "ASN1_item_i2d"
           },
@@ -27963,6 +27984,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-CMS",
               "RT-KEYFORMAT",
               "RT-PKCS12",
@@ -27997,6 +28019,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-CMS",
               "RT-KEYFORMAT",
               "RT-RSA",
@@ -28010,6 +28033,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMP",
               "RT-CMS",
               "RT-KEYFORMAT",
               "RT-RSA",
@@ -28285,6 +28309,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMP",
               "RT-CMS",
               "RT-PKCS12",
               "RT-STORE",
@@ -28470,6 +28495,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMP",
               "RT-X509-REF",
               "RT-X509-STORE",
               "RT-X509-VERIFY-SURFACE"
@@ -30570,6 +30596,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMP",
               "RT-X509-STORE",
               "RT-X509-VERIFY-ENGINE"
             ],
@@ -30754,6 +30781,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMP",
               "RT-X509-STORE",
               "RT-X509-VERIFY-ENGINE"
             ],
@@ -31548,6 +31576,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMP",
               "RT-CMS",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -32040,6 +32069,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMP",
               "RT-STORE",
               "RT-X509-REF",
               "RT-X509-STORE",
@@ -35022,10 +35052,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 428,
-          "directly_courted_called": 283,
+          "directly_courted": 574,
+          "directly_courted_called": 429,
           "directly_courted_referenced": 145,
-          "implemented": 428,
+          "implemented": 574,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -36490,6 +36520,958 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAVS_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAVS_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAVS_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAV_create"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAV_get0_algId"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAV_get0_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAV_get0_value"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAV_get_rsaKeyLen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAV_new_algId"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAV_new_rsaKeyLen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAV_push1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ATAV_set0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CRLSTATUS_create"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CRLSTATUS_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CRLSTATUS_get0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CRLSTATUS_new1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_build_cert_chain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get0_geninfo_ITAVs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get0_libctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get0_newCert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get0_newPkey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get0_propq"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get0_statusString"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get0_trustedStore"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get0_untrusted"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get0_validatedSrvCert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get1_caPubs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get1_extraCertsIn"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get1_newChain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get_certConf_cb_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get_failInfoCode"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get_http_cb_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get_option"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_get_transfer_cb_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_print_errors"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_push0_geninfo_ITAV"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_push0_genm_ITAV"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_push0_policy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_push1_subjectAltName"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_reinit"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_reqExtensions_have_SAN"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_reset_geninfo_ITAVs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set0_newPkey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set0_reqExtensions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set0_trustedStore"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_expected_sender"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_extraCertsOut"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_issuer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_no_proxy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_oldCert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_p10CSR"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_pkey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_proxy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_recipient"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_referenceValue"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_secretValue"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_senderNonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_serialNumber"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_server"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_serverPath"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_srvCert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_subjectName"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_transactionID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set1_untrusted"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set_certConf_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set_certConf_cb_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set_http_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set_http_cb_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set_log_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set_option"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set_serverPort"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set_transfer_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_set_transfer_cb_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_CTX_snprint_PKIStatus"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_HDR_get0_geninfo_ITAVs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_HDR_get0_recipNonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_HDR_get0_transactionID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_create"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_get0_caCerts"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_get0_certProfile"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_get0_crlStatusList"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_get0_crls"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_get0_rootCaCert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_get0_rootCaKeyUpdate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_get0_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_get0_value"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_get1_certReqTemplate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_new0_certProfile"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_new0_certReqTemplate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_new0_crlStatusList"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_new_caCerts"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_new_crls"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_new_rootCaCert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_new_rootCaKeyUpdate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_push0_stack_item"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_ITAV_set0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_MSG_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_MSG_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_MSG_get0_header"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_MSG_get_bodytype"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_MSG_http_perform"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_MSG_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_MSG_read"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_MSG_write"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_PKIHEADER_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_PKIHEADER_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_PKIHEADER_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_PKISI_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_PKISI_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_PKISI_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_PKISI_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_PKISTATUS_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_get0_cmp_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_get0_custom_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_init_trans"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_set_accept_raverified"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_set_accept_unprotected"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_set_grant_implicit_confirm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_SRV_CTX_set_send_unprotected_errors"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_STATUSINFO_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_certConf_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_log_close"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_log_open"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_print_errors_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_print_to_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_snprint_PKIStatusInfo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "OSSL_CMP_validate_cert_path"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-HTTP"
             ],
             "symbol": "OSSL_HTTP_REQ_CTX_add1_header"
@@ -37708,6 +38690,41 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "d2i_OSSL_CMP_ATAVS"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "d2i_OSSL_CMP_MSG"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "d2i_OSSL_CMP_MSG_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "d2i_OSSL_CMP_PKIHEADER"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "d2i_OSSL_CMP_PKISI"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PKCS7"
             ],
             "symbol": "d2i_PKCS7"
@@ -37918,6 +38935,41 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "i2d_OSSL_CMP_ATAVS"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "i2d_OSSL_CMP_MSG"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "i2d_OSSL_CMP_MSG_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "i2d_OSSL_CMP_PKIHEADER"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP"
+            ],
+            "symbol": "i2d_OSSL_CMP_PKISI"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PKCS7"
             ],
             "symbol": "i2d_PKCS7"
@@ -38038,14 +39090,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 12,
-        "staged_candidate_probes": 4
+        "staged_candidate_probes": 5
       }
     ],
     "totals": {
-      "directly_courted": 4909,
-      "directly_courted_called": 3911,
+      "directly_courted": 5055,
+      "directly_courted_called": 4057,
       "directly_courted_referenced": 998,
-      "implemented": 4917,
+      "implemented": 5063,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -38056,7 +39108,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5f2a3bff9dd0d7672c959a0712094e4d9fdc16e3ab4bde1be6cdf5d0425f3e7b"
+      "sha256": "a9652fa69de30bf63250e5d2fa79e798f030307563250df29e01a6e354d9d19a"
     },
     {
       "name": "symbol-ownership",
@@ -38071,7 +39123,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "90bf2ced677177900cdec4ef4dc7cd00382d297abf6fea66fcce519f6c7fab40"
+      "sha256": "3dab87cfb5937fefaab462413fd4351b35a95029fa3501d93d5d23b463c2d4b4"
     },
     {
       "name": "phase3-courts",
@@ -38081,7 +39133,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "a04f4aa367ad46014e83c10aec59845d48aa1288ad7665a1c35e418e2a96dcaf"
+      "sha256": "a1a5dc58dbec00c32ba4433529b9cbe72e0d347e5bdb8206006d01440c640cb7"
     },
     {
       "name": "phase4-courts",
@@ -38091,7 +39143,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "42cc052d533e96d5a63724fb69aa42faea65c10d6be2e84b331b9322d1f9baec"
+      "sha256": "d9b8a994f63780d685a3fb504782aa42b867dcd31bf5a29e4241ec83b8cb75c4"
     },
     {
       "name": "phase5-courts",
@@ -38101,7 +39153,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "6660a737d2da94c3fa3fc1cb5a6e488c63522fba73628103bb5048ab91bca106"
+      "sha256": "5c18bbfa3bd6d63790ba4d9f1005f6576b07abe0084cf88750fbbb106d2b2d38"
     },
     {
       "name": "phase6-courts",
@@ -38111,7 +39163,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "b651364805f5c5e37431adae6ef33d3fc5bf5fde78aef0bbfd28760ca5446925"
+      "sha256": "dd4fa64c1498838db496f857d5db3a68c85fbd908050f1232e31cb0514bd1a3f"
     },
     {
       "name": "phase7-courts",
@@ -38121,7 +39173,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "7368edfbc67ef26b3dfeed9a8bed2a936afcb637c682ba0766145042753ab8eb"
+      "sha256": "4ae998dbfc544ea60d7a1049d71366cd8b5b958ea6a5f297fb2f1949a3fdbefd"
     },
     {
       "name": "phase8-courts",
@@ -38131,7 +39183,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "83e33b1cb9aa45dda93a20da027d1ea5bc1a1e2ed9ce5d78bce784de3a19bc00"
+      "sha256": "d837bd9bdedf1c3141afbd2a1b32c37517c2f9a2e7f657713f5b2d90b82c4f36"
     },
     {
       "name": "phase9-courts",
@@ -38141,7 +39193,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "24a6b72081713346fbd90943395a25fcfd5db18b66e38415b1a72526dd15ca76"
+      "sha256": "4ee1e28e5a0199cb0987f9366ba5eea116b462ecba757ba362703049030f6cbf"
     },
     {
       "name": "phase10-courts",
@@ -38151,7 +39203,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "2f5e6e757181ae0771207a06fc406b139890f2cdd6bddbf0440fd68ffe393b63"
+      "sha256": "81032df90cac1d38216229fefa23ce51c06a1e9d24dc97dd3de3a6e2a8ba49c8"
     },
     {
       "name": "phase11-courts",
@@ -38161,12 +39213,12 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "b778e2e7e835fe0915313ab8a13c25baf2ac5175970df43281912858f504e054"
+      "sha256": "6eff26392b9d65f4eb69da494642eed98a4368fe4e5d24ca6b98a2e6dc99a0ef"
     },
     {
       "name": "phase12-courts",
       "path": "artifacts/phase12/COURTS.json",
-      "sha256": "8f0d2df37f27e22cab17a147e21854b6c5dc509c27a4a0e50e6dc9ca66856cf4"
+      "sha256": "16e71ce064051520e3f9c6aa37d1d44d4698386745f1eb8b06ee0a1723dc624a"
     }
   ],
   "kind": "court-coverage",

@@ -72,10 +72,30 @@
           "candidate": "artifacts/phase12/probes/rt_cms_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 230,
+        "candidate_exit_code": 0,
+        "candidate_observations": 230,
+        "candidate_stderr_tail": [
+          "CMP error: null argument",
+          "CMP error: null argument",
+          "CMP error: null argument"
+        ],
+        "court": "RT-CMP",
+        "crashed": false,
+        "probe": "courts/phase12/rt_cmp_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase12/probes/rt_cmp_probe.authority",
+          "candidate": "artifacts/phase12/probes/rt_cmp_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
-      "RT-CMP": "12.4 -- the CMP transaction surface (`cmp.h`, `cmp_util.h`)",
       "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs",
       "RT-CRMF": "12.7 -- the CRMF certificate-request surface (`crmf.h`)",
       "RT-ESS": "12.7 -- the ESS signing-certificate surface (`ess.h`)",
@@ -85,8 +105,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 4,
-      "total": 4
+      "pass": 5,
+      "total": 5
     }
   },
   "generator": "forensics/tools/phase12_courts.py",
@@ -115,6 +135,11 @@
       "name": "probe",
       "path": "courts/phase12/rt_cms_probe.c",
       "sha256": "ab731db081cf6aa4d6dd0a74f0a63164b0e022fd10fe7829204419ccd9aeba3a"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_cmp_probe.c",
+      "sha256": "6aa273db392f4e9f1175ad2ccfc6d02710bf5efae7ab797ed7f7a54cb61887c9"
     }
   ],
   "kind": "phase12-courts",

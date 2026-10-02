@@ -80,6 +80,10 @@ pub(crate) mod cipher_tables;
 // (Phase 12.7) are reached as the authority's own prototypes rather than re-landed here. See
 // `src/cms/mod.rs`.
 pub mod cms;
+// Phase 12.4 — `crypto/cmp/`: the Certificate Management Protocol. The `OSSL_CMP_*` context and
+// object model; the CRMF item groups its message engine carries are pulled forward crate-internally
+// (the plan orders 12.4 before 12.7). See `src/cmp/mod.rs`.
+pub mod cmp;
 pub mod context;
 // Phase 10.14.15 — `crypto/ct/`: Certificate Transparency. The directory is new here; it lands
 // the units `crypto/x509/v3_x509v3`/`ct_x509v3.c`'s table is blocked on. See `src/ct/mod.rs`.

@@ -198,6 +198,10 @@
       "observations": 26,
       "verdict": "pass"
     },
+    "RT-CMP": {
+      "observations": 230,
+      "verdict": "pass"
+    },
     "RT-CMS": {
       "observations": 176,
       "verdict": "pass"
@@ -581,13 +585,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 5044,
+    "libcrypto": 5190,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
-    "phase12": 605,
+    "phase12": 459,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -639,7 +643,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 35,
     "findings": 0,
-    "language_census": 7250,
+    "language_census": 7248,
     "sealed_census": 51
   },
   "provider_implemented": [
