@@ -341,6 +341,10 @@ pub mod x509_req;
 // Phase 11.4 -- `crypto/x509/x509_r2x.c`: `X509_REQ_to_X509`, the request-to-certificate builder.
 pub mod x509_r2x;
 
+// Phase 11.2a -- the `SSL_DANE` representation (`include/internal/dane.h`) and
+// `crypto/x509/x509_vfy.c`'s DANE matrix (`:3087-3506`), pulled forward ahead of the engine slice
+// that calls it. See the module doc for which of the ten functions land and which wait on 11.2.
+pub mod dane;
 // Phase 10.14.12's `crypto/x509/x509_vfy.c` slice -- `X509_self_signed`, the one name the
 // `X509_add_cert` closure waits on; the rest of the verify engine is withheld by name (Phase 11).
 pub mod x509_vfy;

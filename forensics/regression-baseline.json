@@ -611,7 +611,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 36,
     "findings": 0,
-    "language_census": 7296,
+    "language_census": 7275,
     "sealed_census": 52
   },
   "provider_implemented": [

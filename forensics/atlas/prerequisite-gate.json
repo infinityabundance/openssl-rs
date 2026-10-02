@@ -10,7 +10,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 74,
-      "language_surface_not_modelled_by_name": 7296,
+      "language_surface_not_modelled_by_name": 7275,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -493,7 +493,7 @@
         "crypto/x509/x509_set.c": 19,
         "crypto/x509/x509_trust.c": 19,
         "crypto/x509/x509_v3.c": 10,
-        "crypto/x509/x509_vfy.c": 115,
+        "crypto/x509/x509_vfy.c": 94,
         "crypto/x509/x509_vpm.c": 33,
         "crypto/x509/x509aset.c": 19,
         "crypto/x509/x509cset.c": 15,
@@ -617,7 +617,7 @@
     },
     "checked": {
       "authority_units": 462,
-      "crate_modules": 643,
+      "crate_modules": 648,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
       "divergence_names_covered": 36,
@@ -730,7 +730,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "c8299480da55570bc3d2ae299f1dbe8dbf1c03e4bced01cfba74c9530454bcf0",
+  "body_hash": "294dc97f95bf435f45cec64c796905dd303cd6bc7afa0f9984d85b86942612e2",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -766,7 +766,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d2014cb9cf269846b70c095689dba6b35f2eb6ba67cc95739d93e47ecc6653d1"
+      "sha256": "25c8936bf9dba9b432910d3291d98afa29ba14b1b9cd9f7be60a27e474253f30"
     },
     {
       "name": "phase-state",
