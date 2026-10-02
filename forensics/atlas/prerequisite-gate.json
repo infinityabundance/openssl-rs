@@ -2,71 +2,16 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "blocking_dependencies": [
-      "OSSL_CMP_CERTIFIEDKEYPAIR_new -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_CERTREPMESSAGE_new -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_CERTRESPONSE_free -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_CERTRESPONSE_new -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_CERTSTATUS_free -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_CERTSTATUS_new -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_ERRORMSGCONTENT_new -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_POLLREP_new -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_POLLREQ_free -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_POLLREQ_new -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_REVDETAILS_free -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_REVDETAILS_new -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
-      "OSSL_CMP_REVREPCONTENT_new -> phase 12 (`crypto/cmp/cmp_asn.c`'s ASN.1 item lifecycle for the CMP message bodies. The item templates and their accessors are landed in `src/cmp/cmp_asn.rs`, but these `_new`/`_free` wrappers have no caller until the `cmp_msg.c` constructors above land, and they land with the CMP remainder once 12.7 closes.)",
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
       "cli_option_list_parse -> phase 16 (Transferred to 22.9 and repaired there; what remains deferred to Phase 16 is regenerating the Phase-1 capture with the fixed parser. parse_option_list() (forensics/tools/atlas_runtime.py) matched the authority's `openssl list -options <cmd>` rows against a help-text shape (`-in val        Input file`) that the output never produces, and the real rows are `name type` pairs (`help -`, `in <`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count was 0 and all 2,008 raw rows stayed unstructured. 22.9 rewrote the parser to the authority's actual grammar and re-enumerated the whole namespace from the authority's own built binary (forensics/authorities/build/openssl-3.6.4-production/apps/openssl): forensics/atlas/phase22/cli-surface.json now carries 120 commands with 4,314 structured options, 0 refused rows and 0 commands_with_zero_options, and RT-PHASE22-CLI proves the repaired parser reads a real row and refuses a malformed one (and turns to fail when the parser is broken in memory). The Phase-16-owned Phase-1 capture forensics/atlas/openssl-3.6.4-production/cli-commands.json still carries option_count 0 on all 55 commands: it is Phase 16 (cli-config) that owns the CLI stratum and would regenerate production and historical in lockstep, since regenerating only the production authority would leave a spurious option-set differential against the historical one. Closure: parse_option_list() reads the authority's actual option shape and the structured surface (22.9's cli-surface.json now, and the Phase-16 capture once regenerated) has a non-zero structured option_count for every command.)",
-      "ossl_cmp_certConf_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_certrep_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_certrepmessage_get0_certresponse -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_certreq_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_certresponse_get1_cert -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_certstatus_set0_certHash -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_error_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_exchange_certConf -> phase 12 (`crypto/cmp/cmp_client.c`'s certification-confirmation and error exchanges. The 12.4 ledger holds the client exchange rows open, and docs/PHASE-12-SUBPHASES.md section 5 records that they reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's CRMF PBM surface. It lands with the CMP remainder.)",
-      "ossl_cmp_exchange_error -> phase 12 (`crypto/cmp/cmp_client.c`'s certification-confirmation and error exchanges. The 12.4 ledger holds the client exchange rows open, and docs/PHASE-12-SUBPHASES.md section 5 records that they reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's CRMF PBM surface. It lands with the CMP remainder.)",
-      "ossl_cmp_general_name_is_NULL_DN -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_genm_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_genp_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_hdr_generalInfo_push0_item -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_generalInfo_push1_items -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_get0_senderNonce -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_get_protection_nid -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_get_pvno -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_has_implicitConfirm -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_init -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_push0_freeText -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_push1_freeText -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_set1_recipient -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_set1_sender -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_set1_senderKID -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_set_implicitConfirm -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_set_pvno -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_set_transactionID -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_hdr_update_messageTime -> phase 12 (`crypto/cmp/cmp_hdr.c`'s PKIHeader builders and generalInfo helpers. 12.4 landed only the three `OSSL_CMP_HDR_get0_*` getters; `src/cmp/cmp_hdr.rs`'s module doc records that the header builders are reached by the message engine and land with it. They are blocked on the same 12.7 CRMF/ESS surface as the CMP remainder.)",
-      "ossl_cmp_msg_check_update -> phase 12 (`crypto/cmp/cmp_vfy.c`'s message verifier and POPO check. 12.4 landed only `OSSL_CMP_validate_cert_path`; `src/cmp/cmp_vfy.rs`'s module doc records that `OSSL_CMP_validate_msg` and the POPO path reach the `cmp_protect.c` protection engine, whose PasswordBasedMAC arm needs 12.7's CRMF PBM surface. It lands with the CMP remainder.)",
-      "ossl_cmp_msg_create -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_msg_gen_push0_ITAV -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_msg_gen_push1_ITAVs -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_pkiconf_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_pollRep_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_pollReq_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_pollrepcontent_get0_pollrep -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_revrepcontent_get_CertId -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_revrepcontent_get_pkisi -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_rp_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_rr_new -> phase 12 (`crypto/cmp/cmp_msg.c`'s message-construction half. 12.4 landed the unit's message lifecycle and (de)serialisation -- `OSSL_CMP_MSG_new`/`_free`/`_read`/`_write`, the `d2i_`/`i2d_` wrappers and the `get0_*` accessors -- and left the constructors open, as `src/cmp/cmp_msg.rs`'s module doc records. They build a `PKIMessage` body and reach `ossl_cmp_msg_protect`, whose PasswordBasedMAC arm needs 12.7's `crmf_pbm.c` `OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new`, a non-`cmp/` facility the plan does not pull forward. It lands with the CMP remainder once 12.7 closes.)",
-      "ossl_cmp_verify_popo -> phase 12 (`crypto/cmp/cmp_vfy.c`'s message verifier and POPO check. 12.4 landed only `OSSL_CMP_validate_cert_path`; `src/cmp/cmp_vfy.rs`'s module doc records that `OSSL_CMP_validate_msg` and the POPO path reach the `cmp_protect.c` protection engine, whose PasswordBasedMAC arm needs 12.7's CRMF PBM surface. It lands with the CMP remainder.)",
-      "ossl_cms_sign_encrypt -> phase 12 (`crypto/cms/cms_lib.c`'s signed-message builder. Its first caller is `crypto/cmp/cmp_msg.c`'s `ossl_cmp_msg_create`, part of the un-landed CMP message engine above, so it has no caller until that lands with the CMP remainder once 12.7 closes.)",
       "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
       "covered_by_a_divergence": 86,
-      "language_surface_not_modelled_by_name": 8741,
-      "planned_prerequisites": 95
+      "language_surface_not_modelled_by_name": 8731,
+      "planned_prerequisites": 7
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -216,15 +161,17 @@
         "crypto/cast/c_enc.c": 4,
         "crypto/cmac/cmac.c": 8,
         "crypto/cmp/cmp_asn.c": 120,
-        "crypto/cmp/cmp_client.c": 64,
+        "crypto/cmp/cmp_client.c": 47,
         "crypto/cmp/cmp_ctx.c": 36,
-        "crypto/cmp/cmp_hdr.c": 22,
+        "crypto/cmp/cmp_genm.c": 34,
+        "crypto/cmp/cmp_hdr.c": 21,
         "crypto/cmp/cmp_http.c": 14,
-        "crypto/cmp/cmp_msg.c": 91,
-        "crypto/cmp/cmp_server.c": 52,
+        "crypto/cmp/cmp_msg.c": 72,
+        "crypto/cmp/cmp_protect.c": 17,
+        "crypto/cmp/cmp_server.c": 39,
         "crypto/cmp/cmp_status.c": 37,
         "crypto/cmp/cmp_util.c": 15,
-        "crypto/cmp/cmp_vfy.c": 42,
+        "crypto/cmp/cmp_vfy.c": 31,
         "crypto/cms/cms_asn1.c": 92,
         "crypto/cms/cms_att.c": 8,
         "crypto/cms/cms_dd.c": 8,
@@ -635,61 +582,6 @@
         "providers/baseprov.c": 25
       },
       "planned_prerequisites": {
-        "OSSL_CMP_CERTIFIEDKEYPAIR_new": 1,
-        "OSSL_CMP_CERTREPMESSAGE_new": 1,
-        "OSSL_CMP_CERTRESPONSE_free": 1,
-        "OSSL_CMP_CERTRESPONSE_new": 1,
-        "OSSL_CMP_CERTSTATUS_free": 1,
-        "OSSL_CMP_CERTSTATUS_new": 1,
-        "OSSL_CMP_ERRORMSGCONTENT_new": 1,
-        "OSSL_CMP_POLLREP_new": 1,
-        "OSSL_CMP_POLLREQ_free": 1,
-        "OSSL_CMP_POLLREQ_new": 1,
-        "OSSL_CMP_REVDETAILS_free": 1,
-        "OSSL_CMP_REVDETAILS_new": 1,
-        "OSSL_CMP_REVREPCONTENT_new": 1,
-        "ossl_cmp_certConf_new": 2,
-        "ossl_cmp_certrep_new": 2,
-        "ossl_cmp_certrepmessage_get0_certresponse": 3,
-        "ossl_cmp_certreq_new": 2,
-        "ossl_cmp_certresponse_get1_cert": 3,
-        "ossl_cmp_certstatus_set0_certHash": 1,
-        "ossl_cmp_error_new": 3,
-        "ossl_cmp_exchange_certConf": 1,
-        "ossl_cmp_exchange_error": 1,
-        "ossl_cmp_general_name_is_NULL_DN": 1,
-        "ossl_cmp_genm_new": 2,
-        "ossl_cmp_genp_new": 2,
-        "ossl_cmp_hdr_generalInfo_push0_item": 1,
-        "ossl_cmp_hdr_generalInfo_push1_items": 2,
-        "ossl_cmp_hdr_get0_senderNonce": 1,
-        "ossl_cmp_hdr_get_protection_nid": 3,
-        "ossl_cmp_hdr_get_pvno": 2,
-        "ossl_cmp_hdr_has_implicitConfirm": 3,
-        "ossl_cmp_hdr_init": 2,
-        "ossl_cmp_hdr_push0_freeText": 1,
-        "ossl_cmp_hdr_push1_freeText": 1,
-        "ossl_cmp_hdr_set1_recipient": 1,
-        "ossl_cmp_hdr_set1_sender": 1,
-        "ossl_cmp_hdr_set1_senderKID": 1,
-        "ossl_cmp_hdr_set_implicitConfirm": 2,
-        "ossl_cmp_hdr_set_pvno": 2,
-        "ossl_cmp_hdr_set_transactionID": 2,
-        "ossl_cmp_hdr_update_messageTime": 1,
-        "ossl_cmp_msg_check_update": 3,
-        "ossl_cmp_msg_create": 1,
-        "ossl_cmp_msg_gen_push0_ITAV": 1,
-        "ossl_cmp_msg_gen_push1_ITAVs": 1,
-        "ossl_cmp_pkiconf_new": 2,
-        "ossl_cmp_pollRep_new": 2,
-        "ossl_cmp_pollReq_new": 2,
-        "ossl_cmp_pollrepcontent_get0_pollrep": 2,
-        "ossl_cmp_revrepcontent_get_CertId": 2,
-        "ossl_cmp_revrepcontent_get_pkisi": 2,
-        "ossl_cmp_rp_new": 2,
-        "ossl_cmp_rr_new": 2,
-        "ossl_cmp_verify_popo": 2,
-        "ossl_cms_sign_encrypt": 2,
         "ossl_get_enginesdir": 3,
         "ossl_get_openssldir": 3,
         "ossl_get_wininstallcontext": 1
@@ -782,53 +674,20 @@
         "crypto/asn1/a_i2d_fp.c:ASN1_ITEM"
       ],
       "planned_prerequisites": [
-        "OSSL_CMP_CERTIFIEDKEYPAIR_new",
-        "OSSL_CMP_CERTREPMESSAGE_new",
-        "OSSL_CMP_CERTRESPONSE_free",
-        "OSSL_CMP_CERTRESPONSE_new",
-        "OSSL_CMP_CERTSTATUS_free",
-        "OSSL_CMP_CERTSTATUS_new",
-        "OSSL_CMP_ERRORMSGCONTENT_new",
-        "OSSL_CMP_POLLREP_new",
-        "OSSL_CMP_POLLREQ_free",
-        "OSSL_CMP_POLLREQ_new",
-        "OSSL_CMP_REVDETAILS_free",
-        "OSSL_CMP_REVDETAILS_new",
-        "OSSL_CMP_REVREPCONTENT_new",
-        "ossl_cmp_certConf_new",
-        "ossl_cmp_certConf_new",
-        "ossl_cmp_certrep_new",
-        "ossl_cmp_certrep_new",
-        "ossl_cmp_certrepmessage_get0_certresponse",
-        "ossl_cmp_certrepmessage_get0_certresponse",
-        "ossl_cmp_certrepmessage_get0_certresponse",
-        "ossl_cmp_certreq_new",
-        "ossl_cmp_certreq_new",
-        "ossl_cmp_certresponse_get1_cert",
-        "ossl_cmp_certresponse_get1_cert",
-        "ossl_cmp_certresponse_get1_cert",
-        "ossl_cmp_certstatus_set0_certHash",
-        "ossl_cmp_error_new",
-        "ossl_cmp_error_new",
-        "ossl_cmp_error_new",
-        "ossl_cmp_exchange_certConf",
-        "ossl_cmp_exchange_error",
-        "ossl_cmp_general_name_is_NULL_DN",
-        "ossl_cmp_genm_new",
-        "ossl_cmp_genm_new",
-        "ossl_cmp_genp_new",
-        "ossl_cmp_genp_new",
-        "ossl_cmp_hdr_generalInfo_push0_item",
-        "ossl_cmp_hdr_generalInfo_push1_items",
-        "ossl_cmp_hdr_generalInfo_push1_items",
-        "ossl_cmp_hdr_get0_senderNonce"
+        "ossl_get_enginesdir",
+        "ossl_get_enginesdir",
+        "ossl_get_enginesdir",
+        "ossl_get_openssldir",
+        "ossl_get_openssldir",
+        "ossl_get_openssldir",
+        "ossl_get_wininstallcontext"
       ]
     },
     "checked": {
-      "authority_units": 517,
-      "crate_modules": 703,
+      "authority_units": 519,
+      "crate_modules": 705,
       "deferral_blocker_rows": 0,
-      "deferrals_recorded": 60,
+      "deferrals_recorded": 5,
       "divergence_names_covered": 47,
       "divergence_rows": 11,
       "names_referenced_and_not_built": 19
@@ -840,8 +699,7 @@
     "sealed_stratum_census": {
       "by_defining_unit": {
         "crypto/asn1/asn1_lib.c": [
-          "ossl_asn1_string_embed_free",
-          "ossl_sk_ASN1_UTF8STRING2text"
+          "ossl_asn1_string_embed_free"
         ],
         "crypto/asn1/tasn_fre.c": [
           "ossl_asn1_item_embed_free",
@@ -928,7 +786,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 51
+      "names": 50
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -938,13 +796,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "1453c22e0b0f35008e7ea7db0d7dde1eddbef39e2f1728f1b5c785b49c97e685",
+  "body_hash": "43d5201e1b35edb8c62c249faad2dacea79a2d3379fe0fb08e51bf266287e3b2",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "9a3355c24d6856b6d9d7906474d7bac7431770f86149b20a91c46367f20cc24b"
+      "sha256": "f34c3c9d7a675a3d6559152668eb6f1ce06384b8de32515af066f49361ef4411"
     },
     {
       "name": "macro-owners",
@@ -959,7 +817,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "464b9cb4ecbf945275cda3f127b3e324aeecb955282aa6f05ba2244c2a0d9987"
+      "sha256": "acb62fbcfc4b5dfba5cd0908ed51b7287659c0267908010befde2e9f22ff4b67"
     },
     {
       "name": "symbol-ownership",
@@ -974,17 +832,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9e5f055e5f6fa53e3da24a438ce13175f9db21671248e35805ccb7cee366b922"
+      "sha256": "dfe2369aa2cbf6785f0b092e83fbf30922fb9af5f47536694eea8b783734c988"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "331bf2f9bc17071c6b09ac76e24f7ada5ce3953c85968047ff21282a1b13b2cd"
+      "sha256": "787afc91120f9757b28c033ce5722fb72d1599db956fd08703b70deef4eb3d46"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "f0cc2ee3ca46da828dba71507723ee685aea06b256ccb9e1df76663c1f2f7489"
+      "sha256": "1e202ddb05d3e7606b8201e9207bf86606c794c0595f80da95e3238837bab2b3"
     },
     {
       "name": "crate-source-tree",

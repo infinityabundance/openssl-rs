@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 703,
+      "crate_files_read": 705,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 301,
       "signatures_checked": 337,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 211,
+      "signatures_not_a_dispatch": 212,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -4536,6 +4536,11 @@
           "alias": "NistReduce",
           "at": "src/bn/nist.rs",
           "why": "not an authority type: a crate-local callback shape with no header counterpart"
+        },
+        {
+          "alias": "OsslCmpAllowUnprotectedCb",
+          "at": "src/cmp/cmp_vfy.rs",
+          "why": "not a provider dispatch: a callback typedef declared in `crypto/cmp/cmp_local.h:996`, which is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "DhGenerateKeyFn",

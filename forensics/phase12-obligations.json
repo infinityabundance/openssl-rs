@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1024,
       "deferred_to_later_phase": 0,
-      "implemented": 968,
-      "open_in_this_stratum": 65,
+      "implemented": 983,
+      "open_in_this_stratum": 50,
       "owned": 1033,
       "received_by_handoff": 9
     },
@@ -452,6 +452,7 @@
       "OSSL_CMP_CTX_reinit",
       "OSSL_CMP_CTX_reqExtensions_have_SAN",
       "OSSL_CMP_CTX_reset_geninfo_ITAVs",
+      "OSSL_CMP_CTX_server_perform",
       "OSSL_CMP_CTX_set0_newPkey",
       "OSSL_CMP_CTX_set0_reqExtensions",
       "OSSL_CMP_CTX_set0_trustedStore",
@@ -484,6 +485,7 @@
       "OSSL_CMP_CTX_set_serverPort",
       "OSSL_CMP_CTX_set_transfer_cb",
       "OSSL_CMP_CTX_set_transfer_cb_arg",
+      "OSSL_CMP_CTX_setup_CRM",
       "OSSL_CMP_CTX_snprint_PKIStatus",
       "OSSL_CMP_HDR_get0_geninfo_ITAVs",
       "OSSL_CMP_HDR_get0_recipNonce",
@@ -511,11 +513,14 @@
       "OSSL_CMP_ITAV_set0",
       "OSSL_CMP_MSG_dup",
       "OSSL_CMP_MSG_free",
+      "OSSL_CMP_MSG_get0_certreq_publickey",
       "OSSL_CMP_MSG_get0_header",
       "OSSL_CMP_MSG_get_bodytype",
       "OSSL_CMP_MSG_http_perform",
       "OSSL_CMP_MSG_it",
       "OSSL_CMP_MSG_read",
+      "OSSL_CMP_MSG_update_recipNonce",
+      "OSSL_CMP_MSG_update_transactionID",
       "OSSL_CMP_MSG_write",
       "OSSL_CMP_PKIHEADER_free",
       "OSSL_CMP_PKIHEADER_it",
@@ -535,14 +540,24 @@
       "OSSL_CMP_SRV_CTX_set_accept_unprotected",
       "OSSL_CMP_SRV_CTX_set_grant_implicit_confirm",
       "OSSL_CMP_SRV_CTX_set_send_unprotected_errors",
+      "OSSL_CMP_SRV_process_request",
       "OSSL_CMP_STATUSINFO_new",
       "OSSL_CMP_certConf_cb",
+      "OSSL_CMP_exec_GENM_ses",
+      "OSSL_CMP_exec_RR_ses",
+      "OSSL_CMP_exec_certreq",
+      "OSSL_CMP_get1_caCerts",
+      "OSSL_CMP_get1_certReqTemplate",
+      "OSSL_CMP_get1_crlUpdate",
+      "OSSL_CMP_get1_rootCaKeyUpdate",
       "OSSL_CMP_log_close",
       "OSSL_CMP_log_open",
       "OSSL_CMP_print_errors_cb",
       "OSSL_CMP_print_to_bio",
       "OSSL_CMP_snprint_PKIStatusInfo",
+      "OSSL_CMP_try_certreq",
       "OSSL_CMP_validate_cert_path",
+      "OSSL_CMP_validate_msg",
       "OSSL_CRMF_ATTRIBUTETYPEANDVALUE_dup",
       "OSSL_CRMF_ATTRIBUTETYPEANDVALUE_free",
       "OSSL_CRMF_CERTID_dup",
@@ -1080,96 +1095,6 @@
         "symbol": "CTLOG_STORE_load_default_file"
       },
       {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_server_perform"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_setup_CRM"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_get0_certreq_publickey"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_update_recipNonce"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_update_transactionID"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_process_request"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_client.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_exec_GENM_ses"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_client.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_exec_RR_ses"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_client.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_exec_certreq"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_genm.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_get1_caCerts"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_genm.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_get1_certReqTemplate"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_genm.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_get1_crlUpdate"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_genm.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_get1_rootCaKeyUpdate"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_client.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_try_certreq"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_validate_msg"
-      },
-      {
         "declaring_header": "pkcs7.h",
         "module": "src/x509/x_all.rs",
         "received_from_phase": null,
@@ -1571,17 +1496,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "4a6066b9adba1aba4413c18a9f5a6813a4d8a1b40bf3ac089dec0c45c8d03756"
+      "sha256": "e9bcb7f9eb43eaf7137d2ef30cc0483b474b2f168ab7fcde45116709eef8e5d9"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "26d9fd0dd1c7fd871ac45868b8e46d2200656440ab291910ce87b77b46777a6a"
+      "sha256": "c98a5a3ecf53c98ca2d7ff4f3af8e71bf9db35537728880dc093dfc667042c06"
     },
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "69b3a0e3474420b76136efbd9dacc3ac276961e2f8606bbcc13547b471f7f622"
+      "sha256": "512be5e10090dfbe5f58c4dc090a69fc5ddb0ba47d3edef6615b5bd8a43e0e6b"
     }
   ],
   "kind": "phase12-obligations",

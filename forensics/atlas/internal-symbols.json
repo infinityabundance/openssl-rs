@@ -222,6 +222,7 @@
       "src/asn1/a_verify.rs: {11: 3, 5: 1}",
       "src/asn1/bio_asn1.rs: {4: 4, 5: 2}",
       "src/asn1/bitstr.rs: {5: 7, 4: 1}",
+      "src/cmp/cmp_vfy.rs: {3: 1, 12: 2}",
       "src/cms/cms_io.rs: {12: 13, 5: 2}",
       "src/cms/cms_smime.rs: {12: 25, 5: 1}",
       "src/crmf/crmf_pbm.rs: {3: 1, 12: 2}",
@@ -239,6 +240,7 @@
     "modules_without_a_stratum": [
       "src/bn/dh_data.rs",
       "src/bn/prime_data.rs",
+      "src/cmp/cmp_protect.rs",
       "src/cmp/mod.rs",
       "src/cms/cms_dd.rs",
       "src/cms/cms_dh.rs",

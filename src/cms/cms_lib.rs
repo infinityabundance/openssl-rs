@@ -6,7 +6,7 @@
 #![allow(dead_code, non_snake_case)]
 #![allow(unused_assignments)]
 
-use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::d2i::ASN1_item_d2i_ex;
@@ -18,11 +18,13 @@ use crate::asn1::string::{
 use crate::asn1::tasn_prn::ASN1_item_print;
 use crate::asn1::x_algor::{X509Algor, X509_ALGOR_get0};
 use crate::evp::bio_enc::BIO_f_md;
+use crate::evp::cipher::EvpCipher;
 use crate::evp::digest::{
     EVP_MD_CTX_copy_ex, EVP_MD_CTX_get0_md, EVP_MD_CTX_set_params, EVP_MD_fetch, EVP_MD_free,
     EVP_MD_get_pkey_type, EVP_MD_get_type, EVP_MD_is_a, EVP_MD_xof, EvpMd,
 };
 use crate::evp::legacy_evp::EVP_get_digestbyname;
+use crate::evp::pkey::EvpPkey;
 use crate::params::{OSSL_PARAM_construct_end, OSSL_PARAM_construct_size_t, OsslParam};
 use crate::runtime::bio::bss_mem::{BIO_new_mem_buf, BIO_s_mem};
 use crate::runtime::bio::bss_null::BIO_s_null;
@@ -1368,4 +1370,102 @@ unsafe extern "C" fn x509_free_void(p: *mut c_void) {
 unsafe extern "C" fn x509_crl_free_void(p: *mut c_void) {
     // SAFETY: `p` is an `X509_CRL` per the stack's element type.
     unsafe { X509_CRL_free(p.cast()) };
+}
+
+/// `CMS_EnvelopedData *ossl_cms_sign_encrypt(BIO *data, X509 *sign_cert, STACK_OF(X509) *certs,
+/// EVP_PKEY *sign_key, unsigned int sign_flags, STACK_OF(X509) *enc_recip, const EVP_CIPHER
+/// *cipher, unsigned int enc_flags, OSSL_LIB_CTX *libctx, const char *propq)` —
+/// `cms_lib.c:792-827`. Internal; landed so the CMP engine's `enc_privkey` (central key
+/// generation) has its sign-and-envelope arm.
+///
+/// # Safety
+/// `data`/`sign_key`/`sign_cert`/`enc_recip` are live; `certs` is NULL or a live stack; `cipher`
+/// is live; `propq` is NULL or NUL-terminated. The result is owned by the caller.
+#[allow(clippy::too_many_arguments)]
+pub(crate) unsafe fn ossl_cms_sign_encrypt(
+    data: *mut crate::runtime::bio::Bio,
+    sign_cert: *mut X509,
+    certs: *mut OpenSslStack,
+    sign_key: *mut EvpPkey,
+    sign_flags: c_uint,
+    enc_recip: *mut OpenSslStack,
+    cipher: *const EvpCipher,
+    enc_flags: c_uint,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut CmsEnvelopedData {
+    let privbio: *mut crate::runtime::bio::Bio = ptr::null_mut();
+    let mut signbio: *mut crate::runtime::bio::Bio = ptr::null_mut();
+    let mut signcms: *mut CmsContentInfo = ptr::null_mut();
+    let mut evpcms: *mut CmsContentInfo = ptr::null_mut();
+    let mut evd: *mut CmsEnvelopedData = ptr::null_mut();
+
+    if data.is_null() || sign_key.is_null() || sign_cert.is_null() || enc_recip.is_null() {
+        // SAFETY: the site is a compile-time constant.
+        unsafe { raise_cms(803, c"ossl_cms_sign_encrypt", ERR_R_PASSED_NULL_PARAMETER) };
+        return ptr::null_mut();
+    }
+    // SAFETY: the caller's contract; the callees obey their own.
+    signcms = unsafe {
+        super::cms_smime::CMS_sign_ex(sign_cert, sign_key, certs, data, sign_flags, libctx, propq)
+    };
+    if signcms.is_null() {
+        // goto err
+        // SAFETY: both BIOs are NULL or this call's own; the two CMS objects likewise.
+        unsafe {
+            crate::runtime::bio::BIO_free(privbio);
+            crate::runtime::bio::BIO_free(signbio);
+            CMS_ContentInfo_free(signcms);
+            CMS_ContentInfo_free(evpcms);
+        }
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `BIO_s_mem` answers a static method.
+    signbio = unsafe { crate::runtime::bio::BIO_new(BIO_s_mem()) };
+    // SAFETY: `signbio` is live; the signed data is `signcms`'s.
+    let encoded = if signbio.is_null() {
+        0
+    } else {
+        // SAFETY: the enclosing function's `# Safety` section is the contract for these raw pointers.
+        unsafe {
+            crate::asn1::a_i2d_fp::ASN1_item_i2d_bio(cms_signeddata_it(), signbio, (*signcms).d)
+        }
+    };
+    if signbio.is_null() || encoded <= 0 {
+        // SAFETY: both BIOs are NULL or this call's own; the two CMS objects likewise.
+        unsafe {
+            crate::runtime::bio::BIO_free(privbio);
+            crate::runtime::bio::BIO_free(signbio);
+            CMS_ContentInfo_free(signcms);
+            CMS_ContentInfo_free(evpcms);
+        }
+        return ptr::null_mut();
+    }
+
+    // SAFETY: the caller's contract; the callees obey their own.
+    evpcms = unsafe {
+        super::cms_smime::CMS_encrypt_ex(enc_recip, signbio, cipher, enc_flags, libctx, propq)
+    };
+    if evpcms.is_null() {
+        // SAFETY: both BIOs are NULL or this call's own; the two CMS objects likewise.
+        unsafe {
+            crate::runtime::bio::BIO_free(privbio);
+            crate::runtime::bio::BIO_free(signbio);
+            CMS_ContentInfo_free(signcms);
+            CMS_ContentInfo_free(evpcms);
+        }
+        return ptr::null_mut();
+    }
+    // SAFETY: `evpcms` carries an enveloped data object.
+    evd = unsafe { CMS_EnvelopedData_dup((*evpcms).d as *const CmsEnvelopedData) };
+
+    // SAFETY: both BIOs are NULL or this call's own; the two CMS objects likewise.
+    unsafe {
+        crate::runtime::bio::BIO_free(privbio);
+        crate::runtime::bio::BIO_free(signbio);
+        CMS_ContentInfo_free(signcms);
+        CMS_ContentInfo_free(evpcms);
+    }
+    evd
 }

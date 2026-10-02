@@ -75,9 +75,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 230,
+        "authority_observations": 320,
         "candidate_exit_code": 0,
-        "candidate_observations": 230,
+        "candidate_observations": 320,
         "candidate_stderr_tail": [
           "CMP error: null argument",
           "CMP error: null argument",
@@ -203,7 +203,7 @@
     {
       "name": "probe",
       "path": "courts/phase12/rt_cmp_probe.c",
-      "sha256": "6aa273db392f4e9f1175ad2ccfc6d02710bf5efae7ab797ed7f7a54cb61887c9"
+      "sha256": "5cca8820cb4d0c03a4eb7c9bf614e39e44dd2542e654077f542c9444c8cdbe7a"
     },
     {
       "name": "probe",

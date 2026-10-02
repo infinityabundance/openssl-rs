@@ -446,6 +446,7 @@
         "ossl_pw_set_passphrase",
         "ossl_pw_set_pem_password_cb",
         "ossl_pw_set_ui_method",
+        "ossl_sk_ASN1_UTF8STRING2text",
         "ossl_v3_name_cmp",
         "ossl_x25519",
         "ossl_x25519_public_from_private",
@@ -500,7 +501,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 15843,
+      "compiler_emitted_count": 16047,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -508,7 +509,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 5584,
+        "implemented": 5599,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -3330,6 +3331,7 @@
           "OSSL_CMP_CTX_reinit",
           "OSSL_CMP_CTX_reqExtensions_have_SAN",
           "OSSL_CMP_CTX_reset_geninfo_ITAVs",
+          "OSSL_CMP_CTX_server_perform",
           "OSSL_CMP_CTX_set0_newPkey",
           "OSSL_CMP_CTX_set0_reqExtensions",
           "OSSL_CMP_CTX_set0_trustedStore",
@@ -3362,6 +3364,7 @@
           "OSSL_CMP_CTX_set_serverPort",
           "OSSL_CMP_CTX_set_transfer_cb",
           "OSSL_CMP_CTX_set_transfer_cb_arg",
+          "OSSL_CMP_CTX_setup_CRM",
           "OSSL_CMP_CTX_snprint_PKIStatus",
           "OSSL_CMP_HDR_get0_geninfo_ITAVs",
           "OSSL_CMP_HDR_get0_recipNonce",
@@ -3389,11 +3392,14 @@
           "OSSL_CMP_ITAV_set0",
           "OSSL_CMP_MSG_dup",
           "OSSL_CMP_MSG_free",
+          "OSSL_CMP_MSG_get0_certreq_publickey",
           "OSSL_CMP_MSG_get0_header",
           "OSSL_CMP_MSG_get_bodytype",
           "OSSL_CMP_MSG_http_perform",
           "OSSL_CMP_MSG_it",
           "OSSL_CMP_MSG_read",
+          "OSSL_CMP_MSG_update_recipNonce",
+          "OSSL_CMP_MSG_update_transactionID",
           "OSSL_CMP_MSG_write",
           "OSSL_CMP_PKIHEADER_free",
           "OSSL_CMP_PKIHEADER_it",
@@ -3413,14 +3419,24 @@
           "OSSL_CMP_SRV_CTX_set_accept_unprotected",
           "OSSL_CMP_SRV_CTX_set_grant_implicit_confirm",
           "OSSL_CMP_SRV_CTX_set_send_unprotected_errors",
+          "OSSL_CMP_SRV_process_request",
           "OSSL_CMP_STATUSINFO_new",
           "OSSL_CMP_certConf_cb",
+          "OSSL_CMP_exec_GENM_ses",
+          "OSSL_CMP_exec_RR_ses",
+          "OSSL_CMP_exec_certreq",
+          "OSSL_CMP_get1_caCerts",
+          "OSSL_CMP_get1_certReqTemplate",
+          "OSSL_CMP_get1_crlUpdate",
+          "OSSL_CMP_get1_rootCaKeyUpdate",
           "OSSL_CMP_log_close",
           "OSSL_CMP_log_open",
           "OSSL_CMP_print_errors_cb",
           "OSSL_CMP_print_to_bio",
           "OSSL_CMP_snprint_PKIStatusInfo",
+          "OSSL_CMP_try_certreq",
           "OSSL_CMP_validate_cert_path",
+          "OSSL_CMP_validate_msg",
           "OSSL_CRMF_ATTRIBUTETYPEANDVALUE_dup",
           "OSSL_CRMF_ATTRIBUTETYPEANDVALUE_free",
           "OSSL_CRMF_CERTID_dup",
@@ -6095,7 +6111,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 312
+        "scaffolded": 297
       },
       "libssl": {
         "authority_exports": 603,
@@ -6106,18 +6122,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 5584,
-      "scaffolded": 915
+      "implemented": 5599,
+      "scaffolded": 900
     }
   },
-  "body_hash": "4a6066b9adba1aba4413c18a9f5a6813a4d8a1b40bf3ac089dec0c45c8d03756",
+  "body_hash": "e9bcb7f9eb43eaf7137d2ef30cc0483b474b2f168ab7fcde45116709eef8e5d9",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "b46944eee33da3e900e3cf719ae61d849a213b29a9aaa2b5b5e12531f1a0c58d"
+      "sha256": "6032556fdd8df1f23c8476431894615310a2bef6ca3f5c1cadeed4c4d2b661c0"
     },
     {
       "name": "authority-exports",
