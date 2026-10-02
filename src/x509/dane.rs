@@ -24,27 +24,14 @@
 //! `dane` field stays `*mut c_void`, and the field's declared type is enough for the cast because
 //! the two are the same width.
 //!
-//! ## What is landed, and what is withheld until 11.2
+//! ## What is landed
 //!
-//! Seven of the ten matrix functions land whole: they reach only helpers that are already in the
-//! crate ([`dane_i2d`], [`ctx_dane`], `i2d_X509`/`i2d_X509_PUBKEY`/`i2d_PUBKEY`, `EVP_Digest`,
-//! `X509_verify`, `X509_up_ref`/`X509_free`, the `OPENSSL_sk_*` stack and `X509_get_X509_PUBKEY`).
-//! The remaining three cannot be transcribed faithfully yet and are named, not stubbed, below.
-//!
-//! * `check_leaf_suiteb` (`x509_vfy.c:3392-3398`) expands `CB_FAIL_IF` (`:174-176`) into a call to
-//!   `verify_cb_cert` (`:162-172`). That helper **did** land, but as a *private* `unsafe fn`
-//!   (`x509_vfy.rs:1936`), and it is not nameable from a sibling module. Landing `check_leaf_suiteb`
-//!   therefore needs one word changed outside this unit's write scope — `pub(crate)` on
-//!   `x509_vfy.rs:1936` — and is deferred until that change is made.
-//! * `dane_verify_rpk` (`:3401-3428`) calls `verify_rpk` (`:240-247`), and `dane_verify`
-//!   (`:3431-3490`) calls `check_id` (`:941`) and `verify_chain` (`:253`). All three are the
-//!   withheld engine slice (`src/x509/x509_vfy.rs`'s module doc names them), so neither function
-//!   has a callee yet.
-//!
-//! Each withheld function is listed with its exact authority signature and the precise call that
-//! blocks it in the `TODO(11.2)` block at the foot of this file. No stub is declared: a stub would
-//! put a name in the crate that the authority defines elsewhere and would silently satisfy a future
-//! caller with the wrong body.
+//! Every matrix function the engine reaches is transcribed here: [`dane_i2d`], [`dane_match_cert`],
+//! [`check_dane_issuer`], [`check_dane_pkeys`], [`dane_match_rpk`], [`dane_reset`],
+//! [`get1_trusted_issuer`] and [`ctx_dane`]. The three entry points this file's authority shares
+//! with the engine — `check_leaf_suiteb`, `dane_verify_rpk` and `dane_verify` — are **not** here:
+//! they call the engine's `verify_rpk`/`verify_chain`/`check_id` and the private `verify_cb_cert`,
+//! so they are transcribed in `src/x509/x509_vfy.rs`, the unit that owns them.
 //!
 //! ## Raise coordinates
 //!
@@ -54,11 +41,6 @@
 //! `ERR_R_ASN1_LIB` is `err.h`, against `ERR_LIB_X509` = 11 (`include/openssl/err.h.in:85`).
 //!
 //! SPDX-License-Identifier: Apache-2.0
-
-// The DANE matrix lands ahead of its callers: the engine slice (`build_chain`/`check_trust`) and
-// the two `dane_verify*` entry points arrive in subphase 11.2, whose commit reaches every helper
-// below. The allowance is removed in that commit.
-#![allow(dead_code)]
 
 use core::ffi::{c_int, c_uchar, c_uint, c_ulong, CStr};
 use core::mem::{offset_of, size_of};
@@ -88,23 +70,10 @@ const ERR_R_ASN1_LIB: c_int = 13 | (0x2 << 18);
 /// `X509_R_BAD_SELECTOR` — `include/openssl/x509err.h:23`, `133`.
 const X509_R_BAD_SELECTOR: c_int = 133;
 
-/// `X509_V_OK` — `include/openssl/x509_vfy.h.in:215`, `0`.
-const X509_V_OK: c_int = 0;
-/// `X509_V_ERR_OUT_OF_MEM` — `include/openssl/x509_vfy.h.in:232`, `17`. Read by the withheld
-/// `dane_verify`.
-const X509_V_ERR_OUT_OF_MEM: c_int = 17;
-/// `X509_V_ERR_DANE_NO_MATCH` — `include/openssl/x509_vfy.h.in:287`, `65`. Read by the withheld
-/// `dane_verify_rpk`.
-const X509_V_ERR_DANE_NO_MATCH: c_int = 65;
-
 /// `X509_TRUST_TRUSTED` — `include/openssl/x509_vfy.h.in:122`, `1`.
 const X509_TRUST_TRUSTED: c_int = 1;
 /// `X509_TRUST_UNTRUSTED` — `include/openssl/x509_vfy.h.in:124`, `3`.
 const X509_TRUST_UNTRUSTED: c_int = 3;
-
-/// `DANE_FLAG_NO_DANE_EE_NAMECHECKS` — `include/openssl/x509_vfy.h.in:721`, `(1L << 0)`. Read by
-/// the withheld `dane_verify`.
-const DANE_FLAG_NO_DANE_EE_NAMECHECKS: c_ulong = 1;
 
 /// `EVP_MAX_MD_SIZE` — `include/openssl/evp.h:34`, `64`.
 const EVP_MAX_MD_SIZE: usize = 64;
@@ -121,6 +90,7 @@ pub(crate) const DANETLS_USAGE_DANE_TA: u8 = 2;
 /// `DANETLS_USAGE_DANE_EE` — `include/internal/dane.h:23`, `3`.
 pub(crate) const DANETLS_USAGE_DANE_EE: u8 = 3;
 /// `DANETLS_USAGE_LAST` — `include/internal/dane.h:24`, `DANETLS_USAGE_DANE_EE`.
+#[allow(dead_code)] // the `dane_tlsa_add` bound it awaits is the SSL layer's, not the engine's
 pub(crate) const DANETLS_USAGE_LAST: u8 = DANETLS_USAGE_DANE_EE;
 
 /// `DANETLS_SELECTOR_CERT` — `include/internal/dane.h:30`, `0`.
@@ -128,15 +98,19 @@ pub(crate) const DANETLS_SELECTOR_CERT: u8 = 0;
 /// `DANETLS_SELECTOR_SPKI` — `include/internal/dane.h:31`, `1`.
 pub(crate) const DANETLS_SELECTOR_SPKI: u8 = 1;
 /// `DANETLS_SELECTOR_LAST` — `include/internal/dane.h:32`, `DANETLS_SELECTOR_SPKI`.
+#[allow(dead_code)] // the `dane_tlsa_add` bound it awaits is the SSL layer's, not the engine's
 pub(crate) const DANETLS_SELECTOR_LAST: u8 = DANETLS_SELECTOR_SPKI;
 
 /// `DANETLS_MATCHING_FULL` — `include/internal/dane.h:38`, `0`.
 pub(crate) const DANETLS_MATCHING_FULL: u8 = 0;
 /// `DANETLS_MATCHING_2256` — `include/internal/dane.h:39`, `1`.
+#[allow(dead_code)] // the `dane_tlsa_add` bound it awaits is the SSL layer's, not the engine's
 pub(crate) const DANETLS_MATCHING_2256: u8 = 1;
 /// `DANETLS_MATCHING_2512` — `include/internal/dane.h:40`, `2`.
+#[allow(dead_code)] // the `dane_tlsa_add` bound it awaits is the SSL layer's, not the engine's
 pub(crate) const DANETLS_MATCHING_2512: u8 = 2;
 /// `DANETLS_MATCHING_LAST` — `include/internal/dane.h:41`, `DANETLS_MATCHING_2512`.
+#[allow(dead_code)] // the `dane_tlsa_add` bound it awaits is the SSL layer's, not the engine's
 pub(crate) const DANETLS_MATCHING_LAST: u8 = DANETLS_MATCHING_2512;
 
 /// `DANETLS_USAGE_BIT(u)` — `include/internal/dane.h:82`, `(((uint32_t)1) << u)`.
@@ -316,6 +290,7 @@ pub(crate) unsafe fn danetls_has_ta(dane: *mut SslDane) -> bool {
 /// # Safety
 ///
 /// `dane` must be NULL or a live [`SslDane`].
+#[allow(dead_code)] // the engine reaches only the PKIX/DANE/TA predicates it tests; these await the SSL layer
 pub(crate) unsafe fn danetls_has_ee(dane: *mut SslDane) -> bool {
     // SAFETY: `dane` is NULL or live per the contract; the NULL half short-circuits.
     !dane.is_null() && (unsafe { (*dane).umask } & DANETLS_EE_MASK) != 0
@@ -326,6 +301,7 @@ pub(crate) unsafe fn danetls_has_ee(dane: *mut SslDane) -> bool {
 /// # Safety
 ///
 /// `dane` must be NULL or a live [`SslDane`].
+#[allow(dead_code)] // the engine reaches only the PKIX/DANE/TA predicates it tests; these await the SSL layer
 pub(crate) unsafe fn danetls_has_pkix_ta(dane: *mut SslDane) -> bool {
     // SAFETY: `dane` is NULL or live per the contract; the NULL half short-circuits.
     !dane.is_null() && (unsafe { (*dane).umask } & DANETLS_PKIX_TA_MASK) != 0
@@ -336,6 +312,7 @@ pub(crate) unsafe fn danetls_has_pkix_ta(dane: *mut SslDane) -> bool {
 /// # Safety
 ///
 /// `dane` must be NULL or a live [`SslDane`].
+#[allow(dead_code)] // the engine reaches only the PKIX/DANE/TA predicates it tests; these await the SSL layer
 pub(crate) unsafe fn danetls_has_pkix_ee(dane: *mut SslDane) -> bool {
     // SAFETY: `dane` is NULL or live per the contract; the NULL half short-circuits.
     !dane.is_null() && (unsafe { (*dane).umask } & DANETLS_PKIX_EE_MASK) != 0
@@ -356,6 +333,7 @@ pub(crate) unsafe fn danetls_has_dane_ta(dane: *mut SslDane) -> bool {
 /// # Safety
 ///
 /// `dane` must be NULL or a live [`SslDane`].
+#[allow(dead_code)] // the engine reaches only the PKIX/DANE/TA predicates it tests; these await the SSL layer
 pub(crate) unsafe fn danetls_has_dane_ee(dane: *mut SslDane) -> bool {
     // SAFETY: `dane` is NULL or live per the contract; the NULL half short-circuits.
     !dane.is_null() && (unsafe { (*dane).umask } & DANETLS_DANE_EE_MASK) != 0
@@ -905,7 +883,7 @@ pub(crate) unsafe extern "C" fn get1_trusted_issuer(
         // writable, `ctx`/`cert` live).
         Some(cb) => unsafe { cb(issuer, ctx.cast(), cert) },
         // The authority calls a NULL pointer here; that is unreachable in the landed surface
-        // because only `X509_STORE_CTX_init` (withheld) installs the callback.
+        // because `X509_STORE_CTX_init` always installs a callback.
         None => 0,
     };
 
@@ -913,34 +891,3 @@ pub(crate) unsafe extern "C" fn get1_trusted_issuer(
     unsafe { (*ctx).chain = saved_chain };
     ok
 }
-
-// ---------------------------------------------------------------------------------------------
-// Withheld until subphase 11.2 — `x509_vfy.c:3392-3490`.
-// ---------------------------------------------------------------------------------------------
-//
-// These three functions are transcribed above only when their callees land. Each is listed with
-// its exact authority signature and the precise call that blocks it. No stub is declared.
-//
-// TODO(11.2): `static int check_leaf_suiteb(X509_STORE_CTX *ctx, X509 *cert)` —
-// `crypto/x509/x509_vfy.c:3392-3398`. Blocked by the *visibility* of a landed helper, not by a
-// missing one: its `CB_FAIL_IF(err != X509_V_OK, ctx, cert, 0, err)` (`x509_vfy.c:174-176`)
-// expands to `verify_cb_cert(ctx, cert, 0, err)` (`x509_vfy.c:162-172`), which is transcribed at
-// `src/x509/x509_vfy.rs:1936` as a private `unsafe fn` with no `pub(crate)`. A sibling module
-// cannot name it. Landing this function needs a one-word change outside this unit's write scope:
-// `pub(crate) unsafe fn verify_cb_cert` in `x509_vfy.rs`. It additionally reads
-// `ctx->param->flags` for `X509_chain_check_suiteb(NULL, cert, NULL, ctx->param->flags)`.
-//
-// TODO(11.2): `static int dane_verify_rpk(X509_STORE_CTX *ctx)` —
-// `crypto/x509/x509_vfy.c:3401-3428`. Blocked by a missing callee: its last statement is
-// `return verify_rpk(ctx)` (`crypto/x509/x509_vfy.c:3427`), and `verify_rpk` (`:240-247`) is part
-// of the withheld engine slice (`src/x509/x509_vfy.rs`'s module doc names it). Its other callees,
-// `dane_reset` and `dane_match_rpk`, are landed above; it also reads `ctx->rpk` (landed,
-// `X509StoreCtx.rpk`) and the constants `X509_V_ERR_DANE_NO_MATCH` and `X509_V_OK`.
-//
-// TODO(11.2): `static int dane_verify(X509_STORE_CTX *ctx)` — `crypto/x509/x509_vfy.c:3431-3490`.
-// Blocked by the withheld engine slice: it calls `check_id(ctx)` (`:3463`, defined `:941`),
-// `verify_chain(ctx)` (`:3489`, defined `:253`), and `verify_cb_cert(ctx, cert, 0,
-// X509_V_ERR_DANE_NO_MATCH)` (`:3482`, private at `src/x509/x509_vfy.rs:1936`); it also calls the
-// deferred `check_leaf_suiteb`. Its landed callees are `dane_reset`, `dane_match_cert`,
-// `X509_get_pubkey_parameters` and the constants `X509_V_ERR_OUT_OF_MEM` and
-// `DANE_FLAG_NO_DANE_EE_NAMECHECKS` above.

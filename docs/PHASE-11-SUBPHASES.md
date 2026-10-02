@@ -316,10 +316,11 @@ X509_STORE_CTX lifecycle and accessors (`X509_STORE_CTX_new`, `X509_STORE_CTX_fr
 `X509_STORE_CTX_cleanup`, `X509_STORE_CTX_get0_param`, `X509_STORE_CTX_set0_param`,
 `X509_STORE_CTX_get1_issuer`), the free-standing time surface (`X509_cmp_time`,
 `X509_cmp_current_time`, `X509_cmp_timeframe`, `X509_time_adj`, `X509_time_adj_ex`,
-`X509_gmtime_adj`), `X509_get_pubkey_parameters` and `X509_policy_tree_free`. Seven of the three
-units' open names are withheld, each with its blocker recorded in `src/x509/x509_vfy.rs`'s module
-doc: its three engine entry points and its two context constructors are the five names that stay
-open, and the open clause below names them. The lookup layer and the default-path answers complete
+`X509_gmtime_adj`), `X509_get_pubkey_parameters` and `X509_policy_tree_free`. The five names the three units still
+withheld when 11.2 began -- the engine's three entry points and its two context constructors --
+landed with 11.2c: `X509_verify_cert`, `X509_STORE_CTX_verify`, `X509_build_chain`,
+`X509_STORE_CTX_init` and `X509_STORE_CTX_init_rpk`, whose behaviour `RT-X509-VERIFY-ENGINE`
+compares over a three-level Ed25519 chain. The lookup layer and the default-path answers complete
 after 11.5: **11.7a** lands
 `X509_get_default_cert_area`, `X509_get_default_cert_dir`, `X509_get_default_cert_file` and
 `X509_get_default_private_dir` on a new build-time openssldir constant; **11.1d-f** land
@@ -355,8 +356,8 @@ landed. 11.2 adds `X509_CRL_diff` and `X509_policy_check` with its `pcy_*` inter
 
 **Open exports (checked against the ledger):**
 
-The verification engine is the whole of what remains: `X509_verify_cert`, `X509_STORE_CTX_verify`,
-`X509_build_chain` and the two context constructors `X509_STORE_CTX_init` and
-`X509_STORE_CTX_init_rpk`, all withheld on the chain roll's OCSP and SSL_DANE arms (section 2.1).
-Every name here is in the ledger's open list; the counts move as the slices land, so the ledger,
-not this sentence, carries them.
+None. Every one of the stratum's 1,465 implemented exports is in the ledger's implemented list and
+every one carries a court edge; the two names the atlas once owned that this stratum does not build
+are recorded as deferred hand-offs to Phase 12 (the HTTP loaders), and section 2.1 records why. A
+stratum is complete only when no export it owns is neither implemented nor handed on, and this is
+that state -- the seal is 11.8's.

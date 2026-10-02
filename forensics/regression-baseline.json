@@ -533,6 +533,10 @@
       "observations": 525,
       "verdict": "pass"
     },
+    "RT-X509-VERIFY-ENGINE": {
+      "observations": 242,
+      "verdict": "pass"
+    },
     "RT-X509-VERIFY-SURFACE": {
       "observations": 197,
       "verdict": "pass"
@@ -555,12 +559,12 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4760,
+    "libcrypto": 4765,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
-    "phase11": 5,
+    "phase11": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -586,7 +590,7 @@
     "0": "complete",
     "1": "complete",
     "10": "complete",
-    "11": "in-progress",
+    "11": "complete",
     "12": "not-started",
     "13": "not-started",
     "14": "not-started",
@@ -611,7 +615,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 36,
     "findings": 0,
-    "language_census": 7275,
+    "language_census": 7233,
     "sealed_census": 52
   },
   "provider_implemented": [

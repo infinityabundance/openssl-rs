@@ -3,9 +3,12 @@
 //! carries `#[no_mangle]`, because the `OCSP_*` exports are Phase 12's.
 //!
 //! `crypto/ocsp/ocsp_vfy.c` is 438 lines. The requested set is `OCSP_basic_verify` (`:98`) and the
-//! statics it reaches. **Two of them are held by name**, because the path engine they call is itself
-//! withheld (see below); the seven that close over only landed names are transcribed:
+//! statics it reaches; all nine are transcribed:
 //!
+//! * [`ocsp_verify_signer`] (`:30-74`) — verify the responder certificate's chain through a fresh
+//!   `X509_STORE_CTX` and [`X509_verify_cert`].
+//! * [`OCSP_basic_verify`] (`:98-160`) — find the signer, verify the response signature, then (unless
+//!   `OCSP_NOVERIFY`) verify the signer's chain and the OCSP-issuer criteria.
 //! * [`ocsp_verify`] (`:76-95`) — verify the request or basic-response signature over the signer's
 //!   public key, unless `OCSP_NOSIGS`.
 //! * [`ocsp_find_signer`] (`:168-186`) — the response's `ResponderID` resolved against the extra
@@ -17,16 +20,9 @@
 //!   with the `CertID`'s own algorithm and compare.
 //! * [`ocsp_check_delegated`] (`:369-376`) — the responder certificate's `OCSP Signing` usage.
 //!
-//! ## Held by name
-//!
-//! * `ocsp_verify_signer` (`:30-74`) and `OCSP_basic_verify` (`:98-160`).
-//!
-//! `ocsp_verify_signer` calls `X509_STORE_CTX_init` and `X509_verify_cert`, and
-//! `crate::x509::x509_vfy` withholds both by name (its module doc, `:48-57`): they install and run
-//! the path engine, whose `check_revocation` half is this very OCSP arm. There is no
-//! `crate::x509::x509_vfy::X509_verify_cert` in the crate to reference, so `ocsp_verify_signer`
-//! cannot compile; and because `OCSP_basic_verify` calls it, neither can that. Both land together
-//! with the engine slice (11.2c), which is also where this file's `#![allow(dead_code)]` retires.
+//! `ocsp_verify_signer` and `OCSP_basic_verify` land here once `crate::x509::x509_vfy` supplies
+//! [`X509_STORE_CTX_init`] and [`X509_verify_cert`] (11.2c); they are the OCSP arm's own callers of
+//! the path engine, whose `check_revocation` half is this very arm.
 //!
 //! ## The raise sites
 //!
@@ -40,9 +36,8 @@
 
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-#![allow(dead_code)] // reached only from the Phase-11 engine's OCSP arm (11.2c)
 
-use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, CStr};
 use core::ptr;
 
 use crate::asn1::a_verify::ASN1_item_verify_ex;
@@ -54,11 +49,28 @@ use crate::ocsp::ocsp_asn::{
 };
 use crate::ocsp::ocsp_lib::OCSP_id_issuer_cmp;
 use crate::runtime::err::err_sites::ErrSite;
-use crate::runtime::err::{raise_site, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
-use crate::runtime::obj::{OBJ_cmp, OBJ_obj2txt};
-use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
+use crate::runtime::err::{
+    raise_site, raise_site_data, ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark,
+};
+use crate::runtime::obj::{NID_OCSP_sign, NID_id_pkix_OCSP_noCheck, OBJ_cmp, OBJ_obj2txt};
+use crate::runtime::stack::{
+    OPENSSL_sk_dup, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack,
+};
+use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
 use crate::x509::v3_purp::{X509_get_extended_key_usage, X509_get_extension_flags};
-use crate::x509::x509_cmp::{X509_find_by_subject, X509_get0_pubkey, X509_get_subject_name};
+use crate::x509::x509_cmp::{
+    X509_add_certs, X509_find_by_subject, X509_get0_pubkey, X509_get_subject_name,
+};
+use crate::x509::x509_ext::X509_get_ext_by_NID;
+use crate::x509::x509_lu::X509Store;
+use crate::x509::x509_trust::X509_check_trust;
+use crate::x509::x509_txt::X509_verify_cert_error_string;
+use crate::x509::x509_vfy::{
+    X509_STORE_CTX_free, X509_STORE_CTX_get0_param, X509_STORE_CTX_get1_chain,
+    X509_STORE_CTX_get_error, X509_STORE_CTX_init, X509_STORE_CTX_new, X509_STORE_CTX_set_purpose,
+    X509_STORE_CTX_set_trust, X509_verify_cert,
+};
+use crate::x509::x509_vpm::{X509_VERIFY_PARAM_clear_flags, X509_VERIFY_PARAM_set_flags};
 use crate::x509::x_all::{X509_NAME_digest, X509_pubkey_digest};
 use crate::x509::x_x509::X509;
 
@@ -80,6 +92,40 @@ const OCSP_R_DIGEST_SIZE_ERR: c_int = 107;
 const OCSP_R_DIGEST_ERR: c_int = 102;
 /// `OCSP_R_MISSING_OCSPSIGNING_USAGE` — `include/openssl/ocsperr.h:30`.
 const OCSP_R_MISSING_OCSPSIGNING_USAGE: c_int = 103;
+/// `OCSP_R_CERTIFICATE_VERIFY_ERROR` — `include/openssl/ocsperr.h:24`.
+const OCSP_R_CERTIFICATE_VERIFY_ERROR: c_int = 101;
+/// `OCSP_R_ROOT_CA_NOT_TRUSTED` — `include/openssl/ocsperr.h:40`.
+const OCSP_R_ROOT_CA_NOT_TRUSTED: c_int = 112;
+/// `OCSP_R_SIGNER_CERTIFICATE_NOT_FOUND` — `include/openssl/ocsperr.h:42`.
+const OCSP_R_SIGNER_CERTIFICATE_NOT_FOUND: c_int = 118;
+/// `ERR_R_X509_LIB` — `include/openssl/err.h.in:327`.
+const ERR_R_X509_LIB: c_int = 11 | (0x2 << 18);
+
+/// `OCSP_NOCHAIN` — `include/openssl/ocsp.h.in:80`.
+const OCSP_NOCHAIN: c_ulong = 0x8;
+/// `OCSP_NOVERIFY` — `include/openssl/ocsp.h.in:81`.
+const OCSP_NOVERIFY: c_ulong = 0x10;
+/// `OCSP_NOEXPLICIT` — `include/openssl/ocsp.h.in:82`.
+const OCSP_NOEXPLICIT: c_ulong = 0x20;
+/// `OCSP_NOCHECKS` — `include/openssl/ocsp.h.in:85`.
+const OCSP_NOCHECKS: c_ulong = 0x100;
+/// `OCSP_TRUSTOTHER` — `include/openssl/ocsp.h.in:86`.
+const OCSP_TRUSTOTHER: c_ulong = 0x200;
+/// `OCSP_PARTIAL_CHAIN` — `include/openssl/ocsp.h.in:89`.
+const OCSP_PARTIAL_CHAIN: c_ulong = 0x1000;
+
+/// `X509_V_FLAG_CRL_CHECK` — `include/openssl/x509_vfy.h.in:343`, `0x4`.
+const X509_V_FLAG_CRL_CHECK: c_ulong = 0x4;
+/// `X509_V_FLAG_PARTIAL_CHAIN` — `include/openssl/x509_vfy.h.in:377`, `0x80000`.
+const X509_V_FLAG_PARTIAL_CHAIN: c_ulong = 0x80000;
+/// `X509_PURPOSE_OCSP_HELPER` — `include/openssl/x509v3.h.in:509`, `8`.
+const X509_PURPOSE_OCSP_HELPER: c_int = 8;
+/// `X509_TRUST_OCSP_REQUEST` — `include/openssl/x509_vfy.h.in:105`, `7`.
+const X509_TRUST_OCSP_REQUEST: c_int = 7;
+/// `X509_TRUST_TRUSTED` — `include/openssl/x509_vfy.h.in:122`, `1`.
+const X509_TRUST_TRUSTED: c_int = 1;
+/// `X509_ADD_FLAG_DEFAULT` — `include/openssl/x509.h:996`, `0`.
+const X509_ADD_FLAG_DEFAULT: c_int = 0;
 
 /// `OCSP_NOSIGS` — `include/openssl/ocsp.h.in:79`.
 const OCSP_NOSIGS: c_ulong = 0x4;
@@ -138,6 +184,21 @@ const OCSP_VFY_374: ErrSite = ocsp_vfy_site(
     c"ocsp_check_delegated",
     OCSP_R_MISSING_OCSPSIGNING_USAGE,
 );
+/// `ocsp_verify_signer`'s failed context allocation at `ocsp_vfy.c:39`.
+const OCSP_VFY_39: ErrSite = ocsp_vfy_site(39, c"ocsp_verify_signer", ERR_R_X509_LIB);
+/// `ocsp_verify_signer`'s failed context init at `ocsp_vfy.c:43`.
+const OCSP_VFY_43: ErrSite = ocsp_vfy_site(43, c"ocsp_verify_signer", ERR_R_X509_LIB);
+/// `ocsp_verify_signer`'s failed verification at `ocsp_vfy.c:64`.
+const OCSP_VFY_64: ErrSite =
+    ocsp_vfy_site(64, c"ocsp_verify_signer", OCSP_R_CERTIFICATE_VERIFY_ERROR);
+/// `OCSP_basic_verify`'s missing-signer arm at `ocsp_vfy.c:107`.
+const OCSP_VFY_107: ErrSite = ocsp_vfy_site(
+    107,
+    c"OCSP_basic_verify",
+    OCSP_R_SIGNER_CERTIFICATE_NOT_FOUND,
+);
+/// `OCSP_basic_verify`'s untrusted-root arm at `ocsp_vfy.c:149`.
+const OCSP_VFY_149: ErrSite = ocsp_vfy_site(149, c"OCSP_basic_verify", OCSP_R_ROOT_CA_NOT_TRUSTED);
 
 /// `memcmp` — `<string.h>`; answers the difference of the first differing octets, or 0.
 ///
@@ -519,17 +580,180 @@ pub(crate) unsafe extern "C" fn ocsp_check_delegated(x: *mut X509) -> c_int {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Held by name — the engine slice (11.2c) lands these with `X509_verify_cert`
+// The engine slice's two callers — `ocsp_vfy.c:30-160`
 // ---------------------------------------------------------------------------------------------
-//
-// `ocsp_verify_signer` (`crypto/ocsp/ocsp_vfy.c:30-74`) and `OCSP_basic_verify` (`:98-160`) are not
-// transcribed here. `ocsp_verify_signer` calls `X509_STORE_CTX_init` and `X509_verify_cert`, and
-// `crate::x509::x509_vfy` withholds both by name (its module doc, `:48-57`): they install and run
-// the path engine, whose `check_revocation` half is this very OCSP arm. There is no
-// `crate::x509::x509_vfy::X509_verify_cert` to reference, so `ocsp_verify_signer` cannot compile;
-// and because `OCSP_basic_verify` calls it, neither can that.
-//
-// TODO(11.2c): transcribe `ocsp_verify_signer` and `OCSP_basic_verify` once
-// `crate::x509::x509_vfy::{X509_STORE_CTX_init, X509_verify_cert}` exist, then remove this file's
-// `#![allow(dead_code)]` and the ones in `ocsp_lib.rs`/`ocsp_srv.rs`/`ocsp_cl.rs` this staging put
-// in place.
+
+/// `static int ocsp_verify_signer(X509 *signer, int response, X509_STORE *st, unsigned long flags,
+/// STACK_OF(X509) *untrusted, STACK_OF(X509) **chain)` — `crypto/ocsp/ocsp_vfy.c:30-74`.
+///
+/// Builds a fresh `X509_STORE_CTX` over `st`, installs `signer` as the leaf with `untrusted` as the
+/// untrusted stack, forces a partial chain when `OCSP_PARTIAL_CHAIN` is set and clears CRL checking
+/// for a responder certificate carrying `id-pkix-ocsp-nocheck`, then runs [`X509_verify_cert`] with
+/// the OCSP-helper purpose and the OCSP-request trust. On success it hands the verified chain to
+/// `*chain` when requested. Answers 1 on success, 0 on verification failure, and -1 on fatal error.
+///
+/// # Safety
+/// `signer` must be a live `X509`; `st` must be NULL or a live store; `untrusted` must be NULL or a
+/// live stack of `X509`; `chain`, when non-NULL, must be writable.
+pub(crate) unsafe extern "C" fn ocsp_verify_signer(
+    signer: *mut X509,
+    response: c_int,
+    st: *mut X509Store,
+    flags: c_ulong,
+    untrusted: *mut OpenSslStack,
+    chain: *mut *mut OpenSslStack,
+) -> c_int {
+    // `X509_STORE_CTX_new` allocates a fresh context; a NULL return is handled below.
+    let ctx = X509_STORE_CTX_new();
+    let mut ret: c_int = -1;
+
+    'end: {
+        if ctx.is_null() {
+            // SAFETY: the site's pointers are static.
+            unsafe { raise_site(&OCSP_VFY_39) };
+            break 'end;
+        }
+        // SAFETY: `ctx` is live; `st`, `signer` and `untrusted` are live or NULL per the contract.
+        if unsafe { X509_STORE_CTX_init(ctx, st, signer, untrusted) } == 0 {
+            // SAFETY: the site's pointers are static.
+            unsafe { raise_site(&OCSP_VFY_43) };
+            break 'end;
+        }
+        // SAFETY: `ctx` is live.
+        let vp = unsafe { X509_STORE_CTX_get0_param(ctx) };
+        if vp.is_null() {
+            break 'end;
+        }
+        if (flags & OCSP_PARTIAL_CHAIN) != 0 {
+            // SAFETY: `vp` is live.
+            unsafe { X509_VERIFY_PARAM_set_flags(vp, X509_V_FLAG_PARTIAL_CHAIN) };
+        }
+        if response != 0
+            // SAFETY: `signer` is live per the contract.
+            && unsafe { X509_get_ext_by_NID(signer, NID_id_pkix_OCSP_noCheck, -1) } >= 0
+        {
+            // SAFETY: `vp` is live.
+            unsafe { X509_VERIFY_PARAM_clear_flags(vp, X509_V_FLAG_CRL_CHECK) };
+        }
+        // SAFETY: `ctx` is live; its parameter block is live.
+        unsafe {
+            X509_STORE_CTX_set_purpose(ctx, X509_PURPOSE_OCSP_HELPER);
+            X509_STORE_CTX_set_trust(ctx, X509_TRUST_OCSP_REQUEST);
+        }
+
+        // SAFETY: `ctx` is live and initialised.
+        ret = unsafe { X509_verify_cert(ctx) };
+        if ret <= 0 {
+            // SAFETY: `ctx` is live.
+            let err = unsafe { X509_STORE_CTX_get_error(ctx) };
+            let mut msg: Vec<u8> = b"Verify error: ".to_vec();
+            // SAFETY: `X509_verify_cert_error_string` answers a NUL-terminated static string.
+            msg.extend_from_slice(
+                unsafe { CStr::from_ptr(X509_verify_cert_error_string(err as c_long)) }.to_bytes(),
+            );
+            msg.push(0);
+            // SAFETY: `msg` is NUL-terminated and lives for the call.
+            unsafe { raise_site_data(&OCSP_VFY_64, msg.as_ptr().cast()) };
+            break 'end;
+        }
+        if !chain.is_null() {
+            // SAFETY: `ctx` is live and verified; `chain` is writable per the contract.
+            unsafe { *chain = X509_STORE_CTX_get1_chain(ctx) };
+        }
+    }
+
+    // SAFETY: `ctx` is NULL or the live context allocated above.
+    unsafe { X509_STORE_CTX_free(ctx) };
+    ret
+}
+
+/// `int OCSP_basic_verify(OCSP_BASICRESP *bs, STACK_OF(X509) *certs, X509_STORE *st, unsigned long
+/// flags)` — `crypto/ocsp/ocsp_vfy.c:98-160`.
+///
+/// Locates the response signer (preferring `certs`, then the response's own certificates unless
+/// `OCSP_NOINTERN`), verifies the response signature, and unless `OCSP_NOVERIFY` is set verifies the
+/// signer's chain with [`ocsp_verify_signer`] and then checks the OCSP-issuer criteria. An
+/// explicitly trusted root is required unless `OCSP_NOEXPLICIT` is set. Answers 1 on success, 0 on
+/// failure, and -1 on fatal error.
+///
+/// # Safety
+/// `bs` must be a live `OCSP_BASICRESP`; `certs` must be NULL or a live stack of `X509`; `st` must
+/// be NULL or a live store.
+pub(crate) unsafe extern "C" fn OCSP_basic_verify(
+    bs: *mut OcspBasicResp,
+    certs: *mut OpenSslStack,
+    st: *mut X509Store,
+    flags: c_ulong,
+) -> c_int {
+    // SAFETY: `ocsp_find_signer` obeys its own contract; `bs`, `certs` and the local out-pointer
+    // are live per the contract.
+    let mut signer: *mut X509 = ptr::null_mut();
+    let mut chain: *mut OpenSslStack = ptr::null_mut();
+    let mut untrusted: *mut OpenSslStack = ptr::null_mut();
+    let mut flags = flags;
+
+    let ret = 'end: {
+        // SAFETY: `bs` and `certs` are live per the contract; `signer` is a writable local.
+        let mut ret = unsafe { ocsp_find_signer(&raw mut signer, bs, certs, flags) };
+        if ret == 0 {
+            // SAFETY: the site's pointers are static.
+            unsafe { raise_site(&OCSP_VFY_107) };
+            break 'end 0;
+        }
+        if ret == 2 && (flags & OCSP_TRUSTOTHER) != 0 {
+            flags |= OCSP_NOVERIFY;
+        }
+        // SAFETY: `bs` and `signer` are live; `req` is NULL so the response signature is checked.
+        ret = unsafe { ocsp_verify(ptr::null_mut(), bs, signer, flags) };
+        if ret <= 0 {
+            break 'end ret;
+        }
+        if (flags & OCSP_NOVERIFY) == 0 {
+            ret = -1;
+            if (flags & OCSP_NOCHAIN) == 0 {
+                // SAFETY: `bs` is live, so its `certs` stack is NULL or live.
+                untrusted = unsafe { OPENSSL_sk_dup((*bs).certs) };
+                if untrusted.is_null() {
+                    break 'end ret;
+                }
+                // SAFETY: `untrusted` and `certs` are NULL or live stacks of `X509`.
+                if unsafe { X509_add_certs(untrusted, certs, X509_ADD_FLAG_DEFAULT) } == 0 {
+                    break 'end ret;
+                }
+            }
+            // SAFETY: all pointers are live per the contract; `chain` is a writable local.
+            ret = unsafe { ocsp_verify_signer(signer, 1, st, flags, untrusted, &raw mut chain) };
+            if ret <= 0 {
+                break 'end ret;
+            }
+            if (flags & OCSP_NOCHECKS) != 0 {
+                break 'end 1;
+            }
+            // SAFETY: `bs` is live and `chain` is the verified chain just produced.
+            ret = unsafe { ocsp_check_issuer(bs, chain) };
+            if ret != 0 {
+                break 'end ret;
+            }
+            if (flags & OCSP_NOEXPLICIT) != 0 {
+                break 'end ret;
+            }
+            // SAFETY: `chain` is a live non-empty stack.
+            let x = unsafe { OPENSSL_sk_value(chain, OPENSSL_sk_num(chain) - 1) }.cast::<X509>();
+            // SAFETY: `x` is live.
+            if unsafe { X509_check_trust(x, NID_OCSP_sign, 0) } != X509_TRUST_TRUSTED {
+                // SAFETY: the site's pointers are static.
+                unsafe { raise_site(&OCSP_VFY_149) };
+                break 'end 0;
+            }
+            ret = 1;
+        }
+        ret
+    };
+
+    // SAFETY: `chain` and `untrusted` are each NULL or an owned stack of `X509`.
+    unsafe {
+        OSSL_STACK_OF_X509_free(chain);
+        OPENSSL_sk_free(untrusted);
+    }
+    ret
+}

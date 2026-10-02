@@ -19,8 +19,7 @@
 //! * [`OCSP_check_validity`] (`:310-363`) — the `thisUpdate`/`nextUpdate` freshness window.
 //! * [`OCSP_SINGLERESP_get0_id`] (`:365-368`) — the `certId` of a single response.
 //!
-//! These are the accessors the Phase-11 engine's OCSP arm (`check_cert_ocsp_resp`) reads, so the
-//! module carries one `#![allow(dead_code)]`, retired by the engine commit.
+//! These are the accessors the Phase-11 engine's OCSP arm (`check_cert_ocsp_resp`) reads.
 //!
 //! ## The raise sites
 //!
@@ -38,7 +37,6 @@
 
 #![allow(non_snake_case)]
 #![allow(non_upper_case_globals)]
-#![allow(dead_code)] // reached only from the Phase-11 engine's OCSP arm (11.2c)
 
 use core::ffi::{c_int, c_long};
 use core::ptr;

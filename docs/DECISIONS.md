@@ -34630,3 +34630,49 @@ Verified: `cargo build --release` and `cargo clippy --all-targets -- -D warnings
 libcrypto export; `docs_consistency.py`, `evidence_determinism.py` and `regression_guard.py
 --require-current` ok. The prerequisite census drops as transcriptions replace names
 (`x509_vfy.c` 115 -> 94 not-modelled), which is the movement the guard reports and accepts.
+
+## D507 -- the verification engine lands, and the stratum derives complete
+
+D503 named the knot and the rule, D505 handed the HTTP loaders on, D506 landed the substrate. This
+entry lands the engine those three were building toward.
+
+### The engine
+`src/x509/x509_vfy.rs` gains 3,525 lines: the whole chain roll -- `null_callback`, the callback
+wrappers, `check_auth_level`, `verify_rpk`/`verify_chain`/`x509_verify_rpk`/`x509_verify_x509`, the
+check cluster (`check_purpose`, `check_extensions`, `has_san_id`, `check_name_constraints`,
+`check_id`/`check_hosts`/`check_id_error`, `check_trust`, `check_revocation`, `check_cert_ocsp_resp`,
+`check_policy`), the CRL cluster (sixteen functions from `check_cert_crl` through `cert_crl`),
+`internal_verify`, `build_chain`, the four key/sig level checks, and the five exports
+`X509_STORE_CTX_init`, `X509_STORE_CTX_init_rpk`, `X509_verify_cert`, `X509_STORE_CTX_verify` and
+`X509_build_chain`. The DANE matrix's three remaining functions moved in over `src/x509/dane.rs`, and
+`OCSP_basic_verify`/`ocsp_verify_signer` were turned on in `src/ocsp/ocsp_vfy.rs`; every
+`#![allow(dead_code)]` staging marker the substrate carried is retired. Three small documented
+thunks (`get1_issuer_cb`, `lookup_certs_cb`, `lookup_crls_cb`) reinterpret the crate's `*mut c_void`
+callback slots to the concrete context the exports take -- the authority installs the same single
+pointer.
+
+### The court
+`RT-X509-VERIFY-ENGINE` (`courts/phase11/rt_x509_verify_engine_probe.c`) is registered and pending
+no longer. It drives the five exports over a fixed three-level **Ed25519** chain (root, intermediate,
+leaf, plus an expired and a wrong-name sibling) generated once by the admitted authority, anchored to
+a fixed reference instant so no wall clock moves an answer. It compares the decision, the error code,
+the error depth, the ordered `verify_cb` sequence and the constructed chain -- 242 observations, 0
+residuals. The fixtures are Ed25519 deliberately: an RSA chain would route `X509_verify` through the
+crate's recorded, deferred Phase-13 `EVP_get_digestbyname` divergence (D333/D343), which is not this
+stratum's contract. No residual was an engine bug; the transcription was correct on the first run.
+
+### The reconciliation Phase 11's completeness triggered
+`forensics/phase-state.json` now derives phase 11 `complete`, and that flipped two fail-closed
+checks. Nine `forensics/prerequisites.json` `units` records that had deferred the policy graph, the
+attribute certificate and the store/parameter/trust units to a `not-started` Phase 11 became stale
+deferrals, and the plan's row 11.1 names `crypto/x509/by_dir.c`, whose only export is the constructor
+and whose every other function is `static` (so `internal-symbols.json` records none of them). All ten
+were rewritten as `reached_by_a_named_construct` records naming the crate module and the built names
+-- the honest disposition once the code is there -- and `plan_reconciliation.py` is green again with
+375 of 375 units reached.
+
+Verified: the eight phase-11 courts pass (`all_pass=True`), the eleven phase-2 ABI courts pass,
+`cargo test --lib` 1131 passed, clippy and fmt clean, the full evidence chain reproduces, and
+`regression_guard.py --require-current` reports 133 courts and 48,515 observations with no
+regression. The stratum's ledger is `open_in_this_stratum: 0`, `deferred_to_later_phase: 2`,
+`implemented: 1465`.

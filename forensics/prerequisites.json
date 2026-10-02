@@ -1074,67 +1074,118 @@
         "unit": "crypto/ctype.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "Section 7's 10.14.9 owns the policy graph -- `pcy_tree.c`, `pcy_cache.c`, `pcy_data.c` and `pcy_map.c` -- and it did not land: the crate has no module for any of the four, and their exports (`X509_policy_tree_*`, `X509_policy_level_*`, `X509_policy_node_*`) are `owner_phase` 11 in `symbol-ownership.json`. Phase 11 is the X.509 stratum and is `not-started`, so the work is deferred to it rather than missing from Phase 10.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_tree.rs",
+        "evidence": "src/x509/pcy_tree.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_policy_check",
+          "X509_policy_tree_free"
+        ],
+        "reason": "Landed by Phase 11's 11.2 slices -- the policy-tree entry point and the whole `tree_*` graph between it and `X509_policy_tree_free` are transcribed in `src/x509/pcy_tree.rs`, which `forensics/phase11-obligations.json` records implemented. The record is kept because no single authority unit dominates the module.",
         "unit": "crypto/x509/pcy_tree.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The policy graph's cache half, owned by section 7's 10.14.9 alongside `pcy_tree.c`. Same deferral: no crate module, exports `owner_phase` 11, Phase 11 `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_cache.rs",
+        "evidence": "src/x509/pcy_cache.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "ossl_policy_cache_set",
+          "ossl_policy_cache_find_data",
+          "ossl_policy_cache_free"
+        ],
+        "reason": "The policy graph's cache half, transcribed in `src/x509/pcy_cache.rs`. The unit defines no export -- its content is three authority-internal functions -- so the record names the crate functions that build it.",
         "unit": "crypto/x509/pcy_cache.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The policy graph's data half, owned by section 7's 10.14.9 alongside `pcy_tree.c`. Same deferral: no crate module, exports `owner_phase` 11, Phase 11 `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_data.rs",
+        "evidence": "src/x509/pcy_data.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "ossl_policy_data_new",
+          "ossl_policy_data_free"
+        ],
+        "reason": "The policy graph's data half, transcribed in `src/x509/pcy_data.rs`; both of the unit's internal functions are built.",
         "unit": "crypto/x509/pcy_data.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The policy graph's mapping half, owned by section 7's 10.14.9 alongside `pcy_tree.c`. Same deferral: no crate module, exports `owner_phase` 11, Phase 11 `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_cache.rs",
+        "evidence": "src/x509/pcy_cache.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "ossl_policy_cache_set_mapping"
+        ],
+        "reason": "The policy graph's mapping half. Its one function landed in `src/x509/pcy_cache.rs` rather than a module of its own (the authority is `pcy_map.c`), which is why the unit needs a record: no module is dominated by it.",
         "unit": "crypto/x509/pcy_map.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "Section 7's 10.14.9 names it as still withheld on D455's two-part blocker. `src/x509/pcy_node.rs` is a doc-and-withholds module: it builds none of the unit's six `ossl_policy_*` functions, so the unit is genuinely unreached. Its policy-node helpers belong to the policy graph, whose exports are `owner_phase` 11, and Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_node.rs",
+        "evidence": "src/x509/pcy_node.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "ossl_policy_node_cmp_new",
+          "ossl_policy_tree_find_sk",
+          "ossl_policy_level_add_node"
+        ],
+        "reason": "The policy graph's node half, transcribed whole in `src/x509/pcy_node.rs`; the unit defines no export, so the record names the crate functions that build it.",
         "unit": "crypto/x509/pcy_node.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "Section 7's 10.14.11 owns the printers and the request/attribute objects, `x509_acert.c` among them. Its five internal symbols are the `X509_ACERT`/`OSSL_ISSUER_SERIAL`/`OSSL_OBJECT_DIGEST_INFO`/`X509_HOLDER` item templates, none of which the crate defines, and its exports (`X509_ACERT_sign`/`_verify`/...) are `owner_phase` 11. Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/x509_acert.rs",
+        "evidence": "src/x509/x509_acert.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_ACERT_sign",
+          "X509_ACERT_verify",
+          "OSSL_ISSUER_SERIAL_new"
+        ],
+        "reason": "Phase 11's 11.3 lands the whole attribute-certificate surface in `src/x509/x509_acert.rs`; the unit is reached through its exports and its five item templates.",
         "unit": "crypto/x509/x509_acert.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "Section 7's 10.14.10 owns the trust, verification-parameter and store-lookup layer -- `x509_lu.c`, `x509_vpm.c`, `x509_trust.c` and the `by_*` backends -- and it did not land. `x509_lu.c`'s two internal symbols (`ossl_x509_store_ctx_get_by_subject`, `ossl_x509_store_read_lock`) are unbuilt and its exports (`X509_STORE_get1_*`) are `owner_phase` 11. Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/x509_lu.rs",
+        "evidence": "src/x509/x509_lu.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_LOOKUP_by_subject",
+          "X509_LOOKUP_free",
+          "ossl_x509_store_ctx_get_by_subject"
+        ],
+        "reason": "Phase 11's 11.1 landings transcribe the store and lookup layer in `src/x509/x509_lu.rs`; the unit is reached through its exports and its two internal functions.",
         "unit": "crypto/x509/x509_lu.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The verification-parameter half of section 7's 10.14.10. `X509_VERIFY_PARAM_new`, `X509_VERIFY_PARAM_set_flags` and the unit's other exports are `owner_phase` 11, the crate has no module for the unit, and Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/x509_vpm.rs",
+        "evidence": "src/x509/x509_vpm.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_VERIFY_PARAM_free",
+          "X509_VERIFY_PARAM_get0",
+          "X509_VERIFY_PARAM_add0_policy"
+        ],
+        "reason": "Phase 11's 11.2 transcribes the verification-parameter object and table in `src/x509/x509_vpm.rs`; the unit defines no authority-internal function, so the record names exports.",
         "unit": "crypto/x509/x509_vpm.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The trust-store half of section 7's 10.14.10. `internal-symbols.json` records no function for the unit at all, its exports are `owner_phase` 11, and Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/x509_trust.rs",
+        "evidence": "src/x509/x509_trust.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_TRUST_add",
+          "X509_TRUST_get0",
+          "X509_TRUST_get_by_id"
+        ],
+        "reason": "Phase 11's 11.1 transcribes the trust table in `src/x509/x509_trust.rs`; the unit defines no authority-internal function, so the record names exports.",
         "unit": "crypto/x509/x509_trust.c"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/by_dir.rs",
+        "evidence": "src/x509/by_dir.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_LOOKUP_hash_dir"
+        ],
+        "reason": "Phase 11's 11.1e lands the whole hashed-directory lookup in `src/x509/by_dir.rs`. The unit's only export is the method constructor and every other function is `static` (local linkage, so `internal-symbols.json` records none), which is why the three mechanical signals cannot see it and it needs a record.",
+        "unit": "crypto/x509/by_dir.c"
       }
     ]
   },
