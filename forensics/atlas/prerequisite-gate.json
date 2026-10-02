@@ -10,7 +10,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 74,
-      "language_surface_not_modelled_by_name": 7378,
+      "language_surface_not_modelled_by_name": 7352,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -109,24 +109,24 @@
         "crypto/bio/bf_null.c": 6,
         "crypto/bio/bf_prefix.c": 8,
         "crypto/bio/bf_readbuff.c": 9,
-        "crypto/bio/bio_addr.c": 26,
+        "crypto/bio/bio_addr.c": 25,
         "crypto/bio/bio_cb.c": 5,
         "crypto/bio/bio_dump.c": 5,
-        "crypto/bio/bio_lib.c": 28,
-        "crypto/bio/bio_meth.c": 16,
-        "crypto/bio/bio_print.c": 10,
-        "crypto/bio/bio_sock.c": 16,
-        "crypto/bio/bio_sock2.c": 18,
-        "crypto/bio/bss_acpt.c": 19,
-        "crypto/bio/bss_bio.c": 15,
-        "crypto/bio/bss_conn.c": 42,
+        "crypto/bio/bio_lib.c": 27,
+        "crypto/bio/bio_meth.c": 15,
+        "crypto/bio/bio_print.c": 9,
+        "crypto/bio/bio_sock.c": 15,
+        "crypto/bio/bio_sock2.c": 17,
+        "crypto/bio/bss_acpt.c": 18,
+        "crypto/bio/bss_bio.c": 14,
+        "crypto/bio/bss_conn.c": 41,
         "crypto/bio/bss_core.c": 16,
-        "crypto/bio/bss_dgram.c": 32,
-        "crypto/bio/bss_dgram_pair.c": 22,
+        "crypto/bio/bss_dgram.c": 31,
+        "crypto/bio/bss_dgram_pair.c": 21,
         "crypto/bio/bss_fd.c": 15,
-        "crypto/bio/bss_file.c": 24,
+        "crypto/bio/bss_file.c": 23,
         "crypto/bio/bss_log.c": 10,
-        "crypto/bio/bss_mem.c": 12,
+        "crypto/bio/bss_mem.c": 11,
         "crypto/bio/bss_null.c": 4,
         "crypto/bio/ossl_core_bio.c": 6,
         "crypto/bn/bn_blind.c": 12,
@@ -242,7 +242,7 @@
         "crypto/engine/tb_asnmth.c": 13,
         "crypto/engine/tb_digest.c": 10,
         "crypto/engine/tb_pkmeth.c": 10,
-        "crypto/err/err.c": 69,
+        "crypto/err/err.c": 67,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
         "crypto/evp/asymcipher.c": 19,
@@ -296,7 +296,7 @@
         "crypto/getenv.c": 2,
         "crypto/hmac/hmac.c": 6,
         "crypto/hpke/hpke.c": 20,
-        "crypto/http/http_lib.c": 17,
+        "crypto/http/http_lib.c": 8,
         "crypto/idea/i_cbc.c": 4,
         "crypto/indicator_core.c": 5,
         "crypto/initthread.c": 18,
@@ -506,7 +506,7 @@
         "crypto/x509/x509rset.c": 4,
         "crypto/x509/x509spki.c": 6,
         "crypto/x509/x509type.c": 1,
-        "crypto/x509/x_all.c": 52,
+        "crypto/x509/x_all.c": 50,
         "crypto/x509/x_attrib.c": 14,
         "crypto/x509/x_crl.c": 56,
         "crypto/x509/x_exten.c": 13,
@@ -622,7 +622,7 @@
     },
     "checked": {
       "authority_units": 467,
-      "crate_modules": 648,
+      "crate_modules": 649,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
       "divergence_names_covered": 36,
@@ -735,7 +735,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "d4ef72390b05004f8df0b9708f7a2dd1655c41daa1d0add252064b86b7d09df6",
+  "body_hash": "b5c1bd04304bfd0403631ec3caa720b7e8171c2ca1e4eb35342e2dc2afed180f",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -771,12 +771,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8969d9b6331ccc92d901e2f5f7b1380abf55956cc4de5e2b4d2dd53182a237e9"
+      "sha256": "077ef77b525bda1347cbd3dfb9a975f65fdf00e0a772be357913faedb344584f"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "9a1edb4b9ccad26df85e9e2181ac1d877ae96680f53810a0ab768ffccf1718dc"
+      "sha256": "bdb022bb2209cd282f39e6057b27ad28d6b67f21fe19f20ff9b33ba8fe269d45"
     },
     {
       "name": "prerequisites",

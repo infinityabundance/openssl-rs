@@ -886,6 +886,7 @@
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
+              "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-MEM",
               "RT-MEM-DEFAULT",
@@ -1226,6 +1227,7 @@
               "RT-FETCH",
               "RT-HMAC",
               "RT-HPKE",
+              "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
               "RT-LIBCTX",
@@ -1303,6 +1305,7 @@
               "RT-DRBG",
               "RT-EC",
               "RT-ERR",
+              "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-PKCS12",
               "RT-PUBKEY",
@@ -3070,6 +3073,7 @@
               "RT-EC",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
+              "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-PARAM",
               "RT-PEM-KEY",
@@ -3313,6 +3317,7 @@
               "RT-EC",
               "RT-ERR-BIO",
               "RT-EVP-PEM",
+              "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-LHASH",
               "RT-OBJ-STREAM",
@@ -3775,6 +3780,7 @@
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
+              "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-LHASH",
               "RT-PARAM",
@@ -3863,6 +3869,7 @@
               "RT-AMETH",
               "RT-BIO",
               "RT-CONF",
+              "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-OBJ-STREAM",
               "RT-PEM-KEY",
@@ -4011,6 +4018,7 @@
               "RT-CONF",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
+              "RT-HTTP",
               "RT-LHASH",
               "RT-RUNTIME-EXT",
               "RT-STORE"
@@ -4116,6 +4124,7 @@
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
+              "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-LHASH",
               "RT-PARAM",
@@ -4919,7 +4928,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1",
-              "RT-ASN1-PRINT"
+              "RT-ASN1-PRINT",
+              "RT-HTTP"
             ],
             "symbol": "ASN1_ANY_it"
           },
@@ -6443,7 +6453,8 @@
               "RT-ASN1-MIME",
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
-              "RT-BIO-ASN1"
+              "RT-BIO-ASN1",
+              "RT-HTTP"
             ],
             "symbol": "ASN1_item_free"
           },
@@ -34955,10 +34966,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 149,
-          "directly_courted_called": 3,
-          "directly_courted_referenced": 146,
-          "implemented": 149,
+          "directly_courted": 172,
+          "directly_courted_called": 27,
+          "directly_courted_referenced": 145,
+          "implemented": 172,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -35448,8 +35459,170 @@
             "symbol": "OCSP_SINGLERESP_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_add1_header"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_exchange"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_get0_mem_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_get_resp_len"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_nbio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_nbio_d2i"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_set1_req"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_set_expected"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_set_max_response_hdr_lines"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_set_max_response_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_REQ_CTX_set_request_line"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_adapt_proxy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_close"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_exchange"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_get"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_is_alive"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_open"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_parse_url"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_proxy_connect"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_set1_request"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP"
+            ],
+            "symbol": "OSSL_HTTP_transfer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HTTP",
               "RT-PHASE12-REF"
             ],
             "symbol": "OSSL_parse_url"
@@ -36014,14 +36187,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 12,
-        "staged_candidate_probes": 1
+        "staged_candidate_probes": 2
       }
     ],
     "totals": {
-      "directly_courted": 4630,
-      "directly_courted_called": 3631,
-      "directly_courted_referenced": 999,
-      "implemented": 4638,
+      "directly_courted": 4653,
+      "directly_courted_called": 3655,
+      "directly_courted_referenced": 998,
+      "implemented": 4661,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -36032,7 +36205,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8969d9b6331ccc92d901e2f5f7b1380abf55956cc4de5e2b4d2dd53182a237e9"
+      "sha256": "077ef77b525bda1347cbd3dfb9a975f65fdf00e0a772be357913faedb344584f"
     },
     {
       "name": "symbol-ownership",
@@ -36047,7 +36220,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "5456dff7fe8b93e03e77b6474e8d9e16c68599066001a686401eb9d28f95c95b"
+      "sha256": "4d8681a1bf0a62bcfb42f432803f4d9ba6dcff6332330d1d28fbb327b7d100ae"
     },
     {
       "name": "phase3-courts",
@@ -36057,7 +36230,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "f34eb665962ffd84eb542785f164a98593e4c6a3588ef927d47f05289e44801a"
+      "sha256": "ab2b1b459e6b93eba6eda069ac7378d57cfd05f2dbcce5eced68f5d74671f1da"
     },
     {
       "name": "phase4-courts",
@@ -36067,7 +36240,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "890510d7b80caee4039c895155fe7768206698024c85bd6079ef13812dc2ac56"
+      "sha256": "e7e44eaf7464b3bbe9dfa2085ce8a674a6533b95466f8b71848a001f4389a7ec"
     },
     {
       "name": "phase5-courts",
@@ -36077,7 +36250,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "47c98e566e5b86aaaf8b097aabd03efd64b5d6b9d7922830086b077e5f28e687"
+      "sha256": "51a6df62aec743329dd078d6eee97f1761c09b42c88856cfb9b9a6a2595cb0f2"
     },
     {
       "name": "phase6-courts",
@@ -36087,7 +36260,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "113f5758b5149f7d8cca438153a0197003159140f6c2f8c29cbcebcc536ff724"
+      "sha256": "c5c5886c1bd511aa0718bb9a655ef1704367094d969c892d8833aa1b26547811"
     },
     {
       "name": "phase7-courts",
@@ -36097,7 +36270,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "41b0aa70adbcbc4be4cc254774797611337715eadcfe34ce337f278556013c01"
+      "sha256": "703bfebc862991b84bcecb72971b0fda84b5de6e67774ff50e7c92183e13077a"
     },
     {
       "name": "phase8-courts",
@@ -36107,7 +36280,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "51a924c01c31ccbfcd3153dd25bdaa9b600bf8309b782c8e41821d7e89f4d38e"
+      "sha256": "d17752cb98e41ec86096ee1c150c882b799d9a2b6c773e0d31346a1c15bd4712"
     },
     {
       "name": "phase9-courts",
@@ -36117,7 +36290,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "30226f02e0f8f7d1b57ad78ee6301618553664492de7046c6e0fdd9a38937ffd"
+      "sha256": "3af881c28c581a110311b662e56f94b42349a816e57e1f830ffd7d8f2153b147"
     },
     {
       "name": "phase10-courts",
@@ -36127,7 +36300,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "f815b5642deb68c345d7d2ce97f161b3410a31ec3d93fff00eb77bb72b411766"
+      "sha256": "f2586539130beac7dcfdb31904e3aa7bd3ad03d070b74d9f66260972c17aa3d0"
     },
     {
       "name": "phase11-courts",
@@ -36137,12 +36310,12 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "54745f50429c0f411d9f825a538e9d181df07216d3fd161b5c340ebeb5a6826c"
+      "sha256": "c1009a5aa450ee1c8fb5ea9a8913f1813c950bd02d66301fade86c575036a936"
     },
     {
       "name": "phase12-courts",
       "path": "artifacts/phase12/COURTS.json",
-      "sha256": "eff7950efcb18204bea839f790b1957965a6185238fac83c2a9fbb0ac953e704"
+      "sha256": "7cfd7d1a8f493da5be390314c00201aad64cf664a26bae3fb6e3e7a615a8fc95"
     }
   ],
   "kind": "court-coverage",

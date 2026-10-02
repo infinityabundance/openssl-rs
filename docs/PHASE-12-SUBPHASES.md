@@ -257,9 +257,9 @@ forcing the row.
 
 **Landed exports (checked against the ledger):**
 
-The slices landed so far are none of this stratum's own; every name below is a *pre-activation*
-landing that the ledger's implemented list already carries, and the ledger is the record. The whole
-`ocsp_asn.c` item group is in: `OCSP_REQUEST_new`, `OCSP_RESPONSE_it`, `d2i_OCSP_BASICRESP`,
+The pre-activation slices below are not this stratum's own; every name in them is a landing
+that the ledger's implemented list already carried *before* 12.1, and the ledger is the record. The
+whole `ocsp_asn.c` item group is in: `OCSP_REQUEST_new`, `OCSP_RESPONSE_it`, `d2i_OCSP_BASICRESP`,
 `i2d_OCSP_SINGLERESP`, `d2i_OCSP_CERTID`, `OCSP_CERTSTATUS_free`, `OCSP_CRLID_it`,
 `OCSP_ONEREQ_new`, `d2i_OCSP_REQINFO`, `OCSP_RESPBYTES_new`, `OCSP_RESPDATA_it`,
 `OCSP_RESPID_free`, `d2i_OCSP_REVOKEDINFO`, `OCSP_SERVICELOC_new` and `d2i_OCSP_SIGNATURE`. The CT
@@ -270,14 +270,25 @@ units `ct_sct.c`, `ct_log.c`, `ct_policy.c`, `ct_oct.c`, `ct_b64.c` and `ct_prn.
 `CT_POLICY_EVAL_CTX_new`, `CT_POLICY_EVAL_CTX_get0_cert` and `CT_POLICY_EVAL_CTX_set_time`.
 `pk7_asn1.c` with `pk7_lib.c` contributes `PKCS7_new`, `PKCS7_it`, `PKCS7_set_type`,
 `PKCS7_DIGEST_new`, `PKCS7_ENCRYPT_it` and `PKCS7_ENC_CONTENT_new`; `http_lib.c` contributes
-`OSSL_parse_url`. The bulk of the list was landed before this stratum's first slice by Phase 10's
+`OSSL_parse_url`. The bulk of that list was landed before this stratum's first slice by Phase 10's
 pulled-forward STORE arm and Phase 11's verification substrate; the ledger is the record and this
-sentence names only what those landings left here.
+sentence names only what those landings left here. Subphase 12.1 lands this stratum's own first
+slice. `crypto/http/http_client.c`'s whole surface is
+in: `OSSL_HTTP_REQ_CTX_new`, `OSSL_HTTP_REQ_CTX_free`, `OSSL_HTTP_REQ_CTX_get0_mem_bio`,
+`OSSL_HTTP_REQ_CTX_get_resp_len`, `OSSL_HTTP_REQ_CTX_set_max_response_length`,
+`OSSL_HTTP_REQ_CTX_set_max_response_hdr_lines`, `OSSL_HTTP_REQ_CTX_set_request_line`,
+`OSSL_HTTP_REQ_CTX_add1_header`, `OSSL_HTTP_REQ_CTX_set_expected`, `OSSL_HTTP_REQ_CTX_set1_req`,
+`OSSL_HTTP_REQ_CTX_nbio`, `OSSL_HTTP_REQ_CTX_nbio_d2i`, `OSSL_HTTP_REQ_CTX_exchange`,
+`OSSL_HTTP_is_alive`, `OSSL_HTTP_open`, `OSSL_HTTP_set1_request`, `OSSL_HTTP_exchange`,
+`OSSL_HTTP_get`, `OSSL_HTTP_transfer`, `OSSL_HTTP_close` and `OSSL_HTTP_proxy_connect` -- and
+`http_lib.c`'s remaining two `http.h` names, `OSSL_HTTP_parse_url` and `OSSL_HTTP_adapt_proxy`,
+land with it. Every one of the 23 is now implemented rather than open; `RT-HTTP`
+(`courts/phase12/rt_http_probe.c`) drives them.
 
 **Open exports (checked against the ledger):**
 
-Open is the 884-name remainder, and it is the whole of the container and protocol surface. The HTTP
-client's `OSSL_HTTP_get` and `OSSL_HTTP_REQ_CTX_new` open 12.1. The PKCS#7 remainder opens 12.2 with
+Open is the 861-name remainder, and it is the whole of the container and protocol surface. The
+PKCS#7 remainder opens 12.2 with
 `PKCS7_sign`, `PKCS7_verify`, `PKCS7_dataInit`, `PEM_read_PKCS7` and `PKCS7_ENVELOPE_new`. CMS
 opens 12.3 with `CMS_sign`, `CMS_verify`, `CMS_ContentInfo_new`, `CMS_EncryptedData_encrypt` and
 `PEM_read_CMS`. CMP opens 12.4 with `OSSL_CMP_ATAV_create`, `OSSL_CMP_ATAVS_new` and

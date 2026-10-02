@@ -326,6 +326,10 @@
       "observations": 65,
       "verdict": "pass"
     },
+    "RT-HTTP": {
+      "observations": 128,
+      "verdict": "pass"
+    },
     "RT-KEYFORMAT": {
       "observations": 370,
       "verdict": "pass"
@@ -569,13 +573,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4765,
+    "libcrypto": 4788,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
-    "phase12": 884,
+    "phase12": 861,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -627,7 +631,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 36,
     "findings": 0,
-    "language_census": 7378,
+    "language_census": 7352,
     "sealed_census": 52
   },
   "provider_implemented": [

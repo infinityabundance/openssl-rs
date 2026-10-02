@@ -34767,3 +34767,33 @@ observations); `court_coverage.py` phase 12 149/149 courted, unmatched 0; `docs_
 `evidence_determinism.py` ok (32 artefacts); `regression_guard.py --require-current` ok (135 courts,
 48,904 observations); `run_courts.py` re-derives 12 phases and the committed record is exactly what
 the run wrote.
+
+## D511 -- the HTTP client lands, and the transport withholding is lifted
+
+12.1 lands the whole `crypto/http/` surface: the 21 `http_client.c` exports
+(`OSSL_HTTP_REQ_CTX_new`/`_free`/`_get0_mem_bio`/`_get_resp_len`/`_set_max_response_length`/
+`_set_request_line`/`_add1_header`/`_set_expected`/`_set1_req`/`_set_max_response_hdr_lines`/
+`_nbio`/`_nbio_d2i`/`_exchange`, `OSSL_HTTP_is_alive`, `OSSL_HTTP_open`, `OSSL_HTTP_set1_request`,
+`OSSL_HTTP_exchange`, `OSSL_HTTP_get`, `OSSL_HTTP_transfer`, `OSSL_HTTP_close`,
+`OSSL_HTTP_proxy_connect`) and `http_lib.c`'s two open names (`OSSL_HTTP_parse_url`,
+`OSSL_HTTP_adapt_proxy`). The Phase-10/11 withholding of the client is lifted: its transport is the
+BIO layer's, which is landed (`src/runtime/bio/bss_conn.rs`, `RT-BIO-CONN`), so nothing here
+fabricates a socket stack.
+
+`RT-HTTP` drives the request engine over **memory BIOs** with canned HTTP/1.1 responses
+(status line, `Content-Length`, `Transfer-Encoding: chunked`, a `charset`, a malformed status line,
+the header mismatches, the max-length refusal) and the high-level `open`/`set1_request`/`exchange`/
+`close`/`transfer` path over a supplied BIO pair, plus the `OSSL_parse_url`/`OSSL_HTTP_parse_url`
+arms and `OSSL_HTTP_adapt_proxy` -- 128 observations, 0 residuals, no real network and no wall
+clock. The guessed names in the subphase brief (`OSSL_HTTP_REQ_CTX_set_request`, `parse_response_line`,
+`_nbio_d2i_ex`, `_set_mem_buf`, `_get_mem_buf`, `OSSL_HTTP_get_ex`, `OSSL_HTTP_get0_status`, ...) were
+checked against the authority and **do not exist**; the real names above are what the ledger opens.
+
+This unblocks `crypto/x509/x_all.c`'s two loaders and `ocsp_http.c`/`cmp_http.c`, which Phase 11
+deferred here (D505).
+
+Verified (container): phase 12 `implemented` 149 -> 172, `open_in_this_stratum` 884 -> 861;
+`phase12_courts.py` `all_pass=True` over two courts (REF 149, RT-HTTP 128 observations);
+`court_coverage.py` phase 12 172/172 courted, unmatched 0; `evidence_determinism.py` ok;
+`regression_guard.py --require-current` ok (136 courts, 49,032 observations); `probe_hygiene.py`
+clean; clippy clean.

@@ -29,10 +29,12 @@ The behavioural courts the plan gives the later subphases
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" — the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-HTTP`, `RT-PKCS7`, `RT-CMS`, `RT-CMP`, `RT-TS`, `RT-OCSP`,
-`RT-CRMF`, `RT-ESS` and `RT-SRP` are the subphases' own courts, and `RT-CMS-REMAINDER` is 12.9's
-for the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs. None is registered
-here; each is printed with its subphase on every run.
+later activation established. `RT-PKCS7`, `RT-CMS`, `RT-CMP`, `RT-TS`, `RT-OCSP`, `RT-CRMF`,
+`RT-ESS` and `RT-SRP` are the remaining subphases' own courts, and `RT-CMS-REMAINDER` is 12.9's for
+the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs. `RT-HTTP` was among them and
+is registered by 12.1: `courts/phase12/rt_http_probe.c` drives the request/response engine over
+memory BIOs (no socket, no clock). Each court not yet registered is printed with its subphase on
+every run.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -83,6 +85,7 @@ RUN_TIMEOUT_S = "60"
 # the plan's own courts, named in `PENDING_COURTS` below rather than registered.
 COURTS: list[tuple[str, str]] = [
     ("RT-PHASE12-REF", "rt_coverage_ref_probe.c"),
+    ("RT-HTTP", "rt_http_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -91,8 +94,6 @@ COURTS: list[tuple[str, str]] = [
 # subphase; `RT-CRMF` and `RT-ESS` are the two courts of 12.7, whose two families share a
 # subphase but not a court.
 PENDING_COURTS: dict[str, str] = {
-    "RT-HTTP": "12.1 -- the HTTP client surface (`http.h`'s 23 open exports plus the two "
-               "`http_lib.c` helpers)",
     "RT-PKCS7": "12.2 -- the `pkcs7.h` remainder and the `PEM_*_PKCS7` container readers",
     "RT-CMS": "12.3 -- the `cms.h` container surface (`CMS_*` and the `PEM_*_CMS` readers)",
     "RT-CMP": "12.4 -- the CMP transaction surface (`cmp.h`, `cmp_util.h`)",
@@ -270,12 +271,14 @@ def main(argv: list[str]) -> int:
             "`OSSL_parse_url` -- and prints whether each is non-NULL. A symbol covered only by it "
             "means the candidate distribution defines the name -- which the link proves -- and "
             "NOT that any arm of it was driven; the court coverage atlas records those at basis "
-            "`referenced`, never `called` (docs/DECISIONS.md D199). No behavioural court is "
-            "registered yet: 12.0 lands no unit of this stratum's own, and the plan's courts "
+            "`referenced`, never `called` (docs/DECISIONS.md D199). `RT-HTTP`, landed by 12.1, is "
+            "the first behavioural court here: `rt_http_probe.c` drives the `OSSL_HTTP_REQ_CTX_*` "
+            "engine over memory BIOs and the high-level `OSSL_HTTP_*` path with a supplied BIO "
+            "pair, comparing the two transcripts line by line. The plan's remaining courts "
             "(`pending_courts`) are each printed with the subphase that brings them, so 'not run "
             "yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not "
             "`called`, and docs/PHASE-12-SUBPHASES.md section 3 records what the behavioural "
-            "courts will compare when they land."
+            "courts compare."
         ),
     }
 

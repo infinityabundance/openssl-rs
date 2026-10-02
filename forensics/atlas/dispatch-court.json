@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 648,
+      "crate_files_read": 649,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,12 +12,12 @@
       "identities_authority_only": 45,
       "identities_checked": 232,
       "identities_mismatches": 0,
-      "links_convention": 271,
+      "links_convention": 272,
       "links_documented": 25,
       "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 315,
-      "signatures_checked": 322,
+      "signatures_authority_only": 314,
+      "signatures_checked": 323,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 211,
       "signatures_unlinked": 0,
@@ -1601,7 +1601,6 @@
         "OSSL_FUNC_provider_unquery_operation_fn",
         "OSSL_FUNC_rand_set_callbacks_fn",
         "OSSL_FUNC_self_test_cb_fn",
-        "OSSL_HTTP_bio_cb_t",
         "OSSL_INOUT_CALLBACK",
         "SSL_CTX_alpn_select_cb_func",
         "SSL_CTX_decrypt_session_ticket_fn",
@@ -3646,6 +3645,14 @@
           "authority": "OSSL_FUNC_skeymgmt_get_key_id_fn",
           "authority_signature": "fptr(ptr(const(int:1:s)); ptr(opaque))",
           "crate_signature": "fptr(ptr(const(int:1:s)); ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_HTTP_bio_cb_t",
+          "at": "src/http/http_client.rs",
+          "authority": "OSSL_HTTP_bio_cb_t",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque), int:4:s, int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque), int:4:s, int:4:s)",
           "how": "convention"
         },
         {

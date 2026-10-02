@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-PHASE12-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 149 inherited `implemented` exports -- the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). No behavioural court is registered yet: 12.0 lands no unit of this stratum's own, and the plan's courts (`pending_courts`) are each printed with the subphase that brings them, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-12-SUBPHASES.md section 3 records what the behavioural courts will compare when they land.",
+    "claim": "`RT-PHASE12-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 149 inherited `implemented` exports -- the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-HTTP`, landed by 12.1, is the first behavioural court here: `rt_http_probe.c` drives the `OSSL_HTTP_REQ_CTX_*` engine over memory BIOs and the high-level `OSSL_HTTP_*` path with a supplied BIO pair, comparing the two transcripts line by line. The plan's remaining courts (`pending_courts`) are each printed with the subphase that brings them, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-12-SUBPHASES.md section 3 records what the behavioural courts compare.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -21,6 +21,23 @@
           "candidate": "artifacts/phase12/probes/rt_coverage_ref_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 128,
+        "candidate_exit_code": 0,
+        "candidate_observations": 128,
+        "candidate_stderr_tail": [],
+        "court": "RT-HTTP",
+        "crashed": false,
+        "probe": "courts/phase12/rt_http_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase12/probes/rt_http_probe.authority",
+          "candidate": "artifacts/phase12/probes/rt_http_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
@@ -29,7 +46,6 @@
       "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs",
       "RT-CRMF": "12.7 -- the CRMF certificate-request surface (`crmf.h`)",
       "RT-ESS": "12.7 -- the ESS signing-certificate surface (`ess.h`)",
-      "RT-HTTP": "12.1 -- the HTTP client surface (`http.h`'s 23 open exports plus the two `http_lib.c` helpers)",
       "RT-OCSP": "12.6 -- the OCSP request/response surface (`ocsp.h`'s 94 open exports)",
       "RT-PKCS7": "12.2 -- the `pkcs7.h` remainder and the `PEM_*_PKCS7` container readers",
       "RT-SRP": "12.8 -- the SRP verifier and library surface (`srp.h`)",
@@ -37,8 +53,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 1,
-      "total": 1
+      "pass": 2,
+      "total": 2
     }
   },
   "generator": "forensics/tools/phase12_courts.py",
@@ -52,6 +68,11 @@
       "name": "probe",
       "path": "courts/phase12/rt_coverage_ref_probe.c",
       "sha256": "6b14aab7b4b2d9a6feb03ee6557c6e96622a25b11bfaa83fd6ffbf63f7912ef7"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_http_probe.c",
+      "sha256": "33b64d754f2c0f9889a094e9f2020320953b2c64c88551f8fa4b19ebc76397f8"
     }
   ],
   "kind": "phase12-courts",
