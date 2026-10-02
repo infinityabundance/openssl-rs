@@ -1642,7 +1642,8 @@
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "CRYPTO_free"
           },
@@ -1992,6 +1993,7 @@
               "RT-X509-PEM",
               "RT-X509-REQ",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
@@ -2055,6 +2057,7 @@
               "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
@@ -2795,7 +2798,8 @@
               "RT-PUBKEY",
               "RT-RSA",
               "RT-STORE",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "OBJ_obj2nid"
           },
@@ -3198,6 +3202,7 @@
               "RT-X509-PEM",
               "RT-X509-REQ",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
@@ -3222,6 +3227,7 @@
               "RT-X509-PEM",
               "RT-X509-REQ",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
@@ -3243,6 +3249,7 @@
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-ENGINE",
               "RT-X509-VERIFY-SURFACE"
             ],
@@ -3327,6 +3334,7 @@
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "OPENSSL_sk_value"
@@ -3815,7 +3823,8 @@
               "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-REQ",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "BIO_ctrl"
           },
@@ -4061,7 +4070,8 @@
               "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-REQ",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "BIO_free"
           },
@@ -4521,7 +4531,8 @@
               "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-REQ",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "BIO_new"
           },
@@ -4860,7 +4871,8 @@
               "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-REQ",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "BIO_s_mem"
           },
@@ -5984,6 +5996,7 @@
               "RT-STORE",
               "RT-X509-ACERT",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "ASN1_INTEGER_free"
@@ -5998,6 +6011,7 @@
               "RT-STORE",
               "RT-X509-ACERT",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-ENGINE"
             ],
             "symbol": "ASN1_INTEGER_get"
@@ -6037,6 +6051,7 @@
               "RT-STORE",
               "RT-X509-ACERT",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "ASN1_INTEGER_new"
@@ -6051,6 +6066,7 @@
               "RT-STORE",
               "RT-X509-ACERT",
               "RT-X509-STORE",
+              "RT-X509-V3",
               "RT-X509-VERIFY-SURFACE"
             ],
             "symbol": "ASN1_INTEGER_set"
@@ -6514,7 +6530,8 @@
               "RT-KEYFORMAT",
               "RT-PKCS12",
               "RT-STORE",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "ASN1_STRING_length"
           },
@@ -24764,8 +24781,8 @@
         "completed": true,
         "counts": {
           "directly_courted": 1465,
-          "directly_courted_called": 880,
-          "directly_courted_referenced": 585,
+          "directly_courted_called": 937,
+          "directly_courted_referenced": 528,
           "implemented": 1465,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -24906,65 +24923,74 @@
             "symbol": "ADMISSION_SYNTAX_set0_contentsOfAdmissions"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASIdOrRange_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASIdOrRange_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASIdOrRange_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASIdentifierChoice_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASIdentifierChoice_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASIdentifierChoice_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASIdentifiers_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASIdentifiers_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASIdentifiers_new"
           },
@@ -25054,23 +25080,26 @@
             "symbol": "ASN1_verify"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASRange_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASRange_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "ASRange_new"
           },
@@ -25515,86 +25544,98 @@
             "symbol": "GENERAL_SUBTREE_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressChoice_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressChoice_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressChoice_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressFamily_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressFamily_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressFamily_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressOrRange_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressOrRange_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressOrRange_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressRange_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressRange_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "IPAddressRange_new"
           },
@@ -28023,9 +28064,10 @@
             "symbol": "X509V3_EXT_get_nid"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509V3_EXT_i2d"
           },
@@ -28046,7 +28088,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "X509V3_EXT_print"
           },
@@ -28112,9 +28155,10 @@
             "symbol": "X509V3_add_value_bool_nf"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509V3_add_value_int"
           },
@@ -28131,7 +28175,8 @@
             "courts": [
               "RT-STORE",
               "RT-X509-REF",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "X509V3_conf_free"
           },
@@ -29261,7 +29306,8 @@
             "courts": [
               "RT-STORE",
               "RT-X509-REF",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "X509_EXTENSION_free"
           },
@@ -29270,7 +29316,8 @@
             "courts": [
               "RT-STORE",
               "RT-X509-REF",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "X509_EXTENSION_get_critical"
           },
@@ -29279,7 +29326,8 @@
             "courts": [
               "RT-STORE",
               "RT-X509-REF",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "X509_EXTENSION_get_data"
           },
@@ -29288,7 +29336,8 @@
             "courts": [
               "RT-STORE",
               "RT-X509-REF",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "X509_EXTENSION_get_object"
           },
@@ -33135,65 +33184,74 @@
             "symbol": "X509v3_add_extensions"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_addr_add_inherit"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_addr_add_prefix"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_addr_add_range"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_addr_canonize"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_addr_get_afi"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_addr_get_range"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_addr_inherits"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_addr_is_canonical"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_addr_subset"
           },
@@ -33212,44 +33270,50 @@
             "symbol": "X509v3_addr_validate_resource_set"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_asid_add_id_or_range"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_asid_add_inherit"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_asid_canonize"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_asid_inherits"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_asid_is_canonical"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "X509v3_asid_subset"
           },
@@ -33361,30 +33425,34 @@
             "symbol": "d2i_ADMISSION_SYNTAX"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "d2i_ASIdOrRange"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "d2i_ASIdentifierChoice"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "d2i_ASIdentifiers"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "d2i_ASRange"
           },
@@ -33549,30 +33617,34 @@
             "symbol": "d2i_GENERAL_NAMES"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "d2i_IPAddressChoice"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "d2i_IPAddressFamily"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "d2i_IPAddressOrRange"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "d2i_IPAddressRange"
           },
@@ -34436,30 +34508,34 @@
             "symbol": "i2d_ADMISSION_SYNTAX"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "i2d_ASIdOrRange"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "i2d_ASIdentifierChoice"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "i2d_ASIdentifiers"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "i2d_ASRange"
           },
@@ -34624,30 +34700,34 @@
             "symbol": "i2d_GENERAL_NAMES"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "i2d_IPAddressChoice"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "i2d_IPAddressFamily"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "i2d_IPAddressOrRange"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-X509-REF"
+              "RT-X509-REF",
+              "RT-X509-V3"
             ],
             "symbol": "i2d_IPAddressRange"
           },
@@ -35335,7 +35415,8 @@
             "basis": "called",
             "courts": [
               "RT-X509-REF",
-              "RT-X509-STORE"
+              "RT-X509-STORE",
+              "RT-X509-V3"
             ],
             "symbol": "i2d_X509_EXTENSION"
           },
@@ -35612,13 +35693,13 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 11,
-        "staged_candidate_probes": 8
+        "staged_candidate_probes": 9
       }
     ],
     "totals": {
       "directly_courted": 4481,
-      "directly_courted_called": 3571,
-      "directly_courted_referenced": 910,
+      "directly_courted_called": 3628,
+      "directly_courted_referenced": 853,
       "implemented": 4489,
       "indirectly_courted": 8,
       "non_observable": 0
@@ -35715,7 +35796,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "09f34d258d9ed91f44e5eff7f7a9113008688419731a2183d96072cd23ecb5c8"
+      "sha256": "791d3e097438b1e365a18170ab2ecdc53482c1f715b4ace89cac68a0d4ae2bd5"
     },
     {
       "name": "phase10-courts",
@@ -35725,12 +35806,12 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "07b462b225251b7b500299c54b04b85cecedf75fb0cffa5460359f6a78f4bdb5"
+      "sha256": "cbbbeaa5f5bca5da7fc364f443d6cd2229f85d8601533d99a8b1c19e2d125ac7"
     },
     {
       "name": "phase11-courts",
       "path": "artifacts/phase11/COURTS.json",
-      "sha256": "2877edf66a610a75a9ab5f25fe83b52bf6f9e5cbb08bfe5050585a98e5ab84e5"
+      "sha256": "cc91b4c5b47b60ae12764c25642bad45c53c4b77cf26aeea7b89bf18e349681f"
     }
   ],
   "kind": "court-coverage",

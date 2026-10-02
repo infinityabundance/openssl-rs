@@ -43,19 +43,21 @@ docs/PHASE-11-SUBPHASES.md section 4.3, which is where this stratum's activation
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" — the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established.
+later activation established. `RT-X509-V3` was the stratum's last pending court; with it registered
+the table is empty, and it stays because "no planned court is unrun" is then a printed, recomputed
+fact rather than an omission.
 
-What the pending courts will establish, and what they will not
---------------------------------------------------------------
-`RT-X509-VERIFY-SURFACE`, `RT-X509-ACERT`, `RT-X509-REQ`, `RT-X509-V3`, `RT-X509-PEM` and `RT-X509`
-compare the authority's *behaviour* for the subphases that land them: the container bytes and the
-print text for the object graphs (section 3.1), the decision, error code, depth and callback
-sequence of `X509_verify_cert` (section 3.2), the lookup refusals and cache behaviour (section
-3.3), and the PEM text and malformed-input error coordinates (section 3.4). None of them can
-claim that an object that round-trips is the authority's object: a transcription whose writer
-emits bytes its own reader accepts is a different library, and docs/PHASE-11-SUBPHASES.md section
-3 records where the difference is observable. Nothing here is a parity claim about a certificate's
-meaning (section 3.5).
+What the behavioural courts compare, and what they do not
+---------------------------------------------------------
+`RT-X509-VERIFY-SURFACE`, `RT-X509-VERIFY-ENGINE`, `RT-X509-ACERT`, `RT-X509-REQ`, `RT-X509-V3`,
+`RT-X509-PEM` and `RT-X509` compare the authority's *behaviour* for the subphases that landed them:
+the container bytes and the print text for the object graphs (section 3.1), the decision, error
+code, depth and callback sequence of `X509_verify_cert` (section 3.2), the lookup refusals and
+cache behaviour (section 3.3), and the PEM text and malformed-input error coordinates (section
+3.4). None of them can claim that an object that round-trips is the authority's object: a
+transcription whose writer emits bytes its own reader accepts is a different library, and
+docs/PHASE-11-SUBPHASES.md section 3 records where the difference is observable. Nothing here is a
+parity claim about a certificate's meaning (section 3.5).
 
 SPDX-License-Identifier: Apache-2.0"""
 
@@ -131,6 +133,15 @@ COURTS: list[tuple[str, str]] = [
     # serial). The only nondeterministic input a decision could read -- the wall clock --
     # is never read: every time-sensitive arm sets the verification time explicitly.
     ("RT-X509-VERIFY-ENGINE", "rt_x509_verify_engine_probe.c"),
+    # "RT-X509-V3 -- the Phase 11.5 RFC 3779 address/AS-identifier layer and the remaining
+    # configuration and utility helpers, driven."
+    # It builds an `IPAddrBlocks` with `X509v3_addr_add_prefix`/`_add_range`/`_add_inherit` and an
+    # `ASIdentifiers` with `X509v3_asid_add_id_or_range`/`_add_inherit`, then drives
+    # `X509v3_{addr,asid}_get_afi`/`get_range`/`inherits`/`is_canonical`/`canonize`/`subset`, the
+    # eight item groups' `_it`/`_new`/`_free`/`d2i_`/`i2d_` doors and their round-trips, and the
+    # RFC 3779 `IPAddressFamily`/`ASIdentifiers` printers through `X509V3_EXT_i2d` and
+    # `X509V3_EXT_print` (`v3_addr.c`, `v3_asid.c`, `v3_conf.c`, `v3_utl.c`). It prints no address.
+    ("RT-X509-V3", "rt_x509_v3_probe.c"),
     # "RT-X509-PEM -- the Phase 11.6 PEM X.509 container surface, driven."
     # It reads and writes a fixed certificate, CRL, request, `X509_AUX`, `X509_PUBKEY`, RSA/EC/DSA
     # public key, `NETSCAPE_CERT_SEQUENCE`, PKCS#8 `PrivateKeyInfo`/`EncryptedPrivateKeyInfo` and
@@ -158,12 +169,11 @@ COURTS: list[tuple[str, str]] = [
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
 # pass, and each is printed with the subphase that brings it so that "not run yet" cannot be read
 # as "passed". The court names are `docs/PHASE-11-SUBPHASES.md` section 2's, one per work
-# subphase; `RT-X509` is 11.7's, over the units whose closure crosses into the landed strata.
-PENDING_COURTS: dict[str, str] = {
-    "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the "
-                  "`GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, "
-                  "`v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)",
-}
+# subphase. `RT-X509-V3` was the last entry -- 11.5's RFC 3779 `v3_addr.c`/`v3_asid.c` layer and the
+# `v3_conf.c`/`v3_utl.c` helpers it owns -- and it is now registered above, so the table is empty;
+# it stays because the mechanism is the contract every later stratum reuses, and an empty table is
+# the true statement that no planned court is unrun.
+PENDING_COURTS: dict[str, str] = {}
 
 
 def extra_defs(name: str, libdir: Path) -> list[str]:
@@ -338,12 +348,11 @@ def main(argv: list[str]) -> int:
             "symbol covered only by it means the candidate distribution defines the name -- which "
             "the link proves -- and NOT that any arm of it was driven; the court coverage atlas "
             "records those at basis `referenced`, never `called`, and its phase-11 slice is the "
-            "live count (docs/DECISIONS.md D199). `pending_courts` names the courts the plan gives "
-            "this stratum (docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings "
-            "each, and every name is printed on each run so that 'not run yet' cannot be read as "
-            "'passed'. Nothing here is a parity claim: `referenced` is not `called`, and "
-            "docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts must "
-            "compare when they land."
+            "live count (docs/DECISIONS.md D199). `pending_courts` is now empty: every court "
+            "the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) is registered "
+            "above and named on each run, so 'not run yet' cannot be read as 'passed'. Nothing "
+            "here is a parity claim: `referenced` is not `called`, and "
+            "docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts compare."
         ),
     }
 

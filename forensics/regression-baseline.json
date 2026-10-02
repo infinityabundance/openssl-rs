@@ -533,6 +533,10 @@
       "observations": 525,
       "verdict": "pass"
     },
+    "RT-X509-V3": {
+      "observations": 240,
+      "verdict": "pass"
+    },
     "RT-X509-VERIFY-ENGINE": {
       "observations": 242,
       "verdict": "pass"
