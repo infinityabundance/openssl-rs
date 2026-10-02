@@ -10,7 +10,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 73,
-      "language_surface_not_modelled_by_name": 7243,
+      "language_surface_not_modelled_by_name": 7206,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -325,10 +325,10 @@
         "crypto/o_time.c": 2,
         "crypto/objects/obj_dat.c": 24,
         "crypto/ocsp/ocsp_asn.c": 38,
-        "crypto/ocsp/ocsp_cl.c": 39,
+        "crypto/ocsp/ocsp_cl.c": 25,
         "crypto/ocsp/ocsp_lib.c": 9,
-        "crypto/ocsp/ocsp_srv.c": 46,
-        "crypto/ocsp/ocsp_vfy.c": 28,
+        "crypto/ocsp/ocsp_srv.c": 26,
+        "crypto/ocsp/ocsp_vfy.c": 26,
         "crypto/packet.c": 6,
         "crypto/param_build.c": 17,
         "crypto/param_build_set.c": 5,
@@ -497,7 +497,7 @@
         "crypto/x509/x509_set.c": 19,
         "crypto/x509/x509_trust.c": 19,
         "crypto/x509/x509_v3.c": 10,
-        "crypto/x509/x509_vfy.c": 66,
+        "crypto/x509/x509_vfy.c": 65,
         "crypto/x509/x509_vpm.c": 33,
         "crypto/x509/x509aset.c": 19,
         "crypto/x509/x509cset.c": 15,
@@ -621,7 +621,7 @@
     },
     "checked": {
       "authority_units": 467,
-      "crate_modules": 694,
+      "crate_modules": 697,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
       "divergence_names_covered": 35,
@@ -733,7 +733,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "5969f4f47479b01cc821017caf352d1a9dcf5e5f46e2c5cce803b2777c5e5a04",
+  "body_hash": "66104b1c7530ae246c3654538a19a8f6203fb02bd103d0139154ebff9e58e076",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -769,12 +769,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8601d4ec00808f97cebf5c9ee0d925fede3c665cc28c8012a98224cf84c012c3"
+      "sha256": "d7c20c24c6c0f970dbc8a7bd587fbea75e257a680da2f673a3a03595e2231dce"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "5c1f8c7003cfdb4185238c20cf5c52160649ff7a55f53717c4dff0bcbde1a863"
+      "sha256": "ef7c587aaaccfaed8bc5854ae211b6fdc36b5c6c9bf5b5b971ef4175ab60dd9b"
     },
     {
       "name": "prerequisites",

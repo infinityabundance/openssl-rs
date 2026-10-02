@@ -893,6 +893,7 @@
               "RT-MEM",
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
+              "RT-OCSP",
               "RT-PARAM",
               "RT-PEM-KEY",
               "RT-PKCS12",
@@ -1243,6 +1244,7 @@
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
               "RT-OBJ-STREAM",
+              "RT-OCSP",
               "RT-PARAM",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -1685,6 +1687,7 @@
               "RT-MEM-DEFAULT",
               "RT-MEM-INSTALL",
               "RT-OBJ-STREAM",
+              "RT-OCSP",
               "RT-PARAM",
               "RT-PROVIDER",
               "RT-PROVIDER-3P",
@@ -2045,6 +2048,7 @@
               "RT-CMS",
               "RT-EVP-PBE",
               "RT-KEYFORMAT",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-PUBKEY",
@@ -2073,6 +2077,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMS",
               "RT-KEYFORMAT",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-PUBKEY",
               "RT-RSA",
@@ -2440,6 +2445,7 @@
               "RT-CMS",
               "RT-CONF",
               "RT-ERR",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STACK",
@@ -2481,6 +2487,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMS",
               "RT-ERR",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STACK",
@@ -2556,6 +2563,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMS",
               "RT-ERR",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-STACK",
               "RT-STORE",
@@ -3114,6 +3122,7 @@
               "RT-EVP-PEM",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-OCSP",
               "RT-PARAM",
               "RT-PEM-KEY",
               "RT-PKCS12",
@@ -3364,6 +3373,7 @@
               "RT-KEYFORMAT",
               "RT-LHASH",
               "RT-OBJ-STREAM",
+              "RT-OCSP",
               "RT-PARAM",
               "RT-PEM-KEY",
               "RT-PKCS12",
@@ -3832,6 +3842,7 @@
               "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-LHASH",
+              "RT-OCSP",
               "RT-PARAM",
               "RT-PEM-KEY",
               "RT-PKCS12",
@@ -4183,6 +4194,7 @@
               "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-LHASH",
+              "RT-OCSP",
               "RT-PARAM",
               "RT-PEM-KEY",
               "RT-PKCS12",
@@ -5011,6 +5023,7 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
               "RT-KEYFORMAT",
+              "RT-OCSP",
               "RT-STORE",
               "RT-X509-ACERT"
             ],
@@ -5045,6 +5058,7 @@
               "RT-ASN1-PRINT",
               "RT-ASN1-TEMPLATE",
               "RT-KEYFORMAT",
+              "RT-OCSP",
               "RT-STORE",
               "RT-X509-ACERT",
               "RT-X509-STORE"
@@ -5063,6 +5077,7 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-PRINT",
+              "RT-OCSP",
               "RT-X509-STORE"
             ],
             "symbol": "ASN1_BIT_STRING_set"
@@ -5208,6 +5223,7 @@
             "courts": [
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
+              "RT-OCSP",
               "RT-TS",
               "RT-X509-ACERT"
             ],
@@ -5226,6 +5242,7 @@
             "courts": [
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
+              "RT-OCSP",
               "RT-STORE",
               "RT-TS",
               "RT-X509-ACERT",
@@ -5252,6 +5269,7 @@
             "courts": [
               "RT-ASN1-PRINT",
               "RT-ASN1-TIME",
+              "RT-OCSP",
               "RT-STORE",
               "RT-TS",
               "RT-X509-ACERT",
@@ -5329,6 +5347,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMP",
               "RT-EVP-PEM",
+              "RT-OCSP",
               "RT-STORE",
               "RT-TS",
               "RT-X509-ACERT",
@@ -5343,6 +5362,7 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-RSA",
               "RT-STORE",
@@ -5386,6 +5406,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMP",
               "RT-EVP-PEM",
+              "RT-OCSP",
               "RT-RSA",
               "RT-STORE",
               "RT-TS",
@@ -5403,6 +5424,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMP",
               "RT-EVP-PEM",
+              "RT-OCSP",
               "RT-RSA",
               "RT-STORE",
               "RT-TS",
@@ -5525,6 +5547,7 @@
               "RT-CMP",
               "RT-DIGEST",
               "RT-KEYFORMAT",
+              "RT-OCSP",
               "RT-STORE",
               "RT-TS",
               "RT-X509-ACERT",
@@ -5554,6 +5577,7 @@
               "RT-CMP",
               "RT-DIGEST",
               "RT-KEYFORMAT",
+              "RT-OCSP",
               "RT-PKCS7",
               "RT-STORE",
               "RT-TS",
@@ -5568,6 +5592,7 @@
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
               "RT-BIO-ASN1",
+              "RT-OCSP",
               "RT-PKCS7",
               "RT-STORE",
               "RT-TS",
@@ -5879,6 +5904,7 @@
               "RT-BIO-ASN1",
               "RT-CMS",
               "RT-KEYFORMAT",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STORE",
@@ -5935,6 +5961,7 @@
               "RT-ASN1-TIME",
               "RT-DIGEST",
               "RT-KEYFORMAT",
+              "RT-OCSP",
               "RT-STORE",
               "RT-TS"
             ],
@@ -11227,6 +11254,7 @@
             "basis": "called",
             "courts": [
               "RT-EVP-PKEY",
+              "RT-OCSP",
               "RT-SIGNATURE",
               "RT-STORE"
             ],
@@ -12136,6 +12164,7 @@
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
+              "RT-OCSP",
               "RT-SIGNATURE",
               "RT-STORE",
               "RT-X509-ACERT"
@@ -12211,6 +12240,7 @@
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
+              "RT-OCSP",
               "RT-SIGNATURE",
               "RT-STORE",
               "RT-X509-ACERT"
@@ -13646,6 +13676,7 @@
               "RT-HPKE",
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-PUBKEY",
               "RT-SIGNATURE",
@@ -15450,6 +15481,7 @@
             "basis": "called",
             "courts": [
               "RT-EVP-INTROSPECT",
+              "RT-OCSP",
               "RT-STORE"
             ],
             "symbol": "EVP_sha1"
@@ -15468,6 +15500,7 @@
               "RT-DIGEST",
               "RT-EVP-INTROSPECT",
               "RT-KEYMGMT",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-SIGNATURE",
@@ -26434,6 +26467,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-X509-PEM"
             ],
             "symbol": "PEM_read_X509"
@@ -28665,6 +28699,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-STORE",
               "RT-TS",
               "RT-X509-REF",
@@ -28693,6 +28728,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-STORE",
               "RT-TS",
               "RT-X509-REF",
@@ -28714,6 +28750,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-STORE",
               "RT-X509-REF",
               "RT-X509-STORE",
@@ -29151,6 +29188,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-X509-ACERT",
               "RT-X509-REF"
             ],
@@ -29200,6 +29238,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-STORE",
               "RT-X509-ACERT",
               "RT-X509-REF",
@@ -29278,6 +29317,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-STORE",
               "RT-X509-ACERT",
               "RT-X509-REF",
@@ -31624,6 +31664,7 @@
             "courts": [
               "RT-CMP",
               "RT-CMS",
+              "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STORE",
@@ -31976,6 +32017,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-STORE",
               "RT-X509-REF",
               "RT-X509-REQ",
@@ -34815,6 +34857,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-X509-REF",
               "RT-X509-STORE",
               "RT-X509-V3"
@@ -35099,10 +35142,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 752,
-          "directly_courted_called": 607,
-          "directly_courted_referenced": 145,
-          "implemented": 752,
+          "directly_courted": 846,
+          "directly_courted_called": 714,
+          "directly_courted_referenced": 132,
+          "implemented": 846,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -36250,11 +36293,75 @@
             "symbol": "CT_POLICY_EVAL_CTX_set_time"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_BASICRESP_add1_ext_i2d"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_BASICRESP_add_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_BASICRESP_delete_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_BASICRESP_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_BASICRESP_get1_ext_d2i"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_BASICRESP_get_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_BASICRESP_get_ext_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_BASICRESP_get_ext_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_BASICRESP_get_ext_by_critical"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_BASICRESP_get_ext_count"
           },
           {
             "basis": "referenced",
@@ -36264,15 +36371,24 @@
             "symbol": "OCSP_BASICRESP_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_BASICRESP_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_CERTID_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_CERTID_free"
@@ -36334,11 +36450,74 @@
             "symbol": "OCSP_CRLID_new"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_ONEREQ_add1_ext_i2d"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_ONEREQ_add_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_ONEREQ_delete_ext"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_ONEREQ_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_ONEREQ_get1_ext_d2i"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_ONEREQ_get_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_ONEREQ_get_ext_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_ONEREQ_get_ext_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_ONEREQ_get_ext_by_critical"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_ONEREQ_get_ext_count"
           },
           {
             "basis": "referenced",
@@ -36376,11 +36555,75 @@
             "symbol": "OCSP_REQINFO_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_add1_ext_i2d"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_add_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_delete_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_REQUEST_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_get1_ext_d2i"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_get_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_get_ext_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_get_ext_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_get_ext_by_critical"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_get_ext_count"
           },
           {
             "basis": "referenced",
@@ -36390,11 +36633,19 @@
             "symbol": "OCSP_REQUEST_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_REQUEST_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_REQUEST_print"
           },
           {
             "basis": "referenced",
@@ -36439,8 +36690,9 @@
             "symbol": "OCSP_RESPDATA_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_RESPID_free"
@@ -36453,15 +36705,52 @@
             "symbol": "OCSP_RESPID_it"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_RESPID_match"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_RESPID_match_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_RESPID_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_RESPID_set_by_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_RESPID_set_by_key_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_RESPID_set_by_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_RESPONSE_free"
@@ -36479,6 +36768,13 @@
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_RESPONSE_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_RESPONSE_print"
           },
           {
             "basis": "referenced",
@@ -36544,11 +36840,81 @@
             "symbol": "OCSP_SIGNATURE_new"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_add1_ext_i2d"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_add_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_delete_ext"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_SINGLERESP_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_get0_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_get1_ext_d2i"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_get_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_get_ext_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_get_ext_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_get_ext_by_critical"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_SINGLERESP_get_ext_count"
           },
           {
             "basis": "referenced",
@@ -36563,6 +36929,349 @@
               "RT-PHASE12-REF"
             ],
             "symbol": "OCSP_SINGLERESP_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_accept_responses_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_archive_cutoff_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_basic_add1_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_basic_add1_nonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_basic_add1_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_basic_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_basic_sign_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_basic_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_cert_id_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_cert_status_str"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_cert_to_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_check_nonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_check_validity"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_copy_nonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_crlID_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_crl_reason_str"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_id_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_id_get0_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_id_issuer_cmp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_onereq_get0_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_request_add0_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_request_add1_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_request_add1_nonce"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_request_is_signed"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_request_onereq_count"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_request_onereq_get0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_request_set1_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_request_sign"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_request_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_count"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_find"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_find_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_get0"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_get0_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_get0_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_get0_produced_at"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_get0_respdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_get0_signature"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_get0_signer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_get0_tbs_sigalg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_resp_get1_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_response_create"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_response_get1_basic"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_response_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_response_status_str"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_sendreq_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_sendreq_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_single_get0_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-OCSP"
+            ],
+            "symbol": "OCSP_url_svcloc_new"
           },
           {
             "basis": "called",
@@ -37533,7 +38242,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-HTTP"
+              "RT-HTTP",
+              "RT-OCSP"
             ],
             "symbol": "OSSL_HTTP_REQ_CTX_free"
           },
@@ -39726,8 +40436,9 @@
             "symbol": "d2i_OCSP_REQINFO"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "d2i_OCSP_REQUEST"
@@ -39754,8 +40465,9 @@
             "symbol": "d2i_OCSP_RESPID"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "d2i_OCSP_RESPONSE"
@@ -40034,8 +40746,9 @@
             "symbol": "i2d_OCSP_BASICRESP"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "i2d_OCSP_CERTID"
@@ -40069,8 +40782,9 @@
             "symbol": "i2d_OCSP_REQINFO"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "i2d_OCSP_REQUEST"
@@ -40097,8 +40811,9 @@
             "symbol": "i2d_OCSP_RESPID"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-OCSP",
               "RT-PHASE12-REF"
             ],
             "symbol": "i2d_OCSP_RESPONSE"
@@ -40387,14 +41102,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 12,
-        "staged_candidate_probes": 6
+        "staged_candidate_probes": 7
       }
     ],
     "totals": {
-      "directly_courted": 5233,
-      "directly_courted_called": 4235,
-      "directly_courted_referenced": 998,
-      "implemented": 5241,
+      "directly_courted": 5327,
+      "directly_courted_called": 4342,
+      "directly_courted_referenced": 985,
+      "implemented": 5335,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -40405,7 +41120,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8601d4ec00808f97cebf5c9ee0d925fede3c665cc28c8012a98224cf84c012c3"
+      "sha256": "d7c20c24c6c0f970dbc8a7bd587fbea75e257a680da2f673a3a03595e2231dce"
     },
     {
       "name": "symbol-ownership",
@@ -40420,7 +41135,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "019abe66f39b922ffe3ba4365d7d54857524831baea9702227b675980718b5e8"
+      "sha256": "3ec458b183cde49c0952d7ce79834c2fe65a3b64ba7130d07408f5423c32d19d"
     },
     {
       "name": "phase3-courts",
@@ -40430,7 +41145,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "4675d38dfee5b3f63dea8d4afaafb778d76f54cde93f77e78d2f3739969f80f0"
+      "sha256": "69d4aeb16f5dd55a0afa214cb338d1c11eb4c30c867225796884f5663321d165"
     },
     {
       "name": "phase4-courts",
@@ -40440,7 +41155,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "6caf99f38cfea41509c8c52665619baad85255ba33b7b0bbb389825cf034b0db"
+      "sha256": "110010df947ee672f0fa84c731e0b61d9cd40240362c44f98303655a2b83f936"
     },
     {
       "name": "phase5-courts",
@@ -40450,7 +41165,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "1bddd0fcd047925fbe44feadbd8fbfa1f769babcb00172f3fbfe2c1bc031ffe1"
+      "sha256": "51c1ab1c6bb8f12f716cf09a83631a230194957431cad439c5f7832b18208392"
     },
     {
       "name": "phase6-courts",
@@ -40460,7 +41175,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "9a134cfe933000f17e6c05db73723524d17c8d94a7ee88fbff4ff96dbad5a748"
+      "sha256": "ad85053cce16d21f27b77850a636ec995487471859a2ccdf4ad0dbfd311823cf"
     },
     {
       "name": "phase7-courts",
@@ -40470,7 +41185,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "740e46375b53ff90faadb6ab2001c4bf4f39a3d6967b5fa701b0b3bcdb1f6000"
+      "sha256": "fcd7e8ae552052e5e962d627dc684ee597d0602a65baf24fdd3dd1d77425c795"
     },
     {
       "name": "phase8-courts",
@@ -40480,7 +41195,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "fbc071157b5f12543f4e7f7e55e55c748b74c897257b3b91e0fe9a53b0cf86b3"
+      "sha256": "dd7e41e276690aad34848ae6ad491d1c4dfc8db34c1ddecdee2b59a3db259cc8"
     },
     {
       "name": "phase9-courts",
@@ -40490,7 +41205,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "993e04ebe2dc88cfe0322b92cb8cefe45641360a24bfbf91a80fbd4eac2f1105"
+      "sha256": "73bd0ceeef8cbf73ca37ae730f7b51fa69863c2b06d1eb17951da3317bf390a0"
     },
     {
       "name": "phase10-courts",
@@ -40500,7 +41215,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "0cec2dcc23fb34279dd72e3f87d3d9d3c7692e4c5724162a632c0712ff761ec9"
+      "sha256": "c19321c2374b739ed4635dd1ca6a11d9a4b6bfe6e5a86295cb5aa763c7735601"
     },
     {
       "name": "phase11-courts",
@@ -40510,12 +41225,12 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "d59e0762d6dd5e8d048bf4a5341bbf9182a1c60b560d0285aaaf95399011e0ff"
+      "sha256": "332c76d632a11ac39f910cf86716c7a93c7b7c371c8f08e958e9e9d77280953c"
     },
     {
       "name": "phase12-courts",
       "path": "artifacts/phase12/COURTS.json",
-      "sha256": "040e8dce5a25195fb5ce897caf57d5570f86f2317de336f4f1b7b9b6c788c153"
+      "sha256": "8adc2c28d048194c41d648ee8065a610bcbad813b9149f4aca114ebfd875bc55"
     }
   ],
   "kind": "court-coverage",

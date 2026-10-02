@@ -374,6 +374,10 @@
       "observations": 91,
       "verdict": "pass"
     },
+    "RT-OCSP": {
+      "observations": 266,
+      "verdict": "pass"
+    },
     "RT-PARAM": {
       "observations": 1162,
       "verdict": "pass"
@@ -589,13 +593,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 5368,
+    "libcrypto": 5462,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
-    "phase12": 281,
+    "phase12": 187,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -647,7 +651,7 @@
     "blocking_dependencies": 5,
     "divergence_names_covered": 35,
     "findings": 0,
-    "language_census": 7243,
+    "language_census": 7206,
     "sealed_census": 51
   },
   "provider_implemented": [
