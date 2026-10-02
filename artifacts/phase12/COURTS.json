@@ -127,18 +127,50 @@
           "candidate": "artifacts/phase12/probes/rt_ocsp_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 138,
+        "candidate_exit_code": 0,
+        "candidate_observations": 138,
+        "candidate_stderr_tail": [],
+        "court": "RT-CRMF",
+        "crashed": false,
+        "probe": "courts/phase12/rt_crmf_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase12/probes/rt_crmf_probe.authority",
+          "candidate": "artifacts/phase12/probes/rt_crmf_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 47,
+        "candidate_exit_code": 0,
+        "candidate_observations": 47,
+        "candidate_stderr_tail": [],
+        "court": "RT-ESS",
+        "crashed": false,
+        "probe": "courts/phase12/rt_ess_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase12/probes/rt_ess_probe.authority",
+          "candidate": "artifacts/phase12/probes/rt_ess_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs",
-      "RT-CRMF": "12.7 -- the CRMF certificate-request surface (`crmf.h`)",
-      "RT-ESS": "12.7 -- the ESS signing-certificate surface (`ess.h`)",
       "RT-SRP": "12.8 -- the SRP verifier and library surface (`srp.h`)"
     },
     "summary": {
       "fail": 0,
-      "pass": 7,
-      "total": 7
+      "pass": 9,
+      "total": 9
     }
   },
   "generator": "forensics/tools/phase12_courts.py",
@@ -182,6 +214,16 @@
       "name": "probe",
       "path": "courts/phase12/rt_ocsp_probe.c",
       "sha256": "397b7ea8c6f83d2c8664b55645d2d6b4544c770dbbae1f717d0f9c7254727f1b"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_crmf_probe.c",
+      "sha256": "d1ebebcba2846b34e2fee6b36f11f36a1a96e24dd36056292a4bf5470fa629b5"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_ess_probe.c",
+      "sha256": "b093ff430bccf709bcd9de2cb2652a6b672c2b61b5e16be41a6452a5ac80e98f"
     }
   ],
   "kind": "phase12-courts",

@@ -64,8 +64,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 78,
-      "language_surface_not_modelled_by_name": 8609,
+      "covered_by_a_divergence": 86,
+      "language_surface_not_modelled_by_name": 8741,
       "planned_prerequisites": 95
     },
     "census_by_unit": {
@@ -77,6 +77,13 @@
         "OSSL_CMP_ITAV_new": 1,
         "OSSL_CMP_ROOTCAKEYUPDATE_free": 1,
         "OSSL_CMP_ROOTCAKEYUPDATE_new": 1,
+        "OSSL_CRMF_ATTRIBUTETYPEANDVALUE_new": 2,
+        "OSSL_CRMF_OPTIONALVALIDITY_new": 1,
+        "OSSL_CRMF_POPOPRIVKEY_new": 1,
+        "OSSL_CRMF_POPOSIGNINGKEY_free": 1,
+        "OSSL_CRMF_POPOSIGNINGKEY_new": 1,
+        "OSSL_CRMF_POPO_free": 1,
+        "OSSL_CRMF_POPO_new": 1,
         "arg": 1,
         "bn_set_static_words": 1,
         "cb_arg": 1,
@@ -208,16 +215,16 @@
         "crypto/camellia/cmll_cfb.c": 3,
         "crypto/cast/c_enc.c": 4,
         "crypto/cmac/cmac.c": 8,
-        "crypto/cmp/cmp_asn.c": 124,
-        "crypto/cmp/cmp_client.c": 68,
+        "crypto/cmp/cmp_asn.c": 120,
+        "crypto/cmp/cmp_client.c": 64,
         "crypto/cmp/cmp_ctx.c": 36,
         "crypto/cmp/cmp_hdr.c": 22,
         "crypto/cmp/cmp_http.c": 14,
-        "crypto/cmp/cmp_msg.c": 109,
-        "crypto/cmp/cmp_server.c": 58,
+        "crypto/cmp/cmp_msg.c": 91,
+        "crypto/cmp/cmp_server.c": 52,
         "crypto/cmp/cmp_status.c": 37,
         "crypto/cmp/cmp_util.c": 15,
-        "crypto/cmp/cmp_vfy.c": 43,
+        "crypto/cmp/cmp_vfy.c": 42,
         "crypto/cms/cms_asn1.c": 92,
         "crypto/cms/cms_att.c": 8,
         "crypto/cms/cms_dd.c": 8,
@@ -246,6 +253,9 @@
         "crypto/core_algorithm.c": 6,
         "crypto/core_fetch.c": 8,
         "crypto/core_namemap.c": 41,
+        "crypto/crmf/crmf_asn.c": 56,
+        "crypto/crmf/crmf_lib.c": 63,
+        "crypto/crmf/crmf_pbm.c": 7,
         "crypto/cryptlib.c": 5,
         "crypto/ct/ct_b64.c": 9,
         "crypto/ct/ct_log.c": 21,
@@ -328,9 +338,11 @@
         "crypto/engine/tb_asnmth.c": 13,
         "crypto/engine/tb_digest.c": 10,
         "crypto/engine/tb_pkmeth.c": 10,
-        "crypto/err/err.c": 63,
+        "crypto/err/err.c": 61,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
+        "crypto/ess/ess_asn1.c": 17,
+        "crypto/ess/ess_lib.c": 24,
         "crypto/evp/asymcipher.c": 18,
         "crypto/evp/bio_enc.c": 13,
         "crypto/evp/bio_ok.c": 14,
@@ -694,6 +706,14 @@
         "OSSL_CMP_ITAV_new",
         "OSSL_CMP_ROOTCAKEYUPDATE_free",
         "OSSL_CMP_ROOTCAKEYUPDATE_new",
+        "OSSL_CRMF_ATTRIBUTETYPEANDVALUE_new",
+        "OSSL_CRMF_ATTRIBUTETYPEANDVALUE_new",
+        "OSSL_CRMF_OPTIONALVALIDITY_new",
+        "OSSL_CRMF_POPOPRIVKEY_new",
+        "OSSL_CRMF_POPOSIGNINGKEY_free",
+        "OSSL_CRMF_POPOSIGNINGKEY_new",
+        "OSSL_CRMF_POPO_free",
+        "OSSL_CRMF_POPO_new",
         "arg",
         "bn_set_static_words",
         "cb_arg",
@@ -713,14 +733,6 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
-        "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
@@ -813,12 +825,12 @@
       ]
     },
     "checked": {
-      "authority_units": 512,
-      "crate_modules": 697,
+      "authority_units": 517,
+      "crate_modules": 703,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 60,
-      "divergence_names_covered": 40,
-      "divergence_rows": 10,
+      "divergence_names_covered": 47,
+      "divergence_rows": 11,
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
@@ -926,13 +938,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "593be161d3b1d615e5dc4d98c57555611c80e01eeb846d54d794b7cb9f21ee1f",
+  "body_hash": "1453c22e0b0f35008e7ea7db0d7dde1eddbef39e2f1728f1b5c785b49c97e685",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "1176c3477365846c634f1690b7d99c1c9e9d5caf307c8cb539d52e7c6671bcc3"
+      "sha256": "9a3355c24d6856b6d9d7906474d7bac7431770f86149b20a91c46367f20cc24b"
     },
     {
       "name": "macro-owners",
@@ -947,7 +959,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "747454f857d07289ed35710b0a73e371a97e9ae786f33ba96d2574614af7c532"
+      "sha256": "464b9cb4ecbf945275cda3f127b3e324aeecb955282aa6f05ba2244c2a0d9987"
     },
     {
       "name": "symbol-ownership",
@@ -962,17 +974,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "d7c20c24c6c0f970dbc8a7bd587fbea75e257a680da2f673a3a03595e2231dce"
+      "sha256": "9e5f055e5f6fa53e3da24a438ce13175f9db21671248e35805ccb7cee366b922"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "ef7c587aaaccfaed8bc5854ae211b6fdc36b5c6c9bf5b5b971ef4175ab60dd9b"
+      "sha256": "331bf2f9bc17071c6b09ac76e24f7ada5ce3953c85968047ff21282a1b13b2cd"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "99f8793723090dd9c989ff3534ed4fe65f470c983030d7c08fa1ce52906d49b1"
+      "sha256": "f0cc2ee3ca46da828dba71507723ee685aea06b256ccb9e1df76663c1f2f7489"
     },
     {
       "name": "crate-source-tree",

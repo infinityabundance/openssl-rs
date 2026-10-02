@@ -85,6 +85,12 @@ pub mod cms;
 // (the plan orders 12.4 before 12.7). See `src/cmp/mod.rs`.
 pub mod cmp;
 pub mod context;
+// Phase 12.7 — `crypto/crmf/`: the Certificate Request Message Format (RFC 4211). The item groups
+// landed crate-internally in 12.4; this stratum publishes the CRMF surface. See `src/crmf/mod.rs`.
+pub mod crmf;
+// Phase 12.7 — `crypto/ess/`: the ESS signing-certificate item groups and library. See
+// `src/ess/mod.rs`.
+pub mod ess;
 // Phase 10.14.15 — `crypto/ct/`: Certificate Transparency. The directory is new here; it lands
 // the units `crypto/x509/v3_x509v3`/`ct_x509v3.c`'s table is blocked on. See `src/ct/mod.rs`.
 pub mod ct;

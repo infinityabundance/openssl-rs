@@ -19,7 +19,9 @@ pub(crate) mod cmp_server;
 pub(crate) mod cmp_status;
 pub(crate) mod cmp_util;
 pub(crate) mod cmp_vfy;
-pub(crate) mod crmf_asn;
+// The `crmf_asn.c` item groups 12.4 pulled forward live in `src/crmf/` as of 12.7; this alias keeps
+// the CMP modules that name them compiling unchanged.
+pub(crate) use crate::crmf::crmf_asn;
 
 pub use cmp_asn::*;
 pub use cmp_client::*;

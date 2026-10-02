@@ -29,16 +29,17 @@ The behavioural courts the plan gives the later subphases
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" — the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-PKCS7`, `RT-CMS`, `RT-CMP`, `RT-OCSP`, `RT-CRMF`, `RT-ESS` and
-`RT-SRP` are the remaining subphases' own courts, and `RT-CMS-REMAINDER` is 12.9's for the CT
-remainder, the shared `x_all.c` dispatch and the nine hand-offs. `RT-HTTP` was among them and is
-registered by 12.1, and `RT-TS` is registered by 12.5; each court not yet registered is printed
-with its subphase on every run.
+later activation established. `RT-PKCS7`, `RT-CMS`, `RT-CMP`, `RT-OCSP`, `RT-CRMF`, `RT-ESS`,
+`RT-TS` and `RT-SRP` are the subphases' own courts: `RT-HTTP` is registered by 12.1, `RT-PKCS7`,
+`RT-CMS` and `RT-CMP` by 12.3/12.4, `RT-TS` by 12.5, `RT-OCSP` by 12.6 and `RT-CRMF`/`RT-ESS` by
+12.7, leaving `RT-SRP` (12.8) and `RT-CMS-REMAINDER` (12.9's court for the CT remainder, the shared
+`x_all.c` dispatch and the nine hand-offs). Each court not yet registered is printed with its
+subphase on every run.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
 When they land, `RT-CMS`, `RT-PKCS7`, `RT-SMIME`, `RT-OCSP`, `RT-CMP`, `RT-TS`, `RT-CRMF` and
-`RT-ESS` will compare the authority's *behaviour* for the container and protocol surfaces: the
+`RT-ESS` compare the authority's *behaviour* for the container and protocol surfaces: the
 DER bytes of a signed or enveloped container, the print text, the OCSP response status and
 signature decision, the CMP transaction transcript and the timestamp token's `TSTInfo`. A
 transcription whose writer emits bytes its own reader accepts is a different library, and
@@ -90,16 +91,16 @@ COURTS: list[tuple[str, str]] = [
     ("RT-CMP", "rt_cmp_probe.c"),
     ("RT-TS", "rt_ts_probe.c"),
     ("RT-OCSP", "rt_ocsp_probe.c"),
+    ("RT-CRMF", "rt_crmf_probe.c"),
+    ("RT-ESS", "rt_ess_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
 # pass, and each is printed with the subphase that brings it so that "not run yet" cannot be read
 # as "passed". The court names are `docs/PHASE-12-SUBPHASES.md` section 2's, one per work
-# subphase; `RT-CRMF` and `RT-ESS` are the two courts of 12.7, whose two families share a
-# subphase but not a court.
+# subphase; `RT-CRMF` and `RT-ESS`, the two courts of 12.7, are registered above and have left this
+# table.
 PENDING_COURTS: dict[str, str] = {
-    "RT-CRMF": "12.7 -- the CRMF certificate-request surface (`crmf.h`)",
-    "RT-ESS": "12.7 -- the ESS signing-certificate surface (`ess.h`)",
     "RT-SRP": "12.8 -- the SRP verifier and library surface (`srp.h`)",
     "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine "
                         "hand-offs",

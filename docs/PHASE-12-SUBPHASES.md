@@ -362,24 +362,51 @@ signer-infrastructure 12.3 landed, per section 2.1.
 
 **Open exports (checked against the ledger):**
 
-Open is the 459-name remainder. CMS has closed: every one of its 149 `cms.h` rows is now
+Open is the 65-name remainder. CMS has closed: every one of its 149 `cms.h` rows is now
 implemented and no CMS name appears here. CMP has landed 146 of its 161; the 15 open CMP rows are
 `OSSL_CMP_MSG_get0_certreq_publickey`, `OSSL_CMP_CTX_setup_CRM`, `OSSL_CMP_MSG_update_transactionID`
 and `OSSL_CMP_MSG_update_recipNonce` (`cmp_msg.c`), `OSSL_CMP_SRV_process_request` and
 `OSSL_CMP_CTX_server_perform` (`cmp_server.c`), `OSSL_CMP_try_certreq`, `OSSL_CMP_exec_certreq`,
 `OSSL_CMP_exec_RR_ses` and `OSSL_CMP_exec_GENM_ses` (`cmp_client.c`), `OSSL_CMP_get1_caCerts`,
 `OSSL_CMP_get1_certReqTemplate`, `OSSL_CMP_get1_crlUpdate` and `OSSL_CMP_get1_rootCaKeyUpdate`
-(`cmp_genm.c`), and `OSSL_CMP_validate_msg` (`cmp_vfy.c`). TS opens 12.5 with the two engine-reading
+(`cmp_genm.c`), and `OSSL_CMP_validate_msg` (`cmp_vfy.c`). They are the message-construction half
+of `cmp_msg.c`, the protection engine its message-protection arm needs, the
+client exchange state machine and the server engine -- the CMP *remainder* 12.4 named, which the
+CRMF and ESS surfaces this subphase lands were the last non-`cmp/` prerequisites of, and which no
+subphase after 12.7 is planned to carry; they stay open here. TS opens with the two engine-reading
 configuration setters `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` (blocked on
 Phase 13's ENGINE_by_id/ENGINE_set_default), and `TS_RESP_create_response` with the three verify
-entry points `TS_RESP_verify_response`/`TS_RESP_verify_signature`/`TS_RESP_verify_token` (blocked on
-the Phase-12.7 ESS item group and its OSSL_ESS helpers through the SigningCertificate signed
-attribute). OCSP has closed: every one of its 94 `ocsp.h` rows is now implemented and no OCSP name
-appears here. CRMF opens
-12.7 with `OSSL_CRMF_CERTID_gen` and `OSSL_CRMF_CERTID_get0_issuer`, and ESS with `ESS_CERT_ID_new`,
-`ESS_SIGNING_CERT_new` and `ESS_ISSUER_SERIAL_free`. SRP opens 12.8 with `SRP_create_verifier`,
+entry points `TS_RESP_verify_response`/`TS_RESP_verify_signature`/`TS_RESP_verify_token` (the ESS
+item group and its signing-certificate helpers they reach are now landed by 12.7, so what remains
+open is the TS response engine itself). OCSP has closed: every one of its 94 `ocsp.h` rows is now
+implemented and no OCSP name appears here. CRMF and ESS have closed: every one of `crmf.h`'s 92
+rows and `ess.h`'s 30 rows is now implemented, and no CRMF or ESS name appears here. SRP opens
+12.8 with `SRP_create_verifier`,
 `SRP_user_pwd_new`, `SRP_VBASE_new` and `SRP_Calc_A`. 12.9 opens the CT remainder with
 `CTLOG_STORE_load_default_file`, the shared `x_all.c` dispatch with `d2i_PKCS7_bio` and
 `PKCS7_ISSUER_AND_SERIAL_digest`, and the nine hand-offs with `SMIME_read_ASN1`, `SMIME_write_ASN1`,
 `ASN1_ITEM_get` and `X509_load_http`. A stratum is complete only when no export it owns is neither
-implemented nor handed on, and this is not that state yet — the seal is 12.10's.
+implemented nor handed on, and this is not that state yet -- the seal is 12.10's.
+
+**12.7 -- CRMF and ESS (all 122 rows).** `crmf_asn.c`'s ten exported item groups (`OSSL_CRMF_CERTID`,
+`CERTTEMPLATE`, `ENCRYPTEDVALUE`, `ENCRYPTEDKEY`, `SINGLEPUBINFO`, `PKIPUBLICATIONINFO`,
+`PBMPARAMETER`, `MSG`, `MSGS`, and the `ATTRIBUTETYPEANDVALUE` free/dup pair), `crmf_lib.c`'s
+object-graph accessors, the sixteen `regCtrl`/`regInfo` getters and setters, the
+`CERTID`/`CERTTEMPLATE` builders, the `ProofOfPossession` create/verify pair and the
+`ENCRYPTEDVALUE`/`ENCRYPTEDKEY` decryption helpers, and `crmf_pbm.c`'s `OSSL_CRMF_pbm_new` and
+`OSSL_CRMF_pbmp_new`; `ess_asn1.c`'s five item groups and `ess_lib.c`'s three helpers. The item
+groups 12.4 pulled forward crate-internally as `src/cmp/crmf_asn.rs` moved to `src/crmf/crmf_asn.rs`
+and publish their exports, so the object model did not move a byte. `RT-CRMF`
+(`courts/phase12/rt_crmf_probe.c`) drives the ten item groups over fresh values, the whole
+`OSSL_CRMF_MSG` graph (template fill, validity, extensions, all sixteen controls, and the
+`PKIPublicationInfo`/`SinglePubInfo` builders), `OSSL_CRMF_CERTID_gen`, the `ProofOfPossession`
+create/verify pair over the fixed RSA key (the `RA_VERIFIED` acceptance and refusal, the `KEYENC`
+refusal, and a real signature whose encoding is compared while its *verification* is named
+`pending` -- it reaches the same `EVP_get_digestbyname` legacy-table divergence `RT-OCSP` names),
+and `OSSL_CRMF_pbm_new` over a fixed password, salt and iteration count, so the derived MAC is a
+fixed 20-byte observable. `RT-ESS` (`courts/phase12/rt_ess_probe.c`) drives the five item groups,
+both `OSSL_ESS_signing_cert[_v2]_new_init` builders (v1 SHA-1, v2 SHA-256 -- the default, whose
+`hashAlgorithm` is absent -- and v2 SHA-1, whose is present) and `OSSL_ESS_check_signing_certs`
+over a one-certificate chain, including its two refusal arms. The fixed certificate DER is
+`courts/phase12/rt_ess_der.h`, generated once by `court/rt_ess_gen.py` with the authority's own
+openssl from `court/rt_ocsp_cert.pem`.
