@@ -6,10 +6,10 @@
     ],
     "census": {
       "names_a_basename_the_authority_repeats": 1,
-      "units_not_reached": 35
+      "units_not_reached": 10
     },
     "census_by_stratum": {
-      "12": 36
+      "12": 11
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -18,40 +18,15 @@
       ],
       "units_not_reached": [
         "crypto/asn1/asn1_item_list.c",
-        "crypto/cmp/cmp_client.c",
         "crypto/cmp/cmp_genm.c",
-        "crypto/cmp/cmp_hdr.c",
-        "crypto/cmp/cmp_http.c",
-        "crypto/cmp/cmp_server.c",
-        "crypto/cmp/cmp_vfy.c",
-        "crypto/cms/cms_io.c",
-        "crypto/cms/cms_smime.c",
         "crypto/crmf/crmf_asn.c",
         "crypto/crmf/crmf_lib.c",
         "crypto/crmf/crmf_pbm.c",
         "crypto/ess/ess_asn1.c",
         "crypto/ess/ess_lib.c",
-        "crypto/http/http_client.c",
-        "crypto/ocsp/ocsp_ext.c",
-        "crypto/ocsp/ocsp_http.c",
-        "crypto/ocsp/ocsp_prn.c",
-        "crypto/pkcs7/bio_pk7.c",
-        "crypto/pkcs7/pk7_attr.c",
-        "crypto/pkcs7/pk7_doit.c",
-        "crypto/pkcs7/pk7_mime.c",
-        "crypto/pkcs7/pk7_smime.c",
         "crypto/srp/srp_lib.c",
         "crypto/srp/srp_vfy.c",
-        "crypto/ts/ts_asn1.c",
-        "crypto/ts/ts_conf.c",
-        "crypto/ts/ts_lib.c",
-        "crypto/ts/ts_req_print.c",
-        "crypto/ts/ts_req_utils.c",
-        "crypto/ts/ts_rsp_print.c",
-        "crypto/ts/ts_rsp_sign.c",
-        "crypto/ts/ts_rsp_utils.c",
-        "crypto/ts/ts_rsp_verify.c",
-        "crypto/ts/ts_verify_ctx.c"
+        "crypto/ts/ts_rsp_verify.c"
       ]
     },
     "checked": {
@@ -70,9 +45,9 @@
       "symbols_named_by_a_row": 108,
       "symbols_reached": 108,
       "unit_records": 97,
-      "units_named_by_a_record": 99,
+      "units_named_by_a_record": 105,
       "units_named_by_a_row": 432,
-      "units_reached": 397
+      "units_reached": 422
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -510,22 +485,26 @@
           "OSSL_CMP_CERTRESPONSE_new",
           "OSSL_CMP_CERTSTATUS_free"
         ],
-        "recorded_by": null,
+        "recorded_by": "deferral:OSSL_CMP_CERTIFIEDKEYPAIR_new",
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_asn.rs"
+        ]
       },
       "crypto/cmp/cmp_client.c": {
         "defines": [
           "ossl_cmp_exchange_certConf",
           "ossl_cmp_exchange_error"
         ],
-        "recorded_by": null,
+        "recorded_by": "deferral:ossl_cmp_exchange_certConf",
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_client.rs"
+        ]
       },
       "crypto/cmp/cmp_ctx.c": {
         "defines": [
@@ -546,7 +525,9 @@
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_ctx.rs"
+        ]
       },
       "crypto/cmp/cmp_genm.c": {
         "defines": [],
@@ -576,11 +557,13 @@
           "ossl_cmp_hdr_set_transactionID",
           "ossl_cmp_hdr_update_messageTime"
         ],
-        "recorded_by": null,
+        "recorded_by": "deferral:ossl_cmp_general_name_is_NULL_DN",
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_hdr.rs"
+        ]
       },
       "crypto/cmp/cmp_http.c": {
         "defines": [],
@@ -588,7 +571,9 @@
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_http.rs"
+        ]
       },
       "crypto/cmp/cmp_msg.c": {
         "defines": [
@@ -613,11 +598,13 @@
           "ossl_cmp_pollRep_new",
           "ossl_cmp_pollReq_new"
         ],
-        "recorded_by": null,
+        "recorded_by": "deferral:ossl_cmp_certConf_new",
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_msg.rs"
+        ]
       },
       "crypto/cmp/cmp_server.c": {
         "defines": [],
@@ -625,7 +612,9 @@
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_server.rs"
+        ]
       },
       "crypto/cmp/cmp_status.c": {
         "defines": [
@@ -639,7 +628,9 @@
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_status.rs"
+        ]
       },
       "crypto/cmp/cmp_util.c": {
         "defines": [
@@ -653,18 +644,22 @@
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_util.rs"
+        ]
       },
       "crypto/cmp/cmp_vfy.c": {
         "defines": [
           "ossl_cmp_msg_check_update",
           "ossl_cmp_verify_popo"
         ],
-        "recorded_by": null,
+        "recorded_by": "deferral:ossl_cmp_msg_check_update",
         "subphases": [
           "12:12.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cmp/cmp_vfy.rs"
+        ]
       },
       "crypto/cms/cms_asn1.c": {
         "defines": [
@@ -693,7 +688,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_asn1.rs"
+        ]
       },
       "crypto/cms/cms_att.c": {
         "defines": [
@@ -703,7 +700,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_att.rs"
+        ]
       },
       "crypto/cms/cms_env.c": {
         "defines": [
@@ -724,7 +723,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_env.rs"
+        ]
       },
       "crypto/cms/cms_ess.c": {
         "defines": [
@@ -737,7 +738,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_ess.rs"
+        ]
       },
       "crypto/cms/cms_io.c": {
         "defines": [],
@@ -745,7 +748,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_io.rs"
+        ]
       },
       "crypto/cms/cms_kari.c": {
         "defines": [
@@ -756,7 +761,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_kari.rs"
+        ]
       },
       "crypto/cms/cms_kemri.c": {
         "defines": [
@@ -769,7 +776,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_kemri.rs"
+        ]
       },
       "crypto/cms/cms_lib.c": {
         "defines": [
@@ -790,11 +799,13 @@
           "ossl_cms_set1_keyid",
           "ossl_cms_sign_encrypt"
         ],
-        "recorded_by": null,
+        "recorded_by": "deferral:ossl_cms_sign_encrypt",
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_lib.rs"
+        ]
       },
       "crypto/cms/cms_pwri.c": {
         "defines": [
@@ -804,7 +815,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_pwri.rs"
+        ]
       },
       "crypto/cms/cms_sd.c": {
         "defines": [
@@ -819,7 +832,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_sd.rs"
+        ]
       },
       "crypto/cms/cms_smime.c": {
         "defines": [],
@@ -827,7 +842,9 @@
         "subphases": [
           "12:12.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/cms/cms_smime.rs"
+        ]
       },
       "crypto/conf/conf_api.c": {
         "defines": [
@@ -3154,7 +3171,9 @@
         "subphases": [
           "12:12.1"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/http/http_client.rs"
+        ]
       },
       "crypto/http/http_lib.c": {
         "defines": [],
@@ -3220,7 +3239,9 @@
         "subphases": [
           "12:12.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ocsp/ocsp_ext.rs"
+        ]
       },
       "crypto/ocsp/ocsp_http.c": {
         "defines": [],
@@ -3228,7 +3249,9 @@
         "subphases": [
           "12:12.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ocsp/ocsp_http.rs"
+        ]
       },
       "crypto/ocsp/ocsp_lib.c": {
         "defines": [],
@@ -3246,7 +3269,9 @@
         "subphases": [
           "12:12.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ocsp/ocsp_prn.rs"
+        ]
       },
       "crypto/ocsp/ocsp_srv.c": {
         "defines": [],
@@ -3629,7 +3654,9 @@
         "subphases": [
           "12:12.2"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/pkcs7/bio_pk7.rs"
+        ]
       },
       "crypto/pkcs7/pk7_asn1.c": {
         "defines": [],
@@ -3647,7 +3674,9 @@
         "subphases": [
           "12:12.2"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/pkcs7/pk7_attr.rs"
+        ]
       },
       "crypto/pkcs7/pk7_doit.c": {
         "defines": [],
@@ -3655,7 +3684,9 @@
         "subphases": [
           "12:12.2"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/pkcs7/pk7_doit.rs"
+        ]
       },
       "crypto/pkcs7/pk7_lib.c": {
         "defines": [
@@ -3682,7 +3713,9 @@
         "subphases": [
           "12:12.2"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/pkcs7/pk7_mime.rs"
+        ]
       },
       "crypto/pkcs7/pk7_smime.c": {
         "defines": [],
@@ -3690,7 +3723,9 @@
         "subphases": [
           "12:12.2"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/pkcs7/pk7_smime.rs"
+        ]
       },
       "crypto/poly1305/poly1305.c": {
         "defines": [
@@ -4242,7 +4277,9 @@
         "subphases": [
           "12:12.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ts/ts_asn1.rs"
+        ]
       },
       "crypto/ts/ts_conf.c": {
         "defines": [],
@@ -4250,7 +4287,9 @@
         "subphases": [
           "12:12.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ts/ts_conf.rs"
+        ]
       },
       "crypto/ts/ts_lib.c": {
         "defines": [],
@@ -4258,7 +4297,9 @@
         "subphases": [
           "12:12.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ts/ts_lib.rs"
+        ]
       },
       "crypto/ts/ts_req_print.c": {
         "defines": [],
@@ -4266,7 +4307,9 @@
         "subphases": [
           "12:12.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ts/ts_req_print.rs"
+        ]
       },
       "crypto/ts/ts_req_utils.c": {
         "defines": [],
@@ -4274,7 +4317,9 @@
         "subphases": [
           "12:12.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ts/ts_req_utils.rs"
+        ]
       },
       "crypto/ts/ts_rsp_print.c": {
         "defines": [],
@@ -4282,7 +4327,9 @@
         "subphases": [
           "12:12.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ts/ts_rsp_print.rs"
+        ]
       },
       "crypto/ts/ts_rsp_sign.c": {
         "defines": [],
@@ -4290,7 +4337,9 @@
         "subphases": [
           "12:12.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ts/ts_rsp_sign.rs"
+        ]
       },
       "crypto/ts/ts_rsp_utils.c": {
         "defines": [],
@@ -4298,7 +4347,9 @@
         "subphases": [
           "12:12.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ts/ts_rsp_utils.rs"
+        ]
       },
       "crypto/ts/ts_rsp_verify.c": {
         "defines": [],
@@ -4314,7 +4365,9 @@
         "subphases": [
           "12:12.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ts/ts_verify_ctx.rs"
+        ]
       },
       "crypto/x509/by_dir.c": {
         "defines": [],
@@ -6223,21 +6276,21 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 467
+      "transcribed_units": 512
     }
   },
-  "body_hash": "01e6841196aa34f10d941b12f6fb2ff8181ea94b4edf30085ec08b25171db0fa",
+  "body_hash": "b3fab95e3018dd55606809bef8a983f487f3fcf88aeef2f864d96f526ebb3c2a",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "a863a1ed32f0e870e3506e1a28da859719e91805dea3cd5ab1fa78f80880d82d"
+      "sha256": "1176c3477365846c634f1690b7d99c1c9e9d5caf307c8cb539d52e7c6671bcc3"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "0223ac4902777fdcfb7391ecf6b3514a12662c9b8711c17137c0f131fd1f93d8"
+      "sha256": "747454f857d07289ed35710b0a73e371a97e9ae786f33ba96d2574614af7c532"
     },
     {
       "name": "implemented-surface",
@@ -6252,7 +6305,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "98f7653f716ef0aebc67861dc5a8694980bd2490aa33a39b7034a8c705643074"
+      "sha256": "99f8793723090dd9c989ff3534ed4fe65f470c983030d7c08fa1ce52906d49b1"
     },
     {
       "name": "source-manifest",
@@ -6272,7 +6325,7 @@
     {
       "name": "plan-PHASE-12-SUBPHASES",
       "path": "docs/PHASE-12-SUBPHASES.md",
-      "sha256": "be79d7640df8d9713b530b18e208ea2da995f66e094b4046a2819292425a3345"
+      "sha256": "0ee813de85a6ab17d29a477111de4b96b0028013fdd61a838dd466a1a7a02971"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

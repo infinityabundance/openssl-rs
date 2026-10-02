@@ -41175,7 +41175,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "ad85053cce16d21f27b77850a636ec995487471859a2ccdf4ad0dbfd311823cf"
+      "sha256": "91cffff06546862feb3e2fd0f406fae1b06510a21d6c9e0338d3c163a6500734"
     },
     {
       "name": "phase7-courts",
@@ -41185,7 +41185,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "fcd7e8ae552052e5e962d627dc684ee597d0602a65baf24fdd3dd1d77425c795"
+      "sha256": "81d2c352e3fe99862802978bb7a5d49854e026f0f01858a26225744ce54a68bb"
     },
     {
       "name": "phase8-courts",
@@ -41195,7 +41195,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "dd7e41e276690aad34848ae6ad491d1c4dfc8db34c1ddecdee2b59a3db259cc8"
+      "sha256": "c9dcbd98d1f541857a46841ec1414452bd31f5e6b0d04a71cbf9cb9859f3d0f4"
     },
     {
       "name": "phase9-courts",
@@ -41205,7 +41205,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "73bd0ceeef8cbf73ca37ae730f7b51fa69863c2b06d1eb17951da3317bf390a0"
+      "sha256": "ce83152307a9a8b11c8e34151c46efa02ae948216bff9c7304a6c54427afe3db"
     },
     {
       "name": "phase10-courts",
@@ -41215,7 +41215,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "c19321c2374b739ed4635dd1ca6a11d9a4b6bfe6e5a86295cb5aa763c7735601"
+      "sha256": "551c449e5b8207f3fd6b5333365b4932190ac0d271d0cc0f22eb2213266e3e91"
     },
     {
       "name": "phase11-courts",
@@ -41225,7 +41225,7 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "332c76d632a11ac39f910cf86716c7a93c7b7c371c8f08e958e9e9d77280953c"
+      "sha256": "54de0cf0fdeff7b16227f1b231a28126576a48c61143c1ef198433786d6600f0"
     },
     {
       "name": "phase12-courts",
