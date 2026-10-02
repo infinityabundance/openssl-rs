@@ -875,6 +875,7 @@
               "RT-BIO-RESOLVE",
               "RT-BIO-SOCK",
               "RT-BN",
+              "RT-CMS",
               "RT-CODEC",
               "RT-CONF",
               "RT-DH",
@@ -1200,6 +1201,7 @@
               "RT-CIPHER",
               "RT-CIPHER-MEM",
               "RT-CMAC",
+              "RT-CMS",
               "RT-CODEC",
               "RT-COMP",
               "RT-CONF-MOD",
@@ -1303,6 +1305,7 @@
               "RT-ASN1-TIME",
               "RT-BIO-FILTER",
               "RT-BN-RAND",
+              "RT-CMS",
               "RT-CODEC",
               "RT-DRBG",
               "RT-EC",
@@ -2030,6 +2033,7 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
+              "RT-CMS",
               "RT-EVP-PBE",
               "RT-KEYFORMAT",
               "RT-PKCS12",
@@ -2057,6 +2061,7 @@
             "courts": [
               "RT-ASN1",
               "RT-ASN1-TEMPLATE",
+              "RT-CMS",
               "RT-KEYFORMAT",
               "RT-PKCS12",
               "RT-PUBKEY",
@@ -2485,6 +2490,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMS",
               "RT-CONF",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -2511,6 +2517,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMS",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STACK",
@@ -2596,6 +2603,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMS",
               "RT-CONF",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -3322,6 +3330,7 @@
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
               "RT-BIO-PRINT",
+              "RT-CMS",
               "RT-CONF",
               "RT-DH",
               "RT-EC",
@@ -3353,6 +3362,7 @@
             "courts": [
               "RT-BIO",
               "RT-BIO-ASN1",
+              "RT-CMS",
               "RT-EVP-BIO",
               "RT-PKCS7"
             ],
@@ -3786,6 +3796,7 @@
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
               "RT-BIO-PRINT",
+              "RT-CMS",
               "RT-CONF",
               "RT-DH",
               "RT-EC",
@@ -4132,6 +4143,7 @@
               "RT-BIO-DEBUG",
               "RT-BIO-FILTER",
               "RT-BIO-PRINT",
+              "RT-CMS",
               "RT-CONF",
               "RT-DH",
               "RT-EC",
@@ -4408,6 +4420,7 @@
               "RT-BIO-FILE",
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
+              "RT-CMS",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
@@ -10586,6 +10599,7 @@
               "RT-CIPHER",
               "RT-CIPHER-MEM",
               "RT-CMAC",
+              "RT-CMS",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
               "RT-EVP-PBE",
@@ -10604,6 +10618,7 @@
               "RT-CIPHER",
               "RT-CIPHER-MEM",
               "RT-CMAC",
+              "RT-CMS",
               "RT-EVP-BIO",
               "RT-EVP-CIPHER",
               "RT-EVP-PBE",
@@ -27938,6 +27953,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMS",
               "RT-KEYFORMAT",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -27971,6 +27987,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMS",
               "RT-KEYFORMAT",
               "RT-RSA",
               "RT-X509-ACERT",
@@ -27983,6 +28000,7 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-TEMPLATE",
+              "RT-CMS",
               "RT-KEYFORMAT",
               "RT-RSA",
               "RT-STORE",
@@ -28257,6 +28275,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMS",
               "RT-PKCS12",
               "RT-STORE",
               "RT-X509-PEM",
@@ -31485,6 +31504,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMS",
               "RT-STORE",
               "RT-X509-REF"
             ],
@@ -31518,6 +31538,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-CMS",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-STORE",
@@ -34991,10 +35012,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 275,
-          "directly_courted_called": 130,
+          "directly_courted": 326,
+          "directly_courted_called": 181,
           "directly_courted_referenced": 145,
-          "implemented": 275,
+          "implemented": 326,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -35006,6 +35027,349 @@
               "RT-PKCS7"
             ],
             "symbol": "BIO_new_PKCS7"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_ContentInfo_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_ContentInfo_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_ContentInfo_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_ContentInfo_new_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_ContentInfo_print_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_EncryptedData_set1_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_EnvelopedData_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_EnvelopedData_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_ReceiptRequest_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SharedInfo_encode"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignedData_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_SignedData_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add0_CertificateChoices"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add0_RevocationInfoChoice"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add0_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add0_crl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add1_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_add1_crl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_dataFinal"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_dataInit"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_get0_content"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_get0_eContentType"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_get0_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_get1_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_get1_crls"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_is_detached"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_set1_eContentType"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_set_detached"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_add1_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_add1_attr_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_add1_attr_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_add1_attr_by_txt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_delete_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_get0_data_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_get_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_get_attr_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_get_attr_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_signed_get_attr_count"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_stream"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_add1_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_add1_attr_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_add1_attr_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_add1_attr_by_txt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_delete_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_get0_data_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_get_attr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_get_attr_by_NID"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_get_attr_by_OBJ"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "CMS_unsigned_get_attr_count"
           },
           {
             "basis": "referenced",
@@ -36527,6 +36891,13 @@
             "symbol": "SMIME_write_PKCS7"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "d2i_CMS_ContentInfo"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE12-REF"
@@ -36707,6 +37078,13 @@
               "RT-PHASE12-REF"
             ],
             "symbol": "d2i_SCT_LIST"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS"
+            ],
+            "symbol": "i2d_CMS_ContentInfo"
           },
           {
             "basis": "referenced",
@@ -36936,14 +37314,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 12,
-        "staged_candidate_probes": 3
+        "staged_candidate_probes": 4
       }
     ],
     "totals": {
-      "directly_courted": 4756,
-      "directly_courted_called": 3758,
+      "directly_courted": 4807,
+      "directly_courted_called": 3809,
       "directly_courted_referenced": 998,
-      "implemented": 4764,
+      "implemented": 4815,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -36954,7 +37332,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "9f061698703d21bd57cdaa6bd595fd2b47096b5443748669c5cb483209f63bd2"
+      "sha256": "e05bb5442a5f0d4ec9d5f6dce192407babc77cd16171aa604d911dcf97769516"
     },
     {
       "name": "symbol-ownership",
@@ -36969,7 +37347,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "5cd8342848648bee00c25a8621b67e4a2ba2d9c9358a1fb6d1025c4dc9c54493"
+      "sha256": "0c7cc1e7f8d0773282cf72483281b8e2d23b6f8953f28dbaf75e929b78ca1149"
     },
     {
       "name": "phase3-courts",
@@ -36979,7 +37357,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "17bff8e9b6dfa15b22dbb1fdc2b3213a5491a8e23c022be49bfd68899c4db06b"
+      "sha256": "e82c66d9b42b64f140fb186b73c33e644c9c968a71ce8505c0fa1537716c9391"
     },
     {
       "name": "phase4-courts",
@@ -36989,7 +37367,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "5d81ccbea43897e9fb742b124901eb401684aef2691bc2156f9f2a7d0aaea94e"
+      "sha256": "6d4e8c2ae02bfb55acec3c25d3e8b4fc31a54a328f27eb55c0b0a0ec1bdec05d"
     },
     {
       "name": "phase5-courts",
@@ -36999,7 +37377,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "1d0cf8244941bf41ef8be26f8328f65ef088a2f528e100db8a30351a7f6d8c47"
+      "sha256": "5b8191bb8fd6016ff94434864b72017a02d8d920fa2e782e3a6b9ef71a52a1b4"
     },
     {
       "name": "phase6-courts",
@@ -37009,7 +37387,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "19e797a20fb090f588f9b928a48ef4e5cd607edffb583a2131bbf213cc7917ed"
+      "sha256": "725ae0dec53af12be93c218f600e9682407faadae0023c5b589486f8678b22b2"
     },
     {
       "name": "phase7-courts",
@@ -37019,7 +37397,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "f760877005e156d99012962fc45e2792adf048817d9e0ad79af464de88ecfcd3"
+      "sha256": "f7a67ec1883fa53025d5eb255a7992c041861db564e387238d1099e32829d682"
     },
     {
       "name": "phase8-courts",
@@ -37029,7 +37407,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "9b3da34db7a77acd2c1bb30e26f9eed5db6f6ff86739a3b2d748b747a8999c44"
+      "sha256": "2b1c1c42ec494cfb17eaaa33e4c215ae7920fcf51a88d1b5405d90e042797045"
     },
     {
       "name": "phase9-courts",
@@ -37039,7 +37417,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "ec6df941842a4c35f39b43830be368fecbcc6eeb54f23f3658ed3fca1026feed"
+      "sha256": "5531eb2b2874d5db9044c79db79225968bcc746489d1fa593e54e46a458fdfcb"
     },
     {
       "name": "phase10-courts",
@@ -37049,7 +37427,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "d0436d5fdae3d3cd3238745e777a0c234f92adcccef5e55ebad20a7dc0a1ece0"
+      "sha256": "98f7a02a436a31986d39ce85bc3687405b218caab79dcb0983497a6ddb02ab41"
     },
     {
       "name": "phase11-courts",
@@ -37059,12 +37437,12 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "d457c3501728743c6c12f5e0b3f210d8135da984a8f09252d18e57d861c7e29a"
+      "sha256": "697a1f235e5bcd9629c6528bd4896d8144909a6c4410e325da9d198b9622a409"
     },
     {
       "name": "phase12-courts",
       "path": "artifacts/phase12/COURTS.json",
-      "sha256": "c9f53e1e9f8e83bc1f4996e4aa3087da4a071b6ee9265d952492c5853b920879"
+      "sha256": "933133d4a81ad292e85764417d88914ad33119aa2cb700dfc7763b63083d1352"
     }
   ],
   "kind": "court-coverage",

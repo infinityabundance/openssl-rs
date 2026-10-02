@@ -293,10 +293,29 @@ Subphase 12.2 lands the PKCS#7 remainder: `pk7_asn1.c`'s other three `ANY DEFINE
 `PEM_read[_bio]_PKCS7`/`PEM_write[_bio]_PKCS7`. Every one of the 103 is now implemented rather
 than open; `RT-PKCS7` (`courts/phase12/rt_pkcs7_probe.c`) drives them from fixed DER fixtures.
 
+Subphase 12.3 opens the CMS container and has landed, so far, its object model and item groups:
+`cms_asn1.c`'s `CMS_ContentInfo_it`, `CMS_EnvelopedData_it`/`_dup`, `CMS_ReceiptRequest_it`,
+`CMS_SharedInfo_encode` and `CMS_SignedData_new`/`_free`; the whole of `cms_lib.c`
+(`CMS_ContentInfo_new`/`_new_ex`/`_free`/`_print_ctx`, `d2i_CMS_ContentInfo`/`i2d_CMS_ContentInfo`,
+the `CMS_get0_*`/`CMS_get1_*`/`CMS_is_detached`/`CMS_set_detached`/`CMS_set1_eContentType`
+accessors, the certificate and CRL choice builders and `CMS_dataInit`/`CMS_dataFinal`); the whole
+of `cms_att.c` (the twenty `CMS_{signed,unsigned}_*` attribute exports); `cms_io.c`'s `CMS_stream`;
+and `cms_enc.c`'s `CMS_EncryptedData_set1_key`. That is **51 of the 153 open rows**. The signer
+and recipient engines (`cms_sd.c`, `cms_env.c`), the KARI/KEMRI and password arms, the S/MIME
+entry points (`cms_smime.c`), the receipt surface (`cms_ess.c`) and the `PEM_*_CMS` readers
+(`cms_io.c`) still open here and are this subphase's remaining pass; the one hundred and two CMS
+rows that remain open are recorded in the ledger. `RT-CMS` (`courts/phase12/rt_cms_probe.c`) drives the
+landed surface over the fixed DER fixtures `courts/phase12/rt_cms_der.h` embeds: the decode/encode
+round trip, the accessors, the certificate/CRL choices, `CMS_stream`, the `data` container's
+init/final cycle, `CMS_SharedInfo_encode` and the `CMS_EncryptedData_set1_key` refusal arms. The
+twenty attribute exports are referenced and driven only through the accessor that reaches a
+`CMS_SignerInfo`, which is part of the remaining pass, so their behaviour is named `pending` in the
+probe rather than hidden.
+
 **Open exports (checked against the ledger):**
 
-Open is the 758-name remainder, and it is the whole of the container and protocol surface 12.2's
-PKCS#7 landing left. CMS opens 12.3 with `CMS_sign`, `CMS_verify`, `CMS_ContentInfo_new`,
+Open is the 707-name remainder, and it is the whole of the container and protocol surface 12.2's
+PKCS#7 landing left. CMS opens 12.3 with `CMS_sign`, `CMS_verify`, `CMS_SignedData_init`,
 `CMS_EncryptedData_encrypt` and `PEM_read_CMS`. CMP opens 12.4 with `OSSL_CMP_ATAV_create`,
 `OSSL_CMP_ATAVS_new` and `OSSL_CMP_ATAVS_free`. TS opens 12.5 with `TS_REQ_new`, `TS_RESP_CTX_new`
 and `TS_RESP_create_response`. OCSP opens 12.6 with `OCSP_request_sign`, `OCSP_basic_verify`,
