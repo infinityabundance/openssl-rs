@@ -32,8 +32,10 @@ use core::ptr;
 use crate::asn1::a_d2i_fp::ASN1_d2i_bio;
 use crate::asn1::a_i2d_fp::ASN1_i2d_bio;
 use crate::asn1::layout::{D2iOfVoid, I2dOfVoid};
-use crate::asn1::p8_pkey::{i2d_PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO_free, Pkcs8PrivKeyInfo};
-use crate::asn1::x_sig::{d2i_X509_SIG, i2d_X509_SIG, X509_SIG_free, X509_SIG_new};
+use crate::asn1::p8_pkey::{
+    d2i_PKCS8_PRIV_KEY_INFO, i2d_PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO_free, Pkcs8PrivKeyInfo,
+};
+use crate::asn1::x_sig::{d2i_X509_SIG, i2d_X509_SIG, X509Sig, X509_SIG_free, X509_SIG_new};
 use crate::encoder_lib::{OSSL_ENCODER_CTX_get_num_encoders, OSSL_ENCODER_to_bio};
 use crate::encoder_meth::OSSL_ENCODER_CTX_free;
 use crate::encoder_pkey::{
@@ -45,8 +47,10 @@ use crate::evp::evp_pkey::{ossl_evp_pkcs82pkey_ex, ossl_evp_pkey2pkcs8};
 use crate::evp::pem_bridge::PemPasswordCb;
 use crate::evp::pkey::{EVP_PKEY_free, OSSL_KEYMGMT_SELECT_ALL};
 use crate::pem::pem_lib::{
-    PEM_ASN1_write_bio, PEM_def_callback, PEM_BUFSIZE, PEM_STRING_PKCS8, PEM_STRING_PKCS8INF,
+    PEM_ASN1_read, PEM_ASN1_write, PEM_ASN1_write_bio, PEM_def_callback, PEM_BUFSIZE,
+    PEM_STRING_PKCS8, PEM_STRING_PKCS8INF,
 };
+use crate::pem::pem_oth::PEM_ASN1_read_bio;
 use crate::pkcs12::p12_p8d::PKCS8_decrypt;
 use crate::pkcs12::p12_p8e::PKCS8_encrypt;
 use crate::runtime::bio::{BIO_free, BIO_new_fp, Bio, BIO_NOCLOSE};
@@ -510,4 +514,237 @@ pub unsafe extern "C" fn d2i_PKCS8PrivateKey_fp(
     // SAFETY: `bp` is this frame's own.
     unsafe { BIO_free(bp) };
     ret
+}
+
+// ---------------------------------------------------------------------------------------------
+// `IMPLEMENT_PEM_rw(PKCS8, X509_SIG, PEM_STRING_PKCS8, X509_SIG)` — `pem_pk8.c:268`.
+// ---------------------------------------------------------------------------------------------
+
+/// `(d2i_of_void *)d2i_X509_SIG` — the cast this pair's reader spells.
+///
+/// # Safety
+/// The `void *` arguments must be `d2i_X509_SIG`'s own arguments.
+unsafe extern "C" fn d2i_void_x509_sig(
+    a: *mut *mut c_void,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut c_void {
+    // SAFETY: the caller's contract, restated in the typed decoder's terms.
+    unsafe { d2i_X509_SIG(a.cast::<*mut X509Sig>(), in_, len).cast::<c_void>() }
+}
+
+/// `(i2d_of_void *)i2d_X509_SIG` — the cast this pair's writers spell.
+///
+/// # Safety
+/// `x` must be live and `out` the encoder's own cursor.
+unsafe extern "C" fn i2d_void_x509_sig(x: *const c_void, out: *mut *mut c_uchar) -> c_int {
+    // SAFETY: the caller's contract, restated in the typed encoder's terms.
+    unsafe { i2d_X509_SIG(x.cast::<X509Sig>(), out) }
+}
+
+/// `X509_SIG *PEM_read_PKCS8(FILE *fp, X509_SIG **x, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_pk8.c:268`'s `IMPLEMENT_PEM_read_fp`.
+///
+/// # Safety
+/// `fp` an open readable stream; `x` the decoder's destination; `cb`/`u` passed to the reader.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_PKCS8(
+    fp: *mut c_void,
+    x: *mut *mut X509Sig,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut X509Sig {
+    // SAFETY: `d2i_X509_SIG` is the decoder and the arguments are the caller's.
+    unsafe {
+        PEM_ASN1_read(
+            d2i_void_x509_sig,
+            PEM_STRING_PKCS8,
+            fp,
+            x.cast::<*mut c_void>(),
+            cb,
+            u,
+        )
+    }
+    .cast::<X509Sig>()
+}
+
+/// `X509_SIG *PEM_read_bio_PKCS8(BIO *bp, X509_SIG **x, pem_password_cb *cb, void *u)` —
+/// `crypto/pem/pem_pk8.c:268`'s `IMPLEMENT_PEM_read_bio`.
+///
+/// # Safety
+/// `bp` a live readable BIO; `x` the decoder's destination; `cb`/`u` passed to the reader.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_bio_PKCS8(
+    bp: *mut Bio,
+    x: *mut *mut X509Sig,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut X509Sig {
+    // SAFETY: `d2i_X509_SIG` is the decoder and the arguments are the caller's.
+    unsafe {
+        PEM_ASN1_read_bio(
+            d2i_void_x509_sig,
+            PEM_STRING_PKCS8,
+            bp,
+            x.cast::<*mut c_void>(),
+            cb,
+            u,
+        )
+    }
+    .cast::<X509Sig>()
+}
+
+/// `int PEM_write_PKCS8(FILE *out, const X509_SIG *x)` — `crypto/pem/pem_pk8.c:268`'s
+/// `IMPLEMENT_PEM_write_fp`.
+///
+/// # Safety
+/// `out` an open writable stream; `x` a live `X509_SIG`.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_PKCS8(out: *mut c_void, x: *const X509Sig) -> c_int {
+    // SAFETY: `i2d_X509_SIG` is the encoder and the arguments are the caller's; the two NULLs are
+    // the macro's no-cipher arms.
+    unsafe {
+        PEM_ASN1_write(
+            Some(i2d_void_x509_sig),
+            PEM_STRING_PKCS8,
+            out,
+            x.cast::<c_void>(),
+            ptr::null(),
+            ptr::null(),
+            0,
+            None,
+            ptr::null_mut(),
+        )
+    }
+}
+
+/// `int PEM_write_bio_PKCS8(BIO *out, const X509_SIG *x)` — `crypto/pem/pem_pk8.c:268`'s
+/// `IMPLEMENT_PEM_write_bio`.
+///
+/// # Safety
+/// `out` a live writable BIO; `x` a live `X509_SIG`.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_PKCS8(out: *mut Bio, x: *const X509Sig) -> c_int {
+    // SAFETY: `out` and `x` are the caller's.
+    unsafe { pem_write_bio_pkcs8(out, x) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// `IMPLEMENT_PEM_rw(PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO, PEM_STRING_PKCS8INF,
+// PKCS8_PRIV_KEY_INFO)` — `pem_pk8.c:270`.
+// ---------------------------------------------------------------------------------------------
+
+/// `(d2i_of_void *)d2i_PKCS8_PRIV_KEY_INFO` — the cast this pair's reader spells.
+///
+/// # Safety
+/// The `void *` arguments must be `d2i_PKCS8_PRIV_KEY_INFO`'s own arguments.
+unsafe extern "C" fn d2i_void_p8inf(
+    a: *mut *mut c_void,
+    in_: *mut *const c_uchar,
+    len: c_long,
+) -> *mut c_void {
+    // SAFETY: the caller's contract, restated in the typed decoder's terms.
+    unsafe { d2i_PKCS8_PRIV_KEY_INFO(a.cast::<*mut Pkcs8PrivKeyInfo>(), in_, len).cast::<c_void>() }
+}
+
+/// `(i2d_of_void *)i2d_PKCS8_PRIV_KEY_INFO` — the cast this pair's writers spell.
+///
+/// # Safety
+/// `x` must be live and `out` the encoder's own cursor.
+unsafe extern "C" fn i2d_void_p8inf(x: *const c_void, out: *mut *mut c_uchar) -> c_int {
+    // SAFETY: the caller's contract, restated in the typed encoder's terms.
+    unsafe { i2d_PKCS8_PRIV_KEY_INFO(x.cast::<Pkcs8PrivKeyInfo>(), out) }
+}
+
+/// `PKCS8_PRIV_KEY_INFO *PEM_read_PKCS8_PRIV_KEY_INFO(FILE *fp, PKCS8_PRIV_KEY_INFO **x,
+/// pem_password_cb *cb, void *u)` — `crypto/pem/pem_pk8.c:270`'s `IMPLEMENT_PEM_read_fp`.
+///
+/// # Safety
+/// `fp` an open readable stream; `x` the decoder's destination; `cb`/`u` passed to the reader.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_PKCS8_PRIV_KEY_INFO(
+    fp: *mut c_void,
+    x: *mut *mut Pkcs8PrivKeyInfo,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut Pkcs8PrivKeyInfo {
+    // SAFETY: `d2i_PKCS8_PRIV_KEY_INFO` is the decoder and the arguments are the caller's.
+    unsafe {
+        PEM_ASN1_read(
+            d2i_void_p8inf,
+            PEM_STRING_PKCS8INF,
+            fp,
+            x.cast::<*mut c_void>(),
+            cb,
+            u,
+        )
+    }
+    .cast::<Pkcs8PrivKeyInfo>()
+}
+
+/// `PKCS8_PRIV_KEY_INFO *PEM_read_bio_PKCS8_PRIV_KEY_INFO(BIO *bp, PKCS8_PRIV_KEY_INFO **x,
+/// pem_password_cb *cb, void *u)` — `crypto/pem/pem_pk8.c:270`'s `IMPLEMENT_PEM_read_bio`.
+///
+/// # Safety
+/// `bp` a live readable BIO; `x` the decoder's destination; `cb`/`u` passed to the reader.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_bio_PKCS8_PRIV_KEY_INFO(
+    bp: *mut Bio,
+    x: *mut *mut Pkcs8PrivKeyInfo,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> *mut Pkcs8PrivKeyInfo {
+    // SAFETY: `d2i_PKCS8_PRIV_KEY_INFO` is the decoder and the arguments are the caller's.
+    unsafe {
+        PEM_ASN1_read_bio(
+            d2i_void_p8inf,
+            PEM_STRING_PKCS8INF,
+            bp,
+            x.cast::<*mut c_void>(),
+            cb,
+            u,
+        )
+    }
+    .cast::<Pkcs8PrivKeyInfo>()
+}
+
+/// `int PEM_write_PKCS8_PRIV_KEY_INFO(FILE *out, const PKCS8_PRIV_KEY_INFO *x)` —
+/// `crypto/pem/pem_pk8.c:270`'s `IMPLEMENT_PEM_write_fp`.
+///
+/// # Safety
+/// `out` an open writable stream; `x` a live `PKCS8_PRIV_KEY_INFO`.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_PKCS8_PRIV_KEY_INFO(
+    out: *mut c_void,
+    x: *const Pkcs8PrivKeyInfo,
+) -> c_int {
+    // SAFETY: `i2d_PKCS8_PRIV_KEY_INFO` is the encoder and the arguments are the caller's; the two
+    // NULLs are the macro's no-cipher arms.
+    unsafe {
+        PEM_ASN1_write(
+            Some(i2d_void_p8inf),
+            PEM_STRING_PKCS8INF,
+            out,
+            x.cast::<c_void>(),
+            ptr::null(),
+            ptr::null(),
+            0,
+            None,
+            ptr::null_mut(),
+        )
+    }
+}
+
+/// `int PEM_write_bio_PKCS8_PRIV_KEY_INFO(BIO *out, const PKCS8_PRIV_KEY_INFO *x)` —
+/// `crypto/pem/pem_pk8.c:270`'s `IMPLEMENT_PEM_write_bio`.
+///
+/// # Safety
+/// `out` a live writable BIO; `x` a live `PKCS8_PRIV_KEY_INFO`.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_PKCS8_PRIV_KEY_INFO(
+    out: *mut Bio,
+    x: *const Pkcs8PrivKeyInfo,
+) -> c_int {
+    // SAFETY: `out` and `x` are the caller's.
+    unsafe { pem_write_bio_pkcs8_priv_key_info(out, x) }
 }

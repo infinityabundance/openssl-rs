@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4537,
+      "sites": 4545,
       "unattributed": 0
     },
     "covered_files": [
@@ -177,6 +177,7 @@
       "crypto/pem/pem_oth.c",
       "crypto/pem/pem_pkey.c",
       "crypto/pem/pem_pk8.c",
+      "crypto/pem/pem_info.c",
       "crypto/pem/pvkfmt.c",
       "providers/implementations/ciphers/ciphercommon.c",
       "providers/implementations/ciphers/ciphercommon_block.c",
@@ -288,6 +289,7 @@
       "crypto/rsa/rsa_mp_names.c",
       "crypto/rsa/rsa_acvp_test_params.c",
       "crypto/asn1/x_algor.c",
+      "crypto/asn1/x_pkey.c",
       "crypto/asn1/p5_pbe.c",
       "crypto/asn1/p5_pbev2.c",
       "crypto/ffc/ffc_params_generate.c",
@@ -26347,6 +26349,111 @@
         "rel_source": "crypto/pem/pem_pk8.c"
       },
       {
+        "const_name": "PEM_INFO_36",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+        "function": "X509_INFO",
+        "generated": false,
+        "lib": 9,
+        "lib_symbol": "ERR_LIB_PEM",
+        "line": 36,
+        "macro": "ERR_raise",
+        "reason": 524295,
+        "reason_symbol": "ERR_R_BUF_LIB",
+        "rel_source": "crypto/pem/pem_info.c"
+      },
+      {
+        "const_name": "PEM_INFO_70",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+        "function": "PEM_X509_INFO_read_bio_ex",
+        "generated": false,
+        "lib": 9,
+        "lib_symbol": "ERR_LIB_PEM",
+        "line": 70,
+        "macro": "ERR_raise",
+        "reason": 524303,
+        "reason_symbol": "ERR_R_CRYPTO_LIB",
+        "rel_source": "crypto/pem/pem_info.c"
+      },
+      {
+        "const_name": "PEM_INFO_166",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+        "function": "PEM_X509_INFO_read_bio_ex",
+        "generated": false,
+        "lib": 9,
+        "lib_symbol": "ERR_LIB_PEM",
+        "line": 166,
+        "macro": "ERR_raise",
+        "reason": 524301,
+        "reason_symbol": "ERR_R_ASN1_LIB",
+        "rel_source": "crypto/pem/pem_info.c"
+      },
+      {
+        "const_name": "PEM_INFO_170",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+        "function": "PEM_X509_INFO_read_bio_ex",
+        "generated": false,
+        "lib": 9,
+        "lib_symbol": "ERR_LIB_PEM",
+        "line": 170,
+        "macro": "ERR_raise",
+        "reason": 524301,
+        "reason_symbol": "ERR_R_ASN1_LIB",
+        "rel_source": "crypto/pem/pem_info.c"
+      },
+      {
+        "const_name": "PEM_INFO_243",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+        "function": "PEM_X509_INFO_write_bio",
+        "generated": false,
+        "lib": 9,
+        "lib_symbol": "ERR_LIB_PEM",
+        "line": 243,
+        "macro": "ERR_raise",
+        "reason": 113,
+        "reason_symbol": "PEM_R_UNSUPPORTED_CIPHER",
+        "rel_source": "crypto/pem/pem_info.c"
+      },
+      {
+        "const_name": "PEM_INFO_256",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+        "function": "PEM_X509_INFO_write_bio",
+        "generated": false,
+        "lib": 9,
+        "lib_symbol": "ERR_LIB_PEM",
+        "line": 256,
+        "macro": "ERR_raise",
+        "reason": 127,
+        "reason_symbol": "PEM_R_CIPHER_IS_NULL",
+        "rel_source": "crypto/pem/pem_info.c"
+      },
+      {
+        "const_name": "PEM_INFO_272",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/pem/pem_info.c",
+        "function": "PEM_X509_INFO_write_bio",
+        "generated": false,
+        "lib": 9,
+        "lib_symbol": "ERR_LIB_PEM",
+        "line": 272,
+        "macro": "ERR_raise",
+        "reason": 113,
+        "reason_symbol": "PEM_R_UNSUPPORTED_CIPHER",
+        "rel_source": "crypto/pem/pem_info.c"
+      },
+      {
         "const_name": "PVKFMT_85",
         "data_format": null,
         "dynamic_reason": false,
@@ -48742,6 +48849,21 @@
         "rel_source": "crypto/asn1/x_algor.c"
       },
       {
+        "const_name": "X_PKEY_28",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/asn1/x_pkey.c",
+        "function": "X509_PKEY_new",
+        "generated": false,
+        "lib": 13,
+        "lib_symbol": "ERR_LIB_ASN1",
+        "line": 28,
+        "macro": "ERR_raise",
+        "reason": 524301,
+        "reason_symbol": "ERR_R_ASN1_LIB",
+        "rel_source": "crypto/asn1/x_pkey.c"
+      },
+      {
         "const_name": "P5_PBE_39",
         "data_format": null,
         "dynamic_reason": false,
@@ -69453,6 +69575,11 @@
       "sha256": "a67371cfc7238b0ff62f07f07878234e809f53252de8fe1872352f9a9a2f8f47"
     },
     {
+      "name": "authority:crypto/pem/pem_info.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/pem/pem_info.c",
+      "sha256": "62da2460ad5fa302cf86bf8f9932ba6ae4b40cb67eb0a5e4290458692176c2f1"
+    },
+    {
       "name": "authority:crypto/pem/pvkfmt.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/pem/pvkfmt.c",
       "sha256": "25c92f6d4e490c20f9b735853ed864403e291c8eb367eab5c0d0287a33856db2"
@@ -70006,6 +70133,11 @@
       "name": "authority:crypto/asn1/x_algor.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/asn1/x_algor.c",
       "sha256": "ffb86b0d5712f17c0c86a358fbda9abd8c2c97bbebc33918dc3a7113037d0541"
+    },
+    {
+      "name": "authority:crypto/asn1/x_pkey.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/asn1/x_pkey.c",
+      "sha256": "9fe6c52cb52065b5fd2c7ddf943f24a9ab284a79f971d3c87116b3c7ea91e241"
     },
     {
       "name": "authority:crypto/asn1/p5_pbe.c",

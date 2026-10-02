@@ -1,0 +1,224 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-X509-STORE` is a **behavioural** court: its probe calls the store/lookup/object objects 11.1a lands, the mutator surface 11.4a lands, the trust table and name checks 11.1b/11.5 land and the printers and `CONF`/`X509V3_CTX` builders 11.5 lands, over fixed DER fixtures, and the candidate's transcript must equal the authority's observation for observation. `RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's exports that no behavioural court drives -- the exports earlier strata inherited and the few of this stratum's own that `RT-X509-STORE` cannot reach (they need a store 11.1a does not build, read the opaque `X509_SIG_INFO`, or would compare the crate's recorded D333/D343 divergence) -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called`, and its phase-11 slice is the live count (docs/DECISIONS.md D199). `pending_courts` is now empty: every court the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) is registered above and named on each run, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts compare.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 1007,
+        "candidate_exit_code": 0,
+        "candidate_observations": 1007,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-REF",
+        "crashed": false,
+        "probe": "courts/phase11/rt_coverage_ref_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 525,
+        "candidate_exit_code": 0,
+        "candidate_observations": 525,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-STORE",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_store_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_store_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_store_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 197,
+        "candidate_exit_code": 0,
+        "candidate_observations": 197,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-VERIFY-SURFACE",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_verify_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_verify_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_verify_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 242,
+        "candidate_exit_code": 0,
+        "candidate_observations": 242,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-VERIFY-ENGINE",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_verify_engine_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_verify_engine_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_verify_engine_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 240,
+        "candidate_exit_code": 0,
+        "candidate_observations": 240,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-V3",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_v3_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_v3_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_v3_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 121,
+        "candidate_exit_code": 0,
+        "candidate_observations": 121,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-PEM",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_pem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_pem_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_pem_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 178,
+        "candidate_exit_code": 0,
+        "candidate_observations": 178,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-ACERT",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_acert_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_acert_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_acert_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 76,
+        "candidate_exit_code": 0,
+        "candidate_observations": 76,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-REQ",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_req_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_req_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_req_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 52,
+        "candidate_exit_code": 0,
+        "candidate_observations": 52,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_misc_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_misc_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_misc_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {},
+    "summary": {
+      "fail": 0,
+      "pass": 9,
+      "total": 9
+    }
+  },
+  "generator": "forensics/tools/phase11_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_coverage_ref_probe.c",
+      "sha256": "5d0f1c54ec4ce1a4be908a474cb5ba7360b47a754174919c4368315c978ba477"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_store_probe.c",
+      "sha256": "5e052a174b2b257a828608f2066db4bc835ec034b59590b1498527e006fb3fa1"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_verify_probe.c",
+      "sha256": "ac27c00bfe1f1cf588823ec8ff1d8dbb7b497b32953cd0c3adc76c3625af2e29"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_verify_engine_probe.c",
+      "sha256": "75c6983bb1b1a9312e1fa3f54ef1e5f4f35e86573b2406bfe7e71332716684e7"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_v3_probe.c",
+      "sha256": "79a43fa7b47a5d737ef98a0a62faf9d1dd8347d1d97eeb0abce5e5906d330745"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_pem_probe.c",
+      "sha256": "fc3ba929bf0ad2a14057e04742d6c43ccc918cad2a3745cc3ce40f07d782a83b"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_acert_probe.c",
+      "sha256": "fb8ac40130c74db77f414b2b0f1295d7aa04e2c5e0c12f8e7db383f146eb8cbb"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_req_probe.c",
+      "sha256": "cdcb90f11f5930f519a54191d5b596189a4c9b55d2f70b5c673dd4073dc1cc22"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_misc_probe.c",
+      "sha256": "6ae7b564e13659ad6f69d785473d46a410d5123fd819132c18e098da2fee7baf"
+    }
+  ],
+  "kind": "phase11-courts",
+  "schema": "openssl-rs/atlas/phase11-courts/v1"
+}

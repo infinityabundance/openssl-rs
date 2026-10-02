@@ -1,0 +1,633 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "challenges": [
+      {
+        "defect_class": "dropped-compile-flag",
+        "expected": {
+          "commands_delta": 0,
+          "distinct_sources_delta": 0,
+          "flag_gone": 1,
+          "unit_args_delta": -1,
+          "unit_defines_delta": -1
+        },
+        "expected_effect": "that unit's `defines` and `args` each lose exactly one element; `commands` and `distinct_sources` are unchanged",
+        "instrument": "phase22_build_commands.build_body",
+        "mutation": "remove one `-DFOO` token from one translation unit's captured argv",
+        "observed": {
+          "commands_delta": 0,
+          "distinct_sources_delta": 0,
+          "flag_gone": 1,
+          "unit_args_delta": -1,
+          "unit_defines_delta": -1
+        },
+        "plane": "22.1",
+        "reason": null,
+        "registered_court": null,
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "collapsed-same-spelled-entities",
+        "expected": {
+          "destinations": 2,
+          "reference_edges_delta": 2
+        },
+        "expected_effect": "two distinct destinations are stored and `reference_edges` rises by two; a name-keyed collapse would store one",
+        "instrument": "phase22_doxygen.build_body/_adjacency",
+        "mutation": "add one caller with two resolved reference targets that share the spelling `lookup` in two different files",
+        "observed": {
+          "destinations": 2,
+          "reference_edges_delta": 2
+        },
+        "plane": "22.2",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-DOXYGEN",
+          "observations": 39,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "lost-declaration-link",
+        "expected": {
+          "declarations_delta": 0,
+          "definitions_delta": 0,
+          "definitions_without_declaration_delta": 1
+        },
+        "expected_effect": "`definitions_without_declaration` rises by one while `definitions` and `declarations` do not move",
+        "instrument": "phase22_tu_ast.build_body",
+        "mutation": "remove the declaration-side link of one linked definition",
+        "observed": {
+          "declarations_delta": 0,
+          "definitions_delta": 0,
+          "definitions_without_declaration_delta": 1
+        },
+        "plane": "22.3",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-TU-AST",
+          "observations": 28,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "dropped-define-or-missed-skipped-range",
+        "expected": {
+          "defines_delta": -1,
+          "macros_defined_delta": -1,
+          "skipped_ranges_delta": -1
+        },
+        "expected_effect": "`defines` and `macros_defined` each fall by one; `skipped_ranges` falls by one",
+        "instrument": "phase22_conditional.build_body",
+        "mutation": "drop one uniquely-defined taken macro, and separately drop one skipped source range",
+        "observed": {
+          "defines_delta": -1,
+          "macros_defined_delta": -1,
+          "skipped_ranges_delta": -1
+        },
+        "plane": "22.4",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-CONDITIONAL",
+          "observations": 46,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "missed-generated-input",
+        "expected": {
+          "edges_delta": 1,
+          "generated_inputs_delta": 1,
+          "outputs_delta": 1
+        },
+        "expected_effect": "the new input is marked generated, so `generated_inputs`, `edges` and `outputs` each rise by one",
+        "instrument": "phase22_genealogy.build_body",
+        "mutation": "add a rule whose input is an existing generated output",
+        "observed": {
+          "edges_delta": 1,
+          "generated_inputs_delta": 1,
+          "outputs_delta": 1
+        },
+        "plane": "22.5",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-GENEALOGY",
+          "observations": 23,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "mis-resolved-relocation",
+        "expected": {
+          "name_left_index": 1,
+          "resolved_edges_delta": -3
+        },
+        "expected_effect": "the name leaves the definition index and exactly its live edges stop resolving",
+        "instrument": "phase22_binary_graph.derive_body",
+        "mutation": "remove the single definition that a set of live relocation edges resolved to",
+        "observed": {
+          "name_left_index": 1,
+          "resolved_edges_delta": -3
+        },
+        "plane": "22.6",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-BINARY",
+          "observations": 30,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "lost-dispatch-slot",
+        "expected": {
+          "dispatch_slot_delta": -1,
+          "edges_delta": -1,
+          "slot_edge_gone": 1
+        },
+        "expected_effect": "`edges` and the DISPATCH_SLOT kind count each fall by one and the slot's edge disappears",
+        "instrument": "phase22_dispatch.build_body",
+        "mutation": "remove one uniquely-targeted row from a DISPATCH_SLOT table",
+        "observed": {
+          "dispatch_slot_delta": -1,
+          "edges_delta": -1,
+          "slot_edge_gone": 1
+        },
+        "plane": "22.7",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-DISPATCH",
+          "observations": 27,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "omitted-installed-artefact",
+        "expected": {
+          "category_delta": -1,
+          "entries_delta": -1,
+          "path_absent": 1
+        },
+        "expected_effect": "`entries` and the library category each fall by one and the path is absent",
+        "instrument": "phase22_install_manifest.build_body",
+        "mutation": "omit one library entry from the walked install manifest",
+        "observed": {
+          "category_delta": -1,
+          "entries_delta": -1,
+          "path_absent": 1
+        },
+        "plane": "22.8",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-INSTALL",
+          "observations": 29,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "silently-zero-options",
+        "expected": {
+          "structured_delta_under_defect": -4314,
+          "structured_when_correct": 1,
+          "zero_options_under_defect": 1
+        },
+        "expected_effect": "`options_structured` collapses and `commands_with_zero_options` becomes non-zero",
+        "instrument": "phase22_cli_surface.build_body",
+        "mutation": "replace the option-row parser with the original Phase-1 defect that drops every row silently",
+        "observed": {
+          "structured_delta_under_defect": -4314,
+          "structured_when_correct": 1,
+          "zero_options_under_defect": 1
+        },
+        "plane": "22.9",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-CLI",
+          "observations": 35,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "missed-environment-read",
+        "expected": {
+          "env_sites_delta": -1,
+          "env_vars_delta": -1
+        },
+        "expected_effect": "`env_sites` and `env_vars` each fall by one",
+        "instrument": "phase22_config.build_body",
+        "mutation": "remove the only read site of a single-site environment variable",
+        "observed": {
+          "env_sites_delta": -1,
+          "env_vars_delta": -1
+        },
+        "plane": "22.10",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-CONFIG",
+          "observations": 26,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "undetected-pod-manual-disagreement",
+        "expected": {
+          "disagreements_rose": 1,
+          "undocumented_option_rose": 1
+        },
+        "expected_effect": "the disagreement count rises and RUNTIME_CLI_OPTION_UNDOCUMENTED rises",
+        "instrument": "phase22_pod.build_body/reconcile",
+        "mutation": "drop the documented options of a command page so the runtime option is undocumented",
+        "observed": {
+          "disagreements_rose": 1,
+          "undocumented_option_rose": 1
+        },
+        "plane": "22.11",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-POD",
+          "observations": 32,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      },
+      {
+        "defect_class": "dropped-test-edge",
+        "expected": {
+          "edge_gone": 1,
+          "edges_delta": -1
+        },
+        "expected_effect": "`edges` falls by one and that edge is gone",
+        "instrument": "phase22_crosswalk.build_body",
+        "mutation": "remove one called symbol from a test source",
+        "observed": {
+          "edge_gone": 1,
+          "edges_delta": -1
+        },
+        "plane": "22.13",
+        "reason": null,
+        "registered_court": {
+          "court": "RT-PHASE22-CROSSWALK",
+          "observations": 31,
+          "verdict": "pass"
+        },
+        "status": "DETECTED"
+      }
+    ],
+    "counts": {
+      "challenges": 12,
+      "detected": 12,
+      "fresh_regeneration_deferred": 0,
+      "fresh_regeneration_planes": 4,
+      "frf_fuzz_promoted_failures": 0,
+      "frf_fuzz_residual_produced": 6,
+      "frf_fuzz_seeds": 6,
+      "not_detected": 0,
+      "not_driven": 0
+    },
+    "fresh_regeneration": [
+      {
+        "capture_scratch_clean": true,
+        "committed_body_sha256": "5b08ecabb94b05c1cf0dcde401b9332f24c919d0e46913f0d6be2f972a23cbe1",
+        "method": "rebuild the execution capture with the transparent compiler wrapper in a clean scratch, normalise it with phase22_build_commands, hash the body, and compare to the committed artefact",
+        "note": "2 fresh regenerations; REQUIRED: every run equals the committed body",
+        "plane": "22.1",
+        "runs": [
+          {
+            "body_sha256": "5b08ecabb94b05c1cf0dcde401b9332f24c919d0e46913f0d6be2f972a23cbe1",
+            "match_committed": true,
+            "run": 1,
+            "seconds": 43
+          },
+          {
+            "body_sha256": "5b08ecabb94b05c1cf0dcde401b9332f24c919d0e46913f0d6be2f972a23cbe1",
+            "match_committed": true,
+            "run": 2,
+            "seconds": 43
+          }
+        ],
+        "seconds": 86,
+        "status": "verified"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/doxygen-entities.json",
+        "capture_scratch_clean": true,
+        "committed_body_sha256": "98bf8731bbd02756f498cd1176933acd55660f1d635f19081916ebdfb6c06cf6",
+        "method": "regenerate the raw input in a clean out-of-tree scratch with the pinned tool, run phase22_doxygen over it, hash the normalised body, and compare to the committed artefact",
+        "note": "2 fresh regeneration(s); REQUIRED: every run equals the committed body",
+        "plane": "22.2",
+        "runs": [
+          {
+            "body_sha256": "98bf8731bbd02756f498cd1176933acd55660f1d635f19081916ebdfb6c06cf6",
+            "match_committed": true,
+            "run": 1,
+            "seconds": 24
+          },
+          {
+            "body_sha256": "98bf8731bbd02756f498cd1176933acd55660f1d635f19081916ebdfb6c06cf6",
+            "match_committed": true,
+            "run": 2,
+            "seconds": 26
+          }
+        ],
+        "seconds": 50,
+        "status": "verified"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/tu-ast.json",
+        "capture_scratch_clean": true,
+        "committed_body_sha256": "6be58c6515bd40cb3637822d317f45574b71748db54049d3d20fb0a4696ca7dd",
+        "method": "regenerate the raw input in a clean out-of-tree scratch with the pinned tool, run phase22_tu_ast over it, hash the normalised body, and compare to the committed artefact",
+        "note": "2 fresh regeneration(s); REQUIRED: every run equals the committed body",
+        "plane": "22.3",
+        "runs": [
+          {
+            "body_sha256": "6be58c6515bd40cb3637822d317f45574b71748db54049d3d20fb0a4696ca7dd",
+            "match_committed": true,
+            "run": 1,
+            "seconds": 127
+          },
+          {
+            "body_sha256": "6be58c6515bd40cb3637822d317f45574b71748db54049d3d20fb0a4696ca7dd",
+            "match_committed": true,
+            "run": 2,
+            "seconds": 141
+          }
+        ],
+        "seconds": 268,
+        "status": "verified"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/conditional-surface.json",
+        "capture_scratch_clean": true,
+        "committed_body_sha256": "dfe386e66c133525dd588132467f77324b459e780bb9c4bcff5554e809dfd876",
+        "method": "regenerate the raw input in a clean out-of-tree scratch with the pinned tool, run phase22_conditional over it, hash the normalised body, and compare to the committed artefact",
+        "note": "2 fresh regeneration(s); REQUIRED: every run equals the committed body",
+        "plane": "22.4",
+        "runs": [
+          {
+            "body_sha256": "dfe386e66c133525dd588132467f77324b459e780bb9c4bcff5554e809dfd876",
+            "match_committed": true,
+            "run": 1,
+            "seconds": 16
+          },
+          {
+            "body_sha256": "dfe386e66c133525dd588132467f77324b459e780bb9c4bcff5554e809dfd876",
+            "match_committed": true,
+            "run": 2,
+            "seconds": 16
+          }
+        ],
+        "seconds": 32,
+        "status": "verified"
+      }
+    ],
+    "frf_fuzz": {
+      "counts": {
+        "no_residual": 0,
+        "promoted_failures": 0,
+        "residual_produced": 6,
+        "seeds": 6
+      },
+      "note": "a seed whose instrument returns a plausible answer without a residual is a candidate finding; only one whose silence is reproduced on replay is promoted into `promoted_failures`",
+      "promoted_failures": [],
+      "seeds": [
+        {
+          "error": null,
+          "expected_residual": "the row is refused rather than silently dropped",
+          "input": "an `in val        Input file` help-shaped row that is not `name type`",
+          "instrument": "phase22_cli_surface.classify_option_rows",
+          "observed": {
+            "options": [
+              "help"
+            ],
+            "refused": [
+              "in val        Input file"
+            ]
+          },
+          "replay_confirmed_failure": null,
+          "residual_count": 1,
+          "seed": "malformed-option-row",
+          "status": "residual-produced"
+        },
+        {
+          "error": null,
+          "expected_residual": "the nested name is excluded and the top-level name kept",
+          "input": "a nested `=over`/`=item` list inside a top-level environment item",
+          "instrument": "phase22_pod._env_names",
+          "observed": {
+            "names": [
+              "GOOD_VAR"
+            ]
+          },
+          "replay_confirmed_failure": null,
+          "residual_count": 1,
+          "seed": "nested-over-item",
+          "status": "residual-produced"
+        },
+        {
+          "error": null,
+          "expected_residual": "the condition evaluates to `None` (unresolved), not True or False",
+          "input": "a `#if` over a defined macro whose value is not an integer",
+          "instrument": "phase22_conditional.eval_cond",
+          "observed": {
+            "value": "None"
+          },
+          "replay_confirmed_failure": null,
+          "residual_count": 1,
+          "seed": "unresolved-if-condition",
+          "status": "residual-produced"
+        },
+        {
+          "error": null,
+          "expected_residual": "two distinct destinations, not one collapsed spelling",
+          "input": "two `static` functions named `lookup` in different files, both referenced",
+          "instrument": "phase22_doxygen._adjacency",
+          "observed": {
+            "destinations": [
+              "function|crypto/frf_a.c|1|lookup",
+              "function|crypto/frf_b.c|2|lookup"
+            ]
+          },
+          "replay_confirmed_failure": null,
+          "residual_count": 2,
+          "seed": "second-static-same-spelling",
+          "status": "residual-produced"
+        },
+        {
+          "error": null,
+          "expected_residual": "the object lands in `unexplained`, not in an other-bucket",
+          "input": "an archive member that no captured invocation and no makefile rule explains",
+          "instrument": "phase22_binary_graph.derive_body",
+          "observed": {
+            "listed": 1,
+            "unexplained_delta": 1
+          },
+          "replay_confirmed_failure": null,
+          "residual_count": 1,
+          "seed": "object-without-compile",
+          "status": "residual-produced"
+        },
+        {
+          "error": null,
+          "expected_residual": "the declaration is recovered whole from both lines",
+          "input": "a man3 SYNOPSIS declaration broken across two source lines",
+          "instrument": "phase22_pod._synopsis_declarations",
+          "observed": {
+            "decls": [
+              "int FRF_fuzz_split(const char *a, int b)"
+            ]
+          },
+          "replay_confirmed_failure": null,
+          "residual_count": 1,
+          "seed": "pod-synopsis-across-lines",
+          "status": "residual-produced"
+        }
+      ]
+    },
+    "harness": {
+      "classifier": "DETECTED iff expected == observed, NOT_DETECTED otherwise",
+      "court": "RT-PHASE22-FRF mutates a registered challenge's observed result in memory and requires NOT_DETECTED, proving the classifier is not a rubber stamp",
+      "statuses": [
+        "DETECTED",
+        "NOT_DETECTED",
+        "NOT_DRIVEN"
+      ]
+    },
+    "method": "For each plane a driver reconstructs the plane's raw model from its own committed artefact, runs the plane's pure builder on the baseline, applies one controlled mutation of the named defect class, runs the builder again, and diffs precise counters. `expected` is the delta the mutation implies and `observed` is what the instrument produced; a plane is DETECTED only when they are equal, NOT_DETECTED when the instrument is insensitive, and NOT_DRIVEN when the challenge cannot be constructed -- never a pass. Each record also carries the plane's own registered `courts()` verdict, run for real.",
+    "not_claims": [
+      "an in-memory mutation proves the instrument's logic reacts to its defect class; it does not prove the committed artefact is complete, only the fresh-regeneration challenge addresses reproducibility, and only for the planes it ran on",
+      "a plane recorded NOT_DRIVEN is a gap in this challenge, not a pass",
+      "the FRF-Fuzz campaign fuzzes the extractors' inputs, not the authority's runtime behaviour",
+      "the fresh-regeneration challenge reproduces the committed bodies in the documented environment; it does not claim the committed bodies are the only defensible ones",
+      "22.1's registered sensitivity court lives in phase22_courts.py rather than in phase22_build_commands.py, so its `registered_court` field is null; this plane drives its own 22.1 challenge independently"
+    ],
+    "plan_rule": "docs/PHASE-22-SUBPHASES.md section 6: 22.15 must challenge each extractor with a controlled mutation of its own defect class; a scanner that cannot detect the defect class it claims to inventory is not evidence.",
+    "reproducibility": {
+      "capture_scratch": "the out-of-tree scratch directory that 22.1's capture records as its own `directory` (a path under the container's temporary filesystem; not repeated here so the artefact carries no scratch path)",
+      "note": "22.2's configured view and 22.3/22.4's source resolution read include roots from 22.1's captured compile commands, whose `directory` is that ephemeral capture scratch. The committed bodies correspond to the scratch being absent, so --fresh removes it before the extractive planes and runs 22.1 -- whose rebuild recreates it -- last. A fresh run started with a populated capture scratch resolves the generated headers that rebuild produced and diverges from the committed 22.2/22.3/22.4 bytes; that dependency is recorded here rather than hidden by ordering.",
+      "observed_delta_when_scratch_present": {
+        "22.2_entities": "70075 (absent) -> 76222 (populated)",
+        "22.3": "committed body differs",
+        "22.4_surfaces": "2308 (absent) -> 2426 (populated)"
+      }
+    }
+  },
+  "generator": "forensics/tools/phase22_frf.py",
+  "inputs": [
+    {
+      "name": "phase-22-plan",
+      "path": "docs/PHASE-22-SUBPHASES.md",
+      "sha256": "9c5bff3c85e95c206bc39ccdf0d000e0ca36115211bba3d4fdad65e3650dad9a"
+    },
+    {
+      "name": "plane-22.2",
+      "path": "forensics/atlas/phase22/doxygen-entities.json",
+      "sha256": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97"
+    },
+    {
+      "name": "plane-22.3",
+      "path": "forensics/atlas/phase22/tu-ast.json",
+      "sha256": "865dd968b445bebcfdb87d6ea062cd048e3b79ecbf37507a2830e57efa5b5bc5"
+    },
+    {
+      "name": "plane-22.4",
+      "path": "forensics/atlas/phase22/conditional-surface.json",
+      "sha256": "6a9d0fb3cd1d3a29c222d290ff9f54f95a1ae04ddb152a8bb841488fcb573ed7"
+    },
+    {
+      "name": "plane-22.5",
+      "path": "forensics/atlas/phase22/generated-lineage.json",
+      "sha256": "924b0d9d14ff5fc93c9db8641ba63a4fa6909120c6570cefa672b22da7901521"
+    },
+    {
+      "name": "plane-22.6",
+      "path": "forensics/atlas/phase22/binary-reference-graph.json",
+      "sha256": "9b3ff1b523ca31271c631b6a128c59a40a78d193d50503f633bdc0bd4dc3b681"
+    },
+    {
+      "name": "plane-22.7",
+      "path": "forensics/atlas/phase22/dispatch-graph.json",
+      "sha256": "3116fdb3b6eceb9bb13d50a48d562e6c7ed481d6c500416f94ac6fcc6ba05253"
+    },
+    {
+      "name": "plane-22.8",
+      "path": "forensics/atlas/phase22/install-manifest.json",
+      "sha256": "e24286a7d51467027b1a8b11263adf6d5ce6f3237b215f53066be7b3531d5d67"
+    },
+    {
+      "name": "plane-22.9",
+      "path": "forensics/atlas/phase22/cli-surface.json",
+      "sha256": "add909b70351095a461f82da42854e9d67cf49d1ebe8508e222c7284820658de"
+    },
+    {
+      "name": "plane-22.10",
+      "path": "forensics/atlas/phase22/config-surface.json",
+      "sha256": "bbdca8b5812c5a6027f0ad8df6bce1826a85afa7da8fe6a69b4a760799438d1d"
+    },
+    {
+      "name": "plane-22.11",
+      "path": "forensics/atlas/phase22/pod-contract.json",
+      "sha256": "895ba11713e0bafc2b2bcdcf49e02ccf899e802d66c1885bf360d00af5914744"
+    },
+    {
+      "name": "plane-22.13",
+      "path": "forensics/atlas/phase22/test-crosswalk.json",
+      "sha256": "3048bd891e485e289eda2372c0dec581b0bfcab71014df54c1423489dbfba206"
+    },
+    {
+      "name": "fresh-22.1-RAW_REL",
+      "path": "forensics/atlas/phase22/raw/compile-commands.jsonl",
+      "sha256": "3bc7b1adcf8e49c0468c251d9775a6f8a191b2d2db803f1cbd2d97ea5307b69d"
+    },
+    {
+      "name": "fresh-22.1-OUT_REL",
+      "path": "forensics/atlas/phase22/compile-commands.json",
+      "sha256": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e"
+    },
+    {
+      "name": "fresh-22.2-OUT_REL",
+      "path": "forensics/atlas/phase22/doxygen-entities.json",
+      "sha256": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97"
+    },
+    {
+      "name": "fresh-22.2-CAPTURE_REL",
+      "path": "forensics/atlas/phase22/compile-commands.json",
+      "sha256": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e"
+    },
+    {
+      "name": "fresh-22.3-RAW_REL",
+      "path": "forensics/atlas/phase22/raw/compile-commands.jsonl",
+      "sha256": "3bc7b1adcf8e49c0468c251d9775a6f8a191b2d2db803f1cbd2d97ea5307b69d"
+    },
+    {
+      "name": "fresh-22.3-OUT_REL",
+      "path": "forensics/atlas/phase22/tu-ast.json",
+      "sha256": "865dd968b445bebcfdb87d6ea062cd048e3b79ecbf37507a2830e57efa5b5bc5"
+    },
+    {
+      "name": "fresh-22.3-CAPTURE_REL",
+      "path": "forensics/atlas/phase22/compile-commands.json",
+      "sha256": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e"
+    },
+    {
+      "name": "fresh-22.4-OUT_REL",
+      "path": "forensics/atlas/phase22/conditional-surface.json",
+      "sha256": "6a9d0fb3cd1d3a29c222d290ff9f54f95a1ae04ddb152a8bb841488fcb573ed7"
+    },
+    {
+      "name": "fresh-22.4-CAPTURE_REL",
+      "path": "forensics/atlas/phase22/compile-commands.json",
+      "sha256": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e"
+    }
+  ],
+  "kind": "phase22-frf-challenges",
+  "schema": "openssl-rs/atlas/phase22-frf-challenges/v1"
+}

@@ -271,8 +271,9 @@ pub(crate) unsafe fn ossl_evp_pkey2pkcs8(pkey: *const EvpPkey) -> *mut Pkcs8Priv
 /// `EVP_PKEY *EVP_PKCS82PKEY_ex(const PKCS8_PRIV_KEY_INFO *p8, OSSL_LIB_CTX *libctx,
 /// const char *propq)` — `crypto/evp/evp_pkey.c:73-124`.
 ///
-/// **Internal, not the export**: `EVP_PKCS82PKEY_ex` is `x509.h`'s and Phase 11's. It is
-/// transcribed because `crypto/pem/pem_pk8.c`'s `d2i_PKCS8PrivateKey_bio` (`:194`) calls it; the
+/// **The body both faces call**: the plain [`EVP_PKCS82PKEY`] and, since 11.7, the
+/// [`EVP_PKCS82PKEY_ex`] export itself. It was transcribed because `crypto/pem/pem_pk8.c`'s
+/// `d2i_PKCS8PrivateKey_bio` (`:194`) calls it; the
 /// decoder-first arm is the one a fixed key reaches (`decode_der2key.c` publishes the DER
 /// `PrivateKeyInfo` rows), with the legacy `evp_pkcs82pkey_legacy` fallback behind it.
 ///
@@ -392,6 +393,27 @@ pub unsafe extern "C" fn EVP_PKCS82PKEY(p8: *const Pkcs8PrivKeyInfo) -> *mut Evp
     // SAFETY: `p8` is live per the contract; the context arguments are NULL as the authority's
     // own wrapper passes them.
     unsafe { ossl_evp_pkcs82pkey_ex(p8, ptr::null_mut(), ptr::null()) }
+}
+
+/// `EVP_PKEY *EVP_PKCS82PKEY_ex(const PKCS8_PRIV_KEY_INFO *p8, OSSL_LIB_CTX *libctx,
+/// const char *propq)` — `crypto/evp/evp_pkey.c:72-120`.
+///
+/// **The export face of [`ossl_evp_pkcs82pkey_ex`]**, the `_ex` body with the caller's library
+/// context and property query rather than the defaults its sibling passes. `x509.h` declares it
+/// and Phase 11 owns the row; it is one line because the body is already transcribed and reachable
+/// (`crypto/pem/pem_pk8.c`'s `d2i_PKCS8PrivateKey_bio` calls the same internal function).
+///
+/// # Safety
+/// `p8` must be a live `PKCS8_PRIV_KEY_INFO`; `libctx` NULL or live; `propq` NULL or
+/// NUL-terminated. The answer is owned by the caller.
+#[no_mangle]
+pub unsafe extern "C" fn EVP_PKCS82PKEY_ex(
+    p8: *const Pkcs8PrivKeyInfo,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut EvpPkey {
+    // SAFETY: the arguments are forwarded under this function's contract.
+    unsafe { ossl_evp_pkcs82pkey_ex(p8, libctx, propq) }
 }
 
 /// `int EVP_PKEY_get_attr_count(const EVP_PKEY *key)` — `crypto/evp/evp_pkey.c:190-193`.

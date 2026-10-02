@@ -274,11 +274,20 @@ def active_phases() -> list[int]:
 
 
 def _clause_symbols(text: str, heading: str) -> list[str]:
-    """The backticked symbols of the paragraph that starts at `heading`."""
+    """The backticked symbols of the paragraph that starts at `heading`.
+
+    A blank line between the heading and its paragraph is part of the clause, not the end of it:
+    Phases 9 through 11 write the heading on a line of its own and the paragraph under it. Before
+    D483 this function stopped at the first `\\n\\n` -- which, for that shape, is the blank line
+    immediately after the heading -- and returned an empty list, so the gate found the heading,
+    checked no symbol, and passed. Phase 8, whose paragraph begins on the heading's own line, kept
+    working, so the regression the heading style introduced was silent. The empty-clause guard in
+    `verify` below is what keeps it from recurring.
+    """
     at = text.find(heading)
     if at < 0:
         raise ClaimMissing(f"the anchored status clause {heading!r}")
-    segment = text[at + len(heading):]
+    segment = text[at + len(heading):].lstrip("\n")
     stop = segment.find("\n\n")
     if stop >= 0:
         segment = segment[:stop]
@@ -299,7 +308,17 @@ def active_status_check(phase: int, path: str) -> Check:
             (OPEN_CLAUSE, "open", open_symbols, implemented),
         )
         for heading, claimed, pool, other in clauses:
-            for symbol in _clause_symbols(text, heading):
+            symbols = _clause_symbols(text, heading)
+            # A clause that names no symbol binds nothing: the gate would pass while making no
+            # claim at all. That is the state D483 found (a blank line after the heading emptied
+            # every clause), so a non-empty pool with an empty clause is a finding rather than a
+            # pass. The exemption D203 allows, for a quantity bound to a past moment, is an
+            # `EXEMPTIONS` entry on this check, not an empty clause.
+            if not symbols and pool:
+                findings.append((f"the status clause {heading!r} names no symbol, so it binds "
+                                 f"nothing", "an empty clause",
+                                 f"{len(pool)} symbol(s) in {source}"))
+            for symbol in symbols:
                 claim = f"the status clause {heading!r} names `{symbol}` as {claimed}"
                 if symbol in other:
                     actual = "open" if claimed == "landed" else "implemented"
@@ -351,10 +370,21 @@ CHECKS: list[Check] = [
 # Every active stratum's plan, discovered rather than listed: the next stratum to move to
 # `in-progress` inherits this gate by carrying the two anchored clause headings in its plan, and
 # a plan that has them removed fails `ClaimMissing` rather than passing silently.
+#
+# The gate binds a plan's *status sentences* to its *obligation ledger*, so it applies only to a
+# stratum that has both. Phase 22 is an atlas stratum rather than an export stratum: it owns no
+# exports, its plan carries neither clause, and its own closure rule lives in
+# `forensics/tools/phase_state.py`. Requiring the anchor rather than the file keeps that a
+# property of the document rather than a phase number special-cased here -- a plan that carries
+# the anchor and has no ledger still fails, in `active_status_check`.
 for _phase in active_phases():
     _plan = f"docs/PHASE-{_phase}-SUBPHASES.md"
-    if (REPO_ROOT / _plan).is_file():
-        CHECKS.append(active_status_check(_phase, _plan))
+    _path = REPO_ROOT / _plan
+    if not _path.is_file():
+        continue
+    if LANDED_CLAUSE not in _path.read_text(encoding="utf-8"):
+        continue
+    CHECKS.append(active_status_check(_phase, _plan))
 
 # A `(check id, document)` pair here is exempt from the numeric comparison, and the
 # reason is printed with every run. The entry below is a quantity a document legitimately
@@ -371,11 +401,69 @@ EXEMPTIONS: dict[tuple[str, str], str] = {
 }
 
 
+def self_test() -> int:
+    """Prove the active-status clause gate binds symbols rather than passing vacuously.
+
+    D483 found the gate empty: a heading followed by a blank line made `_clause_symbols` return
+    nothing, so a plan could name a landed export that was still open and still pass. This
+    reconstructs that shape and its opposite and asserts each verdict, so the regression cannot
+    return unnoticed.
+    """
+    phases = active_phases()
+    if not phases:
+        print("docs-consistency: self-test skipped: no stratum is in-progress")
+        return 0
+    phase = phases[0]
+    ledger = load_json(f"forensics/phase{phase}-obligations.json")["body"]
+    implemented = sorted(ledger["implemented"])
+    open_symbols = sorted(row["symbol"] for row in ledger["open"])
+    if not implemented or not open_symbols:
+        print("docs-consistency: self-test skipped: the ledger has an empty side")
+        return 0
+    check = active_status_check(phase, f"docs/PHASE-{phase}-SUBPHASES.md")
+
+    def text(landed: str, opened: str) -> str:
+        return f"{LANDED_CLAUSE}\n\n{landed}\n\n{OPEN_CLAUSE}\n\n{opened}\n"
+
+    ok = f"`{implemented[0]}`"
+    is_open = f"`{open_symbols[0]}`"
+    cases = [
+        # The blank-line shape: an open symbol claimed landed must be a finding.
+        ("a blank line then an open symbol claimed landed", text(is_open, is_open), True),
+        # An empty clause binds nothing, so it must be a finding when its pool is non-empty.
+        ("a blank line then no symbol",
+         text("No export of this stratum has landed.", is_open), True),
+        # The truthful shape must pass.
+        ("a blank line then a landed symbol claimed landed", text(ok, is_open), False),
+    ]
+    failures = []
+    for desc, body, expect in cases:
+        try:
+            findings = check.verify(body)
+        except ClaimMissing as exc:
+            findings = [(str(exc), "missing", "")]
+        if bool(findings) != expect:
+            failures.append(f"{desc}: expected finding={expect}, got {findings!r}")
+    if failures:
+        print("docs-consistency: self-test: FAIL")
+        for failure in failures:
+            print(f"  {failure}")
+        return 1
+    print(f"docs-consistency: self-test: ok ({len(cases)} cases against phase {phase})")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--list", action="store_true",
                     help="print the checked quantities and their generated sources")
+    ap.add_argument("--self-test", action="store_true",
+                    help="prove the active-status clause gate binds symbols rather than "
+                         "passing vacuously")
     args = ap.parse_args(argv)
+
+    if args.self_test:
+        return self_test()
 
     if args.list:
         for check in CHECKS:

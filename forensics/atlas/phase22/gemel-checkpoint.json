@@ -1,0 +1,1251 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "authority": "openssl-3.6.4-production",
+    "counts": {
+      "census_entities": 98753,
+      "census_residual_classes": 15,
+      "census_residuals": 62936,
+      "obligation_units": 1814,
+      "obligations": 5,
+      "phase11_implemented": 1319,
+      "phase11_open": 148,
+      "plane_ledger_implemented": 18,
+      "plane_ledger_open": 0,
+      "planes_bound": 16,
+      "regenerated_changed_outputs": 1,
+      "regenerated_count_deltas": 5,
+      "regenerated_generators": 13,
+      "regenerated_outputs": 16,
+      "unknown_by_class": {
+        "POD_NAME_NOT_IN_ATLAS": 167
+      },
+      "unknown_intersecting_roots": 0,
+      "unknown_total": 167,
+      "x509_gate_baseline": 1,
+      "x509_gate_current": 105,
+      "x509_gate_grown": 104,
+      "x509_satisfied": true
+    },
+    "identity": {
+      "atlas": {
+        "binary-reference-graph": "9b3ff1b523ca31271c631b6a128c59a40a78d193d50503f633bdc0bd4dc3b681",
+        "cli-surface": "add909b70351095a461f82da42854e9d67cf49d1ebe8508e222c7284820658de",
+        "compatibility-closure": "58734faebbd0b99bfdd612a0b799c1892eb2bcf8f0288ddefc9c97917d1183a6",
+        "compile-commands": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e",
+        "compile-commands-raw": "3bc7b1adcf8e49c0468c251d9775a6f8a191b2d2db803f1cbd2d97ea5307b69d",
+        "conditional-surface": "6a9d0fb3cd1d3a29c222d290ff9f54f95a1ae04ddb152a8bb841488fcb573ed7",
+        "config-surface": "bbdca8b5812c5a6027f0ad8df6bce1826a85afa7da8fe6a69b4a760799438d1d",
+        "dispatch-graph": "3116fdb3b6eceb9bb13d50a48d562e6c7ed481d6c500416f94ac6fcc6ba05253",
+        "doxygen-entities": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97",
+        "frf-challenges": "d9d7fdf41c5ad5e9bcbc9ffb48fe6723a5c376f13783b8f5838f2d6b5fb07d96",
+        "generated-lineage": "924b0d9d14ff5fc93c9db8641ba63a4fa6909120c6570cefa672b22da7901521",
+        "install-manifest": "e24286a7d51467027b1a8b11263adf6d5ce6f3237b215f53066be7b3531d5d67",
+        "pod-contract": "895ba11713e0bafc2b2bcdcf49e02ccf899e802d66c1885bf360d00af5914744",
+        "reconciliation": "a9d17ba2e4602221d244701d002004d04218977021745bcc83cba1220cfffcba",
+        "test-crosswalk": "3048bd891e485e289eda2372c0dec581b0bfcab71014df54c1423489dbfba206",
+        "tu-ast": "865dd968b445bebcfdb87d6ea062cd048e3b79ecbf37507a2830e57efa5b5bc5"
+      },
+      "authority": "openssl-3.6.4-production",
+      "checkpoint_state_hash": "eae43ba13c9a279ca4f36a672e677914225ee4039bb8c23d0d335b78c0bc2aea",
+      "plan": {
+        "path": "docs/PHASE-22-SUBPHASES.md",
+        "sha256": "79da72f3c941471c1c81a7fe7d17c250e621af45e17d08d95d055da5ac2b3627"
+      }
+    },
+    "non_export_obligations": [
+      {
+        "count": 120,
+        "detail": {
+          "cipher_aliases": 47,
+          "commands": 120,
+          "deprecated": 1,
+          "digest_aliases": 18,
+          "phase1_capture_commands": 55,
+          "phase1_capture_structured_options": 0,
+          "standard": 54,
+          "structured_options": 4314
+        },
+        "evidence": [
+          "forensics/atlas/phase22/cli-surface.json",
+          "forensics/atlas/openssl-3.6.4-production/cli-commands.json"
+        ],
+        "proposed_owner": "16",
+        "reason": "22.9 enumerates the CLI from the authority's own built binary: the digest and cipher pseudo-commands are part of the surface, so the Phase-1 capture's standard-command count is not the CLI. The whole namespace needs an owner, and CLI is a Phase-16 surface.",
+        "surface": "cli-surface"
+      },
+      {
+        "count": 176,
+        "detail": {
+          "config_entry_points": 56,
+          "default_paths": 10,
+          "directives": 115,
+          "env_named_sites": 63,
+          "environment_variables": 51
+        },
+        "evidence": [
+          "forensics/atlas/phase22/config-surface.json"
+        ],
+        "proposed_owner": "16",
+        "reason": "22.10 treats an environment variable and a configuration directive as contract items with a name, a default, a scope and an effect, and a default path as a filesystem contract. None is an export; all are Phase-16 (config/filesystem) surfaces.",
+        "surface": "configuration-environment-filesystem"
+      },
+      {
+        "count": 1189,
+        "detail": {
+          "reconciliation_dispatch_unwitnessed_in_binary": 741,
+          "slot_edges": 1193,
+          "slot_targets": 972,
+          "slots_without_target": 721,
+          "tables": 373,
+          "without_ast_caller_edges": 1189,
+          "without_ast_caller_targets": 968
+        },
+        "evidence": [
+          "forensics/atlas/phase22/dispatch-graph.json",
+          "forensics/atlas/phase22/reconciliation.json"
+        ],
+        "proposed_owner": "the phase owning each slot's containing unit",
+        "reason": "The architecture of this library is function-pointer tables, so a dispatch or callback slot has no `caller -> target` edge anywhere in the source; 22.7 recovers the slot edges themselves, which no export ledger records. Each slot's owner is the phase owning the unit the table lives in.",
+        "surface": "dispatch-callback-slots-without-source-caller"
+      },
+      {
+        "count": 162,
+        "detail": {
+          "by_category": {
+            "cli": 1,
+            "cmake_config": 2,
+            "directory": 27,
+            "engine": 4,
+            "header": 142,
+            "html_doc": 909,
+            "library": 4,
+            "manpage": 903,
+            "openssl_cnf": 4,
+            "pkgconfig": 3,
+            "provider_module": 1,
+            "script": 3,
+            "symlink": 5663
+          },
+          "directories": 27,
+          "entries": 7666,
+          "files": 1976,
+          "required_compatibility": 162,
+          "symlinks": 5663
+        },
+        "evidence": [
+          "forensics/atlas/phase22/install-manifest.json"
+        ],
+        "proposed_owner": "16 or 20 (distribution/packaging)",
+        "reason": "22.8 lets the authority's own install define the distribution surface: the installed cmake config files, pkg-config files, headers, manpages and modules the constitution had not modelled. A distribution entry is not an export, so only the packaging phase (16) or the distribution phase (20) can own it.",
+        "surface": "installed-distribution-required-compatibility"
+      },
+      {
+        "count": 167,
+        "detail": {
+          "atlas_public_name_not_in_pod": 1255,
+          "pod_contract_own_class_count": 872,
+          "pod_only_residuals": 3294,
+          "reconciled_pod_name_not_in_atlas": 167
+        },
+        "evidence": [
+          "forensics/atlas/phase22/pod-contract.json",
+          "forensics/atlas/phase22/reconciliation.json"
+        ],
+        "proposed_owner": "the phase owning each name's declaring header",
+        "reason": "The canonical 3.6.4 POD manual documents names the header/API atlas and the `.num` inventory do not publish. Undocumented is not nonexistent and documented-but-unimplemented is an obligation an export ledger has no unit for; each name's owner is the phase whose header would declare it, which is the ownership rule `forensics/atlas/symbol-ownership.json` applies to exports. The reconciled census names 167 such names; 22.11's own pod-contract reconciliation records 872 (its narrower join against the Phase-1 atlas).",
+        "surface": "pod-documented-unimplemented-api"
+      }
+    ],
+    "phase11_continuation": {
+      "counts": {
+        "atlas_owned": 1455,
+        "deferred_to_later_phase": 0,
+        "implemented": 1319,
+        "open_in_this_stratum": 148,
+        "owned": 1467,
+        "received_by_handoff": 12
+      },
+      "implemented_total": 1319,
+      "open_total": 148
+    },
+    "plan": {
+      "path": "docs/PHASE-22-SUBPHASES.md",
+      "sha256": "79da72f3c941471c1c81a7fe7d17c250e621af45e17d08d95d055da5ac2b3627"
+    },
+    "plane_ledger": {
+      "counts": {
+        "atlas_owned": 18,
+        "deferred_to_later_phase": 0,
+        "implemented": 18,
+        "open_in_this_stratum": 0,
+        "owned": 18,
+        "received_by_handoff": 0
+      },
+      "implemented": [
+        "22.0",
+        "22.1",
+        "22.10",
+        "22.11",
+        "22.12",
+        "22.13",
+        "22.14",
+        "22.15",
+        "22.16",
+        "22.17",
+        "22.2",
+        "22.3",
+        "22.4",
+        "22.5",
+        "22.6",
+        "22.7",
+        "22.8",
+        "22.9"
+      ],
+      "open": [],
+      "unit": "compatibility plane"
+    },
+    "planes": [
+      {
+        "name": "binary-reference-graph",
+        "path": "forensics/atlas/phase22/binary-reference-graph.json",
+        "sha256": "9b3ff1b523ca31271c631b6a128c59a40a78d193d50503f633bdc0bd4dc3b681"
+      },
+      {
+        "name": "cli-surface",
+        "path": "forensics/atlas/phase22/cli-surface.json",
+        "sha256": "add909b70351095a461f82da42854e9d67cf49d1ebe8508e222c7284820658de"
+      },
+      {
+        "name": "compatibility-closure",
+        "path": "forensics/atlas/phase22/compatibility-closure.json",
+        "sha256": "58734faebbd0b99bfdd612a0b799c1892eb2bcf8f0288ddefc9c97917d1183a6"
+      },
+      {
+        "name": "compile-commands",
+        "path": "forensics/atlas/phase22/compile-commands.json",
+        "sha256": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e"
+      },
+      {
+        "name": "compile-commands-raw",
+        "path": "forensics/atlas/phase22/raw/compile-commands.jsonl",
+        "sha256": "3bc7b1adcf8e49c0468c251d9775a6f8a191b2d2db803f1cbd2d97ea5307b69d"
+      },
+      {
+        "name": "conditional-surface",
+        "path": "forensics/atlas/phase22/conditional-surface.json",
+        "sha256": "6a9d0fb3cd1d3a29c222d290ff9f54f95a1ae04ddb152a8bb841488fcb573ed7"
+      },
+      {
+        "name": "config-surface",
+        "path": "forensics/atlas/phase22/config-surface.json",
+        "sha256": "bbdca8b5812c5a6027f0ad8df6bce1826a85afa7da8fe6a69b4a760799438d1d"
+      },
+      {
+        "name": "dispatch-graph",
+        "path": "forensics/atlas/phase22/dispatch-graph.json",
+        "sha256": "3116fdb3b6eceb9bb13d50a48d562e6c7ed481d6c500416f94ac6fcc6ba05253"
+      },
+      {
+        "name": "doxygen-entities",
+        "path": "forensics/atlas/phase22/doxygen-entities.json",
+        "sha256": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97"
+      },
+      {
+        "name": "frf-challenges",
+        "path": "forensics/atlas/phase22/frf-challenges.json",
+        "sha256": "d9d7fdf41c5ad5e9bcbc9ffb48fe6723a5c376f13783b8f5838f2d6b5fb07d96"
+      },
+      {
+        "name": "generated-lineage",
+        "path": "forensics/atlas/phase22/generated-lineage.json",
+        "sha256": "924b0d9d14ff5fc93c9db8641ba63a4fa6909120c6570cefa672b22da7901521"
+      },
+      {
+        "name": "install-manifest",
+        "path": "forensics/atlas/phase22/install-manifest.json",
+        "sha256": "e24286a7d51467027b1a8b11263adf6d5ce6f3237b215f53066be7b3531d5d67"
+      },
+      {
+        "name": "pod-contract",
+        "path": "forensics/atlas/phase22/pod-contract.json",
+        "sha256": "895ba11713e0bafc2b2bcdcf49e02ccf899e802d66c1885bf360d00af5914744"
+      },
+      {
+        "name": "reconciliation",
+        "path": "forensics/atlas/phase22/reconciliation.json",
+        "sha256": "a9d17ba2e4602221d244701d002004d04218977021745bcc83cba1220cfffcba"
+      },
+      {
+        "name": "test-crosswalk",
+        "path": "forensics/atlas/phase22/test-crosswalk.json",
+        "sha256": "3048bd891e485e289eda2372c0dec581b0bfcab71014df54c1423489dbfba206"
+      },
+      {
+        "name": "tu-ast",
+        "path": "forensics/atlas/phase22/tu-ast.json",
+        "sha256": "865dd968b445bebcfdb87d6ea062cd048e3b79ecbf37507a2830e57efa5b5bc5"
+      }
+    ],
+    "regeneration": {
+      "changed_paths": [
+        "forensics/phase22-obligations.json"
+      ],
+      "conclusion": "regeneration WOULD move counts: 5 body scalar delta(s) across 1 output(s); the deltas are recorded inline in each output's body_scalar_deltas and must be dispositioned before the ledger is committed",
+      "generators": [
+        {
+          "args": [],
+          "generator": "forensics/tools/symbol_ownership.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/atlas/symbol-ownership.json",
+              "scalar_deltas": [],
+              "sha256_after": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137",
+              "sha256_before": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/implemented_surface.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/atlas/implemented-surface.json",
+              "scalar_deltas": [],
+              "sha256_after": "26e7bd4f728f4fc0bcf76296d5b089ae260b8325337b865960be62acff02f368",
+              "sha256_before": "26e7bd4f728f4fc0bcf76296d5b089ae260b8325337b865960be62acff02f368"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase3_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/phase3-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "cff08d78c8e2683e3daced0defa57bbbf750f89cab6ca895d352f5924674bfce",
+              "sha256_before": "cff08d78c8e2683e3daced0defa57bbbf750f89cab6ca895d352f5924674bfce"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase4_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/phase4-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "2d5eccd368b6c83aa44745566583ee4856bde16a6852d4b6c5ada9b9f2ad6720",
+              "sha256_before": "2d5eccd368b6c83aa44745566583ee4856bde16a6852d4b6c5ada9b9f2ad6720"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase5_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/phase5-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "176411c1272e8725b6ea7cb2c63a1619e870245177f69b8ca0d401d0da2327da",
+              "sha256_before": "176411c1272e8725b6ea7cb2c63a1619e870245177f69b8ca0d401d0da2327da"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase6_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/phase6-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "81a75c26c081363c6b773b89558a0fff764184ce5ede9934a87e7b40f774ad1b",
+              "sha256_before": "81a75c26c081363c6b773b89558a0fff764184ce5ede9934a87e7b40f774ad1b"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase7_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/phase7-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "30633f0fef061711a2b494b15f39727ae9867268da10f9127ea4d142ee63522c",
+              "sha256_before": "30633f0fef061711a2b494b15f39727ae9867268da10f9127ea4d142ee63522c"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase8_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/phase8-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "1211f2c3af84f1959885e69168b1ade7c88bb6ee3c60e7b244478d89f54b8c61",
+              "sha256_before": "1211f2c3af84f1959885e69168b1ade7c88bb6ee3c60e7b244478d89f54b8c61"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase9_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/phase9-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "10e0dd0ebc6175f8aa44735be3742b3a1cf610b91ed0e8c5dc7983a3fed3202f",
+              "sha256_before": "10e0dd0ebc6175f8aa44735be3742b3a1cf610b91ed0e8c5dc7983a3fed3202f"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase10_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/phase10-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "41aac11cd4ca11d07ceaaf3f97b46c140d7844a3ac09bc05f1aabbf71493115b",
+              "sha256_before": "41aac11cd4ca11d07ceaaf3f97b46c140d7844a3ac09bc05f1aabbf71493115b"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase11_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/phase11-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "97d6545ccffebd13872adeee888c1214b645bf093cdca26e7ef2a0d3af8bf1b0",
+              "sha256_before": "97d6545ccffebd13872adeee888c1214b645bf093cdca26e7ef2a0d3af8bf1b0"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [],
+          "generator": "forensics/tools/phase22_obligations.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [
+                {
+                  "after": 17,
+                  "before": 18,
+                  "path": "body.counts.implemented"
+                },
+                {
+                  "after": 1,
+                  "before": 0,
+                  "path": "body.counts.open_in_this_stratum"
+                },
+                {
+                  "after": 17,
+                  "before": 18,
+                  "path": "body.implemented.length"
+                },
+                {
+                  "after": "22.17",
+                  "before": "22.16",
+                  "path": "body.implemented[16]"
+                },
+                {
+                  "after": 1,
+                  "before": 0,
+                  "path": "body.open.length"
+                }
+              ],
+              "changed": true,
+              "path": "forensics/phase22-obligations.json",
+              "scalar_deltas": [
+                {
+                  "after": 17,
+                  "before": 18,
+                  "path": ".body.counts.implemented"
+                },
+                {
+                  "after": 1,
+                  "before": 0,
+                  "path": ".body.counts.open_in_this_stratum"
+                },
+                {
+                  "after": 17,
+                  "before": 18,
+                  "path": ".body.implemented.length"
+                },
+                {
+                  "after": "22.17",
+                  "before": "22.16",
+                  "path": ".body.implemented[16]"
+                },
+                {
+                  "after": 1,
+                  "before": 0,
+                  "path": ".body.open.length"
+                }
+              ],
+              "sha256_after": "63767cac05422ab731a4c33ad9bcd4570d30efda21f49d04b2ded3eafc63e51e",
+              "sha256_before": "87c1bdefabf98026a096d05aa9dcea811332a12668bfafb9223535557a5360fe"
+            }
+          ],
+          "returncode": 0
+        },
+        {
+          "args": [
+            "--authority",
+            "openssl-3.6.4-production"
+          ],
+          "generator": "forensics/tools/atlas_parity.py",
+          "outputs": [
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/atlas/openssl-3.6.4-production/parity-obligations.json",
+              "scalar_deltas": [],
+              "sha256_after": "564f4683e1c2b7399f68feb9d58b7ed969d9986835b7cf749002c140d6383bf1",
+              "sha256_before": "564f4683e1c2b7399f68feb9d58b7ed969d9986835b7cf749002c140d6383bf1"
+            },
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/atlas/openssl-3.6.4-production/surface-reconciliation.json",
+              "scalar_deltas": [],
+              "sha256_after": "43bf1b33f3dd6f9bf503bfc084bf46dd5bf1048523c693650bccc0d4df037b18",
+              "sha256_before": "43bf1b33f3dd6f9bf503bfc084bf46dd5bf1048523c693650bccc0d4df037b18"
+            },
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/atlas/openssl-3.6.4-production/coverage.json",
+              "scalar_deltas": [],
+              "sha256_after": "3acf06eaa7d5c92b86c471dde39b3673518000ed91b8aeeeb86e057771fdca05",
+              "sha256_before": "3acf06eaa7d5c92b86c471dde39b3673518000ed91b8aeeeb86e057771fdca05"
+            },
+            {
+              "body_scalar_deltas": [],
+              "changed": false,
+              "path": "forensics/atlas/openssl-3.6.4-production/PARITY_MATRIX.md",
+              "scalar_deltas": [],
+              "sha256_after": "82b65e9298174688e42479bb16078a212b914a22b481686321d88b86951f9000",
+              "sha256_before": "82b65e9298174688e42479bb16078a212b914a22b481686321d88b86951f9000"
+            }
+          ],
+          "returncode": 0
+        }
+      ],
+      "method": "each generator is run in the repository, its declared outputs are compared with the bytes found before the run, and the bytes found before the run are restored -- so this is a measurement that leaves the tree as it found it",
+      "normalization": "gemel-checkpoint.json is hidden while the generators run, because forensics/phase22-obligations.json names it as its 22.16 plane; with the checkpoint present, that one plane would move from open to implemented by construction rather than by any export changing",
+      "summary": {
+        "body_count_deltas": 5,
+        "changed_outputs": 1,
+        "changed_outputs_with_body_delta": 1,
+        "generators": 13,
+        "generators_failed": 0,
+        "outputs": 16,
+        "scalar_deltas": 5
+      }
+    },
+    "residual_census": {
+      "by_class": {
+        "AST_ONLY": 9793,
+        "BINARY_ONLY": 44,
+        "CLI_ONLY": 4434,
+        "CONDITIONAL_ONLY": 141,
+        "CONFIG_ONLY": 127,
+        "CROSSWALK_ONLY": 400,
+        "DECLARED_NOT_DEFINED": 2,
+        "DISPATCH_UNWITNESSED_IN_BINARY": 741,
+        "DOXYGEN_ONLY": 24047,
+        "GENERATED_ONLY": 1034,
+        "GENERATED_WITHOUT_PROVENANCE": 1,
+        "INSTALL_ONLY": 7666,
+        "PHASE1_ONLY": 11045,
+        "POD_NAME_NOT_IN_ATLAS": 167,
+        "POD_ONLY": 3294
+      },
+      "by_disposition": {
+        "AUTHORITY_BUG_BOUNDARY": 2,
+        "DEMO_ONLY": 88,
+        "EXCLUDED_BY_BUILD_PROFILE": 220,
+        "GENERATED_INTERMEDIATE": 8849,
+        "INTERNAL_REACHABLE": 4097,
+        "INTERNAL_UNREACHABLE_PROFILE": 52083,
+        "PLATFORM_EXCLUDED": 23,
+        "REQUIRED_COMPATIBILITY": 31897,
+        "TEST_ONLY": 1318,
+        "TOOLING_ONLY": 9,
+        "UNKNOWN": 167
+      },
+      "entities": 98753,
+      "intersecting_root_keys": [],
+      "joins": 16,
+      "residuals": 62936,
+      "root_families_unpopulated": [
+        "runtime-behaviour",
+        "protocol",
+        "dynamic-loading"
+      ],
+      "root_reachable": 31962,
+      "unjoined": [
+        {
+          "planes": "install-manifest <-> generated-lineage",
+          "why": "the manifest records distribution-relative paths under the install prefix and genealogy records build-relative paths under the build directory; only library, engine and module basenames coincide, so only those are joined.",
+          "would_join_on": "installed path = build output path"
+        },
+        {
+          "planes": "tu-ast <-> non-C translation units",
+          "why": "the 43 assembly/perlasm units cannot have a C AST (22.3 records them as non_c_translation_units); 22.6's binary graph is the only plane that sees them, so their symbols are BINARY_ONLY by construction and not a defect.",
+          "would_join_on": "translation unit"
+        },
+        {
+          "planes": "config-surface <-> tu-ast",
+          "why": "config-surface records directive *sites* at the parser and consumer, but the directive name has no C symbol identity; joining sites would require the AST call graph of s_config.c, which the directive record does not carry.",
+          "would_join_on": "directive call site file+line"
+        },
+        {
+          "planes": "dispatch-graph <-> dispatch-graph (macro-generated tables)",
+          "why": "six dispatch families are built by macro expansion and have no literal table in the source (`body.not_recovered`); there is no source location for a slot to join on.",
+          "would_join_on": "literal table initializer"
+        },
+        {
+          "planes": "runtime-behaviour / protocol / dynamic-loading roots",
+          "why": "the plan names these root families but no extraction plane in 22.1-22.13 observes runtime, wire or loader behaviour; the reconciliation records them as unpopulated rather than inventing a witness.",
+          "would_join_on": "declared compatibility root"
+        }
+      ],
+      "unknown_sets": {
+        "POD_NAME_NOT_IN_ATLAS": [
+          "sym|pod-doc:ASN1_OP_PRINT_",
+          "sym|pod-doc:BIO_LOOKUP_SERVER",
+          "sym|pod-doc:BIO_PARSE_PRIO_SERV",
+          "sym|pod-doc:EVP_TYPE_CTX_get_algor",
+          "sym|pod-doc:EVP_TYPE_CTX_get_algor_params",
+          "sym|pod-doc:EVP_TYPE_CTX_set_algor_params",
+          "sym|pod-doc:EVP_ciphername",
+          "sym|pod-doc:LHASH",
+          "sym|pod-doc:LHASH_DOALL_ARG_FN_TYPE",
+          "sym|pod-doc:OPENSSL_Applink",
+          "sym|pod-doc:OPENSSL_MALLOC_FAILURES",
+          "sym|pod-doc:OPENSSL_MALLOC_FD",
+          "sym|pod-doc:OPENSSL_MALLOC_SEED",
+          "sym|pod-doc:OPENSSL_armcap",
+          "sym|pod-doc:OPENSSL_ia32cap",
+          "sym|pod-doc:OPENSSL_mem_debug_pop",
+          "sym|pod-doc:OPENSSL_mem_debug_push",
+          "sym|pod-doc:OPENSSL_ppccap",
+          "sym|pod-doc:OPENSSL_riscvcap",
+          "sym|pod-doc:OPENSSL_s390xcap",
+          "sym|pod-doc:OSSL_PARAM_BLD_push_TYPE",
+          "sym|pod-doc:OSSL_PARAM_construct_TYPE",
+          "sym|pod-doc:OSSL_PARAM_get_TYPE",
+          "sym|pod-doc:OSSL_PARAM_set_TYPE",
+          "sym|pod-doc:OSSL_TARGET_CERT_free",
+          "sym|pod-doc:OSSL_TARGET_CERT_new",
+          "sym|pod-doc:PEM_read_bio_TYPE",
+          "sym|pod-doc:PEM_write_TYPE",
+          "sym|pod-doc:PEM_write_bio_TYPE",
+          "sym|pod-doc:PROFESSION_INFOS_free",
+          "sym|pod-doc:PROFESSION_INFOS_new",
+          "sym|pod-doc:SSL_set_new_pending_conn_cb_fn",
+          "sym|pod-doc:TYPE_dup",
+          "sym|pod-doc:TYPE_free",
+          "sym|pod-doc:TYPE_get_ex_data",
+          "sym|pod-doc:TYPE_get_ex_new_index",
+          "sym|pod-doc:TYPE_it",
+          "sym|pod-doc:TYPE_new",
+          "sym|pod-doc:TYPE_print_ctx",
+          "sym|pod-doc:TYPE_set_ex_data",
+          "sym|pod-doc:aead_id",
+          "sym|pod-doc:algorithm_description",
+          "sym|pod-doc:algorithm_names",
+          "sym|pod-doc:app_data",
+          "sym|pod-doc:application",
+          "sym|pod-doc:asn1_const_cb",
+          "sym|pod-doc:asn1_ex_clear",
+          "sym|pod-doc:asn1_ex_d2i",
+          "sym|pod-doc:asn1_ex_d2i_ex",
+          "sym|pod-doc:asn1_ex_free",
+          "sym|pod-doc:asn1_ex_i2d",
+          "sym|pod-doc:asn1_ex_new",
+          "sym|pod-doc:asn1_ex_new_ex",
+          "sym|pod-doc:asn1_ex_print",
+          "sym|pod-doc:boundary",
+          "sym|pod-doc:custom",
+          "sym|pod-doc:custom_ui",
+          "sym|pod-doc:d2i_OSSL_ISSUER_SERIAL",
+          "sym|pod-doc:d2i_OSSL_OBJECT_DIGEST_INFO",
+          "sym|pod-doc:d2i_OSSL_TARGET_CERT",
+          "sym|pod-doc:d2i_TYPE",
+          "sym|pod-doc:d2i_TYPEPrivateKey_bio",
+          "sym|pod-doc:d2i_TYPEPrivateKey_fp",
+          "sym|pod-doc:d2i_TYPEPublicKey",
+          "sym|pod-doc:d2i_TYPEPublicKey_bio",
+          "sym|pod-doc:d2i_TYPEPublicKey_fp",
+          "sym|pod-doc:d2i_TYPE_PUBKEY",
+          "sym|pod-doc:d2i_TYPE_PUBKEY_bio",
+          "sym|pod-doc:d2i_TYPE_PUBKEY_fp",
+          "sym|pod-doc:d2i_TYPE_bio",
+          "sym|pod-doc:d2i_TYPE_fp",
+          "sym|pod-doc:d2i_TYPEparams",
+          "sym|pod-doc:d2i_TYPEparams_bio",
+          "sym|pod-doc:d2i_TYPEparams_fp",
+          "sym|pod-doc:data_size",
+          "sym|pod-doc:data_type",
+          "sym|pod-doc:detail",
+          "sym|pod-doc:enc_offset",
+          "sym|pod-doc:errors",
+          "sym|pod-doc:fd",
+          "sym|pod-doc:frame_type",
+          "sym|pod-doc:function_id",
+          "sym|pod-doc:i2d_OSSL_ISSUER_SERIAL",
+          "sym|pod-doc:i2d_OSSL_OBJECT_DIGEST_INFO",
+          "sym|pod-doc:i2d_OSSL_TARGET_CERT",
+          "sym|pod-doc:i2d_TYPE",
+          "sym|pod-doc:i2d_TYPEPrivateKey",
+          "sym|pod-doc:i2d_TYPEPrivateKey_bio",
+          "sym|pod-doc:i2d_TYPEPrivateKey_fp",
+          "sym|pod-doc:i2d_TYPEPublicKey",
+          "sym|pod-doc:i2d_TYPEPublicKey_bio",
+          "sym|pod-doc:i2d_TYPEPublicKey_fp",
+          "sym|pod-doc:i2d_TYPE_PUBKEY",
+          "sym|pod-doc:i2d_TYPE_PUBKEY_bio",
+          "sym|pod-doc:i2d_TYPE_PUBKEY_fp",
+          "sym|pod-doc:i2d_TYPE_bio",
+          "sym|pod-doc:i2d_TYPE_fp",
+          "sym|pod-doc:i2d_TYPEparams",
+          "sym|pod-doc:i2d_TYPEparams_bio",
+          "sym|pod-doc:i2d_TYPEparams_fp",
+          "sym|pod-doc:id",
+          "sym|pod-doc:implementation",
+          "sym|pod-doc:indent",
+          "sym|pod-doc:int",
+          "sym|pod-doc:kdf_id",
+          "sym|pod-doc:kem_id",
+          "sym|pod-doc:lh_TYPE_delete",
+          "sym|pod-doc:lh_TYPE_doall",
+          "sym|pod-doc:lh_TYPE_doall_arg",
+          "sym|pod-doc:lh_TYPE_error",
+          "sym|pod-doc:lh_TYPE_flush",
+          "sym|pod-doc:lh_TYPE_free",
+          "sym|pod-doc:lh_TYPE_get_down_load",
+          "sym|pod-doc:lh_TYPE_insert",
+          "sym|pod-doc:lh_TYPE_new",
+          "sym|pod-doc:lh_TYPE_num_items",
+          "sym|pod-doc:lh_TYPE_retrieve",
+          "sym|pod-doc:lh_TYPE_set_down_load",
+          "sym|pod-doc:local",
+          "sym|pod-doc:msgs_processed",
+          "sym|pod-doc:name",
+          "sym|pod-doc:ndef_bio",
+          "sym|pod-doc:num_msg",
+          "sym|pod-doc:openssl_user_macros",
+          "sym|pod-doc:property_definition",
+          "sym|pod-doc:quic_error_code",
+          "sym|pod-doc:quic_reason",
+          "sym|pod-doc:reason",
+          "sym|pod-doc:reason_len",
+          "sym|pod-doc:ref_lock",
+          "sym|pod-doc:ref_offset",
+          "sym|pod-doc:req",
+          "sym|pod-doc:return_size",
+          "sym|pod-doc:revents",
+          "sym|pod-doc:serial",
+          "sym|pod-doc:size",
+          "sym|pod-doc:size_t",
+          "sym|pod-doc:sk_TYPE_compfunc",
+          "sym|pod-doc:sk_TYPE_deep_copy",
+          "sym|pod-doc:sk_TYPE_delete",
+          "sym|pod-doc:sk_TYPE_delete_ptr",
+          "sym|pod-doc:sk_TYPE_dup",
+          "sym|pod-doc:sk_TYPE_find",
+          "sym|pod-doc:sk_TYPE_find_all",
+          "sym|pod-doc:sk_TYPE_find_ex",
+          "sym|pod-doc:sk_TYPE_free",
+          "sym|pod-doc:sk_TYPE_insert",
+          "sym|pod-doc:sk_TYPE_is_sorted",
+          "sym|pod-doc:sk_TYPE_new",
+          "sym|pod-doc:sk_TYPE_new_null",
+          "sym|pod-doc:sk_TYPE_new_reserve",
+          "sym|pod-doc:sk_TYPE_num",
+          "sym|pod-doc:sk_TYPE_pop",
+          "sym|pod-doc:sk_TYPE_pop_free",
+          "sym|pod-doc:sk_TYPE_push",
+          "sym|pod-doc:sk_TYPE_reserve",
+          "sym|pod-doc:sk_TYPE_set",
+          "sym|pod-doc:sk_TYPE_set_cmp_func",
+          "sym|pod-doc:sk_TYPE_shift",
+          "sym|pod-doc:sk_TYPE_sort",
+          "sym|pod-doc:sk_TYPE_unshift",
+          "sym|pod-doc:sk_TYPE_value",
+          "sym|pod-doc:sk_TYPE_zero",
+          "sym|pod-doc:ui_data",
+          "sym|pod-doc:undefined",
+          "sym|pod-doc:user",
+          "sym|pod-doc:void"
+        ]
+      }
+    },
+    "sort_key": "planes by name; plane_ledger lists sorted; residual_census.by_class and unknown_sets by key; unknown_sets lists sorted; non_export_obligations by surface; regeneration.generators by script; every list sorted",
+    "what_this_is": "Phase 22.16's durable knowledge state: the content hashes of every Phase-22 plane artefact and of the plan, the plane ledger, 22.12's residual census with its UNKNOWN sets named, the Phase-11 continuation state (ledger counts, 22.14's x509_slice verdict and the x509 gate), a proposal for the non-export surfaces the export ledgers cannot carry, and the measured result of regenerating the export ledgers. It is a projection for a later session to resume from, not a seal (22.17 writes that) and not a parity claim.",
+    "x509_gate": {
+      "baseline": [
+        "X509_self_signed"
+      ],
+      "current": [
+        "X509_STORE_CTX_cleanup",
+        "X509_STORE_CTX_free",
+        "X509_STORE_CTX_get0_cert",
+        "X509_STORE_CTX_get0_chain",
+        "X509_STORE_CTX_get0_current_crl",
+        "X509_STORE_CTX_get0_current_issuer",
+        "X509_STORE_CTX_get0_param",
+        "X509_STORE_CTX_get0_parent_ctx",
+        "X509_STORE_CTX_get0_policy_tree",
+        "X509_STORE_CTX_get0_rpk",
+        "X509_STORE_CTX_get0_untrusted",
+        "X509_STORE_CTX_get1_chain",
+        "X509_STORE_CTX_get1_issuer",
+        "X509_STORE_CTX_get_cert_crl",
+        "X509_STORE_CTX_get_check_crl",
+        "X509_STORE_CTX_get_check_issued",
+        "X509_STORE_CTX_get_check_policy",
+        "X509_STORE_CTX_get_check_revocation",
+        "X509_STORE_CTX_get_cleanup",
+        "X509_STORE_CTX_get_current_cert",
+        "X509_STORE_CTX_get_error",
+        "X509_STORE_CTX_get_error_depth",
+        "X509_STORE_CTX_get_ex_data",
+        "X509_STORE_CTX_get_explicit_policy",
+        "X509_STORE_CTX_get_get_crl",
+        "X509_STORE_CTX_get_get_issuer",
+        "X509_STORE_CTX_get_lookup_certs",
+        "X509_STORE_CTX_get_lookup_crls",
+        "X509_STORE_CTX_get_num_untrusted",
+        "X509_STORE_CTX_get_verify",
+        "X509_STORE_CTX_get_verify_cb",
+        "X509_STORE_CTX_new",
+        "X509_STORE_CTX_new_ex",
+        "X509_STORE_CTX_purpose_inherit",
+        "X509_STORE_CTX_set0_crls",
+        "X509_STORE_CTX_set0_dane",
+        "X509_STORE_CTX_set0_param",
+        "X509_STORE_CTX_set0_rpk",
+        "X509_STORE_CTX_set0_trusted_stack",
+        "X509_STORE_CTX_set0_untrusted",
+        "X509_STORE_CTX_set0_verified_chain",
+        "X509_STORE_CTX_set_cert",
+        "X509_STORE_CTX_set_current_cert",
+        "X509_STORE_CTX_set_current_reasons",
+        "X509_STORE_CTX_set_default",
+        "X509_STORE_CTX_set_depth",
+        "X509_STORE_CTX_set_error",
+        "X509_STORE_CTX_set_error_depth",
+        "X509_STORE_CTX_set_ex_data",
+        "X509_STORE_CTX_set_flags",
+        "X509_STORE_CTX_set_get_crl",
+        "X509_STORE_CTX_set_ocsp_resp",
+        "X509_STORE_CTX_set_purpose",
+        "X509_STORE_CTX_set_time",
+        "X509_STORE_CTX_set_trust",
+        "X509_STORE_CTX_set_verify",
+        "X509_STORE_CTX_set_verify_cb",
+        "X509_VERIFY_PARAM_add0_policy",
+        "X509_VERIFY_PARAM_add0_table",
+        "X509_VERIFY_PARAM_add1_host",
+        "X509_VERIFY_PARAM_clear_flags",
+        "X509_VERIFY_PARAM_free",
+        "X509_VERIFY_PARAM_get0",
+        "X509_VERIFY_PARAM_get0_email",
+        "X509_VERIFY_PARAM_get0_host",
+        "X509_VERIFY_PARAM_get0_name",
+        "X509_VERIFY_PARAM_get0_peername",
+        "X509_VERIFY_PARAM_get1_ip_asc",
+        "X509_VERIFY_PARAM_get_auth_level",
+        "X509_VERIFY_PARAM_get_count",
+        "X509_VERIFY_PARAM_get_depth",
+        "X509_VERIFY_PARAM_get_flags",
+        "X509_VERIFY_PARAM_get_hostflags",
+        "X509_VERIFY_PARAM_get_inh_flags",
+        "X509_VERIFY_PARAM_get_purpose",
+        "X509_VERIFY_PARAM_get_time",
+        "X509_VERIFY_PARAM_inherit",
+        "X509_VERIFY_PARAM_lookup",
+        "X509_VERIFY_PARAM_move_peername",
+        "X509_VERIFY_PARAM_new",
+        "X509_VERIFY_PARAM_set1",
+        "X509_VERIFY_PARAM_set1_email",
+        "X509_VERIFY_PARAM_set1_host",
+        "X509_VERIFY_PARAM_set1_ip",
+        "X509_VERIFY_PARAM_set1_ip_asc",
+        "X509_VERIFY_PARAM_set1_name",
+        "X509_VERIFY_PARAM_set1_policies",
+        "X509_VERIFY_PARAM_set_auth_level",
+        "X509_VERIFY_PARAM_set_depth",
+        "X509_VERIFY_PARAM_set_flags",
+        "X509_VERIFY_PARAM_set_hostflags",
+        "X509_VERIFY_PARAM_set_inh_flags",
+        "X509_VERIFY_PARAM_set_purpose",
+        "X509_VERIFY_PARAM_set_time",
+        "X509_VERIFY_PARAM_set_trust",
+        "X509_VERIFY_PARAM_table_cleanup",
+        "X509_cmp_current_time",
+        "X509_cmp_time",
+        "X509_cmp_timeframe",
+        "X509_get_pubkey_parameters",
+        "X509_gmtime_adj",
+        "X509_policy_tree_free",
+        "X509_self_signed",
+        "X509_time_adj",
+        "X509_time_adj_ex"
+      ],
+      "grown": [
+        "X509_STORE_CTX_cleanup",
+        "X509_STORE_CTX_free",
+        "X509_STORE_CTX_get0_cert",
+        "X509_STORE_CTX_get0_chain",
+        "X509_STORE_CTX_get0_current_crl",
+        "X509_STORE_CTX_get0_current_issuer",
+        "X509_STORE_CTX_get0_param",
+        "X509_STORE_CTX_get0_parent_ctx",
+        "X509_STORE_CTX_get0_policy_tree",
+        "X509_STORE_CTX_get0_rpk",
+        "X509_STORE_CTX_get0_untrusted",
+        "X509_STORE_CTX_get1_chain",
+        "X509_STORE_CTX_get1_issuer",
+        "X509_STORE_CTX_get_cert_crl",
+        "X509_STORE_CTX_get_check_crl",
+        "X509_STORE_CTX_get_check_issued",
+        "X509_STORE_CTX_get_check_policy",
+        "X509_STORE_CTX_get_check_revocation",
+        "X509_STORE_CTX_get_cleanup",
+        "X509_STORE_CTX_get_current_cert",
+        "X509_STORE_CTX_get_error",
+        "X509_STORE_CTX_get_error_depth",
+        "X509_STORE_CTX_get_ex_data",
+        "X509_STORE_CTX_get_explicit_policy",
+        "X509_STORE_CTX_get_get_crl",
+        "X509_STORE_CTX_get_get_issuer",
+        "X509_STORE_CTX_get_lookup_certs",
+        "X509_STORE_CTX_get_lookup_crls",
+        "X509_STORE_CTX_get_num_untrusted",
+        "X509_STORE_CTX_get_verify",
+        "X509_STORE_CTX_get_verify_cb",
+        "X509_STORE_CTX_new",
+        "X509_STORE_CTX_new_ex",
+        "X509_STORE_CTX_purpose_inherit",
+        "X509_STORE_CTX_set0_crls",
+        "X509_STORE_CTX_set0_dane",
+        "X509_STORE_CTX_set0_param",
+        "X509_STORE_CTX_set0_rpk",
+        "X509_STORE_CTX_set0_trusted_stack",
+        "X509_STORE_CTX_set0_untrusted",
+        "X509_STORE_CTX_set0_verified_chain",
+        "X509_STORE_CTX_set_cert",
+        "X509_STORE_CTX_set_current_cert",
+        "X509_STORE_CTX_set_current_reasons",
+        "X509_STORE_CTX_set_default",
+        "X509_STORE_CTX_set_depth",
+        "X509_STORE_CTX_set_error",
+        "X509_STORE_CTX_set_error_depth",
+        "X509_STORE_CTX_set_ex_data",
+        "X509_STORE_CTX_set_flags",
+        "X509_STORE_CTX_set_get_crl",
+        "X509_STORE_CTX_set_ocsp_resp",
+        "X509_STORE_CTX_set_purpose",
+        "X509_STORE_CTX_set_time",
+        "X509_STORE_CTX_set_trust",
+        "X509_STORE_CTX_set_verify",
+        "X509_STORE_CTX_set_verify_cb",
+        "X509_VERIFY_PARAM_add0_policy",
+        "X509_VERIFY_PARAM_add0_table",
+        "X509_VERIFY_PARAM_add1_host",
+        "X509_VERIFY_PARAM_clear_flags",
+        "X509_VERIFY_PARAM_free",
+        "X509_VERIFY_PARAM_get0",
+        "X509_VERIFY_PARAM_get0_email",
+        "X509_VERIFY_PARAM_get0_host",
+        "X509_VERIFY_PARAM_get0_name",
+        "X509_VERIFY_PARAM_get0_peername",
+        "X509_VERIFY_PARAM_get1_ip_asc",
+        "X509_VERIFY_PARAM_get_auth_level",
+        "X509_VERIFY_PARAM_get_count",
+        "X509_VERIFY_PARAM_get_depth",
+        "X509_VERIFY_PARAM_get_flags",
+        "X509_VERIFY_PARAM_get_hostflags",
+        "X509_VERIFY_PARAM_get_inh_flags",
+        "X509_VERIFY_PARAM_get_purpose",
+        "X509_VERIFY_PARAM_get_time",
+        "X509_VERIFY_PARAM_inherit",
+        "X509_VERIFY_PARAM_lookup",
+        "X509_VERIFY_PARAM_move_peername",
+        "X509_VERIFY_PARAM_new",
+        "X509_VERIFY_PARAM_set1",
+        "X509_VERIFY_PARAM_set1_email",
+        "X509_VERIFY_PARAM_set1_host",
+        "X509_VERIFY_PARAM_set1_ip",
+        "X509_VERIFY_PARAM_set1_ip_asc",
+        "X509_VERIFY_PARAM_set1_name",
+        "X509_VERIFY_PARAM_set1_policies",
+        "X509_VERIFY_PARAM_set_auth_level",
+        "X509_VERIFY_PARAM_set_depth",
+        "X509_VERIFY_PARAM_set_flags",
+        "X509_VERIFY_PARAM_set_hostflags",
+        "X509_VERIFY_PARAM_set_inh_flags",
+        "X509_VERIFY_PARAM_set_purpose",
+        "X509_VERIFY_PARAM_set_time",
+        "X509_VERIFY_PARAM_set_trust",
+        "X509_VERIFY_PARAM_table_cleanup",
+        "X509_cmp_current_time",
+        "X509_cmp_time",
+        "X509_cmp_timeframe",
+        "X509_get_pubkey_parameters",
+        "X509_gmtime_adj",
+        "X509_policy_tree_free",
+        "X509_time_adj",
+        "X509_time_adj_ex"
+      ],
+      "units": [
+        "crypto/x509/x509_vfy.c",
+        "crypto/x509/x509_vpm.c",
+        "crypto/x509/pcy_tree.c"
+      ]
+    },
+    "x509_slice": {
+      "roots": [
+        "X509",
+        "X509_STORE",
+        "X509_STORE_CTX",
+        "X509_VERIFY_PARAM",
+        "X509_verify_cert",
+        "policy-tree",
+        "trust",
+        "purpose",
+        "crl",
+        "name-constraints",
+        "verification-callbacks"
+      ],
+      "satisfied": true,
+      "unknown_residuals": []
+    }
+  },
+  "generator": "forensics/tools/phase22_gemel.py",
+  "inputs": [
+    {
+      "name": "plan",
+      "path": "docs/PHASE-22-SUBPHASES.md",
+      "sha256": "79da72f3c941471c1c81a7fe7d17c250e621af45e17d08d95d055da5ac2b3627"
+    },
+    {
+      "name": "phase22-obligations",
+      "path": "forensics/phase22-obligations.json",
+      "sha256": "87c1bdefabf98026a096d05aa9dcea811332a12668bfafb9223535557a5360fe"
+    },
+    {
+      "name": "phase11-obligations",
+      "path": "forensics/phase11-obligations.json",
+      "sha256": "97d6545ccffebd13872adeee888c1214b645bf093cdca26e7ef2a0d3af8bf1b0"
+    },
+    {
+      "name": "export-defining-units",
+      "path": "forensics/atlas/export-defining-units.json",
+      "sha256": "fed68223839cb890b8d34359d806945316f67bf2fa08353b7e43e608a3722fed"
+    },
+    {
+      "name": "x509-closure-slice-baseline",
+      "path": "forensics/phase22/x509-closure-slice-baseline.json",
+      "sha256": "48d1496242478fb60f23f05f6b69cd7db225fa555aa74d66538a253619a2d765"
+    },
+    {
+      "name": "phase1-cli-capture",
+      "path": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+      "sha256": "ea3c4c5566be9ea9631723bae2db35bd20b37e3c57b44077a780ae19d5f06ffc"
+    },
+    {
+      "name": "binary-reference-graph",
+      "path": "forensics/atlas/phase22/binary-reference-graph.json",
+      "sha256": "9b3ff1b523ca31271c631b6a128c59a40a78d193d50503f633bdc0bd4dc3b681"
+    },
+    {
+      "name": "cli-surface",
+      "path": "forensics/atlas/phase22/cli-surface.json",
+      "sha256": "add909b70351095a461f82da42854e9d67cf49d1ebe8508e222c7284820658de"
+    },
+    {
+      "name": "compatibility-closure",
+      "path": "forensics/atlas/phase22/compatibility-closure.json",
+      "sha256": "58734faebbd0b99bfdd612a0b799c1892eb2bcf8f0288ddefc9c97917d1183a6"
+    },
+    {
+      "name": "compile-commands",
+      "path": "forensics/atlas/phase22/compile-commands.json",
+      "sha256": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e"
+    },
+    {
+      "name": "compile-commands-raw",
+      "path": "forensics/atlas/phase22/raw/compile-commands.jsonl",
+      "sha256": "3bc7b1adcf8e49c0468c251d9775a6f8a191b2d2db803f1cbd2d97ea5307b69d"
+    },
+    {
+      "name": "conditional-surface",
+      "path": "forensics/atlas/phase22/conditional-surface.json",
+      "sha256": "6a9d0fb3cd1d3a29c222d290ff9f54f95a1ae04ddb152a8bb841488fcb573ed7"
+    },
+    {
+      "name": "config-surface",
+      "path": "forensics/atlas/phase22/config-surface.json",
+      "sha256": "bbdca8b5812c5a6027f0ad8df6bce1826a85afa7da8fe6a69b4a760799438d1d"
+    },
+    {
+      "name": "dispatch-graph",
+      "path": "forensics/atlas/phase22/dispatch-graph.json",
+      "sha256": "3116fdb3b6eceb9bb13d50a48d562e6c7ed481d6c500416f94ac6fcc6ba05253"
+    },
+    {
+      "name": "doxygen-entities",
+      "path": "forensics/atlas/phase22/doxygen-entities.json",
+      "sha256": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97"
+    },
+    {
+      "name": "frf-challenges",
+      "path": "forensics/atlas/phase22/frf-challenges.json",
+      "sha256": "d9d7fdf41c5ad5e9bcbc9ffb48fe6723a5c376f13783b8f5838f2d6b5fb07d96"
+    },
+    {
+      "name": "generated-lineage",
+      "path": "forensics/atlas/phase22/generated-lineage.json",
+      "sha256": "924b0d9d14ff5fc93c9db8641ba63a4fa6909120c6570cefa672b22da7901521"
+    },
+    {
+      "name": "install-manifest",
+      "path": "forensics/atlas/phase22/install-manifest.json",
+      "sha256": "e24286a7d51467027b1a8b11263adf6d5ce6f3237b215f53066be7b3531d5d67"
+    },
+    {
+      "name": "pod-contract",
+      "path": "forensics/atlas/phase22/pod-contract.json",
+      "sha256": "895ba11713e0bafc2b2bcdcf49e02ccf899e802d66c1885bf360d00af5914744"
+    },
+    {
+      "name": "reconciliation",
+      "path": "forensics/atlas/phase22/reconciliation.json",
+      "sha256": "a9d17ba2e4602221d244701d002004d04218977021745bcc83cba1220cfffcba"
+    },
+    {
+      "name": "test-crosswalk",
+      "path": "forensics/atlas/phase22/test-crosswalk.json",
+      "sha256": "3048bd891e485e289eda2372c0dec581b0bfcab71014df54c1423489dbfba206"
+    },
+    {
+      "name": "tu-ast",
+      "path": "forensics/atlas/phase22/tu-ast.json",
+      "sha256": "865dd968b445bebcfdb87d6ea062cd048e3b79ecbf37507a2830e57efa5b5bc5"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "implemented-surface",
+      "path": "forensics/atlas/implemented-surface.json",
+      "sha256": "26e7bd4f728f4fc0bcf76296d5b089ae260b8325337b865960be62acff02f368"
+    },
+    {
+      "name": "phase3-obligations",
+      "path": "forensics/phase3-obligations.json",
+      "sha256": "cff08d78c8e2683e3daced0defa57bbbf750f89cab6ca895d352f5924674bfce"
+    },
+    {
+      "name": "phase4-obligations",
+      "path": "forensics/phase4-obligations.json",
+      "sha256": "2d5eccd368b6c83aa44745566583ee4856bde16a6852d4b6c5ada9b9f2ad6720"
+    },
+    {
+      "name": "phase5-obligations",
+      "path": "forensics/phase5-obligations.json",
+      "sha256": "176411c1272e8725b6ea7cb2c63a1619e870245177f69b8ca0d401d0da2327da"
+    },
+    {
+      "name": "phase6-obligations",
+      "path": "forensics/phase6-obligations.json",
+      "sha256": "81a75c26c081363c6b773b89558a0fff764184ce5ede9934a87e7b40f774ad1b"
+    },
+    {
+      "name": "phase7-obligations",
+      "path": "forensics/phase7-obligations.json",
+      "sha256": "30633f0fef061711a2b494b15f39727ae9867268da10f9127ea4d142ee63522c"
+    },
+    {
+      "name": "phase8-obligations",
+      "path": "forensics/phase8-obligations.json",
+      "sha256": "1211f2c3af84f1959885e69168b1ade7c88bb6ee3c60e7b244478d89f54b8c61"
+    },
+    {
+      "name": "phase9-obligations",
+      "path": "forensics/phase9-obligations.json",
+      "sha256": "10e0dd0ebc6175f8aa44735be3742b3a1cf610b91ed0e8c5dc7983a3fed3202f"
+    },
+    {
+      "name": "phase10-obligations",
+      "path": "forensics/phase10-obligations.json",
+      "sha256": "41aac11cd4ca11d07ceaaf3f97b46c140d7844a3ac09bc05f1aabbf71493115b"
+    },
+    {
+      "name": "parity-obligations",
+      "path": "forensics/atlas/openssl-3.6.4-production/parity-obligations.json",
+      "sha256": "564f4683e1c2b7399f68feb9d58b7ed969d9986835b7cf749002c140d6383bf1"
+    },
+    {
+      "name": "surface-reconciliation",
+      "path": "forensics/atlas/openssl-3.6.4-production/surface-reconciliation.json",
+      "sha256": "43bf1b33f3dd6f9bf503bfc084bf46dd5bf1048523c693650bccc0d4df037b18"
+    },
+    {
+      "name": "coverage",
+      "path": "forensics/atlas/openssl-3.6.4-production/coverage.json",
+      "sha256": "3acf06eaa7d5c92b86c471dde39b3673518000ed91b8aeeeb86e057771fdca05"
+    },
+    {
+      "name": "PARITY_MATRIX",
+      "path": "forensics/atlas/openssl-3.6.4-production/PARITY_MATRIX.md",
+      "sha256": "82b65e9298174688e42479bb16078a212b914a22b481686321d88b86951f9000"
+    }
+  ],
+  "kind": "phase22-gemel-checkpoint",
+  "schema": "openssl-rs/atlas/phase22-gemel-checkpoint/v1"
+}

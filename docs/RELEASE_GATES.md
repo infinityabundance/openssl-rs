@@ -31,6 +31,17 @@ before its evidence exists.
 | 19 | Performance / CPU dispatch |
 | 20 | 3.6.4 custodian seal |
 | 21 | Maintenance delta machinery |
+| 22 | Authority exhaustiveness / whole-program compatibility atlas |
+
+**Phase 22 is dependency-ordered out of number order.** Its evidence is the whole-program
+archaeology every later implementation stratum leans on -- the X.509 verification engine most of
+all -- so it must exist *before* Phase 11 finishes even though it is numbered 22. The dependency is
+declared as a DAG rather than read off the numbers (`forensics/tools/phase_state.py`'s `REQUIRES`;
+`docs/PHASE-22-SUBPHASES.md` section 8):
+
+    0 -> 1 -> ... -> 10 -> 22 -> 11 -> 12 -> ... -> 21
+
+Phase numbers remain historical names; the dependency is represented by the dependency.
 
 **Not** the start: AES, SHA, RSA, TLS. That feels productive and works against
 the architecture.

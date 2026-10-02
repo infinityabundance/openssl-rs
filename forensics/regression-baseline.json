@@ -1,7 +1,9 @@
 {
   "court_phases": [
     "phase10",
+    "phase11",
     "phase2",
+    "phase22",
     "phase3",
     "phase4",
     "phase5",
@@ -371,6 +373,70 @@
       "observations": 102,
       "verdict": "pass"
     },
+    "RT-PHASE22-BINARY": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-BUILD-CAPTURE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-CLI": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-CLOSURE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-CONDITIONAL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-CONFIG": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-CROSSWALK": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-DISPATCH": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-DOXYGEN": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-FRF": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-GEMEL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-GENEALOGY": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-INSTALL": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-POD": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-RECONCILE": {
+      "observations": 0,
+      "verdict": "pass"
+    },
+    "RT-PHASE22-TU-AST": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-PKCS12": {
       "observations": 353,
       "verdict": "pass"
@@ -443,6 +509,42 @@
       "observations": 54,
       "verdict": "pass"
     },
+    "RT-X509": {
+      "observations": 52,
+      "verdict": "pass"
+    },
+    "RT-X509-ACERT": {
+      "observations": 178,
+      "verdict": "pass"
+    },
+    "RT-X509-PEM": {
+      "observations": 121,
+      "verdict": "pass"
+    },
+    "RT-X509-REF": {
+      "observations": 1007,
+      "verdict": "pass"
+    },
+    "RT-X509-REQ": {
+      "observations": 76,
+      "verdict": "pass"
+    },
+    "RT-X509-STORE": {
+      "observations": 525,
+      "verdict": "pass"
+    },
+    "RT-X509-V3": {
+      "observations": 240,
+      "verdict": "pass"
+    },
+    "RT-X509-VERIFY-ENGINE": {
+      "observations": 242,
+      "verdict": "pass"
+    },
+    "RT-X509-VERIFY-SURFACE": {
+      "observations": 197,
+      "verdict": "pass"
+    },
     "libcrypto-contamination": {
       "observations": 0,
       "verdict": "pass"
@@ -450,6 +552,8 @@
   },
   "deferred": {
     "phase10": 0,
+    "phase11": 2,
+    "phase22": 0,
     "phase3": 43,
     "phase4": 23,
     "phase5": 91,
@@ -459,11 +563,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4254,
+    "libcrypto": 4765,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
+    "phase11": 0,
+    "phase22": 0,
     "phase3": 0,
     "phase4": 0,
     "phase5": 0,
@@ -474,6 +580,8 @@
   },
   "owned_obligations": {
     "phase10": 298,
+    "phase11": 1467,
+    "phase22": 18,
     "phase3": 294,
     "phase4": 272,
     "phase5": 565,
@@ -486,7 +594,7 @@
     "0": "complete",
     "1": "complete",
     "10": "complete",
-    "11": "not-started",
+    "11": "complete",
     "12": "not-started",
     "13": "not-started",
     "14": "not-started",
@@ -498,6 +606,7 @@
     "2": "complete",
     "20": "not-started",
     "21": "not-started",
+    "22": "complete",
     "3": "complete",
     "4": "complete",
     "5": "complete",
@@ -507,10 +616,10 @@
     "9": "complete"
   },
   "prerequisites": {
-    "blocking_dependencies": 4,
-    "divergence_names_covered": 38,
+    "blocking_dependencies": 5,
+    "divergence_names_covered": 36,
     "findings": 0,
-    "language_census": 7150,
+    "language_census": 7378,
     "sealed_census": 52
   },
   "provider_implemented": [

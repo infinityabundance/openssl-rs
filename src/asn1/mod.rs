@@ -86,12 +86,22 @@ pub mod i2d_evp;
 pub mod items;
 pub mod layout;
 pub mod new;
+// Phase 11.6's `crypto/asn1/nsseq.c` -- the `NETSCAPE_CERT_SEQUENCE` item, landed with the
+// `pem_all.c` container readers and writers that name its `d2i_*`/`i2d_*` (section 2 row 11.6).
+pub mod nsseq;
 // D443's pull-forward: `crypto/asn1/p5_pbe.c` and `crypto/asn1/p5_pbev2.c` are Phase 11's
 // `x509.h` units, landed early because `PKCS8_encrypt_ex`'s only unlanded names are their
 // `PKCS5_pbe_set_ex`/`PKCS5_pbe2_set_iv_ex` (and the MAC setters need `PKCS5_pbkdf2_set` and
 // the `PBMAC1PARAM` group). See the module docs and `docs/DECISIONS.md` D442's precedent.
 pub mod p5_pbe;
 pub mod p5_pbev2;
+// Phase 11.7's `crypto/asn1/p5_scrypt.c` half -- the `SCRYPT_PARAMS` item and
+// `PKCS5_pbe2_set_scrypt`; the unit's Phase 7 half is `src/evp/p5_scrypt.rs`.
+pub mod p5_scrypt;
+// Phase 11.7's `crypto/asn1/t_spki.c` and `crypto/asn1/asn_mstbl.c` -- the SPKI printer and the
+// `stbl_section` configuration module.
+pub mod asn_mstbl;
+pub mod t_spki;
 // Phase 8.8's `crypto/asn1/p8_pkey.c` pair, `PKCS8_pkey_set0`/`PKCS8_pkey_get0`, and the
 // `PKCS8_PRIV_KEY_INFO` layout (D349). D368 completes the unit's item half; the `add1_attr`
 // family lands with `crypto/x509/x509_att.c`.
@@ -112,6 +122,10 @@ pub mod x_long;
 pub mod x_val;
 // Phase 10's `crypto/asn1/x_sig.c` -- the `X509_SIG` (EncryptedPrivateKeyInfo) family, landed
 // early because `PKCS8_decrypt` reads it through `X509_SIG_get0` (D368).
+// Phase 11.6's `crypto/asn1/x_info.c` and `crypto/asn1/x_pkey.c` -- the `X509_INFO` record and
+// its private-key slot, landed with `crypto/pem/pem_info.c`'s bundle reader and writer.
+pub mod x_info;
+pub mod x_pkey;
 pub mod x_sig;
 // Phase 10.14.2's `crypto/asn1/x_spki.c` -- the `NETSCAPE_SPKAC`/`NETSCAPE_SPKI` items, landed
 // with the `x509spki.c` surface and the two `x_all.c` faces that name them.

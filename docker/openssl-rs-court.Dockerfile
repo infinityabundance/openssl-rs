@@ -42,11 +42,20 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 # --- base toolchain -----------------------------------------------------------
 # build-essential/perl/make : building OpenSSL authorities from source
-# clang                     : AST and header archaeology (Phase 1)
+# clang/lld                 : AST and header archaeology (Phase 1), and Phase 22's
+#                             shadow per-TU analysis over the captured compile commands
 # binutils                  : nm/readelf/objdump symbol and ABI archaeology
 # python3                   : atlas generators and court harnesses
 # curl/ca-certificates/xz   : authority acquisition
 # file / bsdmainutils       : human- and machine-readable artifact inspection
+# doxygen                   : Phase 22.2's entity-graph oracle. Doxygen is an
+#                             *instrument*, not the authority: `docs/PHASE-22-SUBPHASES.md`
+#                             section 6 makes the POD manual canonical for public APIs and
+#                             the Doxygen block a navigation aid, and Doxygen absence must
+#                             never be read as surface absence. Graphviz is deliberately
+#                             NOT installed: Doxygen's HTML call graphs are for a human,
+#                             while 22.3's Clang AST and 22.6's relocations are the
+#                             machine-readable edge oracles, so the image stays minimal.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       build-essential \
@@ -65,6 +74,7 @@ RUN apt-get update \
       file \
       bsdmainutils \
       less \
+      doxygen \
  && rm -rf /var/lib/apt/lists/* \
  # Neutralise the non-authority OpenSSL CLI without purging the package
  # (see design note 3 above).
@@ -81,20 +91,36 @@ RUN apt-get update \
       } > /court/non-authority-openssl.txt; }
 
 # --- Rust toolchain -----------------------------------------------------------
-# Installed via rustup into /usr/local. The exact toolchain is pinned by
-# rust-toolchain.toml in the repository; rustup honours it when cargo runs.
+# Installed via rustup into /usr/local. **The toolchain is the version
+# `rust-toolchain.toml` pins, installed here rather than left to be auto-installed on the
+# first `cargo` invocation.** The image used to install `stable` and rely on rustup's
+# override, which meant the pinned toolchain arrived at run time: on a fresh container it
+# auto-installed an incomplete 1.98.1 (rustc, rustdoc, rustfmt, clippy-driver and cargo-fmt,
+# with no `cargo` binary) and every `cargo` command failed with "the 'cargo' binary ... is not
+# applicable to the '1.98.1' toolchain" until the toolchain was reinstalled by hand. A court
+# image whose toolchain is assembled by accident is not reproducible, so the pin is installed
+# explicitly here and `cargo --version` is asserted at build time.
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-      | sh -s -- -y --no-modify-path --profile minimal --default-toolchain stable \
- && rustup component add rustfmt clippy \
- && rustc --version && cargo --version
+      | sh -s -- -y --no-modify-path --profile minimal --default-toolchain 1.98.1 \
+ && rustup component add rustfmt clippy --toolchain 1.98.1 \
+ && cargo --version && rustc --version
 
 # --- court conventions --------------------------------------------------------
 # /work is the bind mount of the repository. /court is scratch space inside the
 # container, always discarded with the container.
+#
+# `safe.directory /work`: the repository is bind-mounted from the host and is owned
+# by the developer's uid, while courts run as root, so git refuses to read it with
+# "detected dubious ownership". That is configured **here**, system-wide, rather than
+# by a hand-run `git config` in a live container: a court whose ability to read
+# `origin/main` depends on somebody having typed a command into the box is not
+# reproducible. The mount point is fixed by docker/openssl-rs-court.sh, so this is a
+# constant, not an assumption about the host's username.
+RUN git config --system --add safe.directory /work
 WORKDIR /work
 
 COPY openssl-rs-court-entrypoint.sh /usr/local/bin/openssl-rs-court-entrypoint.sh

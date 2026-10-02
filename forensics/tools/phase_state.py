@@ -23,6 +23,8 @@ open blocking residuals, and the seal identity when one exists.
 
 from __future__ import annotations
 
+import argparse
+import copy
 import json
 import sys
 from pathlib import Path
@@ -40,6 +42,10 @@ from atlas_common import (  # noqa: E402
     write_text,
     REPO_ROOT,
 )
+# The register's own derivation, so the sensitivity control below judges a reconstructed row by the
+# real rule rather than by a boolean typed into the test. `divergence_obligations` imports only
+# `atlas_common`, so this is not a cycle.
+from divergence_obligations import derive_blocking  # noqa: E402
 
 OUT = REPO_ROOT / "forensics" / "phase-state.json"
 
@@ -71,11 +77,14 @@ PROVIDER_COVERAGE = "forensics/atlas/provider-court-coverage.json"
 # project that was **prose**: its entries carry a `**Trigger:**` -- the condition under which the
 # divergence must be revisited or removed -- and nothing machine-checked it, so a stratum could
 # derive `complete` while an obligation it owned had had its trigger fire and was still owed.
-# `forensics/tools/divergence_obligations.py` now renders each trigger-bearing entry as a row with
-# `trigger_satisfied`, `disposition` and `current_owner`, and `divergence_blocking_reason` below is
-# the executable half. Generated before this tool by the pipeline; if the JSON is absent this tool
-# fails closed rather than skipping the rule, because a check that can be silently skipped is not a
-# check (see `divergence_blocking_reason`).
+# `forensics/tools/divergence_obligations.py` now renders each trigger-bearing entry as a row whose
+# trigger state is **derived**, not typed: a `trigger_basis: predicate` row reads generated evidence
+# through a named predicate, and a `trigger_basis: manual` row's `trigger_satisfied` is `null` and
+# blocks while `open` until an `adjudication` records why it has not fired. `divergence_blocking_reason`
+# below is the executable half, and it reads the row's derived `blocking` so the rule and the
+# artefact cannot disagree. Generated before this tool by the pipeline; if the JSON is absent this
+# tool fails closed rather than skipping the rule, because a check that can be silently skipped is
+# not a check (see `divergence_blocking_reason`).
 DIVERGENCE_OBLIGATIONS = "forensics/divergence-obligations.json"
 
 # The conservation strata, in dependency order (docs/RELEASE_GATES.md §1).
@@ -102,7 +111,27 @@ STRATA: list[tuple[int, str, str]] = [
     (19, "performance", "Performance / CPU dispatch"),
     (20, "custodian-seal", "3.6.4 custodian seal"),
     (21, "maintenance-delta", "Maintenance delta machinery"),
+    (22, "whole-program-atlas",
+     "Authority exhaustiveness and the whole-program compatibility atlas"),
 ]
+
+# The dependency the strata are ordered by (D138). It is a DAG, not "the previous number".
+#
+# The historical chain is `requires[n] == (n - 1,)`: a stratum may not be complete while the one
+# before it is not. Phase 22 is why that is no longer the whole rule. Its evidence is the
+# whole-program archaeology every *later* implementation stratum leans on -- the verification
+# engine most of all -- so it must exist before Phase 11 finishes even though it is numbered 22.
+# The edge is therefore declared rather than inferred from the number:
+#
+#     0 -> 1 -> ... -> 10 -> 22 -> 11 -> 12 -> ... -> 21
+#
+# Phase numbers stay as historical names; the dependency is represented by the dependency. The
+# plan is `docs/PHASE-22-SUBPHASES.md` section 8.
+REQUIRES: dict[int, tuple[int, ...]] = {
+    **{p: (p - 1,) for p, _n, _s in STRATA if 1 <= p <= 21},
+    22: (10,),
+    11: (10, 22),
+}
 
 CONSTITUTION_DOCS = [
     "docs/CUSTODIAN_CONTRACT.md", "docs/PARITY_MODEL.md", "docs/AUTHORITY_POLICY.md",
@@ -164,6 +193,49 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
                       if c["verdict"] != "pass"]
             if failed:
                 blocking = f"courts not passing: {failed}"
+        return present, absent, blocking
+
+    # Phase 22 is an atlas stratum: its evidence is the plan, the residual ledger its closure
+    # produces, the atlas courts and the seal -- not an export universe, an ownership projection or
+    # a provider row. It is the one stratum whose `open` count is a count of *unclassified
+    # surfaces* rather than of unbuilt exports, and `docs/PHASE-22-SUBPHASES.md` section 7 is what
+    # its seal requires.
+    if phase == 22:
+        for d in PHASE22_MODULES:
+            (present if exists(d) else absent).append(d)
+        ledger = read_json(PHASE22_LEDGER)
+        if ledger:
+            present.append(PHASE22_LEDGER)
+            open_count = ledger["body"]["counts"]["open_in_this_stratum"]
+            if open_count:
+                # **The two quantities this stratum blocks on are different things** and the state
+                # line must not conflate them. Until 22.14's closure exists there are no
+                # `UNKNOWN` residuals to count -- what is open is *instruments not yet built* --
+                # and calling them "residuals" overstates the atlas and understates the work. Once
+                # the closure artefact exists the residual count is read from it and reported
+                # beside the plane count, which is the pair a reader needs.
+                blocking = (
+                    f"{open_count} compatibility plane(s) remain unimplemented "
+                    f"(docs/PHASE-22-SUBPHASES.md sections 5 and 7)"
+                )
+                closure = read_json(PHASE22_CLOSURE)
+                if closure:
+                    unknown = closure["body"]["counts"].get("unknown_intersecting_roots", 0)
+                    blocking += (f"; the closure graph records {unknown} UNKNOWN residual(s) "
+                                 f"intersecting a declared compatibility root")
+                if ledger["body"].get("note"):
+                    blocking += f". {ledger['body']['note']}"
+        else:
+            absent.append(PHASE22_LEDGER)
+        courts = read_json(PHASE22_COURTS)
+        if courts:
+            present.append(PHASE22_COURTS)
+            failed = [c["court"] for c in courts["body"]["courts"] if c["verdict"] != "pass"]
+            if failed:
+                blocking = f"Phase 22 courts not passing: {failed}"
+        else:
+            blocking = blocking or f"no Phase 22 courts yet ({PHASE22_COURTS} absent)"
+        (present if exists(PHASE22_SEAL) else absent).append(PHASE22_SEAL)
         return present, absent, blocking
 
     # Strata 3 and later are one rule, not five.
@@ -756,6 +828,45 @@ PHASE10_MODULES = [
 ]
 
 
+# Phase 11's evidence: the X.509 stratum -- the certificate, request, CRL and attribute-
+# certificate object graphs and their verification machinery (`X509`, `X509_REQ`, `X509_CRL`,
+# `X509_ACERT`, `X509_STORE`, `X509_VERIFY_PARAM`, `X509_POLICY_*`, the `X509V3_EXT_*` engine
+# and the `PEM_*_X509*` container readers and writers). Its plan is
+# `docs/PHASE-11-SUBPHASES.md`, which 11.0 lands with the ledger. The modules are added by
+# the subphase that lands them, in the same commit, so that this list is a statement about the
+# tree rather than about the plan -- which is why it names no `src/x509/` module beyond the ones
+# Phase 10's pulled-forward subphases already landed: the stratum has landed none of its own.
+#
+# **Like Phase 10, this stratum does not start with a whole working set open.**
+# `forensics/phase11-obligations.json` reports a working set of 1,467 exports and an `open` count
+# smaller than it, because Phase 8's 8.8 chain, Phase 10's pulled-forward X.509 subphases
+# (10.8-10.14, D442-D451) and two Phase 5 hand-offs landed part of the set before activation, so
+# `phase-state.json` reports the stratum `in-progress` because its ledger has an open count, not
+# because it has a plan alone. **That split moves as the stratum lands its own units**, so the
+# note below does not restate its counts: the ledger's `counts` is the live record and
+# `forensics/atlas/implemented-surface.json` is the authority behind it. It owns **no provider
+# registration row**. `docs/PHASE-11-SUBPHASES.md` section 4 records the activation measurement
+# and the precondition it places on the coverage join.
+PHASE11_COURTS = "artifacts/phase11/COURTS.json"
+PHASE11_OBLIGATIONS = "forensics/phase11-obligations.json"
+PHASE11_MODULES = [
+    "docs/PHASE-11-SUBPHASES.md",
+    "forensics/tools/phase11_obligations.py",
+]
+
+# Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
+# every other stratum's: no export universe, no ownership projection and no provider row. What it
+# owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
+# the seal. `docs/PHASE-22-SUBPHASES.md` sections 7 and 8 are the rule and the claim.
+PHASE22_MODULES = [
+    "docs/PHASE-22-SUBPHASES.md",
+]
+PHASE22_LEDGER = "forensics/phase22-obligations.json"
+PHASE22_COURTS = "artifacts/phase22/COURTS.json"
+PHASE22_CLOSURE = "forensics/atlas/phase22/compatibility-closure.json"
+PHASE22_SEAL = "docs/PHASE-22-ATLAS-SEAL.md"
+
+
 STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
     3: StratumEvidence(PHASE3_MODULES, PHASE3_OBLIGATIONS, PHASE3_COURTS,
                        ledger_note=(
@@ -787,6 +898,31 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "landed by Phase 8's 8.8 chain rather than by this stratum, so the "
                             "ledger's `open` count is not the whole working set "
                             "(docs/PHASE-10-SUBPHASES.md section 4)"
+                        )),
+    11: StratumEvidence(PHASE11_MODULES, PHASE11_OBLIGATIONS, PHASE11_COURTS,
+                        ledger_note=(
+                            "One thousand four hundred and fifty-five of the exports it owns "
+                            "are its own five headers' (`x509.h`, `x509v3.h`, `x509_vfy.h`, "
+                            "`x509_acert.h`, `pem.h`) and the twelve remainder arrive as "
+                            "recorded hand-offs from phases 5 and 7. The ledger does not start "
+                            "with that whole working set open: exports Phase 8's 8.8 chain and "
+                            "Phase 10's pulled-forward X.509 subphases landed, and two Phase 5 "
+                            "hand-offs, are reported as `implemented` at activation, so its "
+                            "`open` count is not the whole working set. That split moves as "
+                            "this stratum lands its own units, so this note does not restate "
+                            "its counts; the ledger's `counts` and `forensics/atlas/"
+                            "implemented-surface.json` are the live record. The stratum owns "
+                            "no provider registration row (docs/PHASE-11-SUBPHASES.md "
+                            "sections 1 and 4)"
+                        )),
+    # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
+    # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no
+    # row, and `docs/PHASE-22-SUBPHASES.md` is evidence from the day 22.0 lands it.
+    22: StratumEvidence(PHASE22_MODULES, PHASE22_LEDGER, PHASE22_COURTS,
+                        ledger_note=(
+                            "This stratum's `open` count is a count of unclassified surfaces, "
+                            "not of unbuilt exports; the closure and its disposition model are "
+                            "docs/PHASE-22-SUBPHASES.md sections 3, 4 and 7"
                         )),
 }
 
@@ -844,8 +980,8 @@ def provider_rows_for(phase: int) -> dict | None:
     }
 
 
-def divergence_blocking_reason(phase: int) -> str:
-    """The reason a triggered, still-open divergence obligation holds a stratum open.
+def divergence_blocking_reason(phase: int, doc: dict | None = None) -> str:
+    """The reason a blocking divergence obligation holds this stratum open.
 
     `docs/SECURITY_DIVERGENCE_POLICY.md`'s entries carry a `**Trigger:**`: the condition under
     which the divergence must be revisited or removed. Review named the absence of any
@@ -854,18 +990,26 @@ def divergence_blocking_reason(phase: int) -> str:
     because the register was prose and nothing read it. `divergence_obligations.py` renders the
     trigger-bearing entries as rows, so the rule can be executable:
 
-        a row blocks its `current_owner` when `trigger_satisfied` and `disposition == "open"`
+        a row blocks its `current_owner` when its derived `blocking` is true, which the
+        register sets for an `open` obligation whose trigger has materially fired
+        (`trigger_satisfied`) or which is a `manual` row with no `adjudication`
 
-    and this function applies it to one stratum. The test is the row's own `current_owner`
-    equality rather than the derived `blocking` field, so the artefact and the rule cannot
-    disagree about *which* stratum a row blocks.
+    and this function reads that derived `blocking` -- not the trigger state itself -- scoped by
+    the row's own `current_owner` equality, so the artefact and the rule cannot disagree about
+    *which* stratum a row blocks. Deriving the trigger state is the point: the hand-typed
+    `trigger_satisfied` this replaces is what let `D-DECODER-ABSENT-1` read `false` while its
+    trigger had fired.
+
+    `doc` exists so `--self-test` can hand in a reconstructed artefact; it defaults to reading the
+    committed file.
 
     **Fail-closed when the artefact is absent.** The register is what makes the rule checkable,
     so a missing `divergence-obligations.json` is a fatal, not an empty result: returning "" would
     let the whole rule be skipped by deleting one file, which is the hole this closes. The message
     names the generator to run, the way the pipeline runs it.
     """
-    doc = read_json(DIVERGENCE_OBLIGATIONS)
+    if doc is None:
+        doc = read_json(DIVERGENCE_OBLIGATIONS)
     if doc is None:
         print(
             f"[phase-state] fatal: {DIVERGENCE_OBLIGATIONS} is absent or unreadable, so the "
@@ -876,20 +1020,173 @@ def divergence_blocking_reason(phase: int) -> str:
         raise SystemExit(1)
     owed = [
         row for row in doc["body"]["rows"]
-        if row["current_owner"] == phase
-        and row["trigger_satisfied"]
-        and row["disposition"] == "open"
+        if row["current_owner"] == phase and row["blocking"]
     ]
     if not owed:
         return ""
     ids = ", ".join(row["id"] for row in owed)
     return (
-        f"{len(owed)} triggered, open divergence obligation(s) of this stratum, whose trigger has "
-        f"fired and which are still owed ({DIVERGENCE_OBLIGATIONS}): {ids}"
+        f"{len(owed)} blocking divergence obligation(s) of this stratum -- an `open` row whose "
+        f"trigger has fired, or an `open` `manual` row with no adjudication ({DIVERGENCE_OBLIGATIONS}): "
+        f"{ids}"
     )
 
 
-def main() -> int:
+def derive_state_rows() -> list[dict]:
+    """Compute every stratum's row from evidence, exactly as `main` writes it.
+
+    Factored out of `main` so `self_test` can ask *which* strata derive `complete` without writing
+    the artefacts and reconstruct its stale row against one. The divergence rule
+    (`divergence_blocking_reason`) is applied here, **before** the state is computed from
+    `blocking`, so a blocking row's effect is the state rather than a reason printed beside a
+    `complete`.
+    """
+    rows = []
+    for phase, name, stratum in STRATA:
+        present, absent, blocking = evidence_for(phase)
+        # The divergence rule (`divergence_blocking_reason`). An obligation this stratum owns whose
+        # register row blocks it is a blocking reason exactly as an open ledger row is, and it is
+        # applied here, **before** the state is computed from `blocking`, so the effect is the state
+        # rather than a reason printed beside a `complete`.
+        blocking = blocking or divergence_blocking_reason(phase)
+        # **A stratum with any evidence is under way, and `absent` does not say otherwise.**
+        #
+        # This used to read `elif absent: state = "not-started"`, which meant a stratum whose
+        # plan and ledger had landed but whose modules had not was reported as never started.
+        # The Phase 4, 5 and 6 notes each record that mistake being made once by hand for the
+        # *court* item and being fixed for that item alone; the same reasoning applies to every
+        # other piece of evidence, so it is applied once here instead. What is missing is
+        # reported in `blocking` and listed in `evidence_absent`, so the state is not weaker
+        # for the change -- it is `in-progress`, which is what a stratum with a ledger is.
+        if not present:
+            state = "not-started"
+        elif absent:
+            state = "in-progress"
+            blocking = blocking or (
+                f"{len(absent)} required evidence file(s) absent, the first being "
+                f"{absent[0]}"
+            )
+        elif blocking:
+            state = "in-progress"
+        else:
+            state = "complete"
+
+        seal_doc = SEAL_DOCS.get(phase)
+        rows.append({
+            "phase": phase, "name": name, "stratum": stratum, "state": state,
+            "evidence_present": present, "evidence_absent": absent,
+            "blocking": blocking,
+            "seal_sha256": seal_identity(seal_doc) if seal_doc else None,
+            "deferred": deferred_rows(phase),
+            "provider_rows": provider_rows_for(phase),
+        })
+
+    # The dependency invariant (`REQUIRES`, D138, and `docs/PHASE-22-SUBPHASES.md` section 8). A
+    # stratum may be `complete` only when every stratum it *requires* is complete. Two things make
+    # this a separate pass rather than the running "earlier phase" check it used to be: the edges
+    # are declared rather than inferred from the number, and one of them -- `requires[11] = (10,
+    # 22)` -- points *forward* in the registry, so a single list-order pass would read Phase 22's
+    # state before it had one. The pass therefore runs to a fixed point.
+    by_phase = {r["phase"]: r for r in rows}
+    changed = True
+    while changed:
+        changed = False
+        for row in rows:
+            if row["state"] != "complete":
+                continue
+            incomplete = [d for d in REQUIRES.get(row["phase"], ())
+                          if by_phase[d]["state"] != "complete"]
+            if incomplete:
+                row["state"] = "in-progress"
+                row["blocking"] = (
+                    "blocked by the dependency invariant: phase "
+                    + ", ".join(str(d) for d in incomplete) + " is not complete")
+                changed = True
+    return rows
+
+
+# The id the sensitivity control stamps on the row it reconstructs. It cannot collide with a real
+# register id, and the control requires the rule's reason to name it.
+SELF_TEST_STALE_ID = "SELF-TEST-STALE-ROW"
+
+
+def self_test() -> int:
+    """Reconstruct the stale row the typed trigger state could not see, and require the rule to fire.
+
+    The register's most important input used to be a hand-typed `trigger_satisfied`, and
+    `D-DECODER-ABSENT-1` is the proof it failed: its trigger had fired (Phase 10's provider
+    decoders existed, `RT-CODEC` courted them, and the Phase 10 seal named the row a retirement
+    candidate) while the row still read `false`, so Phase 10 derived `complete` with a fired
+    trigger. The fix derives the trigger state, and this control reconstructs the shape the defect
+    had -- an `open`, `manual`, unadjudicated row whose `current_owner` is a stratum that derives
+    `complete` -- and requires `divergence_blocking_reason` to name it. It refuses to pass
+    otherwise, because a check that has never been seen to fire is not evidence.
+    """
+    rows = derive_state_rows()
+    complete = [r for r in rows if r["state"] == "complete"]
+    if not complete:
+        print(
+            "[phase-state] SELF-TEST FAILED: no stratum derives `complete`, so the stale row "
+            "cannot be reconstructed against one",
+            file=sys.stderr,
+        )
+        return 1
+    owner = complete[-1]  # the highest-numbered stratum that derived `complete`
+
+    doc = read_json(DIVERGENCE_OBLIGATIONS)
+    if doc is None:
+        print(
+            f"[phase-state] SELF-TEST FAILED: {DIVERGENCE_OBLIGATIONS} is absent or unreadable, "
+            f"so the rule the control exercises cannot run; run "
+            f"`python3 forensics/tools/divergence_obligations.py` to write it.",
+            file=sys.stderr,
+        )
+        return 1
+    reconstructed = copy.deepcopy(doc)
+    stale = {
+        "id": SELF_TEST_STALE_ID,
+        "current_owner": owner["phase"],
+        "trigger_basis": "manual",
+        "trigger_predicate": "",
+        "trigger_satisfied": None,
+        "adjudication": "",
+        "disposition": "open",
+    }
+    # The register's own derivation, not a typed boolean: the control is evidence only if it is the
+    # `manual`/`open`/unadjudicated shape that makes `blocking` true.
+    stale["blocking"] = derive_blocking(stale)
+    reconstructed["body"]["rows"].append(stale)
+
+    reason = divergence_blocking_reason(owner["phase"], doc=reconstructed)
+    print(
+        f"[phase-state] self-test: reconstructed a stale row ({stale['trigger_basis']}, "
+        f"{stale['disposition']}, unadjudicated, `blocking` derived {stale['blocking']}) owned by "
+        f"phase {owner['phase']} ({owner['name']}), which derives `complete`:")
+    print(f"  {reason or '(no reason: the rule did not fire)'}")
+    if not reason or SELF_TEST_STALE_ID not in reason:
+        print(
+            "[phase-state] SELF-TEST FAILED: the divergence rule did not refuse an open, manual, "
+            "unadjudicated row owned by a complete stratum",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        "[phase-state] self-test ok: the stale row (manual, open, unadjudicated) is caught "
+        "without a human")
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument(
+        "--self-test",
+        action="store_true",
+        help="reconstruct a stale divergence row and require the rule to refuse it",
+    )
+    args = ap.parse_args(argv)
+    if args.self_test:
+        return self_test()
+
     # Every stratum that has *any* of the three artefacts a stratum's evidence is built from
     # must have a row, or it would be derived `not-started` however much of that evidence is
     # on disk. The check reads the filesystem rather than `STRATA`, because reading the
@@ -919,58 +1216,11 @@ def main() -> int:
         )
         return 1
 
-    rows = []
-    earlier_incomplete: int | None = None
-    for phase, name, stratum in STRATA:
-        present, absent, blocking = evidence_for(phase)
-        # The divergence-trigger rule (`divergence_blocking_reason`). A triggered, still-open
-        # obligation this stratum owns is a blocking reason exactly as an open ledger row is, and
-        # it is applied here, **before** the state is computed from `blocking`, so the effect is
-        # the state rather than a reason printed beside a `complete`.
-        blocking = blocking or divergence_blocking_reason(phase)
-        # **A stratum with any evidence is under way, and `absent` does not say otherwise.**
-        #
-        # This used to read `elif absent: state = "not-started"`, which meant a stratum whose
-        # plan and ledger had landed but whose modules had not was reported as never started.
-        # The Phase 4, 5 and 6 notes each record that mistake being made once by hand for the
-        # *court* item and being fixed for that item alone; the same reasoning applies to every
-        # other piece of evidence, so it is applied once here instead. What is missing is
-        # reported in `blocking` and listed in `evidence_absent`, so the state is not weaker
-        # for the change -- it is `in-progress`, which is what a stratum with a ledger is.
-        if not present:
-            state = "not-started"
-        elif absent:
-            state = "in-progress"
-            blocking = blocking or (
-                f"{len(absent)} required evidence file(s) absent, the first being "
-                f"{absent[0]}"
-            )
-        elif blocking:
-            state = "in-progress"
-        else:
-            state = "complete"
-
-        # Executable policy: a later stratum may not be complete while an earlier
-        # one is not.
-        if state == "complete" and earlier_incomplete is not None:
-            state = "in-progress"
-            blocking = (f"blocked by the dependency-order invariant: phase "
-                        f"{earlier_incomplete} is not complete")
-        elif state != "complete" and earlier_incomplete is None:
-            earlier_incomplete = phase
-
-        seal_doc = SEAL_DOCS.get(phase)
-        rows.append({
-            "phase": phase, "name": name, "stratum": stratum, "state": state,
-            "evidence_present": present, "evidence_absent": absent,
-            "blocking": blocking,
-            "seal_sha256": seal_identity(seal_doc) if seal_doc else None,
-            "deferred": deferred_rows(phase),
-            "provider_rows": provider_rows_for(phase),
-        })
+    rows = derive_state_rows()
 
     body = {
-        "rule": "a phase may be complete only if every earlier phase is complete",
+        "rule": "a phase may be complete only if every phase it requires is complete "
+                "(forensics/tools/phase_state.py REQUIRES; docs/PHASE-22-SUBPHASES.md section 8)",
         "derived_from": "artefact existence and their content, never typed status",
         "phases": rows,
         "summary": {
@@ -1012,4 +1262,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

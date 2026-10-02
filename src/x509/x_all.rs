@@ -37,8 +37,6 @@
 //!
 //! | withheld | blocker |
 //! |---|---|
-//! | `X509_REQ_verify_ex` (`:43`), `X509_REQ_verify` (`:56`), `X509_REQ_sign` (`:140`), `X509_REQ_sign_ctx` (`:152`), `d2i_X509_REQ_fp`/`_bio` (`:306`,`:317`), `i2d_X509_REQ_fp`/`_bio` (`:311`,`:330`), `X509_REQ_digest` (`:628`) | the `X509_REQ` type (`crypto/x509/x509_req.c`, 10.14.11) |
-//! | `X509_ACERT_verify` (`:61`), `X509_ACERT_sign` (`:194`), `X509_ACERT_sign_ctx` (`:202`), `d2i_X509_ACERT_fp`/`_bio` (`:862`,`:873`), `i2d_X509_ACERT_fp`/`_bio` (`:867`,`:878`) | the `X509_ACERT` type (`crypto/x509/x509_acert.c`, 10.14.11) |
 //! | `simple_get_asn1` (`:115`), `X509_load_http` (`:134`), `X509_CRL_load_http` (`:188`) | `OSSL_HTTP_get` (the `http`/`punycode` units, withheld since D455) |
 //! | `d2i_PKCS7_fp`/`_bio` (`:260`,`:283`), `i2d_PKCS7_fp`/`_bio` (`:277`,`:300`) | `d2i_PKCS7`/`i2d_PKCS7` (`crypto/pkcs7/pk7_asn1.c`, 10.14.13); only `PKCS7_it` is landed |
 //! | `PKCS7_ISSUER_AND_SERIAL_digest` (`:642`) | `PKCS7_ISSUER_AND_SERIAL_it` (`crypto/pkcs7/pk7_asn1.c`, 10.14.13) |
@@ -48,9 +46,15 @@
 //! (`src/asn1/x_spki.rs`, `src/x509/x509spki.rs`), so both are **landed** here rather than
 //! stubbed or deferred.
 //!
-//! The `X509_REQ`/`X509_ACERT`/`NETSCAPE_SPKI` groups are the forward dependency section 7 names
-//! for this subphase ("`v3_genn`/`x509_req` items for `x_all`'s faces"): the objects arrive in
-//! 10.14.4 and 10.14.11, so the faces that name them stay withheld rather than stubbed.
+//! **The `X509_REQ` and `X509_ACERT` faces, landed by 11.4/11.3.** Those two groups were the
+//! forward dependency section 7 names for this subphase ("`v3_genn`/`x509_req` items for
+//! `x_all`'s faces"), withheld here while their objects were unlanded. Both objects have since
+//! landed -- `X509_REQ` as `src/x509/x509_req.rs`/`x_req.rs` (11.4) and `X509_ACERT` as
+//! `src/x509/x509_acert.rs` (11.3) -- so `X509_REQ_verify_ex`/`_verify` (`:43`,`:56`),
+//! `X509_REQ_sign`/`_sign_ctx` (`:140`,`:152`), the four `X509_REQ` `_fp`/`_bio` stream faces
+//! (`:306-333`), `X509_REQ_digest` (`:628`), `X509_ACERT_verify` (`:61`),
+//! `X509_ACERT_sign`/`_sign_ctx` (`:194`,`:202`) and the four `X509_ACERT` `_fp`/`_bio` faces
+//! (`:862-881`) are **landed** here rather than stubbed or deferred.
 //!
 //! ## The stream faces are the `_of` macros, expanded
 //!
@@ -66,15 +70,16 @@
 //!
 //! ## The raise sites
 //!
-//! Twelve `ERR_raise*` sites in the unit; nine are reachable from this slice — `X509_sign`
-//! (`:80`), `X509_sign_ctx` (`:103`), `X509_CRL_sign` (`:167`), `X509_CRL_sign_ctx` (`:179`),
-//! `X509_digest_sig`'s five refusals (`:530`, `:535`, `:551`, `:582`, `:589`), `X509_CRL_digest`
-//! (`:612`) and the two `_ex_fp` BIO-new failures (`:740`, `:761`) — and are the generated
-//! `X509_ALL_*` constants in [`crate::runtime::err::err_sites`]. The other three
-//! (`X509_REQ_verify_ex` `:47`, `X509_REQ_sign` `:143`, `X509_REQ_sign_ctx` `:155`) are in the
-//! withheld `X509_REQ` faces; their coordinates are generated too and are harmless until that
-//! half lands. `crypto/x509/x_all.c` therefore joins `gen_err_raise_sites.py`'s covered set with
-//! this subphase.
+//! Twelve `ERR_raise*` sites in the unit; with 11.3/11.4 **all twelve are now reachable** --
+//! `X509_REQ_verify_ex` (`:47`), `X509_REQ_sign` (`:143`) and `X509_REQ_sign_ctx` (`:155`) were
+//! in the previously-withheld `X509_REQ` faces and are landed with them. The other nine were
+//! already reachable: `X509_sign` (`:80`), `X509_sign_ctx` (`:103`), `X509_CRL_sign` (`:167`),
+//! `X509_CRL_sign_ctx` (`:179`), `X509_digest_sig`'s five refusals (`:530`, `:535`, `:551`,
+//! `:582`, `:589`), `X509_CRL_digest` (`:612`) and the two `_ex_fp` BIO-new failures
+//! (`:740`, `:761`) -- and are the generated `X509_ALL_*` constants in
+//! [`crate::runtime::err::err_sites`]. `crypto/x509/x_all.c` therefore joins
+//! `gen_err_raise_sites.py`'s covered set with `:47`/`:143`/`:155` also exercised by this
+//! slice.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -84,7 +89,8 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::a_d2i_fp::{
-    asn1_d2i_read_bio, ASN1_d2i_bio, ASN1_d2i_fp, ASN1_item_d2i_bio, ASN1_item_d2i_fp,
+    asn1_d2i_read_bio, ASN1_d2i_bio, ASN1_d2i_fp, ASN1_item_d2i_bio, ASN1_item_d2i_bio_ex,
+    ASN1_item_d2i_fp,
 };
 use crate::asn1::a_digest::{ossl_asn1_item_digest_ex, ASN1_item_digest};
 use crate::asn1::a_i2d_fp::{ASN1_i2d_bio, ASN1_i2d_fp, ASN1_item_i2d_bio, ASN1_item_i2d_fp};
@@ -122,6 +128,8 @@ use crate::runtime::buffer::{BUF_MEM_free, BufMem};
 use crate::runtime::err::{err_sites, raise_site};
 use crate::runtime::obj::{NID_undef, OBJ_find_sigid_algs, OBJ_nid2sn, NID_ED25519, NID_ED448};
 use crate::runtime::stack::OPENSSL_sk_num;
+use crate::x509::x509_acert::{X509Acert, X509_ACERT_INFO_it, X509_ACERT_it};
+use crate::x509::x509_req::{X509Req, X509_REQ_get_version, X509_REQ_VERSION_1};
 use crate::x509::x509_set::{X509_get0_extensions, X509_set_version};
 use crate::x509::x_crl::{X509Crl, X509_CRL_INFO_it, X509_CRL_it};
 use crate::x509::x_pubkey::{
@@ -129,6 +137,7 @@ use crate::x509::x_pubkey::{
     i2d_DSA_PUBKEY, i2d_EC_PUBKEY, i2d_PUBKEY, i2d_RSA_PUBKEY, i2d_X509_PUBKEY, X509Pubkey,
     X509_get0_pubkey_bitstr,
 };
+use crate::x509::x_req::{X509_REQ_INFO_it, X509_REQ_it};
 use crate::x509::x_x509::{X509_CINF_it, X509_get_signature_nid, X509_it, X509};
 
 /// `EXFLAG_SET` — `include/openssl/x509v3.h:678`, the word `X509_digest`/`X509_CRL_digest` test
@@ -257,7 +266,212 @@ pub unsafe extern "C" fn NETSCAPE_SPKI_sign(
     }
 }
 
-/// `int X509_sign(X509 *x, EVP_PKEY *pkey, const EVP_MD *md)` — `crypto/x509/x_all.c:77-98`.
+/// `int X509_REQ_verify_ex(X509_REQ *a, EVP_PKEY *r, OSSL_LIB_CTX *libctx, const char *propq)` --
+/// `crypto/x509/x_all.c:43-54`.
+///
+/// A request whose version is not v1 is refused with `X509_R_UNSUPPORTED_VERSION` and answers
+/// `-1`; otherwise the signature over `X509_REQ_INFO` is verified with the request's own
+/// distinguishing id and the caller's library context/property query.
+///
+/// # Safety
+///
+/// `a` must be a live `X509_REQ`; `r` a live key; `libctx` NULL or live and `propq` NULL or
+/// NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn X509_REQ_verify_ex(
+    a: *mut X509Req,
+    r: *mut EvpPkey,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> c_int {
+    // SAFETY: `a` is live per the contract.
+    if unsafe { X509_REQ_get_version(a) } != X509_REQ_VERSION_1 {
+        // SAFETY: a compile-time-constant site, exactly as `ERR_raise` is.
+        unsafe { raise_site(&err_sites::X509_ALL_47) };
+        return -1;
+    }
+    // SAFETY: `a` is live and `X509_REQ_INFO_it()` is the crate's static item.
+    unsafe {
+        ASN1_item_verify_ex(
+            X509_REQ_INFO_it(),
+            &raw const (*a).sig_alg,
+            (*a).signature,
+            (&raw const (*a).req_info).cast::<c_void>(),
+            (*a).distinguishing_id,
+            r,
+            libctx,
+            propq,
+        )
+    }
+}
+
+/// `int X509_REQ_verify(X509_REQ *a, EVP_PKEY *r)` -- `crypto/x509/x_all.c:56-59`.
+///
+/// # Safety
+///
+/// `a` must be a live `X509_REQ`; `r` a live key.
+#[no_mangle]
+pub unsafe extern "C" fn X509_REQ_verify(a: *mut X509Req, r: *mut EvpPkey) -> c_int {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { X509_REQ_verify_ex(a, r, ptr::null_mut(), ptr::null()) }
+}
+
+/// `int X509_ACERT_verify(X509_ACERT *a, EVP_PKEY *r)` -- `crypto/x509/x_all.c:61-69`.
+///
+/// The TBS signature algorithm must equal the outer one, then `ASN1_item_verify_ex` verifies the
+/// signature over the `X509_ACERT_INFO` item with a NULL distinguishing id and NULL
+/// context/property query -- the attribute certificate carries neither.
+///
+/// # Safety
+///
+/// `a` must be a live `X509_ACERT`; `r` a live key.
+#[no_mangle]
+pub unsafe extern "C" fn X509_ACERT_verify(a: *mut X509Acert, r: *mut EvpPkey) -> c_int {
+    // SAFETY: `a` is live per the contract.
+    if unsafe { X509_ALGOR_cmp(&raw const (*a).sig_alg, &raw const (*(*a).acinfo).signature) } != 0
+    {
+        return 0;
+    }
+    // SAFETY: `a` is live and `X509_ACERT_INFO_it()` is the crate's static item.
+    unsafe {
+        ASN1_item_verify_ex(
+            X509_ACERT_INFO_it(),
+            &raw const (*a).sig_alg,
+            &raw const (*a).signature,
+            (*a).acinfo.cast::<c_void>(),
+            ptr::null(),
+            r,
+            ptr::null_mut(),
+            ptr::null(),
+        )
+    }
+}
+
+/// `int X509_REQ_sign(X509_REQ *x, EVP_PKEY *pkey, const EVP_MD *md)` -- `crypto/x509/x_all.c:140-150`.
+///
+/// A NULL request is refused with `ERR_R_PASSED_NULL_PARAMETER`; the cached encoding is marked
+/// stale before `ASN1_item_sign_ex` signs the `X509_REQ_INFO` item with the request's own library
+/// context and property query.
+///
+/// # Safety
+///
+/// `x` must be NULL or live; `pkey` a live key; `md` a live or NULL method.
+#[no_mangle]
+pub unsafe extern "C" fn X509_REQ_sign(
+    x: *mut X509Req,
+    pkey: *mut EvpPkey,
+    md: *const EvpMd,
+) -> c_int {
+    if x.is_null() {
+        // SAFETY: a compile-time-constant site, exactly as `ERR_raise` is.
+        unsafe { raise_site(&err_sites::X509_ALL_143) };
+        return 0;
+    }
+    // SAFETY: `x` is live per the check above and its body is writable.
+    unsafe {
+        (*x).req_info.enc.modified = 1;
+        ASN1_item_sign_ex(
+            X509_REQ_INFO_it(),
+            &raw mut (*x).sig_alg,
+            ptr::null_mut(),
+            (*x).signature,
+            (&raw const (*x).req_info).cast::<c_void>(),
+            ptr::null(),
+            pkey,
+            md,
+            (*x).libctx,
+            (*x).propq,
+        )
+    }
+}
+
+/// `int X509_REQ_sign_ctx(X509_REQ *x, EVP_MD_CTX *ctx)` -- `crypto/x509/x_all.c:152-162`.
+///
+/// As [`X509_REQ_sign`] but the digest context carries the key and method.
+///
+/// # Safety
+///
+/// `x` must be NULL or live; `ctx` a live initialised signing context.
+#[no_mangle]
+pub unsafe extern "C" fn X509_REQ_sign_ctx(
+    x: *mut X509Req,
+    ctx: *mut crate::evp::digest::EvpMdCtx,
+) -> c_int {
+    if x.is_null() {
+        // SAFETY: a compile-time-constant site, exactly as `ERR_raise` is.
+        unsafe { raise_site(&err_sites::X509_ALL_155) };
+        return 0;
+    }
+    // SAFETY: `x` is live per the check above and its body is writable.
+    unsafe {
+        (*x).req_info.enc.modified = 1;
+        ASN1_item_sign_ctx(
+            X509_REQ_INFO_it(),
+            &raw mut (*x).sig_alg,
+            ptr::null_mut(),
+            (*x).signature,
+            (&raw const (*x).req_info).cast::<c_void>(),
+            ctx,
+        )
+    }
+}
+
+/// `int X509_ACERT_sign(X509_ACERT *x, EVP_PKEY *pkey, const EVP_MD *md)` --
+/// `crypto/x509/x_all.c:194-200`.
+///
+/// Signs the `X509_ACERT_INFO` item, writing the signature algorithm into both the outer
+/// `sig_alg` and the info's `signature`, with a NULL library context and property query.
+///
+/// # Safety
+///
+/// `x` must be a live `X509_ACERT`; `pkey` a live key; `md` a live or NULL method.
+#[no_mangle]
+pub unsafe extern "C" fn X509_ACERT_sign(
+    x: *mut X509Acert,
+    pkey: *mut EvpPkey,
+    md: *const EvpMd,
+) -> c_int {
+    // SAFETY: `x` is live per the contract and its body is writable.
+    unsafe {
+        ASN1_item_sign_ex(
+            X509_ACERT_INFO_it(),
+            &raw mut (*x).sig_alg,
+            &raw mut (*(*x).acinfo).signature,
+            &raw mut (*x).signature,
+            (*x).acinfo.cast::<c_void>(),
+            ptr::null(),
+            pkey,
+            md,
+            ptr::null_mut(),
+            ptr::null(),
+        )
+    }
+}
+
+/// `int X509_ACERT_sign_ctx(X509_ACERT *x, EVP_MD_CTX *ctx)` -- `crypto/x509/x_all.c:202-207`.
+///
+/// # Safety
+///
+/// `x` must be a live `X509_ACERT`; `ctx` a live initialised signing context.
+#[no_mangle]
+pub unsafe extern "C" fn X509_ACERT_sign_ctx(
+    x: *mut X509Acert,
+    ctx: *mut crate::evp::digest::EvpMdCtx,
+) -> c_int {
+    // SAFETY: `x` is live per the contract and its body is writable.
+    unsafe {
+        ASN1_item_sign_ctx(
+            X509_ACERT_INFO_it(),
+            &raw mut (*x).sig_alg,
+            &raw mut (*(*x).acinfo).signature,
+            &raw mut (*x).signature,
+            (*x).acinfo.cast::<c_void>(),
+            ctx,
+        )
+    }
+}
+
+/// `int X509_sign(X509 *x, EVP_PKEY *pkey, const EVP_MD *md)` -- `crypto/x509/x_all.c:77-98`.
 ///
 /// A NULL certificate is refused with `ERR_R_PASSED_NULL_PARAMETER`; a certificate with
 /// extensions is forced to v3; the cached encoding is marked stale before signing, so a changed
@@ -490,6 +704,122 @@ pub unsafe extern "C" fn d2i_X509_CRL_bio(bp: *mut Bio, crl: *mut *mut X509Crl) 
 pub unsafe extern "C" fn i2d_X509_CRL_bio(bp: *mut Bio, crl: *const X509Crl) -> c_int {
     // SAFETY: the caller's contract, forwarded.
     unsafe { ASN1_item_i2d_bio(X509_CRL_it(), bp, crl.cast::<c_void>()) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The request and attribute-certificate stream faces -- `x_all.c:306-333`, `:861-881`
+// ---------------------------------------------------------------------------------------------
+
+/// `X509_REQ *d2i_X509_REQ_fp(FILE *fp, X509_REQ **req)` -- `crypto/x509/x_all.c:306-309`.
+///
+/// # Safety
+///
+/// `fp` must be a live `FILE *`; `req` NULL or a writable slot.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_X509_REQ_fp(fp: *mut FILE, req: *mut *mut X509Req) -> *mut X509Req {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { ASN1_item_d2i_fp(X509_REQ_it(), fp, req.cast::<c_void>()).cast::<X509Req>() }
+}
+
+/// `int i2d_X509_REQ_fp(FILE *fp, const X509_REQ *req)` -- `crypto/x509/x_all.c:311-314`.
+///
+/// # Safety
+///
+/// `fp` must be a live `FILE *`; `req` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_X509_REQ_fp(fp: *mut FILE, req: *const X509Req) -> c_int {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { ASN1_item_i2d_fp(X509_REQ_it(), fp, req.cast::<c_void>()) }
+}
+
+/// `X509_REQ *d2i_X509_REQ_bio(BIO *bp, X509_REQ **req)` -- `crypto/x509/x_all.c:317-328`.
+///
+/// Unlike the other `_bio` faces this one binds the existing request's library context and
+/// property query into `ASN1_item_d2i_bio_ex` when `*req` is non-NULL.
+///
+/// # Safety
+///
+/// `bp` must be a live BIO; `req` NULL or a writable slot.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_X509_REQ_bio(bp: *mut Bio, req: *mut *mut X509Req) -> *mut X509Req {
+    let mut libctx: *mut c_void = ptr::null_mut();
+    let mut propq: *const c_char = ptr::null();
+    if !req.is_null() {
+        // SAFETY: `req` is a non-null writable slot per the contract.
+        let existing = unsafe { *req };
+        if !existing.is_null() {
+            // SAFETY: `existing` is live per the check above.
+            libctx = unsafe { (*existing).libctx };
+            // SAFETY: as above.
+            propq = unsafe { (*existing).propq };
+        }
+    }
+    // SAFETY: `bp`/`req` are the caller's and the context/property query come from the request.
+    unsafe {
+        ASN1_item_d2i_bio_ex(X509_REQ_it(), bp, req.cast::<c_void>(), libctx, propq)
+            .cast::<X509Req>()
+    }
+}
+
+/// `int i2d_X509_REQ_bio(BIO *bp, const X509_REQ *req)` -- `crypto/x509/x_all.c:330-333`.
+///
+/// # Safety
+///
+/// `bp` must be a live BIO; `req` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_X509_REQ_bio(bp: *mut Bio, req: *const X509Req) -> c_int {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { ASN1_item_i2d_bio(X509_REQ_it(), bp, req.cast::<c_void>()) }
+}
+
+/// `X509_ACERT *d2i_X509_ACERT_fp(FILE *fp, X509_ACERT **acert)` -- `crypto/x509/x_all.c:862-865`.
+///
+/// # Safety
+///
+/// `fp` must be a live `FILE *`; `acert` NULL or a writable slot.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_X509_ACERT_fp(
+    fp: *mut FILE,
+    acert: *mut *mut X509Acert,
+) -> *mut X509Acert {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { ASN1_item_d2i_fp(X509_ACERT_it(), fp, acert.cast::<c_void>()).cast::<X509Acert>() }
+}
+
+/// `int i2d_X509_ACERT_fp(FILE *fp, const X509_ACERT *acert)` -- `crypto/x509/x_all.c:867-870`.
+///
+/// # Safety
+///
+/// `fp` must be a live `FILE *`; `acert` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_X509_ACERT_fp(fp: *mut FILE, acert: *const X509Acert) -> c_int {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { ASN1_item_i2d_fp(X509_ACERT_it(), fp, acert.cast::<c_void>()) }
+}
+
+/// `X509_ACERT *d2i_X509_ACERT_bio(BIO *bp, X509_ACERT **acert)` -- `crypto/x509/x_all.c:873-876`.
+///
+/// # Safety
+///
+/// `bp` must be a live BIO; `acert` NULL or a writable slot.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_X509_ACERT_bio(
+    bp: *mut Bio,
+    acert: *mut *mut X509Acert,
+) -> *mut X509Acert {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { ASN1_item_d2i_bio(X509_ACERT_it(), bp, acert.cast::<c_void>()).cast::<X509Acert>() }
+}
+
+/// `int i2d_X509_ACERT_bio(BIO *bp, const X509_ACERT *acert)` -- `crypto/x509/x_all.c:878-881`.
+///
+/// # Safety
+///
+/// `bp` must be a live BIO; `acert` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_X509_ACERT_bio(bp: *mut Bio, acert: *const X509Acert) -> c_int {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { ASN1_item_i2d_bio(X509_ACERT_it(), bp, acert.cast::<c_void>()) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1156,6 +1486,38 @@ pub unsafe extern "C" fn X509_CRL_digest(
         }
         ossl_asn1_item_digest_ex(
             X509_CRL_it(),
+            type_,
+            data.cast_mut().cast::<c_void>(),
+            md,
+            len,
+            (*data).libctx,
+            (*data).propq,
+        )
+    }
+}
+
+/// `int X509_REQ_digest(const X509_REQ *data, const EVP_MD *type, unsigned char *md,
+/// unsigned int *len)` -- `crypto/x509/x_all.c:628-633`.
+///
+/// Unlike `X509_digest`/`X509_CRL_digest` there is no cached-fingerprint shortcut: the request is
+/// always DER-encoded and digested through `ossl_asn1_item_digest_ex` with its own library
+/// context and property query.
+///
+/// # Safety
+///
+/// `data` must be a live `X509_REQ`; `type_` a live method; `md` writable for the digest size and
+/// `len` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn X509_REQ_digest(
+    data: *const X509Req,
+    type_: *const EvpMd,
+    md: *mut c_uchar,
+    len: *mut c_uint,
+) -> c_int {
+    // SAFETY: `data` is live per the contract.
+    unsafe {
+        ossl_asn1_item_digest_ex(
+            X509_REQ_it(),
             type_,
             data.cast_mut().cast::<c_void>(),
             md,

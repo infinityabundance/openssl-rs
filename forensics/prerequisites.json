@@ -25,6 +25,12 @@
         "owner_phase": 13,
         "reason": "providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.",
         "symbol": "OSSL_provider_init"
+      },
+      {
+        "evidence": "forensics/tools/atlas_runtime.py parse_option_list()/_OPTION_ROW and _OPTION_VALTYPES (repaired by 22.9; the row's original citations :240/:243 have moved with the rewrite); forensics/atlas/phase22/cli-surface.json (22.9's structured surface: 120 commands -- 54 standard, 1 deprecated, 18 digest aliases, 47 cipher aliases -- with 4,314 structured options, 0 refused rows and 0 commands with zero options); RT-PHASE22-CLI in artifacts/phase22/COURTS.json (proves the repaired parser reads a real row, refuses a malformed one, and fails when broken in memory); forensics/atlas/openssl-3.6.4-production/cli-commands.json still records command_count 55 and option_count 0 on all 55 commands, because it has not been regenerated",
+        "owner_phase": 16,
+        "reason": "Transferred to 22.9 and repaired there; what remains deferred to Phase 16 is regenerating the Phase-1 capture with the fixed parser. parse_option_list() (forensics/tools/atlas_runtime.py) matched the authority's `openssl list -options <cmd>` rows against a help-text shape (`-in val        Input file`) that the output never produces, and the real rows are `name type` pairs (`help -`, `in <`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count was 0 and all 2,008 raw rows stayed unstructured. 22.9 rewrote the parser to the authority's actual grammar and re-enumerated the whole namespace from the authority's own built binary (forensics/authorities/build/openssl-3.6.4-production/apps/openssl): forensics/atlas/phase22/cli-surface.json now carries 120 commands with 4,314 structured options, 0 refused rows and 0 commands_with_zero_options, and RT-PHASE22-CLI proves the repaired parser reads a real row and refuses a malformed one (and turns to fail when the parser is broken in memory). The Phase-16-owned Phase-1 capture forensics/atlas/openssl-3.6.4-production/cli-commands.json still carries option_count 0 on all 55 commands: it is Phase 16 (cli-config) that owns the CLI stratum and would regenerate production and historical in lockstep, since regenerating only the production authority would leave a spurious option-set differential against the historical one. Closure: parse_option_list() reads the authority's actual option shape and the structured surface (22.9's cli-surface.json now, and the Phase-16 capture once regenerated) has a non-zero structured option_count for every command.",
+        "symbol": "cli_option_list_parse"
       }
     ],
     "divergences": [
@@ -108,24 +114,6 @@
         "evidence": "crypto/bn/bn_intern.c:171-182; src/bn/bignum.rs:67 and :83 (the representation, and the flag it declines to model); src/bn/intern.rs's module documentation (the three representational gaps); docs/DECISIONS.md D338",
         "note": "The one internal of `crypto/bn/bn_intern.c` this crate gives no function, and it is a storage-model divergence rather than a withheld one. The authority's body (`crypto/bn/bn_intern.c:171-182`) is five assignments -- `a->d = (BN_ULONG *)words; a->dmax = a->top = size; a->neg = 0; a->flags |= BN_FLG_STATIC_DATA;` -- and the first of them **aliases the caller's storage into the object**, which is the whole point of the name and which `BN_FLG_STATIC_DATA` then tells `BN_free` not to release. This crate's `BIGNUM` owns its magnitude (`d: Vec<Limb>`, `src/bn/bignum.rs:83`) and `src/bn/bignum.rs:67` already records that the representation the flag describes is not modelled, so the reachable half of the contract is an *owned copy* and not an alias: a later write through the caller's array would not be seen, and the object would carry `BN_FLG_STATIC_DATA` over storage it does own. The other half of the authority's body has no counterpart either -- `bn_correct_top` after a top that is deliberately set wide is the normalisation this representation performs on every store. Both readings are wrong in a direction a reader could not detect, so the name is recorded rather than approximated. **It is unreachable on every path either side has**: `bn_set_static_words` has no caller anywhere in the authority outside its own definition (`grep -rn bn_set_static_words crypto/ include/ providers/` answers the definition and nothing else), and the crate's own callers are the EC layer's, which lands against `src/bn/intern.rs`'s other seven. If a caller ever arrives, the row is what makes the decision visible instead of a `Vec` that quietly copied.",
         "owner_module": "src/bn/intern.rs"
-      },
-      {
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_x509_check_cert_time"
-        ],
-        "evidence": "crypto/x509/x509_vfy.c:2084-2106 (the helper), :429, :470 and :2212 (its three in-unit callers) and crypto/x509/x509_local.h:42 (its declaration); src/x509/x509_vfy.rs's module documentation, which withholds the unit's remainder behind the missing X509_STORE_CTX; docs/DECISIONS.md D451 (the withhold-by-name rule) and D327 (the countable-unit rule)",
-        "note": "**The one name of `crypto/x509/x509_vfy.c` the crate neither lands nor can land is withheld because its closure is unmet, not overlooked.** Phase 10 lands `X509_self_signed` (`:100-115`), whose closure is whole (`ossl_x509v3_cache_extensions` from `v3_purp.c`, `X509_get0_pubkey` from `x509_cmp.c` and `X509_verify` from `x_all.rs`). The unit's other names, `ossl_x509_check_cert_time` among them, read `ctx->param->flags` (`X509_V_FLAG_USE_CHECK_TIME`/`X509_V_FLAG_NO_CHECK_TIME`) and `ctx->param->check_time`, call `X509_cmp_time` on `X509_get0_notBefore`/`X509_get0_notAfter`, and fail through `CB_FAIL_IF` -> `verify_cb_cert` -> `ctx->verify_cb`. The crate models no `struct x509_store_ctx_st` (`X509_STORE_CTX`), no `X509_VERIFY_PARAM` and no `X509_cmp_time`, so every dependency of this helper is unlanded and its stratum, Phase 11, owns it with the rest of the file. This row is what the prerequisite gate's `unwired_function_in_the_current_stratum` finding becomes once the omission is a decision rather than an oversight, and it fail-closes: land the helper and the gate reports the row stale until it is removed.",
-        "owner_module": "src/x509/x509_vfy.rs"
-      },
-      {
-        "class": "owned_by_a_later_stratum",
-        "covers": [
-          "ossl_x509_print_ex_brief"
-        ],
-        "evidence": "docs/DECISIONS.md D349, D470; crypto/x509/t_x509.c:519-559 (now landed) and :383-411 (still withheld) against :269-290 (the slice); crypto/x509/v3_rolespec.c's `i2r_OSSL_ROLE_SPEC_CERT_ID` (the new caller of `ossl_serial_number_print`); crypto/x509/t_x509.c:424 and :493, crypto/cmp/cmp_vfy.c:57 (the brief printer's callers); src/x509/t_x509.rs's module documentation",
-        "note": "**Narrowed at D470: `ossl_serial_number_print` was built, one internal is still withheld.** `src/x509/t_x509.rs` lands `X509_signature_dump` (`:269-290`) and, as of D470, `ossl_serial_number_print` (`:519-559`) -- the decimal-plus-hex serial printer `v3_rolespec.c`'s `i2r_OSSL_ROLE_SPEC_CERT_ID` calls, which is why `crypto/x509/v3_rolespec.c` could land its table. What remains withheld is `ossl_x509_print_ex_brief` (`:383-411`), the brief-print tail called from `crypto/x509/t_x509.c:424`/`:493` and `crypto/cmp/cmp_vfy.c:57`; nine of the unit's ten exports are still the printers, whose `do_print_ex` reads nearly every field of an `X509` and which land with the object layer (Phase 11's). The row fail-closes both ways: if `ossl_x509_print_ex_brief` is built the gate reports it stale until it is removed, and if `src/x509/t_x509.rs` stopped owning the unit the record would stop matching.",
-        "owner_module": "src/x509/t_x509.rs"
       },
       {
         "authority_units": [
@@ -1086,67 +1074,118 @@
         "unit": "crypto/ctype.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "Section 7's 10.14.9 owns the policy graph -- `pcy_tree.c`, `pcy_cache.c`, `pcy_data.c` and `pcy_map.c` -- and it did not land: the crate has no module for any of the four, and their exports (`X509_policy_tree_*`, `X509_policy_level_*`, `X509_policy_node_*`) are `owner_phase` 11 in `symbol-ownership.json`. Phase 11 is the X.509 stratum and is `not-started`, so the work is deferred to it rather than missing from Phase 10.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_tree.rs",
+        "evidence": "src/x509/pcy_tree.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_policy_check",
+          "X509_policy_tree_free"
+        ],
+        "reason": "Landed by Phase 11's 11.2 slices -- the policy-tree entry point and the whole `tree_*` graph between it and `X509_policy_tree_free` are transcribed in `src/x509/pcy_tree.rs`, which `forensics/phase11-obligations.json` records implemented. The record is kept because no single authority unit dominates the module.",
         "unit": "crypto/x509/pcy_tree.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The policy graph's cache half, owned by section 7's 10.14.9 alongside `pcy_tree.c`. Same deferral: no crate module, exports `owner_phase` 11, Phase 11 `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_cache.rs",
+        "evidence": "src/x509/pcy_cache.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "ossl_policy_cache_set",
+          "ossl_policy_cache_find_data",
+          "ossl_policy_cache_free"
+        ],
+        "reason": "The policy graph's cache half, transcribed in `src/x509/pcy_cache.rs`. The unit defines no export -- its content is three authority-internal functions -- so the record names the crate functions that build it.",
         "unit": "crypto/x509/pcy_cache.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The policy graph's data half, owned by section 7's 10.14.9 alongside `pcy_tree.c`. Same deferral: no crate module, exports `owner_phase` 11, Phase 11 `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_data.rs",
+        "evidence": "src/x509/pcy_data.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "ossl_policy_data_new",
+          "ossl_policy_data_free"
+        ],
+        "reason": "The policy graph's data half, transcribed in `src/x509/pcy_data.rs`; both of the unit's internal functions are built.",
         "unit": "crypto/x509/pcy_data.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The policy graph's mapping half, owned by section 7's 10.14.9 alongside `pcy_tree.c`. Same deferral: no crate module, exports `owner_phase` 11, Phase 11 `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_cache.rs",
+        "evidence": "src/x509/pcy_cache.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "ossl_policy_cache_set_mapping"
+        ],
+        "reason": "The policy graph's mapping half. Its one function landed in `src/x509/pcy_cache.rs` rather than a module of its own (the authority is `pcy_map.c`), which is why the unit needs a record: no module is dominated by it.",
         "unit": "crypto/x509/pcy_map.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "Section 7's 10.14.9 names it as still withheld on D455's two-part blocker. `src/x509/pcy_node.rs` is a doc-and-withholds module: it builds none of the unit's six `ossl_policy_*` functions, so the unit is genuinely unreached. Its policy-node helpers belong to the policy graph, whose exports are `owner_phase` 11, and Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/pcy_node.rs",
+        "evidence": "src/x509/pcy_node.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "ossl_policy_node_cmp_new",
+          "ossl_policy_tree_find_sk",
+          "ossl_policy_level_add_node"
+        ],
+        "reason": "The policy graph's node half, transcribed whole in `src/x509/pcy_node.rs`; the unit defines no export, so the record names the crate functions that build it.",
         "unit": "crypto/x509/pcy_node.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "Section 7's 10.14.11 owns the printers and the request/attribute objects, `x509_acert.c` among them. Its five internal symbols are the `X509_ACERT`/`OSSL_ISSUER_SERIAL`/`OSSL_OBJECT_DIGEST_INFO`/`X509_HOLDER` item templates, none of which the crate defines, and its exports (`X509_ACERT_sign`/`_verify`/...) are `owner_phase` 11. Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/x509_acert.rs",
+        "evidence": "src/x509/x509_acert.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_ACERT_sign",
+          "X509_ACERT_verify",
+          "OSSL_ISSUER_SERIAL_new"
+        ],
+        "reason": "Phase 11's 11.3 lands the whole attribute-certificate surface in `src/x509/x509_acert.rs`; the unit is reached through its exports and its five item templates.",
         "unit": "crypto/x509/x509_acert.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "Section 7's 10.14.10 owns the trust, verification-parameter and store-lookup layer -- `x509_lu.c`, `x509_vpm.c`, `x509_trust.c` and the `by_*` backends -- and it did not land. `x509_lu.c`'s two internal symbols (`ossl_x509_store_ctx_get_by_subject`, `ossl_x509_store_read_lock`) are unbuilt and its exports (`X509_STORE_get1_*`) are `owner_phase` 11. Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/x509_lu.rs",
+        "evidence": "src/x509/x509_lu.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_LOOKUP_by_subject",
+          "X509_LOOKUP_free",
+          "ossl_x509_store_ctx_get_by_subject"
+        ],
+        "reason": "Phase 11's 11.1 landings transcribe the store and lookup layer in `src/x509/x509_lu.rs`; the unit is reached through its exports and its two internal functions.",
         "unit": "crypto/x509/x509_lu.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The verification-parameter half of section 7's 10.14.10. `X509_VERIFY_PARAM_new`, `X509_VERIFY_PARAM_set_flags` and the unit's other exports are `owner_phase` 11, the crate has no module for the unit, and Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/x509_vpm.rs",
+        "evidence": "src/x509/x509_vpm.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_VERIFY_PARAM_free",
+          "X509_VERIFY_PARAM_get0",
+          "X509_VERIFY_PARAM_add0_policy"
+        ],
+        "reason": "Phase 11's 11.2 transcribes the verification-parameter object and table in `src/x509/x509_vpm.rs`; the unit defines no authority-internal function, so the record names exports.",
         "unit": "crypto/x509/x509_vpm.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-10-SUBPHASES.md section 7 rows 10.14.9-10.14.11 (the sub-subphases that own these units); forensics/atlas/symbol-ownership.json (their exports are owner_phase 11); forensics/phase-state.json (phase 11 is not-started)",
-        "owner_phase": 11,
-        "reason": "The trust-store half of section 7's 10.14.10. `internal-symbols.json` records no function for the unit at all, its exports are `owner_phase` 11, and Phase 11 is `not-started`.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/x509_trust.rs",
+        "evidence": "src/x509/x509_trust.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_TRUST_add",
+          "X509_TRUST_get0",
+          "X509_TRUST_get_by_id"
+        ],
+        "reason": "Phase 11's 11.1 transcribes the trust table in `src/x509/x509_trust.rs`; the unit defines no authority-internal function, so the record names exports.",
         "unit": "crypto/x509/x509_trust.c"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/x509/by_dir.rs",
+        "evidence": "src/x509/by_dir.rs (the module that transcribes it); forensics/phase11-obligations.json (its exports are implemented); docs/PHASE-11-SUBPHASES.md section 5",
+        "names": [
+          "X509_LOOKUP_hash_dir"
+        ],
+        "reason": "Phase 11's 11.1e lands the whole hashed-directory lookup in `src/x509/by_dir.rs`. The unit's only export is the method constructor and every other function is `static` (local linkage, so `internal-symbols.json` records none), which is why the three mechanical signals cannot see it and it needs a record.",
+        "unit": "crypto/x509/by_dir.c"
       }
     ]
   },
