@@ -503,7 +503,7 @@
         "stratum": "X.509 + verification"
       },
       {
-        "blocking": "884 open obligation(s) of this stratum recorded in forensics/phase12-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand and twenty-four of the exports it owns are its own twelve headers' (`ts.h`, `ocsp.h`, `cmp.h`, `cms.h`, `pkcs7.h`, `crmf.h`, `ct.h`, `ess.h`, `srp.h`, `http.h`, `cmp_util.h`, `pem.h`) and the nine remainder arrive as recorded hand-offs from phases 5 and 11. The ledger does not start with that whole working set open: the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-12-SUBPHASES.md sections 1 and 4)",
+        "blocking": "861 open obligation(s) of this stratum recorded in forensics/phase12-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand and twenty-four of the exports it owns are its own twelve headers' (`ts.h`, `ocsp.h`, `cmp.h`, `cms.h`, `pkcs7.h`, `crmf.h`, `ct.h`, `ess.h`, `srp.h`, `http.h`, `cmp_util.h`, `pem.h`) and the nine remainder arrive as recorded hand-offs from phases 5 and 11. The ledger does not start with that whole working set open: the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-12-SUBPHASES.md sections 1 and 4)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -659,7 +659,7 @@
       "not_started": 9
     }
   },
-  "body_hash": "1c253ee26189510f8c72097116fbea46fcdd155de4a632dee82e2945d53e16f4",
+  "body_hash": "fe9ab5efd540a252609dd9c88635262247dd94be04a5cc73cd712e13f0a1a6d2",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
