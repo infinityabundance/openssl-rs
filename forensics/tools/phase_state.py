@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -46,6 +47,12 @@ from atlas_common import (  # noqa: E402
 # real rule rather than by a boolean typed into the test. `divergence_obligations` imports only
 # `atlas_common`, so this is not a cycle.
 from divergence_obligations import derive_blocking  # noqa: E402
+# The FRF declaration registry (D58). `phase_state.py` reads it rather than `artifacts/phase<N>/
+# COURTS.json` because the two sets differ exactly where this rule must: a reference-basis court
+# (`RT-RUNTIME-REF` and its siblings) has a `COURTS.json` row and a staged probe pair but no table
+# row, so it is not declarable and must not be required to carry a chain. `docs_consistency.py`
+# imports the same table for the manifest counts, so there is one registry.
+import gen_frf_courts  # noqa: E402
 
 OUT = REPO_ROOT / "forensics" / "phase-state.json"
 
@@ -86,6 +93,52 @@ PROVIDER_COVERAGE = "forensics/atlas/provider-court-coverage.json"
 # tool fails closed rather than skipping the rule, because a check that can be silently skipped is
 # not a check (see `divergence_blocking_reason`).
 DIVERGENCE_OBLIGATIONS = "forensics/divergence-obligations.json"
+
+# The FRF chain rule (docs/RELEASE_GATES.md section 2 items 6, 8 and 10, and
+# docs/DECISIONS.md D200/D413/D424/D475). A stratum that has staged FRF courts must carry the
+# whole chain those items name: a declaration for every staged court, a receipt and two
+# adjudicated challenges for every declaration, one compiled `sensitivity-backed` claim with no
+# blockers that covers the receipts, and a Gemel checkpoint whose summary names the stratum and
+# the chain. This is generic over `STRATUM_EVIDENCE` for the same reason the coverage and
+# provider joins are (D199/D237): the requirement is a property of a stratum's own evidence, not
+# of the stratum that happens to be landing, so a later stratum inherits it by existing rather
+# than by a reviewer remembering to copy a check.
+#
+# Every fact is read from the artefact that carries it -- `.frf/` for the FRF objects,
+# `artifacts/phase<N>/COURTS.json` and `forensics/frf/courts/` for the declarations, and the
+# Git-tracked projection `forensics/GEMEL_TRAJECTORY.md` for the checkpoint summaries, because
+# the Gemel binary is not in the court container this runs in. The projection is what makes the
+# checkpoint half checkable here; `forensics/tools/render_gemel_trajectory.sh` prints each
+# checkpoint's own `gemel show` summary into it for exactly this reason.
+FRF_DECLARATIONS = "forensics/frf/courts"
+FRF_RECEIPTS = ".frf/receipts"
+FRF_CHALLENGES = ".frf/challenges"
+FRF_CLAIMS = ".frf/claims"
+GEMEL_TRAJECTORY = "forensics/GEMEL_TRAJECTORY.md"
+
+# The two axes every runtime court declares (`observables` stdout and exit in its manifest) and
+# whose challenge records FRF carries as these `operator` values. A court is not sensitivity-clean
+# unless both have been seen to fire on their own axis and to spare the other (D13, D201); one
+# axis alone is a green run, not a sensitivity control.
+FRF_CHALLENGE_OPERATORS = ("stdout-first-line", "exit-class")
+
+# **The checkpoint clause is waived for the strata whose chains predate the phrase it reads, and
+# for nothing else.** Measured in the tree on 2026-10-02 against `forensics/GEMEL_TRAJECTORY.md`:
+# the phrase `FRF chain` first appears in a checkpoint summary in `K45` (Phase 8's, "the stratum
+# joins the FRF chain with fifteen declarations"); `K48` (Phase 9), `K49` (Phase 10) and `K50`
+# (Phase 11) carry it, and no earlier checkpoint does. Strata 3-7 landed or advanced their chains
+# before that phrasing, so their closing checkpoints name the stratum but not the chain. The
+# waiver is the *checkpoint clause alone*: every other clause below is still measured for a
+# grandfathered stratum, so a stratum that loses its declarations, a receipt, a challenge or its
+# claim blocks on that loss rather than hiding behind the exemption. The row for each phase is
+# the measured reason, not a bare number.
+FRF_CHAIN_CHECKPOINT_EXEMPT: dict[int, str] = {
+    3: "no checkpoint summary names Phase 3 and the chain; the phrase is used from K45 (Phase 8) onward",
+    4: "K7/K8 close the stratum but predate the `FRF chain` phrase (used from K45, Phase 8's, onward)",
+    5: "K26 closes the stratum but predates the `FRF chain` phrase (used from K45, Phase 8's, onward)",
+    6: "K43 closes the stratum but predates the `FRF chain` phrase (used from K45, Phase 8's, onward)",
+    7: "K44 closes the stratum but predates the `FRF chain` phrase (used from K45, Phase 8's, onward)",
+}
 
 # The conservation strata, in dependency order (docs/RELEASE_GATES.md §1).
 STRATA: list[tuple[int, str, str]] = [
@@ -1074,6 +1127,210 @@ def divergence_blocking_reason(phase: int, doc: dict | None = None) -> str:
     )
 
 
+def _frf_declaration(court: str) -> str:
+    """The generated declaration an FRF court id owns."""
+    return f"{FRF_DECLARATIONS}/{court}/manifest.yaml"
+
+
+def _frf_declared_courts(phase: int) -> list[tuple[str, str]]:
+    """`(court id, probe)` for every court `gen_frf_courts.py` declares at `phase`.
+
+    The registry (D58), not `artifacts/phase<N>/COURTS.json`, is the set of *declarable* courts. A
+    reference-basis court -- `RT-RUNTIME-REF`, `RT-BIO-CONF-REF`, `RT-PROVIDER-REF` and the other
+    `-REF` names -- has a `COURTS.json` row and stages a probe pair for the court venue, but it has
+    no row in this table because its probe takes addresses and there is no authority transcript to
+    diff; a vector-driven `CT-*` court is compiled against the candidate alone (D13, D201). Neither
+    can carry a declaration, so neither is required to. Phase 11's `RT-X509-REF` *is* in the table
+    because its probe is fixture-driven and diffs a real transcript, which is why this rule requires
+    a chain for it and not for its predecessors.
+    """
+    return [
+        ("openssl-rs-" + name, probe)
+        for name, p, probe, _desc in gen_frf_courts.COURTS
+        if p == phase
+    ]
+
+
+def _frf_receipt_index() -> dict[str, set[str]]:
+    """Receipt stems by FRF court id, read from each receipt's own `court.id`."""
+    out: dict[str, set[str]] = {}
+    directory = REPO_ROOT / FRF_RECEIPTS
+    if not directory.is_dir():
+        return out
+    for p in sorted(directory.glob("*.json")):
+        try:
+            doc = json.loads(p.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        cid = (doc.get("court") or {}).get("id")
+        if cid:
+            out.setdefault(cid, set()).add(p.stem)
+    return out
+
+
+def _frf_challenge_index() -> dict[str, list[dict]]:
+    """Challenge records by the FRF court id each names."""
+    out: dict[str, list[dict]] = {}
+    directory = REPO_ROOT / FRF_CHALLENGES
+    if not directory.is_dir():
+        return out
+    for p in sorted(directory.glob("*.json")):
+        try:
+            doc = json.loads(p.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        cid = doc.get("court")
+        if cid:
+            out.setdefault(cid, []).append(doc)
+    return out
+
+
+def _frf_claim_docs() -> list[dict]:
+    """Every compiled claim in the FRF store."""
+    out: list[dict] = []
+    directory = REPO_ROOT / FRF_CLAIMS
+    if not directory.is_dir():
+        return out
+    for p in sorted(directory.glob("*.json")):
+        try:
+            out.append(json.loads(p.read_text()))
+        except (OSError, json.JSONDecodeError):
+            continue
+    return out
+
+
+def _gemel_checkpoint_summaries() -> list[tuple[str, str]]:
+    """The `(name, summary)` of every checkpoint in the Git-tracked projection.
+
+    `render_gemel_trajectory.sh` writes each checkpoint as
+
+        * `K50` -- `checkpoint.<sha>`
+          - <its own `gemel show` summary>
+
+    so the summary is read from the same file a reader consults rather than from the untracked
+    store, which this container cannot open.
+    """
+    path = REPO_ROOT / GEMEL_TRAJECTORY
+    if not path.exists():
+        return []
+    out: list[tuple[str, str]] = []
+    for line in path.read_text().splitlines():
+        m = re.match(r"^\* `(K\d+)` — `checkpoint\.[0-9a-f]+`$", line)
+        if m:
+            out.append((m.group(1), ""))
+        elif out and line.startswith("  - "):
+            name, summary = out[-1]
+            out[-1] = (name, f"{summary} {line[4:]}".strip())
+    return out
+
+
+def frf_gemel_blocking_reason(phase: int) -> str:
+    """The reason a stratum's FRF/Gemel chain entry is incomplete, or "" when it is complete.
+
+    `docs/RELEASE_GATES.md` section 2 items 6, 8 and 10 are the same three items every stratum
+    since Phase 7 left open to its chain entry, and D200/D413/D424/D475 repaired them the same
+    way each time. Until this rule the repair was asserted in a seal and in a Gemel change
+    summary, and nothing derived a stratum's state from it -- so a stratum could derive
+    `complete` with a declared court that had no receipt, a receipt with no sensitivity
+    evidence, or a claim no checkpoint reached, exactly as it could derive `complete` with an
+    unmatched export before D199. The rule is executable here, and it is OR-ed into the state
+    *before* the state is computed, like the divergence rule, so the effect is the state rather
+    than a reason printed beside a `complete`.
+
+    The five clauses, every one read from disk:
+
+      1. every court `gen_frf_courts.py` declares at this phase has an FRF declaration staging
+         its probe pair;
+      2. every declarable court has a receipt (`receipt-run-<court>-*` in `.frf/receipts`);
+      3. every declarable court has two adjudicated challenges -- `saw_defect` and
+         `specificity_clean` both true -- covering both operators;
+      4. one `sensitivity-backed` claim with no blockers covers a receipt of every declarable
+         court (the claim's `requires`, matched to the receipts' own `court.id`); and
+      5. a Gemel checkpoint in the projection names the stratum and the chain (with the measured
+         exemption `FRF_CHAIN_CHECKPOINT_EXEMPT` for the strata whose checkpoints predate the
+         phrase).
+
+    A stratum with no declared court has begun no chain and is not blocked here; Phase 22 is an
+    atlas stratum with no export courts and is out of scope for the same reason every other
+    export-shaped rule scopes it out.
+    """
+    if phase not in STRATUM_EVIDENCE or phase == 22:
+        return ""
+    declared = _frf_declared_courts(phase)
+    if not declared:
+        return ""
+
+    problems: list[str] = []
+
+    undeclared = [
+        court for court, probe in declared
+        if not (
+            exists(_frf_declaration(court))
+            and exists(f"artifacts/phase{phase}/probes/{probe}.authority")
+            and exists(f"artifacts/phase{phase}/probes/{probe}.candidate")
+        )
+    ]
+    if undeclared:
+        problems.append(
+            f"{len(undeclared)} of {len(declared)} declared court(s) have no FRF declaration "
+            f"staging their artifacts/phase{phase}/probes/<probe>.{{authority,candidate}} pair "
+            f"({FRF_DECLARATIONS}/openssl-rs-<court>/manifest.yaml): "
+            + ", ".join(undeclared)
+        )
+
+    receipts = _frf_receipt_index()
+    challenges = _frf_challenge_index()
+
+    no_receipt = [court for court, _probe in declared if not receipts.get(court)]
+    if no_receipt:
+        problems.append(
+            f"{len(no_receipt)} declared court(s) have no receipt in {FRF_RECEIPTS}: "
+            + ", ".join(no_receipt)
+        )
+
+    unadjudicated: list[str] = []
+    for court, _probe in declared:
+        adjudicated = [
+            c for c in challenges.get(court, [])
+            if c.get("saw_defect") and c.get("specificity_clean")
+        ]
+        operators = {c.get("operator") for c in adjudicated}
+        if len(adjudicated) < 2 or not set(FRF_CHALLENGE_OPERATORS).issubset(operators):
+            unadjudicated.append(court)
+    if unadjudicated:
+        problems.append(
+            f"{len(unadjudicated)} declared court(s) lack two adjudicated challenges "
+            f"(`saw_defect` and `specificity_clean` true) covering both operators "
+            f"{FRF_CHALLENGE_OPERATORS} in {FRF_CHALLENGES}: " + ", ".join(unadjudicated)
+        )
+
+    covered = False
+    for claim in _frf_claim_docs():
+        if claim.get("policy") != "sensitivity-backed" or claim.get("blockers"):
+            continue
+        required = set(claim.get("requires") or ())
+        if all(receipts.get(court, set()) & required for court, _probe in declared):
+            covered = True
+            break
+    if not covered:
+        problems.append(
+            f"no `sensitivity-backed` claim with zero blockers in {FRF_CLAIMS} covers a receipt "
+            f"of every one of the {len(declared)} declared court(s)"
+        )
+
+    if phase not in FRF_CHAIN_CHECKPOINT_EXEMPT and not any(
+        f"Phase {phase}" in summary and "FRF chain" in summary
+        for _, summary in _gemel_checkpoint_summaries()
+    ):
+        problems.append(
+            f"no checkpoint in {GEMEL_TRAJECTORY} names Phase {phase} and the FRF chain"
+        )
+
+    if not problems:
+        return ""
+    return f"Phase {phase}'s FRF chain entry is incomplete: " + "; ".join(problems)
+
+
 def derive_state_rows() -> list[dict]:
     """Compute every stratum's row from evidence, exactly as `main` writes it.
 
@@ -1091,6 +1348,12 @@ def derive_state_rows() -> list[dict]:
         # applied here, **before** the state is computed from `blocking`, so the effect is the state
         # rather than a reason printed beside a `complete`.
         blocking = blocking or divergence_blocking_reason(phase)
+        # The FRF/Gemel chain rule (`frf_gemel_blocking_reason`, docs/RELEASE_GATES.md section 2
+        # items 6, 8 and 10). A stratum that has staged FRF courts must carry the whole chain the
+        # release gates name, and it is applied here for the same reason the divergence rule is:
+        # before the state is computed from `blocking`, so the effect is the state rather than a
+        # reason printed beside a `complete`.
+        blocking = blocking or frf_gemel_blocking_reason(phase)
         # **A stratum with any evidence is under way, and `absent` does not say otherwise.**
         #
         # This used to read `elif absent: state = "not-started"`, which meant a stratum whose

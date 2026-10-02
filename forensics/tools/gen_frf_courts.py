@@ -482,6 +482,46 @@ COURTS: list[tuple[str, int, str, str]] = [
     ("rt-store", 10, "rt_store_probe",
      "the `OSSL_STORE_LOADER` object, the scheme registry, the `OSSL_STORE_INFO` "
      "type-name table and the `OSSL_STORE_CTX` state machine"),
+    # Phase 11 — X.509, verification and the PEM X.509 container.
+    #
+    # The nine courts that compile the same probe source against both sides. Their
+    # descriptions are each probe's own one-line subject, as Phase 7's, 8's, 9's and
+    # 10's rows carry theirs (D200, D413, D431, D475).
+    #
+    # `RT-X509-REF` is this stratum's reference basis: its probe takes the address of
+    # each inherited or otherwise undriven `implemented` export and prints whether it
+    # is non-NULL, so the court-coverage atlas records those names at basis
+    # `referenced`, never `called` (D199). It is a fixture-driven differential probe
+    # like the eight behavioural courts, so it is declarable here.
+    #
+    # **No `CT-*` construction court is declared, and this stratum registers none.**
+    # The nine courts `artifacts/phase11/COURTS.json` names are all differential, so
+    # the D413 reason that excludes a vector-driven court from a manifest has nothing
+    # to exclude here; all nine stage a
+    # `artifacts/phase11/probes/<probe>.{authority,candidate}` pair.
+    ("rt-x509-ref", 11, "rt_coverage_ref_probe",
+     "the reference basis the X.509 stratum's court coverage needs, and nothing more"),
+    ("rt-x509-store", 11, "rt_x509_store_probe",
+     "the Phase 11 X.509 store/lookup/object, mutator, trust, printer, extension-build "
+     "and name-check surface, driven"),
+    ("rt-x509-verify-surface", 11, "rt_x509_verify_probe",
+     "the Phase 11.2 court: the `X509_VERIFY_PARAM` surface, the `X509_STORE_CTX` "
+     "object's lifecycle and accessor surface, the free-standing time decision surface "
+     "and the issuer lookup, driven against the authority and the candidate and "
+     "compared observation for observation"),
+    ("rt-x509-verify-engine", 11, "rt_x509_verify_engine_probe",
+     "the Phase 11.2 court: the decision procedure itself, driven against the authority "
+     "and the candidate and compared observation for observation"),
+    ("rt-x509-v3", 11, "rt_x509_v3_probe",
+     "the Phase 11.5 `v3` function and configuration layer, driven"),
+    ("rt-x509-pem", 11, "rt_x509_pem_probe",
+     "the Phase 11.6 PEM X.509 container surface, driven"),
+    ("rt-x509-acert", 11, "rt_x509_acert_probe",
+     "the Phase 11.3 attribute-certificate surface, driven"),
+    ("rt-x509-req", 11, "rt_x509_req_probe",
+     "the Phase 11.4 request/CRL/mutator remainder, driven"),
+    ("rt-x509", 11, "rt_x509_misc_probe",
+     "the Phase 11.7 shared remainder, driven"),
 ]
 
 

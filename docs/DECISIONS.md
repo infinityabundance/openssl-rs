@@ -34797,3 +34797,59 @@ Verified (container): phase 12 `implemented` 149 -> 172, `open_in_this_stratum` 
 `court_coverage.py` phase 12 172/172 courted, unmatched 0; `evidence_determinism.py` ok;
 `regression_guard.py --require-current` ok (136 courts, 49,032 observations); `probe_hygiene.py`
 clean; clippy clean.
+
+## D512 -- the Phase-11 FRF chain and Gemel checkpoint close the evidence seal, and the
+## completion predicate learns to require them
+
+`docs/RELEASE_GATES.md` section 2 says a stratum exits when ten things exist, including **item 6
+mutation/sensitivity evidence, item 8 FRF receipts and item 10 a Gemel checkpoint**. The Phase-11
+seal recorded those three as NOT MET, yet `phase_state.py` derived Phase 11 `complete` -- the
+written constitution was stronger than the executable one. This commit closes both halves.
+
+### The Phase-11 FRF entry
+`forensics/tools/gen_frf_courts.py` gains the nine Phase-11 rows (`rt-x509-ref`, `rt-x509-store`,
+`rt-x509-verify-surface`, `rt-x509-verify-engine`, `rt-x509-v3`, `rt-x509-pem`, `rt-x509-acert`,
+`rt-x509-req`, `rt-x509`), so the declaration table is 95 courts and `--check` is green. The chain
+was then run **into the committed store, not by recreating it** (`run_courts.sh`'s leading `rm -rf`
+is never used; D476): nine captures, nine receipts, eighteen adjudicated challenge records (both
+axes on every court, every one `saw_defect` and `specificity_clean`), and the
+`sensitivity-backed` claim
+`efbd2ee4eb2c3e043ed1bb25f5bb6f7416786484f2862f4a7c2349c064c73a1b`, binding
+`openssl-rt-3.6.4-r2` to `openssl-rs 0.0.16` with zero blockers and all nine premises carrying
+`stdout` and `exit`. No `CT-*` court is owed: all nine are differential.
+
+### The Gemel checkpoint
+The change `C97` ("Phase 11 joins the FRF chain...") is closed and the checkpoint written:
+**`K50` = `checkpoint.1eab61e42c9371acb92589b62521f04d91b40c1f98a5a91876bdf2e0c50ecec6`**.
+`forensics/tools/render_gemel_trajectory.sh` is hardened so the `## Checkpoints` section prints
+each checkpoint's own `gemel show` summary, because the per-phase binding the predicate needs
+cannot be read from the projection otherwise; `forensics/GEMEL_TRAJECTORY.md` is re-rendered.
+(Persistent note: `gemel index` errors with `impl without target`, so queries take the canonical
+full-scan path -- pre-existing, not caused here.)
+
+### The executable predicate
+`phase_state.py` gains `frf_gemel_blocking_reason(phase)`, OR-ed in where
+`divergence_blocking_reason` is (`derive_state_rows`). For every `STRATUM_EVIDENCE` phase but 22 it
+requires an FRF declaration staging the probe pair for every court the D58 table declares, a
+receipt per declared court, at least two adjudicated challenges per court, a `sensitivity-backed`
+claim with no blockers covering the stratum's receipts, and a Gemel checkpoint whose summary names
+the phase and the FRF chain -- each failing clause producing a precise named `blocking` string.
+The check reads the declaration registry rather than `COURTS.json`, so reference-basis courts and
+`CT-*` are correctly not required. It was proven to fire: moving one Phase-11 manifest made
+Phase 11 derive `in-progress` with the exact missing-court reason, and restoring it returned
+`complete`.
+
+One measured grandfather entry exists: `FRF_CHAIN_CHECKPOINT_EXEMPT` waives **only** the
+checkpoint clause for phases **3-7**, because the phrase `FRF chain` first appears in a checkpoint
+summary at `K45`; every other clause still binds those phases.
+
+`docs/PHASE-11-X509-SEAL.md` sections 6, 7, 8 and 9 are corrected to record the chain (items 6/8/10
+now met; item 7 records as not applicable), and `forensics/frf/README.md` and `docs/RELEASE_GATES.md`
+move their declaration count 86 -> 95.
+
+Verified (court container): `gen_frf_courts.py --check`; the `phase*_obligations.py` generators;
+`court_coverage.py`; `ownership_audit.py`; `prototype_court.py`; `dispatch_court.py`;
+`phase_state.py`; `plan_reconciliation.py`; `prerequisite_gate.py`; `render_seal_census.py`;
+`render_status.py`; `evidence_determinism.py` (31 artefacts); `regression_guard.py --require-current`
+(no regression); `probe_hygiene.py` clean; `run_courts.py` re-derives 11 phases with Phase 11
+`all_pass` over nine courts and 2,638 observations. Phase 11 is `complete`.
