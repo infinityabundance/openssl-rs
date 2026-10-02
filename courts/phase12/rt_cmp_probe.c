@@ -21,6 +21,15 @@
  *   and DER round trip, the `ATAVS` `SEQUENCE OF`, and the `PKIMessage`/`PKIHeader` item groups
  *   over fixed DER.
  *
+ * 12.4b adds the engine over the fixed `rt_ess_der.h` RSA cert/key -- no key is generated and no
+ * clock is read: `OSSL_CMP_CTX_setup_CRM`, the protect/verify round trip through
+ * `OSSL_CMP_MSG_update_transactionID`, `OSSL_CMP_MSG_get0_certreq_publickey`,
+ * `OSSL_CMP_validate_msg`, the four `cmp_client.c` exchanges handed to an in-process server, the
+ * four `cmp_genm.c` readers, and `OSSL_CMP_SRV_process_request`/`OSSL_CMP_CTX_server_perform`. The
+ * request's `messageTime`/nonces are the library's own and are never printed, so the transcript
+ * stays a function of the library. One arm is named `pending.`: the `EVP_get_digestbyname`
+ * identity divergence that `rt_crmf_probe.c:394` and `rt_ocsp_probe.c:580` already record.
+ *
  * The two CMP messages are hand-built, fixed DER: a `PKIHeader` with an empty `directoryName`
  * sender and recipient, and a `PKIMessage` whose body is the empty `genm` (`GenMsgContent`) arm.
  * Both sides decode the same bytes and re-encode them, so the comparison is the authority's own
@@ -37,10 +46,16 @@
 #include <openssl/bio.h>
 #include <openssl/cmp.h>
 #include <openssl/cmp_util.h>
+#include <openssl/crmf.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/http.h>
 #include <openssl/objects.h>
+#include <openssl/pem.h>
+#include <openssl/safestack.h>
 #include <openssl/x509.h>
+
+#include "rt_ess_der.h"
 
 /* ---------------------------------------------------------------------------------------------
  * Output helpers
@@ -669,6 +684,323 @@ static void drive_ctx(void)
     ASN1_INTEGER_free(serial);
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * The engine: `cmp_msg.c`'s builders, `cmp_protect.c`, `cmp_client.c`, `cmp_vfy.c`,
+ * `cmp_genm.c` and `cmp_server.c`, over the fixed RSA cert/key from `rt_ess_der.h`.
+ * --------------------------------------------------------------------------------------------- */
+
+static X509 *engine_cert;
+static OSSL_CMP_CTX *engine_validator;
+
+static void write_fixture(const char *path, const char *text)
+{
+    FILE *f = fopen(path, "wb");
+
+    if (f != NULL) {
+        fwrite(text, 1, strlen(text), f);
+        fclose(f);
+    }
+}
+
+static X509 *load_pem_cert(const char *path)
+{
+    FILE *f = fopen(path, "r");
+    X509 *x = f == NULL ? NULL : PEM_read_X509(f, NULL, NULL, NULL);
+
+    if (f != NULL)
+        fclose(f);
+    return x;
+}
+
+static EVP_PKEY *load_pem_key(const char *path)
+{
+    FILE *f = fopen(path, "r");
+    EVP_PKEY *k = f == NULL ? NULL : PEM_read_PrivateKey(f, NULL, NULL, NULL);
+
+    if (f != NULL)
+        fclose(f);
+    return k;
+}
+
+/* The server's cert-request callback: reject deterministically, no certificate is issued. */
+static OSSL_CMP_PKISI *engine_srv_certreq(OSSL_CMP_SRV_CTX *srv_ctx,
+    const OSSL_CMP_MSG *req, int certReqId, const OSSL_CRMF_MSG *crm,
+    const X509_REQ *p10cr, X509 **certOut, STACK_OF(X509) **chainOut,
+    STACK_OF(X509) **caPubs)
+{
+    (void)srv_ctx;
+    (void)req;
+    (void)p10cr;
+    (void)certOut;
+    (void)chainOut;
+    (void)caPubs;
+    out_int("engine.srv.certreq.rid", certReqId);
+    out_nonnull("engine.srv.certreq.crm", crm);
+    return OSSL_CMP_STATUSINFO_new(OSSL_CMP_PKISTATUS_rejection, 0, "rt-cmp");
+}
+
+/* The server's genm callback: refuse, so the reader path ends in a deterministic error. */
+static int engine_srv_genm(OSSL_CMP_SRV_CTX *srv_ctx, const OSSL_CMP_MSG *req,
+    const STACK_OF(OSSL_CMP_ITAV) *in, STACK_OF(OSSL_CMP_ITAV) **out)
+{
+    (void)srv_ctx;
+    (void)req;
+    (void)in;
+    (void)out;
+    out_int("engine.srv.genm", 1);
+    return 0;
+}
+
+/*
+ * The transfer callback: observe the protected request, then hand it to the in-process server
+ * through `OSSL_CMP_CTX_server_perform`, whose `transfer_cb_arg` is the SRV_CTX. Never prints
+ * the request's `messageTime` or nonces, which the library generates.
+ */
+static OSSL_CMP_MSG *engine_transfer(OSSL_CMP_CTX *ctx, const OSSL_CMP_MSG *req)
+{
+    int type = OSSL_CMP_MSG_get_bodytype(req);
+
+    out_int("engine.xfer.bodytype", type);
+    if (type == OSSL_CMP_IR || type == OSSL_CMP_CR || type == OSSL_CMP_KUR) {
+        out_nonnull("engine.xfer.pubkey", OSSL_CMP_MSG_get0_certreq_publickey(req));
+        out_int("engine.xfer.valid", OSSL_CMP_validate_msg(engine_validator, req));
+        out_err("engine.xfer.valid.err");
+    }
+    return OSSL_CMP_CTX_server_perform(ctx, req);
+}
+
+static void drive_engine(void)
+{
+    OSSL_CMP_CTX *ctx, *srv_cmp, *client;
+    OSSL_CMP_SRV_CTX *srv;
+    OSSL_CRMF_MSG *crm;
+    OSSL_CMP_MSG *msg;
+    ASN1_OCTET_STRING *tid;
+    EVP_PKEY *key;
+    const unsigned char *p;
+    unsigned char tid_bytes[16];
+    STACK_OF(X509) *certs = NULL;
+    X509 *new_with_new = NULL, *new_with_old = NULL, *old_with_new = NULL;
+    X509_CRL *crl = NULL;
+    OSSL_CRMF_CERTTEMPLATE *tmpl = NULL;
+    OSSL_CMP_ATAVS *keyspec = NULL;
+    int i;
+
+    for (i = 0; i < 16; i++)
+        tid_bytes[i] = (unsigned char)i;
+
+    write_fixture("/tmp/rt_cmp_cert.pem", rt_ess_cert_pem);
+    write_fixture("/tmp/rt_cmp_key.pem", rt_ess_key_pem);
+    engine_cert = load_pem_cert("/tmp/rt_cmp_cert.pem");
+    key = load_pem_key("/tmp/rt_cmp_key.pem");
+    out_nonnull("engine.cert", engine_cert);
+    out_nonnull("engine.key", key);
+
+    /* --- OSSL_CMP_CTX_setup_CRM (cmp_msg.c:287) --- */
+    ctx = OSSL_CMP_CTX_new(NULL, NULL);
+    out_int("engine.set_cert", OSSL_CMP_CTX_set1_cert(ctx, engine_cert));
+    out_int("engine.set_pkey", OSSL_CMP_CTX_set1_pkey(ctx, key));
+    out_int("engine.days0", OSSL_CMP_CTX_set_option(ctx, OSSL_CMP_OPT_VALIDITY_DAYS, 0));
+    crm = OSSL_CMP_CTX_setup_CRM(ctx, 0, 0);
+    out_nonnull("engine.setup_crm", crm);
+    if (crm != NULL) {
+        unsigned char *der = NULL;
+        int n;
+
+        out_int("engine.setup_crm.rid", OSSL_CRMF_MSG_get_certReqId(crm));
+        out_nonnull("engine.setup_crm.pubkey",
+                    OSSL_CRMF_CERTTEMPLATE_get0_publicKey(
+                        OSSL_CRMF_MSG_get0_tmpl(crm)));
+        n = i2d_OSSL_CRMF_MSG(crm, &der);
+        out_hex("engine.setup_crm.der", der, n > 0 ? n : 0);
+        OPENSSL_free(der);
+    } else {
+        out_err("engine.setup_crm.err");
+    }
+    OSSL_CRMF_MSG_free(crm);
+    crm = NULL;
+
+    out_int("engine.set_oldcert", OSSL_CMP_CTX_set1_oldCert(ctx, engine_cert));
+    crm = OSSL_CMP_CTX_setup_CRM(ctx, 1, 1);
+    out_nonnull("engine.setup_crm_kur", crm);
+    if (crm != NULL) {
+        unsigned char *der = NULL;
+        int n = i2d_OSSL_CRMF_MSG(crm, &der);
+
+        out_hex("engine.setup_crm_kur.der", der, n > 0 ? n : 0);
+        OPENSSL_free(der);
+    }
+    OSSL_CRMF_MSG_free(crm);
+    crm = NULL;
+
+    {
+        OSSL_CMP_CTX *c2 = OSSL_CMP_CTX_new(NULL, NULL);
+
+        OSSL_CMP_CTX_set_option(c2, OSSL_CMP_OPT_VALIDITY_DAYS, 0);
+        crm = OSSL_CMP_CTX_setup_CRM(c2, 0, 0);
+        out_nonnull("engine.setup_crm_nopub", crm);
+        out_err("engine.setup_crm_nopub.err");
+        OSSL_CRMF_MSG_free(crm);
+        crm = NULL;
+        OSSL_CMP_CTX_free(c2);
+    }
+
+    /* --- the item mutate helpers, over the fixed genm fixture --- */
+    p = msg_der;
+    msg = d2i_OSSL_CMP_MSG(NULL, &p, (long)sizeof(msg_der));
+    out_nonnull("engine.msg", msg);
+    ERR_clear_error();
+    out_nonnull("engine.get0_pubkey_genm", OSSL_CMP_MSG_get0_certreq_publickey(msg));
+    out_err("engine.get0_pubkey_genm.err");
+    tid = ASN1_OCTET_STRING_new();
+    ASN1_OCTET_STRING_set(tid, tid_bytes, 16);
+    out_int("engine.set_tid", OSSL_CMP_CTX_set1_transactionID(ctx, tid));
+    out_int("engine.update_tid", OSSL_CMP_MSG_update_transactionID(ctx, msg));
+    out_int("engine.update_recipnonce", OSSL_CMP_MSG_update_recipNonce(ctx, msg));
+    ERR_clear_error();
+    out_int("engine.update_tid_null", OSSL_CMP_MSG_update_transactionID(NULL, msg));
+    out_err("engine.update_tid_null.err");
+    out_int("engine.update_recipnonce_null", OSSL_CMP_MSG_update_recipNonce(ctx, NULL));
+    out_err("engine.update_recipnonce_null.err");
+    ASN1_OCTET_STRING_free(tid);
+    OSSL_CMP_MSG_free(msg);
+    msg = NULL;
+
+    /* --- the in-process client/server exchange (cmp_client.c + cmp_server.c) --- */
+    srv = OSSL_CMP_SRV_CTX_new(NULL, NULL);
+    srv_cmp = OSSL_CMP_SRV_CTX_get0_cmp_ctx(srv);
+    out_int("engine.srv.init", OSSL_CMP_SRV_CTX_init(srv, NULL, engine_srv_certreq,
+        NULL, engine_srv_genm, NULL, NULL, NULL));
+    out_int("engine.srv.accept_unprotected", OSSL_CMP_SRV_CTX_set_accept_unprotected(srv, 1));
+    out_int("engine.srv.accept_raverified", OSSL_CMP_SRV_CTX_set_accept_raverified(srv, 1));
+    out_int("engine.srv.grant_implicit", OSSL_CMP_SRV_CTX_set_grant_implicit_confirm(srv, 1));
+    out_int("engine.srv.set_cert", OSSL_CMP_CTX_set1_cert(srv_cmp, engine_cert));
+    out_int("engine.srv.set_pkey", OSSL_CMP_CTX_set1_pkey(srv_cmp, key));
+    out_int("engine.srv.days0", OSSL_CMP_CTX_set_option(srv_cmp, OSSL_CMP_OPT_VALIDITY_DAYS, 0));
+    /*
+     * The server sends its response unprotected, and the client accepts an unprotected
+     * rejection response. Signature verification is the arm named `pending.` below: the verifier
+     * resolves the protection digest through `EVP_get_digestbyname`, whose legacy table is Phase
+     * 13's, so the authority validates a signed transaction and the candidate does not. Running
+     * the exchange unprotected drives the very same `cmp_server.c`/`cmp_client.c` engine on both
+     * sides and keeps every observation below a function of the library.
+     */
+    out_int("engine.srv.unprotected_send",
+            OSSL_CMP_CTX_set_option(srv_cmp, OSSL_CMP_OPT_UNPROTECTED_SEND, 1));
+
+    engine_validator = OSSL_CMP_CTX_new(NULL, NULL);
+    out_int("engine.val.set_srvcert", OSSL_CMP_CTX_set1_srvCert(engine_validator, engine_cert));
+
+    client = OSSL_CMP_CTX_new(NULL, NULL);
+    out_int("engine.cli.set_cert", OSSL_CMP_CTX_set1_cert(client, engine_cert));
+    out_int("engine.cli.set_pkey", OSSL_CMP_CTX_set1_pkey(client, key));
+    out_int("engine.cli.set_transfer", OSSL_CMP_CTX_set_transfer_cb(client, engine_transfer));
+    out_int("engine.cli.set_transfer_arg", OSSL_CMP_CTX_set_transfer_cb_arg(client, srv));
+    out_int("engine.cli.set_srvcert", OSSL_CMP_CTX_set1_srvCert(client, engine_cert));
+    out_int("engine.cli.days0", OSSL_CMP_CTX_set_option(client, OSSL_CMP_OPT_VALIDITY_DAYS, 0));
+    out_int("engine.cli.unprotected_send",
+            OSSL_CMP_CTX_set_option(client, OSSL_CMP_OPT_UNPROTECTED_SEND, 1));
+    out_int("engine.cli.unprotected_errors",
+            OSSL_CMP_CTX_set_option(client, OSSL_CMP_OPT_UNPROTECTED_ERRORS, 1));
+    /*
+     * `raVerified` proof of possession, accepted above by the server, needs no digest resolution;
+     * a signature POPO would re-enter the `EVP_get_digestbyname` divergence named pending below.
+     */
+    out_int("engine.cli.popo_raverified",
+            OSSL_CMP_CTX_set_option(client, OSSL_CMP_OPT_POPO_METHOD,
+                                    OSSL_CRMF_POPO_RAVERIFIED));
+
+    ERR_clear_error();
+    out_nonnull("engine.exec_ir", OSSL_CMP_exec_certreq(client, OSSL_CMP_IR, NULL));
+    out_int("engine.exec_ir.status", OSSL_CMP_CTX_get_status(client));
+    out_int("engine.exec_ir.failinfo", OSSL_CMP_CTX_get_failInfoCode(client));
+    out_err("engine.exec_ir.err");
+
+    {
+        int check_after = -1;
+
+        out_int("engine.try_ir", OSSL_CMP_try_certreq(client, OSSL_CMP_IR, NULL, &check_after));
+        out_int("engine.try_ir.check_after", check_after);
+        out_int("engine.try_ir.status", OSSL_CMP_CTX_get_status(client));
+        out_err("engine.try_ir.err");
+    }
+
+    out_int("engine.exec_rr", OSSL_CMP_exec_RR_ses(client));
+    out_int("engine.exec_rr.status", OSSL_CMP_CTX_get_status(client));
+    out_err("engine.exec_rr.err");
+
+    out_nonnull("engine.exec_genm", OSSL_CMP_exec_GENM_ses(client));
+    out_err("engine.exec_genm.err");
+
+    /* --- the cmp_genm.c readers --- */
+    ERR_clear_error();
+    out_int("engine.get1_caCerts_null", OSSL_CMP_get1_caCerts(client, NULL));
+    out_err("engine.get1_caCerts_null.err");
+    out_int("engine.get1_caCerts", OSSL_CMP_get1_caCerts(client, &certs));
+    out_nonnull("engine.get1_caCerts.out", certs);
+    out_err("engine.get1_caCerts.err");
+    sk_X509_pop_free(certs, X509_free);
+    certs = NULL;
+
+    out_int("engine.get1_rootCaKeyUpdate",
+            OSSL_CMP_get1_rootCaKeyUpdate(client, engine_cert, &new_with_new,
+                                          &new_with_old, &old_with_new));
+    out_nonnull("engine.get1_rootCaKeyUpdate.new", new_with_new);
+    out_err("engine.get1_rootCaKeyUpdate.err");
+    X509_free(new_with_new);
+    X509_free(new_with_old);
+    X509_free(old_with_new);
+    new_with_new = new_with_old = old_with_new = NULL;
+
+    out_int("engine.get1_crlUpdate",
+            OSSL_CMP_get1_crlUpdate(client, engine_cert, NULL, &crl));
+    out_nonnull("engine.get1_crlUpdate.out", crl);
+    out_err("engine.get1_crlUpdate.err");
+    X509_CRL_free(crl);
+    crl = NULL;
+
+    out_int("engine.get1_certReqTemplate",
+            OSSL_CMP_get1_certReqTemplate(client, &tmpl, &keyspec));
+    out_nonnull("engine.get1_certReqTemplate.tmpl", tmpl);
+    out_err("engine.get1_certReqTemplate.err");
+    OSSL_CRMF_CERTTEMPLATE_free(tmpl);
+    OSSL_CMP_ATAVS_free(keyspec);
+
+    /*
+     * `OSSL_CMP_SRV_process_request` directly, not only through
+     * `OSSL_CMP_CTX_server_perform`: the court-coverage atlas needs the entry point itself
+     * observed, and this drives the same engine over the fixed genm fixture (its `process_genm`
+     * callback refuses, so the reply is a deterministic error message).
+     */
+    p = msg_der;
+    msg = d2i_OSSL_CMP_MSG(NULL, &p, (long)sizeof(msg_der));
+    ERR_clear_error();
+    out_nonnull("engine.srv.direct", OSSL_CMP_SRV_process_request(srv, msg));
+    out_err("engine.srv.direct.err");
+    OSSL_CMP_MSG_free(msg);
+    msg = NULL;
+
+    /*
+     * The PBM protection arm resolves its digest through `EVP_get_digestbyname`, whose legacy
+     * table is Phase 13's. This is the same divergence that keeps a *signed* transaction's
+     * `OSSL_CMP_validate_msg` result out of the comparison: the authority accepts a signature
+     * the candidate's verifier cannot resolve, so the signed arm is driven but named pending,
+     * exactly as `rt_crmf_probe.c:394` does for the CRMF POPO and `rt_ocsp_probe.c:580` for
+     * `OCSP_basic_verify`. The unprotected engine above is the comparable arm of the same code.
+     */
+    printf("pending.engine.signed_verify=%s\n",
+           "EVP_get_digestbyname_identity_divergence");
+    printf("pending.engine.pbm_verify=%s\n", "EVP_get_digestbyname_identity_divergence");
+
+    OSSL_CMP_CTX_free(client);
+    OSSL_CMP_CTX_free(engine_validator);
+    OSSL_CMP_SRV_CTX_free(srv);
+    OSSL_CMP_CTX_free(ctx);
+    EVP_PKEY_free(key);
+    X509_free(engine_cert);
+    ERR_clear_error();
+}
+
 int main(void)
 {
     ERR_clear_error();
@@ -680,6 +1012,7 @@ int main(void)
     drive_msg_more();
     drive_ctx();
     drive_srv_and_certconf();
+    drive_engine();
 
     printf("done=1\n");
     return 0;

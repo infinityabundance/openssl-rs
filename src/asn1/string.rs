@@ -24,6 +24,7 @@
 //! precaution" and is observable to a hook.
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
+use core::ptr;
 
 use crate::asn1::layout::*;
 use crate::ffi::guard_ffi;
@@ -659,3 +660,91 @@ pub unsafe extern "C" fn ASN1_OCTET_STRING_dup(a: *const Asn1String) -> *mut Asn
 /// `long` is named by the time accessors that share this module's string type.
 #[allow(dead_code)]
 pub(crate) type Long = c_long;
+
+/// `char *ossl_sk_ASN1_UTF8STRING2text(STACK_OF(ASN1_UTF8STRING) *text, const char *sep,
+/// size_t max_len)` — `crypto/asn1/asn1_lib.c:435-473`.
+///
+/// Withheld by name in 10.10 because its only authority callers were unlanded; the CMP client
+/// engine is a caller, so it lands here. `max_len == 0` means no restriction; a joined length
+/// above `max_len` is the covered refusal. The result is a `CRYPTO_malloc`ed C string the caller
+/// owns.
+///
+/// # Safety
+/// `text` is NULL or a live stack of live `ASN1_UTF8STRING`s; `sep` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn ossl_sk_ASN1_UTF8STRING2text(
+    text: *mut crate::runtime::stack::OpenSslStack,
+    sep: *const c_char,
+    max_len: usize,
+) -> *mut c_char {
+    use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
+
+    let sep_len = if sep.is_null() {
+        0
+    } else {
+        // SAFETY: `sep` is NUL-terminated per the contract.
+        unsafe { c_strlen(sep) }
+    };
+    // SAFETY: `text` is NULL or a live stack.
+    let n = unsafe { OPENSSL_sk_num(text) };
+    let mut length: usize = 0;
+    let mut i = 0;
+    while i < n {
+        // SAFETY: `i` is in range of the live stack.
+        let current = unsafe { OPENSSL_sk_value(text, i) }.cast::<Asn1String>();
+        if i > 0 {
+            length += sep_len;
+        }
+        // SAFETY: `current` is a live element of the stack.
+        length += unsafe { ASN1_STRING_length(current) } as usize;
+        if max_len != 0 && length > max_len {
+            return ptr::null_mut();
+        }
+        i += 1;
+    }
+    // SAFETY: `CRYPTO_malloc` returns `length + 1` writable bytes or NULL.
+    let result =
+        crate::runtime::mem::CRYPTO_malloc(length + 1, FILE.as_ptr(), 456).cast::<c_char>();
+    if result.is_null() {
+        return ptr::null_mut();
+    }
+
+    let mut p = result;
+    let mut i = 0;
+    while i < n {
+        // SAFETY: `i` is in range of the live stack.
+        let current = unsafe { OPENSSL_sk_value(text, i) }.cast::<Asn1String>();
+        // SAFETY: `current` is live.
+        let len = unsafe { ASN1_STRING_length(current) } as usize;
+        if i > 0 && sep_len > 0 {
+            // SAFETY: `p` has room for `sep_len + 1` bytes and `sep` is readable for `sep_len`.
+            unsafe { ptr::copy_nonoverlapping(sep, p, sep_len + 1) };
+            // SAFETY: the copy wrote through `p`, still within the allocation.
+            p = unsafe { p.add(sep_len) };
+        }
+        // SAFETY: `current` is live and `p` has room for `len` bytes.
+        unsafe {
+            ptr::copy_nonoverlapping(ASN1_STRING_get0_data(current), p.cast::<c_uchar>(), len)
+        };
+        // SAFETY: still within the allocation.
+        p = unsafe { p.add(len) };
+        i += 1;
+    }
+    // SAFETY: `p` is within the allocation and NUL is the terminator the authority writes.
+    unsafe { *p = 0 };
+
+    result
+}
+
+/// `strlen` — a NUL-terminated C string's length.
+///
+/// # Safety
+/// `s` is NUL-terminated.
+unsafe fn c_strlen(s: *const c_char) -> usize {
+    let mut n = 0usize;
+    // SAFETY: `s` is NUL-terminated per the contract.
+    while unsafe { *s.add(n) } != 0 {
+        n += 1;
+    }
+    n
+}

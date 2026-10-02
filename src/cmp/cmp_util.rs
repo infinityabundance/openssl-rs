@@ -494,3 +494,59 @@ pub(crate) unsafe fn ossl_cmp_asn1_octet_string_set1_bytes(
     }
     1
 }
+
+/// One formatted CMP log line at a caller's authority coordinate.
+///
+/// The authority's `ossl_cmp_log1..4` macros format through `BIO_snprintf` and hand the result
+/// to the same callback [`crate::cmp::cmp_ctx::ossl_cmp_print_log`] uses. This is the Rust
+/// spelling of that: format into a `String`, then invoke the callback with a NUL-terminated
+/// view, discarding the buffer once the synchronous callback returns.
+///
+/// # Safety
+/// `ctx` is NULL or live; `func`/`file` are static NUL-terminated strings.
+pub(crate) unsafe fn ossl_cmp_log_str(
+    level: c_int,
+    ctx: *const crate::cmp::cmp_ctx::OsslCmpCtx,
+    func: &'static core::ffi::CStr,
+    file: &'static core::ffi::CStr,
+    line: c_int,
+    msg: core::fmt::Arguments<'_>,
+) -> c_int {
+    let s = std::format!("{msg}");
+    let c = std::ffi::CString::new(s).unwrap_or_default();
+    // SAFETY: `ctx` is NULL or live; the callback is invoked synchronously.
+    unsafe {
+        crate::cmp::cmp_ctx::ossl_cmp_print_log(
+            level,
+            ctx,
+            func.as_ptr(),
+            file.as_ptr(),
+            line,
+            c.as_ptr(),
+        )
+    }
+}
+
+/// `ossl_cmp_info(ctx, msg)` — the no-argument convenience used by several engines.
+///
+/// # Safety
+/// `ctx` is NULL or live; `msg` is a static NUL-terminated string.
+pub(crate) unsafe fn ossl_cmp_log0(
+    level: c_int,
+    ctx: *const crate::cmp::cmp_ctx::OsslCmpCtx,
+    func: &'static core::ffi::CStr,
+    line: c_int,
+    msg: &'static core::ffi::CStr,
+) -> c_int {
+    // SAFETY: `ctx` is NULL or live; `msg` is static.
+    unsafe {
+        crate::cmp::cmp_ctx::ossl_cmp_print_log(
+            level,
+            ctx,
+            func.as_ptr(),
+            FILE.as_ptr(),
+            line,
+            msg.as_ptr(),
+        )
+    }
+}

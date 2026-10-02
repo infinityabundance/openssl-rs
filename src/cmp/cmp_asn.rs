@@ -250,120 +250,120 @@ unsafe extern "C" fn atav_free_void(p: *mut c_void) {
 /// `OSSL_CMP_REVANNCONTENT` — `cmp_local.h:148-154`.
 #[repr(C)]
 pub(crate) struct CmpRevAnnContent {
-    status: *mut Asn1String,
-    cert_id: *mut CrmfCertId,
-    will_be_revoked_at: *mut Asn1String,
-    bad_since_date: *mut Asn1String,
-    crl_details: *mut OpenSslStack,
+    pub(crate) status: *mut Asn1String,
+    pub(crate) cert_id: *mut CrmfCertId,
+    pub(crate) will_be_revoked_at: *mut Asn1String,
+    pub(crate) bad_since_date: *mut Asn1String,
+    pub(crate) crl_details: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_CHALLENGE` — `cmp_local.h:181-185`.
 #[repr(C)]
 pub(crate) struct CmpChallenge {
-    owf: *mut X509Algor,
-    witness: *mut Asn1String,
-    challenge: *mut Asn1String,
+    pub(crate) owf: *mut X509Algor,
+    pub(crate) witness: *mut Asn1String,
+    pub(crate) challenge: *mut Asn1String,
 }
 
 /// `OSSL_CMP_CAKEYUPDANNCONTENT` — `cmp_local.h:195-199`.
 #[repr(C)]
 pub(crate) struct CmpCaKeyUpdAnnContent {
-    old_with_new: *mut X509,
-    new_with_old: *mut X509,
-    new_with_new: *mut X509,
+    pub(crate) old_with_new: *mut X509,
+    pub(crate) new_with_old: *mut X509,
+    pub(crate) new_with_new: *mut X509,
 }
 
 /// `OSSL_CMP_ROOTCAKEYUPDATE` — `cmp_local.h:789-793`.
 #[repr(C)]
 pub(crate) struct CmpRootCaKeyUpdate {
-    new_with_new: *mut X509,
-    new_with_old: *mut X509,
-    old_with_new: *mut X509,
+    pub(crate) new_with_new: *mut X509,
+    pub(crate) new_with_old: *mut X509,
+    pub(crate) old_with_new: *mut X509,
 }
 
 /// `OSSL_CMP_CERTREQTEMPLATE` — `cmp_local.h:802-805`.
 #[repr(C)]
 pub(crate) struct CmpCertReqTemplate {
-    cert_template: *mut CrmfCertTemplate,
-    key_spec: *mut OpenSslStack,
+    pub(crate) cert_template: *mut CrmfCertTemplate,
+    pub(crate) key_spec: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_CRLSOURCE` — `cmp_local.h:214-220`.
 #[repr(C)]
 pub(crate) struct CmpCrlSource {
-    type_: c_int,
-    value: CmpCrlSourceValue,
+    pub(crate) type_: c_int,
+    pub(crate) value: CmpCrlSourceValue,
 }
 
 /// The `CRLSOURCE` union.
 #[repr(C)]
 pub(crate) union CmpCrlSourceValue {
-    dpn: *mut DistPointName,
-    issuer: *mut OpenSslStack,
+    pub(crate) dpn: *mut DistPointName,
+    pub(crate) issuer: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_CRLSTATUS` — `cmp_local.h:229-232`.
 #[repr(C)]
 pub(crate) struct CmpCrlStatus {
-    source: *mut CmpCrlSource,
-    this_update: *mut Asn1String,
+    pub(crate) source: *mut CmpCrlSource,
+    pub(crate) this_update: *mut Asn1String,
 }
 
 /// `OSSL_CMP_ITAV` — `cmp_local.h:248-298`.
 #[repr(C)]
 pub(crate) struct CmpItav {
-    info_type: *mut Asn1Object,
-    info_value: CmpItavValue,
+    pub(crate) info_type: *mut Asn1Object,
+    pub(crate) info_value: CmpItavValue,
 }
 
 /// The `ITAV` union — every arm is a pointer.
 #[repr(C)]
 pub(crate) union CmpItavValue {
-    ptr: *mut c_void,
-    ca_prot_enc_cert: *mut X509,
-    sign_key_pair_types: *mut OpenSslStack,
-    enc_key_pair_types: *mut OpenSslStack,
-    preferred_symm_alg: *mut X509Algor,
-    ca_key_update_info: *mut CmpCaKeyUpdAnnContent,
-    current_crl: *mut X509Crl,
-    unsupported_oids: *mut OpenSslStack,
-    key_pair_param_req: *mut Asn1Object,
-    key_pair_param_rep: *mut X509Algor,
-    rev_passphrase: *mut c_void,
-    implicit_confirm: *mut Asn1String,
-    confirm_wait_time: *mut Asn1String,
-    orig_pki_message: *mut OpenSslStack,
-    supp_lang_tags_value: *mut OpenSslStack,
-    cert_profile: *mut OpenSslStack,
-    ca_certs: *mut OpenSslStack,
-    root_ca_cert: *mut X509,
-    root_ca_key_update: *mut CmpRootCaKeyUpdate,
-    cert_req_template: *mut CmpCertReqTemplate,
-    crl_status_list: *mut OpenSslStack,
-    crls: *mut OpenSslStack,
-    other: *mut Asn1Type,
+    pub(crate) ptr: *mut c_void,
+    pub(crate) ca_prot_enc_cert: *mut X509,
+    pub(crate) sign_key_pair_types: *mut OpenSslStack,
+    pub(crate) enc_key_pair_types: *mut OpenSslStack,
+    pub(crate) preferred_symm_alg: *mut X509Algor,
+    pub(crate) ca_key_update_info: *mut CmpCaKeyUpdAnnContent,
+    pub(crate) current_crl: *mut X509Crl,
+    pub(crate) unsupported_oids: *mut OpenSslStack,
+    pub(crate) key_pair_param_req: *mut Asn1Object,
+    pub(crate) key_pair_param_rep: *mut X509Algor,
+    pub(crate) rev_passphrase: *mut c_void,
+    pub(crate) implicit_confirm: *mut Asn1String,
+    pub(crate) confirm_wait_time: *mut Asn1String,
+    pub(crate) orig_pki_message: *mut OpenSslStack,
+    pub(crate) supp_lang_tags_value: *mut OpenSslStack,
+    pub(crate) cert_profile: *mut OpenSslStack,
+    pub(crate) ca_certs: *mut OpenSslStack,
+    pub(crate) root_ca_cert: *mut X509,
+    pub(crate) root_ca_key_update: *mut CmpRootCaKeyUpdate,
+    pub(crate) cert_req_template: *mut CmpCertReqTemplate,
+    pub(crate) crl_status_list: *mut OpenSslStack,
+    pub(crate) crls: *mut OpenSslStack,
+    pub(crate) other: *mut Asn1Type,
 }
 
 /// `OSSL_CMP_CERTORENCCERT` — `cmp_local.h:301-307`.
 #[repr(C)]
 pub(crate) struct CmpCertOrEncCert {
-    type_: c_int,
-    value: CmpCertOrEncCertValue,
+    pub(crate) type_: c_int,
+    pub(crate) value: CmpCertOrEncCertValue,
 }
 
 /// The `CERTORENCCERT` union.
 #[repr(C)]
 pub(crate) union CmpCertOrEncCertValue {
-    certificate: *mut X509,
-    encrypted_cert: *mut c_void,
+    pub(crate) certificate: *mut X509,
+    pub(crate) encrypted_cert: *mut c_void,
 }
 
 /// `OSSL_CMP_CERTIFIEDKEYPAIR` — `cmp_local.h:318-322`.
 #[repr(C)]
 pub(crate) struct CmpCertifiedKeyPair {
-    cert_or_enc_cert: *mut CmpCertOrEncCert,
-    private_key: *mut c_void,
-    publication_info: *mut CrmfPkiPublicationInfo,
+    pub(crate) cert_or_enc_cert: *mut CmpCertOrEncCert,
+    pub(crate) private_key: *mut c_void,
+    pub(crate) publication_info: *mut CrmfPkiPublicationInfo,
 }
 
 /// `OSSL_CMP_PKISI` — `cmp_local.h:332-336`.
@@ -377,72 +377,72 @@ pub(crate) struct CmpPkisi {
 /// `OSSL_CMP_REVDETAILS` — `cmp_local.h:346-349`.
 #[repr(C)]
 pub(crate) struct CmpRevDetails {
-    cert_details: *mut CrmfCertTemplate,
-    crl_entry_details: *mut OpenSslStack,
+    pub(crate) cert_details: *mut CrmfCertTemplate,
+    pub(crate) crl_entry_details: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_REVREPCONTENT` — `cmp_local.h:367-371`.
 #[repr(C)]
 pub(crate) struct CmpRevRepContent {
-    status: *mut OpenSslStack,
-    rev_certs: *mut OpenSslStack,
-    crls: *mut OpenSslStack,
+    pub(crate) status: *mut OpenSslStack,
+    pub(crate) rev_certs: *mut OpenSslStack,
+    pub(crate) crls: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_KEYRECREPCONTENT` — `cmp_local.h:384-389`.
 #[repr(C)]
 pub(crate) struct CmpKeyRecRepContent {
-    status: *mut CmpPkisi,
-    new_sig_cert: *mut X509,
-    ca_certs: *mut OpenSslStack,
-    key_pair_hist: *mut OpenSslStack,
+    pub(crate) status: *mut CmpPkisi,
+    pub(crate) new_sig_cert: *mut X509,
+    pub(crate) ca_certs: *mut OpenSslStack,
+    pub(crate) key_pair_hist: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_ERRORMSGCONTENT` — `cmp_local.h:401-405`.
 #[repr(C)]
 pub(crate) struct CmpErrorMsgContent {
     pub(crate) pki_status_info: *mut CmpPkisi,
-    error_code: *mut Asn1String,
-    error_details: *mut OpenSslStack,
+    pub(crate) error_code: *mut Asn1String,
+    pub(crate) error_details: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_CERTSTATUS` — `cmp_local.h:421-426`.
 #[repr(C)]
 pub(crate) struct CmpCertStatus {
-    cert_hash: *mut Asn1String,
-    cert_req_id: *mut Asn1String,
-    status_info: *mut CmpPkisi,
-    hash_alg: *mut X509Algor,
+    pub(crate) cert_hash: *mut Asn1String,
+    pub(crate) cert_req_id: *mut Asn1String,
+    pub(crate) status_info: *mut CmpPkisi,
+    pub(crate) hash_alg: *mut X509Algor,
 }
 
 /// `OSSL_CMP_CERTRESPONSE` — `cmp_local.h:444-449`.
 #[repr(C)]
 pub(crate) struct CmpCertResponse {
-    cert_req_id: *mut Asn1String,
-    status: *mut CmpPkisi,
-    certified_key_pair: *mut CmpCertifiedKeyPair,
-    rsp_info: *mut Asn1String,
+    pub(crate) cert_req_id: *mut Asn1String,
+    pub(crate) status: *mut CmpPkisi,
+    pub(crate) certified_key_pair: *mut CmpCertifiedKeyPair,
+    pub(crate) rsp_info: *mut Asn1String,
 }
 
 /// `OSSL_CMP_CERTREPMESSAGE` — `cmp_local.h:459-462`.
 #[repr(C)]
 pub(crate) struct CmpCertRepMessage {
-    ca_pubs: *mut OpenSslStack,
-    response: *mut OpenSslStack,
+    pub(crate) ca_pubs: *mut OpenSslStack,
+    pub(crate) response: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_POLLREQ` — `cmp_local.h:470-472`.
 #[repr(C)]
 pub(crate) struct CmpPollReq {
-    cert_req_id: *mut Asn1String,
+    pub(crate) cert_req_id: *mut Asn1String,
 }
 
 /// `OSSL_CMP_POLLREP` — `cmp_local.h:485-489`.
 #[repr(C)]
 pub(crate) struct CmpPollRep {
-    cert_req_id: *mut Asn1String,
-    check_after: *mut Asn1String,
-    reason: *mut OpenSslStack,
+    pub(crate) cert_req_id: *mut Asn1String,
+    pub(crate) check_after: *mut Asn1String,
+    pub(crate) reason: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_PKIHEADER` — `cmp_local.h:529-542`.
@@ -472,33 +472,33 @@ pub(crate) struct CmpPkiBody {
 /// The `PKIBODY` union — all 27 arms are pointers.
 #[repr(C)]
 pub(crate) union CmpPkiBodyValue {
-    ir: *mut OpenSslStack,
-    ip: *mut CmpCertRepMessage,
-    cr: *mut OpenSslStack,
-    cp: *mut CmpCertRepMessage,
-    p10cr: *mut c_void,
-    popdecc: *mut OpenSslStack,
-    popdecr: *mut OpenSslStack,
-    kur: *mut OpenSslStack,
-    kup: *mut CmpCertRepMessage,
-    krr: *mut OpenSslStack,
-    krp: *mut CmpKeyRecRepContent,
-    rr: *mut OpenSslStack,
-    rp: *mut CmpRevRepContent,
-    ccr: *mut OpenSslStack,
-    ccp: *mut CmpCertRepMessage,
-    ckuann: *mut CmpCaKeyUpdAnnContent,
-    cann: *mut X509,
-    rann: *mut CmpRevAnnContent,
-    crlann: *mut OpenSslStack,
-    pkiconf: *mut Asn1Type,
-    nested: *mut OpenSslStack,
-    genm: *mut OpenSslStack,
-    genp: *mut OpenSslStack,
+    pub(crate) ir: *mut OpenSslStack,
+    pub(crate) ip: *mut CmpCertRepMessage,
+    pub(crate) cr: *mut OpenSslStack,
+    pub(crate) cp: *mut CmpCertRepMessage,
+    pub(crate) p10cr: *mut c_void,
+    pub(crate) popdecc: *mut OpenSslStack,
+    pub(crate) popdecr: *mut OpenSslStack,
+    pub(crate) kur: *mut OpenSslStack,
+    pub(crate) kup: *mut CmpCertRepMessage,
+    pub(crate) krr: *mut OpenSslStack,
+    pub(crate) krp: *mut CmpKeyRecRepContent,
+    pub(crate) rr: *mut OpenSslStack,
+    pub(crate) rp: *mut CmpRevRepContent,
+    pub(crate) ccr: *mut OpenSslStack,
+    pub(crate) ccp: *mut CmpCertRepMessage,
+    pub(crate) ckuann: *mut CmpCaKeyUpdAnnContent,
+    pub(crate) cann: *mut X509,
+    pub(crate) rann: *mut CmpRevAnnContent,
+    pub(crate) crlann: *mut OpenSslStack,
+    pub(crate) pkiconf: *mut Asn1Type,
+    pub(crate) nested: *mut OpenSslStack,
+    pub(crate) genm: *mut OpenSslStack,
+    pub(crate) genp: *mut OpenSslStack,
     pub(crate) error: *mut CmpErrorMsgContent,
-    cert_conf: *mut OpenSslStack,
-    poll_req: *mut OpenSslStack,
-    poll_rep: *mut OpenSslStack,
+    pub(crate) cert_conf: *mut OpenSslStack,
+    pub(crate) poll_req: *mut OpenSslStack,
+    pub(crate) poll_rep: *mut OpenSslStack,
 }
 
 /// `OSSL_CMP_MSG` — `cmp_local.h:714-722`.
@@ -515,8 +515,8 @@ pub(crate) struct CmpMsg {
 /// `OSSL_CMP_PROTECTEDPART` — `cmp_local.h:732-735`.
 #[repr(C)]
 pub(crate) struct CmpProtectedPart {
-    header: *mut CmpPkiHeader,
-    body: *mut CmpPkiBody,
+    pub(crate) header: *mut CmpPkiHeader,
+    pub(crate) body: *mut CmpPkiBody,
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1719,6 +1719,116 @@ unsafe fn crlstatus_new() -> *mut CmpCrlStatus {
 unsafe fn crlstatus_free(p: *mut CmpCrlStatus) {
     // SAFETY: `p` is NULL or a live item value.
     unsafe { ASN1_item_free(p.cast(), cmp_crlstatus_it()) };
+}
+
+// ---------------------------------------------------------------------------------------------
+// The `IMPLEMENT_ASN1_FUNCTIONS` lifecycle for the message-body items whose caller is the
+// `cmp_msg.c` constructor half. That half lands with the CMP engine (12.4b), so these wrappers
+// are the ones the authority's `cmp_msg.c` reaches by name.
+// ---------------------------------------------------------------------------------------------
+
+/// `OSSL_CMP_CERTREPMESSAGE_new` — internal item allocator.
+pub(crate) unsafe fn OSSL_CMP_CERTREPMESSAGE_new() -> *mut CmpCertRepMessage {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(cmp_certrepmessage_it()) }.cast()
+}
+
+/// `OSSL_CMP_REVREPCONTENT_new` — internal item allocator.
+pub(crate) unsafe fn OSSL_CMP_REVREPCONTENT_new() -> *mut CmpRevRepContent {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(cmp_revrepcontent_it()) }.cast()
+}
+
+/// `OSSL_CMP_ERRORMSGCONTENT_new` — internal item allocator.
+pub(crate) unsafe fn OSSL_CMP_ERRORMSGCONTENT_new() -> *mut CmpErrorMsgContent {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(cmp_errormsgcontent_it()) }.cast()
+}
+
+/// `OSSL_CMP_CERTIFIEDKEYPAIR_new` — internal item allocator.
+pub(crate) unsafe fn OSSL_CMP_CERTIFIEDKEYPAIR_new() -> *mut CmpCertifiedKeyPair {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(cmp_certifiedkeypair_it()) }.cast()
+}
+
+/// `OSSL_CMP_REVDETAILS_new` — internal item allocator.
+pub(crate) unsafe fn OSSL_CMP_REVDETAILS_new() -> *mut CmpRevDetails {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(cmp_revdetails_it()) }.cast()
+}
+
+/// `OSSL_CMP_REVDETAILS_free` — the item free.
+///
+/// # Safety
+/// `p` is NULL or a value the item layer built.
+pub(crate) unsafe fn OSSL_CMP_REVDETAILS_free(p: *mut CmpRevDetails) {
+    // SAFETY: `p` is NULL or a live item value.
+    unsafe { ASN1_item_free(p.cast(), cmp_revdetails_it()) };
+}
+
+/// `OSSL_CMP_CERTSTATUS_new` — internal item allocator.
+pub(crate) unsafe fn OSSL_CMP_CERTSTATUS_new() -> *mut CmpCertStatus {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(cmp_certstatus_it()) }.cast()
+}
+
+/// `OSSL_CMP_CERTSTATUS_free` — the item free.
+///
+/// # Safety
+/// `p` is NULL or a value the item layer built.
+pub(crate) unsafe fn OSSL_CMP_CERTSTATUS_free(p: *mut CmpCertStatus) {
+    // SAFETY: `p` is NULL or a live item value.
+    unsafe { ASN1_item_free(p.cast(), cmp_certstatus_it()) };
+}
+
+/// `OSSL_CMP_CERTRESPONSE_new` — internal item allocator.
+pub(crate) unsafe fn OSSL_CMP_CERTRESPONSE_new() -> *mut CmpCertResponse {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(cmp_certresponse_it()) }.cast()
+}
+
+/// `OSSL_CMP_CERTRESPONSE_free` — the item free.
+///
+/// # Safety
+/// `p` is NULL or a value the item layer built.
+pub(crate) unsafe fn OSSL_CMP_CERTRESPONSE_free(p: *mut CmpCertResponse) {
+    // SAFETY: `p` is NULL or a live item value.
+    unsafe { ASN1_item_free(p.cast(), cmp_certresponse_it()) };
+}
+
+/// `OSSL_CMP_POLLREQ_new` — internal item allocator.
+pub(crate) unsafe fn OSSL_CMP_POLLREQ_new() -> *mut CmpPollReq {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(cmp_pollreq_it()) }.cast()
+}
+
+/// `OSSL_CMP_POLLREQ_free` — the item free.
+///
+/// # Safety
+/// `p` is NULL or a value the item layer built.
+pub(crate) unsafe fn OSSL_CMP_POLLREQ_free(p: *mut CmpPollReq) {
+    // SAFETY: `p` is NULL or a live item value.
+    unsafe { ASN1_item_free(p.cast(), cmp_pollreq_it()) };
+}
+
+/// `OSSL_CMP_POLLREP_new` — internal item allocator.
+pub(crate) unsafe fn OSSL_CMP_POLLREP_new() -> *mut CmpPollRep {
+    // SAFETY: the accessor answers a static item.
+    unsafe { ASN1_item_new(cmp_pollrep_it()) }.cast()
+}
+
+/// `i2d_OSSL_CMP_PROTECTEDPART` — the `IMPLEMENT_ASN1_FUNCTIONS(OSSL_CMP_PROTECTEDPART)` encoder,
+/// reached by `ossl_cmp_calc_protection` (`cmp_protect.c:67`). Crate-internal: `cmp.h` does not
+/// declare it.
+///
+/// # Safety
+/// `a` is live and `out` is a writable slot.
+pub(crate) unsafe fn i2d_OSSL_CMP_PROTECTEDPART(
+    a: *const CmpProtectedPart,
+    out: *mut *mut c_uchar,
+) -> c_int {
+    // SAFETY: the accessor answers a static item; `a`/`out` are the caller's.
+    unsafe { ASN1_item_i2d(a.cast(), out, cmp_protectedpart_it()) }
 }
 
 // ---------------------------------------------------------------------------------------------
