@@ -4,7 +4,7 @@
 derives from artefact existence. `forensics/phase-state.json:502` reads `complete` for phase 11,
 `docs/SEAL-CENSUS.md:365` reads `complete` and `docs/SEAL-CENSUS.md:39` carries the same stratum's
 row, `forensics/phase11-obligations.json:9` reads `open_in_this_stratum: 0`, and every earlier
-stratum is `complete`, which the rule `forensics/phase-state.json:646` states. `seal_sha256` is
+stratum is `complete`, which the rule `forensics/phase-state.json:647` states. `seal_sha256` is
 derived too: this document is named in `forensics/tools/atlas_common.py`'s `SEAL_DOCS` table, which
 `forensics/tools/render_seal_census.py` and `phase_state.py` read, so the line is recomputed
 whenever this document changes and is not restated here. In the tree before this document existed
@@ -52,13 +52,19 @@ parity (`docs/PARITY_MODEL.md:22`) — exactly as `docs/SEAL-CENSUS.md:21` and
   `directly_courted` is stated there and in §1 below (D199)
 - Derived state: `forensics/phase-state.json:485-504`; it owns **no provider row**, so its
   `provider_rows` is `null` (`:500`) rather than a count
-- FRF receipts and claim: **not yet this stratum's.** `forensics/tools/gen_frf_courts.py`'s `COURTS`
-  table has no Phase 11 block (`--check` reads `ok: 172 file(s) match the table (86 courts)`, the
-  figure Phase 10's `C95` recorded), there are no `forensics/frf/courts/openssl-rs-rt-x509*`
-  declarations and no Phase-11 objects in `.frf/`; §8 states what is owed
-- Gemel checkpoint: **not yet this stratum's.** `forensics/GEMEL_TRAJECTORY.md`'s head change is
-  Phase 10's `C95` (`forensics/GEMEL_TRAJECTORY.md:13`) and its `current:` is still `K49`
-  (`forensics/GEMEL_TRAJECTORY.md:156,163`); §8 states what is owed
+- FRF receipts and claim: **present, and the chain's objects are on disk.** `forensics/tools/
+  gen_frf_courts.py`'s `COURTS` table gained a Phase-11 block for the nine differential courts, the
+  declarations are under
+  `forensics/frf/courts/openssl-rs-rt-x509{,-ref,-store,-verify-surface,-verify-engine,-v3,-pem,-acert,-req}`,
+  `--check` reads `ok: 190 file(s) match the table (95 courts)`, and `.frf` now carries nine receipts,
+  eighteen challenges, twenty-seven captures and one compiled claim
+  (`efbd2ee4eb2c3e043ed1bb25f5bb6f7416786484f2862f4a7c2349c064c73a1b`; 100 receipts and 200
+  challenges, from the 91 and 182 Phase 10's head change `C95` left). §8 states what that is
+- Gemel checkpoint: **present, and it is this stratum's.** `forensics/GEMEL_TRAJECTORY.md`'s head
+  change is Phase 11's `C97` (`forensics/GEMEL_TRAJECTORY.md:13`) and its `current:` is `K50` —
+  `checkpoint.1eab61e42c9371acb92589b62521f04d91b40c1f98a5a91876bdf2e0c50ecec6`
+  (`forensics/GEMEL_TRAJECTORY.md:205,216`). The state a reader reaches the stratum's `complete`
+  through is this stratum's. §8 states what that is
 - Deciding record: `docs/DECISIONS.md` — **D499** through **D508** (`docs/DECISIONS.md:34373-34704`),
   with `docs/PHASE-11-SUBPHASES.md` for the subphase plan this seal closes. §10 is where the
   corrections those entries record are summarised
@@ -490,8 +496,13 @@ divergence, and none is smoothed.
     and coverage count is `docs/SEAL-CENSUS.md`'s.** This document types none of those itself; the
     exceptions are §3's per-court table and the head matter's court and coverage figures, each of
     which names the artefact it was read from.
-11. **The FRF and Gemel evidence is not yet this stratum's.** §8 records the owed chain entry
-    honestly; this seal claims no receipt, no claim and no checkpoint it cannot cite from disk.
+11. **The FRF and Gemel evidence is a bounded `sensitivity-backed` claim over nine courts, and it
+    is not a parity claim.** The nine differential courts' compiled claim (`efbd2ee4…`, §8) binds
+    the authority's first stdout line and its exit class for the nine courts' fixture families only,
+    with `blockers: []` and `excluded_evidence: []`; this stratum registers no `CT-*` court, and a
+    `referenced`-basis name in `RT-X509-REF` remains a proof of reference only, not a driven arm.
+    The claim's own non-claims are emitted beside it, and `forensics/frf/README.md` says what the
+    `sensitivity-backed` policy means (§7, §8).
 
 ## 7. Exit criteria
 
@@ -515,7 +526,7 @@ clause below is checked against a generated artefact rather than asserted.
 | the dispatch court clean | `forensics/atlas/dispatch-court.json`: `problems` 0 (`:18`) |
 | the prerequisite gate at zero findings | `forensics/atlas/prerequisite-gate.json`: `findings` empty (`:629`); D507's ten `forensics/prerequisites.json` unit records are what keep it there |
 | the plan reconciliation at zero findings | `forensics/atlas/plan-reconciliation.json`: `findings` empty (`:32`) |
-| the earlier strata are complete, which the rule requires | `forensics/phase-state.json:646` |
+| the earlier strata are complete, which the rule requires | `forensics/phase-state.json:647` |
 | the courts are re-derived on every push, not trusted from a committed file | the `courts` job in `.github/workflows/ci.yml` runs `court/pipeline.sh` |
 | a commit may not undo an earlier commit's evidence | `forensics/tools/regression_guard.py` against the branch's previous head and against `origin/main` |
 
@@ -529,48 +540,75 @@ empty.
 | 1 | authority identity | `forensics/authorities/AUTHORITIES.json:39` pins `openssl-3.6.4-production`; `artifacts/phase11/COURTS.json:2` names it |
 | 2 | obligation inventory | `forensics/phase11-obligations.json` (`:5-12`); this stratum owns no provider row |
 | 3 | court manifests | `artifacts/phase11/COURTS.json` |
-| 4 | raw captures | **met in the court venue.** The nine staged `artifacts/phase11/probes/<probe>.{authority,candidate}` pairs are the captures the court venue diffs (`artifacts/phase11/COURTS.json:19-22` and each row's `staged_binaries`) |
+| 4 | raw captures | **met in both venues.** The nine staged `artifacts/phase11/probes/<probe>.{authority,candidate}` pairs are the captures the court venue diffs (`artifacts/phase11/COURTS.json:19-22` and each row's `staged_binaries`), and `.frf/captures/` carries twenty-seven Phase-11 runs — the real run and the two challenged runs of each differential court (§8) |
 | 5 | residual set | **met in the court venue.** Every court's `residual_count` is 0 and its `residuals` list empty (`artifacts/phase11/COURTS.json:7-161`), `summary` reads `pass` 9 of 9 and `pending_courts` is empty (`:162-167`) |
-| 6 | mutation / sensitivity evidence | **not met.** No Phase-11 FRF challenge records exist; §8 states what is owed |
+| 6 | mutation / sensitivity evidence | **met.** Eighteen challenge records — both declared axes on each of the nine differential courts — every one adjudicated, and the claim is `sensitivity-backed` (§8); `forensics/frf/README.md:160` counts 95 runtime courts, the Phase-11 nine among them |
 | 7 | resolution runs | **not applicable, and therefore not met.** `--resolution-run` is required only for a `fixed` disposition, and no Phase-11 FRF residual exists to carry one |
-| 8 | FRF receipts | **not met.** No Phase-11 `.frf/receipts/` record exists; §8 states what is owed |
+| 8 | FRF receipts | **met.** Nine `.frf/receipts/` records — one per differential court — each with an empty `residuals` list (`receipt-run-openssl-rs-rt-x509…`; §8) |
 | 9 | generated parity projection | `forensics/STATUS.md` (`:146-160`), rendered by `forensics/tools/render_status.py`; the seal-facing arithmetic is `docs/SEAL-CENSUS.md` |
-| 10 | Gemel checkpoint | **not met.** `forensics/GEMEL_TRAJECTORY.md`'s head change is still Phase 10's `C95` (`:13`) and its `current:` is `K49` (`:156,163`); §8 states what is owed |
+| 10 | Gemel checkpoint | **met.** `forensics/GEMEL_TRAJECTORY.md`'s head change is Phase 11's `C97` (`:13`) and its `current:` is `K50` — `checkpoint.1eab61e4…` (`:205,216`), the state `C97` leaves; one checkpoint, because this stratum's chain carries no finding, fix or disposition (§8) |
 
-**Six of the ten items are met — 1, 2, 3, 4, 5 and 9 — item 7 is not applicable rather than wanting,
-and items 6, 8 and 10 are owed.** They are the same three items Phase 10 left open to its FRF chain
-entry, and §8 records the entry Phase 11 has yet to make. That the stratum derives `complete` with
-them owed is the same state Phase 10 was in before `C95`: `complete` records the code, the ledger
-and the courts, and a seal written at that moment says honestly which evidence has not landed
-rather than front-running it (D421).
+**Nine of the ten items are met — 1, 2, 3, 4, 5, 6, 8, 9 and 10, with item 4 met in both venues
+— and item 7 is not applicable rather than wanting: `--resolution-run` is required only for a
+`fixed` disposition, and none attaches to a Phase-11 FRF residual, because the eighteen residual
+records the challenges produced are all `open` by design.** The stratum entered the FRF chain and
+produced the declarations, captures, receipts, challenges, claim and checkpoint §8 describes, with
+`blockers: []` and `excluded_evidence: []`. Item 10's checkpoint, `K50`, is the state this stratum's
+head change leaves, and it has landed (§8).
 
 ## 8. FRF and Gemel
 
-**The FRF chain entry this stratum needs has not been made, and this seal records the gap rather
-than inventing the objects.** `forensics/tools/gen_frf_courts.py`'s `COURTS` table is the registry
-of declarations (D58), and it has **no Phase 11 block**: `python3 forensics/tools/gen_frf_courts.py
---check` reads `ok: 172 file(s) match the table (86 courts)`, the same figure Phase 10's `C95`
-recorded (`forensics/GEMEL_TRAJECTORY.md:13`). There are therefore no
-`forensics/frf/courts/openssl-rs-rt-x509*` declarations, no Phase-11 receipts in `.frf/receipts/`,
-no Phase-11 challenges or captures, and no claim binding a Phase-11 court; `forensics/frf/README.md`
-still counts 86 runtime courts. `forensics/GEMEL_TRAJECTORY.md`'s head change is Phase 10's `C95`
-(`:13`) and its `current:` is `K49` (`:156,163`), so the checkpoint a reader reaches Phase 10
-complete through is Phase 10's and not this stratum's.
+**The FRF chain entry this stratum needs has landed, and every object it produces is on disk.**
+`forensics/tools/gen_frf_courts.py`'s `COURTS` table is the registry of declarations (D58), and it
+gained a Phase 11 block — `("rt-x509-ref", 11, …)` through `("rt-x509", 11, …)`. Phase 9's chain
+entry shows what one requires, and D424 fixes it: rows for every **differential** court, each naming
+the `artifacts/phase11/probes/<probe>.{authority,candidate}` pair the court stages and the
+`courts/phase11/<probe>.c` it was compiled from, then the store **added to** rather than recreated,
+producing one receipt and two challenge records per court, a compiled `sensitivity-backed` claim, and
+a Gemel checkpoint. This stratum registers **nine differential courts and no `CT-*` court**, so the
+D413 reason that excludes a vector-driven court from a manifest (`CT-PKCS12` was Phase 10's one
+exclusion) has nothing to exclude here: all nine of `RT-X509-REF`, `RT-X509-STORE`,
+`RT-X509-VERIFY-SURFACE`, `RT-X509-VERIFY-ENGINE`, `RT-X509-V3`, `RT-X509-PEM`, `RT-X509-ACERT`,
+`RT-X509-REQ` and `RT-X509` are declared, run, receipted, challenged and compiled. **`RT-X509-REF`
+is declared, unlike the earlier strata's `-REF` courts**, because its probe is fixture-driven and
+diffs a real authority transcript rather than taking addresses, so it is a chain subject with a
+capture to compare and not a reference basis with nothing to diff (D199).
 
-**What the entry would be, and why all nine courts are declarable.** Phase 9's chain entry shows
-what one requires, and D424 fixes it: rows added to `forensics/tools/gen_frf_courts.py`'s `COURTS`
-table — one per **differential** court, each naming the `artifacts/phase11/probes/<probe>.{authority,candidate}`
-pair the court stages and the `courts/phase11/<probe>.c` it was compiled from — then the store
-**added to** rather than recreated, producing one receipt and two challenge records per court, a
-compiled `sensitivity-backed` claim, and a Gemel checkpoint. This stratum registers **nine
-differential courts and no `CT-*` court**, so the D413 reason that excludes a vector-driven court
-from a manifest (`CT-PKCS12` was Phase 10's one exclusion) does not apply here: all nine of
-`RT-X509-REF`, `RT-X509-STORE`, `RT-X509-VERIFY-SURFACE`, `RT-X509-VERIFY-ENGINE`, `RT-X509-V3`,
-`RT-X509-PEM`, `RT-X509-ACERT`, `RT-X509-REQ` and `RT-X509` are differential and would be declared,
-run, receipted, challenged and compiled. None of those objects is on disk, and this seal does not
-run the FRF tooling container to produce them; it names them as owed so the omission is a recorded
-gap rather than a silent one. Items 6, 8 and 10 of §7 retire when the entry lands, exactly as they
-did for Phase 10's `C95`.
+- **Nine declarations.** `forensics/tools/gen_frf_courts.py`'s table gained the Phase-11 block, and
+  the generated declarations are under
+  `forensics/frf/courts/openssl-rs-rt-x509{,-ref,-store,-verify-surface,-verify-engine,-v3,-pem,-acert,-req}`.
+  `gen_frf_courts.py --check` reads `ok: 190 file(s) match the table (95 courts)`, and
+  `forensics/frf/README.md:160` counts **95 runtime courts** — the Phase-11 nine among them, which
+  moves the manifest count the `docs/RELEASE_GATES.md` alternative names with it (D200/D413/D424).
+- **Nine receipts, eighteen challenges, twenty-seven captures.** One receipt per court, each with an
+  empty `residuals` list; both declared axes challenged and adjudicated on each court; and three runs
+  captured per court — the real run and the two challenged runs. They are in `.frf/receipts/`,
+  `.frf/challenges/` and `.frf/captures/` under the `openssl-rs-rt-x509…` names.
+- **One `sensitivity-backed` claim.**
+  `efbd2ee4eb2c3e043ed1bb25f5bb6f7416786484f2862f4a7c2349c064c73a1b` binds authority
+  `openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.16` (`identity_hash e4f60d8b…`) in environment
+  `x86_64-linux (77b5d08d)` over the nine differential courts, with `blockers: []` and
+  `excluded_evidence: []` (`.frf/claims/efbd2ee4….json`). Every one of its nine premises carries both
+  axes — `observable_scope [stdout, exit]`, relation `eq(stdout-first-line), eq(exit-code)` — so no
+  cell is narrowed, and its eighteen `capability` entries are the two challenged axes per court.
+- **One Gemel checkpoint, `K50`.** `forensics/GEMEL_TRAJECTORY.md`'s head change is `C97` — "Phase 11
+  joins the FRF chain: the X.509 stratum adds nine differential declarations"
+  (`forensics/GEMEL_TRAJECTORY.md:13`) — and its `current:` is the state that change's checkpoint
+  leaves, `checkpoint.1eab61e42c9371acb92589b62521f04d91b40c1f98a5a91876bdf2e0c50ecec6`, listed as
+  `K50` (`forensics/GEMEL_TRAJECTORY.md:205,216`). **One checkpoint rather than the three Phase 8
+  needed**, because this stratum's chain contains no finding, fix or disposition for the trajectory
+  to carry in order: the nine courts' real runs raise no residual on a claimed surface, the claim
+  compiles with zero blockers and no narrowed cell on the first pass, and the only residuals the
+  chain produces are the eighteen mutant residuals of the challenge records, which are open by design
+  because a mutant's divergence is the challenge's evidence. **The store was added to, not
+  recreated**: `.frf` moved receipts 91 → 100, challenges 182 → 200, captures 273 → 300 and claims
+  10 → 11, the figures Phase 10's head change `C95` left.
+
+**What the seal does *not* do is invent any of these objects.** The declarations, the receipts, the
+challenges, the captures, the claim and the checkpoint are produced by running the chain in the FRF
+tooling container, never on the host, and all six are cited above from disk —
+`forensics/GEMEL_TRAJECTORY.md` is the generated projection of a store Gemel keeps untracked (D17).
+Items 6, 8 and 10 of §7 retire with this entry, exactly as they did for Phase 10's `C95`.
 
 ## 9. What happens next
 
@@ -583,13 +621,15 @@ owns is implemented, and the 12 it *received* are discharged rather than passed 
 
 **The immediate next actions this seal's own state points at**, recorded so they are not lost:
 
-- **Make the FRF chain entry.** §8's subject: the nine declarations, the nine receipts, the
-  challenges, the captures, the compiled `sensitivity-backed` claim and the Gemel checkpoint. This
-  is the change Phase 10's `C95` was for it, and it is what retires §7's items 6, 8 and 10.
-- **Correct this seal's §7 and §8 when the entry lands.** They are written to the tree as it is
-  now; the receipts, claim id and checkpoint id are produced by running the chain in the FRF
-  tooling container, never on the host, and this document's bytes (and so its derived `seal_sha256`)
-  move with that correction. Phase 10's seal was corrected the same way.
+- **The FRF chain entry has landed.** §8's subject: nine declarations, the nine receipts, eighteen
+  challenges and twenty-seven captures they produced, the compiled `sensitivity-backed` claim
+  `efbd2ee4…`, and the `K50` checkpoint the chain leaves. This stratum registers no `CT-*` court, so
+  the entry covers all nine differential courts and nothing is recorded as not declarable. No object
+  of the entry is still owed.
+- **This seal's §7 and §8 are corrected, and its bytes moved with the correction.** The receipts,
+  claim id and checkpoint id were produced by running the chain in the FRF tooling container, never
+  on the host, and `seal_sha256` is recomputed from the document's new bytes. Phase 10's seal was
+  corrected the same way.
 - **`ossl_x509_check_cert_time` is now landed, and Phase 10's §9 follow-up is satisfied.** Phase 10
   recorded it as a divergence with its blocker until Phase 11 modelled `X509_VERIFY_PARAM`,
   `X509_STORE_CTX` and `X509_cmp_time` (`docs/PHASE-10-KEYFORMATS-SEAL.md:509-511,674-676`); the
