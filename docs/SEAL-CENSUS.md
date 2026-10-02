@@ -363,7 +363,7 @@ The other 1 compare ELF structure rather than a transcript and observe nothing l
 ## Phase 11 — X.509 + verification
 
 * state: `complete`
-* seal: none written yet (`unnamed`)
+* seal: `docs/PHASE-11-X509-SEAL.md`
 * ledger: `forensics/phase11-obligations.json`
 * atlas-owned: 1455
 * owned working set: 1467

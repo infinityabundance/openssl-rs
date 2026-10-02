@@ -498,7 +498,7 @@
         "name": "x509",
         "phase": 11,
         "provider_rows": null,
-        "seal_sha256": null,
+        "seal_sha256": "cf231cfd2faae28617f95c63bfe363d587ea62cc5d50be2f9c1c0d7b050d4736",
         "state": "complete",
         "stratum": "X.509 + verification"
       },
@@ -651,7 +651,7 @@
       "not_started": 10
     }
   },
-  "body_hash": "81647a06cf09b391ac56c3a50603102c6fb76939bd94a7404d84083c318bf5bc",
+  "body_hash": "516d62fd59a351ecf19efb3c1cbe69e9c60dd6e41cba8d61e3f148269d555cb1",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
