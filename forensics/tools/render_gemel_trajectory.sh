@@ -38,9 +38,23 @@ render() {
     # store, it is a projection of the moment. The log and the checkpoints are
     # store-resident and therefore stable.
     printf '%s\n' "## Checkpoints" ""
+    # Each checkpoint's own `gemel show` summary is printed beside its name and
+    # identity. Without it the projection said only *that* a continuation boundary
+    # existed, so a reader could not see which stratum a boundary closed or what it
+    # carried -- and the identity of the checkpoint a stratum's chain entry leaves
+    # is the one fact `phase_state.py`'s FRF-chain rule needs to read from a
+    # Git-tracked file rather than from the untracked store (the Gemel binary is
+    # not in the court container, so the rule cannot call `gemel show` itself).
     for ref in .gemel/refs/checkpoints/K*; do
         [ -f "$ref" ] || continue
-        printf '* `%s` — `%s`\n' "$(basename "$ref")" "$(cat "$ref")"
+        name=$(basename "$ref")
+        gid=$(cat "$ref")
+        # `gemel show` prints `checkpoint <gid>` then `  summary: <one line>`.
+        summary=$(gemel show "$gid" 2>/dev/null | sed -n 's/^  summary: //p')
+        printf '* `%s` — `%s`\n' "$name" "$gid"
+        if [ -n "$summary" ]; then
+            printf '  - %s\n' "$summary"
+        fi
     done
     printf '\n'
     if [ -f .gemel/refs/checkpoints/current ]; then
