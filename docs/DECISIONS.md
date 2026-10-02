@@ -34702,3 +34702,25 @@ authority on every arm, so no `v3_*.rs` change was needed. `PENDING_COURTS` is n
 Verified: nine phase-11 courts pass; 134 courts and 48,755 observations with no regression;
 `court_coverage.py`'s phase-11 `called` rises 880 -> 937 and `referenced` falls 585 -> 528 by exactly
 the 57 names; `probe_hygiene.py` clean.
+
+## D509 -- the Phase-11 seal lands, and the FRF chain it owes is recorded rather than assumed
+
+`docs/PHASE-11-X509-SEAL.md` is written and registered in `forensics/tools/atlas_common.py`'s
+`SEAL_DOCS`, so `phase_state.py` records its sha256 and `docs/SEAL-CENSUS.md` renders it. The
+stratum derives `complete`: the ledger's `open_in_this_stratum` is 0, its two non-built names are the
+deferred hand-offs to Phase 12 (D505), nine courts pass with no court pending, and every one of its
+1,465 implemented exports carries a court edge.
+
+The seal's section 7 marks Release Gates section 2 items 6 (sensitivity evidence), 8 (FRF receipts)
+and 10 (Gemel checkpoint) **not yet met**, and the seal says so rather than inventing the entry:
+Phase 11 has no block in `gen_frf_courts.py`'s `COURTS` table, no `openssl-rs-rt-x509*` declarations
+and no Gemel checkpoint (`forensics/GEMEL_TRAJECTORY.md` is still the Phase 10 `C95`/`K49`). Section 8
+states what the entry would be -- all nine courts are differential, so unlike Phase 10's `CT-PKCS12`
+none is excluded. That is the remaining Phase-11 work and it is a project-wide mechanism rather than
+an X.509 one; it lands the way Phase 10's `C95` corrected its own seal's section 7, in the session
+that runs the FRF chain, rather than being claimed here.
+
+Verified: `evidence_determinism.py`, `check_evidence_portability.py`, `docs_consistency.py`,
+`plan_reconciliation.py`, `gen_prerequisite_atlas.py --check` and `gen_frf_courts.py --check` ok;
+`regression_guard.py --require-current` reports 134 courts and 48,755 observations with no
+regression; `phase_state.json` records Phase 11 `complete` with a seal sha256.
