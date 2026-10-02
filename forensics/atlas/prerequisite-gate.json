@@ -10,7 +10,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 73,
-      "language_surface_not_modelled_by_name": 7250,
+      "language_surface_not_modelled_by_name": 7248,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -327,7 +327,7 @@
         "crypto/ocsp/ocsp_asn.c": 38,
         "crypto/ocsp/ocsp_cl.c": 39,
         "crypto/ocsp/ocsp_lib.c": 9,
-        "crypto/ocsp/ocsp_srv.c": 47,
+        "crypto/ocsp/ocsp_srv.c": 46,
         "crypto/ocsp/ocsp_vfy.c": 28,
         "crypto/packet.c": 6,
         "crypto/param_build.c": 17,
@@ -507,7 +507,7 @@
         "crypto/x509/x509type.c": 1,
         "crypto/x509/x_all.c": 50,
         "crypto/x509/x_attrib.c": 14,
-        "crypto/x509/x_crl.c": 56,
+        "crypto/x509/x_crl.c": 55,
         "crypto/x509/x_exten.c": 13,
         "crypto/x509/x_ietfatt.c": 25,
         "crypto/x509/x_name.c": 38,
@@ -621,7 +621,7 @@
     },
     "checked": {
       "authority_units": 467,
-      "crate_modules": 672,
+      "crate_modules": 684,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
       "divergence_names_covered": 35,
@@ -733,7 +733,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "697ae33655b049b4c5d83a9fa3d04888fd07e2f67c5dfbff12e4780e42145f64",
+  "body_hash": "2196f93d272fe47349d808425d093c93a1b32bd2218b15d43824640886c9fdca",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -769,12 +769,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5f2a3bff9dd0d7672c959a0712094e4d9fdc16e3ab4bde1be6cdf5d0425f3e7b"
+      "sha256": "a9652fa69de30bf63250e5d2fa79e798f030307563250df29e01a6e354d9d19a"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "56dab399de6aebe53f71a90b1a928180cd07f1a13ec5ba5e089c9227302f58de"
+      "sha256": "c0f59a34dd306aa4e517b9fc27c93db725e54f4de2f0d0bf89b373908e452304"
     },
     {
       "name": "prerequisites",

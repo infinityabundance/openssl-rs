@@ -34917,3 +34917,23 @@ Verified (container): `RT-CMS` 176 observations, 0 residuals; `cargo clippy --al
 -D warnings` and `cargo fmt --all -- --check` clean; `build_phase2.sh` all-ABI pass; the whole gate
 chain green; `regression_guard.py --require-current` ok (138 courts, 49,284 observations);
 `probe_hygiene.py` clean.
+
+## D515 -- the CMP stratum lands, and fifteen of its rows wait on CRMF
+
+12.4 lands `crypto/cmp/`: `cmp_asn.c` whole, `cmp_ctx.c`, `cmp_hdr.c`, `cmp_status.c`, `cmp_util.c`,
+`cmp_msg.c`'s object graph and read/write doors, `cmp_http.c`'s `OSSL_CMP_MSG_http_perform` (over the
+landed HTTP client), `cmp_vfy.c`'s path validation, `cmp_client.c`'s `certConf` callback and
+`cmp_server.c`'s `OSSL_CMP_SRV_CTX` plumbing. `open_in_this_stratum` falls 605 -> 459 and `RT-CMP`
+drives 230 observations with 0 residuals.
+
+**Fifteen CMP rows remain open, and the blocker is named rather than hidden.** Every one reaches
+`ossl_cmp_msg_protect` or a CRMF accessor, whose PasswordBasedMAC arm needs `crmf_pbm.c`'s
+`OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new` and whose builders need `crmf_lib.c`'s
+`OSSL_CRMF_CERTTEMPLATE_*`. Those units are 12.7's, so the rows stay open in this stratum's ledger
+rather than being pulled across or abridged; 12.7 completes them. The crate-internal `src/cmp/crmf_asn.rs`
+precedent covers only the item groups CMP structurally names, not the library surface.
+
+Verified (container): `RT-CMP` 230 observations, 0 residuals; `probe_hygiene.py` clean;
+`cargo clippy --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean;
+`cargo test --lib` 1131 passed; `build_phase2.sh` all-ABI pass; the whole gate chain green;
+`regression_guard.py --require-current` ok (139 courts, 49,564 observations).

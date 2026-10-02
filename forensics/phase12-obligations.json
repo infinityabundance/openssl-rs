@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1024,
       "deferred_to_later_phase": 0,
-      "implemented": 428,
-      "open_in_this_stratum": 605,
+      "implemented": 574,
+      "open_in_this_stratum": 459,
       "owned": 1033,
       "received_by_handoff": 9
     },
@@ -296,6 +296,142 @@
       "OCSP_SINGLERESP_free",
       "OCSP_SINGLERESP_it",
       "OCSP_SINGLERESP_new",
+      "OSSL_CMP_ATAVS_free",
+      "OSSL_CMP_ATAVS_it",
+      "OSSL_CMP_ATAVS_new",
+      "OSSL_CMP_ATAV_create",
+      "OSSL_CMP_ATAV_get0_algId",
+      "OSSL_CMP_ATAV_get0_type",
+      "OSSL_CMP_ATAV_get0_value",
+      "OSSL_CMP_ATAV_get_rsaKeyLen",
+      "OSSL_CMP_ATAV_new_algId",
+      "OSSL_CMP_ATAV_new_rsaKeyLen",
+      "OSSL_CMP_ATAV_push1",
+      "OSSL_CMP_ATAV_set0",
+      "OSSL_CMP_CRLSTATUS_create",
+      "OSSL_CMP_CRLSTATUS_free",
+      "OSSL_CMP_CRLSTATUS_get0",
+      "OSSL_CMP_CRLSTATUS_new1",
+      "OSSL_CMP_CTX_build_cert_chain",
+      "OSSL_CMP_CTX_free",
+      "OSSL_CMP_CTX_get0_geninfo_ITAVs",
+      "OSSL_CMP_CTX_get0_libctx",
+      "OSSL_CMP_CTX_get0_newCert",
+      "OSSL_CMP_CTX_get0_newPkey",
+      "OSSL_CMP_CTX_get0_propq",
+      "OSSL_CMP_CTX_get0_statusString",
+      "OSSL_CMP_CTX_get0_trustedStore",
+      "OSSL_CMP_CTX_get0_untrusted",
+      "OSSL_CMP_CTX_get0_validatedSrvCert",
+      "OSSL_CMP_CTX_get1_caPubs",
+      "OSSL_CMP_CTX_get1_extraCertsIn",
+      "OSSL_CMP_CTX_get1_newChain",
+      "OSSL_CMP_CTX_get_certConf_cb_arg",
+      "OSSL_CMP_CTX_get_failInfoCode",
+      "OSSL_CMP_CTX_get_http_cb_arg",
+      "OSSL_CMP_CTX_get_option",
+      "OSSL_CMP_CTX_get_status",
+      "OSSL_CMP_CTX_get_transfer_cb_arg",
+      "OSSL_CMP_CTX_new",
+      "OSSL_CMP_CTX_print_errors",
+      "OSSL_CMP_CTX_push0_geninfo_ITAV",
+      "OSSL_CMP_CTX_push0_genm_ITAV",
+      "OSSL_CMP_CTX_push0_policy",
+      "OSSL_CMP_CTX_push1_subjectAltName",
+      "OSSL_CMP_CTX_reinit",
+      "OSSL_CMP_CTX_reqExtensions_have_SAN",
+      "OSSL_CMP_CTX_reset_geninfo_ITAVs",
+      "OSSL_CMP_CTX_set0_newPkey",
+      "OSSL_CMP_CTX_set0_reqExtensions",
+      "OSSL_CMP_CTX_set0_trustedStore",
+      "OSSL_CMP_CTX_set1_cert",
+      "OSSL_CMP_CTX_set1_expected_sender",
+      "OSSL_CMP_CTX_set1_extraCertsOut",
+      "OSSL_CMP_CTX_set1_issuer",
+      "OSSL_CMP_CTX_set1_no_proxy",
+      "OSSL_CMP_CTX_set1_oldCert",
+      "OSSL_CMP_CTX_set1_p10CSR",
+      "OSSL_CMP_CTX_set1_pkey",
+      "OSSL_CMP_CTX_set1_proxy",
+      "OSSL_CMP_CTX_set1_recipient",
+      "OSSL_CMP_CTX_set1_referenceValue",
+      "OSSL_CMP_CTX_set1_secretValue",
+      "OSSL_CMP_CTX_set1_senderNonce",
+      "OSSL_CMP_CTX_set1_serialNumber",
+      "OSSL_CMP_CTX_set1_server",
+      "OSSL_CMP_CTX_set1_serverPath",
+      "OSSL_CMP_CTX_set1_srvCert",
+      "OSSL_CMP_CTX_set1_subjectName",
+      "OSSL_CMP_CTX_set1_transactionID",
+      "OSSL_CMP_CTX_set1_untrusted",
+      "OSSL_CMP_CTX_set_certConf_cb",
+      "OSSL_CMP_CTX_set_certConf_cb_arg",
+      "OSSL_CMP_CTX_set_http_cb",
+      "OSSL_CMP_CTX_set_http_cb_arg",
+      "OSSL_CMP_CTX_set_log_cb",
+      "OSSL_CMP_CTX_set_option",
+      "OSSL_CMP_CTX_set_serverPort",
+      "OSSL_CMP_CTX_set_transfer_cb",
+      "OSSL_CMP_CTX_set_transfer_cb_arg",
+      "OSSL_CMP_CTX_snprint_PKIStatus",
+      "OSSL_CMP_HDR_get0_geninfo_ITAVs",
+      "OSSL_CMP_HDR_get0_recipNonce",
+      "OSSL_CMP_HDR_get0_transactionID",
+      "OSSL_CMP_ITAV_create",
+      "OSSL_CMP_ITAV_dup",
+      "OSSL_CMP_ITAV_free",
+      "OSSL_CMP_ITAV_get0_caCerts",
+      "OSSL_CMP_ITAV_get0_certProfile",
+      "OSSL_CMP_ITAV_get0_crlStatusList",
+      "OSSL_CMP_ITAV_get0_crls",
+      "OSSL_CMP_ITAV_get0_rootCaCert",
+      "OSSL_CMP_ITAV_get0_rootCaKeyUpdate",
+      "OSSL_CMP_ITAV_get0_type",
+      "OSSL_CMP_ITAV_get0_value",
+      "OSSL_CMP_ITAV_get1_certReqTemplate",
+      "OSSL_CMP_ITAV_new0_certProfile",
+      "OSSL_CMP_ITAV_new0_certReqTemplate",
+      "OSSL_CMP_ITAV_new0_crlStatusList",
+      "OSSL_CMP_ITAV_new_caCerts",
+      "OSSL_CMP_ITAV_new_crls",
+      "OSSL_CMP_ITAV_new_rootCaCert",
+      "OSSL_CMP_ITAV_new_rootCaKeyUpdate",
+      "OSSL_CMP_ITAV_push0_stack_item",
+      "OSSL_CMP_ITAV_set0",
+      "OSSL_CMP_MSG_dup",
+      "OSSL_CMP_MSG_free",
+      "OSSL_CMP_MSG_get0_header",
+      "OSSL_CMP_MSG_get_bodytype",
+      "OSSL_CMP_MSG_http_perform",
+      "OSSL_CMP_MSG_it",
+      "OSSL_CMP_MSG_read",
+      "OSSL_CMP_MSG_write",
+      "OSSL_CMP_PKIHEADER_free",
+      "OSSL_CMP_PKIHEADER_it",
+      "OSSL_CMP_PKIHEADER_new",
+      "OSSL_CMP_PKISI_dup",
+      "OSSL_CMP_PKISI_free",
+      "OSSL_CMP_PKISI_it",
+      "OSSL_CMP_PKISI_new",
+      "OSSL_CMP_PKISTATUS_it",
+      "OSSL_CMP_SRV_CTX_free",
+      "OSSL_CMP_SRV_CTX_get0_cmp_ctx",
+      "OSSL_CMP_SRV_CTX_get0_custom_ctx",
+      "OSSL_CMP_SRV_CTX_init",
+      "OSSL_CMP_SRV_CTX_init_trans",
+      "OSSL_CMP_SRV_CTX_new",
+      "OSSL_CMP_SRV_CTX_set_accept_raverified",
+      "OSSL_CMP_SRV_CTX_set_accept_unprotected",
+      "OSSL_CMP_SRV_CTX_set_grant_implicit_confirm",
+      "OSSL_CMP_SRV_CTX_set_send_unprotected_errors",
+      "OSSL_CMP_STATUSINFO_new",
+      "OSSL_CMP_certConf_cb",
+      "OSSL_CMP_log_close",
+      "OSSL_CMP_log_open",
+      "OSSL_CMP_print_errors_cb",
+      "OSSL_CMP_print_to_bio",
+      "OSSL_CMP_snprint_PKIStatusInfo",
+      "OSSL_CMP_validate_cert_path",
       "OSSL_HTTP_REQ_CTX_add1_header",
       "OSSL_HTTP_REQ_CTX_exchange",
       "OSSL_HTTP_REQ_CTX_free",
@@ -469,6 +605,11 @@
       "d2i_OCSP_SERVICELOC",
       "d2i_OCSP_SIGNATURE",
       "d2i_OCSP_SINGLERESP",
+      "d2i_OSSL_CMP_ATAVS",
+      "d2i_OSSL_CMP_MSG",
+      "d2i_OSSL_CMP_MSG_bio",
+      "d2i_OSSL_CMP_PKIHEADER",
+      "d2i_OSSL_CMP_PKISI",
       "d2i_PKCS7",
       "d2i_PKCS7_DIGEST",
       "d2i_PKCS7_ENCRYPT",
@@ -499,6 +640,11 @@
       "i2d_OCSP_SERVICELOC",
       "i2d_OCSP_SIGNATURE",
       "i2d_OCSP_SINGLERESP",
+      "i2d_OSSL_CMP_ATAVS",
+      "i2d_OSSL_CMP_MSG",
+      "i2d_OSSL_CMP_MSG_bio",
+      "i2d_OSSL_CMP_PKIHEADER",
+      "i2d_OSSL_CMP_PKISI",
       "i2d_PKCS7",
       "i2d_PKCS7_DIGEST",
       "i2d_PKCS7_ENCRYPT",
@@ -1207,471 +1353,9 @@
       },
       {
         "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAVS_free"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAVS_it"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAVS_new"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAV_create"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAV_get0_algId"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAV_get0_type"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAV_get0_value"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAV_get_rsaKeyLen"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAV_new_algId"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAV_new_rsaKeyLen"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAV_push1"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ATAV_set0"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CRLSTATUS_create"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CRLSTATUS_free"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CRLSTATUS_get0"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CRLSTATUS_new1"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_build_cert_chain"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_free"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get0_geninfo_ITAVs"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get0_libctx"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get0_newCert"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get0_newPkey"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get0_propq"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get0_statusString"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get0_trustedStore"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get0_untrusted"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get0_validatedSrvCert"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get1_caPubs"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get1_extraCertsIn"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get1_newChain"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get_certConf_cb_arg"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get_failInfoCode"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get_http_cb_arg"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get_option"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get_status"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_get_transfer_cb_arg"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_new"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_print_errors"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_push0_geninfo_ITAV"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_push0_genm_ITAV"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_push0_policy"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_push1_subjectAltName"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_reinit"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_reqExtensions_have_SAN"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_reset_geninfo_ITAVs"
-      },
-      {
-        "declaring_header": "cmp.h",
         "module": "src/cmp/cmp_server.rs",
         "received_from_phase": null,
         "symbol": "OSSL_CMP_CTX_server_perform"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set0_newPkey"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set0_reqExtensions"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set0_trustedStore"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_cert"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_expected_sender"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_extraCertsOut"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_issuer"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_no_proxy"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_oldCert"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_p10CSR"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_pkey"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_proxy"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_recipient"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_referenceValue"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_secretValue"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_senderNonce"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_serialNumber"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_server"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_serverPath"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_srvCert"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_subjectName"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_transactionID"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set1_untrusted"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set_certConf_cb"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set_certConf_cb_arg"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set_http_cb"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set_http_cb_arg"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set_log_cb"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set_option"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set_serverPort"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set_transfer_cb"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_set_transfer_cb_arg"
       },
       {
         "declaring_header": "cmp.h",
@@ -1681,201 +1365,9 @@
       },
       {
         "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_status.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_CTX_snprint_PKIStatus"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_hdr.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_HDR_get0_geninfo_ITAVs"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_hdr.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_HDR_get0_recipNonce"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_hdr.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_HDR_get0_transactionID"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_create"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_dup"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_free"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_get0_caCerts"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_get0_certProfile"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_get0_crlStatusList"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_get0_crls"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_get0_rootCaCert"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_get0_rootCaKeyUpdate"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_get0_type"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_get0_value"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_get1_certReqTemplate"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_new0_certProfile"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_new0_certReqTemplate"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_new0_crlStatusList"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_new_caCerts"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_new_crls"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_new_rootCaCert"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_new_rootCaKeyUpdate"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_push0_stack_item"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_ITAV_set0"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_dup"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_free"
-      },
-      {
-        "declaring_header": "cmp.h",
         "module": "src/cmp/cmp_msg.rs",
         "received_from_phase": null,
         "symbol": "OSSL_CMP_MSG_get0_certreq_publickey"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_get0_header"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_get_bodytype"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_http.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_http_perform"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_it"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_read"
       },
       {
         "declaring_header": "cmp.h",
@@ -1891,135 +1383,9 @@
       },
       {
         "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_MSG_write"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_PKIHEADER_free"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_PKIHEADER_it"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_PKIHEADER_new"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_PKISI_dup"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_PKISI_free"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_PKISI_it"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_PKISI_new"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_PKISTATUS_it"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_free"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_get0_cmp_ctx"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_get0_custom_ctx"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_init"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_init_trans"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_new"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_set_accept_raverified"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_set_accept_unprotected"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_set_grant_implicit_confirm"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_server.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_SRV_CTX_set_send_unprotected_errors"
-      },
-      {
-        "declaring_header": "cmp.h",
         "module": "src/cmp/cmp_server.rs",
         "received_from_phase": null,
         "symbol": "OSSL_CMP_SRV_process_request"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_status.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_STATUSINFO_new"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_client.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_certConf_cb"
       },
       {
         "declaring_header": "cmp.h",
@@ -2064,46 +1430,10 @@
         "symbol": "OSSL_CMP_get1_rootCaKeyUpdate"
       },
       {
-        "declaring_header": "cmp_util.h",
-        "module": "src/cmp/cmp_util.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_log_close"
-      },
-      {
-        "declaring_header": "cmp_util.h",
-        "module": "src/cmp/cmp_util.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_log_open"
-      },
-      {
-        "declaring_header": "cmp_util.h",
-        "module": "src/cmp/cmp_util.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_print_errors_cb"
-      },
-      {
-        "declaring_header": "cmp_util.h",
-        "module": "src/cmp/cmp_util.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_print_to_bio"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_status.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_snprint_PKIStatusInfo"
-      },
-      {
         "declaring_header": "cmp.h",
         "module": "src/cmp/cmp_client.rs",
         "received_from_phase": null,
         "symbol": "OSSL_CMP_try_certreq"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_vfy.rs",
-        "received_from_phase": null,
-        "symbol": "OSSL_CMP_validate_cert_path"
       },
       {
         "declaring_header": "cmp.h",
@@ -3762,36 +3092,6 @@
         "symbol": "d2i_ESS_SIGNING_CERT_V2"
       },
       {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_OSSL_CMP_ATAVS"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_OSSL_CMP_MSG"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_OSSL_CMP_MSG_bio"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_OSSL_CMP_PKIHEADER"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_OSSL_CMP_PKISI"
-      },
-      {
         "declaring_header": "crmf.h",
         "module": "src/crmf/crmf_asn.rs",
         "received_from_phase": null,
@@ -3970,36 +3270,6 @@
         "module": "src/ess/ess_asn1.rs",
         "received_from_phase": null,
         "symbol": "i2d_ESS_SIGNING_CERT_V2"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_OSSL_CMP_ATAVS"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_OSSL_CMP_MSG"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_msg.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_OSSL_CMP_MSG_bio"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_OSSL_CMP_PKIHEADER"
-      },
-      {
-        "declaring_header": "cmp.h",
-        "module": "src/cmp/cmp_asn.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_OSSL_CMP_PKISI"
       },
       {
         "declaring_header": "crmf.h",
@@ -4271,17 +3541,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "b3c37b2392d694152c5360233d513327c042dddb69089e7d2115a534e4606305"
+      "sha256": "637d334073e3516ac91f93472be92aa96584234918acb881642af76bec78a449"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "42cc052d533e96d5a63724fb69aa42faea65c10d6be2e84b331b9322d1f9baec"
+      "sha256": "d9b8a994f63780d685a3fb504782aa42b867dcd31bf5a29e4241ec83b8cb75c4"
     },
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "2f5e6e757181ae0771207a06fc406b139890f2cdd6bddbf0440fd68ffe393b63"
+      "sha256": "81032df90cac1d38216229fefa23ce51c06a1e9d24dc97dd3de3a6e2a8ba49c8"
     }
   ],
   "kind": "phase12-obligations",
