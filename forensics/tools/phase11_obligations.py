@@ -93,21 +93,34 @@ MODULE_OVERRIDES: list[tuple[str, tuple[str, ...]]] = []
 
 
 # ---------------------------------------------------------------------------------------------
-# The blocked hand-offs. **Empty, and that is a measurement rather than an omission.**
+# The blocked hand-offs. **Two, and each names the later stratum that owns its callee.**
 #
 # The rule is Phase 8's through Phase 10's: a symbol whose declaring header is this stratum's
 # but whose *body* needs a name no module of this crate defines is recorded here with the reason
 # naming the callee, the authority file and line the call sits on, and the stratum that owns the
-# callee. Phase 11 owns the X.509 object graph itself, so every symbol it receives lands in
-# `open` rather than here: the 513 are blocked on nothing but this stratum's own work, and a
-# same-stratum blocker is recorded as `open` because a stratum cannot hand a symbol to itself.
+# callee. Phase 11 owns the X.509 object graph itself, so almost every symbol it receives lands in
+# `open` rather than here -- a same-stratum blocker is recorded as `open` because a stratum cannot
+# hand a symbol to itself. The one pair that is not is `X509_load_http`/`X509_CRL_load_http`,
+# whose declaring header is `x509.h` but whose only callee is Phase 12's `OSSL_HTTP_get`.
 #
 # Where a row is blocked on a later stratum's *provider* primitive, `provider-algorithms.json`
 # carries its `blocked_by` and `phase_state.py` reads it -- not this file. And this stratum owns
 # no provider row at all (see the module doc), so there is no such row to carry it.
 # ---------------------------------------------------------------------------------------------
 
-BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = []
+BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
+    (
+        ("X509_load_http", "X509_CRL_load_http"),
+        12,
+        "both are one-line delegations to the static `simple_get_asn1` "
+        "(`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document "
+        "and whose `ASN1_item_d2i_bio` decodes it; `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` "
+        "transport under it are `http.h`'s and Phase 12's (`forensics/atlas/symbol-ownership.json`, "
+        "owner_phase 12), and this crate deliberately withholds the http/punycode units "
+        "(docs/DECISIONS.md D455; `src/http/http_lib.rs` lands only `OSSL_parse_url`), so pulling "
+        "the whole HTTP client forward to satisfy two convenience wrappers is disproportionate",
+    ),
+]
 
 
 def load(path: Path) -> dict:

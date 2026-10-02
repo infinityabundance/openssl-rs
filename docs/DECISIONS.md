@@ -34574,3 +34574,26 @@ Verified: `cargo test --lib` 1131 passed; `cargo clippy --all-targets -- -D warn
 the eleven phase-2 ABI courts pass; `evidence_determinism.py`, `check_evidence_portability.py`,
 `docs_consistency.py` and `regression_guard.py --require-current` ok. The stratum falls from 21 open
 obligations to 7.
+
+## D505 -- the two HTTP loaders are handed to Phase 12 rather than pulling the client forward
+
+`X509_load_http` and `X509_CRL_load_http` (`crypto/x509/x_all.c:134-138`, `:188-192`) are declared
+in `x509.h`, so the atlas assigns them to Phase 11. Their bodies are one line each: both delegate to
+the static `simple_get_asn1` (`:115-132`), whose only external call is `OSSL_HTTP_get` (`:121`).
+
+`OSSL_HTTP_get` is `http.h`'s and Phase 12's, and the transport under it (`OSSL_HTTP_REQ_CTX_*`,
+`BIO_new_connect`, the punycode decoder) is the http/punycode unit set this crate deliberately
+withholds (D455); `src/http/http_lib.rs` lands only `OSSL_parse_url`, which `v3_ncons.c` needs.
+D503's rule -- pull the implementation dependency forward, not the public ownership -- was written
+for the verifier's *internal* substrate, and the measured OCSP/DANE closure behind `X509_verify_cert`
+is the case it argues. Pulling a whole HTTP client, the BIO connect machinery and punycode forward to
+satisfy two convenience wrappers is the opposite trade, so the two names are recorded as a deferred
+hand-off to Phase 12 in `forensics/tools/phase11_obligations.py`'s `BLOCKED_HANDOFFS`, with the
+callee, its authority file and line, and the owning stratum.
+
+That moves `counts.deferred_to_later_phase` from 0 to 2 and leaves `open_in_this_stratum` at the five
+names that are the stratum's purpose: `X509_verify_cert`, `X509_STORE_CTX_verify`,
+`X509_build_chain`, `X509_STORE_CTX_init` and `X509_STORE_CTX_init_rpk`.
+
+Verified: `docs_consistency.py`, `evidence_determinism.py` and `regression_guard.py
+--require-current` ok; no code or court change in this commit.
