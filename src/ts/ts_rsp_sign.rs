@@ -1,50 +1,90 @@
-//! `crypto/ts/ts_rsp_sign.c` — the response-generation context. Phase 12.5.
+//! `crypto/ts/ts_rsp_sign.c` — the response-generation engine. Phase 12.5.
 //!
 //! The `TS_RESP_CTX` object model: its allocation and release, the signer certificate/key/digest
 //! and certificate-chain setters, the acceptable-policy and acceptable-digest stacks, the accuracy
 //! triple and the clock-precision control, the three callbacks and their default implementations,
 //! the flags, and the status/failure mutators.
 //!
-//! **What this unit does not land, and why.** `TS_RESP_create_response` and its private helpers
-//! (`ts_RESP_sign`, `ossl_ess_add1_signing_cert*`, `ts_TST_INFO_content_new`,
-//! `TS_RESP_set_genTime_with_precision`, `ts_RESP_check_request`, `ts_RESP_get_policy`,
-//! `ts_RESP_create_tst_info`, `ts_RESP_process_extensions`) reach the ESS item group and the
-//! `OSSL_ESS_*` helpers through the `SigningCertificate` signed attribute, and those are Phase
-//! 12.7's by their `ess.h` declaration. They are not ts-local, so the entry point waits for 12.7
-//! rather than reaching across the subphase boundary. Everything the rest of `ts_conf.c` and a
-//! caller can reach *without* a signed token lands here.
+//! Phase 12.5b lands the response builder itself: `TS_RESP_create_response` (`:373-423`) and the
+//! statics it reaches — `ts_RESP_CTX_init`/`_cleanup` (`:426-442`), `ts_RESP_check_request`
+//! (`:445-498`), `ts_RESP_get_policy` (`:501-528`), `ts_RESP_create_tst_info` (`:531-608`),
+//! `ts_RESP_process_extensions` (`:611-629`), `ossl_ess_add1_signing_cert[_v2]` (`:632-684`),
+//! `ts_RESP_sign` (`:686-801`), `ts_TST_INFO_content_new` (`:803-828`) and
+//! `TS_RESP_set_genTime_with_precision` (`:830-896`). It waited on 12.7's ESS item group and its
+//! `OSSL_ESS_signing_cert[_v2]_new_init` builders, which `ts_RESP_sign` reaches through the
+//! `SigningCertificate` signed attribute.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 #![allow(non_snake_case)]
 
-use core::ffi::{c_int, c_long, c_void};
+use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
+use crate::asn1::a_type::{ASN1_TYPE_get, ASN1_TYPE_new, ASN1_TYPE_set};
 use crate::asn1::bitstr::ASN1_BIT_STRING_set_bit;
-use crate::asn1::layout::Asn1String;
+use crate::asn1::layout::{
+    Asn1String, V_ASN1_NULL, V_ASN1_OBJECT, V_ASN1_OCTET_STRING, V_ASN1_SEQUENCE,
+};
 use crate::asn1::prim::{ASN1_INTEGER_get, ASN1_INTEGER_set, ASN1_OBJECT_free};
 use crate::asn1::string::{
-    ASN1_BIT_STRING_new, ASN1_INTEGER_free, ASN1_INTEGER_new, ASN1_STRING_set,
-    ASN1_UTF8STRING_free, ASN1_UTF8STRING_new,
+    ASN1_BIT_STRING_new, ASN1_GENERALIZEDTIME_free, ASN1_GENERALIZEDTIME_new, ASN1_INTEGER_free,
+    ASN1_INTEGER_new, ASN1_OCTET_STRING_free, ASN1_OCTET_STRING_new, ASN1_STRING_free,
+    ASN1_STRING_new, ASN1_STRING_set, ASN1_UTF8STRING_free, ASN1_UTF8STRING_new,
 };
-use crate::evp::digest::EvpMd;
+use crate::asn1::time::ASN1_GENERALIZEDTIME_set_string;
+use crate::ess::ess_asn1::{
+    i2d_ESS_SIGNING_CERT, i2d_ESS_SIGNING_CERT_V2, ESS_SIGNING_CERT_V2_free, ESS_SIGNING_CERT_free,
+    EssSigningCert, EssSigningCertV2,
+};
+use crate::ess::ess_lib::{OSSL_ESS_signing_cert_new_init, OSSL_ESS_signing_cert_v2_new_init};
+use crate::evp::digest::{
+    EVP_MD_fetch, EVP_MD_free, EVP_MD_get0_name, EVP_MD_get0_provider, EVP_MD_get_size,
+    EVP_MD_is_a, EvpMd,
+};
 use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_up_ref, EvpPkey};
-use crate::runtime::bio::sys::{gettimeofday, Timeval};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
-use crate::runtime::obj::{Asn1Object, OBJ_dup};
-use crate::runtime::stack::{
-    OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_pop_free, OPENSSL_sk_push, OpenSslStack,
+use crate::pkcs7::pk7_asn1::{PKCS7_free, PKCS7_new, PKCS7_new_ex, Pkcs7, Pkcs7SignerInfo};
+use crate::pkcs7::pk7_doit::{PKCS7_add_signed_attribute, PKCS7_dataFinal, PKCS7_dataInit};
+use crate::pkcs7::pk7_lib::{
+    PKCS7_add_certificate, PKCS7_add_signature, PKCS7_set_content, PKCS7_set_type,
 };
+use crate::runtime::bio::print::BIO_snprintf;
+use crate::runtime::bio::sys::{gettimeofday, Timeval};
+use crate::runtime::bio::{BIO_free_all, Bio};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::obj::{
+    Asn1Object, NID_id_smime_aa_signingCertificate, NID_id_smime_aa_signingCertificateV2,
+    NID_id_smime_ct_TSTInfo, NID_pkcs7_signed, NID_pkcs9_contentType, OBJ_cmp, OBJ_dup,
+    OBJ_nid2obj, OBJ_obj2txt,
+};
+use crate::runtime::stack::{
+    OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push,
+    OPENSSL_sk_value, OpenSslStack,
+};
+use crate::runtime::time::{OPENSSL_gmtime, TimeT, Tm};
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
+use crate::x509::v3_genn::{GENERAL_NAME_free, GENERAL_NAME_new, GeneralName, GEN_DIRNAME};
 use crate::x509::v3_purp::X509_check_purpose;
-use crate::x509::x509_cmp::X509_chain_up_ref;
+use crate::x509::x509_cmp::{X509_chain_up_ref, X509_check_private_key, X509_get_subject_name};
 use crate::x509::x509_set::X509_up_ref;
 use crate::x509::x_exten::X509Extension;
+use crate::x509::x_name::X509_NAME_dup;
 use crate::x509::x_x509::{X509_free, X509};
 
-use super::ts_asn1::{TS_STATUS_INFO_free, TsReq, TsResp, TsTstInfo};
-use super::ts_rsp_utils::TS_RESP_set_status_info;
-use super::{raise_ts, ERR_R_ASN1_LIB, ERR_R_CRYPTO_LIB, ERR_R_OBJ_LIB, ERR_R_TS_LIB};
+use super::ts_asn1::{
+    d2i_TS_REQ_bio, i2d_TS_TST_INFO_bio, TS_ACCURACY_free, TS_ACCURACY_new, TS_REQ_free,
+    TS_RESP_free, TS_RESP_new, TS_STATUS_INFO_free, TS_TST_INFO_free, TS_TST_INFO_new, TsAccuracy,
+    TsReq, TsResp, TsTstInfo,
+};
+use super::ts_req_utils::TS_REQ_get_version;
+use super::ts_rsp_utils::{
+    TS_ACCURACY_set_micros, TS_ACCURACY_set_millis, TS_ACCURACY_set_seconds,
+    TS_RESP_set_status_info, TS_TST_INFO_set_accuracy, TS_TST_INFO_set_msg_imprint,
+    TS_TST_INFO_set_nonce, TS_TST_INFO_set_ordering, TS_TST_INFO_set_policy_id,
+    TS_TST_INFO_set_serial, TS_TST_INFO_set_time, TS_TST_INFO_set_tsa, TS_TST_INFO_set_version,
+};
+use super::{
+    raise_ts, ERR_R_ASN1_LIB, ERR_R_CRYPTO_LIB, ERR_R_OBJ_LIB, ERR_R_PKCS7_LIB, ERR_R_TS_LIB,
+};
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/ts/ts_rsp_sign.c";
@@ -60,13 +100,57 @@ const TS_STATUS_GRANTED: c_int = 0;
 const TS_STATUS_REJECTION: c_int = 2;
 /// `TS_INFO_TIME_NOT_AVAILABLE` — `include/openssl/ts.h:59`.
 const TS_INFO_TIME_NOT_AVAILABLE: c_int = 14;
+/// `TS_INFO_BAD_ALG` — `include/openssl/ts.h:56`.
+const TS_INFO_BAD_ALG: c_int = 0;
+/// `TS_INFO_BAD_REQUEST` — `include/openssl/ts.h:57`.
+const TS_INFO_BAD_REQUEST: c_int = 2;
+/// `TS_INFO_BAD_DATA_FORMAT` — `include/openssl/ts.h:58`.
+const TS_INFO_BAD_DATA_FORMAT: c_int = 5;
+/// `TS_INFO_UNACCEPTED_POLICY` — `include/openssl/ts.h:60`.
+const TS_INFO_UNACCEPTED_POLICY: c_int = 15;
 /// `TS_INFO_UNACCEPTED_EXTENSION` — `include/openssl/ts.h:61`.
 const TS_INFO_UNACCEPTED_EXTENSION: c_int = 16;
+
+/// `TS_TSA_NAME` — `include/openssl/ts.h:232`.
+const TS_TSA_NAME: u32 = 0x01;
+/// `TS_ORDERING` — `include/openssl/ts.h:235`.
+const TS_ORDERING: u32 = 0x02;
+/// `TS_ESS_CERT_ID_CHAIN` — `include/openssl/ts.h:242`.
+const TS_ESS_CERT_ID_CHAIN: u32 = 0x04;
+
+/// `OSSL_MAX_NAME_SIZE` — `include/internal/sizes.h:18`.
+const OSSL_MAX_NAME_SIZE: usize = 50;
+
+/// `SN_sha1` — `include/openssl/obj_mac.h`.
+#[allow(non_upper_case_globals)]
+const SN_sha1: &core::ffi::CStr = c"SHA1";
 
 /// `TS_R_TIME_SYSCALL_ERROR` — `include/openssl/tserr.h`.
 const TS_R_TIME_SYSCALL_ERROR: c_int = 122;
 /// `TS_R_INVALID_SIGNER_CERTIFICATE_PURPOSE` — `include/openssl/tserr.h`.
 const TS_R_INVALID_SIGNER_CERTIFICATE_PURPOSE: c_int = 117;
+/// `TS_R_INVALID_NULL_POINTER` — `include/openssl/tserr.h`.
+const TS_R_INVALID_NULL_POINTER: c_int = 102;
+/// `TS_R_RESPONSE_SETUP_ERROR` — `include/openssl/tserr.h`.
+const TS_R_RESPONSE_SETUP_ERROR: c_int = 121;
+/// `TS_R_UNACCEPTABLE_POLICY` — `include/openssl/tserr.h`.
+const TS_R_UNACCEPTABLE_POLICY: c_int = 125;
+/// `TS_R_TST_INFO_SETUP_ERROR` — `include/openssl/tserr.h`.
+const TS_R_TST_INFO_SETUP_ERROR: c_int = 123;
+/// `TS_R_PRIVATE_KEY_DOES_NOT_MATCH_CERTIFICATE` — `include/openssl/tserr.h`.
+const TS_R_PRIVATE_KEY_DOES_NOT_MATCH_CERTIFICATE: c_int = 120;
+/// `TS_R_PKCS7_ADD_SIGNATURE_ERROR` — `include/openssl/tserr.h`.
+const TS_R_PKCS7_ADD_SIGNATURE_ERROR: c_int = 118;
+/// `TS_R_PKCS7_ADD_SIGNED_ATTR_ERROR` — `include/openssl/tserr.h`.
+const TS_R_PKCS7_ADD_SIGNED_ATTR_ERROR: c_int = 119;
+/// `TS_R_ESS_ADD_SIGNING_CERT_ERROR` — `include/openssl/tserr.h`.
+const TS_R_ESS_ADD_SIGNING_CERT_ERROR: c_int = 116;
+/// `TS_R_ESS_ADD_SIGNING_CERT_V2_ERROR` — `include/openssl/tserr.h`.
+const TS_R_ESS_ADD_SIGNING_CERT_V2_ERROR: c_int = 139;
+/// `TS_R_TS_DATASIGN` — `include/openssl/tserr.h`.
+const TS_R_TS_DATASIGN: c_int = 124;
+/// `TS_R_COULD_NOT_SET_TIME` — `include/openssl/tserr.h`.
+const TS_R_COULD_NOT_SET_TIME: c_int = 115;
 
 /// `TS_serial_cb` — `include/openssl/ts.h:248`.
 pub(crate) type TsSerialCb = unsafe extern "C" fn(*mut TsRespCtx, *mut c_void) -> *mut Asn1String;
@@ -881,4 +965,988 @@ pub(crate) unsafe extern "C" fn TS_RESP_CTX_set_ess_cert_id_digest(
     // SAFETY: `ctx` is live.
     unsafe { (*ctx).ess_cert_id_digest = md };
     1
+}
+
+// ---------------------------------------------------------------------------------------------
+// The response builder — `TS_RESP_create_response` and the statics it reaches
+// ---------------------------------------------------------------------------------------------
+
+/// `TS_RESP *TS_RESP_create_response(TS_RESP_CTX *ctx, BIO *req_bio)` — `ts_rsp_sign.c:373-423`.
+///
+/// The `end:` cleanup is transcribed with a labelled block: the authority's `goto end` sets no
+/// local, so the block merely reaches the shared tail, and the tail's `result` flag is what
+/// distinguishes the success path from every one of the eight failure arms.
+///
+/// # Safety
+/// `ctx` is live and owned by the caller; `req_bio` is a live `BIO` holding a DER `TS_REQ`; the
+/// returned value is owned by the caller.
+#[no_mangle]
+pub(crate) unsafe extern "C" fn TS_RESP_create_response(
+    ctx: *mut TsRespCtx,
+    req_bio: *mut Bio,
+) -> *mut TsResp {
+    let mut result = false;
+
+    // SAFETY: `ctx` is live.
+    unsafe { ts_resp_ctx_init(ctx) };
+
+    'end: {
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).response = TS_RESP_new() };
+        // SAFETY: `ctx` is live.
+        if unsafe { (*ctx).response }.is_null() {
+            // SAFETY: a compile-time coordinate.
+            unsafe { raise_ts(FILE, 382, c"TS_RESP_create_response", ERR_R_TS_LIB) };
+            break 'end;
+        }
+        // SAFETY: `req_bio` is live and the out-pointer is null, so the request is fresh.
+        unsafe { (*ctx).request = d2i_TS_REQ_bio(req_bio, ptr::null_mut()) };
+        // SAFETY: `ctx` is live.
+        if unsafe { (*ctx).request }.is_null() {
+            // SAFETY: `ctx` is live and its response is live.
+            unsafe {
+                TS_RESP_CTX_set_status_info(
+                    ctx,
+                    TS_STATUS_REJECTION,
+                    c"Bad request format or system error.".as_ptr(),
+                );
+                TS_RESP_CTX_add_failure_info(ctx, TS_INFO_BAD_DATA_FORMAT);
+            }
+            break 'end;
+        }
+        // SAFETY: `ctx` is live and its response is live; the NULL text is the authority's.
+        if unsafe { TS_RESP_CTX_set_status_info(ctx, TS_STATUS_GRANTED, ptr::null()) } == 0 {
+            break 'end;
+        }
+        // SAFETY: `ctx` is live.
+        if unsafe { ts_RESP_check_request(ctx) } == 0 {
+            break 'end;
+        }
+        // SAFETY: `ctx` is live.
+        let policy = unsafe { ts_RESP_get_policy(ctx) };
+        if policy.is_null() {
+            break 'end;
+        }
+        // SAFETY: `ctx` is live and `policy` is live.
+        unsafe { (*ctx).tst_info = ts_RESP_create_tst_info(ctx, policy) };
+        // SAFETY: `ctx` is live.
+        if unsafe { (*ctx).tst_info }.is_null() {
+            break 'end;
+        }
+        // SAFETY: `ctx` is live.
+        if unsafe { ts_RESP_process_extensions(ctx) } == 0 {
+            break 'end;
+        }
+        // SAFETY: `ctx` is live.
+        if unsafe { ts_RESP_sign(ctx) } == 0 {
+            break 'end;
+        }
+        result = true;
+    }
+
+    if !result {
+        // SAFETY: a compile-time coordinate.
+        unsafe {
+            raise_ts(
+                FILE,
+                407,
+                c"TS_RESP_create_response",
+                TS_R_RESPONSE_SETUP_ERROR,
+            )
+        };
+        // SAFETY: `ctx` is live.
+        if !unsafe { (*ctx).response }.is_null() {
+            // SAFETY: `ctx` is live and its response is live.
+            if unsafe {
+                TS_RESP_CTX_set_status_info_cond(
+                    ctx,
+                    TS_STATUS_REJECTION,
+                    c"Error during response generation.".as_ptr(),
+                )
+            } == 0
+            {
+                // SAFETY: `ctx` is live and its response is live and owned by this frame.
+                unsafe {
+                    TS_RESP_free((*ctx).response);
+                    (*ctx).response = ptr::null_mut();
+                }
+            }
+        }
+    }
+    // SAFETY: `ctx` is live.
+    let response = unsafe { (*ctx).response };
+    // SAFETY: `ctx` is live; ownership of the response passes to the caller.
+    unsafe {
+        (*ctx).response = ptr::null_mut();
+        ts_resp_ctx_cleanup(ctx);
+    }
+    response
+}
+
+/// `static void ts_RESP_CTX_init(TS_RESP_CTX *ctx)` — `ts_rsp_sign.c:426-431`.
+///
+/// # Safety
+/// `ctx` is live.
+unsafe fn ts_resp_ctx_init(ctx: *mut TsRespCtx) {
+    // SAFETY: `ctx` is live.
+    unsafe {
+        (*ctx).request = ptr::null_mut();
+        (*ctx).response = ptr::null_mut();
+        (*ctx).tst_info = ptr::null_mut();
+    }
+}
+
+/// `static void ts_RESP_CTX_cleanup(TS_RESP_CTX *ctx)` — `ts_rsp_sign.c:434-442`.
+///
+/// # Safety
+/// `ctx` is live; each of the three members is NULL or owned by the context.
+unsafe fn ts_resp_ctx_cleanup(ctx: *mut TsRespCtx) {
+    // SAFETY: `ctx` is live; each member is NULL or owned.
+    unsafe {
+        TS_REQ_free((*ctx).request);
+        (*ctx).request = ptr::null_mut();
+        TS_RESP_free((*ctx).response);
+        (*ctx).response = ptr::null_mut();
+        TS_TST_INFO_free((*ctx).tst_info);
+        (*ctx).tst_info = ptr::null_mut();
+    }
+}
+
+/// `static int ts_RESP_check_request(TS_RESP_CTX *ctx)` — `ts_rsp_sign.c:445-498`.
+///
+/// # Safety
+/// `ctx` is live and its `request` is live; `ctx->response` is live so the status mutators may
+/// write it.
+unsafe fn ts_RESP_check_request(ctx: *mut TsRespCtx) -> c_int {
+    // SAFETY: `ctx` is live.
+    let request = unsafe { (*ctx).request };
+    // SAFETY: `request` is live.
+    if unsafe { TS_REQ_get_version(request) } != 1 {
+        // SAFETY: `ctx` is live and its response is live.
+        unsafe {
+            TS_RESP_CTX_set_status_info(ctx, TS_STATUS_REJECTION, c"Bad request version.".as_ptr());
+            TS_RESP_CTX_add_failure_info(ctx, TS_INFO_BAD_REQUEST);
+        }
+        return 0;
+    }
+    // SAFETY: `request` is live.
+    let msg_imprint = unsafe { (*request).msg_imprint };
+    // SAFETY: `msg_imprint` is live.
+    let md_alg = unsafe { (*msg_imprint).hash_algo };
+    let mut md_alg_name = [0 as c_char; OSSL_MAX_NAME_SIZE];
+    // SAFETY: `md_alg_name` is writable for its whole length and `md_alg` is live.
+    unsafe {
+        OBJ_obj2txt(
+            md_alg_name.as_mut_ptr(),
+            md_alg_name.len() as c_int,
+            (*md_alg).algorithm,
+            0,
+        );
+    }
+    let mut md: *const EvpMd = ptr::null();
+    let mut i = 0;
+    // SAFETY: `ctx` is live, so its `mds` is NULL or a live stack.
+    while md.is_null() && i < unsafe { OPENSSL_sk_num((*ctx).mds) } {
+        // SAFETY: `i` is in range of the live stack.
+        let current_md = unsafe { OPENSSL_sk_value((*ctx).mds, i) }.cast::<EvpMd>();
+        // SAFETY: `current_md` and `md_alg_name` are live.
+        if unsafe { EVP_MD_is_a(current_md, md_alg_name.as_ptr()) } != 0 {
+            md = current_md;
+        }
+        i += 1;
+    }
+    if md.is_null() {
+        // SAFETY: `ctx` is live and its response is live.
+        unsafe {
+            TS_RESP_CTX_set_status_info(
+                ctx,
+                TS_STATUS_REJECTION,
+                c"Message digest algorithm is not supported.".as_ptr(),
+            );
+            TS_RESP_CTX_add_failure_info(ctx, TS_INFO_BAD_ALG);
+        }
+        return 0;
+    }
+    // SAFETY: `md` is live.
+    let md_size = unsafe { EVP_MD_get_size(md) };
+    if md_size <= 0 {
+        return 0;
+    }
+    // SAFETY: `md_alg` is live.
+    if !unsafe { (*md_alg).parameter }.is_null()
+        // SAFETY: the parameter is live per the null check.
+        && unsafe { ASN1_TYPE_get((*md_alg).parameter) } != V_ASN1_NULL
+    {
+        // SAFETY: `ctx` is live and its response is live.
+        unsafe {
+            TS_RESP_CTX_set_status_info(
+                ctx,
+                TS_STATUS_REJECTION,
+                c"Superfluous message digest parameter.".as_ptr(),
+            );
+            TS_RESP_CTX_add_failure_info(ctx, TS_INFO_BAD_ALG);
+        }
+        return 0;
+    }
+    // SAFETY: `msg_imprint` is live.
+    let digest = unsafe { (*msg_imprint).hashed_msg };
+    // SAFETY: `digest` is live.
+    if unsafe { (*digest).length } != md_size {
+        // SAFETY: `ctx` is live and its response is live.
+        unsafe {
+            TS_RESP_CTX_set_status_info(ctx, TS_STATUS_REJECTION, c"Bad message digest.".as_ptr());
+            TS_RESP_CTX_add_failure_info(ctx, TS_INFO_BAD_DATA_FORMAT);
+        }
+        return 0;
+    }
+
+    1
+}
+
+/// `static ASN1_OBJECT *ts_RESP_get_policy(TS_RESP_CTX *ctx)` — `ts_rsp_sign.c:501-528`.
+///
+/// # Safety
+/// `ctx` is live and its `request` is live; `ctx->response` is live so the status mutators may
+/// write it.
+unsafe fn ts_RESP_get_policy(ctx: *mut TsRespCtx) -> *mut Asn1Object {
+    // SAFETY: `ctx` and its request are live.
+    let requested = unsafe { (*(*ctx).request).policy_id };
+    let mut policy: *mut Asn1Object = ptr::null_mut();
+    // SAFETY: `ctx` is live.
+    if unsafe { (*ctx).default_policy }.is_null() {
+        // SAFETY: a compile-time coordinate.
+        unsafe { raise_ts(FILE, 508, c"ts_RESP_get_policy", TS_R_INVALID_NULL_POINTER) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `requested` is NULL or live, and `default_policy` is live.
+    if requested.is_null() || unsafe { OBJ_cmp(requested, (*ctx).default_policy) } == 0 {
+        // SAFETY: `ctx` is live.
+        policy = unsafe { (*ctx).default_policy };
+    }
+    let mut i = 0;
+    // SAFETY: `ctx` is live, so its `policies` is NULL or a live stack.
+    while policy.is_null() && i < unsafe { OPENSSL_sk_num((*ctx).policies) } {
+        // SAFETY: `i` is in range of the live stack.
+        let current = unsafe { OPENSSL_sk_value((*ctx).policies, i) }.cast::<Asn1Object>();
+        // SAFETY: `requested` and `current` are live.
+        if unsafe { OBJ_cmp(requested, current) } == 0 {
+            policy = current;
+        }
+        i += 1;
+    }
+    if policy.is_null() {
+        // SAFETY: a compile-time coordinate.
+        unsafe { raise_ts(FILE, 521, c"ts_RESP_get_policy", TS_R_UNACCEPTABLE_POLICY) };
+        // SAFETY: `ctx` is live and its response is live.
+        unsafe {
+            TS_RESP_CTX_set_status_info(
+                ctx,
+                TS_STATUS_REJECTION,
+                c"Requested policy is not supported.".as_ptr(),
+            );
+            TS_RESP_CTX_add_failure_info(ctx, TS_INFO_UNACCEPTED_POLICY);
+        }
+    }
+    policy
+}
+
+/// `static TS_TST_INFO *ts_RESP_create_tst_info(TS_RESP_CTX *ctx, ASN1_OBJECT *policy)` —
+/// `ts_rsp_sign.c:531-608`.
+///
+/// # Safety
+/// `ctx` is live and its `request`/`signer_cert` are live where the arms reach them; `policy` is
+/// live; `ctx->response` is live so the status mutator may write it.
+unsafe fn ts_RESP_create_tst_info(ctx: *mut TsRespCtx, policy: *mut Asn1Object) -> *mut TsTstInfo {
+    let mut result = false;
+    let mut tst_info: *mut TsTstInfo;
+    let mut serial: *mut Asn1String = ptr::null_mut();
+    let mut asn1_time: *mut Asn1String = ptr::null_mut();
+    let mut accuracy: *mut TsAccuracy = ptr::null_mut();
+    let mut tsa_name: *mut GeneralName = ptr::null_mut();
+
+    'end: {
+        // SAFETY: no preconditions.
+        tst_info = unsafe { TS_TST_INFO_new() };
+        if tst_info.is_null() {
+            break 'end;
+        }
+        // SAFETY: `tst_info` is live.
+        if unsafe { TS_TST_INFO_set_version(tst_info, 1) } == 0 {
+            break 'end;
+        }
+        // SAFETY: `tst_info` and `policy` are live.
+        if unsafe { TS_TST_INFO_set_policy_id(tst_info, policy) } == 0 {
+            break 'end;
+        }
+        // SAFETY: `tst_info` is live, and the request's imprint is live.
+        if unsafe { TS_TST_INFO_set_msg_imprint(tst_info, (*(*ctx).request).msg_imprint) } == 0 {
+            break 'end;
+        }
+        // SAFETY: `ctx` is live and its `serial_cb` is a live callback.
+        serial = match unsafe { (*ctx).serial_cb } {
+            // SAFETY: `ctx` and its data are live per the callback's contract.
+            Some(cb) => unsafe { cb(ctx, (*ctx).serial_cb_data) },
+            None => ptr::null_mut(),
+        };
+        if serial.is_null()
+            // SAFETY: `tst_info` and `serial` are live.
+            || unsafe { TS_TST_INFO_set_serial(tst_info, serial) } == 0
+        {
+            break 'end;
+        }
+        let mut sec: c_long = 0;
+        let mut usec: c_long = 0;
+        // SAFETY: `ctx` and its data are live, and `sec`/`usec` are writable.
+        let timed = match unsafe { (*ctx).time_cb } {
+            // SAFETY: `ctx` and its data are live, and `sec`/`usec` are writable.
+            Some(cb) => unsafe { cb(ctx, (*ctx).time_cb_data, &mut sec, &mut usec) },
+            None => 0,
+        };
+        if timed == 0 {
+            break 'end;
+        }
+        // SAFETY: no preconditions.
+        asn1_time = unsafe {
+            ts_resp_set_gentime_with_precision(
+                ptr::null_mut(),
+                sec,
+                usec,
+                (*ctx).clock_precision_digits,
+            )
+        };
+        if asn1_time.is_null()
+            // SAFETY: `tst_info` and `asn1_time` are live.
+            || unsafe { TS_TST_INFO_set_time(tst_info, asn1_time) } == 0
+        {
+            break 'end;
+        }
+
+        // SAFETY: `ctx` is live.
+        if !unsafe { (*ctx).seconds }.is_null()
+            // SAFETY: `ctx` is live.
+            || !unsafe { (*ctx).millis }.is_null()
+            // SAFETY: `ctx` is live.
+            || !unsafe { (*ctx).micros }.is_null()
+        {
+            // SAFETY: no preconditions.
+            accuracy = unsafe { TS_ACCURACY_new() };
+            if accuracy.is_null() {
+                break 'end;
+            }
+        }
+        // SAFETY: `ctx` is live.
+        if !unsafe { (*ctx).seconds }.is_null()
+            // SAFETY: `accuracy` and the context's seconds are live.
+            && unsafe { TS_ACCURACY_set_seconds(accuracy, (*ctx).seconds) } == 0
+        {
+            break 'end;
+        }
+        // SAFETY: `ctx` is live.
+        if !unsafe { (*ctx).millis }.is_null()
+            // SAFETY: `accuracy` and the context's millis are live.
+            && unsafe { TS_ACCURACY_set_millis(accuracy, (*ctx).millis) } == 0
+        {
+            break 'end;
+        }
+        // SAFETY: `ctx` is live.
+        if !unsafe { (*ctx).micros }.is_null()
+            // SAFETY: `accuracy` and the context's micros are live.
+            && unsafe { TS_ACCURACY_set_micros(accuracy, (*ctx).micros) } == 0
+        {
+            break 'end;
+        }
+        if !accuracy.is_null()
+            // SAFETY: `tst_info` and `accuracy` are live.
+            && unsafe { TS_TST_INFO_set_accuracy(tst_info, accuracy) } == 0
+        {
+            break 'end;
+        }
+
+        // SAFETY: `ctx` is live.
+        if (unsafe { (*ctx).flags } & TS_ORDERING) != 0
+            // SAFETY: `tst_info` is live.
+            && unsafe { TS_TST_INFO_set_ordering(tst_info, 1) } == 0
+        {
+            break 'end;
+        }
+
+        // SAFETY: `ctx` and its request are live.
+        let nonce = unsafe { (*(*ctx).request).nonce };
+        if !nonce.is_null()
+            // SAFETY: `tst_info` and `nonce` are live.
+            && unsafe { TS_TST_INFO_set_nonce(tst_info, nonce) } == 0
+        {
+            break 'end;
+        }
+
+        // SAFETY: `ctx` is live.
+        if (unsafe { (*ctx).flags } & TS_TSA_NAME) != 0 {
+            // SAFETY: no preconditions.
+            tsa_name = GENERAL_NAME_new();
+            if tsa_name.is_null() {
+                break 'end;
+            }
+            // SAFETY: `tsa_name` is live; the subject name is borrowed and dup'ed.
+            unsafe {
+                (*tsa_name).type_ = GEN_DIRNAME;
+                (*tsa_name).d.directoryName =
+                    X509_NAME_dup(X509_get_subject_name((*ctx).signer_cert));
+            }
+            // SAFETY: `tsa_name` is live.
+            if unsafe { (*tsa_name).d.directoryName }.is_null() {
+                break 'end;
+            }
+            // SAFETY: `tst_info` and `tsa_name` are live.
+            if unsafe { TS_TST_INFO_set_tsa(tst_info, tsa_name) } == 0 {
+                break 'end;
+            }
+        }
+
+        result = true;
+    }
+
+    if !result {
+        // SAFETY: `tst_info` is NULL or owned by this frame.
+        unsafe { TS_TST_INFO_free(tst_info) };
+        tst_info = ptr::null_mut();
+        // SAFETY: a compile-time coordinate.
+        unsafe {
+            raise_ts(
+                FILE,
+                597,
+                c"ts_RESP_create_tst_info",
+                TS_R_TST_INFO_SETUP_ERROR,
+            )
+        };
+        // SAFETY: `ctx` is live and its response is live.
+        unsafe {
+            TS_RESP_CTX_set_status_info_cond(
+                ctx,
+                TS_STATUS_REJECTION,
+                c"Error during TSTInfo generation.".as_ptr(),
+            )
+        };
+    }
+    // SAFETY: each pointer is NULL or owned by this frame.
+    unsafe {
+        GENERAL_NAME_free(tsa_name);
+        TS_ACCURACY_free(accuracy);
+        ASN1_GENERALIZEDTIME_free(asn1_time);
+        ASN1_INTEGER_free(serial);
+    }
+
+    tst_info
+}
+
+/// `static int ts_RESP_process_extensions(TS_RESP_CTX *ctx)` — `ts_rsp_sign.c:611-629`.
+///
+/// # Safety
+/// `ctx` is live and its `request` and `extension_cb` are live.
+unsafe fn ts_RESP_process_extensions(ctx: *mut TsRespCtx) -> c_int {
+    // SAFETY: `ctx` and its request are live.
+    let exts = unsafe { (*(*ctx).request).extensions };
+    let mut i = 0;
+    let mut ok: c_int = 1;
+    // SAFETY: `exts` is NULL or a live stack.
+    while ok != 0 && i < unsafe { OPENSSL_sk_num(exts) } {
+        // SAFETY: `i` is in range of the live stack.
+        let ext = unsafe { OPENSSL_sk_value(exts, i) }.cast::<X509Extension>();
+        // SAFETY: `ctx`, `ext` and the callback's data are live; the authority passes NULL for the
+        // third argument (see `:619-624`).
+        ok = match unsafe { (*ctx).extension_cb } {
+            // SAFETY: `ctx`, `ext` and the callback's data are live.
+            Some(cb) => unsafe { cb(ctx, ext, ptr::null_mut()) },
+            None => 0,
+        };
+        i += 1;
+    }
+
+    ok
+}
+
+/// `static int ossl_ess_add1_signing_cert(PKCS7_SIGNER_INFO *si, const ESS_SIGNING_CERT *sc)` —
+/// `ts_rsp_sign.c:632-657`.
+///
+/// # Safety
+/// `si` is live; `sc` is live.
+unsafe fn ossl_ess_add1_signing_cert(si: *mut Pkcs7SignerInfo, sc: *const EssSigningCert) -> c_int {
+    // SAFETY: `sc` is live; a NULL out-pointer measures the encoding.
+    let len = unsafe { i2d_ESS_SIGNING_CERT(sc, ptr::null_mut()) };
+    // SAFETY: `len` is positive for a live value; the malloc is `OPENSSL_malloc(len)` at `:637`.
+    let pp = CRYPTO_malloc(len as usize, FILE.as_ptr(), 637).cast::<core::ffi::c_uchar>();
+    if pp.is_null() {
+        return 0;
+    }
+
+    let mut p = pp;
+    // SAFETY: `pp` holds `len` bytes and `sc` is live.
+    unsafe { i2d_ESS_SIGNING_CERT(sc, &mut p) };
+    // SAFETY: no preconditions.
+    let seq = ASN1_STRING_new();
+    let mut set_failed = seq.is_null();
+    if !set_failed {
+        // SAFETY: `seq` is live and `pp` holds `len` bytes.
+        set_failed = unsafe { ASN1_STRING_set(seq, pp.cast(), len) } == 0;
+    }
+    if set_failed {
+        // SAFETY: `seq` is NULL or owned here, and `pp` is owned here.
+        unsafe {
+            ASN1_STRING_free(seq);
+            CRYPTO_free(pp.cast(), FILE.as_ptr(), 648);
+        }
+        return 0;
+    }
+
+    // SAFETY: `pp` is owned here.
+    unsafe { CRYPTO_free(pp.cast(), FILE.as_ptr(), 650) };
+    // SAFETY: `si` is live and `seq` is live; the attribute takes a reference.
+    if unsafe {
+        PKCS7_add_signed_attribute(
+            si,
+            NID_id_smime_aa_signingCertificate,
+            V_ASN1_SEQUENCE,
+            seq.cast(),
+        )
+    } == 0
+    {
+        // SAFETY: `seq` is owned here.
+        unsafe { ASN1_STRING_free(seq) };
+        return 0;
+    }
+    1
+}
+
+/// `static int ossl_ess_add1_signing_cert_v2(PKCS7_SIGNER_INFO *si, const ESS_SIGNING_CERT_V2 *sc)`
+/// — `ts_rsp_sign.c:659-684`.
+///
+/// # Safety
+/// `si` is live; `sc` is live.
+unsafe fn ossl_ess_add1_signing_cert_v2(
+    si: *mut Pkcs7SignerInfo,
+    sc: *const EssSigningCertV2,
+) -> c_int {
+    // SAFETY: `sc` is live; a NULL out-pointer measures the encoding.
+    let len = unsafe { i2d_ESS_SIGNING_CERT_V2(sc, ptr::null_mut()) };
+    // SAFETY: `len` is positive for a live value; the malloc is `OPENSSL_malloc(len)` at `:664`.
+    let pp = CRYPTO_malloc(len as usize, FILE.as_ptr(), 664).cast::<core::ffi::c_uchar>();
+    if pp.is_null() {
+        return 0;
+    }
+
+    let mut p = pp;
+    // SAFETY: `pp` holds `len` bytes and `sc` is live.
+    unsafe { i2d_ESS_SIGNING_CERT_V2(sc, &mut p) };
+    // SAFETY: no preconditions.
+    let seq = ASN1_STRING_new();
+    let mut set_failed = seq.is_null();
+    if !set_failed {
+        // SAFETY: `seq` is live and `pp` holds `len` bytes.
+        set_failed = unsafe { ASN1_STRING_set(seq, pp.cast(), len) } == 0;
+    }
+    if set_failed {
+        // SAFETY: `seq` is NULL or owned here, and `pp` is owned here.
+        unsafe {
+            ASN1_STRING_free(seq);
+            CRYPTO_free(pp.cast(), FILE.as_ptr(), 675);
+        }
+        return 0;
+    }
+
+    // SAFETY: `pp` is owned here.
+    unsafe { CRYPTO_free(pp.cast(), FILE.as_ptr(), 677) };
+    // SAFETY: `si` is live and `seq` is live; the attribute takes a reference.
+    if unsafe {
+        PKCS7_add_signed_attribute(
+            si,
+            NID_id_smime_aa_signingCertificateV2,
+            V_ASN1_SEQUENCE,
+            seq.cast(),
+        )
+    } == 0
+    {
+        // SAFETY: `seq` is owned here.
+        unsafe { ASN1_STRING_free(seq) };
+        return 0;
+    }
+    1
+}
+
+/// `static int ts_RESP_sign(TS_RESP_CTX *ctx)` — `ts_rsp_sign.c:686-801`.
+///
+/// The authority's `goto err` is transcribed with a labelled block and an `owned` flag; the
+/// `err:` tail frees the fetched digest when it is not the caller's own, sets the conditional
+/// status, and releases the partial `PKCS7`, the two signing-cert values and the BIO.
+///
+/// # Safety
+/// `ctx` is live with a live `signer_cert`, `signer_key` and `response`.
+unsafe fn ts_RESP_sign(ctx: *mut TsRespCtx) -> c_int {
+    let mut ret = false;
+    let mut p7: *mut Pkcs7 = ptr::null_mut();
+    let mut sc2: *mut EssSigningCertV2 = ptr::null_mut();
+    let mut sc: *mut EssSigningCert = ptr::null_mut();
+    let mut p7bio: *mut Bio = ptr::null_mut();
+    let mut signer_md: *mut EvpMd = ptr::null_mut();
+
+    'err: {
+        // SAFETY: `ctx` is live and its signer certificate and key are live.
+        if unsafe { X509_check_private_key((*ctx).signer_cert, (*ctx).signer_key) } == 0 {
+            // SAFETY: a compile-time coordinate.
+            unsafe {
+                raise_ts(
+                    FILE,
+                    700,
+                    c"ts_RESP_sign",
+                    TS_R_PRIVATE_KEY_DOES_NOT_MATCH_CERTIFICATE,
+                )
+            };
+            break 'err;
+        }
+
+        // SAFETY: `ctx` is live; its `libctx`/`propq` are the caller's.
+        p7 = unsafe { PKCS7_new_ex((*ctx).libctx, (*ctx).propq) };
+        if p7.is_null() {
+            // SAFETY: a compile-time coordinate.
+            unsafe { raise_ts(FILE, 705, c"ts_RESP_sign", ERR_R_ASN1_LIB) };
+            break 'err;
+        }
+        // SAFETY: `p7` is live.
+        if unsafe { PKCS7_set_type(p7, NID_pkcs7_signed) } == 0 {
+            break 'err;
+        }
+        // SAFETY: `p7` is live and is a signed structure by the previous call.
+        if unsafe { ASN1_INTEGER_set((*(*p7).d.sign).version, 3) } == 0 {
+            break 'err;
+        }
+
+        // SAFETY: `ctx` and its request are live.
+        if unsafe { (*(*ctx).request).cert_req } != 0 {
+            // SAFETY: `p7` and the signer certificate are live.
+            unsafe { PKCS7_add_certificate(p7, (*ctx).signer_cert) };
+            // SAFETY: `ctx` is live, so its `certs` is NULL or a live stack.
+            if !unsafe { (*ctx).certs }.is_null() {
+                let mut i = 0;
+                // SAFETY: `ctx` is live and its `certs` is a live stack.
+                while i < unsafe { OPENSSL_sk_num((*ctx).certs) } {
+                    // SAFETY: `i` is in range of the live stack.
+                    let cert = unsafe { OPENSSL_sk_value((*ctx).certs, i) }.cast::<X509>();
+                    // SAFETY: `p7` and `cert` are live.
+                    unsafe { PKCS7_add_certificate(p7, cert) };
+                    i += 1;
+                }
+            }
+        }
+
+        // SAFETY: `ctx` is live.
+        if unsafe { (*ctx).signer_md }.is_null() {
+            // SAFETY: no preconditions; the `SHA256` name is the authority's own.
+            signer_md = unsafe { EVP_MD_fetch((*ctx).libctx, c"SHA256".as_ptr(), (*ctx).propq) };
+        } else {
+            // SAFETY: `ctx` is live and its signer digest is live.
+            if unsafe { EVP_MD_get0_provider((*ctx).signer_md) }.is_null() {
+                // SAFETY: the signer digest's name is the fetch's algorithm argument.
+                signer_md = unsafe {
+                    EVP_MD_fetch(
+                        (*ctx).libctx,
+                        EVP_MD_get0_name((*ctx).signer_md),
+                        (*ctx).propq,
+                    )
+                };
+            } else {
+                // SAFETY: `ctx` is live; the digest is the caller's own and must not be freed.
+                signer_md = unsafe { (*ctx).signer_md }.cast_mut();
+            }
+        }
+
+        // SAFETY: `p7`, the signer certificate/key and `signer_md` are live.
+        let si =
+            unsafe { PKCS7_add_signature(p7, (*ctx).signer_cert, (*ctx).signer_key, signer_md) };
+        if si.is_null() {
+            // SAFETY: a compile-time coordinate.
+            unsafe { raise_ts(FILE, 734, c"ts_RESP_sign", TS_R_PKCS7_ADD_SIGNATURE_ERROR) };
+            break 'err;
+        }
+
+        // SAFETY: no preconditions.
+        let oid = OBJ_nid2obj(NID_id_smime_ct_TSTInfo);
+        // SAFETY: `si` and `oid` are live; the attribute takes a reference.
+        if unsafe {
+            PKCS7_add_signed_attribute(si, NID_pkcs9_contentType, V_ASN1_OBJECT, oid.cast())
+        } == 0
+        {
+            // SAFETY: a compile-time coordinate.
+            unsafe { raise_ts(FILE, 741, c"ts_RESP_sign", TS_R_PKCS7_ADD_SIGNED_ATTR_ERROR) };
+            break 'err;
+        }
+
+        // SAFETY: `ctx` is live.
+        let certs = if (unsafe { (*ctx).flags } & TS_ESS_CERT_ID_CHAIN) != 0 {
+            // SAFETY: `ctx` is live.
+            unsafe { (*ctx).certs }
+        } else {
+            ptr::null_mut()
+        };
+        // SAFETY: `ctx` is live.
+        let use_v1 = unsafe { (*ctx).ess_cert_id_digest }.is_null()
+            // SAFETY: the signer digest is live; the `SN_sha1` name is the authority's own.
+            || unsafe { EVP_MD_is_a((*ctx).ess_cert_id_digest, SN_sha1.as_ptr()) } != 0;
+        if use_v1 {
+            // SAFETY: `ctx`'s signer certificate is live; `certs` is NULL or live.
+            sc = unsafe { OSSL_ESS_signing_cert_new_init((*ctx).signer_cert, certs, 0) };
+            if sc.is_null() {
+                break 'err;
+            }
+            // SAFETY: `si` and `sc` are live.
+            if unsafe { ossl_ess_add1_signing_cert(si, sc) } == 0 {
+                // SAFETY: a compile-time coordinate.
+                unsafe { raise_ts(FILE, 754, c"ts_RESP_sign", TS_R_ESS_ADD_SIGNING_CERT_ERROR) };
+                break 'err;
+            }
+        } else {
+            // SAFETY: `ctx`'s `ess_cert_id_digest`, signer certificate are live; `certs` NULL/live.
+            sc2 = unsafe {
+                OSSL_ESS_signing_cert_v2_new_init(
+                    (*ctx).ess_cert_id_digest,
+                    (*ctx).signer_cert,
+                    certs,
+                    0,
+                )
+            };
+            if sc2.is_null() {
+                break 'err;
+            }
+            // SAFETY: `si` and `sc2` are live.
+            if unsafe { ossl_ess_add1_signing_cert_v2(si, sc2) } == 0 {
+                // SAFETY: a compile-time coordinate.
+                unsafe {
+                    raise_ts(
+                        FILE,
+                        764,
+                        c"ts_RESP_sign",
+                        TS_R_ESS_ADD_SIGNING_CERT_V2_ERROR,
+                    )
+                };
+                break 'err;
+            }
+        }
+
+        // SAFETY: `p7` is live.
+        if unsafe { ts_TST_INFO_content_new(p7) } == 0 {
+            break 'err;
+        }
+        // SAFETY: `p7` is live; the NULL BIO is the authority's own argument.
+        p7bio = unsafe { PKCS7_dataInit(p7, ptr::null_mut()) };
+        if p7bio.is_null() {
+            // SAFETY: a compile-time coordinate.
+            unsafe { raise_ts(FILE, 772, c"ts_RESP_sign", ERR_R_PKCS7_LIB) };
+            break 'err;
+        }
+        // SAFETY: `p7bio` and `ctx`'s pending TST_INFO are live.
+        if unsafe { i2d_TS_TST_INFO_bio(p7bio, (*ctx).tst_info) } == 0 {
+            // SAFETY: a compile-time coordinate.
+            unsafe { raise_ts(FILE, 776, c"ts_RESP_sign", TS_R_TS_DATASIGN) };
+            break 'err;
+        }
+        // SAFETY: `p7` and `p7bio` are live.
+        if unsafe { PKCS7_dataFinal(p7, p7bio) } == 0 {
+            // SAFETY: a compile-time coordinate.
+            unsafe { raise_ts(FILE, 780, c"ts_RESP_sign", TS_R_TS_DATASIGN) };
+            break 'err;
+        }
+        // SAFETY: `ctx`'s response and pending TST_INFO are live; ownership transfers.
+        unsafe { super::ts_rsp_utils::TS_RESP_set_tst_info((*ctx).response, p7, (*ctx).tst_info) };
+        p7 = ptr::null_mut();
+        // SAFETY: `ctx` is live.
+        unsafe { (*ctx).tst_info = ptr::null_mut() };
+
+        ret = true;
+    }
+
+    // SAFETY: `signer_md` is NULL or the fetched digest; the signer's own digest is owned by the
+    // caller and must not be released.
+    if !signer_md.is_null() && !core::ptr::eq(signer_md.cast_const(), unsafe { (*ctx).signer_md }) {
+        // SAFETY: `signer_md` is owned by this frame.
+        unsafe { EVP_MD_free(signer_md) };
+    }
+
+    if !ret {
+        // SAFETY: `ctx` is live and its response is live.
+        unsafe {
+            TS_RESP_CTX_set_status_info_cond(
+                ctx,
+                TS_STATUS_REJECTION,
+                c"Error during signature generation.".as_ptr(),
+            )
+        };
+    }
+    // SAFETY: each pointer is NULL or owned by this frame.
+    unsafe {
+        BIO_free_all(p7bio);
+        ESS_SIGNING_CERT_V2_free(sc2);
+        ESS_SIGNING_CERT_free(sc);
+        PKCS7_free(p7);
+    }
+    ret as c_int
+}
+
+/// `static int ts_TST_INFO_content_new(PKCS7 *p7)` — `ts_rsp_sign.c:803-828`.
+///
+/// # Safety
+/// `p7` is live and is a signed structure.
+unsafe fn ts_TST_INFO_content_new(p7: *mut Pkcs7) -> c_int {
+    let mut octet_string: *mut Asn1String = ptr::null_mut();
+
+    // SAFETY: no preconditions.
+    let ret = PKCS7_new();
+    if ret.is_null() {
+        return 0;
+    }
+    // SAFETY: `ret` is live and its `d.other` slot is writable.
+    unsafe { (*ret).d.other = ASN1_TYPE_new() };
+    // SAFETY: `ret` is live.
+    if unsafe { (*ret).d.other }.is_null() {
+        // SAFETY: each pointer is NULL or owned here.
+        unsafe {
+            ASN1_OCTET_STRING_free(octet_string);
+            PKCS7_free(ret);
+        }
+        return 0;
+    }
+    // SAFETY: `ret` is live; the OID is the authority's own.
+    unsafe { (*ret).type_ = OBJ_nid2obj(NID_id_smime_ct_TSTInfo) };
+    // SAFETY: no preconditions.
+    octet_string = ASN1_OCTET_STRING_new();
+    if octet_string.is_null() {
+        // SAFETY: each pointer is NULL or owned here.
+        unsafe {
+            ASN1_OCTET_STRING_free(octet_string);
+            PKCS7_free(ret);
+        }
+        return 0;
+    }
+    // SAFETY: `ret`'s `d.other` is live and takes ownership of `octet_string`.
+    unsafe { ASN1_TYPE_set((*ret).d.other, V_ASN1_OCTET_STRING, octet_string.cast()) };
+    octet_string = ptr::null_mut();
+
+    // SAFETY: `p7` and `ret` are live; `PKCS7_set_content` takes ownership of `ret`.
+    if unsafe { PKCS7_set_content(p7, ret) } == 0 {
+        // SAFETY: each pointer is NULL or owned here.
+        unsafe {
+            ASN1_OCTET_STRING_free(octet_string);
+            PKCS7_free(ret);
+        }
+        return 0;
+    }
+
+    1
+}
+
+/// `static ASN1_GENERALIZEDTIME *TS_RESP_set_genTime_with_precision(ASN1_GENERALIZEDTIME *asn1_time,`
+/// `long sec, long usec, unsigned precision)` — `ts_rsp_sign.c:830-896`.
+///
+/// # Safety
+/// `asn1_time` is NULL or a live value owned by the caller.
+unsafe fn ts_resp_set_gentime_with_precision(
+    asn1_time: *mut Asn1String,
+    sec: c_long,
+    usec: c_long,
+    precision: u32,
+) -> *mut Asn1String {
+    let time_sec: TimeT = sec;
+    // SAFETY: `Tm` is a plain C struct of integers; a zeroed value is a valid out-parameter.
+    let mut tm_result: Tm = unsafe { core::mem::zeroed() };
+    let mut gen_time_str = [0 as c_char; 17 + TS_MAX_CLOCK_PRECISION_DIGITS as usize];
+    let base = gen_time_str.as_mut_ptr();
+    let mut p = base;
+    // SAFETY: `base` points at the start of `gen_time_str`; the offset is its length.
+    let p_end = unsafe { base.add(gen_time_str.len()) };
+
+    if precision > TS_MAX_CLOCK_PRECISION_DIGITS {
+        // SAFETY: no preconditions.
+        return unsafe { ts_gentime_err() };
+    }
+
+    // SAFETY: `time_sec` and `tm_result` are live.
+    let tm = unsafe { OPENSSL_gmtime(&time_sec, &mut tm_result) };
+    if tm.is_null() {
+        // SAFETY: no preconditions.
+        return unsafe { ts_gentime_err() };
+    }
+
+    // SAFETY: `p` is within `gen_time_str` and `p_end - p` is the writable remainder.
+    let written = unsafe {
+        BIO_snprintf(
+            p,
+            p_end.offset_from(p) as usize,
+            c"%04d%02d%02d%02d%02d%02d".as_ptr(),
+            (*tm).tm_year + 1900,
+            (*tm).tm_mon + 1,
+            (*tm).tm_mday,
+            (*tm).tm_hour,
+            (*tm).tm_min,
+            (*tm).tm_sec,
+        )
+    };
+    // SAFETY: `p` is within `gen_time_str` and the written length keeps it so.
+    p = unsafe { p.add(written as usize) };
+    if precision > 0 {
+        // SAFETY: `p` has at least `2 + precision` writable bytes remaining.
+        unsafe { BIO_snprintf(p, (2 + precision) as usize, c".%06ld".as_ptr(), usec) };
+        // SAFETY: `BIO_snprintf` NUL-terminated the fraction it wrote.
+        p = unsafe { p.add(core::ffi::CStr::from_ptr(p).to_bytes().len()) };
+
+        // SAFETY: the loop walks back over the fraction's trailing zeros; the dot that
+        // `BIO_snprintf` wrote is the exit condition even when every digit is zero.
+        unsafe {
+            loop {
+                p = p.sub(1);
+                if *p != b'0' as c_char {
+                    break;
+                }
+            }
+            if *p != b'.' as c_char {
+                p = p.add(1);
+            }
+        }
+    }
+    // SAFETY: `p` is within `gen_time_str`; two bytes remain for the `Z` and the terminator.
+    unsafe {
+        *p = b'Z' as c_char;
+        p = p.add(1);
+        *p = 0;
+    }
+
+    let mut out = asn1_time;
+    if out.is_null() {
+        // SAFETY: no preconditions.
+        out = ASN1_GENERALIZEDTIME_new();
+        if out.is_null() {
+            // SAFETY: no preconditions.
+            return unsafe { ts_gentime_err() };
+        }
+    }
+    // SAFETY: `out` is live and `gen_time_str` is NUL-terminated.
+    if unsafe { ASN1_GENERALIZEDTIME_set_string(out, base) } == 0 {
+        // SAFETY: `out` is owned here.
+        unsafe { ASN1_GENERALIZEDTIME_free(out) };
+        // SAFETY: no preconditions.
+        return unsafe { ts_gentime_err() };
+    }
+    out
+}
+
+/// The `err:` arm of [`ts_resp_set_gentime_with_precision`] — `ts_rsp_sign.c:893-895`.
+///
+/// # Safety
+/// No preconditions.
+unsafe fn ts_gentime_err() -> *mut Asn1String {
+    // SAFETY: a compile-time coordinate.
+    unsafe {
+        raise_ts(
+            FILE,
+            894,
+            c"TS_RESP_set_genTime_with_precision",
+            TS_R_COULD_NOT_SET_TIME,
+        )
+    };
+    ptr::null_mut()
 }

@@ -10,7 +10,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 86,
-      "language_surface_not_modelled_by_name": 8731,
+      "language_surface_not_modelled_by_name": 8757,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -187,7 +187,7 @@
         "crypto/cms/cms_lib.c": 49,
         "crypto/cms/cms_pwri.c": 21,
         "crypto/cms/cms_rsa.c": 15,
-        "crypto/cms/cms_sd.c": 56,
+        "crypto/cms/cms_sd.c": 55,
         "crypto/cms/cms_smime.c": 40,
         "crypto/comp/comp_lib.c": 7,
         "crypto/conf/conf_api.c": 22,
@@ -285,7 +285,7 @@
         "crypto/engine/tb_asnmth.c": 13,
         "crypto/engine/tb_digest.c": 10,
         "crypto/engine/tb_pkmeth.c": 10,
-        "crypto/err/err.c": 61,
+        "crypto/err/err.c": 60,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
         "crypto/ess/ess_asn1.c": 17,
@@ -319,7 +319,7 @@
         "crypto/evp/mac_lib.c": 11,
         "crypto/evp/names.c": 8,
         "crypto/evp/p5_crpt.c": 14,
-        "crypto/evp/p5_crpt2.c": 20,
+        "crypto/evp/p5_crpt2.c": 19,
         "crypto/evp/p_dec.c": 4,
         "crypto/evp/p_enc.c": 4,
         "crypto/evp/p_legacy.c": 7,
@@ -378,7 +378,7 @@
         "crypto/ocsp/ocsp_lib.c": 9,
         "crypto/ocsp/ocsp_prn.c": 22,
         "crypto/ocsp/ocsp_srv.c": 26,
-        "crypto/ocsp/ocsp_vfy.c": 26,
+        "crypto/ocsp/ocsp_vfy.c": 25,
         "crypto/packet.c": 6,
         "crypto/param_build.c": 17,
         "crypto/param_build_set.c": 5,
@@ -394,14 +394,14 @@
         "crypto/pem/pem_pkey.c": 29,
         "crypto/pem/pem_x509.c": 1,
         "crypto/pem/pem_xaux.c": 1,
-        "crypto/pem/pvkfmt.c": 22,
+        "crypto/pem/pvkfmt.c": 21,
         "crypto/pkcs12/p12_add.c": 21,
         "crypto/pkcs12/p12_asn.c": 32,
         "crypto/pkcs12/p12_attr.c": 8,
         "crypto/pkcs12/p12_crpt.c": 9,
         "crypto/pkcs12/p12_crt.c": 21,
         "crypto/pkcs12/p12_decr.c": 12,
-        "crypto/pkcs12/p12_init.c": 6,
+        "crypto/pkcs12/p12_init.c": 5,
         "crypto/pkcs12/p12_key.c": 9,
         "crypto/pkcs12/p12_kiss.c": 22,
         "crypto/pkcs12/p12_mutl.c": 19,
@@ -413,10 +413,10 @@
         "crypto/pkcs7/bio_pk7.c": 4,
         "crypto/pkcs7/pk7_asn1.c": 53,
         "crypto/pkcs7/pk7_attr.c": 15,
-        "crypto/pkcs7/pk7_doit.c": 57,
+        "crypto/pkcs7/pk7_doit.c": 56,
         "crypto/pkcs7/pk7_lib.c": 42,
         "crypto/pkcs7/pk7_mime.c": 9,
-        "crypto/pkcs7/pk7_smime.c": 41,
+        "crypto/pkcs7/pk7_smime.c": 40,
         "crypto/poly1305/poly1305.c": 5,
         "crypto/property/defn_cache.c": 7,
         "crypto/property/property.c": 25,
@@ -488,8 +488,9 @@
         "crypto/ts/ts_req_print.c": 3,
         "crypto/ts/ts_req_utils.c": 10,
         "crypto/ts/ts_rsp_print.c": 12,
-        "crypto/ts/ts_rsp_sign.c": 49,
+        "crypto/ts/ts_rsp_sign.c": 46,
         "crypto/ts/ts_rsp_utils.c": 17,
+        "crypto/ts/ts_rsp_verify.c": 40,
         "crypto/ts/ts_verify_ctx.c": 14,
         "crypto/ui/ui_lib.c": 17,
         "crypto/ui/ui_null.c": 2,
@@ -507,7 +508,7 @@
         "crypto/x509/t_acert.c": 20,
         "crypto/x509/t_crl.c": 10,
         "crypto/x509/t_req.c": 17,
-        "crypto/x509/t_x509.c": 28,
+        "crypto/x509/t_x509.c": 27,
         "crypto/x509/v3_aaa.c": 26,
         "crypto/x509/v3_ac_tgt.c": 38,
         "crypto/x509/v3_addr.c": 52,
@@ -540,7 +541,7 @@
         "crypto/x509/v3_rolespec.c": 18,
         "crypto/x509/v3_san.c": 31,
         "crypto/x509/v3_sda.c": 14,
-        "crypto/x509/v3_skid.c": 10,
+        "crypto/x509/v3_skid.c": 9,
         "crypto/x509/v3_sxnet.c": 22,
         "crypto/x509/v3_timespec.c": 36,
         "crypto/x509/v3_tlsf.c": 23,
@@ -569,7 +570,7 @@
         "crypto/x509/x509rset.c": 4,
         "crypto/x509/x509spki.c": 6,
         "crypto/x509/x509type.c": 1,
-        "crypto/x509/x_all.c": 50,
+        "crypto/x509/x_all.c": 49,
         "crypto/x509/x_attrib.c": 14,
         "crypto/x509/x_crl.c": 55,
         "crypto/x509/x_exten.c": 13,
@@ -684,8 +685,8 @@
       ]
     },
     "checked": {
-      "authority_units": 519,
-      "crate_modules": 705,
+      "authority_units": 520,
+      "crate_modules": 706,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
       "divergence_names_covered": 47,
@@ -796,7 +797,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "43d5201e1b35edb8c62c249faad2dacea79a2d3379fe0fb08e51bf266287e3b2",
+  "body_hash": "651d7bfc77cec52d0338877035104b35eb3cae5b880174c1b75d4a6afb035383",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -817,7 +818,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "acb62fbcfc4b5dfba5cd0908ed51b7287659c0267908010befde2e9f22ff4b67"
+      "sha256": "6690dc37a17e3d340c6fc55c63b79fc436e2b55d3dc42c836dbe3fe401d0a4fc"
     },
     {
       "name": "symbol-ownership",
@@ -832,12 +833,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "dfe2369aa2cbf6785f0b092e83fbf30922fb9af5f47536694eea8b783734c988"
+      "sha256": "0610500e77562c36b9a1e9c0aa84772402e35accd1a06c7b28513ba7ab334544"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "787afc91120f9757b28c033ce5722fb72d1599db956fd08703b70deef4eb3d46"
+      "sha256": "c0dcc4601604f78bb19f87f8cf9327d43ef952dc60d26e964e28b141f72da715"
     },
     {
       "name": "prerequisites",
