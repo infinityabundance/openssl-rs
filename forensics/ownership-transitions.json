@@ -261,6 +261,14 @@
       "reason": "The blocking-dependency census rises by **one**, from 4 to 5, and unlike every earlier row on this metric the rise *is* the record rather than a name becoming visible. The new deferral `cli_option_list_parse` (forensics/prerequisites.json) records a known Phase-1 archaeology defect and names Phase 16 as the stratum that closes it: forensics/atlas/openssl-3.6.4-production/cli-commands.json carries 55 commands and 2,008 raw option rows, but every structured `option_count` is 0 and every `options` list is empty, because `parse_option_list()` (forensics/tools/atlas_runtime.py:243) matches the authority's `openssl list -options <cmd>` output against the wrong shape. The gate's blocking set is 'deferrals whose owner stratum is not complete' and Phase 16 is not-started, so the count rises by exactly one the moment the row is written. It is placed there on purpose, because the gate re-prints the blocking list on every pipeline run and the defect therefore cannot be silently forgotten between now and 16.0. Nothing was undone and no dependency became unreal; the row is additive.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md (the Phase-11 session entry, written by the orchestrator); forensics/prerequisites.json's `cli_option_list_parse` deferral"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 5,
+      "after": 60,
+      "reason": "The regenerated prerequisite atlas names the Phase-12 CMP and CMS crate modules (`src/cmp/*`, `src/cms/*`) for the first time. `forensics/atlas/transcription-edges.json` had not been re-derived since 12.1-12.6 landed, so the gate's direction B did not see those units and the fifty-five authority internals the CMP remainder still owes were invisible to it; the re-derivation makes them countable, and each is now a deferral in `forensics/prerequisites.json` naming the subphase that lands it (the CMP remainder 12.4 left open, which the plan blocks on 12.7's CRMF/ESS surface). This is the *visibility* movement D132 and D134 recorded for this metric: a whole authority unit that nothing referenced became visible, not a dependency that became unreal or a piece of work that was undone. Nothing else on the plane moves -- `findings` stays 0 and `sealed_census` stays 51 -- and the five `cmp_asn.c` allocators the crate builds under Rust names are covered by a `named_differently` divergence rather than counted here.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md (this Phase-12 session entry); the 55 CMP-remainder deferrals in forensics/prerequisites.json"
     }
   ]
 }

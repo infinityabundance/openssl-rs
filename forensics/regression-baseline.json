@@ -648,10 +648,10 @@
     "9": "complete"
   },
   "prerequisites": {
-    "blocking_dependencies": 5,
-    "divergence_names_covered": 35,
+    "blocking_dependencies": 60,
+    "divergence_names_covered": 40,
     "findings": 0,
-    "language_census": 7206,
+    "language_census": 8609,
     "sealed_census": 51
   },
   "provider_implemented": [
