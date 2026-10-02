@@ -157,18 +157,20 @@ requires each mutation to be seen on its targeted axis **and on no other**.
 | `openssl-cli-dgst` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-inventory` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-version` | refused | refused | observations only |
-| `openssl-rs-rt-*` (all 86 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
+| `openssl-rs-rt-*` (all 95 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
 
-The runtime count is 86 as of this revision: ten Phase 3 courts, seventeen Phase 4, nine
-Phase 5, seven Phase 6, nineteen Phase 7, fifteen Phase 8, four Phase 9, and five Phase 10. The
+The runtime count is 95 as of this revision: ten Phase 3 courts, seventeen Phase 4, nine
+Phase 5, seven Phase 6, nineteen Phase 7, fifteen Phase 8, four Phase 9, five Phase 10, and nine
+Phase 11. The
 Phase 7 nineteen
 arrived with D200, the Phase 8 fifteen with D413, and the Phase 9 four with the FRF chain entry this
-revision adds; the Phase 10 five arrived with the stratum's seal. The number is not asserted from
+revision adds; the Phase 10 five arrived with the stratum's seal, and the Phase 11 nine with its own.
+The number is not asserted from
 memory — it is the count of manifests `forensics/frf/courts/openssl-rs-rt-*` holds, which is also
 what `forensics/frf/run_courts.sh` derives its court list from — so the *runner* cannot fall
 behind a new court. This line can: it is prose rather than a projection, and it was wrong
 before this revision (it said 25 while the store held 37, then 40 while it held 43, then 62
-while it held 77, then 77 while it held 81, then 81 while it held 86). The
+while it held 77, then 77 while it held 81, then 81 while it held 86, then 86 while it held 95). The
 authoritative counts are `frf --root .frf evidence status` and `forensics/STATUS.md`; a
 discrepancy here is a stale sentence, not a missing court.
 
