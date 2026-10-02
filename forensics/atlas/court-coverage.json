@@ -15,128 +15,10 @@
       11
     ],
     "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
-    "in_progress": [],
+    "in_progress": [
+      12
+    ],
     "not_yet_begun": [
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_STORE_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_STORE_get0_log_by_id"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_STORE_load_file"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_STORE_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_STORE_new_ex"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_get0_log_id"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_get0_name"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_get0_public_key"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_new_ex"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_new_from_base64"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CTLOG_new_from_base64_ex"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_get0_cert"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_get0_issuer"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_get0_log_store"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_get_time"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_new_ex"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_set1_cert"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_set1_issuer"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_set_shared_CTLOG_STORE"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "CT_POLICY_EVAL_CTX_set_time"
-      },
       {
         "owing_phase": 13,
         "owner_phase": 13,
@@ -443,236 +325,6 @@
         "symbol": "ENGINE_up_ref"
       },
       {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_BASICRESP_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_BASICRESP_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_BASICRESP_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_CERTID_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_CERTID_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_CERTID_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_CERTSTATUS_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_CERTSTATUS_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_CERTSTATUS_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_CRLID_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_CRLID_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_CRLID_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_ONEREQ_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_ONEREQ_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_ONEREQ_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_REQINFO_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_REQINFO_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_REQINFO_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_REQUEST_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_REQUEST_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_REQUEST_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPBYTES_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPBYTES_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPBYTES_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPDATA_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPDATA_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPDATA_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPID_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPID_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPID_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPONSE_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPONSE_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_RESPONSE_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_REVOKEDINFO_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_REVOKEDINFO_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_REVOKEDINFO_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_SERVICELOC_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_SERVICELOC_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_SERVICELOC_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_SIGNATURE_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_SIGNATURE_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_SIGNATURE_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_SINGLERESP_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_SINGLERESP_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OCSP_SINGLERESP_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "OSSL_parse_url"
-      },
-      {
         "owing_phase": 13,
         "owner_phase": 7,
         "symbol": "PEM_read_PrivateKey"
@@ -691,221 +343,6 @@
         "owing_phase": 13,
         "owner_phase": 7,
         "symbol": "PEM_read_bio_PrivateKey_ex"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_DIGEST_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_DIGEST_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_DIGEST_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_ENCRYPT_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_ENCRYPT_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_ENCRYPT_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_ENC_CONTENT_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_ENC_CONTENT_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_ENC_CONTENT_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_it"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_new_ex"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "PKCS7_set_type"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_LIST_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_LIST_print"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_LIST_validate"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_free"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_get0_extensions"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_get0_log_id"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_get0_signature"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_get_log_entry_type"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_get_signature_nid"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_get_source"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_get_timestamp"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_get_validation_status"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_get_version"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_new"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_new_from_base64"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_print"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set0_extensions"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set0_log_id"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set0_signature"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set1_extensions"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set1_log_id"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set1_signature"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set_log_entry_type"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set_signature_nid"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set_source"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set_timestamp"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_set_version"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_validate"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "SCT_validation_status_string"
       },
       {
         "owing_phase": 13,
@@ -1216,186 +653,6 @@
         "owing_phase": 13,
         "owner_phase": 13,
         "symbol": "UI_set_result_ex"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_BASICRESP"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_CERTID"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_CERTSTATUS"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_CRLID"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_ONEREQ"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_REQINFO"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_REQUEST"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_RESPBYTES"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_RESPDATA"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_RESPID"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_RESPONSE"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_REVOKEDINFO"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_SERVICELOC"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_SIGNATURE"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_OCSP_SINGLERESP"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "d2i_SCT_LIST"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_BASICRESP"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_CERTID"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_CERTSTATUS"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_CRLID"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_ONEREQ"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_REQINFO"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_REQUEST"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_RESPBYTES"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_RESPDATA"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_RESPID"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_RESPONSE"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_REVOKEDINFO"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_SERVICELOC"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_SIGNATURE"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_OCSP_SINGLERESP"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2d_SCT_LIST"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2o_SCT"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "i2o_SCT_LIST"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "o2i_SCT"
-      },
-      {
-        "owing_phase": 12,
-        "owner_phase": 12,
-        "symbol": "o2i_SCT_LIST"
       }
     ],
     "strata": [
@@ -35694,13 +34951,1077 @@
         "non_observable": [],
         "phase": 11,
         "staged_candidate_probes": 9
+      },
+      {
+        "completed": false,
+        "counts": {
+          "directly_courted": 149,
+          "directly_courted_called": 3,
+          "directly_courted_referenced": 146,
+          "implemented": 149,
+          "indirectly_courted": 0,
+          "non_observable": 0,
+          "unmatched": 0
+        },
+        "directly_courted": [
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_STORE_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_STORE_get0_log_by_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_STORE_load_file"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_STORE_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_STORE_new_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_get0_log_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_get0_name"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_get0_public_key"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_new_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_new_from_base64"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CTLOG_new_from_base64_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_get0_cert"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_get0_issuer"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_get0_log_store"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_get_time"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_new_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_set1_cert"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_set1_issuer"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_set_shared_CTLOG_STORE"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "CT_POLICY_EVAL_CTX_set_time"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_BASICRESP_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_BASICRESP_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_BASICRESP_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_CERTID_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_CERTID_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_CERTID_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_CERTSTATUS_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_CERTSTATUS_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_CERTSTATUS_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_CRLID_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_CRLID_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_CRLID_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_ONEREQ_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_ONEREQ_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_ONEREQ_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_REQINFO_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_REQINFO_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_REQINFO_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_REQUEST_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_REQUEST_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_REQUEST_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPBYTES_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPBYTES_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPBYTES_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPDATA_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPDATA_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPDATA_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPID_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPID_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPID_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPONSE_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPONSE_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_RESPONSE_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_REVOKEDINFO_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_REVOKEDINFO_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_REVOKEDINFO_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_SERVICELOC_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_SERVICELOC_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_SERVICELOC_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_SIGNATURE_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_SIGNATURE_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_SIGNATURE_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_SINGLERESP_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_SINGLERESP_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OCSP_SINGLERESP_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "OSSL_parse_url"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_DIGEST_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_DIGEST_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_DIGEST_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_ENCRYPT_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_ENCRYPT_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_ENCRYPT_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_ENC_CONTENT_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_ENC_CONTENT_it"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_ENC_CONTENT_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE12-REF",
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS7_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_it"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE12-REF",
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS7_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "PKCS7_new_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE12-REF",
+              "RT-PKCS12"
+            ],
+            "symbol": "PKCS7_set_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_LIST_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_LIST_print"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_LIST_validate"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_get0_extensions"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_get0_log_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_get0_signature"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_get_log_entry_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_get_signature_nid"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_get_source"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_get_timestamp"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_get_validation_status"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_get_version"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_new_from_base64"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_print"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set0_extensions"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set0_log_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set0_signature"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set1_extensions"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set1_log_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set1_signature"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set_log_entry_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set_signature_nid"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set_source"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set_timestamp"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_set_version"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_validate"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "SCT_validation_status_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_BASICRESP"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_CERTID"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_CERTSTATUS"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_CRLID"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_ONEREQ"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_REQINFO"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_REQUEST"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_RESPBYTES"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_RESPDATA"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_RESPID"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_RESPONSE"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_REVOKEDINFO"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_SERVICELOC"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_SIGNATURE"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_OCSP_SINGLERESP"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "d2i_SCT_LIST"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_BASICRESP"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_CERTID"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_CERTSTATUS"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_CRLID"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_ONEREQ"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_REQINFO"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_REQUEST"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_RESPBYTES"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_RESPDATA"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_RESPID"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_RESPONSE"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_REVOKEDINFO"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_SERVICELOC"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_SIGNATURE"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_OCSP_SINGLERESP"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2d_SCT_LIST"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2o_SCT"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "i2o_SCT_LIST"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "o2i_SCT"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE12-REF"
+            ],
+            "symbol": "o2i_SCT_LIST"
+          }
+        ],
+        "indirectly_courted": [],
+        "non_observable": [],
+        "phase": 12,
+        "staged_candidate_probes": 1
       }
     ],
     "totals": {
-      "directly_courted": 4481,
-      "directly_courted_called": 3628,
-      "directly_courted_referenced": 853,
-      "implemented": 4489,
+      "directly_courted": 4630,
+      "directly_courted_called": 3631,
+      "directly_courted_referenced": 999,
+      "implemented": 4638,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -35711,7 +36032,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "85ceed173f37c513b8e578b21c9a8075c72f1bdfb9ebe3ff175008d3f7c5e7ad"
+      "sha256": "8969d9b6331ccc92d901e2f5f7b1380abf55956cc4de5e2b4d2dd53182a237e9"
     },
     {
       "name": "symbol-ownership",
@@ -35721,7 +36042,7 @@
     {
       "name": "coverage-rows",
       "path": "forensics/atlas/court-coverage-rows.json",
-      "sha256": "b3cbc7f3d3df7cb16c9c922a562e52b39a50a4bb1a18ea6dad1e8cc0a5df0c8d"
+      "sha256": "0f0a7a77777a6c5aa6e8ffce57703d0965311c5860fda2bae83e58e01e4f7d0c"
     },
     {
       "name": "phase3-obligations",
@@ -35766,7 +36087,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "1dea48b0e1bbedbbd56b71fd25585bb0a224d27913dd3f55932ae17498f3c759"
+      "sha256": "113f5758b5149f7d8cca438153a0197003159140f6c2f8c29cbcebcc536ff724"
     },
     {
       "name": "phase7-courts",
@@ -35776,7 +36097,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "a5e256d5139b71bdc135b8f63de1db548639655de8e90b2320d59e02d4def913"
+      "sha256": "41b0aa70adbcbc4be4cc254774797611337715eadcfe34ce337f278556013c01"
     },
     {
       "name": "phase8-courts",
@@ -35786,7 +36107,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "bfe43a78a2bcb40e547acb2888bca45deb6a62493306b8f0fc910ea7dec1a857"
+      "sha256": "51a924c01c31ccbfcd3153dd25bdaa9b600bf8309b782c8e41821d7e89f4d38e"
     },
     {
       "name": "phase9-courts",
@@ -35796,7 +36117,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "791d3e097438b1e365a18170ab2ecdc53482c1f715b4ace89cac68a0d4ae2bd5"
+      "sha256": "30226f02e0f8f7d1b57ad78ee6301618553664492de7046c6e0fdd9a38937ffd"
     },
     {
       "name": "phase10-courts",
@@ -35806,12 +36127,22 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "cbbbeaa5f5bca5da7fc364f443d6cd2229f85d8601533d99a8b1c19e2d125ac7"
+      "sha256": "f815b5642deb68c345d7d2ce97f161b3410a31ec3d93fff00eb77bb72b411766"
     },
     {
       "name": "phase11-courts",
       "path": "artifacts/phase11/COURTS.json",
       "sha256": "cc91b4c5b47b60ae12764c25642bad45c53c4b77cf26aeea7b89bf18e349681f"
+    },
+    {
+      "name": "phase12-obligations",
+      "path": "forensics/phase12-obligations.json",
+      "sha256": "54745f50429c0f411d9f825a538e9d181df07216d3fd161b5c340ebeb5a6826c"
+    },
+    {
+      "name": "phase12-courts",
+      "path": "artifacts/phase12/COURTS.json",
+      "sha256": "eff7950efcb18204bea839f790b1957965a6185238fac83c2a9fbb0ac953e704"
     }
   ],
   "kind": "court-coverage",

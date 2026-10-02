@@ -1,0 +1,59 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-PHASE12-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 149 inherited `implemented` exports -- the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). No behavioural court is registered yet: 12.0 lands no unit of this stratum's own, and the plan's courts (`pending_courts`) are each printed with the subphase that brings them, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-12-SUBPHASES.md section 3 records what the behavioural courts will compare when they land.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 149,
+        "candidate_exit_code": 0,
+        "candidate_observations": 149,
+        "candidate_stderr_tail": [],
+        "court": "RT-PHASE12-REF",
+        "crashed": false,
+        "probe": "courts/phase12/rt_coverage_ref_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase12/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase12/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {
+      "RT-CMP": "12.4 -- the CMP transaction surface (`cmp.h`, `cmp_util.h`)",
+      "RT-CMS": "12.3 -- the `cms.h` container surface (`CMS_*` and the `PEM_*_CMS` readers)",
+      "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs",
+      "RT-CRMF": "12.7 -- the CRMF certificate-request surface (`crmf.h`)",
+      "RT-ESS": "12.7 -- the ESS signing-certificate surface (`ess.h`)",
+      "RT-HTTP": "12.1 -- the HTTP client surface (`http.h`'s 23 open exports plus the two `http_lib.c` helpers)",
+      "RT-OCSP": "12.6 -- the OCSP request/response surface (`ocsp.h`'s 94 open exports)",
+      "RT-PKCS7": "12.2 -- the `pkcs7.h` remainder and the `PEM_*_PKCS7` container readers",
+      "RT-SRP": "12.8 -- the SRP verifier and library surface (`srp.h`)",
+      "RT-TS": "12.5 -- the timestamping surface (`ts.h`)"
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 1,
+      "total": 1
+    }
+  },
+  "generator": "forensics/tools/phase12_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_coverage_ref_probe.c",
+      "sha256": "6b14aab7b4b2d9a6feb03ee6557c6e96622a25b11bfaa83fd6ffbf63f7912ef7"
+    }
+  ],
+  "kind": "phase12-courts",
+  "schema": "openssl-rs/atlas/phase12-courts/v1"
+}

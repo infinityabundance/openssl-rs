@@ -34724,3 +34724,46 @@ Verified: `evidence_determinism.py`, `check_evidence_portability.py`, `docs_cons
 `plan_reconciliation.py`, `gen_prerequisite_atlas.py --check` and `gen_frf_courts.py --check` ok;
 `regression_guard.py --require-current` reports 134 courts and 48,755 observations with no
 regression; `phase_state.json` records Phase 11 `complete` with a seal sha256.
+
+## D510 -- Phase 12 activates, and the census is 884 open over CMS / OCSP / CMP / CT / TS and the
+## remaining families
+
+Phase 12 begins the way Phase 11 did (D499): the ledger, the plan, the runner and the reference
+probe land together, because `run_courts.py` refuses a non-`not-started` stratum with no runner and
+`court_coverage.py` refuses the inherited implemented exports until a reference probe covers them.
+
+### The measurement
+`forensics/atlas/symbol-ownership.json` gives `owner_phase == 12` **1,024** exports, all `libcrypto`,
+over thirteen declaring headers -- `ts.h` 184, `ocsp.h` 169, `cmp.h` 157, `cms.h` 149, `pkcs7.h` 118,
+`crmf.h` 92, `ct.h` 60, `ess.h` 30, `srp.h` 29, `http.h` 24, `cmp_util.h` 4, `pem.h` 4 and four
+headerless PEM-CMS spellings. The stratum receives **nine hand-offs** (`X509_load_http`,
+`X509_CRL_load_http` from Phase 11; `ASN1_ITEM_get`/`_lookup` and the five `SMIME_*` faces from
+Phase 5), so its working set is **1,033**. **149 were already implemented** by earlier strata -- all
+of `ocsp_asn.c` (75), Certificate Transparency's `ct_sct`/`ct_log`/`ct_policy`/`ct_oct`/`ct_b64`/
+`ct_prn` (59), the `pk7_asn1.c`/`pk7_lib.c` subset (14) and `http_lib.c`'s `OSSL_parse_url` -- and
+`open_in_this_stratum` therefore opens at **884**, not 1,033. Phase 12 owns no provider row
+(`provider_rows_owned: 0`, a measurement), and `requires(12) == (11,)` is already satisfied.
+
+### The partition
+`docs/PHASE-12-SUBPHASES.md` section 2 partitions the 884 exactly by defining unit: 12.1 the HTTP
+client (23), 12.2 the PKCS#7 remainder (103), 12.3 CMS (153), 12.4 CMP (161), 12.5 TS (184), 12.6
+OCSP (94), 12.7 CRMF and ESS (122), 12.8 SRP (29), 12.9 the CT remainder and the shared hand-offs
+(15), and 12.10 the seal. The order is the authority's own: `ocsp_http.c`, `cmp_http.c` and the two
+`x_all.c` loaders reach `http_client.c`, so 12.1 is first; CMP messages and TimeStampTokens are CMS
+`SignedData` and ESS is a CMS attribute, so 12.3 precedes 12.4/12.5/12.7; `asn1_item_list.c`
+enumerates every stratum's items, so it lands last in 12.9. The dependency of 12.4/12.5/12.7 on 12.3
+is inferred from the authority's domain structure rather than a measured call graph, and is recorded
+as a dependency to be corrected at each slice.
+
+### What lands with this activation
+`forensics/tools/phase12_obligations.py` (and its ledger), `forensics/tools/phase12_courts.py`, the
+reference probe `courts/phase12/rt_coverage_ref_probe.c` (the 149 inherited exports at basis
+`referenced`, three of them also `called` by Phase 10's `RT-PKCS12`), the `STRATUM_EVIDENCE[12]` row
+in `phase_state.py`, and `RT-PHASE12-REF` in `court-coverage-rows.json`. `phase_state.json` derives
+phase 12 `in-progress`.
+
+Verified (all inside the court container): `phase12_courts.py` `all_pass=True` (`RT-PHASE12-REF` 149
+observations); `court_coverage.py` phase 12 149/149 courted, unmatched 0; `docs_consistency.py` ok;
+`evidence_determinism.py` ok (32 artefacts); `regression_guard.py --require-current` ok (135 courts,
+48,904 observations); `run_courts.py` re-derives 12 phases and the committed record is exactly what
+the run wrote.
