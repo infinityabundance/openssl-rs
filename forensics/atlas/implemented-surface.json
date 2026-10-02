@@ -495,7 +495,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 15132,
+      "compiler_emitted_count": 15214,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -503,7 +503,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 4891,
+        "implemented": 4942,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -1222,6 +1222,55 @@
           "CMAC_Init",
           "CMAC_Update",
           "CMAC_resume",
+          "CMS_ContentInfo_free",
+          "CMS_ContentInfo_it",
+          "CMS_ContentInfo_new",
+          "CMS_ContentInfo_new_ex",
+          "CMS_ContentInfo_print_ctx",
+          "CMS_EncryptedData_set1_key",
+          "CMS_EnvelopedData_dup",
+          "CMS_EnvelopedData_it",
+          "CMS_ReceiptRequest_it",
+          "CMS_SharedInfo_encode",
+          "CMS_SignedData_free",
+          "CMS_SignedData_new",
+          "CMS_add0_CertificateChoices",
+          "CMS_add0_RevocationInfoChoice",
+          "CMS_add0_cert",
+          "CMS_add0_crl",
+          "CMS_add1_cert",
+          "CMS_add1_crl",
+          "CMS_dataFinal",
+          "CMS_dataInit",
+          "CMS_get0_content",
+          "CMS_get0_eContentType",
+          "CMS_get0_type",
+          "CMS_get1_certs",
+          "CMS_get1_crls",
+          "CMS_is_detached",
+          "CMS_set1_eContentType",
+          "CMS_set_detached",
+          "CMS_signed_add1_attr",
+          "CMS_signed_add1_attr_by_NID",
+          "CMS_signed_add1_attr_by_OBJ",
+          "CMS_signed_add1_attr_by_txt",
+          "CMS_signed_delete_attr",
+          "CMS_signed_get0_data_by_OBJ",
+          "CMS_signed_get_attr",
+          "CMS_signed_get_attr_by_NID",
+          "CMS_signed_get_attr_by_OBJ",
+          "CMS_signed_get_attr_count",
+          "CMS_stream",
+          "CMS_unsigned_add1_attr",
+          "CMS_unsigned_add1_attr_by_NID",
+          "CMS_unsigned_add1_attr_by_OBJ",
+          "CMS_unsigned_add1_attr_by_txt",
+          "CMS_unsigned_delete_attr",
+          "CMS_unsigned_get0_data_by_OBJ",
+          "CMS_unsigned_get_attr",
+          "CMS_unsigned_get_attr_by_NID",
+          "CMS_unsigned_get_attr_by_OBJ",
+          "CMS_unsigned_get_attr_count",
           "COMP_CTX_free",
           "COMP_CTX_get_method",
           "COMP_CTX_get_type",
@@ -4955,6 +5004,7 @@
           "d2i_AutoPrivateKey_ex",
           "d2i_BASIC_CONSTRAINTS",
           "d2i_CERTIFICATEPOLICIES",
+          "d2i_CMS_ContentInfo",
           "d2i_CRL_DIST_POINTS",
           "d2i_DHparams",
           "d2i_DHxparams",
@@ -5183,6 +5233,7 @@
           "i2d_AUTHORITY_KEYID",
           "i2d_BASIC_CONSTRAINTS",
           "i2d_CERTIFICATEPOLICIES",
+          "i2d_CMS_ContentInfo",
           "i2d_CRL_DIST_POINTS",
           "i2d_DHparams",
           "i2d_DHxparams",
@@ -5397,7 +5448,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 1005
+        "scaffolded": 954
       },
       "libssl": {
         "authority_exports": 603,
@@ -5408,18 +5459,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 4891,
-      "scaffolded": 1608
+      "implemented": 4942,
+      "scaffolded": 1557
     }
   },
-  "body_hash": "f09ec518f997de298b458d47d0d173ccd309b57fd5c1a9ecf6da6e8d9ffb15a2",
+  "body_hash": "15df8a724e7634b4812c333ace68956d1e75579ce0c2d0df8869cd7582593ce0",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "06b8aaca0aa492ff2baec41db06376a76768773a1f2c5f03b90fd92728673b30"
+      "sha256": "14e735265515173f70ea5d96176e986351382a38d7aa2f6d2940319820341f4e"
     },
     {
       "name": "authority-exports",

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1024,
       "deferred_to_later_phase": 0,
-      "implemented": 275,
-      "open_in_this_stratum": 758,
+      "implemented": 326,
+      "open_in_this_stratum": 707,
       "owned": 1033,
       "received_by_handoff": 9
     },
@@ -89,6 +89,55 @@
     },
     "implemented": [
       "BIO_new_PKCS7",
+      "CMS_ContentInfo_free",
+      "CMS_ContentInfo_it",
+      "CMS_ContentInfo_new",
+      "CMS_ContentInfo_new_ex",
+      "CMS_ContentInfo_print_ctx",
+      "CMS_EncryptedData_set1_key",
+      "CMS_EnvelopedData_dup",
+      "CMS_EnvelopedData_it",
+      "CMS_ReceiptRequest_it",
+      "CMS_SharedInfo_encode",
+      "CMS_SignedData_free",
+      "CMS_SignedData_new",
+      "CMS_add0_CertificateChoices",
+      "CMS_add0_RevocationInfoChoice",
+      "CMS_add0_cert",
+      "CMS_add0_crl",
+      "CMS_add1_cert",
+      "CMS_add1_crl",
+      "CMS_dataFinal",
+      "CMS_dataInit",
+      "CMS_get0_content",
+      "CMS_get0_eContentType",
+      "CMS_get0_type",
+      "CMS_get1_certs",
+      "CMS_get1_crls",
+      "CMS_is_detached",
+      "CMS_set1_eContentType",
+      "CMS_set_detached",
+      "CMS_signed_add1_attr",
+      "CMS_signed_add1_attr_by_NID",
+      "CMS_signed_add1_attr_by_OBJ",
+      "CMS_signed_add1_attr_by_txt",
+      "CMS_signed_delete_attr",
+      "CMS_signed_get0_data_by_OBJ",
+      "CMS_signed_get_attr",
+      "CMS_signed_get_attr_by_NID",
+      "CMS_signed_get_attr_by_OBJ",
+      "CMS_signed_get_attr_count",
+      "CMS_stream",
+      "CMS_unsigned_add1_attr",
+      "CMS_unsigned_add1_attr_by_NID",
+      "CMS_unsigned_add1_attr_by_OBJ",
+      "CMS_unsigned_add1_attr_by_txt",
+      "CMS_unsigned_delete_attr",
+      "CMS_unsigned_get0_data_by_OBJ",
+      "CMS_unsigned_get_attr",
+      "CMS_unsigned_get_attr_by_NID",
+      "CMS_unsigned_get_attr_by_OBJ",
+      "CMS_unsigned_get_attr_count",
       "CTLOG_STORE_free",
       "CTLOG_STORE_get0_log_by_id",
       "CTLOG_STORE_load_file",
@@ -305,6 +354,7 @@
       "SMIME_read_PKCS7",
       "SMIME_read_PKCS7_ex",
       "SMIME_write_PKCS7",
+      "d2i_CMS_ContentInfo",
       "d2i_OCSP_BASICRESP",
       "d2i_OCSP_CERTID",
       "d2i_OCSP_CERTSTATUS",
@@ -331,6 +381,7 @@
       "d2i_PKCS7_SIGNER_INFO",
       "d2i_PKCS7_SIGN_ENVELOPE",
       "d2i_SCT_LIST",
+      "i2d_CMS_ContentInfo",
       "i2d_OCSP_BASICRESP",
       "i2d_OCSP_CERTID",
       "i2d_OCSP_CERTSTATUS",
@@ -400,36 +451,6 @@
       },
       {
         "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_ContentInfo_free"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_ContentInfo_it"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_ContentInfo_new"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_ContentInfo_new_ex"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_ContentInfo_print_ctx"
-      },
-      {
-        "declaring_header": "cms.h",
         "module": "src/cms/cms_smime.rs",
         "received_from_phase": null,
         "symbol": "CMS_EncryptedData_decrypt"
@@ -448,12 +469,6 @@
       },
       {
         "declaring_header": "cms.h",
-        "module": "src/cms/cms_enc.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_EncryptedData_set1_key"
-      },
-      {
-        "declaring_header": "cms.h",
         "module": "src/cms/cms_env.rs",
         "received_from_phase": null,
         "symbol": "CMS_EnvelopedData_create"
@@ -469,18 +484,6 @@
         "module": "src/cms/cms_env.rs",
         "received_from_phase": null,
         "symbol": "CMS_EnvelopedData_decrypt"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_EnvelopedData_dup"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_EnvelopedData_it"
       },
       {
         "declaring_header": "cms.h",
@@ -505,12 +508,6 @@
         "module": "src/cms/cms_ess.rs",
         "received_from_phase": null,
         "symbol": "CMS_ReceiptRequest_get0_values"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_ReceiptRequest_it"
       },
       {
         "declaring_header": "cms.h",
@@ -682,27 +679,9 @@
       },
       {
         "declaring_header": "cms.h",
-        "module": "src/cms/cms_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_SharedInfo_encode"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_SignedData_free"
-      },
-      {
-        "declaring_header": "cms.h",
         "module": "src/cms/cms_sd.rs",
         "received_from_phase": null,
         "symbol": "CMS_SignedData_init"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_SignedData_new"
       },
       {
         "declaring_header": "cms.h",
@@ -772,30 +751,6 @@
       },
       {
         "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_add0_CertificateChoices"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_add0_RevocationInfoChoice"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_add0_cert"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_add0_crl"
-      },
-      {
-        "declaring_header": "cms.h",
         "module": "src/cms/cms_env.rs",
         "received_from_phase": null,
         "symbol": "CMS_add0_recipient_key"
@@ -811,18 +766,6 @@
         "module": "src/cms/cms_ess.rs",
         "received_from_phase": null,
         "symbol": "CMS_add1_ReceiptRequest"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_add1_cert"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_add1_crl"
       },
       {
         "declaring_header": "cms.h",
@@ -871,18 +814,6 @@
         "module": "src/cms/cms_smime.rs",
         "received_from_phase": null,
         "symbol": "CMS_data"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_dataFinal"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_dataInit"
       },
       {
         "declaring_header": "cms.h",
@@ -982,27 +913,9 @@
       },
       {
         "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_get0_content"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_get0_eContentType"
-      },
-      {
-        "declaring_header": "cms.h",
         "module": "src/cms/cms_sd.rs",
         "received_from_phase": null,
         "symbol": "CMS_get0_signers"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_get0_type"
       },
       {
         "declaring_header": "cms.h",
@@ -1012,39 +925,9 @@
       },
       {
         "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_get1_certs"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_get1_crls"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_is_detached"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_set1_eContentType"
-      },
-      {
-        "declaring_header": "cms.h",
         "module": "src/cms/cms_sd.rs",
         "received_from_phase": null,
         "symbol": "CMS_set1_signers_certs"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_set_detached"
       },
       {
         "declaring_header": "cms.h",
@@ -1066,135 +949,9 @@
       },
       {
         "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_add1_attr"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_add1_attr_by_NID"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_add1_attr_by_OBJ"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_add1_attr_by_txt"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_delete_attr"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_get0_data_by_OBJ"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_get_attr"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_get_attr_by_NID"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_get_attr_by_OBJ"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_signed_get_attr_count"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_io.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_stream"
-      },
-      {
-        "declaring_header": "cms.h",
         "module": "src/cms/cms_smime.rs",
         "received_from_phase": null,
         "symbol": "CMS_uncompress"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_add1_attr"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_add1_attr_by_NID"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_add1_attr_by_OBJ"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_add1_attr_by_txt"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_delete_attr"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_get0_data_by_OBJ"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_get_attr"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_get_attr_by_NID"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_get_attr_by_OBJ"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_att.rs",
-        "received_from_phase": null,
-        "symbol": "CMS_unsigned_get_attr_count"
       },
       {
         "declaring_header": "cms.h",
@@ -4456,12 +4213,6 @@
       },
       {
         "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_CMS_ContentInfo"
-      },
-      {
-        "declaring_header": "cms.h",
         "module": "src/cms/cms_ess.rs",
         "received_from_phase": null,
         "symbol": "d2i_CMS_ReceiptRequest"
@@ -4681,12 +4432,6 @@
         "module": "src/ts/ts_asn1.rs",
         "received_from_phase": null,
         "symbol": "d2i_TS_TST_INFO_fp"
-      },
-      {
-        "declaring_header": "cms.h",
-        "module": "src/cms/cms_lib.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_CMS_ContentInfo"
       },
       {
         "declaring_header": "cms.h",
@@ -5036,17 +4781,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "f09ec518f997de298b458d47d0d173ccd309b57fd5c1a9ecf6da6e8d9ffb15a2"
+      "sha256": "15df8a724e7634b4812c333ace68956d1e75579ce0c2d0df8869cd7582593ce0"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "5d81ccbea43897e9fb742b124901eb401684aef2691bc2156f9f2a7d0aaea94e"
+      "sha256": "6d4e8c2ae02bfb55acec3c25d3e8b4fc31a54a328f27eb55c0b0a0ec1bdec05d"
     },
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "d0436d5fdae3d3cd3238745e777a0c234f92adcccef5e55ebad20a7dc0a1ece0"
+      "sha256": "98f7a02a436a31986d39ce85bc3687405b218caab79dcb0983497a6ddb02ab41"
     }
   ],
   "kind": "phase12-obligations",

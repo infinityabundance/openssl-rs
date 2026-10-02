@@ -75,6 +75,11 @@ pub mod chacha;
 // number from the pinned authority's `crypto/` tree; the modules that read them carry the
 // structure.
 pub(crate) mod cipher_tables;
+// Phase 12.3 — `crypto/cms/`: the CMS container, its item groups and the signer/recipient
+// engines. `crypto/asn1/asn_mime.c`'s `SMIME_*` hand-off (Phase 12.9) and the ESS item groups
+// (Phase 12.7) are reached as the authority's own prototypes rather than re-landed here. See
+// `src/cms/mod.rs`.
+pub mod cms;
 pub mod context;
 // Phase 10.14.15 — `crypto/ct/`: Certificate Transparency. The directory is new here; it lands
 // the units `crypto/x509/v3_x509v3`/`ct_x509v3.c`'s table is blocked on. See `src/ct/mod.rs`.
