@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 1024,
       "deferred_to_later_phase": 3,
-      "implemented": 1015,
-      "open_in_this_stratum": 15,
+      "implemented": 1030,
+      "open_in_this_stratum": 0,
       "owned": 1033,
       "received_by_handoff": 9
     },
@@ -53,13 +53,13 @@
         {
           "declaring_header": "x509.h",
           "owning_phase": 12,
-          "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it; `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are `http.h`'s and Phase 12's (`forensics/atlas/symbol-ownership.json`, owner_phase 12), and this crate deliberately withholds the http/punycode units (docs/DECISIONS.md D455; `src/http/http_lib.rs` lands only `OSSL_parse_url`), so pulling the whole HTTP client forward to satisfy two convenience wrappers is disproportionate",
+          "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it. The blocker this row named has landed: 12.9 transcribed `crypto/http/` into `src/http/http_client.rs` and the two loaders into `src/x509/x_all.rs`, so `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are in the crate. The exports remain Phase 12's to have written, so the row stays as the hand-off edge rather than being retired.",
           "symbol": "X509_CRL_load_http"
         },
         {
           "declaring_header": "x509.h",
           "owning_phase": 12,
-          "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it; `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are `http.h`'s and Phase 12's (`forensics/atlas/symbol-ownership.json`, owner_phase 12), and this crate deliberately withholds the http/punycode units (docs/DECISIONS.md D455; `src/http/http_lib.rs` lands only `OSSL_parse_url`), so pulling the whole HTTP client forward to satisfy two convenience wrappers is disproportionate",
+          "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it. The blocker this row named has landed: 12.9 transcribed `crypto/http/` into `src/http/http_client.rs` and the two loaders into `src/x509/x_all.rs`, so `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are in the crate. The exports remain Phase 12's to have written, so the row stays as the hand-off edge rather than being retired.",
           "symbol": "X509_load_http"
         }
       ],
@@ -109,6 +109,8 @@
       ]
     },
     "implemented": [
+      "ASN1_ITEM_get",
+      "ASN1_ITEM_lookup",
       "BIO_new_CMS",
       "BIO_new_PKCS7",
       "CMS_AuthEnvelopedData_create",
@@ -250,6 +252,7 @@
       "CMS_verify_receipt",
       "CTLOG_STORE_free",
       "CTLOG_STORE_get0_log_by_id",
+      "CTLOG_STORE_load_default_file",
       "CTLOG_STORE_load_file",
       "CTLOG_STORE_new",
       "CTLOG_STORE_new_ex",
@@ -704,6 +707,7 @@
       "PKCS7_ENVELOPE_free",
       "PKCS7_ENVELOPE_it",
       "PKCS7_ENVELOPE_new",
+      "PKCS7_ISSUER_AND_SERIAL_digest",
       "PKCS7_ISSUER_AND_SERIAL_free",
       "PKCS7_ISSUER_AND_SERIAL_it",
       "PKCS7_ISSUER_AND_SERIAL_new",
@@ -806,10 +810,15 @@
       "SCT_set_version",
       "SCT_validate",
       "SCT_validation_status_string",
+      "SMIME_read_ASN1",
+      "SMIME_read_ASN1_ex",
       "SMIME_read_CMS",
       "SMIME_read_CMS_ex",
       "SMIME_read_PKCS7",
       "SMIME_read_PKCS7_ex",
+      "SMIME_text",
+      "SMIME_write_ASN1",
+      "SMIME_write_ASN1_ex",
       "SMIME_write_CMS",
       "SMIME_write_PKCS7",
       "SRP_Calc_A",
@@ -993,6 +1002,8 @@
       "TS_VERIFY_CTX_set_store",
       "TS_X509_ALGOR_print_bio",
       "TS_ext_print_bio",
+      "X509_CRL_load_http",
+      "X509_load_http",
       "d2i_CMS_ContentInfo",
       "d2i_CMS_ReceiptRequest",
       "d2i_CMS_bio",
@@ -1040,6 +1051,8 @@
       "d2i_PKCS7_SIGNED",
       "d2i_PKCS7_SIGNER_INFO",
       "d2i_PKCS7_SIGN_ENVELOPE",
+      "d2i_PKCS7_bio",
+      "d2i_PKCS7_fp",
       "d2i_SCT_LIST",
       "d2i_TS_ACCURACY",
       "d2i_TS_MSG_IMPRINT",
@@ -1104,7 +1117,9 @@
       "i2d_PKCS7_SIGNED",
       "i2d_PKCS7_SIGNER_INFO",
       "i2d_PKCS7_SIGN_ENVELOPE",
+      "i2d_PKCS7_bio",
       "i2d_PKCS7_bio_stream",
+      "i2d_PKCS7_fp",
       "i2d_SCT_LIST",
       "i2d_TS_ACCURACY",
       "i2d_TS_MSG_IMPRINT",
@@ -1128,98 +1143,7 @@
     "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
     "module_overrides": [],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation except Phases 10 and 11, this ledger does not start with the whole working set open: the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` landed before activation, and the nine hand-offs phases 5 and 11 discharged, are reported as `implemented` because `implemented-surface.json` says so. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum owns no provider registration row (`forensics/atlas/provider-algorithms.json` records rows for owning phases 8, 9, 10 and 13 only). Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-12-SUBPHASES.md section 4 decides when the stratum may be called complete.",
-    "open": [
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/asn1_item_list.rs",
-        "received_from_phase": 5,
-        "symbol": "ASN1_ITEM_get"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/asn1_item_list.rs",
-        "received_from_phase": 5,
-        "symbol": "ASN1_ITEM_lookup"
-      },
-      {
-        "declaring_header": "ct.h",
-        "module": "src/ct/ct_log.rs",
-        "received_from_phase": null,
-        "symbol": "CTLOG_STORE_load_default_file"
-      },
-      {
-        "declaring_header": "pkcs7.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS7_ISSUER_AND_SERIAL_digest"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/asn_mime.rs",
-        "received_from_phase": 5,
-        "symbol": "SMIME_read_ASN1"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/asn_mime.rs",
-        "received_from_phase": 5,
-        "symbol": "SMIME_read_ASN1_ex"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/asn_mime.rs",
-        "received_from_phase": 5,
-        "symbol": "SMIME_text"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/asn_mime.rs",
-        "received_from_phase": 5,
-        "symbol": "SMIME_write_ASN1"
-      },
-      {
-        "declaring_header": "asn1.h",
-        "module": "src/asn1/asn_mime.rs",
-        "received_from_phase": 5,
-        "symbol": "SMIME_write_ASN1_ex"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": 11,
-        "symbol": "X509_CRL_load_http"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": 11,
-        "symbol": "X509_load_http"
-      },
-      {
-        "declaring_header": "pkcs7.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_PKCS7_bio"
-      },
-      {
-        "declaring_header": "pkcs7.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_PKCS7_fp"
-      },
-      {
-        "declaring_header": "pkcs7.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_PKCS7_bio"
-      },
-      {
-        "declaring_header": "pkcs7.h",
-        "module": "src/x509/x_all.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_PKCS7_fp"
-      }
-    ],
+    "open": [],
     "owned_by_header": {
       "(none)": 4,
       "asn1.h": 7,
@@ -1339,17 +1263,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "02eb7edb713a1af55022c464ff17883c4f407ca7252a47c35740cdd5cd3b9967"
+      "sha256": "577168e52e5605593d048da5d1979f7ab821c0b1913384a60a96bb340375e8a9"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "3b622872f2161ec3eb9ac2d8dc1cf47978ff448ceec09d30823f08ecd056a2a4"
+      "sha256": "aa156db59af11e1dfd6d23749d65844fdd1e9e18292d442681f3b89a8ebdb486"
     },
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "4c3f1e6d96462348c82827a9f709479d30557b32a28980f983bdf7350e182967"
+      "sha256": "69db917c590f80bedb972519d26839b4fc8ebc17ff045fa74035504a82ac6e60"
     }
   ],
   "kind": "phase12-obligations",

@@ -120,7 +120,7 @@ and CT name is an `libcrypto` export reached through a caller, not a dispatch-ta
 | 12.0 | **The plan and the census** | `docs/PHASE-12-SUBPHASES.md` and the measurement in §1. The ledger (`forensics/phase12-obligations.json`) and its generator land with it. **The runner and the reference-basis probe land with it too, and §4.3 is why they cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner and `court_coverage.py` refuses the inherited `implemented` exports until a reference probe covers them, and neither can be satisfied by a later subphase without leaving the pipeline red in between. | 11 | — |
 | 12.1 | **The HTTP client** | `http_client.c` (21), `http_lib.c` (2): the `OSSL_HTTP_REQ_CTX_*` request context and its BIO, the `OSSL_HTTP_transfer`/`OSSL_HTTP_get`/`OSSL_HTTP_post` entry points, the per-request header and redirection surface and `OSSL_HTTP_parse_url`/`OSSL_parse_url`'s remaining companions. **23 open rows over 2 units.** | 12.0 | `RT-HTTP` |
 | 12.2 | **The PKCS#7 remainder** | `pk7_asn1.c` (43), `pk7_lib.c` (19), `pk7_doit.c` (16), `pk7_smime.c` (9), `pk7_attr.c` (6), `pk7_mime.c` (5), `bio_pk7.c` (1) and `pem_all.c` (4: `PEM_read[_bio]_PKCS7`, `PEM_write[_bio]_PKCS7`): the `PKCS7` item groups, the sign/verify/encrypt/decrypt chain, the attribute stack and the S/MIME writer. **103 open rows over 8 units.** | 12.0 | `RT-PKCS7` |
-| 12.3 | **The CMS container** | `cms_smime.c` (25), `cms_lib.c` (22), `cms_att.c` (20), `cms_env.c` (20), `cms_sd.c` (19), `cms_io.c` (13), `cms_kari.c` (10), `cms_ess.c` (9), `cms_asn1.c` (7), `cms_kemri.c` (5), `cms_pwri.c` (2), `cms_enc.c` (1): `CMS_ContentInfo` and the `CMS_*` signed, enveloped, encrypted, digested and authenticated-enveloped surface, the recipient-info and signer-info engines, the KARI/KEMRI key agreement and the `PEM_*_CMS` container readers. **153 open rows over 12 units** — the largest subphase, and the stratum's namesake. | 12.1, 12.2 | `RT-CMS` |
+| 12.3 | **The CMS container** | `cms_smime.c` (25), `cms_lib.c` (22), `cms_att.c` (20), `cms_env.c` (20), `cms_sd.c` (19), `cms_io.c` (13), `cms_kari.c` (10), `cms_ess.c` (9), `cms_asn1.c` (7), `cms_kemri.c` (5), `cms_pwri.c` (2), `crypto/cms/cms_enc.c` (1): `CMS_ContentInfo` and the `CMS_*` signed, enveloped, encrypted, digested and authenticated-enveloped surface, the recipient-info and signer-info engines, the KARI/KEMRI key agreement and the `PEM_*_CMS` container readers. **153 open rows over 12 units** — the largest subphase, and the stratum's namesake. | 12.1, 12.2 | `RT-CMS` |
 | 12.4 | **CMP** | `cmp_ctx.c` (61), `cmp_asn.c` (53), `cmp_msg.c` (13), `cmp_server.c` (12), `cmp_client.c` (5), `cmp_genm.c` (4), `cmp_util.c` (4), `cmp_hdr.c` (3), `cmp_status.c` (3), `cmp_vfy.c` (2), `cmp_http.c` (1): the `OSSL_CMP_CTX` and its accessors, the message and PKI header/status/protection item groups, the general-message engine, the client and server state machines and the HTTP transport arm. **161 open rows over 11 units.** | 12.1, 12.3 | `RT-CMP` |
 | 12.5 | **Timestamping** | `ts_asn1.c` (47), `ts_rsp_utils.c` (43), `ts_req_utils.c` (24), `ts_rsp_sign.c` (23), `ts_conf.c` (20), `ts_verify_ctx.c` (15), `ts_lib.c` (5), `ts_rsp_print.c` (3), `ts_rsp_verify.c` (3), `ts_req_print.c` (1): the `TS_REQ`/`TS_RESP`/`TS_TST_INFO` item groups, the `TS_RESP_CTX_*` authority engine, the response signing and verification and the `CONF`-driven configuration reader. **184 open rows over 10 units** — the whole of `ts.h`'s open 184. | 12.3 | `RT-TS` |
 | 12.6 | **OCSP** | `ocsp_ext.c` (44), `ocsp_cl.c` (20), `ocsp_srv.c` (15), `ocsp_lib.c` (5), `ocsp_prn.c` (5), `ocsp_vfy.c` (3), `ocsp_http.c` (2): the OCSP extension engine, the request/response sign-and-send surface, the responder server state machine, the response verifier and the HTTP transport arm. **94 open rows over 7 units** — the whole of `ocsp.h`'s open 94. | 12.1, 12.3 | `RT-OCSP` |
@@ -299,7 +299,13 @@ calculation surface and verifier database: the fourteen `srp_lib.c` names -- `SR
 `SRP_VBASE_get1_by_user`, `SRP_VBASE_get_by_user`, `SRP_VBASE_new`, `SRP_create_verifier`,
 `SRP_create_verifier_ex`, `SRP_create_verifier_BN`, `SRP_create_verifier_BN_ex`,
 `SRP_user_pwd_new`, `SRP_user_pwd_free`, `SRP_user_pwd_set0_sv`, `SRP_user_pwd_set1_ids` and
-`SRP_user_pwd_set_gN`) are now implemented rather than open.
+`SRP_user_pwd_set_gN`) are now implemented rather than open. Subphase 12.9 closes the stratum's
+own remainder: `CTLOG_STORE_load_default_file`, the shared `x_all.c` dispatch
+(`PKCS7_ISSUER_AND_SERIAL_digest`, `d2i_PKCS7_bio`, `d2i_PKCS7_fp`, `i2d_PKCS7_bio`,
+`i2d_PKCS7_fp`), the two Phase-11 HTTP hand-offs `X509_load_http` and `X509_CRL_load_http`, the
+five `asn_mime.c` names (`SMIME_read_ASN1`, `SMIME_read_ASN1_ex`, `SMIME_write_ASN1`,
+`SMIME_write_ASN1_ex`, `SMIME_text`) and the two `asn1_item_list.c` names (`ASN1_ITEM_get`,
+`ASN1_ITEM_lookup`) are now implemented rather than open, so the stratum has no open row.
 
 Subphase 12.2 lands the PKCS#7 remainder: `pk7_asn1.c`'s other three `ANY DEFINED BY` arms
 (`signed`, `enveloped`, `signedAndEnveloped`) and the streaming callback's four arms, the whole of
@@ -393,21 +399,28 @@ the seven known groups, the `SRP_user_pwd_*` record, the verifier database and t
 SRP-base64 salt making the codec's verifier string a stable observable), so no random byte is
 compared.
 
+Subphase 12.9 closes the stratum. `asn1_item_list.c`'s `ASN1_ITEM_lookup`/`ASN1_ITEM_get` land
+over a table of the 147 `_it` accessors the authority's generated `asn1_item_list.h` names, in its
+exact order; `ct_log.c`'s `CTLOG_STORE_load_default_file` lands over the landed
+`CTLOG_STORE_load_file`; `x_all.c`'s shared dispatch (`PKCS7_ISSUER_AND_SERIAL_digest` and the
+four `PKCS7` BIO/FILE codecs) and the two Phase-11 hand-offs `X509_load_http`/`X509_CRL_load_http`
+land over the 12.1 HTTP client; and `asn_mime.c`'s reader and writer (`SMIME_read_ASN1`/`_ex`,
+`SMIME_write_ASN1`/`_ex`, `SMIME_text`) land with the MIME object model, the multipart splitter
+and the base64 path `BIO_f_base64` provides. `RT-CMS-REMAINDER`
+(`courts/phase12/rt_cms_remainder_probe.c`) drives them: the item table by index and by name, the
+`ISSUER_AND_SERIAL` digest, the PKCS#7 BIO and FILE round trips, the default-config refusal arm,
+the opaque S/MIME write/read pair, `SMIME_text`, and the two `X509` HTTP loaders over memory-BIO
+responses. The `SMIME_DETACHED` arm's random boundary and the `asn1_write_micalg` legacy
+`EVP_get_digestbynid` arm are not compared (the first is random, the second the recorded Phase-13
+divergence); the authority's `d2i`/`i2d_PKCS7_fp` NULL-`FILE` arms crash it, so the FILE refusals
+drive bad content and a null value instead.
+
 **Open exports (checked against the ledger):**
 
-Open is the 15-name remainder. CMS has closed: every one of its 149 `cms.h` rows is now
-implemented and no CMS name appears here. CMP has closed: 12.4b landed the engine, so every one of
-`cmp.h`'s 161 rows is now implemented and no CMP name appears here. TS has closed its engine: 12.5b
-lands the response builder and the three verify entry points, so no TS engine name appears here.
-OCSP has closed: every one of its 94 `ocsp.h` rows is now implemented and no OCSP name appears
-here. CRMF and ESS have closed: every one of `crmf.h`'s 92 rows and `ess.h`'s 30 rows is now
-implemented, and no CRMF or ESS name appears here. SRP has closed: 12.8 lands the whole `srp.h`
-calculation surface and verifier database, so no SRP name appears here. 12.9 opens the CT
-remainder with `CTLOG_STORE_load_default_file`, the shared `x_all.c` dispatch with `d2i_PKCS7_bio`
-and `PKCS7_ISSUER_AND_SERIAL_digest`, and the hand-offs with `SMIME_read_ASN1`,
-`SMIME_write_ASN1`, `ASN1_ITEM_get` and `X509_load_http`. A stratum is complete only when no
-export it owns is neither implemented nor handed on, and this is not that state yet -- the seal is
-12.10's.
+Open is empty. CMS, CMP, TS, OCSP, CRMF, ESS and SRP have each closed, and 12.9 closes the last
+of the stratum's own rows -- the CT remainder, the shared `x_all.c` dispatch and the hand-offs.
+Every export this stratum owns is now either implemented or handed on (the three rows in the next
+paragraph), so no export it owns is neither; the seal is 12.10's.
 
 Three rows are not open because they are handed to a later stratum: the two `ts.h`
 configuration setters `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` are Phase 13's,

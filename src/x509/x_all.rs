@@ -27,19 +27,30 @@
 //!   `d2i_PKCS8_PRIV_KEY_INFO`, `d2i_AutoPrivateKey`, `d2i_PUBKEY` and their encoders.
 //! * **The RSA/DSA/EC key stream faces** (`:336-485`), the same `_fp`/`_bio` shape over the
 //!   algorithm strata's own `d2i_RSAPrivateKey`/`d2i_RSA_PUBKEY`/… entry points.
+//! * **The PKCS#7 stream faces and digest** (12.9) — `d2i_PKCS7_fp`/`_bio` (`:260`,`:283`) and
+//!   `i2d_PKCS7_fp`/`_bio` (`:277`,`:300`), each one `ASN1_item_*` call on `PKCS7_it` with the
+//!   existing object's library context and property query threaded through the `_ex` decoders and
+//!   `ossl_pkcs7_resolve_libctx` run on success; and `PKCS7_ISSUER_AND_SERIAL_digest` (`:642`),
+//!   one `ASN1_item_digest` on `PKCS7_ISSUER_AND_SERIAL_it`.
+//! * **The HTTP loaders** (12.9) — `X509_load_http` (`:134`), `X509_CRL_load_http` (`:188`) and
+//!   their `static simple_get_asn1` helper (`:115`), over `OSSL_HTTP_get`
+//!   (`crypto/http/http_client.c`) and the two `OSSL_HTTP_DEFAULT_MAX_*` response caps
+//!   (`include/openssl/http.h:43-44`).
 //!
 //! `i2d_X509_PUBKEY_bio` (`:685-689`) is **already landed** — 10.3 pulled it forward into
 //! `src/x509/x_pubkey.rs` because `encode_key2any.c`'s `SubjectPublicKeyInfo` writer reaches it —
 //! so it is not transcribed a second time; a second `#[no_mangle]` definition would be a
 //! duplicate symbol.
 //!
-//! ## What is withheld, by name, with its blocker
+//! ## Nothing is withheld
 //!
-//! | withheld | blocker |
-//! |---|---|
-//! | `simple_get_asn1` (`:115`), `X509_load_http` (`:134`), `X509_CRL_load_http` (`:188`) | `OSSL_HTTP_get` (the `http`/`punycode` units, withheld since D455) |
-//! | `d2i_PKCS7_fp`/`_bio` (`:260`,`:283`), `i2d_PKCS7_fp`/`_bio` (`:277`,`:300`) | `d2i_PKCS7`/`i2d_PKCS7` (`crypto/pkcs7/pk7_asn1.c`, 10.14.13); only `PKCS7_it` is landed |
-//! | `PKCS7_ISSUER_AND_SERIAL_digest` (`:642`) | `PKCS7_ISSUER_AND_SERIAL_it` (`crypto/pkcs7/pk7_asn1.c`, 10.14.13) |
+//! The three groups this module once withheld by name landed once their objects did. The four
+//! PKCS#7 stream faces and `PKCS7_ISSUER_AND_SERIAL_digest` waited on `crypto/pkcs7/pk7_asn1.c`'s
+//! items (`PKCS7_it`, `PKCS7_ISSUER_AND_SERIAL_it`, `d2i_PKCS7`/`i2d_PKCS7`), which 12.2 pulled
+//! forward; the two HTTP loaders and their `simple_get_asn1` helper waited on `OSSL_HTTP_get`
+//! (`crypto/http/http_client.c`), which 12 lands. With both available 12.9 transcribes them
+//! rather than withholding them, so every definition of `crypto/x509/x_all.c` is accounted for
+//! here, in `src/x509/x_pubkey.rs` or in the `X509_REQ`/`X509_ACERT` faces section 7 names.
 //!
 //! `NETSCAPE_SPKI_verify` (`:71`) and `NETSCAPE_SPKI_sign` (`:209`) were withheld when this
 //! module was drafted, on the `NETSCAPE_SPKI` object; this subphase lands that object
@@ -90,7 +101,7 @@ use core::ptr;
 
 use crate::asn1::a_d2i_fp::{
     asn1_d2i_read_bio, ASN1_d2i_bio, ASN1_d2i_fp, ASN1_item_d2i_bio, ASN1_item_d2i_bio_ex,
-    ASN1_item_d2i_fp,
+    ASN1_item_d2i_fp, ASN1_item_d2i_fp_ex,
 };
 use crate::asn1::a_digest::{ossl_asn1_item_digest_ex, ASN1_item_digest};
 use crate::asn1::a_i2d_fp::{ASN1_i2d_bio, ASN1_i2d_fp, ASN1_item_i2d_bio, ASN1_item_i2d_fp};
@@ -98,7 +109,7 @@ use crate::asn1::a_sign::{ASN1_item_sign_ctx, ASN1_item_sign_ex};
 use crate::asn1::a_verify::{ASN1_item_verify, ASN1_item_verify_ex};
 use crate::asn1::d2i_pr::{d2i_AutoPrivateKey, d2i_AutoPrivateKey_ex};
 use crate::asn1::i2d_evp::i2d_PrivateKey;
-use crate::asn1::layout::{Asn1String, D2iOfVoid, I2dOfVoid};
+use crate::asn1::layout::{Asn1Item, Asn1String, D2iOfVoid, I2dOfVoid};
 use crate::asn1::p8_pkey::{
     d2i_PKCS8_PRIV_KEY_INFO, i2d_PKCS8_PRIV_KEY_INFO, PKCS8_PRIV_KEY_INFO_free, Pkcs8PrivKeyInfo,
 };
@@ -117,6 +128,10 @@ use crate::evp::evp_pkey::EVP_PKEY2PKCS8;
 use crate::evp::legacy_evp::EVP_get_digestbyname;
 use crate::evp::pkey::EvpPkey;
 use crate::evp::pkey_ctx::EVP_PKEY_RSA_PSS;
+use crate::http::http_client::OSSL_HTTP_get;
+use crate::pkcs7::{
+    ossl_pkcs7_resolve_libctx, PKCS7_ISSUER_AND_SERIAL_it, PKCS7_it, Pkcs7, Pkcs7IssuerAndSerial,
+};
 use crate::rsa::asn1::{RSAPrivateKey_it, RSAPublicKey_it, RSA_PSS_PARAMS_free};
 use crate::rsa::backend::{ossl_rsa_pss_decode, ossl_rsa_pss_get_param_unverified};
 use crate::rsa::Rsa;
@@ -154,6 +169,12 @@ const X509_VERSION_3: c_long = 2;
 const EVP_MAX_MD_SIZE: usize = 64;
 /// `SN_sha1` — the short name `X509_digest`/`X509_CRL_digest` compare their method with.
 const SN_SHA1: &core::ffi::CStr = c"SHA1";
+/// `OSSL_HTTP_DEFAULT_MAX_RESP_LEN` — `include/openssl/http.h:43`, the response cap
+/// `simple_get_asn1` passes for every item but `X509_CRL`.
+const OSSL_HTTP_DEFAULT_MAX_RESP_LEN: usize = 100 * 1024;
+/// `OSSL_HTTP_DEFAULT_MAX_CRL_LEN` — `include/openssl/http.h:44`, the larger cap a CRL
+/// download is allowed.
+const OSSL_HTTP_DEFAULT_MAX_CRL_LEN: usize = 32 * 1024 * 1024;
 
 /// The "new" function `ASN1_d2i_fp`/`ASN1_d2i_bio` take as their first argument and **never
 /// call** (`src/asn1/a_d2i_fp.rs:106-111`; the authority's own `ASN1_d2i_bio` does not call it
@@ -615,6 +636,95 @@ pub unsafe extern "C" fn X509_CRL_sign_ctx(
 }
 
 // ---------------------------------------------------------------------------------------------
+// The HTTP loaders — `x_all.c:114-138`, `:188-192`
+// ---------------------------------------------------------------------------------------------
+
+/// `static ASN1_VALUE *simple_get_asn1(const char *url, BIO *bio, BIO *rbio, int timeout,
+/// const ASN1_ITEM *it)` — `crypto/x509/x_all.c:115-132`.
+///
+/// One `GET` through [`OSSL_HTTP_get`], with the authority's fixed `1024`-byte request buffer,
+/// `NULL` proxy/no-proxy/headers/expected content type, redirects enabled and ASN.1 expected;
+/// the response cap is [`OSSL_HTTP_DEFAULT_MAX_CRL_LEN`] for a CRL and
+/// [`OSSL_HTTP_DEFAULT_MAX_RESP_LEN`] for everything else. The response BIO is decoded with
+/// [`ASN1_item_d2i_bio`] and released before answering.
+///
+/// # Safety
+///
+/// `url` must be NUL-terminated; `bio`/`rbio` NULL or live; `it` a live item.
+unsafe fn simple_get_asn1(
+    url: *const c_char,
+    bio: *mut Bio,
+    rbio: *mut Bio,
+    timeout: c_int,
+    it: *const Asn1Item,
+) -> *mut c_void {
+    let max_resp_len = if it == X509_CRL_it() {
+        OSSL_HTTP_DEFAULT_MAX_CRL_LEN
+    } else {
+        OSSL_HTTP_DEFAULT_MAX_RESP_LEN
+    };
+    // SAFETY: `url` is NUL-terminated per the contract and `bio`/`rbio` are the caller's; the
+    // NULL proxy, no-proxy, callback, argument, headers and expected-content-type arguments and
+    // the fixed buffer size and expectations are the authority's own.
+    let mem = unsafe {
+        OSSL_HTTP_get(
+            url,
+            ptr::null(), /* proxy */
+            ptr::null(), /* no_proxy */
+            bio,
+            rbio,
+            None,            /* cb */
+            ptr::null_mut(), /* arg */
+            1024,            /* buf_size */
+            ptr::null(),     /* headers */
+            ptr::null(),     /* expected_ct */
+            1,               /* expect_asn1 */
+            max_resp_len,
+            timeout,
+        )
+    };
+    // SAFETY: `it` is a live item and `mem` is NULL or a live BIO per `OSSL_HTTP_get`.
+    let res = unsafe { ASN1_item_d2i_bio(it, mem, ptr::null_mut()) };
+    // SAFETY: `mem` is this call's BIO or NULL, which `BIO_free` accepts.
+    unsafe { BIO_free(mem) };
+    res
+}
+
+/// `X509 *X509_load_http(const char *url, BIO *bio, BIO *rbio, int timeout)` —
+/// `crypto/x509/x_all.c:134-138`.
+///
+/// # Safety
+///
+/// `url` must be NUL-terminated; `bio`/`rbio` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_load_http(
+    url: *const c_char,
+    bio: *mut Bio,
+    rbio: *mut Bio,
+    timeout: c_int,
+) -> *mut X509 {
+    // SAFETY: the caller's contract, forwarded; `X509_it()` is a static item.
+    unsafe { simple_get_asn1(url, bio, rbio, timeout, X509_it()).cast::<X509>() }
+}
+
+/// `X509_CRL *X509_CRL_load_http(const char *url, BIO *bio, BIO *rbio, int timeout)` —
+/// `crypto/x509/x_all.c:188-192`.
+///
+/// # Safety
+///
+/// `url` must be NUL-terminated; `bio`/`rbio` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_load_http(
+    url: *const c_char,
+    bio: *mut Bio,
+    rbio: *mut Bio,
+    timeout: c_int,
+) -> *mut X509Crl {
+    // SAFETY: the caller's contract, forwarded; `X509_CRL_it()` is a static item.
+    unsafe { simple_get_asn1(url, bio, rbio, timeout, X509_CRL_it()).cast::<X509Crl>() }
+}
+
+// ---------------------------------------------------------------------------------------------
 // The certificate and CRL stream faces — `x_all.c:216-257`
 // ---------------------------------------------------------------------------------------------
 
@@ -704,6 +814,97 @@ pub unsafe extern "C" fn d2i_X509_CRL_bio(bp: *mut Bio, crl: *mut *mut X509Crl) 
 pub unsafe extern "C" fn i2d_X509_CRL_bio(bp: *mut Bio, crl: *const X509Crl) -> c_int {
     // SAFETY: the caller's contract, forwarded.
     unsafe { ASN1_item_i2d_bio(X509_CRL_it(), bp, crl.cast::<c_void>()) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The PKCS#7 stream faces — `x_all.c:260-303`
+// ---------------------------------------------------------------------------------------------
+
+/// `PKCS7 *d2i_PKCS7_fp(FILE *fp, PKCS7 **p7)` — `crypto/x509/x_all.c:260-275`.
+///
+/// When `*p7` is non-NULL its library context and property query are threaded into
+/// `ASN1_item_d2i_fp_ex`, and a successful decode resolves the result's own context.
+///
+/// # Safety
+///
+/// `fp` must be a live `FILE *`; `p7` NULL or a writable slot holding NULL or a live `PKCS7`.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_PKCS7_fp(fp: *mut FILE, p7: *mut *mut Pkcs7) -> *mut Pkcs7 {
+    let mut libctx: *mut c_void = ptr::null_mut();
+    let mut propq: *const c_char = ptr::null();
+    if !p7.is_null() {
+        // SAFETY: `p7` is a non-null writable slot per the contract.
+        let existing = unsafe { *p7 };
+        if !existing.is_null() {
+            // SAFETY: `existing` is live per the check above.
+            libctx = unsafe { (*existing).ctx.libctx };
+            // SAFETY: as above.
+            propq = unsafe { (*existing).ctx.propq };
+        }
+    }
+    // SAFETY: `fp`/`p7` are the caller's and the context/property query come from the object.
+    let ret = unsafe {
+        ASN1_item_d2i_fp_ex(PKCS7_it(), fp, p7.cast::<c_void>(), libctx, propq).cast::<Pkcs7>()
+    };
+    if !ret.is_null() {
+        // SAFETY: `ret` is the just-decoded live `PKCS7`.
+        unsafe { ossl_pkcs7_resolve_libctx(ret) };
+    }
+    ret
+}
+
+/// `int i2d_PKCS7_fp(FILE *fp, const PKCS7 *p7)` — `crypto/x509/x_all.c:277-280`.
+///
+/// # Safety
+///
+/// `fp` must be a live `FILE *`; `p7` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_PKCS7_fp(fp: *mut FILE, p7: *const Pkcs7) -> c_int {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { ASN1_item_i2d_fp(PKCS7_it(), fp, p7.cast::<c_void>()) }
+}
+
+/// `PKCS7 *d2i_PKCS7_bio(BIO *bp, PKCS7 **p7)` — `crypto/x509/x_all.c:283-298`.
+///
+/// The `_bio` twin of [`d2i_PKCS7_fp`], with the same context threading.
+///
+/// # Safety
+///
+/// `bp` must be a live BIO; `p7` NULL or a writable slot holding NULL or a live `PKCS7`.
+#[no_mangle]
+pub unsafe extern "C" fn d2i_PKCS7_bio(bp: *mut Bio, p7: *mut *mut Pkcs7) -> *mut Pkcs7 {
+    let mut libctx: *mut c_void = ptr::null_mut();
+    let mut propq: *const c_char = ptr::null();
+    if !p7.is_null() {
+        // SAFETY: `p7` is a non-null writable slot per the contract.
+        let existing = unsafe { *p7 };
+        if !existing.is_null() {
+            // SAFETY: `existing` is live per the check above.
+            libctx = unsafe { (*existing).ctx.libctx };
+            // SAFETY: as above.
+            propq = unsafe { (*existing).ctx.propq };
+        }
+    }
+    // SAFETY: `bp`/`p7` are the caller's and the context/property query come from the object.
+    let ret = unsafe {
+        ASN1_item_d2i_bio_ex(PKCS7_it(), bp, p7.cast::<c_void>(), libctx, propq).cast::<Pkcs7>()
+    };
+    if !ret.is_null() {
+        // SAFETY: `ret` is the just-decoded live `PKCS7`.
+        unsafe { ossl_pkcs7_resolve_libctx(ret) };
+    }
+    ret
+}
+
+/// `int i2d_PKCS7_bio(BIO *bp, const PKCS7 *p7)` — `crypto/x509/x_all.c:300-303`.
+///
+/// # Safety
+///
+/// `bp` must be a live BIO; `p7` NULL or live.
+#[no_mangle]
+pub unsafe extern "C" fn i2d_PKCS7_bio(bp: *mut Bio, p7: *const Pkcs7) -> c_int {
+    // SAFETY: the caller's contract, forwarded.
+    unsafe { ASN1_item_i2d_bio(PKCS7_it(), bp, p7.cast::<c_void>()) }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -1548,6 +1749,32 @@ pub unsafe extern "C" fn X509_NAME_digest(
             crate::x509::x_name::X509_NAME_it(),
             type_,
             data.cast_mut().cast::<c_void>(),
+            md,
+            len,
+        )
+    }
+}
+
+/// `int PKCS7_ISSUER_AND_SERIAL_digest(PKCS7_ISSUER_AND_SERIAL *data, const EVP_MD *type,
+/// unsigned char *md, unsigned int *len)` — `crypto/x509/x_all.c:642-648`.
+///
+/// # Safety
+///
+/// `data` must be a live `PKCS7_ISSUER_AND_SERIAL`; `type` a live method; `md` writable for the
+/// digest size and `len` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn PKCS7_ISSUER_AND_SERIAL_digest(
+    data: *mut Pkcs7IssuerAndSerial,
+    type_: *const EvpMd,
+    md: *mut c_uchar,
+    len: *mut c_uint,
+) -> c_int {
+    // SAFETY: the caller's contract, forwarded; `PKCS7_ISSUER_AND_SERIAL_it()` is a static item.
+    unsafe {
+        ASN1_item_digest(
+            PKCS7_ISSUER_AND_SERIAL_it(),
+            type_,
+            data.cast::<c_void>(),
             md,
             len,
         )

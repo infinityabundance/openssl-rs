@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-PHASE12-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 149 inherited `implemented` exports -- the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-HTTP`, landed by 12.1, is the first behavioural court here: `rt_http_probe.c` drives the `OSSL_HTTP_REQ_CTX_*` engine over memory BIOs and the high-level `OSSL_HTTP_*` path with a supplied BIO pair, comparing the two transcripts line by line. The plan's remaining courts (`pending_courts`) are each printed with the subphase that brings them, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-12-SUBPHASES.md section 3 records what the behavioural courts compare.",
+    "claim": "`RT-PHASE12-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 149 inherited `implemented` exports -- the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-HTTP`, landed by 12.1, is the first behavioural court here: `rt_http_probe.c` drives the `OSSL_HTTP_REQ_CTX_*` engine over memory BIOs and the high-level `OSSL_HTTP_*` path with a supplied BIO pair, comparing the two transcripts line by line. Every court the plan names is now registered -- `pending_courts` is empty -- and 12.9's `RT-CMS-REMAINDER` (`rt_cms_remainder_probe.c`) drives the CT default-file arm, the shared item-list lookups, the PKCS#7 stream faces, the issuer-and-serial digest, the SMIME hand-offs and the two `_load_http` dispatches over fixed fixtures. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-12-SUBPHASES.md section 3 records what the behavioural courts compare.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -178,15 +178,30 @@
           "candidate": "artifacts/phase12/probes/rt_srp_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 71,
+        "candidate_exit_code": 0,
+        "candidate_observations": 71,
+        "candidate_stderr_tail": [],
+        "court": "RT-CMS-REMAINDER",
+        "crashed": false,
+        "probe": "courts/phase12/rt_cms_remainder_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase12/probes/rt_cms_remainder_probe.authority",
+          "candidate": "artifacts/phase12/probes/rt_cms_remainder_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
-    "pending_courts": {
-      "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs"
-    },
+    "pending_courts": {},
     "summary": {
       "fail": 0,
-      "pass": 10,
-      "total": 10
+      "pass": 11,
+      "total": 11
     }
   },
   "generator": "forensics/tools/phase12_courts.py",
@@ -245,6 +260,11 @@
       "name": "probe",
       "path": "courts/phase12/rt_srp_probe.c",
       "sha256": "760966aac239b62850d5238a7fc0cfbd0b94fbba470de1d0941f3e9105906692"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_cms_remainder_probe.c",
+      "sha256": "5b060070b911a05c9ab0bbf6f1650093857fa2b928194daeadfc8b54c4711b38"
     }
   ],
   "kind": "phase12-courts",

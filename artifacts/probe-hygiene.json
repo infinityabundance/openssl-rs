@@ -1004,6 +1004,68 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase12/rt_cms_remainder_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 71,
+              "-O1": 71,
+              "-O2": 71
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 71,
+              "-O1": 71,
+              "-O2": 71
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase12/rt_coverage_ref_probe.c",
         "sides": {
           "authority": {
@@ -6896,8 +6958,8 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 111,
-      "total": 111,
+      "clean": 112,
+      "total": 112,
       "unstable": 0
     }
   },
@@ -6982,6 +7044,11 @@
       "name": "probe",
       "path": "courts/phase12/rt_cms_probe.c",
       "sha256": "ab731db081cf6aa4d6dd0a74f0a63164b0e022fd10fe7829204419ccd9aeba3a"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_cms_remainder_probe.c",
+      "sha256": "5b060070b911a05c9ab0bbf6f1650093857fa2b928194daeadfc8b54c4711b38"
     },
     {
       "name": "probe",
