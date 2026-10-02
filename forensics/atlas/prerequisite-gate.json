@@ -10,7 +10,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 74,
-      "language_surface_not_modelled_by_name": 7233,
+      "language_surface_not_modelled_by_name": 7378,
       "planned_prerequisites": 7
     },
     "census_by_unit": {
@@ -326,6 +326,10 @@
         "crypto/o_time.c": 2,
         "crypto/objects/obj_dat.c": 24,
         "crypto/ocsp/ocsp_asn.c": 38,
+        "crypto/ocsp/ocsp_cl.c": 39,
+        "crypto/ocsp/ocsp_lib.c": 9,
+        "crypto/ocsp/ocsp_srv.c": 47,
+        "crypto/ocsp/ocsp_vfy.c": 28,
         "crypto/packet.c": 6,
         "crypto/param_build.c": 17,
         "crypto/param_build_set.c": 5,
@@ -429,6 +433,7 @@
         "crypto/ui/ui_openssl.c": 9,
         "crypto/ui/ui_util.c": 13,
         "crypto/whrlpool/wp_dgst.c": 3,
+        "crypto/x509/by_dir.c": 22,
         "crypto/x509/by_file.c": 14,
         "crypto/x509/by_store.c": 16,
         "crypto/x509/pcy_cache.c": 16,
@@ -616,7 +621,7 @@
       ]
     },
     "checked": {
-      "authority_units": 462,
+      "authority_units": 467,
       "crate_modules": 648,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
@@ -730,13 +735,13 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "c4ecbe22faff7fda995c4a015cf38381e337fe868160e0416d407af56107fb3b",
+  "body_hash": "d4ef72390b05004f8df0b9708f7a2dd1655c41daa1d0add252064b86b7d09df6",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "28466c2f0b4fb987ebafd18c63b934463361ce6553a8d19301154201ea73e815"
+      "sha256": "a863a1ed32f0e870e3506e1a28da859719e91805dea3cd5ab1fa78f80880d82d"
     },
     {
       "name": "macro-owners",
@@ -751,7 +756,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "288af3598049882dbbc9d2509456463d0b068a7a8b192c377e79a857a566ed5f"
+      "sha256": "0223ac4902777fdcfb7391ecf6b3514a12662c9b8711c17137c0f131fd1f93d8"
     },
     {
       "name": "symbol-ownership",
