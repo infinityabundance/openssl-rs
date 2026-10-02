@@ -14,7 +14,8 @@
  *
  * So the two structs are read here, by the same headers the authority compiled
  * against, and only the answers cross into Rust: a directory stream handle, a
- * NUL-terminated entry name, and a three-state file-status result.
+ * NUL-terminated entry name, a three-state file-status result, and the two
+ * existence answers `by_dir`'s hashed-directory scan needs.
  *
  * Nothing behavioural lives here. `OPENSSL_DIR_read`, `OPENSSL_DIR_end` and the
  * `stat` decision that `process_include` makes are decided in Rust; this file
@@ -83,4 +84,28 @@ int openssl_rs_stat_is_dir(const char *path, int *err)
     }
     *err = 0;
     return S_ISDIR(st.st_mode) ? 1 : 0;
+}
+
+/*
+ * The two existence-only probes `by_dir.c`'s hashed-directory scan makes.
+ *
+ * `get_cert_by_subject_ex` asks `lstat` whether a candidate file is there at all
+ * (a missing file stops the scan) and then `stat` whether it can be followed (a
+ * dangling symlink skips that suffix). Only the *sign* of the result is used:
+ * the authority never reads a field of `struct stat`, so no field is read here
+ * either. `lstat` and `stat` return -1 on failure, so 0 is success and -1 is
+ * failure, exactly the `< 0` test at `crypto/x509/by_dir.c:328` and `:331`.
+ */
+int openssl_rs_lstat_exists(const char *path)
+{
+    struct stat st;
+
+    return lstat(path, &st) < 0 ? -1 : 0;
+}
+
+int openssl_rs_stat_exists(const char *path)
+{
+    struct stat st;
+
+    return stat(path, &st) < 0 ? -1 : 0;
 }

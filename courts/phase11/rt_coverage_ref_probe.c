@@ -12,7 +12,7 @@
  * purpose: the name is referenced by a probe that ran, which is not the same as
  * every arm of the name having been driven. See docs/DECISIONS.md D199.
  *
- * The 993 names below are the stratum's `implemented` exports this reference basis
+ * The 1,007 names below are the stratum's `implemented` exports this reference basis
  * covers. 954 are the ones earlier strata landed and this stratum now owns -- the 952
  * atlas-owned exports Phase 8's 8.8 chain and Phase 10's pulled-forward X.509 subphases
  * (10.8-10.16, D442-D451) landed, and the two `ASN1_generate_*` hand-offs Phase 5
@@ -37,11 +37,26 @@
  * extension-building chain, and `v3_utl.c`'s name checks and `get1_*` accessors) and added
  * thirty-three more `implemented` exports. **Every one of them is `called` by `RT-X509-STORE`** --
  * the behavioural court grew the arms that drive the trust table, the STORE-URI lookup, the four
- * printers, the nine builders and the six checks -- so this reference basis is unchanged: no name
- * is added below, the count stays 993, and those 33 are recorded `called`, the stronger true
- * statement, from the behavioural probe's own import.
+ * printers, the nine builders and the six checks -- so at that point this reference basis was
+ * unchanged: no name is added below, the count stayed 993, and those 33 are recorded `called`, the
+ * stronger true statement, from the behavioural probe's own import.
  *
- * Some of the 993 are, independently, imported by a behavioural court -- 401 of the 954
+ * The subphases after 11.5 add fourteen names below, and they are the ones no behavioural court
+ * can drive. 11.7a lands the four free-standing default-path answers
+ * `X509_get_default_{cert_area,cert_dir,cert_file,private_dir}`: each answers a compile-time path
+ * built from the admitted build's forensic `OPENSSLDIR`, while the candidate answers its own
+ * `OPENSSL_RS_OPENSSLDIR` (empty when unset), so the two sides diverge by construction and no
+ * observation of them can be equal (the same reason `ossl_get_modulesdir` is not compared).
+ * 11.4b lands `X509_STORE_CTX_print_verify_cb`: it prints a *context that has run the verify
+ * engine*, and `X509_STORE_CTX_init` -- the call that installs the callbacks and seeds the
+ * certificate -- is still withheld (11.2), so the probe cannot build a context that has anything
+ * to print. 11.1d-f land the two lookup constructors (`X509_LOOKUP_file`, `X509_LOOKUP_hash_dir`)
+ * and the seven `x509_d2.c` drivers (`X509_STORE_load_file(_ex)`, `_load_path`, `_load_locations(_ex)`,
+ * `X509_STORE_set_default_paths(_ex)`): each cascades through a constructor into
+ * `X509_get_default_cert_file`/`_dir`, so the same `OPENSSLDIR` divergence reaches them. All
+ * fourteen are the weaker true statement -- referenced by a probe that ran, never `called`.
+ *
+ * Some of the 1,007 are, independently, imported by a behavioural court -- 401 of the 954
  * by Phases 8 and 10, and 3 more (`X509_REQ_get_version`, `X509_REQ_get_subject_name`,
  * `X509_REQ_get0_signature`) by `RT-X509-STORE`, which reads them while driving the
  * `X509_REQ` surface. Listing a name here cannot weaken a stronger edge: the atlas
@@ -597,6 +612,8 @@ extern void X509_REVOKED_it(void);
 extern void X509_REVOKED_new(void);
 extern void X509_REVOKED_set_revocationDate(void);
 extern void X509_REVOKED_set_serialNumber(void);
+extern void X509_LOOKUP_file(void);
+extern void X509_LOOKUP_hash_dir(void);
 extern void X509_SIG_INFO_get(void);
 extern void X509_SIG_INFO_set(void);
 extern void X509_SIG_free(void);
@@ -609,6 +626,7 @@ extern void X509_STORE_CTX_get1_certs(void);
 extern void X509_STORE_CTX_get1_crls(void);
 extern void X509_STORE_CTX_get_by_subject(void);
 extern void X509_STORE_CTX_get_obj_by_subject(void);
+extern void X509_STORE_CTX_print_verify_cb(void);
 extern void X509_STORE_add_lookup(void);
 extern void X509_STORE_get0_objects(void);
 extern void X509_STORE_get0_param(void);
@@ -625,6 +643,11 @@ extern void X509_STORE_get_lookup_certs(void);
 extern void X509_STORE_get_lookup_crls(void);
 extern void X509_STORE_get_verify(void);
 extern void X509_STORE_get_verify_cb(void);
+extern void X509_STORE_load_file(void);
+extern void X509_STORE_load_file_ex(void);
+extern void X509_STORE_load_locations(void);
+extern void X509_STORE_load_locations_ex(void);
+extern void X509_STORE_load_path(void);
 extern void X509_STORE_lock(void);
 extern void X509_STORE_set_cert_crl(void);
 extern void X509_STORE_set_check_crl(void);
@@ -632,6 +655,8 @@ extern void X509_STORE_set_check_issued(void);
 extern void X509_STORE_set_check_policy(void);
 extern void X509_STORE_set_check_revocation(void);
 extern void X509_STORE_set_cleanup(void);
+extern void X509_STORE_set_default_paths(void);
+extern void X509_STORE_set_default_paths_ex(void);
 extern void X509_STORE_set_ex_data(void);
 extern void X509_STORE_set_get_crl(void);
 extern void X509_STORE_set_get_issuer(void);
@@ -681,8 +706,12 @@ extern void X509_get0_serialNumber(void);
 extern void X509_get0_signature(void);
 extern void X509_get0_subject_key_id(void);
 extern void X509_get0_trust_objects(void);
+extern void X509_get_default_cert_area(void);
+extern void X509_get_default_cert_dir(void);
 extern void X509_get_default_cert_dir_env(void);
+extern void X509_get_default_cert_file(void);
 extern void X509_get_default_cert_file_env(void);
+extern void X509_get_default_private_dir(void);
 extern void X509_get_ex_data(void);
 extern void X509_get_ext(void);
 extern void X509_get_ext_by_NID(void);
@@ -1592,6 +1621,8 @@ static const void *volatile refs[] = {
     (const void *) X509_REVOKED_new,
     (const void *) X509_REVOKED_set_revocationDate,
     (const void *) X509_REVOKED_set_serialNumber,
+    (const void *) X509_LOOKUP_file,
+    (const void *) X509_LOOKUP_hash_dir,
     (const void *) X509_SIG_INFO_get,
     (const void *) X509_SIG_INFO_set,
     (const void *) X509_SIG_free,
@@ -1604,6 +1635,7 @@ static const void *volatile refs[] = {
     (const void *) X509_STORE_CTX_get1_crls,
     (const void *) X509_STORE_CTX_get_by_subject,
     (const void *) X509_STORE_CTX_get_obj_by_subject,
+    (const void *) X509_STORE_CTX_print_verify_cb,
     (const void *) X509_STORE_add_lookup,
     (const void *) X509_STORE_get0_objects,
     (const void *) X509_STORE_get0_param,
@@ -1620,6 +1652,11 @@ static const void *volatile refs[] = {
     (const void *) X509_STORE_get_lookup_crls,
     (const void *) X509_STORE_get_verify,
     (const void *) X509_STORE_get_verify_cb,
+    (const void *) X509_STORE_load_file,
+    (const void *) X509_STORE_load_file_ex,
+    (const void *) X509_STORE_load_locations,
+    (const void *) X509_STORE_load_locations_ex,
+    (const void *) X509_STORE_load_path,
     (const void *) X509_STORE_lock,
     (const void *) X509_STORE_set_cert_crl,
     (const void *) X509_STORE_set_check_crl,
@@ -1627,6 +1664,8 @@ static const void *volatile refs[] = {
     (const void *) X509_STORE_set_check_policy,
     (const void *) X509_STORE_set_check_revocation,
     (const void *) X509_STORE_set_cleanup,
+    (const void *) X509_STORE_set_default_paths,
+    (const void *) X509_STORE_set_default_paths_ex,
     (const void *) X509_STORE_set_ex_data,
     (const void *) X509_STORE_set_get_crl,
     (const void *) X509_STORE_set_get_issuer,
@@ -1676,8 +1715,12 @@ static const void *volatile refs[] = {
     (const void *) X509_get0_signature,
     (const void *) X509_get0_subject_key_id,
     (const void *) X509_get0_trust_objects,
+    (const void *) X509_get_default_cert_area,
+    (const void *) X509_get_default_cert_dir,
     (const void *) X509_get_default_cert_dir_env,
+    (const void *) X509_get_default_cert_file,
     (const void *) X509_get_default_cert_file_env,
+    (const void *) X509_get_default_private_dir,
     (const void *) X509_get_ex_data,
     (const void *) X509_get_ext,
     (const void *) X509_get_ext_by_NID,

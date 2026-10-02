@@ -148,6 +148,29 @@ fn run() -> Result<(), String> {
     println!("cargo:rustc-env=OPENSSL_RS_MODULESDIR={modulesdir}");
     println!("cargo:rerun-if-env-changed=OPENSSL_RS_MODULESDIR");
 
+    // The compiled-in OpenSSL installation directory (`OPENSSLDIR`) that the four
+    // `X509_get_default_*` path functions build their answers from: `X509_CERT_AREA` itself and
+    // its `/certs`, `/cert.pem` and `/private` children (`include/internal/common.h:83-86`).
+    //
+    // A *distribution* fact rather than an authority one, exactly like MODULESDIR above: the
+    // authority bakes its own configure-time `OPENSSLDIR` into the library
+    // (`…/prefix/openssl-3.6.4-production/ssl`), a substitute is installed somewhere else, and
+    // the two strings can never be equal, so no court compares them. An unset variable emits the
+    // empty string, which `crate::x509::x509_def` reads as "no compiled-in openssldir" and
+    // answers an empty C string for -- the same honest degradation `ossl_get_modulesdir` makes
+    // with NULL. Injecting a fabricated path would have `X509_STORE` open the authority's `/certs`
+    // or `/cert.pem`, which is worse than admitting there is no default.
+    // A NUL would make the value unrepresentable as a C string, and `clippy::panic` is denied
+    // in this crate including its build script -- so the refusal is reported the way the other
+    // refusals above are.
+    let openssldir = std::env::var("OPENSSL_RS_OPENSSLDIR").unwrap_or_default();
+    if openssldir.contains('\0') {
+        eprintln!("error: OPENSSL_RS_OPENSSLDIR must not contain a NUL byte");
+        std::process::exit(1);
+    }
+    println!("cargo:rustc-env=OPENSSL_RS_OPENSSLDIR={openssldir}");
+    println!("cargo:rerun-if-env-changed=OPENSSL_RS_OPENSSLDIR");
+
     build_c_adapters(&manifest_dir)?;
 
     Ok(())

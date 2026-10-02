@@ -34518,3 +34518,59 @@ between this stratum and its purpose. It is a large slice and it is not attempte
 what this commit does is make it impossible to mistake the remaining work for ordinary leftovers.
 
 Verified: documentation only; no code, court or ledger changes in this commit.
+
+## D504 -- the lookup layer and its default paths land on a build-time openssldir, and the stratum falls
+## to seven open
+
+Phase 11's store side closes, and the one gate that held thirteen exports was a build fact rather
+than a missing implementation.
+
+### The `OPENSSLDIR` gate, and how it is opened
+`X509_get_default_cert_file` and `X509_get_default_cert_dir` (`crypto/x509/x509_def.c:88-106`)
+answer compile-time paths built from the admitted build's forensic `OPENSSLDIR`
+(`include/internal/common.h:83-86`), and `by_file_ctrl_ex`/`dir_ctrl` read them for the
+`X509_FILETYPE_DEFAULT` arm, so `X509_LOOKUP_file`, `X509_LOOKUP_hash_dir` and the seven
+`x509_d2.c` drivers that cascade through them all waited on it. `src/x509/x509_def.rs` withheld the
+four names as a D451-class divergence: the candidate reports `OPENSSLDIR: N/A`
+(`src/runtime/init.rs:1133`) and the directory plane is Phase 16's.
+
+It is opened the way `MODULESDIR` already was. `build.rs` captures a new `OPENSSL_RS_OPENSSLDIR`
+(NUL rejected; `cargo:rerun-if-env-changed`), and the four functions answer it --
+`X509_get_default_cert_area` the value itself, the other three `value + "/certs"`, `"/cert.pem"`,
+`"/private"` -- or the **empty C string** when it is unset. Empty rather than NULL or a fabricated
+path: `by_file_ctrl_ex` then fails to open a default bundle instead of opening the authority's
+`/work/.../cert.pem`, and a caller that `strlen`s the answer gets zero rather than a segfault. This
+is a distribution fact, not an authority one, so no court compares the string and the four names are
+covered at basis `referenced` (below). Phase 16 still owns the directory plane proper
+(`ossl_get_openssldir`); this lands only the x509-side answers `by_file.c`/`by_dir.c` read, which
+the plan already assigned to 11.7.
+
+### The `lstat`/`stat` existence probe
+`get_cert_by_subject_ex` (`by_dir.c:321-337`) tests a candidate path with `lstat` then `stat`, using
+only the sign of each. The crate had no `lstat` binding (RAND's `src/rand/sys.rs` `stat` is
+RAND-scoped and has no `lstat`), so two existence-only shims were added to `src/runtime/dir_posix.c`
+beside `openssl_rs_stat_is_dir`, read through the platform headers "so that no field offset is
+assumed" (`build.rs:166-167`). They are internal symbols, which is why the C-identifier count in
+`docs/CI.md` moves from 485 to 487. With the row constructible, the D453 "no reachable caller"
+reason that also covered the unit's statics dissolves.
+
+### 11.4b's verify-callback printer
+`X509_STORE_CTX_print_verify_cb` (`t_x509.c:449-513`) was withheld on the same unit's
+`ossl_x509_print_ex_brief` (`:383-411`), which the `forensics/prerequisites.json` row
+`owned_by_a_later_stratum` covered. All of its callees were already landed, so the printer and its
+two statics (`print_certs`, `print_store_certs`) are transcribed and the row is retired. It is not
+driven behaviourally yet: it prints a *context that has run the engine*, and `X509_STORE_CTX_init`
+is 11.2's, so it is `referenced` until that lands.
+
+### The reference basis grows by fourteen
+`courts/phase11/rt_coverage_ref_probe.c` gains the four default-path answers, the callback printer,
+the two lookup constructors and the seven `x509_d2.c` drivers -- 993 to 1,007 references. The first
+four and the last nine diverge by construction under `OPENSSL_RS_OPENSSLDIR` (or cascade into a name
+that does), so no observation of them can be equal and `referenced` is the strongest true statement
+available; the callback printer is `referenced` until `X509_STORE_CTX_init` lands.
+
+Verified: `cargo test --lib` 1131 passed; `cargo clippy --all-targets -- -D warnings` clean;
+`cargo fmt --all --check` clean; the seven phase-11 courts pass (RT-X509-REF 1,007 observations);
+the eleven phase-2 ABI courts pass; `evidence_determinism.py`, `check_evidence_portability.py`,
+`docs_consistency.py` and `regression_guard.py --require-current` ok. The stratum falls from 21 open
+obligations to 7.

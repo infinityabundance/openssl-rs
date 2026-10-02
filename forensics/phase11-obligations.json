@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1455,
       "deferred_to_later_phase": 0,
-      "implemented": 1446,
-      "open_in_this_stratum": 21,
+      "implemented": 1460,
+      "open_in_this_stratum": 7,
       "owned": 1467,
       "received_by_handoff": 12
     },
@@ -744,9 +744,11 @@
       "X509_LOOKUP_by_subject_ex",
       "X509_LOOKUP_ctrl",
       "X509_LOOKUP_ctrl_ex",
+      "X509_LOOKUP_file",
       "X509_LOOKUP_free",
       "X509_LOOKUP_get_method_data",
       "X509_LOOKUP_get_store",
+      "X509_LOOKUP_hash_dir",
       "X509_LOOKUP_init",
       "X509_LOOKUP_meth_free",
       "X509_LOOKUP_meth_get_ctrl",
@@ -958,6 +960,7 @@
       "X509_STORE_CTX_get_verify_cb",
       "X509_STORE_CTX_new",
       "X509_STORE_CTX_new_ex",
+      "X509_STORE_CTX_print_verify_cb",
       "X509_STORE_CTX_purpose_inherit",
       "X509_STORE_CTX_set0_crls",
       "X509_STORE_CTX_set0_dane",
@@ -1003,6 +1006,11 @@
       "X509_STORE_get_lookup_crls",
       "X509_STORE_get_verify",
       "X509_STORE_get_verify_cb",
+      "X509_STORE_load_file",
+      "X509_STORE_load_file_ex",
+      "X509_STORE_load_locations",
+      "X509_STORE_load_locations_ex",
+      "X509_STORE_load_path",
       "X509_STORE_load_store",
       "X509_STORE_load_store_ex",
       "X509_STORE_lock",
@@ -1014,6 +1022,8 @@
       "X509_STORE_set_check_policy",
       "X509_STORE_set_check_revocation",
       "X509_STORE_set_cleanup",
+      "X509_STORE_set_default_paths",
+      "X509_STORE_set_default_paths_ex",
       "X509_STORE_set_depth",
       "X509_STORE_set_ex_data",
       "X509_STORE_set_flags",
@@ -1132,8 +1142,12 @@
       "X509_get1_email",
       "X509_get1_ocsp",
       "X509_get_X509_PUBKEY",
+      "X509_get_default_cert_area",
+      "X509_get_default_cert_dir",
       "X509_get_default_cert_dir_env",
+      "X509_get_default_cert_file",
       "X509_get_default_cert_file_env",
+      "X509_get_default_private_dir",
       "X509_get_ex_data",
       "X509_get_ext",
       "X509_get_ext_by_NID",
@@ -1572,18 +1586,6 @@
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/x509/by_file.rs",
-        "received_from_phase": null,
-        "symbol": "X509_LOOKUP_file"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/by_dir.rs",
-        "received_from_phase": null,
-        "symbol": "X509_LOOKUP_hash_dir"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_init"
@@ -1596,87 +1598,15 @@
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/x509/t_x509.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_CTX_print_verify_cb"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_STORE_CTX_verify"
       },
       {
         "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_d2.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_load_file"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_d2.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_load_file_ex"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_d2.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_load_locations"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_d2.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_load_locations_ex"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_d2.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_load_path"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_d2.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_set_default_paths"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
-        "module": "src/x509/x509_d2.rs",
-        "received_from_phase": null,
-        "symbol": "X509_STORE_set_default_paths_ex"
-      },
-      {
-        "declaring_header": "x509_vfy.h",
         "module": "src/x509/x509_vfy.rs",
         "received_from_phase": null,
         "symbol": "X509_build_chain"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_def.rs",
-        "received_from_phase": null,
-        "symbol": "X509_get_default_cert_area"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_def.rs",
-        "received_from_phase": null,
-        "symbol": "X509_get_default_cert_dir"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_def.rs",
-        "received_from_phase": null,
-        "symbol": "X509_get_default_cert_file"
-      },
-      {
-        "declaring_header": "x509.h",
-        "module": "src/x509/x509_def.rs",
-        "received_from_phase": null,
-        "symbol": "X509_get_default_private_dir"
       },
       {
         "declaring_header": "x509.h",
@@ -1843,7 +1773,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "7875eaff965fbebe196f33557fc68a7764e3fa17b2ae5fe29a7e02bb6c5d230f"
+      "sha256": "5cb34c12a0c7701e4656034c22f29e62921d9f9e23da226432b8af778f1ae047"
     },
     {
       "name": "phase5-obligations",
@@ -1853,7 +1783,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "66228b2f3f06f576db4d9d40e3cb50b10a8f0699b4aae2801b2438e2bddbbe98"
+      "sha256": "7f029e7789b497fd96c840c692c7df1efb866938e8c17102e4f69780cd4b96e4"
     }
   ],
   "kind": "phase11-obligations",

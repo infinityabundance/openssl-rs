@@ -1,9 +1,8 @@
 //! `crypto/x509/by_file.c` — the `X509_LOOKUP_file` method and its two file loaders. **This slice
-//! lands the five loaders** — `X509_load_cert_file_ex`/`_file`, `X509_load_crl_file` and
-//! `X509_load_cert_crl_file_ex`/`_file` — and withholds the method constructor
-//! `X509_LOOKUP_file` (`:41-44`), its row `x509_file_lookup` (`:26-39`) and the two control doors
-//! `by_file_ctrl_ex` (`:46-82`)/`by_file_ctrl` (`:84-88`), for the one unmet dependency recorded
-//! below.
+//! lands the unit whole**: the five loaders — `X509_load_cert_file_ex`/`_file`,
+//! `X509_load_crl_file` and `X509_load_cert_crl_file_ex`/`_file` — and the method constructor
+//! `X509_LOOKUP_file` (`:41-44`) with its row `x509_file_lookup` (`:26-39`) and the two control
+//! doors `by_file_ctrl_ex` (`:46-82`)/`by_file_ctrl` (`:84-88`).
 //!
 //! `crypto/x509/by_file.c` is 284 lines. Its two loaders read a certificate bundle through the
 //! `pem.h` X.509 readers — `PEM_read_bio_X509_AUX` (`crypto/pem/pem_xaux.c`, 11.6),
@@ -14,26 +13,32 @@
 //! only blockers, and 11.6/11.7 have discharged them, so **the five loaders are transcribed
 //! here** and the module is no longer a doc and six withholds.
 //!
-//! ## Withheld by name, with the one unmet blocker
+//! ## The constructor: the default-file blocker is discharged
 //!
-//! * `X509_LOOKUP_file` (`:41-44`) and its table `x509_file_lookup` (`:26-39`) — the method
-//!   constructor. The table's `ctrl`/`ctrl_ex` slots are `by_file_ctrl` (`:84-88`) and
-//!   `by_file_ctrl_ex` (`:46-82`), and all three are withheld **together**, because
-//!   `by_file_ctrl_ex`'s `X509_FILETYPE_DEFAULT` arm calls `X509_get_default_cert_file`
-//!   (`crypto/x509/x509_def.c:98-106`). That name is withheld in its own unit as a D451-class
-//!   divergence: its answer is a compile-time path built from the admitted build's forensic
-//!   `OPENSSLDIR`, while the candidate distribution reports `OPENSSLDIR: N/A`
-//!   (`src/runtime/init.rs:1133`) and the directory plane is Phase 16's (`ossl_get_openssldir`,
-//!   `src/runtime/defaults.rs`). The candidate's symbol of that name is a **scaffolded abort**
-//!   (`artifacts/phase2/shell/libcrypto.shell.rs:5772`), so a transcription that called it would
-//!   abort on every `X509_FILETYPE_DEFAULT` load rather than load the default bundle — the reason
-//!   the name is left withheld rather than stubbed. Every other callee of `by_file_ctrl_ex` is
-//!   landed — `ossl_safe_getenv` (`runtime/getenv.rs`), `X509_get_default_cert_file_env`
-//!   (`x509_def.rs`) and this module's own two loaders — so exactly one default-path call waits on
-//!   11.7/16.
+//! `by_file_ctrl_ex`'s `X509_FILETYPE_DEFAULT` arm calls `X509_get_default_cert_file`
+//! (`crypto/x509/x509_def.c:98-106`). That name was once withheld as a D451-class divergence — its
+//! answer is a compile-time path built from the admitted build's forensic `OPENSSLDIR` — but
+//! [`crate::x509::x509_def`] now lands all six of its functions on the non-Windows branch: the four
+//! paths answer from a build-time `OPENSSL_RS_OPENSSLDIR` (an unset variable degrades to the empty
+//! C string, never a fabricated path), and the env-var name `X509_get_default_cert_file_env`
+//! (`:113-116`) is the fixed `SSL_CERT_FILE` (`include/internal/common.h:97`). So the constructor,
+//! its row and its two control doors land with the loaders here; the `X509_FILETYPE_DEFAULT` arm
+//! raises `X509_R_LOADING_DEFAULTS` when the default bundle fails to load, exactly as the authority
+//! does.
 //!
-//! The three callers of the constructor — `X509_LOOKUP_file`, `X509_STORE_load_file(_ex)` and
-//! `X509_STORE_set_default_paths(_ex)` in [`crate::x509::x509_d2`] — wait with it.
+//! The three callers of the constructor — `X509_STORE_load_file(_ex)` and
+//! `X509_STORE_set_default_paths(_ex)` in [`crate::x509::x509_d2`] — land with it.
+//!
+//! ## The landed surface
+//!
+//! * `x509_file_lookup` (`:26-39`) and its constructor `X509_LOOKUP_file` (`:41-44`) — the method
+//!   row, whose `ctrl`/`ctrl_ex` slots are the two doors below and every other slot NULL (its
+//!   `name` is the fixed `"Load file into cache"`).
+//! * `by_file_ctrl_ex` (`:46-82`) and its wrapper `by_file_ctrl` (`:84-88`) — the control doors.
+//!   `X509_L_FILE_LOAD` selects a bundle: a `X509_FILETYPE_DEFAULT` `argl` loads the environment's
+//!   file (or the compiled-in default) through `X509_load_cert_crl_file_ex`, a `X509_FILETYPE_PEM`
+//!   one loads `argp` through `X509_load_cert_crl_file_ex`, and any other `argl` loads it through
+//!   `X509_load_cert_file_ex`. Every other command answers 0.
 //!
 //! ## The landed five
 //!
@@ -53,14 +58,14 @@
 //! ## The raise sites
 //!
 //! `crypto/x509/by_file.c` is **not** in `gen_err_raise_sites.py`'s `COVERED_FILES`, so the
-//! seventeen coordinates the landed loaders reach are **declared locally** in the
-//! `err_sites::ErrSite` shape (as `v3_addr.rs` does). Their reason values are read from
-//! `include/openssl/err.h.in` (the `ERR_R_*` commons) and the generated `x509err.h`/`pemerr.h`
-//! (the `X509_R_*`/`PEM_R_*` rows cited on each constant): `ERR_R_PASSED_NULL_PARAMETER` is
-//! `258 | ERR_R_FATAL` = 786690, `ERR_R_BIO_LIB` is `ERR_LIB_BIO (2) | ERR_RFLAG_COMMON`, and
-//! both `ERR_R_ASN1_LIB` (`ERR_LIB_ASN1 (13)`) and `ERR_R_PEM_LIB` (`ERR_LIB_PEM (9)`) are the
-//! same `| ERR_RFLAG_COMMON`. The `by_file_ctrl_ex` raise at `:68` is reachable only from a
-//! withheld name, so no coordinate is declared for it.
+//! eighteen coordinates the unit reaches are **declared locally** in the `err_sites::ErrSite`
+//! shape (as `v3_addr.rs` does). Their reason values are read from `include/openssl/err.h.in` (the
+//! `ERR_R_*` commons) and the generated `x509err.h`/`pemerr.h` (the `X509_R_*`/`PEM_R_*` rows cited
+//! on each constant): `ERR_R_PASSED_NULL_PARAMETER` is `258 | ERR_R_FATAL` = 786690,
+//! `ERR_R_BIO_LIB` is `ERR_LIB_BIO (2) | ERR_RFLAG_COMMON`, and both `ERR_R_ASN1_LIB`
+//! (`ERR_LIB_ASN1 (13)`) and `ERR_R_PEM_LIB` (`ERR_LIB_PEM (9)`) are the same `| ERR_RFLAG_COMMON`.
+//! The constructor's own raise at `:68` — `X509_R_LOADING_DEFAULTS` (`x509err.h:45`) — is now
+//! reachable and declared here too.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -77,16 +82,18 @@ use crate::runtime::bio::bss_file::{BIO_new_file, BIO_s_file};
 use crate::runtime::bio::iolib::BIO_ctrl;
 use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_CLOSE, BIO_C_SET_FILENAME, BIO_FP_READ};
 use crate::runtime::err::err_reasons::{
-    PEM_R_NO_START_LINE, X509_R_BAD_X509_FILETYPE, X509_R_NO_CERTIFICATE_FOUND,
-    X509_R_NO_CERTIFICATE_OR_CRL_FOUND, X509_R_NO_CRL_FOUND,
+    PEM_R_NO_START_LINE, X509_R_BAD_X509_FILETYPE, X509_R_LOADING_DEFAULTS,
+    X509_R_NO_CERTIFICATE_FOUND, X509_R_NO_CERTIFICATE_OR_CRL_FOUND, X509_R_NO_CRL_FOUND,
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::{
     peek_last_reason, raise_site, ERR_clear_error, ERR_clear_last_mark, ERR_pop_to_mark,
     ERR_set_mark,
 };
+use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_value};
-use crate::x509::x509_lu::{X509Lookup, X509_STORE_add_cert, X509_STORE_add_crl};
+use crate::x509::x509_def::{X509_get_default_cert_file, X509_get_default_cert_file_env};
+use crate::x509::x509_lu::{X509Lookup, X509LookupMethod, X509_STORE_add_cert, X509_STORE_add_crl};
 use crate::x509::x_all::{d2i_X509_CRL_bio, d2i_X509_bio};
 use crate::x509::x_crl::{X509Crl, X509_CRL_free};
 use crate::x509::x_x509::{X509_free, X509_new_ex, X509};
@@ -95,6 +102,12 @@ use crate::x509::x_x509::{X509_free, X509_new_ex, X509};
 const X509_FILETYPE_PEM: c_int = 1;
 /// `X509_FILETYPE_ASN1` — `include/openssl/x509.h.in:71`.
 const X509_FILETYPE_ASN1: c_int = 2;
+/// `X509_FILETYPE_DEFAULT` — `include/openssl/x509.h:170`.
+const X509_FILETYPE_DEFAULT: c_int = 3;
+
+/// `X509_L_FILE_LOAD` — `include/openssl/x509_vfy.h:283`, the command behind
+/// `X509_LOOKUP_load_file(_ex)`.
+const X509_L_FILE_LOAD: c_int = 1;
 
 /// `ERR_LIB_X509` — `include/openssl/err.h.in:85`.
 const ERR_LIB_X509: c_int = 11;
@@ -164,6 +177,9 @@ const BY_FILE_275: ErrSite = by_file_site(
     c"X509_load_cert_crl_file_ex",
     X509_R_NO_CERTIFICATE_OR_CRL_FOUND,
 );
+/// `by_file_ctrl_ex`'s failed default-file load at `by_file.c:68` (`X509_R_LOADING_DEFAULTS`,
+/// `x509err.h:45`).
+const BY_FILE_68: ErrSite = by_file_site(68, c"by_file_ctrl_ex", X509_R_LOADING_DEFAULTS);
 
 /// The `X509_INFO` destructor [`X509_load_cert_crl_file_ex`] passes to `OPENSSL_sk_pop_free`.
 ///
@@ -554,4 +570,137 @@ pub unsafe extern "C" fn X509_load_cert_crl_file(
 ) -> c_int {
     // SAFETY: the contract is `X509_load_cert_crl_file_ex`'s with NULL libctx/propq.
     unsafe { X509_load_cert_crl_file_ex(ctx, file, type_, ptr::null_mut(), ptr::null()) }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The method table, its constructor and its control doors — `crypto/x509/by_file.c:20-88`
+// ---------------------------------------------------------------------------------------------
+
+/// `static int by_file_ctrl_ex(X509_LOOKUP *ctx, int cmd, const char *argp, long argl, char **ret,
+/// OSSL_LIB_CTX *libctx, const char *propq)` — `crypto/x509/by_file.c:46-82`.
+///
+/// The method's `ctrl_ex` door. `X509_L_FILE_LOAD` loads one bundle into the lookup's store: a
+/// `X509_FILETYPE_DEFAULT` `argl` loads the file named by `X509_get_default_cert_file_env`'s
+/// environment variable (or, unset, `X509_get_default_cert_file`) through
+/// [`X509_load_cert_crl_file_ex`], a `X509_FILETYPE_PEM` `argl` loads `argp` through the same
+/// loader, and any other `argl` loads it through [`X509_load_cert_file_ex`]. Any other command
+/// answers 0. A failed default-file load raises `X509_R_LOADING_DEFAULTS`.
+///
+/// # Safety
+///
+/// `ctx` must be a live `X509_LOOKUP` whose store is live; `argp`/`propq` NULL or NUL-terminated;
+/// `libctx` NULL or live.
+unsafe extern "C" fn by_file_ctrl_ex(
+    ctx: *mut X509Lookup,
+    cmd: c_int,
+    argp: *const c_char,
+    argl: c_long,
+    _ret: *mut *mut c_char,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> c_int {
+    let mut ok: c_int = 0;
+    if cmd == X509_L_FILE_LOAD {
+        if argl == c_long::from(X509_FILETYPE_DEFAULT) {
+            // SAFETY: the env-var name is a fixed `'static` C string, so reading the
+            // environment is defined.
+            let file = unsafe { ossl_safe_getenv(X509_get_default_cert_file_env()) };
+            let loaded = if !file.is_null() {
+                // SAFETY: `ctx` is live with a live store per the contract; `file` is
+                // NUL-terminated (a getenv answer); `libctx`/`propq` are the caller's.
+                unsafe { X509_load_cert_crl_file_ex(ctx, file, X509_FILETYPE_PEM, libctx, propq) }
+            } else {
+                // SAFETY: as above; `X509_get_default_cert_file` answers a `'static` string.
+                unsafe {
+                    X509_load_cert_crl_file_ex(
+                        ctx,
+                        X509_get_default_cert_file(),
+                        X509_FILETYPE_PEM,
+                        libctx,
+                        propq,
+                    )
+                }
+            };
+            ok = c_int::from(loaded != 0);
+            if ok == 0 {
+                // SAFETY: a compile-time-constant site.
+                unsafe { raise_site(&BY_FILE_68) };
+            }
+        } else if argl == c_long::from(X509_FILETYPE_PEM) {
+            // SAFETY: `ctx` is live with a live store; `argp` is NUL-terminated per the
+            // contract; `libctx`/`propq` are the caller's.
+            let loaded =
+                unsafe { X509_load_cert_crl_file_ex(ctx, argp, X509_FILETYPE_PEM, libctx, propq) };
+            ok = c_int::from(loaded != 0);
+        } else {
+            // SAFETY: `ctx` is live with a live store; `argp` is NUL-terminated; `libctx`/
+            // `propq` are the caller's. The cast is the authority's `(int)argl`.
+            let loaded = unsafe { X509_load_cert_file_ex(ctx, argp, argl as c_int, libctx, propq) };
+            ok = c_int::from(loaded != 0);
+        }
+    }
+    ok
+}
+
+/// `static int by_file_ctrl(X509_LOOKUP *ctx, int cmd, const char *argp, long argl, char **ret)` —
+/// `crypto/x509/by_file.c:84-88`.
+///
+/// [`by_file_ctrl_ex`] with a NULL library context and property query.
+///
+/// # Safety
+///
+/// As [`by_file_ctrl_ex`], without `libctx`/`propq`.
+unsafe extern "C" fn by_file_ctrl(
+    ctx: *mut X509Lookup,
+    cmd: c_int,
+    argp: *const c_char,
+    argl: c_long,
+    ret: *mut *mut c_char,
+) -> c_int {
+    // SAFETY: the contract is `by_file_ctrl_ex`'s with NULL libctx/propq.
+    unsafe { by_file_ctrl_ex(ctx, cmd, argp, argl, ret, ptr::null_mut(), ptr::null()) }
+}
+
+/// A `Sync` newtype over the method row, so it can be a `static`.
+///
+/// A `static` of raw pointers is not `Sync` (the same reason [`crate::x509::by_store`]'s method
+/// row claims it), so the table is wrapped.
+#[repr(transparent)]
+struct FileLookupMethod(X509LookupMethod);
+
+// SAFETY: the row is fully initialised at compile time and never written. Its pointer fields
+// borrow the crate's own `static` string, function addresses and NULL; the authority's
+// `x509_file_lookup` is exactly this -- an immutable table of immutable fields.
+unsafe impl Sync for FileLookupMethod {}
+
+/// `static X509_LOOKUP_METHOD x509_file_lookup` — `crypto/x509/by_file.c:26-39`.
+///
+/// The method row [`X509_LOOKUP_file`] hands out. Its `new_item`, `free`, `init`, `shutdown`,
+/// `get_by_subject`, `get_by_issuer_serial`, `get_by_fingerprint`, `get_by_alias` and
+/// `get_by_subject_ex` slots are NULL; `ctrl` and `ctrl_ex` are this unit's two doors.
+static X509_FILE_LOOKUP: FileLookupMethod = FileLookupMethod(X509LookupMethod {
+    name: c"Load file into cache".as_ptr().cast_mut(),
+    new_item: None,
+    free: None,
+    init: None,
+    shutdown: None,
+    ctrl: Some(by_file_ctrl),
+    get_by_subject: None,
+    get_by_issuer_serial: None,
+    get_by_fingerprint: None,
+    get_by_alias: None,
+    get_by_subject_ex: None,
+    ctrl_ex: Some(by_file_ctrl_ex),
+});
+
+/// `X509_LOOKUP_METHOD *X509_LOOKUP_file(void)` — `crypto/x509/by_file.c:41-44`.
+///
+/// The file-lookup method. The answer is a `'static` row the caller must not free.
+///
+/// # Safety
+///
+/// The answer is a module-owned `static`; no argument is read.
+#[no_mangle]
+pub unsafe extern "C" fn X509_LOOKUP_file() -> *mut X509LookupMethod {
+    (&raw const X509_FILE_LOOKUP.0).cast_mut()
 }

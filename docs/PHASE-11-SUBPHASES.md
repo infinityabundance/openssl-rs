@@ -317,9 +317,16 @@ X509_STORE_CTX lifecycle and accessors (`X509_STORE_CTX_new`, `X509_STORE_CTX_fr
 `X509_STORE_CTX_get1_issuer`), the free-standing time surface (`X509_cmp_time`,
 `X509_cmp_current_time`, `X509_cmp_timeframe`, `X509_time_adj`, `X509_time_adj_ex`,
 `X509_gmtime_adj`), `X509_get_pubkey_parameters` and `X509_policy_tree_free`. Seven of the three
-units' open names are withheld, each with its blocker recorded in `src/x509/x509_vfy.rs`'s and
-`src/x509/pcy_tree.rs`'s module docs: the engine's three entry points, the two context
-constructors, the CRL difference helper and the policy-tree entry point.
+units' open names are withheld, each with its blocker recorded in `src/x509/x509_vfy.rs`'s module
+doc: its three engine entry points and its two context constructors are the five names that stay
+open, and the open clause below names them. The lookup layer and the default-path answers complete
+after 11.5: **11.7a** lands
+`X509_get_default_cert_area`, `X509_get_default_cert_dir`, `X509_get_default_cert_file` and
+`X509_get_default_private_dir` on a new build-time openssldir constant; **11.1d-f** land
+`X509_LOOKUP_file`, `X509_LOOKUP_hash_dir`, `X509_STORE_load_file`, `X509_STORE_load_file_ex`,
+`X509_STORE_load_path`, `X509_STORE_load_locations`, `X509_STORE_load_locations_ex`,
+`X509_STORE_set_default_paths` and `X509_STORE_set_default_paths_ex`; and **11.4b** lands
+`X509_STORE_CTX_print_verify_cb` with the brief printer it pulls forward.
 
 11.4's `x_crl.c` CRL method and lookup surface, pulled forward to unblock the engine, adds
 `X509_CRL_add0_revoked`, `X509_CRL_verify`, `X509_CRL_get0_by_serial`, `X509_CRL_get0_by_cert`,
@@ -332,8 +339,9 @@ seven names the missing `X509_VERIFY_PARAM` had withheld: `X509_STORE_new`, `X50
 and `X509_STORE_set_trust`; and 11.1c's file loaders add `X509_load_cert_file`,
 `X509_load_cert_file_ex`, `X509_load_crl_file`, `X509_load_cert_crl_file` and
 `X509_load_cert_crl_file_ex`. The two lookup-method constructors, `X509_LOOKUP_file` and
-`X509_LOOKUP_hash_dir`, stay withheld on the `OPENSSLDIR` defaults
-`X509_get_default_cert_file`/`_dir`, which are 11.7's and Phase 16's.
+`X509_LOOKUP_hash_dir`, and the `OPENSSLDIR` defaults `X509_get_default_cert_dir` and
+`X509_get_default_cert_file` they read, land with 11.7a and 11.1d-f rather than staying withheld;
+the compiled-in directory plane proper remains Phase 16's.
 
 11.3 adds the whole attribute-certificate surface: the `X509_ACERT` item group and its accessors
 and setters (`x509_acert.c`, `x509aset.c`), the `OSSL_IETF_ATTR_SYNTAX` items (`x_ietfatt.c`) and
@@ -347,10 +355,8 @@ landed. 11.2 adds `X509_CRL_diff` and `X509_policy_check` with its `pcy_*` inter
 
 **Open exports (checked against the ledger):**
 
-The store and verification layer is still open at `X509_verify_cert`; the attribute certificate
-surface is closed but for the verify-callback printer
-`X509_STORE_CTX_print_verify_cb`; and
-the remaining shared units at `X509_get_default_cert_file`, `X509_load_http`
-and `X509_CRL_load_http`. Every name
-here is in the ledger's open list; the counts move as the slices land, so the ledger, not this
-sentence, carries them.
+The verification engine is the whole of what remains: `X509_verify_cert`, `X509_STORE_CTX_verify`,
+`X509_build_chain` and the two context constructors `X509_STORE_CTX_init` and
+`X509_STORE_CTX_init_rpk`, all withheld on the chain roll's OCSP and SSL_DANE arms (section 2.1).
+Every name here is in the ledger's open list; the counts move as the slices land, so the ledger,
+not this sentence, carries them.
