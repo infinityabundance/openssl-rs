@@ -31,17 +31,17 @@ A court the plan names and this stratum cannot run yet is NOT registered here. I
 run yet" cannot be read as "passed" — the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
 later activation established. `RT-PKCS7`, `RT-CMS`, `RT-CMP`, `RT-OCSP`, `RT-CRMF`, `RT-ESS`,
 `RT-TS` and `RT-SRP` are the subphases' own courts: `RT-HTTP` is registered by 12.1, `RT-PKCS7`,
-`RT-CMS` and `RT-CMP` by 12.3/12.4, `RT-TS` by 12.5, `RT-OCSP` by 12.6 and `RT-CRMF`/`RT-ESS` by
-12.7, leaving `RT-SRP` (12.8) and `RT-CMS-REMAINDER` (12.9's court for the CT remainder, the shared
-`x_all.c` dispatch and the nine hand-offs). Each court not yet registered is printed with its
-subphase on every run.
+`RT-CMS` and `RT-CMP` by 12.3/12.4, `RT-TS` by 12.5, `RT-OCSP` by 12.6, `RT-CRMF`/`RT-ESS` by
+12.7 and `RT-SRP` by 12.8, leaving `RT-CMS-REMAINDER` (12.9's court for the CT remainder, the
+shared `x_all.c` dispatch and the nine hand-offs). Each court not yet registered is printed with
+its subphase on every run.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
-When they land, `RT-CMS`, `RT-PKCS7`, `RT-SMIME`, `RT-OCSP`, `RT-CMP`, `RT-TS`, `RT-CRMF` and
-`RT-ESS` compare the authority's *behaviour* for the container and protocol surfaces: the
-DER bytes of a signed or enveloped container, the print text, the OCSP response status and
-signature decision, the CMP transaction transcript and the timestamp token's `TSTInfo`. A
+When they land, `RT-CMS`, `RT-PKCS7`, `RT-SMIME`, `RT-OCSP`, `RT-CMP`, `RT-TS`, `RT-CRMF`,
+`RT-ESS` and `RT-SRP` compare the authority's *behaviour*: the DER bytes of a signed or enveloped
+container, the print text, the OCSP response status and signature decision, the CMP transaction
+transcript, the timestamp token's `TSTInfo`, and the SRP arithmetic and verifier codec. A
 transcription whose writer emits bytes its own reader accepts is a different library, and
 docs/PHASE-12-SUBPHASES.md section 3 records where the difference is observable. Nothing here is
 a parity claim about a container's meaning.
@@ -78,11 +78,8 @@ RUN_TIMEOUT_S = "60"
 # The differential courts, in the order they land. `(name, probe filename)`, and the probe is
 # declared in the same commit as the entry, so a runner that names a probe which does not exist
 # cannot be committed -- the check below fails instead.
-#
-# **The reference basis is the only court this activation can register.** The exports this
-# stratum inherited are implemented and `court_coverage.py` requires an edge for each, and none of
-# the stratum's own units is built yet, so no behavioural probe can link. The five later rows are
-# the plan's own courts, named in `PENDING_COURTS` below rather than registered.
+# Rows are appended as each subphase lands its court; a court whose probe the stratum cannot yet
+# link stays in `PENDING_COURTS` below, so "not run yet" is never read as "passed".
 COURTS: list[tuple[str, str]] = [
     ("RT-PHASE12-REF", "rt_coverage_ref_probe.c"),
     ("RT-HTTP", "rt_http_probe.c"),
@@ -93,15 +90,15 @@ COURTS: list[tuple[str, str]] = [
     ("RT-OCSP", "rt_ocsp_probe.c"),
     ("RT-CRMF", "rt_crmf_probe.c"),
     ("RT-ESS", "rt_ess_probe.c"),
+    ("RT-SRP", "rt_srp_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
 # pass, and each is printed with the subphase that brings it so that "not run yet" cannot be read
 # as "passed". The court names are `docs/PHASE-12-SUBPHASES.md` section 2's, one per work
-# subphase; `RT-CRMF` and `RT-ESS`, the two courts of 12.7, are registered above and have left this
-# table.
+# subphase; `RT-CRMF`/`RT-ESS` (12.7) and `RT-SRP` (12.8) are registered above and have left this
+# table, leaving 12.9's remainder court.
 PENDING_COURTS: dict[str, str] = {
-    "RT-SRP": "12.8 -- the SRP verifier and library surface (`srp.h`)",
     "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine "
                         "hand-offs",
 }

@@ -35023,3 +35023,31 @@ Pulling the ENGINE registry forward to satisfy two `CONF` readers would be dispr
 Verified (container): `RT-TS` 275 observations, 0 residuals; `cargo clippy --all-targets --
 -D warnings` and `cargo fmt --all -- --check` clean; `build_phase2.sh` all-ABI pass; the
 authority-tier atlas byte-identical on a second run.
+
+## D521 -- the SRP surface lands, and one row is handed to Phase 13
+
+12.8 lands `crypto/srp/`: the fourteen `srp_lib.c` exports (`SRP_Calc_A`/`_B`/`_B_ex`/
+`_client_key`/`_client_key_ex`/`_server_key`/`_u`/`_u_ex`/`_x`/`_x_ex`, `SRP_Verify_A_mod_N`,
+`SRP_Verify_B_mod_N`, `SRP_check_known_gN_param`, `SRP_get_default_gN`) and the fifteen
+`srp_vfy.c` exports, of which one is handed on (below) -- the whole `srp.h` surface in a new
+`src/srp/`. The RFC 5054 groups and generators `srp_lib.c`'s known-`gN` table names land
+crate-internally as `src/bn/bn_srp.rs` (`crypto/bn/bn_srp.c`), transcribed from the authority's
+limbs with `BN_FLG_STATIC_DATA` and no `#[no_mangle]`, mirroring `src/bn/dh_data.rs`.
+`open_in_this_stratum` falls 44 -> 15 and `RT-SRP` drives 149 observations with 0 residuals.
+
+The one hand-off is `SRP_VBASE_init`, recorded in `phase12_obligations.py`'s `BLOCKED_HANDOFFS`
+for **Phase 13**: its only callee outside this crate is `TXT_DB_read`/`TXT_DB_free`
+(`crypto/srp/srp_vfy.c:423`, `:504`), which are `txt_db.h`'s and Phase 13's
+(`forensics/atlas/symbol-ownership.json`, owner_phase 13). Pulling a 314-line `txt_db.c` forward to
+satisfy one deprecated verifier-file reader would be disproportionate, so the row is handed on
+rather than stubbed -- the same call 12.5b made for the two ENGINE-reading `TS_CONF_*` setters.
+
+The court measures the arithmetic deterministically: `SRP_Calc_u` has no NULL guard in the
+authority (`srp_Calc_xy` dereferences its argument), so a probe that passes NULL dies on both sides
+and compares nothing; those arms are omitted rather than driven. The random-salt arms print only
+invariants -- `v == g**x` recomputed from the returned salt, and a fixed SRP-base64 salt whose
+transcoded verifier string is stable -- so no random byte is ever compared.
+
+Verified (container): `RT-SRP` 149 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `cargo build --release` clean;
+`build_phase2.sh` all-ABI pass.

@@ -501,7 +501,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 15992,
+      "compiler_emitted_count": 15915,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -509,7 +509,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 5603,
+        "implemented": 5631,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -4575,6 +4575,34 @@
           "SMIME_read_PKCS7_ex",
           "SMIME_write_CMS",
           "SMIME_write_PKCS7",
+          "SRP_Calc_A",
+          "SRP_Calc_B",
+          "SRP_Calc_B_ex",
+          "SRP_Calc_client_key",
+          "SRP_Calc_client_key_ex",
+          "SRP_Calc_server_key",
+          "SRP_Calc_u",
+          "SRP_Calc_u_ex",
+          "SRP_Calc_x",
+          "SRP_Calc_x_ex",
+          "SRP_VBASE_add0_user",
+          "SRP_VBASE_free",
+          "SRP_VBASE_get1_by_user",
+          "SRP_VBASE_get_by_user",
+          "SRP_VBASE_new",
+          "SRP_Verify_A_mod_N",
+          "SRP_Verify_B_mod_N",
+          "SRP_check_known_gN_param",
+          "SRP_create_verifier",
+          "SRP_create_verifier_BN",
+          "SRP_create_verifier_BN_ex",
+          "SRP_create_verifier_ex",
+          "SRP_get_default_gN",
+          "SRP_user_pwd_free",
+          "SRP_user_pwd_new",
+          "SRP_user_pwd_set0_sv",
+          "SRP_user_pwd_set1_ids",
+          "SRP_user_pwd_set_gN",
           "SXNETID_free",
           "SXNETID_it",
           "SXNETID_new",
@@ -6115,7 +6143,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 293
+        "scaffolded": 265
       },
       "libssl": {
         "authority_exports": 603,
@@ -6126,18 +6154,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 5603,
-      "scaffolded": 896
+      "implemented": 5631,
+      "scaffolded": 868
     }
   },
-  "body_hash": "eb27b192d2b083e197cd3e34a5fc1dd39f773d1f035c10d7ef1f4dc4f43ecafb",
+  "body_hash": "02eb7edb713a1af55022c464ff17883c4f407ca7252a47c35740cdd5cd3b9967",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "51f90d4df4dd2c50b5cd761107bf7e0c68510c12d9d415b745274b3eade3cc19"
+      "sha256": "0eec7ea155840bf188be2199ae894b567b0550b36431f4d116c3f40e530688cf"
     },
     {
       "name": "authority-exports",
