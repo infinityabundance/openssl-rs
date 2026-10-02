@@ -795,6 +795,7 @@ def parse_rust_declaration(
     while i < len(after):
         ch = after[i]
         if ch == "-" and after[i + 1:i + 2] == ">":
+            ret.append("->")
             i += 2
             continue
         if ch in pairs:
@@ -816,6 +817,15 @@ def rust_signature_parts(text: str, open_at: int) -> tuple[str, list[str]] | Non
 
     The same scan `parse_rust_declaration` classifies, kept in one place so the
     class/arity plane and the type plane cannot disagree about what was read.
+
+    The `->` of an **inner** function-pointer return is kept in the return text, not
+    dropped. `Option<unsafe extern "C" fn(ctx: *mut X509Lookup) -> c_int>` (what
+    `X509_LOOKUP_meth_get_init`/`_get_new_item`/`_get_shutdown` declare) is a function
+    pointer returning `c_int`; dropping the arrow left `canon_rust_fnptr` reading the
+    `-> c_int` as absent and canonicalising the type to `fptr(void; ...)`, which the
+    class/arity plane could not see (it reads `function_pointer` either way) but the type
+    plane reported as three false mismatches. The outer arrow is consumed by the regex
+    above, so every arrow left here is an inner one and must be preserved.
     """
     close_at = _scan_balanced(text, open_at)
     if close_at < 0:
@@ -834,6 +844,7 @@ def rust_signature_parts(text: str, open_at: int) -> tuple[str, list[str]] | Non
     while i < len(after):
         ch = after[i]
         if ch == "-" and after[i + 1:i + 2] == ">":
+            ret.append("->")
             i += 2
             continue
         if ch in pairs:

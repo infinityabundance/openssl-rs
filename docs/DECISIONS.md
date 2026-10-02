@@ -33358,3 +33358,1369 @@ what `docs/PARITY_MODEL.md` says those words mean.
 identical tracked-diff fingerprint across them, `cargo test --lib` is 1117 passed on both halves,
 `gen_frf_courts.py --check` is clean, and `phase_state.py` derives phase 10 `complete` with its
 seal and phase 11 `not-started`.
+## D479 -- the divergence register derives its trigger state; a stale `trigger_satisfied=false` can no longer let a stratum seal
+
+**The register's most important input was typed by hand.** `divergence_obligations.py` held
+`Row.trigger_satisfied: bool`, and `blocking = trigger_satisfied and disposition == "open"` was
+derived from it -- so the derivation was only as good as the human who last edited the boolean. The
+failure was not hypothetical: `D-DECODER-ABSENT-1` read `trigger_satisfied: false, disposition: open`
+while the Phase-10 provider decoders existed, `RT-CODEC` courted them, and D474's own seal named the
+row a retirement candidate. **Phase 10 derived `complete` with a fired trigger in its own register**,
+which is exactly the failure mode the register exists to prevent.
+
+**The trigger state is now derived, and manual rows fail closed.**
+
+* `Row` loses `trigger_satisfied` and gains `trigger_basis` (`"predicate"` | `"manual"`),
+  `trigger_predicate` (a name in a new `PREDICATES` table) and `adjudication`.
+* `trigger_satisfied` is rendered, never typed: a predicate row carries its predicate's read of
+  generated evidence; a `manual` row carries `null`, because a machine genuinely cannot decide it.
+* `blocking` is derived and fail-closed:
+  `disposition == "open" and (trigger_satisfied is True or (trigger_basis == "manual" and not adjudication))`.
+  An open `manual` row therefore **blocks its owner until an adjudication records, with evidence, why
+  the trigger has not fired** -- the default is "the gun may have fired", not "assume it has not".
+* `phase_state.divergence_blocking_reason` now reads the row's derived `blocking` (keeping the
+  `current_owner == phase` scoping), so the artefact and the rule cannot disagree about which
+  stratum a row blocks.
+
+**`D-DECODER-ABSENT-1` is retired truthfully, through the new mechanism.** Its predicate reads
+`forensics/atlas/provider-algorithms.json` and observed **152 of 152 `OSSL_OP_DECODER` rows
+implemented**, so `trigger_satisfied` renders `true`; the row moves to `disposition: fixed` with the
+row-publishing units and `RT-CODEC` as evidence, and its `note` records that D474's seal named it a
+retirement candidate. The row is kept, not deleted -- the row is the record that the divergence
+existed and was closed. `D-EVP-CIPHER-LEGACY-NID-1` (open, owner 13) is `manual` with an
+adjudication naming the machine facts that show its trigger has not fired: Phase 13 is `not-started`
+and `src/runtime/init.rs`'s `add_all_legacy_methods` is a no-op, so the legacy `OBJ_NAME` table is
+still empty.
+
+### The sensitivity test, and why it is the point
+
+**`phase_state.py --self-test` reconstructs the stale row and requires the rule to catch it.**
+It computes the phase states, picks a stratum that derived `complete`, deep-copies the real register,
+appends a reconstructed `manual`/`open`/unadjudicated row owned by that stratum with `blocking` set
+by the register's **own** `derive_blocking` (imported, not retyped), and refuses to pass unless
+`divergence_blocking_reason` returns a non-empty reason naming it. `pipeline.sh` runs it immediately
+after the divergence step, on every run, so a future edit that reintroduced a hand-typed quiet row is
+a red pipeline rather than a silent seal.
+
+**Recorded residual.** A `predicate` row whose predicate returns `None` while `open` is
+non-blocking under the formula above. It is unreachable in a valid tree -- the census a predicate
+reads exists before this step, and a missing census already blocks every stratum at 3 or beyond --
+but the formula does not say so, and that is worth knowing.
+
+### The CLI archaeology defect is recorded, not left in prose
+
+Phase 16 owns the CLI and the conservation order puts Phase 11 first, so the defect is recorded
+rather than repaired: `forensics/prerequisites.json` gains the deferral `cli_option_list_parse`
+(`owner_phase: 16`) with the measurement (`forensics/atlas/openssl-3.6.4-production/cli-commands.json`
+line 5: `command_count` 55; line 9: `option_count` 0 and `options` `[]` on all 55; 2,008 raw option
+rows, being 2,063 non-blank rows less the 55 `- -` sentinels; parser `forensics/tools/atlas_runtime.py:240`
+`_OPTION_ROW` and `:243` `parse_option_list`), and the `blocking_dependencies` 4 -> 5 movement is
+recorded as the approved transition the regression guard requires. A deferral in the gated ledger is
+re-printed by `prerequisite_gate.py` on every run; a paragraph in a seal is not, which is why the
+seal's own preamble says its lists are kept as the record of seal time.
+
+### Verification
+
+`sh forensics/tools/pipeline.sh` prints `PIPELINE OK` exit 0 with **110 courts and 47,071
+observations**; the register reads **10 rows, 0 blocking**; the self-test prints
+`[phase-state] self-test ok: the stale row (manual, open, unadjudicated) is caught without a human`;
+`divergence_obligations.py --check`, `prerequisite_gate.py`, `evidence_determinism.py` and
+`check_evidence_portability.py` are all clean; phase 10 still derives `complete` and phase 11
+`in-progress` with 513 open.
+## D481 -- 11.1a and 11.4a land the first X.509 work; the store gets a behavioural court, and two court tools are repaired
+
+**Phase 11 is no longer inherited-only.** Two slices landed, and with them the first code this
+stratum wrote rather than received: **136 exports closed**, phase 11 implemented **954 -> 1,090**,
+open **513 -> 377**, and `libcrypto` implemented **4,254 -> 4,390**. The pipeline reads **111 courts
+and 47,314 observations**.
+
+### 11.1a -- the `X509_STORE` object model and the lookup layer
+`src/x509/x509_lu.rs` lands `crypto/x509/x509_lu.c`: the `X509_OBJECT` value and its `union`, the
+`X509_LOOKUP` and `X509_LOOKUP_METHOD` objects, the `X509_STORE` container, the twelve
+`set_*`/`get_*` callback pairs, and the read path (`X509_STORE_CTX_get_obj_by_subject`,
+`_get_by_subject`, `_get1_certs`, `_get1_crls`, `get0_store`). `src/x509/x509_meth.rs` lands
+`x509_meth.c`'s twenty `X509_LOOKUP_meth_*` functions whole. **Seven `X509_STORE_*` accessors stay
+withheld by name** -- `X509_STORE_new`/`_free`/`_set_flags`/`_set_depth`/`_set_purpose`/`_set_trust`/
+`_set1_param` -- each because it reads an `X509_VERIFY_PARAM`, which is 11.2's unit. The
+`X509_STORE_CTX` **lifecycle** is 11.2's as well; what landed here is the store's own read path.
+
+### 11.4a -- the mutators, the attribute surface and the request item group
+`src/x509/x509_set.rs` lands all 16 mutators/readers (`X509_set_serialNumber`/`_issuer_name`/
+`_subject_name`/`_pubkey`/`_set1_notBefore`/`_set1_notAfter`, `X509_get0_notBefore`/`_notAfter`,
+`X509_getm_notBefore`/`_notAfter`, `X509_get_signature_type`, `X509_get_X509_PUBKEY`,
+`X509_get0_uids`, `X509_get0_tbs_sigalg`, `X509_SIG_INFO_get`, `X509_get_signature_info`).
+`src/x509/x509_req.rs` lands 20 of `x509_req.c`'s 24 (the pubkey accessors, the attribute surface and
+the four `add1_attr*`, the signature setters, `i2d_re_X509_REQ_tbs`), withholding `X509_to_X509_REQ`
+(it calls `X509_REQ_sign`, withheld in `x_all.rs`) and the four extension functions (they decode
+through the `X509_EXTENSIONS` item, withheld in `x_exten.rs`). `src/x509/x_req.rs` lands
+`x_req.c` whole: the `X509_REQ_INFO` and `X509_REQ` item groups, their descriptors, the
+`_it`/`_new`/`_free`/`d2i_`/`i2d_` group, `X509_REQ_dup`, the distinguishing-id pair and
+`X509_REQ_new_ex`, reusing the `X509ReqInfo`/`X509Req` layouts D472 pulled forward rather than
+redeclaring them.
+
+### The court, and why it is behavioural rather than a reference basis
+**`RT-X509-STORE` (`courts/phase11/rt_x509_store_probe.c`) drives the landed surface and compares
+204 observations, byte-for-byte identical on both sides** -- the `X509_LOOKUP_METHOD` vtable through
+a set of hooks it installs itself, the `X509_LOOKUP` object with and without hooks (including the
+`ctrl_ex` -> `ctrl` fallback and the four `get_by_*` doors), `X509_OBJECT` over a fixed certificate
+and CRL, the four `X509_STORE` refusal arms with their error coordinates, the `x509_set.c` round
+trips, and the request item group over a fixed request DER. **97 of the 136 new exports are `called`;
+39 are `referenced`**, and the reference probe grew 954 -> 993 names. The 39 are referenced for
+honest reasons, each recorded: 32 `X509_STORE_*` and 5 `X509_STORE_CTX_*` need an object that cannot
+be constructed while `X509_STORE_new`/`X509_STORE_CTX_new` are withheld behind `X509_VERIFY_PARAM`
+(so the four refusal arms are the only `X509_STORE` calls that exist to make); `X509_SIG_INFO_get`'s
+argument type is opaque in `x509.h`; and `X509_get_signature_info` is a **measured divergence**
+(D333/D343: the authority answers `md=672 sec=128 flags=3`, the candidate `md=672 sec=-1 flags=0`),
+which is the divergence's evidence rather than this unit's.
+
+### Two court-tool defects, found by the landing and fixed at the root cause
+* `prototype_court.py`'s return-type scanner discarded the `->` inside an inline function-pointer
+  return type, so three `X509_LOOKUP_meth_get_*` canonicalised to `fptr(void; ...)` against the
+  authority's `fptr(int:4:s; ...)` -- three false `TYPE-MISMATCH`es. `canon_rust_type` already
+  preserved the arrow; only the scanner dropped it.
+* `dispatch_court.py`'s `rust_key` stripped `Fn` but not the `_fn` suffix that `authority_key`
+  strips, so the eighteen new `X509_LOOKUP_*_fn`/`X509_STORE_CTX_*_fn` aliases were unlinked.
+  Both fixes leave the tools' sensitivity controls firing.
+
+`docs/CI.md`'s live `c_style` count moved 484 -> 485.
+
+### Verification
+`PIPELINE OK` exit 0 with **111 courts and 47,314 observations**; `court_coverage.py` reports phase
+11 with **zero unmatched** (`called=501`, `referenced=589`); `cargo test --lib` is **1119 passed**
+(up from 1117: the new request and mutator tests); `cargo fmt`/`clippy -D warnings` clean;
+`probe_hygiene` reports the new probe stable across `-O0/-O1/-O2` on both sides.
+
+## D482 -- 11.1b and 11.5 land the trust table, the store loaders, the printers and the extension builders, and the phase-11 notes stop restating counts that move
+
+**Thirty-three more exports closed.** Phase 11 implemented **1,090 -> 1,123**, open **377 -> 344**,
+and `libcrypto` implemented **4,390 -> 4,423**. The pipeline reads **111 courts and 47,545
+observations**.
+
+### 11.1b -- the trust table, the store loaders and the URI lookup
+`src/x509/x509_trust.rs` lands `crypto/x509/x509_trust.c` whole: all eleven open exports
+(`X509_TRUST_add`, `_cleanup`, `_get0`, `_get0_name`, `_get_by_id`, `_get_count`, `_get_flags`,
+`_get_trust`, `_set`, `_set_default`, `X509_check_trust`) and the six `static` helpers they are
+built on, over the writable `trstandard[]` table the authority's `X509_TRUST_add` overwrites in
+place. `src/x509/by_store.rs` lands `by_store.c`'s one export, `X509_LOOKUP_store`, with its eight
+`static` callbacks and the two `X509_L_*` `ctrl` commands. `src/x509/x509_d2.rs` lands two of
+`x509_d2.c`'s nine -- `X509_STORE_load_store_ex` and `X509_STORE_load_store` -- withholding the
+other seven by name, each with the one unlanded lookup constructor it reaches. `src/x509/by_file.rs`
+and `src/x509/by_dir.rs` become **documented modules whose every name is withheld**, each blocker
+named (11.6's PEM X.509 readers and 11.7's `x509_def.c` default paths), the shape D454 gave
+`x509rset.rs`.
+
+### 11.5 -- the printers, the host/name checks and the extension builders
+`src/x509/v3_prn.rs` (new) lands `crypto/x509/v3_prn.c` whole: `X509V3_EXT_val_prn`,
+`X509V3_EXT_print`, `X509V3_extensions_print` and `X509V3_EXT_print_fp`. `src/x509/v3_utl.rs`
+gains the six name checks and accessors (`X509_check_host`/`_email`/`_ip`/`_ip_asc`,
+`X509_get1_email`, `X509_get1_ocsp`) on the `GENERAL_NAMES` surface Phase 10 landed.
+`src/x509/v3_conf.rs` gains the nine `X509V3_EXT_*` builders (`X509V3_EXT_nconf(_nid)`,
+`X509V3_EXT_conf(_nid)`, `X509V3_EXT_add_nconf(_sk)`, `X509V3_EXT_add_conf`, the two
+`X509V3_EXT_CRL_add_*`), the `CONF`/`X509V3_CTX` chain the extension engine is driven through.
+
+### The court, extended rather than added
+`RT-X509-STORE` grew **204 -> 435 observations**, both sides byte-identical: the trust table
+through hooks the probe installs, the STORE-URI lookup and the store loaders' NULL-URI refusals,
+the four printers over fixed DER, the nine builders through a real `CONF`, and the name checks
+over the SAN-bearing fixture `rt_x509_der.h` gained. `dispatch_court.py` gained three
+`NOT_A_DISPATCH` exemptions -- `EqualFn`, `CheckTrust`, `DefaultTrustFn`, the authority's own
+`.c`-local callback-pointer types that are not symbols a version script exports, so the atlas
+records no `typedef` for them. `court_coverage.py` reports phase 11 with **zero unmatched**
+(called **536**, referenced **587**).
+
+### The notes stop restating counts that move
+Landed with the slice that falsified them. `D-DECODER-ABSENT-1`'s lesson -- a typed value standing
+where a derived one belongs -- recurred in four notes that named the *activation* split
+("954 of 1,467", "952 atlas-owned", "the 39 of 11.1a's own", "993") as though it were current:
+`forensics/tools/phase_state.py`'s `ledger_note`, `forensics/tools/phase11_obligations.py`'s module
+docstring and its ledger `note`, and `forensics/tools/phase11_courts.py`'s module docstring and its
+`COURTS.json` `claim`. The first is the worst, because `render_status.py` echoes it into three
+generated documents (`forensics/STATUS.md`, `forensics/phase-state.md`, `docs/SEAL-CENSUS.md`), so
+a stale hand-typed number printed as generated evidence. Each note now defers to the live record
+(`forensics/phase11-obligations.json`'s `counts` and `forensics/atlas/implemented-surface.json`)
+and says so, the pattern Phase 9's `ledger_note` already set. `docs/PHASE-11-SUBPHASES.md` section
+1's census is labelled the activation measurement, and its section 5 status clauses -- which
+`docs_consistency.py` binds per symbol to the ledger -- are rewritten to name only symbols whose
+ledger disposition they match.
+
+### Verification
+`PIPELINE OK` exit 0 with **111 courts and 47,545 observations**; the pipeline's `cargo fmt
+--all`, `cargo build --release`, both `cargo test --lib` runs (serial and parallel-safety) and
+`cargo clippy --all-targets -- -D warnings` are green, with **1,119 unit tests passed**;
+`probe_hygiene` stable across `-O0/-O1/-O2` on both sides.
+
+## D483 -- the active-stratum clause gate was empty; it binds symbols again, and it proves it
+
+`docs_consistency.py`'s D208 check ties the active stratum's plan status clauses to its obligation
+ledger, per symbol: a name in the "Landed exports (checked against the ledger)" clause must be in
+the ledger's `implemented` list, and a name in the "Open exports" clause must be in its `open`
+list. It is the gate that caught Phase 8's stale "Still open" prose.
+
+**It has checked nothing since Phase 9.** `_clause_symbols` read the text from the end of the
+heading to the first `\n\n`. Phase 8's plan begins the clause paragraph on the heading's own line,
+so that was the paragraph. Phases 9, 10 and 11 write the heading on a line of its own with a blank
+line beneath it, so the first `\n\n` is that blank line, the segment is empty, and the function
+returned `[]`. The gate found the heading, iterated over no symbol, and reported ok -- which is why
+phase 11's section 5 could name `X509V3_EXT_nconf` and `X509_OBJECT_free` as still open while the
+ledger recorded both implemented. D482 surfaced it sideways: rewording the heading produced a
+`ClaimMissing`, because the heading string was the only part doing any work.
+
+**Three changes give it its teeth back.**
+* `_clause_symbols` strips leading newlines, so a heading and its paragraph are one clause however
+they are laid out.
+* `verify` reports a clause that names no symbol while its pool is non-empty. That is the exact
+shape the blank line produced, and it is now a finding rather than a pass. The D203 exemption is
+the only way to bind a clause to a past moment, never an empty clause.
+* `--self-test` reconstructs three shapes against the live ledger -- a blank line then an open
+symbol claimed landed (must fail), a blank line then no symbol (must fail), and a blank line then a
+landed symbol claimed landed (must pass) -- and `pipeline.sh` runs it before the gate.
+
+The check's effect is real rather than cosmetic: it made phase 11's section 5 clauses name only
+symbols whose ledger disposition they match, which D482 rewrote for exactly this reason. No other
+stratum is in-progress, so no other plan is re-read.
+
+### The chain settles one generation behind its first run
+This commit also carries four regenerated artefacts whose only change is a recorded input hash:
+`forensics/phase10-obligations.json` and `forensics/phase11-obligations.json` (and the two atlases
+that record those ledgers' hashes). The pipeline globs `forensics/tools/phase*_obligations.py`
+lexicographically, so `phase10` and `phase11` run **before** `phase7`; the phase-7 ledger a run
+records is the previous generation's. The hash therefore trails by one run and reaches its fixed
+point on the next, which is why `forensics/tools/pipeline.sh`'s own header says the chain needs two
+to four runs to settle. The settled values are the ones here. The ordering is left as it is --
+D96's ordering rule is load-bearing and the lag is recorded rather than repaired -- but this entry
+is where a reader finds it named.
+
+`PIPELINE OK` exit 0 with 111 courts and 47,545 observations; `docs-consistency --self-test`
+passes its three cases.
+
+## D485 -- 22.0: the whole-program atlas becomes a stratum, and the dependency order becomes a DAG
+
+Phase 22 is activated. `docs/PHASE-22-SUBPHASES.md` is its plan, `forensics/phase22-obligations.json`
+its ledger, and its question is the one Phase 1 could not ask: *starting from the exact admitted
+`openssl-3.6.4-production` source, build, installed distribution and runtime, can every externally
+relevant compatibility surface be discovered, connected to the authority implementation that
+produces it, assigned a parity obligation, and mapped to an implementation phase, with zero
+unexplained gaps?*
+
+Phase 1's atlas answers a smaller question -- what the installed public headers *publish* -- and it
+is still the authority for that. Phase 22 does not replace it; it is the closure around it: the
+build graph, the whole-source semantic graph, the preprocessor's conditional reality, the
+generated-code genealogy, the object and relocation graph, the runtime registration graph, the
+installed distribution, the CLI, the configuration and environment surface, and the canonical POD
+manuals, joined to the source by a **typed** edge graph rather than a call graph. The typed part is
+the point: the architecture of this library is function-pointer tables, and
+`static const OSSL_DISPATCH t[] = { { ..., (void (*)(void))f }, ... }` has no `caller -> f` edge
+anywhere in the source.
+
+### The order is now a DAG, and Phase 11 requires Phase 22
+`phase_state.py` enforced "a phase may be complete only if every *earlier* phase is complete", a
+running check over the numerically-ordered registry. Phase 22's evidence must exist **before Phase
+11 finishes** -- discovering an omitted callback, config flag, static dispatch path, error path or
+policy table after the verification engine is written is exactly the cost Phase 22 exists to avoid
+-- so the edge leaves the numbers:
+
+```
+0 -> 1 -> ... -> 10 -> 22 -> 11 -> 12 -> ... -> 21
+```
+
+`REQUIRES` is now an explicit DAG, and the enforcement runs to a fixed point rather than in list
+order, because `requires[11]` names 22 and the registry lists 22 after 11. Phase numbers remain
+historical names; the dependency is represented by the dependency. The claim rule is reprinted
+wherever it is rendered (`phase-state.json`'s `rule`, `forensics/STATUS.md`, this entry).
+
+### The ledger's unit is a plane
+Phase 22 owns no `libcrypto` export, so a ledger that counted symbols would count zero while the
+stratum did the most important work in the repository. Its unit is a **compatibility plane**: one
+extraction or reconciliation instrument per subphase, and a plane is implemented when the
+content-addressed artefact it names exists. `counts.open_in_this_stratum` is therefore a count of
+instruments not yet built, not of exports not yet written -- the one place this ledger's arithmetic
+differs from every other stratum's.
+
+That difference is declared rather than special-cased: the ledger carries `unit: "compatibility
+plane"`, and the two tools that partition the *export* universe (`court_coverage.py`,
+`ownership_audit.py`) skip a ledger whose `unit` is not an export set. The marker is a property of
+the document, so neither tool learns a phase number.
+
+### The three joiners this activation had to teach, and why that is the right shape
+The activation failed four times before it was green, and each failure was a *joiner* asserting
+something true about every other stratum and not about an atlas stratum:
+
+* `run_courts.py` requires an active stratum to have a runner. Phase 22's first court is an
+extractor's sensitivity challenge, which is 22.1's; `NO_RUNNER_YET[22]` carries the reason and
+retires itself the moment `artifacts/phase22/COURTS.json` exists.
+* `regression_guard.py` requires a stratum that moved off `not-started` to have an obligation
+ledger. That is why 22.0 lands the ledger and not only the plan.
+* `court_coverage.py` and `ownership_audit.py` partition the export universe and found `"22.0"` in
+it. The `unit` marker above is the fix.
+
+Each is recorded because the pattern is the point: a stratum that is genuinely a different kind of
+thing will always meet the joiners, and the joiners are supposed to be the place where that gets
+noticed. None of them was weakened to make phase 22 fit; each gained a rule about a document
+property.
+
+### The Phase-11 freeze
+Phase 11 is frozen at **`97b3cef5`**, the 11.4b WIP commit: `libcrypto` implemented 4,432 of 5,896,
+the Phase-11 working set 1,132 of 1,467 with 335 open, `RT-X509-REF` and `RT-X509-STORE` both
+passing, 111 courts and 47,575 observations. Phase 22's 22.16 regenerates the phase ledgers from the
+stronger atlas; until then Phase 11's own ledger stands and this entry is the baseline it is
+compared against.
+
+`PIPELINE OK` exit 0 with 111 courts and 47,575 observations; `phase-state.json` derives phases 0
+through 10 `complete`, phases 11 and 22 `in-progress`, and phases 12-21 `not-started`.
+
+## D486 -- 22.1: the exact build commands are captured, and Phase 22's first court challenges the
+## instrument that captured them
+
+Phase 22 has its first plane. `forensics/tools/phase22_capture_build.py` rebuilds the admitted
+profile in a scratch directory with a **transparent compiler wrapper** that records each argv and
+then `exec`s the real compiler unchanged; it wrote 2,272 invocations, of which 2,201 are
+translation units over 1,232 distinct sources (the other 71 are the build's
+`gcc -Wa,-v -c -o /dev/null -x assembler /dev/null` feature probes, which the normalizer
+recognises and drops because they are not translation units).
+
+**The capture is execution-captured, not a `Configure` reconstruction.** The plan is explicit
+(section 6): the per-object perlasm defines -- the `-DAES_ASM ...` block the x86-64 assembly units
+carry -- appear nowhere in the `Configure` profile and are in the log only because the build
+emitted them. The artefact records `capture_method: "execution-captured"`, `producer: "gcc"` (read
+from the pinned `configdata.pm`), and `analysis_instrument: "clang"` beside the sentence that Clang
+is the *shadow* instrument 22.3 will use and that the authority stays a GCC build.
+
+`forensics/tools/phase22_build_commands.py` normalizes the log into
+`forensics/atlas/phase22/compile-commands.json`: one row per translation unit with `source`,
+`output`, `directory`, the ordered `defines` and `includes`, and the full `args`, sorted by source
+so the same log always produces byte-identical JSON. The scratch build took 42 seconds and never
+touched `forensics/authorities/build/` or `prefix/`; the pinned build directory's mtime is unchanged.
+
+### The raw capture is tracked, and that is a departure from the captures policy
+The authority's capture directory is gitignored on purpose -- its logs are reproducible from the
+source, and `BUILD_RECORDS.json` is the tracked record of the build. This capture is different in
+one respect that decides where it lives: `RT-PHASE22-BUILD-CAPTURE` re-derives the committed
+artefact **from the raw log and requires the two to be equal**, so the log is not a reproducible
+intermediate, it is the second half of the comparison. Ignored, a fresh checkout could only assert
+that some JSON existed. It therefore lives at `forensics/atlas/phase22/raw/compile-commands.jsonl`
+(3.1 MB), tracked, and its sha256 is one of the artefact's own inputs.
+
+### The court challenges the instrument, not a file's existence
+`forensics/tools/phase22_courts.py` runs the normalizer's own body over the real log and over
+**controlled mutations of it in memory**: drop one `-D` (that unit's `defines` and `args` lose
+exactly that element and nothing else moves); swap two `-I` options (that unit's `includes` order
+follows and its `defines` do not); append a synthetic translation unit (`commands` and
+`distinct_sources` rise by one); append a build-time `-o /dev/null` assembler probe (nothing
+changes, because it is not a translation unit). It then re-derives the committed artefact and
+requires equality. 19 observations; the court fails if the normalizer is insensitive to any of
+its four defect classes, and the sensitivity was proved by breaking the normalizer and watching the
+court fail. `pending_courts` names the other sixteen, so "not run yet" cannot be read as "passed".
+
+### Everything runs in the court, and the normalizer is a pipeline step
+The three new tools initially ran on the host, where Python is 3.14; the court image pins Debian
+bookworm (Python 3.11.2) by digest. That is exactly the class of unreproducibility the court exists
+to prevent, and D485's activation did not catch it because the tools did not exist yet. The
+normalizer is now a `pipeline.sh` step immediately before `run_courts.py`, so the artefact the
+court re-derives is regenerated inside the court on every run; the capture tool is one-shot and
+writes only to a scratch directory and the tracked log.
+
+`PIPELINE OK` exit 0 with **112 courts** and 47,575 observations; the phase-22 ledger reads 2 of 18
+planes implemented, 16 open.
+
+## D487 -- the court image is made self-describing: Doxygen, the pinned toolchain, and git trust
+
+22.2 needs a Doxygen corpus, and Doxygen was not in the image. Installing it by hand in a running
+container is exactly the unreproducibility the court exists to prevent, so the image was extended
+and rebuilt -- and doing that surfaced two older defects that had been harmless only because nobody
+had recreated the container since they appeared.
+
+### `doxygen` is now an instrument in the image, and `graphviz` deliberately is not
+`doxygen 1.9.4` joins `clang`, `lld`, `binutils` and `python3`. `graphviz` does not: Doxygen's HTML
+call graphs are for a human to look at, while 22.3's every-translation-unit Clang AST and 22.6's
+relocations are the machine-readable edge oracles. The plan's own rule is that Doxygen is one
+oracle and not *the* oracle (`docs/PHASE-22-SUBPHASES.md` section 6), and a minimal image is part of
+that statement.
+
+### The pinned Rust toolchain is installed by the image, not assembled at run time
+The Dockerfile installed `stable` and relied on `rust-toolchain.toml`'s override to pull `1.98.1` on
+the first `cargo` invocation. On a fresh container that auto-install produced an **incomplete**
+toolchain -- `rustc`, `rustdoc`, `rustfmt`, `clippy-driver` and `cargo-fmt`, with no `cargo` binary
+-- and every `cargo` command failed with *"the 'cargo' binary, normally provided by the 'cargo'
+component, is not applicable to the '1.98.1-x86_64-unknown-linux-gnu' toolchain"*. The old container
+had a good copy because it predated the defect; recreating it reproduced the failure immediately.
+The image now installs `1.98.1` explicitly with `rustfmt` and `clippy`, and asserts `cargo
+--version` at build time, so a toolchain that cannot run `cargo` cannot become an image.
+
+### `safe.directory /work` is baked in
+The repository is bind-mounted from the host and owned by the developer's uid while courts run as
+root, so git refuses to read it with *"detected dubious ownership in repository at '/work'"*. It had
+been papered over by a `git config` typed into a live container. A court whose ability to read
+`origin/main` -- which `regression_guard.py --baseline-ref origin/main` needs -- depends on somebody
+having typed a command is not reproducible, so it is `git config --system --add safe.directory
+/work` in the Dockerfile. The mount point is fixed by `docker/openssl-rs-court.sh`, so this is a
+constant rather than an assumption about the host.
+
+`PIPELINE OK` exit 0 in the rebuilt image with 112 courts and 47,575 observations; `cargo 1.98.1`,
+`rustc 1.98.1`, `doxygen 1.9.4` and `python3 3.11.2` are the container's own versions, verified
+inside it.
+
+## D488 -- 22.2: the Doxygen entity graph, and the two views that disagree in both directions
+
+Phase 22's second plane. Two pinned Doxyfiles (`forensics/phase22/Doxyfile.configured`,
+`Doxyfile.lexical`) run over the **whole** admitted authority tree -- no input narrowing was needed:
+10.9 s for the configured view, 2.9 s for the lexical one, `external_entities_skipped` 0 in both.
+`forensics/tools/phase22_doxygen.py` normalizes the XML into
+`forensics/atlas/phase22/doxygen-entities.json`: **70,075 entities**, 40,810 seen by both views,
+**4,670 `lexical_only`**, 24,595 `configured_only`, 323,306 deduplicated reference edges over
+33,237 source entities, 654 documented and 17,185 static. The document is byte-identical across runs
+and carries no host or scratch path.
+
+### Neither view is a superset, and that is the finding
+"Reduced preprocessing" does not merely reveal the untaken branches: it also *loses* the
+preprocessed entity set, so `configured_only` is large too. Both directions are recorded. The
+strongest instance is macros: Doxygen 1.9.4 emits **no `define` entities when preprocessing is off**,
+so the 17,622 macro entities -- the bulk of `configured_only` -- exist only in the configured view.
+This is the plan's section-6 rule made concrete: a surface one view misses is not a surface that is
+absent, and a plane that reported only one view's entity count would understate the authority in a
+direction nobody could see.
+
+### The plan said "Clang-assisted" and Doxygen cannot do that
+Section 6 described 22.2's configured view as "production profile, compilation database,
+Clang-assisted". Doxygen 1.9.4 has **no Clang frontend**. The configured view is Doxygen's own
+preprocessor seeded from 22.1's capture as an aggregated project profile -- per-translation-unit
+capture cannot be expressed to Doxygen at all -- and reading the same capture with Clang is 22.3's
+job. The plan is corrected rather than left implying that 22.2 did 22.3's work, and the artefact
+records what the instrument actually is. This is the class of defect the project's own rule is for:
+the document said something the tool cannot support, and the measurement is what caught it.
+
+### The court
+`RT-PHASE22-DOXYGEN` adds 29 observations to the existing runner: a full round trip (re-derive the
+committed body from its own entities and edges and require equality) plus five mutations -- add a
+configured entity, add a lexical-only entity, clear a `documented` flag, move a shared entity's
+line so the view join splits, add a reference edge. Sensitivity was proved by breaking
+`_adjacency`, the documented classifier and `merge_views` in memory: each turned the court to `fail`
+and it returned to `pass` on restore.
+
+### Non-claims, recorded rather than hidden
+The court ties the artefact to the normalizer's logic and to the committed entity set, **not** to a
+fresh Doxygen run: the XML is a scratch product and untracked, so a reviewer re-deriving the graph
+must re-run Doxygen. That is the same shape as the authority itself -- `build/` is ignored and
+`BUILD_RECORDS.json` is the tracked record -- and it is a non-claim of this plane rather than a gap.
+
+The artefact is 37 MB, larger than any other atlas document; the first naive edge list was 127 MB,
+and it was collapsed to a per-source-entity adjacency with deduplicated target names and Doxygen's
+internal `refid`s dropped. It is committed for the same reason `parity-obligations.json` (23 MB) is:
+it is the evidence the later planes join against, and a graph nothing carries is a graph nothing can
+reconcile.
+
+`PIPELINE OK` exit 0 with **113 courts** and 47,575 observations; the phase-22 ledger reads 3 of 18
+planes implemented, 15 open.
+
+## D489 -- 22.6: the binary-reference graph, and the one plane that sees perlasm
+
+Phase 22's third plane reads the binaries the admitted build produced, not the source. The plan's
+section 6 gives it its reason: "22.6 exists because assembly and perlasm are invisible to Clang, and
+because link-time resolution is where the real dependency graph is confirmed."
+`forensics/tools/phase22_binary_graph.py` walks the whole distribution the authority built --
+`libcrypto.so.3`, `libssl.so.3`, `libcrypto.a`, `libssl.a`, `apps/openssl`, the one provider module
+(`providers/legacy.so`) and the six engine modules -- and writes
+`forensics/atlas/phase22/binary-reference-graph.json`: **12 artefacts**, **1,133 objects** (the 10
+standalone ELF objects plus **1,123 archive members**), **50,772 defined** symbols (17,872 global /
+32,899 local / 1 weak), **27,788 undefined**, **35,809 `RELOCATION_REFERENCE` edges** of which
+**34,484 resolve** to an object that defines their symbol, **9,523 versioned symbols**, **20 alias
+groups**, **18 DT_NEEDED** edges across the objects that have a dynamic section, and **41
+perlasm objects** -- archive members joined back to 22.1's `compile-commands.json` as built from a
+`.s`/`.S` source, the units Clang never parses.
+
+### Reading is pure Python, and resolution is over link-visible definitions only
+`elf_symbols.py` already established that binutils' LLVM-bitcode plugin makes the same archive yield
+different symbol sets on different machines (D30, D33), so a relocation graph read through `objdump`
+would inherit that non-determinism. This tool parses ELF64 and `ar` with `struct`, reusing
+`elf_symbols`' constants and string helper, and never invokes binutils. The definition index that
+resolves an edge is built from **link-binding definitions only**; a `static` name such as `init` is
+file-local and is defined in hundreds of objects, so indexing locals made a single reference
+"resolve" to 765 objects and the document 204 MB. With locals excluded from the index and a local
+reference resolved to its own object, the document is 33 MB. Relocation entries are collapsed to one
+edge per `(object, symbol)` carrying the sorted set of relocation types seen -- a libcrypto archive
+carries ~134,000 such entries -- and the collapse is recorded in `body.reduction` rather than done
+silently.
+
+### The court challenges the classifier and the resolver
+`RT-PHASE22-BINARY` adds 21 observations: a round trip (reconstruct the raw model from the
+artefact's own `defined`/`undefined`/`relocations` and re-derive the whole body, requiring equality)
+plus eight mutations -- add a defined symbol (the definition index gains it), add an undefined symbol
+(and the index does not), add a relocation that resolves (both edge counts rise), add one that does
+not (`relocation_edges` rises and `resolved_edges` does not), remove an archive member (`objects`,
+`archive_members` and the member's own `defined` count all fall), flip a linkage bit (`defined_global`
+falls and `defined_local` rises while `defined` holds), and remove a definition a live edge resolved
+to (exactly its edges stop resolving). Sensitivity was proved by breaking the resolver, the alias
+classifier, the undefined classifier, the member count and the binding breakdown in memory: each
+broke the round trip and turned the court to `fail`, and it returned to `pass` on restore.
+
+`tls` is **0**: neither the shared objects nor any archive member defines a single `STT_TLS` symbol,
+confirmed independently with `nm` over all twelve artefacts. That is a fact about this profile, not a
+gap in the reader, and the requirement that TLS objects be inventoried is met by reporting the empty
+set rather than by omitting the field. `libcrypto.so.3`'s 18,338 defined symbols equal
+`nm --defined-only` exactly.
+
+## D490 -- 22.3, 22.8 and 22.9 land, and the runner discovers its courts
+
+Four planes landed in one wave. The ledger now reads **7 of 18**. `PIPELINE OK` exit 0 with **117
+courts**.
+
+### The runner discovers its courts, so a plane is one file
+`phase22_courts.py` listed its courts, which meant every new plane edited the same file -- and this
+wave ran four planes at once. Each plane tool now exposes `ARTEFACT_REL` and `courts()`, and the
+runner imports every `phase22_*.py` and collects them. A plane that has not landed returns `[]`; a
+module that raises on import is a hard failure, because a court that cannot be loaded is not a court
+that passed. `pending_courts` is now the plan's list minus whatever is registered, so it shrinks by
+itself, and each plane's artefact is content-addressed into the court document's `inputs`. The
+summary line was also made court-agnostic: it prints `35 observations; 35 observations` and
+`35838 entities, None lexical-only` before the fix, and a court whose own pass line misrepresents it
+is evidence a reader reads first and should not have to decode.
+
+### 22.3 -- every translation unit, read by Clang as a shadow instrument
+`forensics/tools/phase22_tu_ast.py` replays 22.1's captured invocations with
+`clang -fsyntax-only -Xclang -ast-dump=json`. **1,216 of 1,216 C translation units parsed, 0 failed**,
+in 121 s with four jobs; a serial extrapolation of ~10 minutes said no narrowing was needed. Four
+arguments per source deduplicate 2,114 invocations to 1,216 logical units. **35,838 entities**
+(24,702 functions, 3,833 variables, 808 records, 528 typedefs, 3,302 fields, 2,564 enumerators),
+**16,573 static**, **104,192 direct-call edges**, **3,896 address-taken**, 9,000
+definitions-without-declaration; the 43 assembly units are recorded as `non_c_translation_units`
+because they cannot have a C AST -- and 22.6 is where they are seen. Byte-identical across three
+regenerations.
+
+### 22.8 -- the authority's own install defines the distribution surface
+`forensics/tools/phase22_install_manifest.py` runs `make install DESTDIR=<scratch>` and walks the
+result: **7,666 entries** (1,976 files, 27 directories, 5,663 symlinks, 8 ELF), **0 UNKNOWN
+dispositions**, and all sixteen surfaces the plan named present -- including the two
+`lib/cmake/OpenSSL/OpenSSLConfig*.cmake` files and the three pkg-config files the constitution had
+not modelled. The reconciliation against the **pinned** prefix is a finding rather than a hidden
+one: the pinned prefix has 169 entries because it was installed with `install_sw`, so
+`only_in_pinned=0`, `changed=0` and `only_in_manifest=7,497` (man symlinks, HTML docs, man pages).
+The pinned prefix under-represents the distribution surface, and the manifest says so.
+
+### 22.9 -- the CLI is 120 commands, not 55, and the recorded parser defect is repaired
+The plan's rule (section 6) is that the CLI is not "the 55 standard commands". Enumerated from the
+authority's own built binary: **120 commands** -- 54 standard, 1 deprecated (`rsautl`), **18 digest
+aliases** and **47 cipher aliases** -- with **4,314 structured options**, **0 refused rows** and
+**0 commands with zero options**. The archaeology defect recorded as `cli_option_list_parse` is
+repaired rather than re-deferred: `parse_option_list` matched `openssl list -options <cmd>` rows
+against a help-text shape (`-in val        Input file`) that the output never produces, while the
+real rows are `name type` pairs (`help -`, `in <`, `provider s`), so every structured
+`option_count` was 0. The parser was rewritten to the authority's real grammar, `RT-PHASE22-CLI`
+proves it reads a real row and refuses a malformed one, and the prerequisite row is kept with its
+closure text: what remains for Phase 16 is regenerating the **Phase-1** capture in lockstep with the
+historical authority, since regenerating production alone would leave a spurious option-set
+differential.
+
+`PIPELINE OK` exit 0 with 117 courts and 47,575 observations.
+
+## D491 -- 22.11: the canonical POD contract oracle, and the claim graph that will not pretend to
+## have read the prose
+
+Phase 22's fourth plane is the documentation plane, and section 6 gives it the hardest rule in the
+stratum: use the exact 3.6.4 manual corpus, **resolve `.pod.in` the way the build does**, run
+OpenSSL's own `util/find-doc-nits` as *one instrument*, parse POD into a content-addressed claim
+graph, and reconcile it against the planes that exist -- where "undocumented is not nonexistent, and
+documented-but-divergent is evidence". `forensics/tools/phase22_pod.py` lands
+`forensics/atlas/phase22/pod-contract.json` (12 MB) and the generated `docs/POD-CENSUS.md`.
+
+### The corpus is 903 pages, 56 of them templates, and every template is resolved by `dofile.pl`
+`doc/man1` (62), `doc/man3` (679), `doc/man5` (3) and `doc/man7` (159) is **903 pages**: 6,562 `NAME`
+entries, 4,960 man3 SYNOPSIS declarations, 2,182 documented man1 options over 59 command pages, 53
+environment variables, 66 configuration directives. **56 pages are `.pod.in` templates** and are
+resolved by running the authority's own `util/dofile.pl` from the admitted build directory with the
+build's own relative input path, so the resolved text is byte-identical to the page `make` writes.
+A plane that read the templates as written would read `{- $OpenSSL::safe::opt_provider_synopsis -}`
+instead of the option block; the resolution is why 59 command pages carry the generic option blocks
+and why only one runtime option is left undocumented. Each page records its source digest, its
+resolved digest, and which resolver produced the text (`as-written`, `dofile`, `generated-pod`, or
+`unresolved`).
+
+### `find-doc-nits` is retained raw, and it is labelled as one instrument
+It is run from the admitted build directory with every check enabled; its complete stdout and stderr
+are stored verbatim with digests. It reported **1,229 libcrypto names and 30 libssl names not
+documented**, 45 undocumented macros and 27 reference-to-non-existing links. Its stderr carries the
+pinned container's git-probe usage text (that git does not implement `git config get`, and the script
+falls back); the noise is kept rather than hidden. It is deliberately **not** the oracle: it selects
+`doc/internal` too, and reads `include/openssl/*.h` rather than this plane's corpus. Its 1,259-total
+figure is the cross-check the ABI reconciliation is measured against and it agrees: this plane's
+`ATLAS_PUBLIC_NAME_NOT_IN_POD` is **1,255**.
+
+### The claim graph is 15,044 claims, and prose is not understood
+Every extracted assertion is `PODCLAIM(section:page, kind, subject, normalized)` with a class from the
+plan's vocabulary. It carries 11,516 `STRUCTURAL` (NAME entries and SYNOPSIS declarations), 2,453
+`EXECUTABLE_CLAIM` (CLI options, environment variables, directives, default paths, deprecations,
+provider identities), 172 `SEMANTIC_TEXT` (RETURN VALUES quotes) and 903 `EXPLANATORY_ONLY` (man7
+concepts). **The two prose classes are untestable and say so**: a RETURN VALUES quote is carried, not
+interpreted, and man7 behaviour prose is not turned into an assertion. `probes.untestable` names the
+reason for each.
+
+### The reconciliation: every disagreement classified, none silently resolved
+The claim graph is joined against the header/API atlas, 22.2's Doxygen graph, 22.3's AST, 22.8's
+install manifest, 22.9's CLI surface, 22.10's config surface, the provider-algorithm inventory and
+the `.num`/DSO inventories. **2,292 disagreements** are recorded across nine classes:
+`ATLAS_PUBLIC_NAME_NOT_IN_POD` 1,255 (the ABI names no man3 page documents -- the find-doc-nits
+cross-check), `POD_NAME_NOT_IN_ATLAS` 871 (man3 names the public headers and `.num` do not publish,
+annotated with whether the whole-program AST or Doxygen sees them), `POD_CLI_OPTION_MISSING` 80,
+`POD_CONFIG_DIRECTIVE_MISSING` 51, `POD_DEPRECATION_MISMATCH` 21, `POD_ENVIRONMENT_VARIABLE_MISSING`
+8, `POD_PROVIDER_ALGORITHM_MISSING` 4, `RUNTIME_CLI_OPTION_UNDOCUMENTED` 1, and 1
+`POD_DEFAULT_PATH_MISMATCH`. The header-atlas variant (19,816 public header names undocumented) is a
+count, not 19,816 rows, because that set is dominated by non-API macros and would bury the figure the
+plan names. `POD_AMBIGUOUS` is 0 here (no man3 name is claimed by two pages). **The join against
+22.8 is exact and empty of residuals**: 903 corpus pages against 903 installed manpage files and
+5,660 alias symlinks, `POD_PAGE_NOT_INSTALLED` 0, `INSTALLED_PAGE_NOT_IN_POD` 0.
+
+### The court challenges extraction and reconciliation, not a file's existence
+`RT-PHASE22-POD` adds 32 observations: a round trip (re-derive the whole claim graph and the whole
+reconciliation from the artefact's own committed page model and index and require equality) plus the
+plan's nine mutation families -- delete a `NAME` alias, add a fake public function to a SYNOPSIS,
+alter a parameter type, change a documented return value, add and remove a CLI option, add and remove
+an environment variable, add and remove a configuration directive, change a default pathname, alter a
+deprecation statement. Each is detected by the plane it belongs to: the name/declaration/return/path/
+deprecation mutations move the claim graph, and the CLI/env/directive mutations move a residual
+(`POD_CLI_OPTION_MISSING`, `POD_ENVIRONMENT_VARIABLE_MISSING`, `POD_CONFIG_DIRECTIVE_MISSING`).
+Sensitivity was proved in memory: an extractor that drops `NAME_ENTRY` claims fails 4 checks, and a
+reconciler that drops `POD_ENVIRONMENT_VARIABLE_MISSING` fails 2, each including its own mutation's
+check.
+
+### Non-claims, named rather than hidden
+man7 concept extraction is partial (NAME plus provider `Identities`, the rest EXPLANATORY_ONLY);
+RETURN VALUES semantics are not decided; deprecation and default-path extraction are narrow and
+best-effort; `find-doc-nits` is one instrument. The plan's section 5 lists a separate
+`pod-atlas-reconciliation.json`; this plane folds the reconciliation into `pod-contract.json` rather
+than emitting a second document. Two clean regenerations are byte-identical.
+
+## D492 -- 22.2's reference identity, the 11.2 closure gate, and 22.6 as the witness for 22.1
+
+Three defects a review found, all fixed, plus one strengthening. `PIPELINE OK` exit 0 with **123
+courts**.
+
+### 22.2 dropped the Doxygen `refid`, so two distinct targets could share an identity
+The extractor emitted each reference edge with the target's display **name** and discarded the
+Doxygen `refid`, and `_adjacency` then stored the destination by that name. Two `static int
+lookup` in different files would have collapsed into one destination -- an information loss in a
+plane whose purpose is that no reachable path is lost. `phase22_doxygen.py` now indexes every
+`memberdef` `id` while parsing and resolves each edge to a real identity
+(`{kind, file, line, name}`, or an explicit `resolved: false` with the raw name and refid for a
+target outside the tree), and `_adjacency` keys on the identity on both ends. Unresolved targets are
+recorded, never dropped: **319,253 of 323,306 edges resolve (98.75%)**.
+
+**The defect was latent in this corpus, and that is recorded rather than dressed up.** Re-keying by
+spelling over the raw XML gives the same 323,306 destinations for OpenSSL 3.6.4, because Doxygen's
+spelling happens to be unique per source and relation here. What the fix buys is that the invariant
+is now structural rather than accidental -- there are **980 source slots holding two or more
+destinations that share a member name but differ in identity** (for example
+`function|apps/include/apps_ui.h|19|password_callback` and
+`function|apps/req.c|1164|prompt_info`), and the court's new `same-spelling` mutation adds a caller
+naming `lookup` in two files and requires **two** destinations. Reverting `_adjacency` to name
+keying in memory turns the court to `fail` on four of its checks.
+
+### Phase 11.2 is now gated on the Phase-22 X.509 closure slice
+The stratum-level `REQUIRES` edge stops Phase 11 being `complete` while Phase 22 is open. It does
+not stop somebody implementing `X509_verify_cert`, `x509_vpm.c` and `pcy_tree.c` tomorrow, which is
+what the dependency is for. `forensics/tools/phase22_x509_gate.py` is the subphase-level half: a
+fail-closed pipeline gate that reads the exports `x509_vfy.c`, `x509_vpm.c` and `pcy_tree.c` define,
+compares their implemented set against the frozen baseline
+`forensics/phase22/x509-closure-slice-baseline.json`, and **refuses any growth while the X.509
+closure slice is unsatisfied**, naming the exports that grew.
+
+The baseline is frozen rather than zero because Phase 10's pulled-forward subphases legitimately
+landed part of those units before Phase 22 existed -- one export is already implemented -- and a gate
+that fired on work already done could not be passed. The gate has its own `--self-test`, which
+reconstructs the shape it exists to stop and requires the rule to refuse it, because a gate never
+seen to fire is not evidence. The contract it reads is now written down
+(`docs/PHASE-22-SUBPHASES.md` section 8): 22.14 must publish
+`compatibility-closure.json`'s `body.x509_slice` with `roots`, `satisfied` and `unknown_residuals`,
+and `satisfied` is true exactly when no `UNKNOWN` residual intersects an X.509 root.
+`docs/PHASE-11-SUBPHASES.md` section 2's row 11.2 now names the dependency in its own column.
+
+### The state line said "residuals" where it meant "instruments"
+`phase_state.py` described the unlanded Phase-22 planes as *"N unresolved atlas residual(s)"*. That
+conflates two different quantities: until 22.14's closure exists there are no `UNKNOWN` residuals to
+count, and what is open is instruments not yet built. The line now reads *"N compatibility plane(s)
+remain unimplemented"*, and appends the `UNKNOWN`-residual count **only** when the closure artefact
+exists to read it from. A state line that overstates the atlas to describe unfinished work is the
+same class of defect D482 and D483 removed from the notes.
+
+### 22.6 became the independent witness for 22.1
+A compiler wrapper proves what went *through the wrapper*; it cannot prove that everything which
+produced the authority went through it. 22.6 now closes that: it joins 22.1's captured outputs
+against every object it walks and gives each object exactly one explanation --
+`CAPTURED_COMPILER_OUTPUT` (1,082), `PERLASM_OUTPUT` (41), `LINK_OUTPUT` (10), with
+`GENERATED_ASSEMBLY_OUTPUT`, `ARCHIVE_MEMBER` and `EXPLICIT_NONCOMPILER_BUILD_STEP` empty in this
+corpus. **1,133 of 1,133 objects are explained and 0 are unexplained**, and an object with no
+captured invocation would now land in a named `unexplained` array rather than appear in no list at
+all. The court blinds the captured-output join in memory and requires the probe to fail there, so
+the witness is proven able to see a capture gap rather than merely asserted to close.
+
+`PIPELINE OK` exit 0 with **123 courts** and 47,575 observations.
+
+## D493 -- 22.12 joins the planes, and 22.15 proves every instrument can see its own defect
+
+Two planes landed. The ledger reads **15 of 18**; `PIPELINE OK` exit 0 with **125 courts**.
+
+### 22.12 -- one atlas out of twelve, and no plane is allowed to win an argument
+`forensics/tools/phase22_reconciliation.py` projects every plane onto one canonical identity per
+authority thing (`sym|<name>`, `sym|<name>@<file>` so two same-named statics stay two rows -- D492's
+fix carried forward -- `src|<file>|<line>|<name>`, `install|<path>`, `cli|<name>`, `config|<name>`,
+`pod|<page>`) and joins them. **110,382 entities** (symbol 78,607, source 12,444, install 7,666,
+cli 6,616, file 3,851, POD 961, config 237), **75,227 cross-plane residuals over 15 classes**, and
+**5,912 `UNKNOWN`** entities of which **2 intersect a declared compatibility root**
+(`_openssl_ascii2ebcdic` and `_openssl_ebcdic2ascii`, declared in `ebcdic.h` and defined by no
+plane). Sixteen pairwise joins are made and five are recorded as **not made**, with the reason:
+install-to-generated (prefix-relative against build-relative paths), AST-to-assembly (no C AST;
+22.6 is the only witness), config-to-AST (a directive name has no C symbol), dispatch-to-macro-
+generated tables, and the three root families -- runtime behaviour, protocol, dynamic loading -- that
+no 22.1-22.13 plane observes at all.
+
+The residual classes are the finding the plan predicted: `DOXYGEN_ONLY` 24,126 is dominated by the
+17.6k macros Doxygen's configured view emits and the AST cannot (D488), and `AST_ONLY` 9,798 is
+enumerators and field line-mismatches. Section 1.1's rule is enforced rather than stated: a fact two
+planes contradict yields `UNKNOWN`, never a vote, and `static inline` header functions were removed
+from `DECLARED_NOT_DEFINED` only after they produced 1,003 false positives -- the corrected count
+is 2.
+
+### 22.15 -- twelve instruments, twelve defects, and one reproducibility defect found by the attempt
+`forensics/tools/phase22_frf.py` drives a challenge **per plane** through the plane's own pure
+builder: the mutation, the expected effect and the observed delta. **12 of 12 detected, 0
+not-detected, 0 not-driven.** Dropping a compile flag moves 22.1's `unit_defines` by one; restoring
+the Phase-1 broken option parser drops 22.9's structured count by 4,314; removing a single definer
+un-resolves three relocations in 22.6; two `lookup` targets stay two destinations in 22.2. The
+harness itself carries `RT-PHASE22-FRF`, which fails if a mutated challenge result is not reported
+`NOT_DETECTED` -- so the harness is not a rubber stamp, and that was proven by replacing the
+classifier with one.
+
+**The fresh-regeneration challenge ran end to end, twice, for four planes.** 22.2 was rebuilt from
+an empty scratch with both pinned Doxyfiles over the whole authority and hashed; 22.3 and 22.4
+replayed Clang; 22.1 re-ran the transparent-wrapper capture (43 s). Every one matched the committed
+artefact, and 22.2's two runs matched each other. That is the end-to-end path the plan demands and
+the Doxygen non-claim D488 recorded -- it is now executed rather than asserted.
+
+**And the attempt found a real reproducibility defect.** 22.2, 22.3 and 22.4 resolve their include
+roots from 22.1's capture, whose `directory` is the ephemeral capture scratch. The committed bodies
+correspond to that scratch being **absent**, so a 22.1 rebuild that repopulates it makes the other
+three diverge -- 22.2 jumped 70,075 to 76,222 entities on a first multi-plane run. The runner now
+removes the scratch before the extractive planes and runs 22.1 last, which reproduces the documented
+state, and the dependency and the measured deltas are recorded in the artefact's
+`body.reproducibility`. A plane whose output depends on the absence of a scratch directory is a
+latent nondeterminism, and it was found by doing the thing the plan asks for rather than by
+describing it.
+
+**FRF-Fuzz seeded six adversarial inputs against the instruments** (a malformed option row, nested
+POD `=over`/`=item`, an unresolved `#if`, a second same-spelled `static`, an object with no compile,
+a SYNOPSIS split across lines). All six produced a residual and none was silently accepted, so
+nothing was promoted -- which is the correct outcome for a healthy instrument, and is recorded as
+such rather than as an absence of evidence.
+
+`PIPELINE OK` exit 0 with **125 courts** and 47,575 observations.
+
+## D494 -- 22.14 closes the graph, and the X.509 slice opens Phase 11.2
+
+`forensics/tools/phase22_closure.py` declares the plan's ten compatibility-root families, derives a
+concrete member list for each from the authority, and traverses the typed edge graph from every
+member to its reachable closure.
+
+**16 of 18 planes.** `PIPELINE OK` exit 0 with **126 courts**.
+
+The roots: **source-api 25,919** (the Phase-1 header/API atlas), **binary-abi 6,512** (22.6's DSO,
+provider and engine exports), **modules 770** and **callbacks 332** (22.7's dispatch and callback
+slots), **cli 120** (22.9), **configuration 176** (22.10), **distribution 162** (22.8's
+`REQUIRED_COMPATIBILITY` rows). **27,495 distinct members**, every offered name resolved. The graph
+is **148,275 typed edges over 12 kinds** and the union reachable from the roots is **35,436
+entities**. Three families stay **unpopulated**, and that is recorded rather than faked: no
+22.1-22.13 plane observes runtime errors/state/ownership/concurrency, the TLS/DTLS/QUIC wire, or the
+`dlopen`/`dlsym` lookup path -- 22.6 sees `DT_NEEDED` and 22.7 sees engine registration, but neither
+sees the lookup itself.
+
+### The X.509 slice is satisfied, and the gate it feeds is therefore open
+```json
+{"roots": ["X509", "X509_STORE", "X509_STORE_CTX", "X509_VERIFY_PARAM", "X509_verify_cert",
+           "policy-tree", "trust", "purpose", "crl", "name-constraints",
+           "verification-callbacks"],
+ "satisfied": true, "unknown_residuals": []}
+```
+The membership is derived, not chosen: the names are matched against 22.12's declared-root members by
+the `X509*` prefix and by the authority's own `crypto/x509/` units (`pcy_*.c`, `x509_trust.c`,
+`v3_purp.c`, `x_crl.c`/`v3_crld.c`, `v3_ncons.c`) plus the callback-slot targets. That is **1,294
+members** and **12,313 reachable entities** with **0 `UNKNOWN`**. The two `UNKNOWN` entities 22.12
+records -- `_openssl_ascii2ebcdic` and `_openssl_ebcdic2ascii` from `ebcdic.h` -- are matched by no
+X.509 rule and are the target of no call, address-taken, relocation or dispatch edge anywhere in the
+atlas, so they genuinely do not reach the slice.
+
+`phase22_x509_gate.py` now reads that block and reports:
+
+    [x509-gate] ok: 1 implemented export(s) of Phase 11.2's units, 0 beyond the frozen baseline;
+    the closure graph records the X.509 slice satisfied
+
+**So the dependency D492 built is discharged, and Phase 11.2 may proceed.** That is the point of
+building it as a gate rather than as a sentence: the block was real while the closure did not exist,
+and it lifted because the evidence arrived, not because somebody edited a flag. The court proves the
+slice *can* be unsatisfied -- it makes an `UNKNOWN` reachable from an X.509 root in memory and
+requires `satisfied` to flip false and `unknown_residuals` to fill -- so `true` here is a measurement
+and not a vacuous default.
+
+`PIPELINE OK` exit 0 with **126 courts** and 47,575 observations.
+
+## D495 -- 11.2 and 11.6 land: the parameter, the context and the time surface around the engine,
+## and the PEM X.509 containers
+
+Two subphases land together, each with a behavioural court, and the stratum's two largest remaining
+units get their first real coverage. `forensics/phase11-obligations.json` moves from 1,132 to **1,299
+implemented** of 1,467, **168 open**, and `libcrypto` from 4,254 to **4,599** exports.
+
+### 11.2 is the surface around the engine, and it says so
+104 of the three units' 111 names land. `src/x509/x509_vpm.rs` is a whole new unit (39 exports):
+`X509_VERIFY_PARAM` as a 112-byte `#[repr(C)]` struct with its `size_of`/`offset_of` assertions, the
+authority's six-row `default_table` (the named param sets) and the writable `param_table`,
+`inherit`/`set1` and every flag, purpose, trust, depth and auth-level accessor, the policy, host,
+peername, email and IP setters, and the `add0_table`/`get_count`/`get0`/`lookup`/`table_cleanup`
+group. `src/x509/pcy_tree.rs` lands `X509_policy_tree_free` and makes `ossl_policy_node_free` and
+`ossl_policy_data_free` private, because nothing else reaches them. `src/x509/x509_vfy.rs` grows the
+`X509_STORE_CTX` lifecycle (`new`, `new_ex`, `free`, `cleanup`), the `set_default`/`purpose_inherit`/
+`set_purpose`/`set_trust` group, roughly fifty field, error and callback accessors,
+`set0_trusted_stack`, `X509_STORE_CTX_get1_issuer` with its helpers, the six free-standing time
+functions (`X509_cmp_time`, `X509_cmp_current_time`, `X509_cmp_timeframe`, `X509_time_adj`,
+`X509_time_adj_ex`, `X509_gmtime_adj`), `ossl_x509_check_cert_time` and `X509_get_pubkey_parameters`.
+
+**The seven names it withholds are the engine itself**, and each blocker is measured rather than
+guessed: the chain roll's OCSP arm is Phase 12, its CRL arm needs `X509_CRL_get0_by_cert` and
+`X509_CRL_verify` from 11.4, its DANE arm is the SSL layer, `X509v3_{asid,addr}_validate_path` are
+withheld in their own units (11.5), and `X509_policy_check` needs `pcy_cache.c`, `pcy_data.c` and
+`pcy_node.c`. So 11.2 lands the parameter, the context and the time surface the engine will read, and
+not the engine: the entry points `X509_verify_cert`, `X509_STORE_CTX_verify` and `X509_build_chain`,
+the two remaining constructors `X509_STORE_CTX_init`/`init_rpk`, `X509_CRL_diff` and
+`X509_policy_check` stay named and open.
+
+Two authority fault boundaries were found while reproducing the time surface: `X509_cmp_time(NULL,
+...)` dereferences `ctm`, and `X509_VERIFY_PARAM_inherit(NULL, src)` dereferences `dest`. The crate
+reproduces both. `X509_VERIFY_PARAM_add0_policy` **frees its argument**, so the crate's callers pass
+`OBJ_dup`.
+
+### 11.6 lands all 54 of its names plus the nine its closure needed
+`src/pem/pem_x509.rs` (4), `pem_xaux.rs` (4), `pem_pk8.rs` (8), and two new units: `pem_all.rs` (33)
+and `pem_info.rs` (5). The closure pulled in `src/asn1/x_info.rs` (2), `x_pkey.rs` (2) and `nsseq.rs`
+(5). The court compares **exact PEM text bytes** against the authority, and malformed inputs against
+the error coordinates, rather than trusting a round trip.
+
+### Two edits outside the subphase's own units, disclosed
+`gen_err_raise_sites.py` learns `pem_info.c` and `x_pkey.c` so the error-raise census tracks the new
+units. And `forensics/prerequisites.json` loses its `ossl_x509_check_cert_time` divergence row: it was
+class `owned_by_a_later_stratum`, and 11.2 landed the helper, which is exactly the transition the row's
+own note said would make the gate report it stale until it was removed. `docs/PHASE-11-SUBPHASES.md`
+section 5 is updated so the Landed and Open clauses bind the ledger again.
+
+### The courts, and the shape of the remaining work
+`RT-X509-VERIFY` adds 135 observations and `RT-X509-PEM` 121, over the parameter/context/time surface
+and the container surface respectively. The cohort is **129 courts, 47,831 observations**, `PIPELINE
+OK` exit 0 on two consecutive runs with no drift between them. Section 3.2's decision-procedure court
+is not yet what the verify court is: it cannot run `X509_verify_cert`, so it cannot yet compare return
+value, error, depth and callback sequence, or drive a hostile-chain corpus. That court arrives with the
+engine, and it is why the engine's blockers are being pulled forward rather than worked around.
+
+Verified: `PIPELINE OK` exit 0; phase 11 in-progress at 1,299/1,467; 129 courts and 47,831
+observations.
+
+## D496 -- the engine's revocation and name-constraint arms land, pulled forward from 11.4 and
+## 11.5
+
+D495 named seven withheld engine names and measured each blocker rather than guessing it. Three of
+those measurements pointed outside 11.2: the chain roll's CRL arm needed `X509_CRL_get0_by_cert`,
+`X509_CRL_get0_by_serial` and `X509_CRL_verify` from `x_crl.c`, and its RFC 3779 arm called
+`X509v3_asid_validate_path` and `X509v3_addr_validate_path`, withheld in their own units. This
+commit pulls both forward, so the engine's remaining closure is the OCSP arm (Phase 12), the DANE
+arm (the SSL layer) and `pcy_cache.c`/`pcy_data.c`/`pcy_node.c` behind `X509_policy_check`.
+
+### 11.4's `x_crl.c` was blocked from inside itself
+`x_crl.rs` withheld nine names on "the method vtable's unlanded entries" and the method object. Both
+are in `x_crl.c`: the vtable is the `static X509_CRL_METHOD int_crl_meth = { 0, def_crl_lookup,
+ def_crl_verify }` at `:33-38`, and the lookup/verify pair are the unit's own statics at `:405-480`.
+So the slice is self-contained. `X509_CRL_add0_revoked`, the three accessors, the `X509_CRL_METHOD`
+allocator/free pair, `X509_CRL_set_default_method` and the `meth_data` pair land with
+`def_crl_verify`, `crl_revoked_issuer_match` and `def_crl_lookup`.
+
+`default_crl_method` is a mutable authority global, and it is modelled as an `AtomicPtr` rather than
+a `static mut`; the precedent is `src/asn1/a_strnid.rs:140-147`, which chose the same shape for a
+bare authority pointer "so that reading it never forms a reference to mutable static storage".
+`crl_cb`'s `ASN1_OP_NEW_POST` arm reads it, so a CRL created after `X509_CRL_set_default_method(m)`
+carries `m` and a CRL created after `set_default_method(NULL)` carries `int_crl_meth`, exactly as
+`:40` and `:482-488` decide.
+
+### 11.5's path validation was the last of its open set
+`X509v3_asid_validate_path`/`..._validate_resource_set` (`v3_asid.c:844-869`) and
+`X509v3_addr_validate_path`/`..._validate_resource_set` (`v3_addr.c:1332-1357`) land with
+`asid_validate_path_internal` (`:719-837`) and `addr_validate_path_internal` (`:1212-1325`). Every
+primitive they need was already in the crate -- the extended structures, the range containment
+helpers and the stack ops -- so nothing was stubbed. **11.5's open set is now empty.**
+
+### Three divergences, each named with its reason
+`def_crl_lookup`'s stack-local `X509_REVOKED rtmp` is a `MaybeUninit` with only `serialNumber`
+byte-copied in, because a C struct-copy is not expressible in Rust over a non-`Copy` field; the
+comparator reads nothing else, so the observation is identical. The three vtable accessors add a
+`meth.is_null()` guard the authority omits -- observable only on a hand-zeroed object, and matching
+the guard `crl_cb`'s `D2I_PRE` arm already uses. And `validation_err`, which the authority writes as
+a macro closing over the caller's `ctx`/`x`/`i` and a `goto done`, is a private `unsafe fn`: a
+`macro_rules!` body cannot name a caller's locals. Both call sites turn `goto done` into an early
+return.
+
+### The court drives the new arms, and the two sides agree
+`RT-X509-VERIFY` grows from 135 to 160 observations. It drives the **real** `def_crl_lookup` through
+`add0_revoked` and `get0_by_serial`/`get0_by_cert` over two fixed serials, the vtable dispatch
+through a probe method on a second CRL, the `meth_data` round trip, and the four RFC 3779 doors: a
+chain-less context returns 0 and leaves `X509_V_ERR_UNSPECIFIED` -- an error coordinate, not a
+boolean -- and a NULL extension set returns 1. `X509_CRL_verify` is called only through the probe
+method, because the default `def_crl_verify` would run `ASN1_item_verify_ex` on a fabricated keyless
+signature. The authority and candidate transcripts match observation for observation, which is the
+first behavioural evidence either unit has.
+
+`src/x509/x509_vfy.rs`'s module doc listed these names as withheld; that prose is now false and is
+corrected to say where the arms landed. `docs/PHASE-11-SUBPHASES.md` section 5 names the 13 exports,
+which is what `docs_consistency.py` binds to the ledger.
+
+Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,312/1,467 with 155 open;
+`libcrypto` at 4,612; 129 courts and 47,856 observations.
+
+## D497 -- 11.1c lands the store object and its parameter setters, and a blocker named by a
+## module doc is discharged by the slice that removed it
+
+11.1's seven withheld store names were the cleanest kind of deferral: the module doc named the one
+unmet dependency and it was a *type*, `struct X509_VERIFY_PARAM_st`. 11.2 landed that type. So this
+slice needs no new judgement, only the transcription the blocker interrupted, and the interesting
+part is that the deferral turned itself off.
+
+`X509_STORE_new` (`x509_lu.c:182-224`), `X509_STORE_free` (`:226-254`), `X509_STORE_set1_param`
+(`:804-807`) and the four `set_flags`/`set_depth`/`set_purpose`/`set_trust` setters (`:783-802`) land
+with their five raise coordinates (`:189`/`:194`/`:199`/`:203`/`:209`) and the shared `err:` label
+(`:217-223`). Every other dependency was already present, including the 11.2 `X509_VERIFY_PARAM_set*`
+family, so nothing new was stubbed or re-derived.
+
+### One type becomes concrete, and the reason it is safe is mechanical
+`X509_STORE`'s `param` member was `*mut c_void` because its type did not exist. It is now
+`*mut X509VerifyParam`, and so is `X509_STORE_get0_param`'s return. The change is layout-preserving
+by construction -- both are pointers -- and it had exactly one reader in the file. The *context*'s
+`param` stays opaque: its retype belongs to `x509_vfy.rs`, which `.cast()`s it, and a slice that
+touched it would be editing a file it does not own.
+
+### The court drives the constructor and every setter
+`RT-X509-STORE` grows twenty observations: the constructor and its error arm, the `get0_param` read,
+and each of the four setters plus `set1_param` driven and read back through the public
+`X509_VERIFY_PARAM_get_flags`/`_get_depth`/`_get_purpose` getters. `probe_hygiene.py` is clean at
+`-O0`/`-O1`/`-O2` on both sides, 485 observations each, and no existing key moved.
+
+`docs/PHASE-11-SUBPHASES.md` section 5 still called `X509_STORE_new` and `X509_STORE_set1_param`
+open; `docs_consistency.py` binds that clause to the ledger, so both move into the landed clause.
+
+Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,319/1,467 with 148 open; 129
+courts and 47,876 observations.
+
+## D498 -- the whole-program join resolves a POD claim by its identity, and the `UNKNOWN` census
+## collapses from 5,912 to 167
+
+22.12 is the plane where every independent measurement becomes one truth model, so a bug there
+weighs more than its size. It had one, and it was an identity bug: `claim.get("normalized") or
+claim.get("subject")` resolved a POD claim by its *declaration* whenever a SYNOPSIS declaration had
+one. `subject` is the identity; `normalized` is the declaration text. Looking up
+`int EVP_FOO(EVP_CTX *ctx)` as a name made thousands of declarations read as missing symbols, which
+is why 22.11's dedicated oracle said 871 and this plane said 5,910.
+
+### Three projection gaps compounded the identity bug
+* `Universe.name_index` was built **once**, right after the source-semantic pass, so a name whose
+  only witness was the binary, the dispatch graph, the Phase-1 atlas or 22.13's crosswalk could
+  never resolve. `add` now maintains it, so identity is established by whatever plane establishes
+  it and the join, which runs last, sees all of them.
+* The Phase-1 projection read `functions`/`variables`/`macros`/`typedefs`/`structs` and omitted
+  `enums.json`, so three documented enum names (`BIO_hostserv_priorities`, `BIO_lookup_type`,
+  `UI_string_types`) came out missing here while 22.11 found them in the header/API atlas. The
+  projection reads enums too.
+* **Only a man3 page names a symbol.** Every section's NAME entry was projected into symbol space,
+  inventing obligations for man1 commands, man5 config files and man7 concepts. `mac`, `rand`,
+  `rsa` and `ssl` -- provider pages -- became `UNKNOWN` entities reachable from an X.509 root and
+  closed the gate. The projection is scoped to section 3, which is what 22.11's own
+  reverse-direction measurement already did.
+
+### What the fix changes, and the invariant that now guards it
+The join resolves on `subject`; a residual is a name that no plane **other than the POD projection**
+saw (so an ambiguous documented name two statics share is in the atlas and is joined). Entities fall
+110,382 -> **98,753**, residuals 75,227 -> **62,936**, and `UNKNOWN` 5,912 -> **167**. The 167 are man3
+template names no implementation defines -- `PEM_read_bio_TYPE`, `OSSL_PARAM_get_TYPE`, `TYPE_new` --
+which are genuinely documented and genuinely absent, and they are exactly what the plane is for.
+
+The review's cross-plane invariant is enforced rather than stated: `pod_cross_plane` records how many
+of 22.11's missing names this wider join resolves (382) and, crucially, every name it calls missing
+that 22.11 does **not** (`only_here_unexplained`). That list is empty, and `main` fails the run if it
+is ever non-empty, so a projection gap cannot hide behind a plausible total. `RT-PHASE22-RECONCILE`
+carries a declaration-keyed mutation as a sensitivity case, and its self-test requires the court to
+name that specific check rather than merely fail.
+
+### Two further defects the same pass exposed
+22.11's `parse_name` joined the whole NAME block, so `=for openssl names: openssl-cmds` -- a POD
+directive that *declares* names -- was captured as one name. It now takes the directive's argument
+list as names and drops any other directive line. And `RT-PHASE22-GEMEL`'s `move-ledger-state`
+mutation required an open plane, which made it hostage to the committed checkpoint: the checkpoint
+was stale at 17/18 since the 22.17 seal, and regenerating it at 18/18 exposed that the mutation had
+only ever run one way. It now takes its direction from the ledger.
+
+### The regeneration criterion is literal, not narrowed
+The review offered narrowing the plan's "two clean regenerations are byte-identical" or making it
+true. 22.1, 22.3 and 22.4 join 22.2 in regenerating twice into a clean scratch, and the FRF record
+shows four planes verified with two runs each (86s / 50s / 268s / 32s), every run equal to the
+committed body. `phase22_capture_build` re-`Configure`s its scratch on every invocation, so the
+second 22.1 run is a second clean build and not an incremental no-op.
+
+`docs/PHASE-22-ATLAS-SEAL.md` is corrected and resealed with the new figures and with the correction
+recorded beside them; `docs/PHASE-22-SUBPHASES.md` states the criterion precisely. The gate reopens:
+`phase22_x509_gate.py` reports the X.509 slice satisfied, `unknown_intersecting_roots` is 0, and
+Phase 11.2 may proceed.
+
+Verified: `PIPELINE OK` exit 0 on repeated runs; 129 courts and 47,876 observations.
+
+## D499 -- 11.1c's file loaders land, and the two lookup-method constructors are the remainder
+
+`by_file.c`'s five loaders waited on the store constructor 11.1c landed in D497, so this slice is the
+next link of the same chain. `X509_load_cert_file` (`:167-170`), `X509_load_cert_file_ex` (`:90-165`),
+`X509_load_crl_file` (`:172-230`), `X509_load_cert_crl_file` (`:281-284`) and
+`X509_load_cert_crl_file_ex` (`:232-279`) land with the unit's seventeen raise coordinates.
+
+### What remains, and it is one blocker named twice
+`X509_LOOKUP_file` (`by_file.c:41-44`) and `X509_LOOKUP_hash_dir` (`by_dir.c:77-80`) stay withheld:
+both ctrl doors' `X509_FILETYPE_DEFAULT` arm calls `X509_get_default_cert_file`/`_dir`, the
+compile-time `OPENSSLDIR` constants 11.7 withholds under D451. The candidate reports `OPENSSLDIR:
+N/A` and the directory plane is Phase 16's, so a transcription would diverge on every default-path
+load -- the D452 class, where a name is withheld because the thing it would have to return does not
+exist yet rather than because the work is hard. `by_dir.rs`'s module doc now records the narrowed
+blocker (`X509_get_default_cert_dir` alone; the two `by_file` loads it once also named are landed).
+
+### The court drives every loader and its refusals
+`RT-X509-STORE` grows by forty observations: six fixed fixtures (certificate and CRL in both PEM and
+DER, a mixed bundle, an empty file) and, per loader, its success arm plus the refusal coordinate for
+NULL, a wrong-typed file, a missing file and an empty file. The candidate distribution shell was
+rebuilt so the five come from the implementation rather than a scaffolded abort.
+
+**A process note that belongs in the record.** The slice's own `cargo build` was clean, but two
+`clippy::undocumented_unsafe_blocks` errors in the `BIO_read_filename` expansions survived it and
+were caught by the pipeline's clippy gate. That is the gate doing its job: a build is not a lint,
+and the SAFETY comment now sits on the `unsafe` block rather than on the `if` that encloses it.
+
+Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,324/1,467 with 143 open; 129
+courts and 47,916 observations.
+
+## D500 -- 11.3's attribute-certificate surface and 11.4's printers land, and the stratum falls to
+## 38 open
+
+Two subphases landed together, each with the behavioural court the plan names for it. The stratum
+moves 1,324 -> **1,429 implemented** of 1,467 and `libcrypto` 4,254 -> **4,729** exports.
+
+### 11.3 is the whole attribute certificate
+`x509_acert.c` and `x509aset.c` land their 60 exports -- the `X509_ACERT` item group, every
+accessor, the twelve setters (each observed with a read-back), the attribute container and
+`add_attr_nconf` surface and the extension doors -- `x_ietfatt.c` its 14 (`OSSL_IETF_ATTR_SYNTAX`
+and its value helpers, including the RFC 5755 mixed-choice refusal), and `x_all.c` the 16 sign,
+verify, digest and `_fp`/`_bio` faces that reach them.
+
+### 11.4 is the printers
+`t_x509.c` lands eight, including `OSSL_STACK_OF_X509_free`, `X509_print`/`_ex`/`_ex_fp`,
+`X509_aux_print`, `X509_ocspid_print` and `X509_signature_print`; `t_req.c` and `t_crl.c` land
+their three each; and `x509_r2x.c` lands `X509_REQ_to_X509`. The printers' evidence is the
+**printed text** -- exact length plus a digest of the captured bytes -- not a round trip, which is
+what section 3.1 asks for.
+
+### Six names stay withheld, and two of them are now one-line follow-ups
+`X509_ACERT_print`/`_ex` wait on `X509_signature_print`, which this slice lands; `X509_to_X509_REQ`
+was withheld on `X509_REQ_sign`, which this slice also lands. Both are therefore now landable and
+are named as such rather than left looking blocked. The other three are genuinely blocked:
+`X509_load_http`/`X509_CRL_load_http` need the `http` client unit, and
+`X509_STORE_CTX_print_verify_cb` needs the unit-internal `ossl_x509_print_ex_brief`, which is the
+`covers` name of `t_x509.c`'s divergence row -- landing it would open that row.
+
+### The courts, and one bug they caught
+`RT-X509-ACERT` adds 168 observations and `RT-X509-REQ` 67, over fixed DER fixtures with no address
+printed. The cohort is **131 courts and 48,151 observations**. The printers' text comparison caught a
+real transcription bug: `X509_print_ex` printed the version as `l` where the authority prints
+`l + 1`. That is the court doing exactly what section 3.1 says it is for.
+
+Verified: `PIPELINE OK` exit 0 on two consecutive runs; phase 11 at 1,429/1,467 with 38 open.
+
+## D502 -- the verifier court is split by name, the status front door renders both atlases, and a
+## signature defect the type plane caught
+
+Three review points, and the first is about evidence rather than code.
+
+### `pass` must not be readable as a claim it does not make
+`RT-X509-VERIFY` passed while `X509_verify_cert` was still withheld, and the only thing saying so was
+prose: the artifact held `RT-X509-VERIFY = pass` and a reader had to find the caveat in the probe
+header. The project separates `referenced` from `called` and `IMPLEMENTED` from `PARITY_VERIFIED`
+precisely so a claim cannot be read out of a weaker one, and this was the same failure mode. The
+registered court is now **`RT-X509-VERIFY-SURFACE`**, and **`RT-X509-VERIFY-ENGINE`** is registered as
+a pending court whose description names what it will establish -- return value, error code, error
+depth, `verify_cb` sequence and constructed chain over a hostile-chain corpus -- and says the surface
+court's `pass` is not that claim. Both the runner summary and the machine-readable `pending_courts`
+block carry it now.
+
+Renaming rather than aliasing was checked against the fail-closed regression guard first, because it
+treats a baseline court that disappears as a lost result: `origin/main`'s baseline carries no
+`RT-X509` court, so the rename cannot make one absent. That is why the guard is safe to rename
+against and a stale baseline is not.
+
+### The front door now tells the current story
+`forensics/STATUS.md` is generated by `render_status.py`, and it rendered one "Atlas census" whose
+`cli commands | 55` and `config files | 3` are true of the Phase-1 capture and false of the atlas
+Phase 22 measured. It now renders **two** sections: the Phase-1 public API/ABI contract, and a
+Phase-22 whole-program compatibility atlas whose twenty figures are read from the committed plane
+artefacts. The old numbers are not wrong and are not deleted; they are placed where they belong.
+
+### A signature defect, on a line I had already read
+The 11.7 slice declared `PKCS5_pbe2_set_scrypt`'s `aiv` as `*const c_uchar`; the authority takes
+`unsigned char *aiv`, and the IV is read out of it. The type plane reported
+`TYPE-MISMATCH PKCS5_pbe2_set_scrypt` and the parameter is now `*mut c_uchar`. The court found it
+after a human had read that declaration and believed it, which is the argument for the court.
+
+Verified: `PIPELINE OK` exit 0 on two consecutive runs; 132 courts and 48,259 observations;
+`docs_consistency.py` ok.
+
+## D503 -- the verifier's dependency knot is measured, and the rule that resolves it is written
+## down
+
+Phase 11's purpose is `X509_verify_cert`, and its remaining closure crosses *forward* into strata
+that come after it. This entry records the measurement and the rule so the next slice does not have
+to re-derive either.
+
+### The knot, measured rather than argued
+`src/x509/x509_vfy.rs`'s own module doc already named it, and the authority confirms it line by
+line: `check_revocation` (`x509_vfy.c:1062`) keeps its `#ifndef OPENSSL_NO_OCSP` arm, and this
+admitted build does **not** define `OPENSSL_NO_OCSP` (`configuration.h:134-135` sets only
+`OPENSSL_NO_TRACE`), so a faithful transcription of the function must call `check_cert_ocsp_resp`
+(`:1174`). Its callees are `crypto/ocsp/`'s and `src/ocsp/` does not exist. The CRL half of the same
+function is now landable -- its blocker was discharged in D496 -- and the two halves cannot be
+separated without the transcription ceasing to be the authority's function. `verify_chain`
+interleaves the same problem once more through the `SSL_DANE` matrix (`:3087-3490`).
+
+So the obvious answer, "`X509_verify_cert` waits for Phase 12", is not available: the dependency
+order is `22 -> 11 -> 12 -> ...`, and a stratum cannot be completed by waiting for one that cannot
+start until it is complete. That is a cycle, not a schedule.
+
+### The rule
+> **Pull the implementation dependency forward, not the public ownership.**
+
+A stratum owns the *exports* the atlas assigns it; it may borrow the *internals* it needs. Phase 11
+pulls forward the minimum internal substrate the verifier's arms reach -- landed as internal
+transcriptions, recorded in `forensics/prerequisites.json` as pulled forward rather than owned --
+and Phase 12 and the SSL layer later implement their own exported surfaces around an already-landed
+internal core. This is the mechanism the project has already used for cross-stratum closures; the
+only new thing is naming it as the general answer to a forward dependency.
+
+### The measured OCSP closure, and what is left
+The substrate `check_cert_ocsp_resp` needs is eleven functions -- `OCSP_response_status`,
+`OCSP_response_get1_basic`, `OCSP_cert_to_id`, `OCSP_id_cmp`, `OCSP_id_get0_info`,
+`OCSP_resp_count`, `OCSP_resp_find_status`, `OCSP_resp_get0`, `OCSP_SINGLERESP_get0_id`,
+`OCSP_check_validity`, `OCSP_basic_verify` -- plus the four item types (`OCSP_RESPONSE`,
+`OCSP_BASICRESP`, `OCSP_SINGLERESP`, `OCSP_CERTID`), their `d2i`/`i2d` and their free doors;
+`OCSP_basic_verify` in turn needs `ocsp_vfy.c`'s signer checks. `docs/PHASE-11-SUBPHASES.md` section
+2.1 records the same list beside the subphase table, so the plan and the decision carry one figure.
+
+That substrate, plus the `SSL_DANE` representation the DANE arm reads, is the whole of what stands
+between this stratum and its purpose. It is a large slice and it is not attempted in this commit;
+what this commit does is make it impossible to mistake the remaining work for ordinary leftovers.
+
+Verified: documentation only; no code, court or ledger changes in this commit.
+
+## D504 -- the lookup layer and its default paths land on a build-time openssldir, and the stratum falls
+## to seven open
+
+Phase 11's store side closes, and the one gate that held thirteen exports was a build fact rather
+than a missing implementation.
+
+### The `OPENSSLDIR` gate, and how it is opened
+`X509_get_default_cert_file` and `X509_get_default_cert_dir` (`crypto/x509/x509_def.c:88-106`)
+answer compile-time paths built from the admitted build's forensic `OPENSSLDIR`
+(`include/internal/common.h:83-86`), and `by_file_ctrl_ex`/`dir_ctrl` read them for the
+`X509_FILETYPE_DEFAULT` arm, so `X509_LOOKUP_file`, `X509_LOOKUP_hash_dir` and the seven
+`x509_d2.c` drivers that cascade through them all waited on it. `src/x509/x509_def.rs` withheld the
+four names as a D451-class divergence: the candidate reports `OPENSSLDIR: N/A`
+(`src/runtime/init.rs:1133`) and the directory plane is Phase 16's.
+
+It is opened the way `MODULESDIR` already was. `build.rs` captures a new `OPENSSL_RS_OPENSSLDIR`
+(NUL rejected; `cargo:rerun-if-env-changed`), and the four functions answer it --
+`X509_get_default_cert_area` the value itself, the other three `value + "/certs"`, `"/cert.pem"`,
+`"/private"` -- or the **empty C string** when it is unset. Empty rather than NULL or a fabricated
+path: `by_file_ctrl_ex` then fails to open a default bundle instead of opening the authority's
+`/work/.../cert.pem`, and a caller that `strlen`s the answer gets zero rather than a segfault. This
+is a distribution fact, not an authority one, so no court compares the string and the four names are
+covered at basis `referenced` (below). Phase 16 still owns the directory plane proper
+(`ossl_get_openssldir`); this lands only the x509-side answers `by_file.c`/`by_dir.c` read, which
+the plan already assigned to 11.7.
+
+### The `lstat`/`stat` existence probe
+`get_cert_by_subject_ex` (`by_dir.c:321-337`) tests a candidate path with `lstat` then `stat`, using
+only the sign of each. The crate had no `lstat` binding (RAND's `src/rand/sys.rs` `stat` is
+RAND-scoped and has no `lstat`), so two existence-only shims were added to `src/runtime/dir_posix.c`
+beside `openssl_rs_stat_is_dir`, read through the platform headers "so that no field offset is
+assumed" (`build.rs:166-167`). They are internal symbols, which is why the C-identifier count in
+`docs/CI.md` moves from 485 to 487. With the row constructible, the D453 "no reachable caller"
+reason that also covered the unit's statics dissolves.
+
+### 11.4b's verify-callback printer
+`X509_STORE_CTX_print_verify_cb` (`t_x509.c:449-513`) was withheld on the same unit's
+`ossl_x509_print_ex_brief` (`:383-411`), which the `forensics/prerequisites.json` row
+`owned_by_a_later_stratum` covered. All of its callees were already landed, so the printer and its
+two statics (`print_certs`, `print_store_certs`) are transcribed and the row is retired. It is not
+driven behaviourally yet: it prints a *context that has run the engine*, and `X509_STORE_CTX_init`
+is 11.2's, so it is `referenced` until that lands.
+
+### The reference basis grows by fourteen
+`courts/phase11/rt_coverage_ref_probe.c` gains the four default-path answers, the callback printer,
+the two lookup constructors and the seven `x509_d2.c` drivers -- 993 to 1,007 references. The first
+four and the last nine diverge by construction under `OPENSSL_RS_OPENSSLDIR` (or cascade into a name
+that does), so no observation of them can be equal and `referenced` is the strongest true statement
+available; the callback printer is `referenced` until `X509_STORE_CTX_init` lands.
+
+Verified: `cargo test --lib` 1131 passed; `cargo clippy --all-targets -- -D warnings` clean;
+`cargo fmt --all --check` clean; the seven phase-11 courts pass (RT-X509-REF 1,007 observations);
+the eleven phase-2 ABI courts pass; `evidence_determinism.py`, `check_evidence_portability.py`,
+`docs_consistency.py` and `regression_guard.py --require-current` ok. The stratum falls from 21 open
+obligations to 7.
+
+## D505 -- the two HTTP loaders are handed to Phase 12 rather than pulling the client forward
+
+`X509_load_http` and `X509_CRL_load_http` (`crypto/x509/x_all.c:134-138`, `:188-192`) are declared
+in `x509.h`, so the atlas assigns them to Phase 11. Their bodies are one line each: both delegate to
+the static `simple_get_asn1` (`:115-132`), whose only external call is `OSSL_HTTP_get` (`:121`).
+
+`OSSL_HTTP_get` is `http.h`'s and Phase 12's, and the transport under it (`OSSL_HTTP_REQ_CTX_*`,
+`BIO_new_connect`, the punycode decoder) is the http/punycode unit set this crate deliberately
+withholds (D455); `src/http/http_lib.rs` lands only `OSSL_parse_url`, which `v3_ncons.c` needs.
+D503's rule -- pull the implementation dependency forward, not the public ownership -- was written
+for the verifier's *internal* substrate, and the measured OCSP/DANE closure behind `X509_verify_cert`
+is the case it argues. Pulling a whole HTTP client, the BIO connect machinery and punycode forward to
+satisfy two convenience wrappers is the opposite trade, so the two names are recorded as a deferred
+hand-off to Phase 12 in `forensics/tools/phase11_obligations.py`'s `BLOCKED_HANDOFFS`, with the
+callee, its authority file and line, and the owning stratum.
+
+That moves `counts.deferred_to_later_phase` from 0 to 2 and leaves `open_in_this_stratum` at the five
+names that are the stratum's purpose: `X509_verify_cert`, `X509_STORE_CTX_verify`,
+`X509_build_chain`, `X509_STORE_CTX_init` and `X509_STORE_CTX_init_rpk`.
+
+Verified: `docs_consistency.py`, `evidence_determinism.py` and `regression_guard.py
+--require-current` ok; no code or court change in this commit.
+
+## D506 -- the engine's OCSP and SSL_DANE substrate is pulled forward as internal transcriptions,
+## staged ahead of the engine
+
+D503 named the substrate `X509_verify_cert` reaches forward for and D505 wrote the rule down. This
+entry lands the substrate, before the engine that will call it, so the engine slice changes only
+`src/x509/x509_vfy.rs`.
+
+### What lands, and why it is internal rather than exported
+Thirty-point of the OCSP surface is transcribed under `src/ocsp/` -- `ocsp_lib.c`'s `OCSP_cert_to_id`
+family, `ocsp_srv.c`'s `OCSP_id_get0_info`, `ocsp_cl.c`'s response/status readers, and the seven
+`ocsp_vfy.c` signer checks -- plus the `SSL_DANE` representation and seven of the ten `x509_vfy.c`
+DANE-matrix functions under `src/x509/dane.rs`. **None carries `#[no_mangle]`**: ownership stays where
+`forensics/atlas/symbol-ownership.json` puts it (`ocsp.h` is Phase 12's, the DANE matrix is this
+stratum's own statics), and D503's rule is to pull the *implementation* forward, not the *public
+owning*. `implemented-surface.json` is the proof rather than the promise: libcrypto stays at 4,760
+implemented exports, and an `nm` over the archive finds no new `OCSP_*` symbol.
+
+The OCSP ASN.1 item groups were already landed in `src/ocsp/ocsp_asn.rs` (they are exports and were
+needed elsewhere), so only the functions are new. Both modules carry the `#![allow(dead_code)]`
+staging marker `src/runtime/defaults.rs` established, each naming the engine commit that retires it.
+
+### What is held, and the one-word change it waits on
+Three DANE functions and two OCSP functions are held with a `TODO(11.2c)` note rather than stubbed:
+`dane_verify`/`dane_verify_rpk`/`check_leaf_suiteb` call `verify_chain`/`verify_rpk`/`verify_cb_cert`
+(the engine's, and `verify_cb_cert` is private to `x509_vfy.rs`), and `OCSP_basic_verify` reaches
+`ocsp_verify_signer`, whose `X509_verify_cert`/`X509_STORE_CTX_init` calls are the five exports this
+stratum is finishing. The first engine edit is to widen `verify_cb_cert` to `pub(crate)`.
+
+Verified: `cargo build --release` and `cargo clippy --all-targets -- -D warnings` clean; no new
+libcrypto export; `docs_consistency.py`, `evidence_determinism.py` and `regression_guard.py
+--require-current` ok. The prerequisite census drops as transcriptions replace names
+(`x509_vfy.c` 115 -> 94 not-modelled), which is the movement the guard reports and accepts.
+
+## D507 -- the verification engine lands, and the stratum derives complete
+
+D503 named the knot and the rule, D505 handed the HTTP loaders on, D506 landed the substrate. This
+entry lands the engine those three were building toward.
+
+### The engine
+`src/x509/x509_vfy.rs` gains 3,525 lines: the whole chain roll -- `null_callback`, the callback
+wrappers, `check_auth_level`, `verify_rpk`/`verify_chain`/`x509_verify_rpk`/`x509_verify_x509`, the
+check cluster (`check_purpose`, `check_extensions`, `has_san_id`, `check_name_constraints`,
+`check_id`/`check_hosts`/`check_id_error`, `check_trust`, `check_revocation`, `check_cert_ocsp_resp`,
+`check_policy`), the CRL cluster (sixteen functions from `check_cert_crl` through `cert_crl`),
+`internal_verify`, `build_chain`, the four key/sig level checks, and the five exports
+`X509_STORE_CTX_init`, `X509_STORE_CTX_init_rpk`, `X509_verify_cert`, `X509_STORE_CTX_verify` and
+`X509_build_chain`. The DANE matrix's three remaining functions moved in over `src/x509/dane.rs`, and
+`OCSP_basic_verify`/`ocsp_verify_signer` were turned on in `src/ocsp/ocsp_vfy.rs`; every
+`#![allow(dead_code)]` staging marker the substrate carried is retired. Three small documented
+thunks (`get1_issuer_cb`, `lookup_certs_cb`, `lookup_crls_cb`) reinterpret the crate's `*mut c_void`
+callback slots to the concrete context the exports take -- the authority installs the same single
+pointer.
+
+### The court
+`RT-X509-VERIFY-ENGINE` (`courts/phase11/rt_x509_verify_engine_probe.c`) is registered and pending
+no longer. It drives the five exports over a fixed three-level **Ed25519** chain (root, intermediate,
+leaf, plus an expired and a wrong-name sibling) generated once by the admitted authority, anchored to
+a fixed reference instant so no wall clock moves an answer. It compares the decision, the error code,
+the error depth, the ordered `verify_cb` sequence and the constructed chain -- 242 observations, 0
+residuals. The fixtures are Ed25519 deliberately: an RSA chain would route `X509_verify` through the
+crate's recorded, deferred Phase-13 `EVP_get_digestbyname` divergence (D333/D343), which is not this
+stratum's contract. No residual was an engine bug; the transcription was correct on the first run.
+
+### The reconciliation Phase 11's completeness triggered
+`forensics/phase-state.json` now derives phase 11 `complete`, and that flipped two fail-closed
+checks. Nine `forensics/prerequisites.json` `units` records that had deferred the policy graph, the
+attribute certificate and the store/parameter/trust units to a `not-started` Phase 11 became stale
+deferrals, and the plan's row 11.1 names `crypto/x509/by_dir.c`, whose only export is the constructor
+and whose every other function is `static` (so `internal-symbols.json` records none of them). All ten
+were rewritten as `reached_by_a_named_construct` records naming the crate module and the built names
+-- the honest disposition once the code is there -- and `plan_reconciliation.py` is green again with
+375 of 375 units reached.
+
+Verified: the eight phase-11 courts pass (`all_pass=True`), the eleven phase-2 ABI courts pass,
+`cargo test --lib` 1131 passed, clippy and fmt clean, the full evidence chain reproduces, and
+`regression_guard.py --require-current` reports 133 courts and 48,515 observations with no
+regression. The stratum's ledger is `open_in_this_stratum: 0`, `deferred_to_later_phase: 2`,
+`implemented: 1465`.
+
+## D508 -- the v3 court lands, and the RFC 3779 layer moves from referenced to called
+
+The plan's row 11.5 named `RT-X509-V3`, and it stayed a pending court through the stratum's
+completion because the 11.5 surface *looked* covered: `RT-X509-STORE` calls the `v3_conf.c`
+builders, the four `v3_prn.c` printers and the `v3_utl.c` name checks. Measured against
+`forensics/atlas/court-coverage.json`, that was half true. `v3_addr.c`'s and `v3_asid.c`'s own
+arithmetic and item doors were basis `referenced` -- address-taken by `RT-X509-REF` and never
+driven -- which is exactly the weaker claim D502 exists to keep visible. Fifty-seven exports,
+including `X509v3_addr_subset`/`_is_canonical`/`_canonize`/`_get_afi`/`_get_range`,
+`X509v3_asid_subset`/`_is_canonical`/`_canonize`, and every `IPAddressFamily`/`IPAddressChoice`/
+`IPAddressOrRange`/`IPAddressRange` and `ASIdentifiers`/`ASIdentifierChoice`/`ASIdOrRange`/`ASRange`
+item door.
+
+`courts/phase11/rt_x509_v3_probe.c` builds the values with the builders
+(`X509v3_addr_add_prefix`/`_add_range`/`_add_inherit`, `X509v3_asid_add_id_or_range`/`_add_inherit`)
+rather than from hand-made DER, then exercises canonize, is-canonical, subset, get-afi, get-range,
+inherits, the i2d/d2i round-trips and the i2r printers through `X509V3_EXT_print`, with the refusal
+arms (`X509v3_addr_canonize` NULL -> `34.107`, `X509v3_asid_canonize` duplicate/empty -> `34.116`,
+`X509V3_EXT_i2d` unknown -> `34.129`). 240 observations, 0 residuals; the candidate matched the
+authority on every arm, so no `v3_*.rs` change was needed. `PENDING_COURTS` is now empty and
+`docs/PHASE-11-SUBPHASES.md` section 2 no longer marks the engine and v3 courts pending.
+
+Verified: nine phase-11 courts pass; 134 courts and 48,755 observations with no regression;
+`court_coverage.py`'s phase-11 `called` rises 880 -> 937 and `referenced` falls 585 -> 528 by exactly
+the 57 names; `probe_hygiene.py` clean.
+
+## D509 -- the Phase-11 seal lands, and the FRF chain it owes is recorded rather than assumed
+
+`docs/PHASE-11-X509-SEAL.md` is written and registered in `forensics/tools/atlas_common.py`'s
+`SEAL_DOCS`, so `phase_state.py` records its sha256 and `docs/SEAL-CENSUS.md` renders it. The
+stratum derives `complete`: the ledger's `open_in_this_stratum` is 0, its two non-built names are the
+deferred hand-offs to Phase 12 (D505), nine courts pass with no court pending, and every one of its
+1,465 implemented exports carries a court edge.
+
+The seal's section 7 marks Release Gates section 2 items 6 (sensitivity evidence), 8 (FRF receipts)
+and 10 (Gemel checkpoint) **not yet met**, and the seal says so rather than inventing the entry:
+Phase 11 has no block in `gen_frf_courts.py`'s `COURTS` table, no `openssl-rs-rt-x509*` declarations
+and no Gemel checkpoint (`forensics/GEMEL_TRAJECTORY.md` is still the Phase 10 `C95`/`K49`). Section 8
+states what the entry would be -- all nine courts are differential, so unlike Phase 10's `CT-PKCS12`
+none is excluded. That is the remaining Phase-11 work and it is a project-wide mechanism rather than
+an X.509 one; it lands the way Phase 10's `C95` corrected its own seal's section 7, in the session
+that runs the FRF chain, rather than being claimed here.
+
+Verified: `evidence_determinism.py`, `check_evidence_portability.py`, `docs_consistency.py`,
+`plan_reconciliation.py`, `gen_prerequisite_atlas.py --check` and `gen_frf_courts.py --check` ok;
+`regression_guard.py --require-current` reports 134 courts and 48,755 observations with no
+regression; `phase_state.json` records Phase 11 `complete` with a seal sha256.

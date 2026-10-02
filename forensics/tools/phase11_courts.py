@@ -1,0 +1,393 @@
+#!/usr/bin/env python3
+"""openssl-rs — Phase 11 courts: X.509 and verification.
+
+Each court is a C probe in `courts/phase11/` compiled **twice** — once against the admitted
+authority, once against the candidate distribution shell — and run. The two transcripts are
+compared line by line, and every difference is a residual.
+
+The method is Phases 3-10's, for the same reason: a unit test encodes what its author believes the
+contract is, whereas a probe measures what the authority actually does, and the comparison is
+between two *executions* of the same program, so the expectation cannot drift.
+
+`RT-X509-STORE` and `RT-X509-REF`, and what each claims
+------------------------------------------------------
+11.1a and 11.4a have landed the stratum's first real units: `x509_lu.c`, `x509_meth.c`,
+`x509_set.c`, `x509_req.c` and `x_req.c`. `RT-X509-STORE`,
+`courts/phase11/rt_x509_store_probe.c`, is the behavioural court over them: it **calls** the
+`X509_LOOKUP_METHOD`/`X509_LOOKUP`/`X509_OBJECT` objects, the four `X509_STORE_*` arms that reach
+their refusal without a store, the `X509_set_*`/`X509_get0_*` mutator layer and the `X509_REQ`
+mutators, item group and lifecycle over fixed DER fixtures, and diffs the two transcripts.
+
+11.1b and 11.5 grew that same probe by six units: the `X509_TRUST` table and `X509_check_trust`
+(`x509_trust.c`), the STORE-URI lookup and the store loaders' NULL-URI refusals (`by_store.c`,
+`x509_d2.c`), the four extension printers (`v3_prn.c`), the nine extension builders
+(`v3_conf.c`) and the host/email/IP checks and `get1_*` accessors (`v3_utl.c`). Every export all
+six landed is therefore **called** by `RT-X509-STORE` -- the trust table, the printers, the real
+`CONF`/`X509V3_CTX` builders and the SAN-fixture name checks -- so no name is added to the
+reference basis for them.
+
+The stratum also owns the exports earlier strata landed -- those of Phase 8's 8.8 chain, Phase
+10's pulled-forward X.509 subphases (10.8-10.16, D442-D451) and the two `ASN1_generate_*`
+hand-offs of Phase 5 -- and `court_coverage.py` refuses a stratum that has begun while any of its
+implemented exports has no court edge. `RT-X509-REF`, `courts/phase11/rt_coverage_ref_probe.c`, is
+the reference basis for those and for this stratum's own exports that `RT-X509-STORE` cannot drive
+(they need an `X509_STORE`/`X509_STORE_CTX` 11.1a does not build, read the opaque `X509_SIG_INFO`,
+or would compare the crate's recorded D333/D343 divergence): it takes each into a `volatile` table,
+prints one `coverage_ref.N=nonnull` line per symbol, and stops. **It does not call any of them and
+claims no behaviour about them.** The court coverage atlas records every symbol covered only by it
+at basis `referenced`, never `called`, because the probe's name is in that atlas's
+`reference_probes` table; the atlas's `claim` is the weaker, true statement, and the atlas's
+phase-11 slice is the live count of the names each basis covers. See docs/DECISIONS.md D199 and
+docs/PHASE-11-SUBPHASES.md section 4.3, which is where this stratum's activation requires it.
+
+A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
+`PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
+run yet" cannot be read as "passed" — the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
+later activation established. `RT-X509-V3` was the stratum's last pending court; with it registered
+the table is empty, and it stays because "no planned court is unrun" is then a printed, recomputed
+fact rather than an omission.
+
+What the behavioural courts compare, and what they do not
+---------------------------------------------------------
+`RT-X509-VERIFY-SURFACE`, `RT-X509-VERIFY-ENGINE`, `RT-X509-ACERT`, `RT-X509-REQ`, `RT-X509-V3`,
+`RT-X509-PEM` and `RT-X509` compare the authority's *behaviour* for the subphases that landed them:
+the container bytes and the print text for the object graphs (section 3.1), the decision, error
+code, depth and callback sequence of `X509_verify_cert` (section 3.2), the lookup refusals and
+cache behaviour (section 3.3), and the PEM text and malformed-input error coordinates (section
+3.4). None of them can claim that an object that round-trips is the authority's object: a
+transcription whose writer emits bytes its own reader accepts is a different library, and
+docs/PHASE-11-SUBPHASES.md section 3 records where the difference is observable. Nothing here is a
+parity claim about a certificate's meaning (section 3.5).
+
+SPDX-License-Identifier: Apache-2.0"""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from atlas_common import (  # noqa: E402
+    PRODUCTION_AUTHORITY,
+    REPO_ROOT,
+    InputRef,
+    envelope,
+    rel,
+    resolve_authority,
+    run,
+    write_json,
+)
+
+OUT = REPO_ROOT / "artifacts" / "phase11" / "COURTS.json"
+GENERATOR = "forensics/tools/phase11_courts.py"
+PROBE_DIR = REPO_ROOT / "courts" / "phase11"
+PHASE2 = REPO_ROOT / "artifacts" / "phase2"
+STAGED = REPO_ROOT / "artifacts" / "phase11" / "probes"
+RUN_TIMEOUT_S = "60"
+
+# The differential courts, in the order they land. `(name, probe filename)`, and the probe is
+# declared in the same commit as the entry, so a runner that names a probe which does not exist
+# cannot be committed -- the check below fails instead.
+#
+# **The reference basis comes first, then the first behavioural court.** `RT-X509-REF` is
+# registered because the exports this stratum inherited (and its own that `RT-X509-STORE` cannot
+# drive) are implemented and `court_coverage.py` requires an edge for each. `RT-X509-STORE`
+# is 11.1a's/11.4a's and 11.1b's/11.5's behavioural court, and its description is its probe
+# header's own first sentence. See the module doc.
+COURTS: list[tuple[str, str]] = [
+    ("RT-X509-REF", "rt_coverage_ref_probe.c"),
+    # "RT-X509-STORE -- the Phase 11 X.509 store/lookup/object, mutator, trust, printer,
+    # extension-build and name-check surface, driven."
+    # It calls the `X509_LOOKUP_METHOD` vtable (`x509_meth.c`), the `X509_LOOKUP` object and its
+    # five `by_*` doors, the `X509_OBJECT` accessors and updaters, the four `X509_STORE_*` arms
+    # that refuse without a store, the `X509_set_*`/`X509_get0_*` layer (`x509_set.c`) and the
+    # `X509_REQ`/`X509_REQ_INFO` mutators, attribute accessors and lifecycle (`x509_req.c`,
+    # `x_req.c`), over fixed DER fixtures and with no address or address-dependent value printed.
+    ("RT-X509-STORE", "rt_x509_store_probe.c"),
+    # "RT-X509-VERIFY-SURFACE -- the Phase 11.2 X.509 verification *surface*, driven."
+    # **The name says SURFACE, and the engine is a separate court, registered below.** This probe
+    # drives the `X509_VERIFY_PARAM` object, table and every accessor (`x509_vpm.c`), the
+    # `X509_STORE_CTX` lifecycle and every field/error/callback accessor (`x509_vfy.c`), the
+    # free-standing time decision surface over a fixed verification time, the issuer lookup and
+    # `X509_policy_tree_free`. It also drives the two chain-roll arms 11.4 and 11.5 landed when
+    # they were pulled forward to unblock the engine: the `x_crl.c` CRL method/lookup surface
+    # (`X509_CRL_add0_revoked`, `..._get0_by_serial`, `..._get0_by_cert`, `..._verify`, the
+    # `X509_CRL_METHOD_*` object and `..._set_/get_meth_data`) and the RFC 3779
+    # `X509v3_{asid,addr}_validate_path` / `..._validate_resource_set`.
+    # **It does NOT run the decision procedure** `docs/PHASE-11-SUBPHASES.md` section 3.2
+    # describes: `X509_verify_cert` and its two siblings are driven by `RT-X509-VERIFY-ENGINE`,
+    # registered immediately below, and not here. The two names are deliberately different so
+    # that this court's `pass` cannot be read as "the verifier is verified".
+    ("RT-X509-VERIFY-SURFACE", "rt_x509_verify_probe.c"),
+    # "RT-X509-VERIFY-ENGINE -- the Phase 11.2 decision procedure, driven."
+    # **This is the court the SURFACE probe's `pass` was deliberately not allowed to be
+    # read as.** It drives the five engine exports the transcription just landed --
+    # `X509_STORE_CTX_init`/`init_rpk`, `X509_verify_cert`, `X509_STORE_CTX_verify` and
+    # `X509_build_chain` -- over a fixed three-level PKI (`rt_x509_chain_der.h`), and
+    # compares, as `docs/PHASE-11-SUBPHASES.md` section 3.2 requires, the decision (the
+    # return value), the error code, the error depth, the ordered `verify_cb` callback
+    # sequence and the constructed chain (length, per-element subject/issuer link and
+    # serial). The only nondeterministic input a decision could read -- the wall clock --
+    # is never read: every time-sensitive arm sets the verification time explicitly.
+    ("RT-X509-VERIFY-ENGINE", "rt_x509_verify_engine_probe.c"),
+    # "RT-X509-V3 -- the Phase 11.5 RFC 3779 address/AS-identifier layer and the remaining
+    # configuration and utility helpers, driven."
+    # It builds an `IPAddrBlocks` with `X509v3_addr_add_prefix`/`_add_range`/`_add_inherit` and an
+    # `ASIdentifiers` with `X509v3_asid_add_id_or_range`/`_add_inherit`, then drives
+    # `X509v3_{addr,asid}_get_afi`/`get_range`/`inherits`/`is_canonical`/`canonize`/`subset`, the
+    # eight item groups' `_it`/`_new`/`_free`/`d2i_`/`i2d_` doors and their round-trips, and the
+    # RFC 3779 `IPAddressFamily`/`ASIdentifiers` printers through `X509V3_EXT_i2d` and
+    # `X509V3_EXT_print` (`v3_addr.c`, `v3_asid.c`, `v3_conf.c`, `v3_utl.c`). It prints no address.
+    ("RT-X509-V3", "rt_x509_v3_probe.c"),
+    # "RT-X509-PEM -- the Phase 11.6 PEM X.509 container surface, driven."
+    # It reads and writes a fixed certificate, CRL, request, `X509_AUX`, `X509_PUBKEY`, RSA/EC/DSA
+    # public key, `NETSCAPE_CERT_SEQUENCE`, PKCS#8 `PrivateKeyInfo`/`EncryptedPrivateKeyInfo` and
+    # `X509_INFO` bundle, prints each writer's exact PEM bytes, and prints the queue coordinate of
+    # every malformed-input refusal (truncated, wrong-header, bad-base64, wrong-container).
+    ("RT-X509-PEM", "rt_x509_pem_probe.c"),
+    # "RT-X509-ACERT -- the Phase 11.3 attribute-certificate surface, driven."
+    # The `X509_ACERT`/`OSSL_ISSUER_SERIAL`/`OSSL_OBJECT_DIGEST_INFO` item groups, their
+    # accessors and setters, the `X509_ACERT` extension surface, the `x_ietfatt.c` syntax items and
+    # the `d2i`/`i2d`/print/lifecycle faces, over fixed DER fixtures.
+    ("RT-X509-ACERT", "rt_x509_acert_probe.c"),
+    # "RT-X509-REQ -- the Phase 11.4 request/CRL/mutator remainder, driven."
+    # The `X509_REQ` sign/verify/digest and `_fp`/`_bio` faces and its printers, the `X509_CRL`
+    # mutators and printers, `X509_to_X509_REQ`/`X509_REQ_to_X509`, the `X509_ACERT` sign/verify
+    # doors and the extension accessors, over fixed DER fixtures.
+    ("RT-X509-REQ", "rt_x509_req_probe.c"),
+    # "RT-X509 -- the Phase 11.7 shared remainder, driven."
+    # The units whose closure crosses into the landed strata: the PKCS#5 scrypt scheme
+    # (`p5_scrypt.c`), the two `EVP_*_CTX_get_algor` hand-offs (`evp_lib.c`),
+    # `ASN1_add_stable_module` (`asn_mstbl.c`), `EVP_PKCS82PKEY_ex` (`evp_pkey.c`),
+    # `NETSCAPE_SPKI_print` (`t_spki.c`) and `PBMAC1_get1_pbkdf2_param` (`p12_mutl.c`).
+    ("RT-X509", "rt_x509_misc_probe.c"),
+]
+
+# A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
+# pass, and each is printed with the subphase that brings it so that "not run yet" cannot be read
+# as "passed". The court names are `docs/PHASE-11-SUBPHASES.md` section 2's, one per work
+# subphase. `RT-X509-V3` was the last entry -- 11.5's RFC 3779 `v3_addr.c`/`v3_asid.c` layer and the
+# `v3_conf.c`/`v3_utl.c` helpers it owns -- and it is now registered above, so the table is empty;
+# it stays because the mechanism is the contract every later stratum reuses, and an empty table is
+# the true statement that no planned court is unrun.
+PENDING_COURTS: dict[str, str] = {}
+
+
+def extra_defs(name: str, libdir: Path) -> list[str]:
+    """Per-side build definitions.
+
+    **None.** `RT-X509-REF` takes addresses and prints whether each is non-NULL; `RT-X509-STORE`
+    drives the landed units with no side-specific input. Both are compiled identically on both
+    sides, so a difference in either transcript can only be a difference in what the library
+    does. `extra_defs` is kept because the runner's shape is Phase 8's through Phase 10's and a
+    later court here may need one.
+    """
+    del name, libdir
+    return []
+
+
+def compile_probe(
+    src: Path, out: Path, include: Path, libdir: Path, defs: list[str] | None = None
+) -> tuple[bool, str]:
+    res = run([
+        # `-Werror=implicit-function-declaration` is not decoration: without a prototype, C
+        # assumes a function returns `int`, so a probe that forgot an include reads a pointer
+        # return as its low 32 bits and dereferences it. Phases 6 through 10 each paid a run to
+        # learn that, so it is a compile failure here.
+        "clang", "-std=c11", "-Wall", "-Werror=implicit-function-declaration", "-O1",
+        "-D_GNU_SOURCE",
+        *(defs or []),
+        "-I", str(include),
+        "-o", str(out), str(src),
+        "-L", str(libdir), "-lcrypto",
+        f"-Wl,-rpath,{libdir}",
+    ])
+    return res.ok, res.stderr.strip()
+
+
+def run_probe(binary: Path) -> tuple[str, str, int | None]:
+    res = run(["timeout", RUN_TIMEOUT_S, str(binary)])
+    code = res.returncode
+    if code == 124:
+        return res.stdout, res.stderr, None
+    return res.stdout, res.stderr, code
+
+
+def diff(authority: str, candidate: str) -> list[dict]:
+    """Line-wise comparison keyed on `key=value`, so a missing or extra line produces exactly one
+    residual instead of shifting every following line."""
+    def parse(text: str) -> tuple[list[str], dict[str, str]]:
+        order: list[str] = []
+        values: dict[str, str] = {}
+        for line in text.splitlines():
+            if "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            if key not in values:
+                order.append(key)
+                values[key] = value
+            else:
+                values[key] = f"{values[key]}|{value}"
+        return order, values
+
+    a_order, a = parse(authority)
+    c_order, c = parse(candidate)
+    residuals: list[dict] = []
+    for key in a_order:
+        if key not in c:
+            residuals.append({"observation": key, "authority": a[key],
+                              "candidate": None, "class": "missing"})
+        elif a[key] != c[key]:
+            residuals.append({"observation": key, "authority": a[key],
+                              "candidate": c[key], "class": "value"})
+    for key in c_order:
+        if key not in a:
+            residuals.append({"observation": key, "authority": None,
+                              "candidate": c[key], "class": "extra"})
+    return residuals
+
+
+def court(name: str, src: Path, auth, work: Path) -> dict:
+    auth_lib = auth.prefix / "lib"
+    auth_inc = auth.prefix / "include"
+
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+
+    ok, err = compile_probe(src, auth_bin, auth_inc, auth_lib,
+                            extra_defs(name, auth_lib))
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2,
+                            extra_defs(name, PHASE2))
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    a_out, a_err, a_code = run_probe(auth_bin)
+    c_out, c_err, c_code = run_probe(cand_bin)
+
+    staged = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{srcbin.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    if not a_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "authority-run",
+                "detail": {"exit_code": a_code,
+                           "stderr": a_err.splitlines()[:12]}}
+
+    residuals = diff(a_out, c_out)
+    # A probe that died on a signal compared nothing beyond the prefix it managed to print, so two
+    # sides dying the same way is not agreement.
+    crashed = a_code is None or a_code < 0 or c_code is None or c_code < 0
+    return {
+        "court": name,
+        "probe": rel(src),
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "crashed": crashed,
+        "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
+        "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
+        "residual_count": len(residuals),
+        "residuals": residuals,
+        "verdict": (
+            "pass" if not residuals and c_code == a_code and not crashed else "fail"
+        ),
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
+    args = ap.parse_args(argv)
+    del args
+
+    auth = resolve_authority(PRODUCTION_AUTHORITY)
+    work = REPO_ROOT / "court" / "phase11"
+    work.mkdir(parents=True, exist_ok=True)
+
+    records: list[dict] = []
+    for name, filename in COURTS:
+        src = PROBE_DIR / filename
+        if not src.is_file():
+            records.append({"court": name, "verdict": "fail",
+                            "stage": "probe-missing", "detail": rel(src)})
+            continue
+        records.append(court(name, src, auth, work))
+
+    passed = sum(1 for r in records if r["verdict"] == "pass")
+    body = {
+        "all_pass": passed == len(records),
+        "authority": auth.id,
+        "courts": records,
+        "summary": {"total": len(records), "pass": passed,
+                    "fail": len(records) - passed},
+        "pending_courts": PENDING_COURTS,
+        "claim": (
+            "`RT-X509-STORE` is a **behavioural** court: its probe calls the store/lookup/object "
+            "objects 11.1a lands, the mutator surface 11.4a lands, the trust table and name checks "
+            "11.1b/11.5 land and the printers and `CONF`/`X509V3_CTX` builders 11.5 lands, over "
+            "fixed DER fixtures, and "
+            "the candidate's transcript must equal the authority's observation for observation. "
+            "`RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of "
+            "this stratum's exports that no behavioural court drives -- the exports earlier strata "
+            "inherited and the few of this stratum's own that `RT-X509-STORE` cannot reach (they "
+            "need a store 11.1a does not build, read the opaque `X509_SIG_INFO`, or would compare "
+            "the crate's recorded D333/D343 divergence) -- and prints whether each is non-NULL. A "
+            "symbol covered only by it means the candidate distribution defines the name -- which "
+            "the link proves -- and NOT that any arm of it was driven; the court coverage atlas "
+            "records those at basis `referenced`, never `called`, and its phase-11 slice is the "
+            "live count (docs/DECISIONS.md D199). `pending_courts` is now empty: every court "
+            "the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) is registered "
+            "above and named on each run, so 'not run yet' cannot be read as 'passed'. Nothing "
+            "here is a parity claim: `referenced` is not `called`, and "
+            "docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts compare."
+        ),
+    }
+
+    inputs = [
+        InputRef(name="authority-symbols", path=REPO_ROOT / "forensics" / "atlas"
+                 / auth.id / "symbols-libcrypto.json"),
+    ]
+    for _name, filename in COURTS:
+        inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))
+    doc = envelope(kind="phase11-courts", authority=auth.id, inputs=inputs,
+                   body=body, generator=GENERATOR)
+    write_json(OUT, doc)
+
+    for r in records:
+        if r["verdict"] == "pass":
+            print(f"  {r['court']:<18} pass   "
+                  f"({r['authority_observations']} observations)")
+        else:
+            print(f"  {r['court']:<18} FAIL   stage={r.get('stage', 'compare')}")
+            detail = r.get("detail")
+            if isinstance(detail, dict):
+                print(f"      exit_code={detail.get('exit_code')}")
+                for line in detail.get("stderr", []):
+                    print(f"      {line}")
+            elif isinstance(detail, list):
+                for line in detail[:8]:
+                    print(f"      {line}")
+            for res in r.get("residuals", [])[:12]:
+                print(f"      {res['observation']}: authority={res['authority']!r} "
+                      f"candidate={res['candidate']!r} ({res['class']})")
+    for name, needs in PENDING_COURTS.items():
+        print(f"  {name:<18} PENDING (not registered as passing) -- {needs}")
+    print(f"  -> {rel(OUT)} all_pass={body['all_pass']} over {len(records)} court(s)")
+    return 0 if body["all_pass"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

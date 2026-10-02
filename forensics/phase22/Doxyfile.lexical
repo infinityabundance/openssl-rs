@@ -1,0 +1,66 @@
+# openssl-rs -- Phase 22.2 pinned Doxygen configuration: the *lexical* view.
+#
+# WHAT THIS IS
+#   The project-level Doxygen configuration for the discovery-only view of the admitted
+#   authority `openssl-3.6.4-production`. It parses the same source tree as
+#   `Doxyfile.configured`, but with preprocessing deliberately switched off.
+#
+# WHY IT IS PINNED HERE, AND WHY IT IS OURS
+#   Same reason as the configured view: OpenSSL 3.6.4 ships no canonical Doxyfile, and a corpus
+#   is only reproducible when its configuration is a tracked artefact. Bound to the exact
+#   authority path and to the court image's `doxygen 1.9.4` (`docs/DECISIONS.md` D487).
+#
+# WHICH VIEW
+#   The **lexical** view: `ENABLE_PREPROCESSING = NO`. Doxygen evaluates no `#if`/`#ifdef` and
+#   expands no macro, so it parses the text of a translation unit as written. That is what makes
+#   it interesting: it reveals the branches the production profile's preprocessor *removes* --
+#   code guarded by a macro the profile does not define, and the `#else` of a guard the profile
+#   takes. `docs/PHASE-22-SUBPHASES.md` section 6 calls this the material "the production profile
+#   hides", and is explicit that this view "cannot assert runtime relevance": an entity seen
+#   only here is *discovered*, not *compiled*.
+#
+#   One consequence is recorded rather than hidden: with preprocessing disabled, Doxygen 1.9.4
+#   does not recognise `#define` as a `define` entity at all, so this view contains **no**
+#   macros. Macros are therefore configured-view material; `forensics/tools/phase22_doxygen.py`
+#   says so in the artefact's `preprocessing_note`.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+PROJECT_NAME           = openssl-3.6.4-production
+PROJECT_BRIEF          = "Phase 22.2 lexical Doxygen view"
+
+INPUT                  = /work/forensics/authorities/src/openssl-3.6.4
+RECURSIVE              = YES
+FILE_PATTERNS          = *.c *.h
+EXCLUDE_PATTERNS       = */.git/*
+
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_LOCAL_CLASSES  = YES
+HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_CLASSES     = NO
+
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+GENERATE_XML           = YES
+XML_PROGRAMLISTING     = NO
+HAVE_DOT               = NO
+
+QUIET                  = YES
+WARNINGS               = NO
+WARN_IF_UNDOCUMENTED   = NO
+
+ENABLE_PREPROCESSING   = NO
+MACRO_EXPANSION        = NO
+SEARCH_INCLUDES        = NO
+
+# Edges are a configured-view product: a reference resolved without the preprocessor is a lexical
+# coincidence, not a resolution of the authority's includes. The lexical view exists to discover
+# entities, not to model their references.
+REFERENCES_RELATION    = NO
+REFERENCED_BY_RELATION = NO
+
+# Appended at run time by forensics/tools/phase22_doxygen.py:
+#   OUTPUT_DIRECTORY = <scratch>/lexical      (a scratch path; never the authority)
+#   INPUT            = <resolved authority source root>

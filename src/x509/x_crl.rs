@@ -1,27 +1,25 @@
-//! `crypto/x509/x_crl.c` — the `X509_CRL` object core, transcribed as far as 10.8's slice reaches.
-//! Phase 10.8.
+//! `crypto/x509/x_crl.c` -- the `X509_CRL` object core. Phase 10.8.
 //!
-//! `crypto/x509/x_crl.c` is 542 lines and reaches a great deal. **This module lands the object
-//! core only**: the `X509_REVOKED`, `X509_CRL_INFO` and `X509_CRL` structures with the authority's
-//! own layout, their four item descriptors (`X509_REVOKED_it`, `X509_CRL_INFO_it`, `X509_CRL_it`),
-//! the `crl_inf_cb` and `crl_cb` callbacks in the part the item layer can build, the lifecycles
-//! (`_new`/`_new_ex`/`_free`/`_dup`, `d2i_`/`i2d_`), the `X509_REVOKED_cmp` comparator and
-//! `ossl_x509_crl_set0_libctx`. **The rest is withheld by name**:
+//! `crypto/x509/x_crl.c` is 542 lines. This module lands the object core: the `X509_REVOKED`,
+//! `X509_CRL_INFO` and `X509_CRL` structures with the authority's own layout, their four item
+//! descriptors (`X509_REVOKED_it`, `X509_CRL_INFO_it`, `X509_CRL_it`), the `crl_inf_cb` and
+//! `crl_cb` callbacks in the part the item layer can build, the lifecycles
+//! (`_new`/`_new_ex`/`_free`/`_dup`, `d2i_`/`i2d_`), the `X509_REVOKED_cmp` comparator,
+//! `ossl_x509_crl_set0_libctx`, and the whole CRL method surface: `X509_CRL_add0_revoked`,
+//! `X509_CRL_verify`, `X509_CRL_get0_by_serial`/`_by_cert`, the three internal statics
+//! `def_crl_verify`/`crl_revoked_issuer_match`/`def_crl_lookup`, and the method object
+//! `X509_CRL_set_default_method`, `X509_CRL_METHOD_new`/`_free` and
+//! `X509_CRL_set_meth_data`/`X509_CRL_get_meth_data`. **The rest is withheld by name**:
 //!
 //! | withheld | blocker |
 //! |---|---|
-//! | `crl_cb`'s `ASN1_OP_D2I_POST` arm | `X509_CRL_digest`, `X509_CRL_get_ext_d2i`, `setup_idp`, `crl_set_issuers` and the `EXFLAG_*` words — none landed |
+//! | `crl_cb`'s `ASN1_OP_D2I_POST` arm | `X509_CRL_digest`, `X509_CRL_get_ext_d2i`, `setup_idp`, `crl_set_issuers` and the `EXFLAG_*` words -- none landed |
 //! | `crl_cb`'s cache frees in `D2I_PRE`/`FREE_POST` | `AUTHORITY_KEYID_free`, `ISSUING_DIST_POINT_free`, `sk_GENERAL_NAMES_pop_free` (`v3_akid.c`/`v3_crld.c`/`v3_genn.c`) |
-//! | `def_crl_lookup`, `def_crl_verify`, `crl_revoked_issuer_match` | the `v3_*`/`x509_cmp` graph |
 //! | `crl_set_issuers`, `setup_idp` | `X509_REVOKED_get_ext_d2i`, `DIST_POINT_set_dpname` |
-//! | `X509_CRL_verify`, `X509_CRL_get0_by_serial`, `X509_CRL_get0_by_cert`, `X509_CRL_add0_revoked` | the method vtable's unlanded entries |
-//! | `X509_CRL_set_default_method`, `X509_CRL_METHOD_new`/`_free`, `X509_CRL_set_meth_data`/`get_meth_data` | the method object |
 //!
-//! The `ASN1_OP_NEW_POST` arm sets `crl->meth` to a **default method whose four callbacks are
-//! NULL**, because the two the authority installs (`def_crl_lookup`, `def_crl_verify`) are
-//! unlanded. The only observable consequence is inside the withheld accessors that read the
-//! vtable; `D2I_PRE`'s `crl->meth->crl_free` guard, which the item layer does reach, tests a slot
-//! that is NULL in the authority's own default method too.
+//! The `ASN1_OP_NEW_POST` arm installs [`default_crl_method`]'s value, which is `int_crl_meth`
+//! unless `X509_CRL_set_default_method` reassigned it, so a CRL carries whatever method was
+//! current when it was created -- exactly the authority's read of its mutable global.
 //!
 //! ## The layout
 //!
@@ -36,11 +34,13 @@
 //! half of the reference-count pair `X509_CRL_it`'s `ASN1_AFLG_REFCOUNT` maintains and 10.8 lands
 //! it beside its object. Its coordinate is cited in its own doc.
 //!
-//! ## No raise in the landed subset
+//! ## The raise sites
 //!
 //! `x_crl.c`'s only two raises are in `X509_CRL_add0_revoked` (`:374`) and `def_crl_verify`
-//! (`:408`), both withheld, so `crypto/x509/x_crl.c` is deliberately **not** an entry in
-//! `gen_err_raise_sites.py`'s `COVERED_FILES`.
+//! (`:408`). `crypto/x509/x_crl.c` is deliberately **not** an entry in `gen_err_raise_sites.py`'s
+//! `COVERED_FILES`, so both coordinates are declared locally with the `err_sites::ErrSite` shape,
+//! as `v3_bitst.rs` and `v3_akid.rs` do. The two `ERR_LIB_*` values and the mismatch reason are
+//! typed from `include/openssl/err.h.in` and `x509err.h`, not from memory.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -51,21 +51,35 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_void};
 use core::ptr;
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::asn1::a_dup::ASN1_item_dup;
+use crate::asn1::a_verify::ASN1_item_verify_ex;
 use crate::asn1::d2i::ASN1_item_d2i;
 use crate::asn1::fre::ASN1_item_free;
 use crate::asn1::i2d::ASN1_item_i2d;
 use crate::asn1::items::{ASN1_BIT_STRING_it, ASN1_INTEGER_it, ASN1_TIME_it};
 use crate::asn1::layout::*;
 use crate::asn1::new::ASN1_item_new;
+use crate::asn1::prim::ASN1_INTEGER_cmp;
 use crate::asn1::string::ASN1_STRING_cmp;
-use crate::asn1::x_algor::{X509Algor, X509_ALGOR_it};
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
-use crate::runtime::stack::{OPENSSL_sk_set_cmp_func, OpenSslStack};
-use crate::runtime::thread::CryptoRwlock;
+use crate::asn1::x_algor::{X509Algor, X509_ALGOR_cmp, X509_ALGOR_it};
+use crate::evp::pkey::EvpPkey;
+use crate::runtime::err::err_reasons::X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH;
+use crate::runtime::err::err_sites::ErrSite;
+use crate::runtime::err::raise_site;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
+use crate::runtime::stack::{
+    OPENSSL_sk_find, OPENSSL_sk_is_sorted, OPENSSL_sk_new, OPENSSL_sk_num, OPENSSL_sk_push,
+    OPENSSL_sk_set_cmp_func, OPENSSL_sk_sort, OPENSSL_sk_value, OpenSslStack,
+};
+use crate::runtime::thread::{CRYPTO_THREAD_unlock, CRYPTO_THREAD_write_lock, CryptoRwlock};
+use crate::x509::v3_genn::{GeneralName, GEN_DIRNAME};
+use crate::x509::x509_cmp::{X509_NAME_cmp, X509_get0_serialNumber, X509_get_issuer_name};
+use crate::x509::x509cset::X509_CRL_get_issuer;
 use crate::x509::x_exten::X509_EXTENSION_it;
 use crate::x509::x_name::{X509Name, X509_NAME_it};
+use crate::x509::x_x509::X509;
 
 /// `CRLDP_ALL_REASONS` — `include/openssl/x509v3.h:316`, the default `idp_reasons` a new CRL
 /// carries.
@@ -80,11 +94,66 @@ const LINE_FREE_PROPQ: c_int = 533;
 const LINE_STRDUP_PROPQ: c_int = 536;
 /// `crl_cb`'s `OPENSSL_free(crl->propq)` (`:269`).
 const LINE_FREE_PROPQ_FREE_POST: c_int = 269;
+/// `X509_CRL_METHOD_new`'s `OPENSSL_malloc(sizeof(*m))` (`:499`).
+const LINE_METHOD_NEW: c_int = 499;
+/// `X509_CRL_METHOD_free`'s `OPENSSL_free(m)` (`:515`).
+const LINE_METHOD_FREE: c_int = 515;
 
-/// `X509_CRL_METHOD` — `struct x509_crl_method_st`, from `crypto/x509/x509_local.h`.
+/// `CRL_REASON_REMOVE_FROM_CRL` -- `include/openssl/x509v3.h.in:230`, the reason `def_crl_lookup`
+/// answers `2` for.
+const CRL_REASON_REMOVE_FROM_CRL: c_int = 8;
+/// `X509_CRL_METHOD_DYNAMIC` -- `crypto/x509/x509_local.h:63`, set on a method
+/// `X509_CRL_METHOD_new` allocated.
+const X509_CRL_METHOD_DYNAMIC: c_int = 1;
+
+/// `ERR_LIB_X509` -- `include/openssl/err.h.in:85`.
+const ERR_LIB_X509: c_int = 11;
+/// `ERR_LIB_ASN1` -- `include/openssl/err.h.in:87`.
+const ERR_LIB_ASN1: c_int = 13;
+/// `ERR_R_CRYPTO_LIB` -- `include/openssl/err.h.in:330`, `ERR_LIB_CRYPTO | ERR_RFLAG_COMMON`
+/// (`15 | 0x80000`).
+const ERR_R_CRYPTO_LIB: c_int = 524303;
+
+/// One `x_crl.c` raise coordinate, declared locally: `crypto/x509/x_crl.c` is not in
+/// `gen_err_raise_sites.py`'s `COVERED_FILES`, so its two sites are built here from the
+/// authority's own `__FILE__`/`__LINE__`/`__func__`, as `v3_bitst.rs` does.
+const fn x_crl_site(
+    line: c_int,
+    func: &'static core::ffi::CStr,
+    lib: c_int,
+    reason: c_int,
+) -> ErrSite {
+    ErrSite {
+        file: c"../../src/openssl-3.6.4/crypto/x509/x_crl.c",
+        line,
+        func,
+        lib,
+        reason,
+        dynamic_reason: false,
+    }
+}
+
+/// `X509_CRL_add0_revoked`'s failed `sk_X509_REVOKED_new`/`sk_X509_REVOKED_push` at `x_crl.c:374`
+/// (`ERR_LIB_ASN1`/`ERR_R_CRYPTO_LIB`).
+const X_CRL_374: ErrSite = x_crl_site(
+    374,
+    c"X509_CRL_add0_revoked",
+    ERR_LIB_ASN1,
+    ERR_R_CRYPTO_LIB,
+);
+/// `def_crl_verify`'s signature-algorithm mismatch at `x_crl.c:408` (`ERR_LIB_X509`/
+/// `X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH`).
+const X_CRL_408: ErrSite = x_crl_site(
+    408,
+    c"def_crl_verify",
+    ERR_LIB_X509,
+    X509_R_CRL_SIGNATURE_ALGORITHM_MISMATCH,
+);
+
+/// `X509_CRL_METHOD` -- `struct x509_crl_method_st`, from `crypto/x509/x509_local.h:65-72`.
 ///
-/// The four callbacks are optional; the default method's `crl_init`/`crl_free` are NULL and, in
-/// this crate, so are `crl_lookup`/`crl_verify` (see the module doc).
+/// The four callbacks are optional; the default method's `crl_init`/`crl_free` are NULL while its
+/// `crl_lookup`/`crl_verify` are [`def_crl_lookup`]/[`def_crl_verify`].
 #[repr(C)]
 pub struct X509CrlMethod {
     /// `int flags` — `X509_CRL_METHOD_DYNAMIC` for an allocated method.
@@ -107,22 +176,32 @@ pub struct X509CrlMethod {
     pub(crate) crl_verify: Option<unsafe extern "C" fn(*mut X509Crl, *mut c_void) -> c_int>,
 }
 
-/// `static X509_CRL_METHOD int_crl_meth` — `crypto/x509/x_crl.c:33-38`.
+/// `static X509_CRL_METHOD int_crl_meth = { 0, 0, 0, def_crl_lookup, def_crl_verify }` --
+/// `crypto/x509/x_crl.c:33-38`.
 ///
-/// The authority's initialiser installs `def_crl_lookup` and `def_crl_verify`; both are withheld
-/// (they reach the `v3_*`/`x509_cmp` graph), so their slots are NULL here. `crl_init` and
-/// `crl_free` are NULL in the authority too.
+/// `crl_init` and `crl_free` are NULL, exactly as the authority's initialiser leaves them;
+/// `crl_lookup` and `crl_verify` are [`def_crl_lookup`] and [`def_crl_verify`].
 static INT_CRL_METH: X509CrlMethod = X509CrlMethod {
     flags: 0,
     crl_init: None,
     crl_free: None,
-    crl_lookup: None,
-    crl_verify: None,
+    crl_lookup: Some(def_crl_lookup),
+    crl_verify: Some(def_crl_verify),
 };
 
-/// `static const X509_CRL_METHOD *default_crl_method = &int_crl_meth` — `crypto/x509/x_crl.c:40`.
+/// `static const X509_CRL_METHOD *default_crl_method = &int_crl_meth` -- `crypto/x509/x_crl.c:40`,
+/// reassigned by [`X509_CRL_set_default_method`].
+///
+/// The authority holds this in a mutable pointer global. The crate models such globals as an
+/// `AtomicPtr` so that reading one never forms a reference to mutable static storage -- the same
+/// choice the `a_strnid` module makes for its mutable stack -- and, like the authority, reads and
+/// writes it without synchronisation (`Relaxed`).
+static DEFAULT_CRL_METHOD: AtomicPtr<X509CrlMethod> =
+    AtomicPtr::new(&INT_CRL_METH as *const X509CrlMethod as *mut X509CrlMethod);
+
+/// `default_crl_method`'s read -- the method a freshly built `X509_CRL` carries.
 fn default_crl_method() -> *const X509CrlMethod {
-    &INT_CRL_METH
+    DEFAULT_CRL_METHOD.load(Ordering::Relaxed)
 }
 
 /// `struct x509_revoked_st` — `X509_REVOKED`, from `include/crypto/x509.h:130-143`.
@@ -806,6 +885,350 @@ pub unsafe extern "C" fn X509_CRL_new_ex(
     crl
 }
 
+// ---------------------------------------------------------------------------------------------
+// The CRL method surface -- `crypto/x509/x_crl.c:366-526`
+// ---------------------------------------------------------------------------------------------
+
+/// `int X509_CRL_add0_revoked(X509_CRL *crl, X509_REVOKED *rev)` -- `crypto/x509/x_crl.c:366-379`.
+///
+/// # Safety
+///
+/// `crl` is live; `rev` is live and, on success, becomes owned by the CRL.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_add0_revoked(crl: *mut X509Crl, rev: *mut X509Revoked) -> c_int {
+    // SAFETY: `crl` is live per the contract.
+    unsafe {
+        if (*crl).crl.revoked.is_null() {
+            (*crl).crl.revoked = OPENSSL_sk_new(Some(X509_REVOKED_cmp));
+        }
+        if (*crl).crl.revoked.is_null()
+            || OPENSSL_sk_push((*crl).crl.revoked, rev.cast::<c_void>()) == 0
+        {
+            // SAFETY: a compile-time-constant site.
+            raise_site(&X_CRL_374);
+            return 0;
+        }
+        (*crl).crl.enc.modified = 1;
+    }
+    1
+}
+
+/// `int X509_CRL_verify(X509_CRL *crl, EVP_PKEY *r)` -- `crypto/x509/x_crl.c:381-386`.
+///
+/// # Safety
+///
+/// `crl` is live; `r` is NULL or a live `EVP_PKEY`.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_verify(crl: *mut X509Crl, r: *mut EvpPkey) -> c_int {
+    // SAFETY: `crl` is live per the contract.
+    let meth = unsafe { (*crl).meth };
+    if !meth.is_null() {
+        // SAFETY: `meth` is live here.
+        if let Some(f) = unsafe { (*meth).crl_verify } {
+            // SAFETY: `f` is `meth`'s own verify callback; `r` is the caller's key.
+            return unsafe { f(crl, r.cast::<c_void>()) };
+        }
+    }
+    0
+}
+
+/// `int X509_CRL_get0_by_serial(X509_CRL *crl, X509_REVOKED **ret, const ASN1_INTEGER *serial)` --
+/// `crypto/x509/x_crl.c:388-394`.
+///
+/// # Safety
+///
+/// `crl` is live; `ret` is NULL or writable; `serial` is live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_get0_by_serial(
+    crl: *mut X509Crl,
+    ret: *mut *mut X509Revoked,
+    serial: *const Asn1String,
+) -> c_int {
+    // SAFETY: `crl` is live per the contract.
+    let meth = unsafe { (*crl).meth };
+    if !meth.is_null() {
+        // SAFETY: `meth` is live here.
+        if let Some(f) = unsafe { (*meth).crl_lookup } {
+            // SAFETY: `f` is `meth`'s own lookup callback; the pointers are the caller's.
+            return unsafe { f(crl, ret, serial, ptr::null()) };
+        }
+    }
+    0
+}
+
+/// `int X509_CRL_get0_by_cert(X509_CRL *crl, X509_REVOKED **ret, X509 *x)` --
+/// `crypto/x509/x_crl.c:396-403`.
+///
+/// # Safety
+///
+/// `crl` is live; `ret` is NULL or writable; `x` is live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_get0_by_cert(
+    crl: *mut X509Crl,
+    ret: *mut *mut X509Revoked,
+    x: *mut X509,
+) -> c_int {
+    // SAFETY: `crl` is live per the contract.
+    let meth = unsafe { (*crl).meth };
+    if !meth.is_null() {
+        // SAFETY: `meth` is live here.
+        if let Some(f) = unsafe { (*meth).crl_lookup } {
+            // SAFETY: `x` is live, so the two accessors return its own fields, which the lookup
+            // callback reads without taking ownership.
+            return unsafe { f(crl, ret, X509_get0_serialNumber(x), X509_get_issuer_name(x)) };
+        }
+    }
+    0
+}
+
+/// `static int def_crl_verify(X509_CRL *crl, EVP_PKEY *r)` -- `crypto/x509/x_crl.c:405-414`.
+///
+/// # Safety
+///
+/// `crl` is live; `r` is NULL or a live `EVP_PKEY`.
+unsafe extern "C" fn def_crl_verify(crl: *mut X509Crl, r: *mut c_void) -> c_int {
+    // SAFETY: `crl` is live per the contract.
+    if unsafe { X509_ALGOR_cmp(&raw const (*crl).sig_alg, &raw const (*crl).crl.sig_alg) } != 0 {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&X_CRL_408) };
+        return 0;
+    }
+    // SAFETY: `crl` is live, `X509_CRL_INFO_it()` is the crate's static item, and `r` is the
+    // caller's key.
+    unsafe {
+        ASN1_item_verify_ex(
+            X509_CRL_INFO_it(),
+            &raw const (*crl).sig_alg,
+            &raw const (*crl).signature,
+            (&raw const (*crl).crl).cast::<c_void>(),
+            ptr::null(),
+            r.cast::<EvpPkey>(),
+            (*crl).libctx,
+            (*crl).propq,
+        )
+    }
+}
+
+/// `static int crl_revoked_issuer_match(X509_CRL *crl, const X509_NAME *nm, X509_REVOKED *rev)` --
+/// `crypto/x509/x_crl.c:416-440`.
+///
+/// # Safety
+///
+/// `crl` is live; `nm` is NULL or live; `rev` is live.
+unsafe fn crl_revoked_issuer_match(
+    crl: *mut X509Crl,
+    nm: *const X509Name,
+    rev: *const X509Revoked,
+) -> c_int {
+    // SAFETY: `rev` is live per the contract.
+    let issuer = unsafe { (*rev).issuer };
+    if issuer.is_null() {
+        if nm.is_null() {
+            return 1;
+        }
+        // SAFETY: `crl` and `nm` are live.
+        if unsafe { X509_NAME_cmp(nm, X509_CRL_get_issuer(crl)) } == 0 {
+            return 1;
+        }
+        return 0;
+    }
+
+    // The authority's `if (!nm) nm = X509_CRL_get_issuer(crl);`.
+    let nm = if nm.is_null() {
+        // SAFETY: `crl` is live.
+        unsafe { X509_CRL_get_issuer(crl) }
+    } else {
+        nm.cast_mut()
+    };
+
+    // SAFETY: `issuer` is `rev`'s live `GENERAL_NAME` stack.
+    let num = unsafe { OPENSSL_sk_num(issuer) };
+    let mut i = 0;
+    while i < num {
+        // SAFETY: `i` is in range and `issuer` is live.
+        let gen = unsafe { OPENSSL_sk_value(issuer, i) }.cast::<GeneralName>();
+        // SAFETY: `gen` is a live general name.
+        if unsafe { (*gen).type_ } == GEN_DIRNAME {
+            // SAFETY: a `GEN_DIRNAME` name carries its directory name in the union.
+            if unsafe { X509_NAME_cmp(nm, (*gen).d.directoryName) } == 0 {
+                return 1;
+            }
+        }
+        i += 1;
+    }
+    0
+}
+
+/// `static int def_crl_lookup(X509_CRL *crl, X509_REVOKED **ret, const ASN1_INTEGER *serial,
+/// const X509_NAME *issuer)` -- `crypto/x509/x_crl.c:442-480`.
+///
+/// # Safety
+///
+/// `crl` is live; `ret` is NULL or writable; `serial` is live; `issuer` is NULL or live.
+unsafe extern "C" fn def_crl_lookup(
+    crl: *mut X509Crl,
+    ret: *mut *mut X509Revoked,
+    serial: *const Asn1String,
+    issuer: *const X509Name,
+) -> c_int {
+    // SAFETY: `crl` is live per the contract.
+    let revoked = unsafe { (*crl).crl.revoked };
+    if revoked.is_null() {
+        return 0;
+    }
+
+    // Sort the entries into serial order if they are not already, under the CRL's own lock.
+    // SAFETY: `revoked` is the CRL's live stack.
+    if unsafe { OPENSSL_sk_is_sorted(revoked) } == 0 {
+        // SAFETY: `crl` is live and its `lock` guards the stack.
+        if unsafe { CRYPTO_THREAD_write_lock((*crl).lock) } == 0 {
+            return 0;
+        }
+        // SAFETY: `revoked` is live and the lock is held.
+        unsafe { OPENSSL_sk_sort(revoked) };
+        // SAFETY: `crl` is live and the lock is held.
+        unsafe { CRYPTO_THREAD_unlock((*crl).lock) };
+    }
+
+    // The authority copies only `serialNumber` into a stack-local `X509_REVOKED`, because that is
+    // the one field the comparator reads; the rest stays uninitialised rather than zero-filled, as
+    // the crate's stack-local `X509` in `x509_cmp.rs` is built.
+    let mut rtmp = core::mem::MaybeUninit::<X509Revoked>::uninit();
+    // The authority's `rtmp.serialNumber = *serial` is a struct copy; `serialNumber` is the first
+    // field, so this copies the `ASN1_INTEGER` into the key's first slot.
+    // SAFETY: `serial` is live, and `rtmp` has room for the one `Asn1String` written at offset 0.
+    unsafe { ptr::copy_nonoverlapping(serial, rtmp.as_mut_ptr().cast::<Asn1String>(), 1) };
+    // SAFETY: `revoked` is live and `rtmp` holds the search key.
+    let mut idx = unsafe { OPENSSL_sk_find(revoked, rtmp.as_ptr().cast::<c_void>()) };
+    if idx < 0 {
+        return 0;
+    }
+    // SAFETY: `revoked` is live.
+    let num = unsafe { OPENSSL_sk_num(revoked) };
+    while idx < num {
+        // SAFETY: `idx` is in range and `revoked` is live.
+        let rev = unsafe { OPENSSL_sk_value(revoked, idx) }.cast::<X509Revoked>();
+        // SAFETY: `rev` is a live entry and `serial` is live.
+        if unsafe { ASN1_INTEGER_cmp(&raw const (*rev).serialNumber, serial) } != 0 {
+            return 0;
+        }
+        // SAFETY: `crl`, `issuer` and `rev` are live.
+        if unsafe { crl_revoked_issuer_match(crl, issuer, rev) } != 0 {
+            if !ret.is_null() {
+                // SAFETY: `ret` is writable per the contract.
+                unsafe { *ret = rev };
+            }
+            // SAFETY: `rev` is live.
+            if unsafe { (*rev).reason } == CRL_REASON_REMOVE_FROM_CRL {
+                return 2;
+            }
+            return 1;
+        }
+        idx += 1;
+    }
+    0
+}
+
+/// `void X509_CRL_set_default_method(const X509_CRL_METHOD *meth)` --
+/// `crypto/x509/x_crl.c:482-488`.
+///
+/// # Safety
+///
+/// `meth` is NULL or a live method that outlives every CRL created while it is installed.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_set_default_method(meth: *const X509CrlMethod) {
+    if meth.is_null() {
+        DEFAULT_CRL_METHOD.store(
+            &INT_CRL_METH as *const X509CrlMethod as *mut X509CrlMethod,
+            Ordering::Relaxed,
+        );
+    } else {
+        DEFAULT_CRL_METHOD.store(meth.cast_mut(), Ordering::Relaxed);
+    }
+}
+
+/// `X509_CRL_METHOD *X509_CRL_METHOD_new(...)` -- `crypto/x509/x_crl.c:490-509`.
+///
+/// # Safety
+///
+/// Each callback is NULL or valid for the method's lifetime.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_METHOD_new(
+    crl_init: Option<unsafe extern "C" fn(*mut X509Crl) -> c_int>,
+    crl_free: Option<unsafe extern "C" fn(*mut X509Crl) -> c_int>,
+    crl_lookup: Option<
+        unsafe extern "C" fn(
+            *mut X509Crl,
+            *mut *mut X509Revoked,
+            *const Asn1String,
+            *const X509Name,
+        ) -> c_int,
+    >,
+    crl_verify: Option<unsafe extern "C" fn(*mut X509Crl, *mut c_void) -> c_int>,
+) -> *mut X509CrlMethod {
+    // SAFETY: the allocator answers NULL or one `X509_CRL_METHOD`-sized block; the file and line
+    // are this unit's `OPENSSL_malloc` expansion.
+    let m = CRYPTO_malloc(
+        core::mem::size_of::<X509CrlMethod>(),
+        FILE.as_ptr(),
+        LINE_METHOD_NEW,
+    )
+    .cast::<X509CrlMethod>();
+    if m.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `m` is a fresh, unaliased allocation.
+    unsafe {
+        (*m).crl_init = crl_init;
+        (*m).crl_free = crl_free;
+        (*m).crl_lookup = crl_lookup;
+        (*m).crl_verify = crl_verify;
+        (*m).flags = X509_CRL_METHOD_DYNAMIC;
+    }
+    m
+}
+
+/// `void X509_CRL_METHOD_free(X509_CRL_METHOD *m)` -- `crypto/x509/x_crl.c:511-516`.
+///
+/// # Safety
+///
+/// `m` is NULL or a method `X509_CRL_METHOD_new` allocated and no longer referenced.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_METHOD_free(m: *mut X509CrlMethod) {
+    if m.is_null() {
+        return;
+    }
+    // SAFETY: `m` is live per the contract.
+    if unsafe { (*m).flags } & X509_CRL_METHOD_DYNAMIC == 0 {
+        return;
+    }
+    // SAFETY: `m` is the caller's `X509_CRL_METHOD_new` block, freed with this unit's
+    // `OPENSSL_free` expansion.
+    unsafe { CRYPTO_free(m.cast::<c_void>(), FILE.as_ptr(), LINE_METHOD_FREE) };
+}
+
+/// `void X509_CRL_set_meth_data(X509_CRL *crl, void *dat)` -- `crypto/x509/x_crl.c:518-521`.
+///
+/// # Safety
+///
+/// `crl` is live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_set_meth_data(crl: *mut X509Crl, dat: *mut c_void) {
+    // SAFETY: `crl` is live per the contract.
+    unsafe { (*crl).meth_data = dat };
+}
+
+/// `void *X509_CRL_get_meth_data(X509_CRL *crl)` -- `crypto/x509/x_crl.c:523-526`.
+///
+/// # Safety
+///
+/// `crl` is live.
+#[no_mangle]
+pub unsafe extern "C" fn X509_CRL_get_meth_data(crl: *mut X509Crl) -> *mut c_void {
+    // SAFETY: `crl` is live per the contract.
+    unsafe { (*crl).meth_data }
+}
+
 /// `int X509_CRL_up_ref(X509_CRL *crl)` — `crypto/x509/x509cset.c:74-84`, the CRL half of the
 /// reference-count pair `X509_CRL_it` maintains. It is landed here with the object it counts.
 ///
@@ -882,6 +1305,32 @@ mod tests {
             assert_eq!((*crl).references, 2);
             X509_CRL_free(crl);
             assert_eq!((*crl).references, 1);
+            X509_CRL_free(crl);
+        }
+    }
+
+    /// The method object and the CRL's `meth_data` slot round-trip. The process-wide
+    /// `X509_CRL_set_default_method` global is deliberately not exercised here, because the test
+    /// harness runs tests concurrently and mutating it could race a CRL another test is freeing.
+    #[test]
+    fn method_object_and_meth_data_round_trip() {
+        // SAFETY: every object below is one this test owns.
+        unsafe {
+            let m = X509_CRL_METHOD_new(None, None, None, None);
+            assert!(!m.is_null());
+            assert_eq!((*m).flags, X509_CRL_METHOD_DYNAMIC);
+            X509_CRL_METHOD_free(m);
+
+            let crl = X509_CRL_new();
+            assert!((*crl).meth_data.is_null());
+            X509_CRL_set_meth_data(crl, 0x1234 as *mut c_void);
+            assert_eq!(X509_CRL_get_meth_data(crl), 0x1234 as *mut c_void);
+
+            // A fresh CRL has no revoked entries, so a serial lookup answers 0 with `ret` NULL.
+            let mut rev: *mut X509Revoked = ptr::null_mut();
+            assert_eq!(X509_CRL_get0_by_serial(crl, &raw mut rev, ptr::null()), 0);
+            assert!(rev.is_null());
+
             X509_CRL_free(crl);
         }
     }

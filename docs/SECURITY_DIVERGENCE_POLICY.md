@@ -80,11 +80,21 @@ observations that *can* be made around each boundary are compared normally.
 **Entries that defer a closure carry a `Trigger`, and their machine-readable form is
 `forensics/divergence-obligations.json`.** The prose below is the record; the JSON is the form the
 evidence machinery reads. `forensics/tools/divergence_obligations.py` renders it from a table that
-names, for every trigger-bearing entry, the phase that owns the closure, the trigger condition,
-whether the trigger has fired, and the disposition (`open`, `fixed`, `explicitly_deferred` or
-`accepted_permanent_divergence`). `forensics/tools/phase_state.py` refuses to derive a stratum's
-state while an obligation it owns has fired and is still `open`, so a triggered obligation cannot be
-outrun by a derived `complete`. `--check` fails on any drift between the table and the JSON.
+names, for every trigger-bearing entry, the phase that owns the closure, the trigger condition, the
+**basis** on which the trigger state is decided (`predicate` or `manual`) and the disposition
+(`open`, `fixed`, `explicitly_deferred` or `accepted_permanent_divergence`). A row's `trigger_basis`
+is `predicate` when the trigger is machine-observable and `manual` when it is a human judgement; a
+`predicate` row names a `trigger_predicate` -- a function that reads generated evidence and reports
+whether the trigger has fired, and the file and count it read -- and its `trigger_satisfied` is
+derived from that read, while a `manual` row's `trigger_satisfied` is `null`, because no artefact
+decides it. `forensics/tools/phase_state.py` refuses to derive a stratum's state while an obligation
+it owns **blocks** it: a row blocks its `current_owner` when its disposition is `open` and either
+its trigger has fired or it is a `manual` row with no `adjudication`. An open `manual` row therefore
+blocks its owner **until an `adjudication` records, with the evidence it read, why the trigger has
+not fired**; an adjudicated `manual` row is non-blocking and its adjudication is carried in the row.
+This is deliberately fail-closed -- a manual row is presumed fired until someone says otherwise --
+because the hand-typed trigger state it replaces is exactly what let `D-DECODER-ABSENT-1` read
+`false` while its trigger had fired. `--check` fails on any drift between the table and the JSON.
 
 ### D-CIPHERCTX-NOALG-1 — `EVP_CIPHER_CTX_gettable_params` dereferences a NULL cipher
 
@@ -1503,7 +1513,14 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   the same refusal with the answer the landing actually gives, which is stronger than a NULL because
   it is a stated behaviour with a measurement behind it rather than a field left empty.
 
-### D-DECODER-ABSENT-1 — the crate publishes no provider decoder, so every `OSSL_DECODER`-dependent reader answers the legacy leg's answer or fails
+### D-DECODER-ABSENT-1 — the crate publishes no provider decoder, so every `OSSL_DECODER`-dependent reader answers the legacy leg's answer or fails — **CLOSED**
+
+> **Closed by Phase 10's provider decoder landing.** The decoder rows recorded as absent below are
+> written and courted (`RT-CODEC`), so the three readers named below decode as the authority does.
+> Nothing below is erased: the paragraphs are the entry as it stood while the divergence was real,
+> and the `- **Closed:**` paragraph at its end records what changed. The machine row's trigger is now
+> a predicate over the provider census rather than a hand-typed boolean, and
+> `docs/PHASE-10-KEYFORMATS-SEAL.md` §5 named this row a retirement candidate.
 
 - **Obligation:** the readers whose authority body tries `OSSL_DECODER` first: `d2i_PUBKEY` and
   `d2i_PUBKEY_ex` (`crypto/x509/x_pubkey.c:541`, `:547`) through `x509_pubkey_ex_d2i_ex`'s
@@ -1547,3 +1564,16 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   keymgmt rows they construct into. At that point each of the three arms decodes, the queue record
   becomes the authority's, and this entry is removed with the boundary it records. **Recorded by
   D369.**
+- **Closed:** Phase 10 landed the provider decoder layer the entry records as missing. The
+  `decode_der2key.c` rows and their two front doors are `src/provider/decode_der2key.rs`'s
+  `DEFLT_DECODERS`/`BASE_DECODERS`; `decode_epki2pki.c` is `src/provider/decode_epki2pki.rs`;
+  `decode_pem2der.c` is `src/provider/decode_pem2der.rs`; `decode_spki2typespki.c` is
+  `src/provider/decode_spki2typespki.rs`; and the 10.6 `msblob`/`pvk` decoders are
+  `src/provider/decode_msblob2key.rs` and `src/provider/decode_pvk2key.rs`. So the decoder context
+  now carries instances, `OSSL_DECODER_from_data`/`_from_bio` reach a decoder rather than their
+  zero-decoder arm, and `d2i_PUBKEY`/`d2i_PUBKEY_ex` and `pem_read_bio_key_decoder` decode.
+  `RT-CODEC` (`courts/phase10/rt_codec_probe.c`) drives exactly those rows through the public
+  `OSSL_DECODER_*` surface, and D450 measured `RT-PUBKEY`'s queue-count observable matching the
+  authority, so the claim removed above is restored to the compatible set. The machine-readable row
+  is `disposition: "fixed"` with the row-publishing units and `RT-CODEC` as its `evidence`, and
+  `docs/PHASE-10-KEYFORMATS-SEAL.md` §9's owed retirement is what this paragraph discharges.

@@ -4,8 +4,8 @@
       "blocking": 0,
       "by_disposition": {
         "accepted_permanent_divergence": 3,
-        "fixed": 5,
-        "open": 2
+        "fixed": 6,
+        "open": 1
       },
       "rows": 10
     },
@@ -17,6 +17,7 @@
     ],
     "rows": [
       {
+        "adjudication": "",
         "blocking": false,
         "current_owner": 9,
         "disposition": "fixed",
@@ -24,11 +25,15 @@
         "id": "D-GF2M-1",
         "note": "The heading reads `-- **CLOSED**` and the entry's own `- **Closed:**` paragraph records the construction: `BN_priv_rand_ex(b, numbits - 1, BN_RAND_TOP_ANY, BN_RAND_BOTTOM_ANY, 0, ctx)` retrying while `b` is zero, `r := a*b`, a vartime inversion and a multiply by `b`, routed through `BN_GF2m_mod_mul`. The value, return class and error behaviour are unchanged (a field inverse is unique) and `OBL-GF2M-INV-BLINDING` is discharged; the unit test pins `a * a^-1 == 1`.",
         "originating_phase": 5,
+        "trigger_basis": "manual",
         "trigger_condition": "the Phase 9 RAND landing that makes the authority's blinding constructible: `BN_priv_rand_ex` exists, so `BN_GF2m_mod_inv` can draw `b`",
+        "trigger_observation": "manual: the trigger is a human judgement and is not machine-observable, so `trigger_satisfied` is null; an `adjudication` is what records why it has not fired",
         "trigger_phase": 9,
-        "trigger_satisfied": true
+        "trigger_predicate": "",
+        "trigger_satisfied": null
       },
       {
+        "adjudication": "",
         "blocking": false,
         "current_owner": 9,
         "disposition": "fixed",
@@ -36,11 +41,15 @@
         "id": "D-CBCHMAC-MULTIBLOCK-ENC-1",
         "note": "The heading reads `-- **CLOSED**`; the entry's `- **Closed:**` paragraph records the authority's two `tls1_multi_block_encrypt` bodies in `src/provider/cipher.rs` and the new `RT-CIPHER` arm, which observes `mbenc=1`, the packed length (5204 SHA-1 / 5268 SHA-256 at 5000 bytes), the four record headers and a round trip. The IV bytes are not compared -- no two machines draw the same ones.",
         "originating_phase": 8,
+        "trigger_basis": "manual",
         "trigger_condition": "Phase 9's first commit that lands `crypto/rand/`, which supplies the IVs the multiblock encrypt parameter draws through `RAND_bytes_ex`",
+        "trigger_observation": "manual: the trigger is a human judgement and is not machine-observable, so `trigger_satisfied` is null; an `adjudication` is what records why it has not fired",
         "trigger_phase": 9,
-        "trigger_satisfied": true
+        "trigger_predicate": "",
+        "trigger_satisfied": null
       },
       {
+        "adjudication": "",
         "blocking": false,
         "current_owner": 8,
         "disposition": "fixed",
@@ -48,11 +57,15 @@
         "id": "D-PKEY-AMETH-1",
         "note": "Superseded by D-PKEY-AMETH-3 for the table, and closed on it: the 8.8 landing D353 populated `standard_methods[]` and D372 landed the four ECX rows. But the table alone was **not** sufficient. The observable stayed owed because `evp_keymgmt_util_assign_pkey`/`_copy` called a crate-local `evp_pkey_set_type_by_keymgmt` that passed a NULL `str` and skipped the name walk, so a provider key named `\"RSA\"`/`\"EC\"`/... stayed `EVP_PKEY_KEYMGMT`. D438 observed it and `RT-KEYFORMAT` measured it (`EVP_PKEY_get_id` answers 6/116/408 on the authority against `EVP_PKEY_KEYMGMT` (-1) here; `EVP_PKEY_get_base_id` 6/116/408 against `NID_undef` 0). Both call sites now call the public `EVP_PKEY_set_type_by_keymgmt` exactly as `crypto/evp/keymgmt_lib.c:64`/`:505` do, the helper is removed, and `RT-KEYFORMAT` passes 342 observations with zero residuals. The Phase 8 seal §5 records it under `D-PKEY-AMETH-1, -2, superseded by -3, which D372 supersedes in turn ... Every one is closed`.",
         "originating_phase": 8,
+        "trigger_basis": "manual",
         "trigger_condition": "Phase 8's first commit that lands an `EVP_PKEY_ASN1_METHOD` object, making `pkey_set_type`'s `if (ameth != NULL)` arm reachable",
+        "trigger_observation": "manual: the trigger is a human judgement and is not machine-observable, so `trigger_satisfied` is null; an `adjudication` is what records why it has not fired",
         "trigger_phase": 8,
-        "trigger_satisfied": true
+        "trigger_predicate": "",
+        "trigger_satisfied": null
       },
       {
+        "adjudication": "",
         "blocking": false,
         "current_owner": 8,
         "disposition": "fixed",
@@ -60,11 +73,15 @@
         "id": "D-PKEY-AMETH-3",
         "note": "Superseded by D372 (the entry's own quote says so), which landed the ECX chain; `EVP_PKEY_asn1_get_count` now answers 15 and `EVP_PKEY_meth_get_count` 10, `EVP_PKEY_asn1_find`/`_find_str` answer the four ECX objects and `EVP_PKEY_type` their four NIDs. The provider-key-typing observable it also names -- a keymgmt named `\"X25519\"`/`\"X448\"`/`\"ED25519\"`/`\"ED448\"` taking the legacy NID through `pkey_set_type` -- additionally required `evp_keymgmt_util_assign_pkey`/`_copy` to call the public `EVP_PKEY_set_type_by_keymgmt` rather than a crate-local NULL-`str` helper; that call site was repaired with D-PKEY-AMETH-1 and `RT-KEYFORMAT` measures it. The Phase 8 seal §5: `D372 landed the ECX chain and the register's third entry retires with it. Every one is closed`.",
         "originating_phase": 8,
+        "trigger_basis": "manual",
         "trigger_condition": "the slice that lands `crypto/ec/ecx_meth.c` and the ~9,000 lines its callbacks name, at which point the four rows are appended to both standard_methods[] tables",
+        "trigger_observation": "manual: the trigger is a human judgement and is not machine-observable, so `trigger_satisfied` is null; an `adjudication` is what records why it has not fired",
         "trigger_phase": 8,
-        "trigger_satisfied": true
+        "trigger_predicate": "",
+        "trigger_satisfied": null
       },
       {
+        "adjudication": "",
         "blocking": false,
         "current_owner": 8,
         "disposition": "accepted_permanent_divergence",
@@ -72,11 +89,15 @@
         "id": "D-EC-1",
         "note": "Superseded by D-EC-2, and the entry records the shape of the supersession itself: `That slice landed in D340 and the trigger fired the other way: the column is written, its one non-NULL row is resolved to EC_GFp_simple_method, and the divergence is recorded rather than removed`. The divergence therefore persists as D-EC-2, which is why this row is not `fixed`; keeping it as its own row records that the trigger fired and the answer changed shape rather than disappeared.",
         "originating_phase": 8,
+        "trigger_basis": "manual",
         "trigger_condition": "the slice that lands `ec_key.c`, `ecdh_ossl.c` and `ecdsa_ossl.c`, at which point the method column is written",
+        "trigger_observation": "manual: the trigger is a human judgement and is not machine-observable, so `trigger_satisfied` is null; an `adjudication` is what records why it has not fired",
         "trigger_phase": 8,
-        "trigger_satisfied": true
+        "trigger_predicate": "",
+        "trigger_satisfied": null
       },
       {
+        "adjudication": "",
         "blocking": false,
         "current_owner": 8,
         "disposition": "accepted_permanent_divergence",
@@ -84,11 +105,15 @@
         "id": "D-EC-2",
         "note": "The trigger names no future stratum; the register records the divergence as `neither transcribable nor inventable` because every field operation is `ecp_nistz256-x86_64.s` with no `#else` arm, and D274's perlasm rule does not reach it either -- a Montgomery representation is observable through every subsequent multiplication. The Phase 8 seal §6 states it as `the standing consequence: where this authority's implementation is perlasm, this crate's is a portable reconstruction`. That is a deliberate permanent narrowing, and `prerequisites.json` carries it machine-readably as `modelled_differently` with empty `covers`, so it is recorded rather than left `open` for a stratum that does not exist.",
         "originating_phase": 8,
+        "trigger_basis": "manual",
         "trigger_condition": "the slice that supplies a construction for the perlasm unit (`crypto/ec/ecp_nistz256.c`), at which point `curve_list_method` answers `EC_GFp_nistz256_method`",
+        "trigger_observation": "manual: the trigger is a human judgement and is not machine-observable, so `trigger_satisfied` is null; an `adjudication` is what records why it has not fired",
         "trigger_phase": 8,
-        "trigger_satisfied": false
+        "trigger_predicate": "",
+        "trigger_satisfied": null
       },
       {
+        "adjudication": "",
         "blocking": false,
         "current_owner": 8,
         "disposition": "accepted_permanent_divergence",
@@ -96,11 +121,15 @@
         "id": "D-CBCHMAC-MAXBUFSZ-ASSERT-1",
         "note": "The register's trigger is `none planned ... If a caller needs parity with the abort, that is docs/DECISIONS.md D276's to revisit, not an arm's`. The authority aborts (`cipher_aes_cbc_hmac_sha1_hw.c:701`, exit 134) before `maxsndfrag` is set; the crate computes 53. Reproducing a deliberate `abort()` would turn a caller's diagnostic into a denial of service, and the Phase 8 seal §5 agrees: `This one is permanent and deliberate: it is a safety divergence, not a gap`.",
         "originating_phase": 8,
+        "trigger_basis": "manual",
         "trigger_condition": "none planned: this is a permanent, deliberate safety divergence",
+        "trigger_observation": "manual: the trigger is a human judgement and is not machine-observable, so `trigger_satisfied` is null; an `adjudication` is what records why it has not fired",
         "trigger_phase": 8,
-        "trigger_satisfied": false
+        "trigger_predicate": "",
+        "trigger_satisfied": null
       },
       {
+        "adjudication": "",
         "blocking": false,
         "current_owner": 10,
         "disposition": "fixed",
@@ -108,11 +137,15 @@
         "id": "D-PBE-PKCS12-KEYGEN-1",
         "note": "10.4 landed `crypto/pkcs12/p12_crpt.c`, which is this row's trigger, so the six `builtin_pbe[]` rows take both `PKCS12_PBE_keyivgen` addresses and `EVP_PBE_find`/`_ex` answer 1 with both keygen out-parameters **non-NULL**. What was a contents gap in two columns is now the authority's table. `RT-PKCS12` drives all six NIDs through `EVP_PBE_find_ex` and prints the return code, the type, the NID and both presence answers, which is the measurement `RT-EVP-PBE` held back with a marker while the two libraries differed. The heading reads `-- **CLOSED**`. Nothing was stubbed; the guard in `EVP_PBE_CipherInit_ex` still covers the eighteen PRF rows, and the six PKCS#12 rows stop taking it.",
         "originating_phase": 7,
+        "trigger_basis": "manual",
         "trigger_condition": "Phase 10's first commit that lands `crypto/pkcs12/p12_crpt.c`, which supplies the two `PKCS12_PBE_keyivgen` function addresses the six rows lack",
+        "trigger_observation": "manual: the trigger is a human judgement and is not machine-observable, so `trigger_satisfied` is null; an `adjudication` is what records why it has not fired",
         "trigger_phase": 10,
-        "trigger_satisfied": true
+        "trigger_predicate": "",
+        "trigger_satisfied": null
       },
       {
+        "adjudication": "The trigger has not fired, and the machine facts that show it are: its phrase is Phase 13's first legacy cipher wrapper, and Phase 13 is `not-started` (`forensics/phase-state.json`), so no wrapper has been written; and the legacy `OBJ_NAME` table those wrappers populate is still empty because the crate's own adder is inert -- `src/runtime/init.rs`'s `add_all_legacy_methods` is `fn add_all_legacy_methods(opts: u64) { let _ = opts; }`, so `OPENSSL_init_crypto`'s two adder bits do nothing and `set_legacy_nid` finds nothing. The divergence -- `EVP_CIPHER_get_nid` answers `NID_undef` where the authority answers `NID_des_cbc` -- is therefore still real, and it is adjudicated rather than assumed quiet.",
         "blocking": false,
         "current_owner": 13,
         "disposition": "open",
@@ -120,33 +153,44 @@
         "id": "D-EVP-CIPHER-LEGACY-NID-1",
         "note": "The trigger phrase names Phase 13, which is not yet `complete`, so this row may be `open`. `evp_cipher_from_algorithm` calls `set_legacy_nid`, whose code landed in 7.3b; what it searches is the legacy wrappers' table, which is Phase 13's and empty, so `EVP_CIPHER_get_nid` answers `NID_undef` (0) where the authority answers 31 (`NID_des_cbc`).",
         "originating_phase": 7,
+        "trigger_basis": "manual",
         "trigger_condition": "Phase 13's first legacy cipher wrapper, which populates the `OBJ_NAME` table `set_legacy_nid` searches -- so a fetched provider cipher's legacy NID becomes real",
+        "trigger_observation": "manual: the trigger is a human judgement and is not machine-observable, so `trigger_satisfied` is null; an `adjudication` is what records why it has not fired",
         "trigger_phase": 13,
-        "trigger_satisfied": false
+        "trigger_predicate": "",
+        "trigger_satisfied": null
       },
       {
+        "adjudication": "",
         "blocking": false,
         "current_owner": 10,
-        "disposition": "open",
-        "evidence": "courts/phase8/rt_pubkey_probe.c (RT-PUBKEY)",
+        "disposition": "fixed",
+        "evidence": "src/provider/decode_der2key.rs (DEFLT_DECODERS/BASE_DECODERS, the decode_der2key rows and their two front doors); src/provider/decode_epki2pki.rs; src/provider/decode_pem2der.rs; src/provider/decode_spki2typespki.rs; src/provider/decode_msblob2key.rs; src/provider/decode_pvk2key.rs; courts/phase10/rt_codec_probe.c; RT-CODEC",
         "id": "D-DECODER-ABSENT-1",
-        "note": "Recorded by D369, and the trigger phrase names Phase 10, which is not yet `complete`, so this row may be `open`. The crate's decoder context carries no instances, so `d2i_PUBKEY` answers NULL for a decodable input and `pem_read_bio_key_decoder` returns NULL after its first failed walk; the only observable inside the shared path is the queue record. The entry retires with the provider decoder that lands the rows.",
+        "note": "Recorded by D369 while the provider decoder layer was absent: the crate's decoder context carried no instances, `d2i_PUBKEY` answered NULL for a decodable input and `pem_read_bio_key_decoder` returned NULL after its first failed walk. Phase 10 landed the layer -- the `decode_der2key.c` rows and their two front doors (`src/provider/decode_der2key.rs`), the `EncryptedPrivateKeyInfo` decoder (`src/provider/decode_epki2pki.rs`), `decode_pem2der.c` (`src/provider/decode_pem2der.rs`), `decode_spki2typespki.c` (`src/provider/decode_spki2typespki.rs`) and the `msblob`/`pvk` decoders (`src/provider/decode_msblob2key.rs`, `src/provider/decode_pvk2key.rs`) -- so the census `forensics/atlas/provider-algorithms.json` records every `OSSL_OP_DECODER` row `implemented`, and this row's trigger is now a predicate over that count rather than a hand-typed boolean. `RT-CODEC` (`courts/phase10/rt_codec_probe.c`) is the behavioural measurement of those decoder rows, and D450 measured the queue-count observable `RT-PUBKEY` carries. **D474's Phase 10 seal §5 named this row a retirement candidate** (`the trigger condition has been met and the machine row still reads otherwise`) and its §9 said the register row `should be removed with the boundary it records`; the row is retired here -- kept rather than deleted, as its siblings are, and marked `CLOSED` in `docs/SECURITY_DIVERGENCE_POLICY.md`.",
         "originating_phase": 8,
+        "trigger_basis": "predicate",
         "trigger_condition": "the slice that supplies a provider decoder -- the DER/PEM decoder rows and the keymgmt rows they construct into",
+        "trigger_observation": "read forensics/atlas/provider-algorithms.json: 152 of 152 OSSL_OP_DECODER row(s) are implemented",
         "trigger_phase": 10,
-        "trigger_satisfied": false
+        "trigger_predicate": "provider-decoder-rows-implemented",
+        "trigger_satisfied": true
       }
     ],
-    "rule": "an obligation blocks its `current_owner` when its trigger has fired (`trigger_satisfied`) and its `disposition` is still `open`; `phase_state.py` applies that test to each stratum"
+    "rule": "an obligation blocks its `current_owner` when its `disposition` is `open` and either its trigger has materially fired (`trigger_satisfied` is true, which a `trigger_basis: predicate` row derives from its named predicate's read of generated evidence) or it is a `trigger_basis: manual` row with no `adjudication` -- a manual row's `trigger_satisfied` is null because the trigger is not machine-observable, so an open manual row blocks its owner until an `adjudication` records, with evidence, why the trigger has not fired; `phase_state.py` applies that test to each stratum",
+    "trigger_bases": [
+      "predicate",
+      "manual"
+    ]
   },
-  "body_hash": "10db55d88a7a8e8dc57d2c9207fe962b0310053f0d17d58198471caafccc1cc3",
+  "body_hash": "0da66b5d943582b410f79d4fc11780cdbb3bf811071925c5767e8b983fb3dfbf",
   "generator": "forensics/tools/divergence_obligations.py",
   "inputs": [
     {
       "name": "divergence-register",
       "note": "the prose register this table transcribes",
       "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
-      "sha256": "08a4e3f2683c8f63e1e657c4618e50ecd83e799edc2fe8e2cbb7ffefc184f0ae"
+      "sha256": "6a98cb25b569797d6e5b0ceef5e10875532d1de7a9ad560fdb0892d653715fb3"
     },
     {
       "name": "phase-8-seal",
@@ -164,13 +208,19 @@
       "name": "phase-8-obligations",
       "note": "the Phase 8 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "5acf4868546cc67958eb1c197bf64cf247a300a690bd9f555a062ee6adb0e901"
+      "sha256": "a5e256d5139b71bdc135b8f63de1db548639655de8e90b2320d59e02d4def913"
     },
     {
       "name": "phase-9-obligations",
       "note": "the Phase 9 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "98e5394c5cb5a295b82faaf6086017f1d35dbdb4a629a1b8dc8cda087ddc0be4"
+      "sha256": "bfe43a78a2bcb40e547acb2888bca45deb6a62493306b8f0fc910ea7dec1a857"
+    },
+    {
+      "name": "provider-algorithms",
+      "note": "the census the decoder predicate reads: its OSSL_OP_DECODER rows and their implementation_state",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "d7b2138ccf175e9d3ffa58b738729344f315b6a52e1b3c81427e593d6659bba5"
     }
   ],
   "kind": "divergence-obligations",

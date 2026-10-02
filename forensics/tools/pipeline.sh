@@ -124,6 +124,28 @@ echo "== phase 2 shell + its courts =="
 bash forensics/tools/build_phase2.sh
 
 echo "== every active stratum's courts =="
+# Phase 22.1's normalizer runs first: `RT-PHASE22-BUILD-CAPTURE` re-derives
+# `forensics/atlas/phase22/compile-commands.json` from the tracked raw capture and requires the
+# committed artefact to be equal to the re-derivation, so the normalizer has to have run for the
+# court to be judging a fresh artefact rather than last commit's. It is idempotent and needs only
+# the tracked capture plus the pinned `configdata.pm`.
+python3 forensics/tools/phase22_build_commands.py
+# 22.6's binary-reference graph, for the same reason: `RT-PHASE22-BINARY` reconstructs the graph's
+# raw model from the committed artefact's own rows and re-derives the whole body, so the artefact
+# must be freshly generated from the pinned build before the court judges it. It reads the build
+# directory with a pure-Python ELF64/`ar` reader and never invokes binutils.
+python3 forensics/tools/phase22_binary_graph.py
+# 22.7's dispatch/callback/registration graph, for the same reason: `RT-PHASE22-DISPATCH`
+# re-derives the body from the committed artefact's own tables and compares, so the artefact
+# must be fresh. It scans the authority source with a pure C tokenizer and joins 22.3's
+# address-taken census and 22.6's data relocations; it needs no build and no compiler.
+python3 forensics/tools/phase22_dispatch.py
+# 22.10's configuration/environment/default-path surface, for the same reason: `RT-PHASE22-CONFIG`
+# reconstructs the raw model from the committed artefact's own rows and re-derives the whole body,
+# so the artefact must be freshly generated from the pinned source, `configdata.pm` and built
+# binary before the court judges it. It reads the authority tree and runs `openssl version -d/-e/-m`
+# with the build directory on `LD_LIBRARY_PATH`; it writes no host path.
+python3 forensics/tools/phase22_config.py
 python3 forensics/tools/run_courts.py
 
 echo "== prerequisite atlases =="
@@ -164,6 +186,16 @@ echo "== ledgers =="
 # Discovery-driven, the way `evidence_determinism.py` already is: a stratum is a file
 # matching the glob, not an entry in a list somebody has to remember to extend.
 for f in forensics/tools/phase*_obligations.py; do python3 "$f"; done
+
+# The Phase-11.2 / Phase-22 X.509 closure gate. It is **after** the ledgers because it reads
+# `forensics/phase11-obligations.json`'s implemented set, and it **fails closed**: a new export of
+# Phase 11.2's three units while the Phase-22 X.509 closure slice is unsatisfied is the thing the
+# stratum-level `REQUIRES` edge cannot see, because that edge only fires on a `complete`
+# (`docs/PHASE-22-SUBPHASES.md` section 8, `docs/PHASE-11-SUBPHASES.md` section 2 row 11.2).
+# `--self-test` runs first and proves the rule fires, since a gate never seen to fire is not
+# evidence.
+python3 forensics/tools/phase22_x509_gate.py --self-test
+python3 forensics/tools/phase22_x509_gate.py
 
 # The Phase 8 remainder projection (`docs/PHASE-8-REMAINING.md`), immediately after the
 # loop above because it is a projection of the ledger that loop writes: run before it,
@@ -211,6 +243,17 @@ echo "== divergence obligations =="
 python3 forensics/tools/divergence_obligations.py
 python3 forensics/tools/divergence_obligations.py --check
 
+# The sensitivity control for the divergence rule, immediately after the artefact it reads. The
+# register's most important input used to be a hand-typed `trigger_satisfied`, and
+# `D-DECODER-ABSENT-1` is the proof it failed: a fired trigger read `false` and the owning stratum
+# derived `complete` anyway. The rule is now derived, and `--self-test` reconstructs the shape the
+# defect had -- an `open`, `manual`, unadjudicated row owned by a stratum that derives `complete`
+# -- and refuses to pass unless the rule catches it. It runs before `phase_state.py` derives any
+# state, so a rule that could no longer fire is a failure here rather than a silent gap. It follows
+# the same principle as `gen_provider_algorithms.py --self-test` above, which reconstructs the six
+# ways to defeat the census and requires each to fire.
+python3 forensics/tools/phase_state.py --self-test
+
 echo "== phase state =="
 python3 forensics/tools/phase_state.py
 
@@ -236,7 +279,10 @@ echo "== docs consistency =="
 # that move what it compares, and after `regression_guard.py --update` would have moved the
 # baseline -- which is why `docs/CI.md` defers to that file rather than typing its figures
 # (D205): a gate whose verdict depends on where in the pipeline it sits is not a gate.
-# See docs/DECISIONS.md D203 and D208.
+# See docs/DECISIONS.md D203 and D208. `--self-test` runs first and proves the active stratum's
+# clause gate binds symbols rather than passing vacuously (D483): a plan could name a landed
+# export that was still open and pass, while the heading was found and nothing was checked.
+python3 forensics/tools/docs_consistency.py --self-test
 python3 forensics/tools/docs_consistency.py
 
 echo "== evidence determinism =="

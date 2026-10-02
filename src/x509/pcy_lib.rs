@@ -6,6 +6,12 @@
 //! withheld — every field it reads is a plain member of a structure this module is the canonical
 //! definition for, and the only callee is `OPENSSL_sk_num`/`OPENSSL_sk_value`.
 //!
+//! `pcy_lib.c` itself never reads the fifth `pcy_local.h` structure, `X509_POLICY_CACHE` (the
+//! cache `pcy_cache.c`'s `ossl_policy_cache_set` hangs off the certificate), but this module is
+//! where the crate keeps the `pcy_local.h` layouts, so [`X509PolicyCache`] is defined here beside
+//! the other four. Phase 11.2 added it: it is the layout `pcy_tree.rs`'s `X509_policy_check`
+//! closure reads and writes through the `X509::policy_cache` `*mut c_void` slot.
+//!
 //! ## The structures
 //!
 //! `struct X509_POLICY_DATA_st`, `struct X509_POLICY_NODE_st`, `struct X509_POLICY_LEVEL_st` and
@@ -31,7 +37,7 @@
 
 #![allow(non_snake_case)]
 
-use core::ffi::{c_int, c_uint};
+use core::ffi::{c_int, c_long, c_uint};
 
 use crate::runtime::obj::Asn1Object;
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
@@ -136,6 +142,35 @@ const _: () = {
     assert!(core::mem::offset_of!(X509PolicyTree, auth_policies) == 40);
     assert!(core::mem::offset_of!(X509PolicyTree, user_policies) == 48);
     assert!(core::mem::offset_of!(X509PolicyTree, flags) == 56);
+};
+
+/// `struct X509_POLICY_CACHE_st` — `X509_POLICY_CACHE`, from `crypto/x509/pcy_local.h:65-82`.
+///
+/// The policy data cached with a certificate: its anyPolicy datum, the remaining data, and the
+/// three extension skip counters (`-1` when the extension is absent). The certificate's
+/// `policy_cache` member is a `*mut c_void` (`x_x509.rs`) because no landed unit needed the layout
+/// until now; `pcy_cache.rs` casts it to this type.
+#[repr(C)]
+pub struct X509PolicyCache {
+    /// `X509_POLICY_DATA *anyPolicy` — the anyPolicy data, or null.
+    pub(crate) anyPolicy: *mut X509PolicyData,
+    /// `STACK_OF(X509_POLICY_DATA) *data` — the other policy data.
+    pub(crate) data: *mut OpenSslStack,
+    /// `long any_skip` — inhibitAnyPolicy's value, or -1.
+    pub(crate) any_skip: c_long,
+    /// `long explicit_skip` — requireExplicitPolicy's value, or -1.
+    pub(crate) explicit_skip: c_long,
+    /// `long map_skip` — inhibitPolicyMapping's value, or -1.
+    pub(crate) map_skip: c_long,
+}
+
+const _: () = {
+    assert!(core::mem::size_of::<X509PolicyCache>() == 40);
+    assert!(core::mem::offset_of!(X509PolicyCache, anyPolicy) == 0);
+    assert!(core::mem::offset_of!(X509PolicyCache, data) == 8);
+    assert!(core::mem::offset_of!(X509PolicyCache, any_skip) == 16);
+    assert!(core::mem::offset_of!(X509PolicyCache, explicit_skip) == 24);
+    assert!(core::mem::offset_of!(X509PolicyCache, map_skip) == 32);
 };
 
 // ---------------------------------------------------------------------------------------------

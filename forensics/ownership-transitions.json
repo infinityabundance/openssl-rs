@@ -253,6 +253,14 @@
       "reason": "10.6 transcribes `crypto/pem/pvkfmt.c` -- the ten hand-off exports -- giving the unit a crate module, `src/pem/pvkfmt.rs`. The gate's sealed census counts authority internals a transcribed unit calls whose own defining unit's stratum has sealed, so transcribing another authority file necessarily enters that file's not-yet-built tail: two names of it appeared, `b2i_DSA_PVK_bio` (`crypto/pem/pvkfmt.c:486`) and `b2i_RSA_PVK_bio` (`:594`), neither of which the crate defines. They are the two encrypted-PVK readers the unit's `b2i_PVK_bio`/`b2i_PVK_bio_ex` call on the way in; their bodies need the legacy provider's `RC4`/`PVKKDF` rows, which are open, so the unencrypted level was landed and these two are the unit's recorded remainder. The count rises because a whole authority unit that nothing referenced became visible, which is the cause D132 recorded for the blocking list and D314 for this same metric: landing work can move such a count up without any work being undone.",
       "authority_artifact": "forensics/atlas/prerequisite-gate.json",
       "recorded_by": "docs/PHASE-10-SUBPHASES.md section 3.4 (subphase 10.6)"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 4,
+      "after": 5,
+      "reason": "The blocking-dependency census rises by **one**, from 4 to 5, and unlike every earlier row on this metric the rise *is* the record rather than a name becoming visible. The new deferral `cli_option_list_parse` (forensics/prerequisites.json) records a known Phase-1 archaeology defect and names Phase 16 as the stratum that closes it: forensics/atlas/openssl-3.6.4-production/cli-commands.json carries 55 commands and 2,008 raw option rows, but every structured `option_count` is 0 and every `options` list is empty, because `parse_option_list()` (forensics/tools/atlas_runtime.py:243) matches the authority's `openssl list -options <cmd>` output against the wrong shape. The gate's blocking set is 'deferrals whose owner stratum is not complete' and Phase 16 is not-started, so the count rises by exactly one the moment the row is written. It is placed there on purpose, because the gate re-prints the blocking list on every pipeline run and the defect therefore cannot be silently forgotten between now and 16.0. Nothing was undone and no dependency became unreal; the row is additive.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md (the Phase-11 session entry, written by the orchestrator); forensics/prerequisites.json's `cli_option_list_parse` deferral"
     }
   ]
 }

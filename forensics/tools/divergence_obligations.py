@@ -19,13 +19,21 @@ table. `forensics/tools/phase_state.py` reads the result and holds a stratum ope
 row it owns is both triggered and still `open`, which is the derivation the register
 never had.
 
-What a row is, and what `blocking` is not
------------------------------------------
+What a row is, and what `trigger_satisfied` and `blocking` are not
+-----------------------------------------------------------------
 A row's fields are the register entry's own: `id`, `originating_phase`,
-`trigger_phase`, `current_owner`, `trigger_condition`, `trigger_satisfied`,
-`disposition`, `evidence`, `note`. `blocking` is **derived, never typed**: it is true
-when the trigger has fired and the disposition is still `open`, i.e. when the row blocks
-*its own* `current_owner`. It is not a field a human edits, and it is not the table.
+`trigger_phase`, `current_owner`, `trigger_condition`, `trigger_basis`,
+`trigger_predicate`, `adjudication`, `disposition`, `evidence`, `note`. The trigger's
+*state* is not a hand-typed boolean either. `trigger_basis` says how it is decided --
+`predicate` when a named predicate reads generated evidence, `manual` when it is a human
+judgement -- and the rendered `trigger_satisfied` is derived from that: the predicate's
+answer for a `predicate` row, and `null` for a `manual` row, because no artefact decides
+it. `blocking` is likewise **derived, never typed**: a row blocks *its own* `current_owner`
+when its disposition is `open` and either its trigger has materially fired or it is a
+`manual` row with no `adjudication`. So an open `manual` row blocks its owner **until an
+`adjudication` records, with evidence, why the trigger has not fired** -- which is
+deliberately fail-closed, because a hand-typed trigger state is exactly what let
+`D-DECODER-ABSENT-1` read `false` while its trigger had fired.
 
 `disposition` is one of four values, and the vocabulary is the whole point:
 
@@ -38,9 +46,10 @@ when the trigger has fired and the disposition is still `open`, i.e. when the ro
     answers portably).
 
 The tool fails closed on the table itself: unique ids, phase numbers that exist, a
-disposition from the vocabulary, a `fixed` row that names its evidence, and an
-`explicitly_deferred` row that names a later owner and gives a reason. A violation exits
-nonzero with the row named.
+disposition from the vocabulary, a `trigger_basis` from the vocabulary, a `predicate` row
+that names a predicate the `PREDICATES` table holds (and a `manual` row that names none), a
+`fixed` row that names its evidence, and an `explicitly_deferred` row that names a later
+owner and gives a reason. A violation exits nonzero with the row named.
 
 Usage
 -----
@@ -60,7 +69,7 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -85,6 +94,11 @@ PHASE8_SEAL = "docs/PHASE-8-CRYPTO-SEAL.md"
 PHASE9_SEAL = "docs/PHASE-9-RAND-DRBG-SEAL.md"
 PHASE8_LEDGER = "forensics/phase8-obligations.json"
 PHASE9_LEDGER = "forensics/phase9-obligations.json"
+# The provider-algorithm census (`forensics/atlas/provider-algorithms.json`), the generated
+# artefact a trigger predicate reads. It records every provider registration row of every admitted
+# provider with an `operation` and an `implementation_state`, so a trigger whose condition is "the
+# provider decoder layer lands" is decidable from evidence rather than typed.
+PROVIDER_ALGORITHMS = "forensics/atlas/provider-algorithms.json"
 
 INPUTS = [
     InputRef(name="divergence-register", path=REPO_ROOT / REGISTER,
@@ -97,12 +111,22 @@ INPUTS = [
              note="the Phase 8 ledger, whose open_in_this_stratum is what a freeing row would move"),
     InputRef(name="phase-9-obligations", path=REPO_ROOT / PHASE9_LEDGER,
              note="the Phase 9 ledger, whose open_in_this_stratum is what a freeing row would move"),
+    InputRef(name="provider-algorithms", path=REPO_ROOT / PROVIDER_ALGORITHMS,
+             note="the census the decoder predicate reads: its OSSL_OP_DECODER rows and their "
+                  "implementation_state"),
 ]
 
 # The four dispositions, in the order the vocabulary is stated. A row's `disposition`
 # must be one of these; anything else is a typo the tool refuses rather than a value it
 # copies through.
 DISPOSITIONS = ("open", "fixed", "explicitly_deferred", "accepted_permanent_divergence")
+
+# The two trigger bases, in the order the vocabulary is stated. A row's `trigger_basis` must be
+# one of these; anything else is a typo the tool refuses. `predicate` means the trigger is decided
+# by a named function that reads generated evidence; `manual` means it is a human judgement that no
+# artefact decides, so its `trigger_satisfied` is `null` and an `adjudication` is what keeps it from
+# blocking.
+TRIGGER_BASES = ("predicate", "manual")
 
 # The stratum registry: `phase_state.py`'s `STRATA`, phases 0 through 21. Validating
 # against the range rather than a bare integer means a row cannot name a phase that does
@@ -120,12 +144,56 @@ EVIDENCE = re.compile(
 )
 
 
+# The trigger predicates, by name. A `predicate` row names one of these; each reads generated
+# evidence and returns `(satisfied_or_None, observation)`, where the observation names the file it
+# read and the count it observed, or says why the trigger is undecidable.
+
+
+def predicate_provider_decoders_implemented() -> tuple[bool | None, str]:
+    """Satisfied when the census records every `OSSL_OP_DECODER` row as implemented.
+
+    `D-DECODER-ABSENT-1`'s trigger is the provider decoder layer whose absence the entry records,
+    and the census is the generated artefact that says whether that layer has landed: it carries
+    one row per provider registration row with an `implementation_state`, and the decoder rows are
+    the `OSSL_OP_DECODER` rows. The predicate is satisfied when the census carries at least one
+    decoder row and every one of them is `implemented`. A census that is absent cannot decide the
+    trigger and returns `None` with that reason rather than a guess.
+    """
+    path = REPO_ROOT / PROVIDER_ALGORITHMS
+    if not path.is_file():
+        return None, (
+            f"{PROVIDER_ALGORITHMS} is absent, so the OSSL_OP_DECODER row count cannot be "
+            f"read and the trigger is undecidable")
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    decoders = [r for r in doc["body"]["rows"] if r["operation"] == "OSSL_OP_DECODER"]
+    implemented = [r for r in decoders if r["implementation_state"] == "implemented"]
+    return (
+        bool(decoders) and len(implemented) == len(decoders),
+        f"read {PROVIDER_ALGORITHMS}: {len(implemented)} of {len(decoders)} "
+        f"OSSL_OP_DECODER row(s) are implemented",
+    )
+
+
+# The predicates by name. A `predicate` row names one of these keys in `trigger_predicate`.
+PREDICATES: dict[str, Callable[[], tuple[bool | None, str]]] = {
+    "provider-decoder-rows-implemented": predicate_provider_decoders_implemented,
+}
+
+# A `manual` row has no predicate to read, so there is no file and no count to name. The reason
+# the trigger has not fired, when one is given, is the row's `adjudication`.
+MANUAL_OBSERVATION = (
+    "manual: the trigger is a human judgement and is not machine-observable, so "
+    "`trigger_satisfied` is null; an `adjudication` is what records why it has not fired"
+)
+
+
 class Row(NamedTuple):
     """One register entry, transcribed. Deliberately data: the rule reads the table.
 
-    `blocking` is not a field here on purpose. It is computed from `trigger_satisfied`
-    and `disposition` when the artefact is rendered, so it cannot be typed by hand and
-    cannot disagree with the two fields it is a function of.
+    Neither `trigger_satisfied` nor `blocking` is a field here on purpose. The trigger state is
+    derived from `trigger_basis`/`trigger_predicate` and the predicate it names (or is `null` for a
+    `manual` row), and `blocking` is computed from the rendered row when the artefact is written,
+    so neither can be typed by hand and neither can disagree with the fields it is a function of.
     """
 
     id: str
@@ -133,7 +201,9 @@ class Row(NamedTuple):
     trigger_phase: int
     current_owner: int
     trigger_condition: str
-    trigger_satisfied: bool
+    trigger_basis: str
+    trigger_predicate: str
+    adjudication: str
     disposition: str
     evidence: str
     note: str
@@ -161,7 +231,9 @@ OBLIGATIONS: list[Row] = [
             "the Phase 9 RAND landing that makes the authority's blinding constructible: "
             "`BN_priv_rand_ex` exists, so `BN_GF2m_mod_inv` can draw `b`"
         ),
-        trigger_satisfied=True,
+        trigger_basis="manual",
+        trigger_predicate="",
+        adjudication="",
         disposition="fixed",
         evidence=(
             "src/bn/gf2m.rs (BN_GF2m_mod_inv, the blinding at :643-712, and the "
@@ -186,7 +258,9 @@ OBLIGATIONS: list[Row] = [
             "Phase 9's first commit that lands `crypto/rand/`, which supplies the IVs the "
             "multiblock encrypt parameter draws through `RAND_bytes_ex`"
         ),
-        trigger_satisfied=True,
+        trigger_basis="manual",
+        trigger_predicate="",
+        adjudication="",
         disposition="fixed",
         evidence=(
             "src/provider/cipher.rs (tls1_multi_block_encrypt_sha1/_sha256, drawing the "
@@ -211,7 +285,9 @@ OBLIGATIONS: list[Row] = [
             "Phase 8's first commit that lands an `EVP_PKEY_ASN1_METHOD` object, making "
             "`pkey_set_type`'s `if (ameth != NULL)` arm reachable"
         ),
-        trigger_satisfied=True,
+        trigger_basis="manual",
+        trigger_predicate="",
+        adjudication="",
         disposition="fixed",
         evidence=(
             "src/evp/pkey_asn1.rs (STANDARD_METHODS, the authority's fifteen rows); "
@@ -244,7 +320,9 @@ OBLIGATIONS: list[Row] = [
             "the slice that lands `crypto/ec/ecx_meth.c` and the ~9,000 lines its callbacks "
             "name, at which point the four rows are appended to both standard_methods[] tables"
         ),
-        trigger_satisfied=True,
+        trigger_basis="manual",
+        trigger_predicate="",
+        adjudication="",
         disposition="fixed",
         evidence=(
             "src/ec/ecx_meth.rs; src/evp/pkey_asn1.rs (STANDARD_METHODS, 15 rows); "
@@ -274,7 +352,9 @@ OBLIGATIONS: list[Row] = [
             "the slice that lands `ec_key.c`, `ecdh_ossl.c` and `ecdsa_ossl.c`, at which point "
             "the method column is written"
         ),
-        trigger_satisfied=True,
+        trigger_basis="manual",
+        trigger_predicate="",
+        adjudication="",
         disposition="accepted_permanent_divergence",
         evidence=(
             "docs/SECURITY_DIVERGENCE_POLICY.md D-EC-2 (which supersedes it); "
@@ -299,7 +379,9 @@ OBLIGATIONS: list[Row] = [
             "(`crypto/ec/ecp_nistz256.c`), at which point `curve_list_method` answers "
             "`EC_GFp_nistz256_method`"
         ),
-        trigger_satisfied=False,
+        trigger_basis="manual",
+        trigger_predicate="",
+        adjudication="",
         disposition="accepted_permanent_divergence",
         evidence=(
             "src/ec/curve.rs (curve_list_method); forensics/prerequisites.json "
@@ -326,7 +408,9 @@ OBLIGATIONS: list[Row] = [
         trigger_condition=(
             "none planned: this is a permanent, deliberate safety divergence"
         ),
-        trigger_satisfied=False,
+        trigger_basis="manual",
+        trigger_predicate="",
+        adjudication="",
         disposition="accepted_permanent_divergence",
         evidence=(
             "courts/phase8/rt_cipher_probe.c (the `cbchmac.*.g.maxbufsz` arm); "
@@ -351,7 +435,9 @@ OBLIGATIONS: list[Row] = [
             "Phase 10's first commit that lands `crypto/pkcs12/p12_crpt.c`, which supplies the "
             "two `PKCS12_PBE_keyivgen` function addresses the six rows lack"
         ),
-        trigger_satisfied=True,
+        trigger_basis="manual",
+        trigger_predicate="",
+        adjudication="",
         disposition="fixed",
         evidence=(
             "src/pkcs12/p12_crpt.rs (PKCS12_PBE_keyivgen/_ex, transcribed against "
@@ -380,7 +466,19 @@ OBLIGATIONS: list[Row] = [
             "Phase 13's first legacy cipher wrapper, which populates the `OBJ_NAME` table "
             "`set_legacy_nid` searches -- so a fetched provider cipher's legacy NID becomes real"
         ),
-        trigger_satisfied=False,
+        trigger_basis="manual",
+        trigger_predicate="",
+        adjudication=(
+            "The trigger has not fired, and the machine facts that show it are: its phrase is "
+            "Phase 13's first legacy cipher wrapper, and Phase 13 is `not-started` "
+            "(`forensics/phase-state.json`), so no wrapper has been written; and the legacy "
+            "`OBJ_NAME` table those wrappers populate is still empty because the crate's own "
+            "adder is inert -- `src/runtime/init.rs`'s `add_all_legacy_methods` is "
+            "`fn add_all_legacy_methods(opts: u64) { let _ = opts; }`, so `OPENSSL_init_crypto`'s "
+            "two adder bits do nothing and `set_legacy_nid` finds nothing. The divergence -- "
+            "`EVP_CIPHER_get_nid` answers `NID_undef` where the authority answers `NID_des_cbc` "
+            "-- is therefore still real, and it is adjudicated rather than assumed quiet."
+        ),
         disposition="open",
         evidence="RT-EVP-PBE (the `pbe.cipher_nid.legacy` marker)",
         note=(
@@ -401,16 +499,36 @@ OBLIGATIONS: list[Row] = [
             "the slice that supplies a provider decoder -- the DER/PEM decoder rows and the "
             "keymgmt rows they construct into"
         ),
-        trigger_satisfied=False,
-        disposition="open",
-        evidence="courts/phase8/rt_pubkey_probe.c (RT-PUBKEY)",
+        trigger_basis="predicate",
+        trigger_predicate="provider-decoder-rows-implemented",
+        adjudication="",
+        disposition="fixed",
+        evidence=(
+            "src/provider/decode_der2key.rs (DEFLT_DECODERS/BASE_DECODERS, the decode_der2key "
+            "rows and their two front doors); src/provider/decode_epki2pki.rs; "
+            "src/provider/decode_pem2der.rs; src/provider/decode_spki2typespki.rs; "
+            "src/provider/decode_msblob2key.rs; src/provider/decode_pvk2key.rs; "
+            "courts/phase10/rt_codec_probe.c; RT-CODEC"
+        ),
         note=(
-            "Recorded by D369, and the trigger phrase names Phase 10, which is not yet "
-            "`complete`, so this row may be `open`. The crate's decoder context carries no "
-            "instances, so `d2i_PUBKEY` answers NULL for a decodable input and "
-            "`pem_read_bio_key_decoder` returns NULL after its first failed walk; the only "
-            "observable inside the shared path is the queue record. The entry retires with the "
-            "provider decoder that lands the rows."
+            "Recorded by D369 while the provider decoder layer was absent: the crate's decoder "
+            "context carried no instances, `d2i_PUBKEY` answered NULL for a decodable input and "
+            "`pem_read_bio_key_decoder` returned NULL after its first failed walk. Phase 10 "
+            "landed the layer -- the `decode_der2key.c` rows and their two front doors "
+            "(`src/provider/decode_der2key.rs`), the `EncryptedPrivateKeyInfo` decoder "
+            "(`src/provider/decode_epki2pki.rs`), `decode_pem2der.c` "
+            "(`src/provider/decode_pem2der.rs`), `decode_spki2typespki.c` "
+            "(`src/provider/decode_spki2typespki.rs`) and the `msblob`/`pvk` decoders "
+            "(`src/provider/decode_msblob2key.rs`, `src/provider/decode_pvk2key.rs`) -- so the "
+            "census `forensics/atlas/provider-algorithms.json` records every `OSSL_OP_DECODER` "
+            "row `implemented`, and this row's trigger is now a predicate over that count rather "
+            "than a hand-typed boolean. `RT-CODEC` (`courts/phase10/rt_codec_probe.c`) is the "
+            "behavioural measurement of those decoder rows, and D450 measured the queue-count "
+            "observable `RT-PUBKEY` carries. **D474's Phase 10 seal §5 named this row a "
+            "retirement candidate** (`the trigger condition has been met and the machine row "
+            "still reads otherwise`) and its §9 said the register row `should be removed with "
+            "the boundary it records`; the row is retired here -- kept rather than deleted, as "
+            "its siblings are, and marked `CLOSED` in `docs/SECURITY_DIVERGENCE_POLICY.md`."
         ),
     ),
 ]
@@ -440,6 +558,23 @@ def validate(rows: list[Row]) -> list[str]:
                 f"{r.id}: `disposition` is {r.disposition!r}, which is not one of "
                 f"{list(DISPOSITIONS)}"
             )
+        if r.trigger_basis not in TRIGGER_BASES:
+            problems.append(
+                f"{r.id}: `trigger_basis` is {r.trigger_basis!r}, which is not one of "
+                f"{list(TRIGGER_BASES)}"
+            )
+        elif r.trigger_basis == "predicate":
+            if r.trigger_predicate not in PREDICATES:
+                problems.append(
+                    f"{r.id}: `trigger_basis` is `predicate` but `trigger_predicate` is "
+                    f"{r.trigger_predicate!r}, which is not in PREDICATES "
+                    f"{sorted(PREDICATES)}"
+                )
+        elif r.trigger_predicate:
+            problems.append(
+                f"{r.id}: `trigger_basis` is `manual`, so `trigger_predicate` must be empty, "
+                f"but it is {r.trigger_predicate!r}"
+            )
         if not r.trigger_condition.strip():
             problems.append(f"{r.id}: `trigger_condition` is empty")
         if r.disposition == "fixed" and not EVIDENCE.search(r.evidence):
@@ -461,16 +596,43 @@ def validate(rows: list[Row]) -> list[str]:
     return problems
 
 
+def derive_blocking(row: dict) -> bool:
+    """The register's one rule, derived from a rendered row rather than typed.
+
+    A row blocks *its own* `current_owner` when its disposition is still `open` and its trigger
+    has either materially fired (`trigger_satisfied is True`, which for a `predicate` row is its
+    named predicate's answer) or is unobservable and unadjudicated (`trigger_basis` is `manual`
+    with no `adjudication`). The manual clause is the fail-closed half: an open manual row is
+    presumed fired until an `adjudication` records why it has not. `phase_state.py` applies the
+    same test scoped to the stratum being asked about (`current_owner == phase`), and its
+    `--self-test` imports this function so a reconstructed row is judged by the real rule.
+    """
+    if row["disposition"] != "open":
+        return False
+    if row["trigger_satisfied"] is True:
+        return True
+    return row["trigger_basis"] == "manual" and not row.get("adjudication", "").strip()
+
+
 def build() -> dict:
-    """Render the artefact from the table, deriving `blocking` rather than reading it."""
+    """Render the artefact from the table, deriving the trigger state and `blocking`.
+
+    Neither `trigger_satisfied` nor `blocking` is typed by hand: the first is the named predicate's
+    answer for a `predicate` row (and `None` for a `manual` row, whose trigger no artefact
+    decides), and the second is `derive_blocking` over the rendered row.
+    """
     rows: list[dict] = []
     for r in OBLIGATIONS:
         row = dict(r._asdict())
-        # Derived, never typed: the row blocks its own `current_owner` exactly when the
-        # trigger has fired and the disposition is still `open`. `phase_state.py` applies
-        # the same test per stratum (`current_owner == phase`), which is the same
-        # predicate scoped to the stratum being asked about.
-        row["blocking"] = bool(r.trigger_satisfied and r.disposition == "open")
+        if r.trigger_basis == "predicate":
+            satisfied, observation = PREDICATES[r.trigger_predicate]()
+            row["trigger_satisfied"] = satisfied
+        else:
+            row["trigger_satisfied"] = None
+            observation = MANUAL_OBSERVATION
+        row["trigger_observation"] = observation
+        # Derived, never typed: see `derive_blocking`.
+        row["blocking"] = derive_blocking(row)
         rows.append(row)
 
     by_disposition: dict[str, int] = {}
@@ -479,10 +641,15 @@ def build() -> dict:
 
     body = {
         "dispositions": list(DISPOSITIONS),
+        "trigger_bases": list(TRIGGER_BASES),
         "rule": (
-            "an obligation blocks its `current_owner` when its trigger has fired "
-            "(`trigger_satisfied`) and its `disposition` is still `open`; "
-            "`phase_state.py` applies that test to each stratum"
+            "an obligation blocks its `current_owner` when its `disposition` is `open` and "
+            "either its trigger has materially fired (`trigger_satisfied` is true, which a "
+            "`trigger_basis: predicate` row derives from its named predicate's read of generated "
+            "evidence) or it is a `trigger_basis: manual` row with no `adjudication` -- a manual "
+            "row's `trigger_satisfied` is null because the trigger is not machine-observable, so "
+            "an open manual row blocks its owner until an `adjudication` records, with evidence, "
+            "why the trigger has not fired; `phase_state.py` applies that test to each stratum"
         ),
         "counts": {
             "rows": len(rows),

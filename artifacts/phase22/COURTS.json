@@ -1,0 +1,557 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "16 courts, each an FRF-style sensitivity challenge rather than a file existence check. `RT-PHASE22-BUILD-CAPTURE` runs `forensics/tools/phase22_build_commands.py`'s own `build_body` on the real raw capture and on controlled mutations of it in memory: dropping one `-D` removes exactly that element from the unit's `defines` and `args`; swapping two `-I` options reorders that unit's `includes` and leaves its `defines`; appending a synthetic unit raises `commands` and `distinct_sources` by one; and appending a build-time `-o /dev/null` assembler probe -- which is not a translation unit -- changes nothing. It also re-derives the committed `forensics/atlas/phase22/compile-commands.json` body from the raw log and requires they be equal. The other courts are each exposed by their own plane's module as `courts()` and discovered by this runner rather than listed here, and each carries the same obligation: it drives its instrument over the real artefact and over controlled mutations of it, and fails if the instrument is insensitive to its own defect class. No court claims the authority surface is complete: a plane's raw input is often a scratch product and is not tracked, so the courts tie committed artefacts to the logic that built them rather than to a fresh re-derivation, and Doxygen absence is never surface absence (docs/PHASE-22-SUBPHASES.md section 6). `pending_courts` names the courts the plan gives later subphases and every name is printed on each run, so 'not run yet' cannot be read as 'passed'.",
+    "courts": [
+      {
+        "captured_commands": 2201,
+        "court": "RT-PHASE22-BUILD-CAPTURE",
+        "distinct_sources": 1232,
+        "failures": [],
+        "mutations": [
+          "drop-define",
+          "reorder-includes",
+          "synthetic-unit",
+          "assembler-probe"
+        ],
+        "observations": 19,
+        "producer": "gcc",
+        "raw_capture": "forensics/atlas/phase22/raw/compile-commands.jsonl",
+        "verdict": "pass"
+      },
+      {
+        "archive_members": 1123,
+        "artefact": "forensics/atlas/phase22/binary-reference-graph.json",
+        "artefacts": 12,
+        "court": "RT-PHASE22-BINARY",
+        "explanation_counts": {
+          "ARCHIVE_MEMBER": 0,
+          "CAPTURED_COMPILER_OUTPUT": 1082,
+          "EXPLICIT_NONCOMPILER_BUILD_STEP": 0,
+          "GENERATED_ASSEMBLY_OUTPUT": 0,
+          "LINK_OUTPUT": 10,
+          "PERLASM_OUTPUT": 41
+        },
+        "failures": [],
+        "genealogy_sensitivity": {
+          "break": "the captured-output join is blinded in memory (every captured output treated as unmatched)",
+          "probe_checks_failed_when_blinded": [
+            "genealogy add-unexplained-object: `objects_unexplained` rises by one and `objects_explained` does not move",
+            "genealogy add-explaining-invocation: the object moves out of `unexplained`",
+            "genealogy add-explaining-invocation: it is CAPTURED_COMPILER_OUTPUT carrying the captured command",
+            "genealogy add-explaining-invocation: `objects_explained` rises by one and `objects_unexplained` returns to baseline"
+          ],
+          "verdict_when_blinded": "fail"
+        },
+        "mutations": [
+          "round-trip",
+          "add-defined-symbol",
+          "add-undefined-symbol",
+          "add-resolved-edge",
+          "add-unresolved-edge",
+          "remove-archive-member",
+          "flip-linkage",
+          "remove-definition",
+          "genealogy-add-unexplained-object",
+          "genealogy-add-explaining-invocation",
+          "genealogy-blind-join-sensitivity"
+        ],
+        "objects": 1133,
+        "objects_explained": 1133,
+        "objects_unexplained": 0,
+        "observations": 30,
+        "perlasm_objects": 41,
+        "relocation_edges": 35809,
+        "resolved_edges": 34484,
+        "summary": "1133 objects, 50772 defined, 35809 relocation edges (34484 resolved); 1133 explained, 0 unexplained",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/cli-surface.json",
+        "cipher_aliases": 47,
+        "commands": 120,
+        "commands_with_zero_options": 0,
+        "court": "RT-PHASE22-CLI",
+        "digest_aliases": 18,
+        "failures": [],
+        "mutations": [
+          "real-row-parse",
+          "malformed-row-refusal",
+          "add-command",
+          "add-alias",
+          "add-option-row",
+          "remove-pseudo-command",
+          "broken-parser-sensitivity"
+        ],
+        "observations": 35,
+        "options_structured": 4314,
+        "standard": 54,
+        "verdict": "pass",
+        "version": "OpenSSL 3.6.4 25 Aug 2026 (Library: OpenSSL 3.6.4 25 Aug 2026)"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/compatibility-closure.json",
+        "court": "RT-PHASE22-CLOSURE",
+        "edges": 148275,
+        "failures": [],
+        "mutations": [
+          "round-trip",
+          "add-root-member",
+          "add-reachable-entity",
+          "make-unknown-reachable",
+          "remove-reachability",
+          "drop-root-family"
+        ],
+        "observations": 21,
+        "reachable_entities": 35432,
+        "root_families": 7,
+        "root_members": 27495,
+        "summary": "7 root families, 27495 members, 35432 reachable, 0 unknown-in-roots, x509 satisfied=True",
+        "unknown_intersecting_roots": 0,
+        "verdict": "pass",
+        "x509_satisfied": true
+      },
+      {
+        "analysis_instrument": "clang",
+        "artefact": "forensics/atlas/phase22/conditional-surface.json",
+        "classifications": {
+          "active-production": 1619,
+          "assembly-alternative": 50,
+          "demo-only": 81,
+          "deprecated-only": 10,
+          "excluded-by-production-profile": 96,
+          "fips-only": 11,
+          "generated-only": 79,
+          "platform-specific": 13,
+          "test-only": 349
+        },
+        "conditionals": 6436,
+        "court": "RT-PHASE22-CONDITIONAL",
+        "failures": [],
+        "includes": 8630,
+        "macros_defined": 2100,
+        "mutations": [
+          "round-trip",
+          "add-macro-definition",
+          "add-dead-define",
+          "add-include",
+          "add-conditional",
+          "move-surface",
+          "add-surface",
+          "classify",
+          "record"
+        ],
+        "observations": 46,
+        "producer": "gcc",
+        "skipped_ranges": 4542,
+        "summary": "1216 TUs, 2308 surfaces, 6436 conditionals, 4542 ranges",
+        "translation_units": 1216,
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/config-surface.json",
+        "config_entry_points": 56,
+        "court": "RT-PHASE22-CONFIG",
+        "default_paths": 10,
+        "directives": 115,
+        "env_sites": 66,
+        "env_vars": 51,
+        "failures": [],
+        "mutations": [
+          "round-trip",
+          "add-env-var",
+          "add-read-site",
+          "flip-reader-safe-to-unsafe",
+          "add-default-path",
+          "add-directive-scope",
+          "blind-aggregator-sensitivity"
+        ],
+        "observations": 26,
+        "summary": "51 env vars / 66 sites, 10 default paths, 115 directives",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/test-crosswalk.json",
+        "court": "RT-PHASE22-CROSSWALK",
+        "demos": 76,
+        "edges": 10039,
+        "failures": [],
+        "fuzzers": 34,
+        "mutations": [
+          "round-trip",
+          "add-test-source",
+          "add-symbol-edge",
+          "move-test-to-fuzz",
+          "add-empty-target",
+          "add-untested-export"
+        ],
+        "observations": 31,
+        "summary": "679 tests, 34 fuzzers, 76 demos, 10039 edges, 3967 untested exports",
+        "targets_with_no_edges": 327,
+        "tests": 679,
+        "untested_exported_symbols": 3967,
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/dispatch-graph.json",
+        "binary_only": 354,
+        "corroborated": 468,
+        "court": "RT-PHASE22-DISPATCH",
+        "edges": 1959,
+        "edges_by_kind": {
+          "CALLBACK_SLOT": 471,
+          "CLI_DISPATCH": 315,
+          "CONFIG_DISPATCH": 30,
+          "DISPATCH_SLOT": 722,
+          "REGISTRATION": 67,
+          "RELOCATION_REFERENCE": 354
+        },
+        "failures": [],
+        "mutations": [
+          "round-trip",
+          "add-dispatch-slot",
+          "add-callback-slot",
+          "add-registration-edge",
+          "add-cli-dispatch",
+          "delete-table",
+          "move-corroboration",
+          "promote-binary-only"
+        ],
+        "observations": 27,
+        "source_only": 1137,
+        "summary": "373 tables, 1959 edges (468 both, 1137 source-only, 354 binary-only)",
+        "tables": 373,
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/doxygen-entities.json",
+        "court": "RT-PHASE22-DOXYGEN",
+        "doxygen_version": "1.9.4",
+        "entities": 70075,
+        "failures": [],
+        "lexical_only": 4670,
+        "mutations": [
+          "round-trip",
+          "add-entity",
+          "add-lexical-only",
+          "clear-documented",
+          "move-location",
+          "add-edge",
+          "same-spelling",
+          "unresolved-edge"
+        ],
+        "observations": 39,
+        "reference_edges": 323306,
+        "reference_edges_resolved": 319253,
+        "reference_edges_unresolved": 4053,
+        "summary": "70075 entities, 4670 lexical-only, 323306 reference edges (319253 resolved / 4053 unresolved)",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/frf-challenges.json",
+        "challenges": 12,
+        "court": "RT-PHASE22-FRF",
+        "detected": 12,
+        "failed_planes": [],
+        "failures": [],
+        "fresh_deferred": [],
+        "fresh_regeneration_planes": 4,
+        "fresh_stale": [],
+        "fresh_verified": [
+          "22.1",
+          "22.2",
+          "22.3",
+          "22.4"
+        ],
+        "mutations": [
+          "harness-classify-sensitivity",
+          "harness-negative-controls",
+          "per-plane-drive",
+          "fresh-regeneration-carry",
+          "frf-fuzz-campaign"
+        ],
+        "not_detected": 0,
+        "not_driven": 0,
+        "observations": 16,
+        "sensitivity": {
+          "break": "take a registered DETECTED challenge, add 1 to one of its observed deltas in memory, and require the harness to report NOT_DETECTED",
+          "mutated_plane": "22.1",
+          "verdict_unmutated": "DETECTED",
+          "verdict_when_mutated": "NOT_DETECTED"
+        },
+        "summary": "12 challenges (12 detected, 0 not-detected, 0 not-driven), 6/6 fuzz seeds produced a residual",
+        "undriven_planes": [],
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/gemel-checkpoint.json",
+        "census_entities": 98753,
+        "census_residuals": 62936,
+        "court": "RT-PHASE22-GEMEL",
+        "failures": [],
+        "mutations": [
+          "round-trip",
+          "change-artefact-hash",
+          "add-residual-class",
+          "add-unknown",
+          "move-ledger-state",
+          "add-obligation",
+          "restore"
+        ],
+        "obligations": 5,
+        "observations": 21,
+        "phase11_implemented": 1319,
+        "phase11_open": 148,
+        "planes_bound": 16,
+        "regenerated_changed_outputs": 1,
+        "regenerated_count_deltas": 5,
+        "summary": "16 plane hashes, 98753 entities, 167 UNKNOWN named, 5 proposed obligations, regeneration changed 1/16 outputs with 5 count deltas",
+        "unknown_intersecting_roots": 0,
+        "unknown_total": 167,
+        "verdict": "pass",
+        "x509_satisfied": true
+      },
+      {
+        "artefact": "forensics/atlas/phase22/generated-lineage.json",
+        "court": "RT-PHASE22-GENEALOGY",
+        "edges": 1734,
+        "failures": [],
+        "generators": 60,
+        "mutations": [
+          "round-trip",
+          "add-output",
+          "add-declared",
+          "add-input",
+          "remove-generator",
+          "mark-input"
+        ],
+        "observations": 23,
+        "outputs": 1279,
+        "outputs_without_a_rule": 1,
+        "summary": "1279 outputs, 1734 edges, 60 generators, 1 without a rule",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/install-manifest.json",
+        "categories": {
+          "cli": 1,
+          "cmake_config": 2,
+          "directory": 27,
+          "engine": 4,
+          "header": 142,
+          "html_doc": 909,
+          "library": 4,
+          "manpage": 903,
+          "openssl_cnf": 4,
+          "pkgconfig": 3,
+          "provider_module": 1,
+          "script": 3,
+          "symlink": 5663
+        },
+        "court": "RT-PHASE22-INSTALL",
+        "elf": 8,
+        "entries": 7666,
+        "failures": [],
+        "mutations": [
+          "round-trip",
+          "add-library",
+          "add-symlink",
+          "change-mode",
+          "add-provider-module",
+          "add-pinned-only"
+        ],
+        "observations": 29,
+        "pinned_prefix_present": true,
+        "prefix_diff": {
+          "changed": 0,
+          "only_in_manifest": 7497,
+          "only_in_pinned": 0
+        },
+        "summary": "7666 entries, 5663 symlinks, 8 ELF; prefix_diff 7497/0/0",
+        "symlinks": 5663,
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/pod-contract.json",
+        "claims": 15045,
+        "court": "RT-PHASE22-POD",
+        "disagreements": 2293,
+        "failures": [],
+        "mutations": [
+          "delete-name-alias",
+          "add-synopsis-function",
+          "alter-param-type",
+          "change-return-value",
+          "add-cli-option",
+          "remove-cli-option",
+          "add-env-var",
+          "remove-env-var",
+          "add-directive",
+          "remove-directive",
+          "change-default-path",
+          "alter-deprecation",
+          "broken-extractor",
+          "broken-reconciler"
+        ],
+        "observations": 32,
+        "pages": 903,
+        "summary": "903 pages, 15045 claims, 2293 disagreements",
+        "verdict": "pass"
+      },
+      {
+        "artefact": "forensics/atlas/phase22/reconciliation.json",
+        "court": "RT-PHASE22-RECONCILE",
+        "entities": 98753,
+        "failures": [],
+        "joins": 16,
+        "mutations": [
+          "round-trip",
+          "pod-identity",
+          "add-one-plane-entity",
+          "move-disposition",
+          "add-contradiction",
+          "add-unknown-root",
+          "remove-plane"
+        ],
+        "observations": 30,
+        "residuals": 62936,
+        "summary": "98753 entities, 62936 residuals, 167 unknown, 0 unknown-in-roots",
+        "unknown": 167,
+        "unknown_intersecting_roots": 0,
+        "verdict": "pass"
+      },
+      {
+        "analysis_instrument": "clang",
+        "artefact": "forensics/atlas/phase22/tu-ast.json",
+        "call_edges": 104192,
+        "court": "RT-PHASE22-TU-AST",
+        "entities": 35838,
+        "failed": 0,
+        "failures": [],
+        "mutations": [
+          "round-trip",
+          "add-declaration",
+          "add-definition",
+          "flip-static",
+          "add-call-edge",
+          "move-location"
+        ],
+        "observations": 28,
+        "parsed": 1216,
+        "producer": "gcc",
+        "translation_units": 1216,
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {
+      "RT-PHASE22-SEAL": "22.17 -- the Phase-22 seal (`docs/PHASE-22-ATLAS-SEAL.md`)"
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 16,
+      "total": 16
+    }
+  },
+  "generator": "forensics/tools/phase22_courts.py",
+  "inputs": [
+    {
+      "name": "raw-compile-commands",
+      "path": "forensics/atlas/phase22/raw/compile-commands.jsonl",
+      "sha256": "3bc7b1adcf8e49c0468c251d9775a6f8a191b2d2db803f1cbd2d97ea5307b69d"
+    },
+    {
+      "name": "normalized-compile-commands",
+      "path": "forensics/atlas/phase22/compile-commands.json",
+      "sha256": "8b851d9d3349f376f0a1cb86e4ff49daf39b06fdce4cdfdac0fca4943fcc0a9e"
+    },
+    {
+      "name": "doxygen-entities",
+      "path": "forensics/atlas/phase22/doxygen-entities.json",
+      "sha256": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97"
+    },
+    {
+      "name": "phase-22-plan",
+      "path": "docs/PHASE-22-SUBPHASES.md",
+      "sha256": "9c5bff3c85e95c206bc39ccdf0d000e0ca36115211bba3d4fdad65e3650dad9a"
+    },
+    {
+      "name": "phase22_binary_graph",
+      "path": "forensics/atlas/phase22/binary-reference-graph.json",
+      "sha256": "9b3ff1b523ca31271c631b6a128c59a40a78d193d50503f633bdc0bd4dc3b681"
+    },
+    {
+      "name": "phase22_cli_surface",
+      "path": "forensics/atlas/phase22/cli-surface.json",
+      "sha256": "add909b70351095a461f82da42854e9d67cf49d1ebe8508e222c7284820658de"
+    },
+    {
+      "name": "phase22_closure",
+      "path": "forensics/atlas/phase22/compatibility-closure.json",
+      "sha256": "58734faebbd0b99bfdd612a0b799c1892eb2bcf8f0288ddefc9c97917d1183a6"
+    },
+    {
+      "name": "phase22_conditional",
+      "path": "forensics/atlas/phase22/conditional-surface.json",
+      "sha256": "6a9d0fb3cd1d3a29c222d290ff9f54f95a1ae04ddb152a8bb841488fcb573ed7"
+    },
+    {
+      "name": "phase22_config",
+      "path": "forensics/atlas/phase22/config-surface.json",
+      "sha256": "432020454908e7bfb40d8df7e4cdd7fdb3a0e0ef988364d1bc3ed32c003bede8"
+    },
+    {
+      "name": "phase22_crosswalk",
+      "path": "forensics/atlas/phase22/test-crosswalk.json",
+      "sha256": "3048bd891e485e289eda2372c0dec581b0bfcab71014df54c1423489dbfba206"
+    },
+    {
+      "name": "phase22_dispatch",
+      "path": "forensics/atlas/phase22/dispatch-graph.json",
+      "sha256": "3116fdb3b6eceb9bb13d50a48d562e6c7ed481d6c500416f94ac6fcc6ba05253"
+    },
+    {
+      "name": "phase22_doxygen",
+      "path": "forensics/atlas/phase22/doxygen-entities.json",
+      "sha256": "d2e11b47b4a4c26551d3295ed348692a5152e22cca69533506934e2f7508fb97"
+    },
+    {
+      "name": "phase22_frf",
+      "path": "forensics/atlas/phase22/frf-challenges.json",
+      "sha256": "7c4006d863224456e63df4475fef487f95989a070b86f2a4aaced622d7f2b413"
+    },
+    {
+      "name": "phase22_gemel",
+      "path": "forensics/atlas/phase22/gemel-checkpoint.json",
+      "sha256": "5942d9ac609df20a2bf602e704f6bc31254980a9c57d171ab39e0e00756ca9ce"
+    },
+    {
+      "name": "phase22_genealogy",
+      "path": "forensics/atlas/phase22/generated-lineage.json",
+      "sha256": "924b0d9d14ff5fc93c9db8641ba63a4fa6909120c6570cefa672b22da7901521"
+    },
+    {
+      "name": "phase22_install_manifest",
+      "path": "forensics/atlas/phase22/install-manifest.json",
+      "sha256": "e24286a7d51467027b1a8b11263adf6d5ce6f3237b215f53066be7b3531d5d67"
+    },
+    {
+      "name": "phase22_pod",
+      "path": "forensics/atlas/phase22/pod-contract.json",
+      "sha256": "895ba11713e0bafc2b2bcdcf49e02ccf899e802d66c1885bf360d00af5914744"
+    },
+    {
+      "name": "phase22_reconciliation",
+      "path": "forensics/atlas/phase22/reconciliation.json",
+      "sha256": "a9d17ba2e4602221d244701d002004d04218977021745bcc83cba1220cfffcba"
+    },
+    {
+      "name": "phase22_tu_ast",
+      "path": "forensics/atlas/phase22/tu-ast.json",
+      "sha256": "865dd968b445bebcfdb87d6ea062cd048e3b79ecbf37507a2830e57efa5b5bc5"
+    }
+  ],
+  "kind": "phase22-courts",
+  "schema": "openssl-rs/atlas/phase22-courts/v1"
+}

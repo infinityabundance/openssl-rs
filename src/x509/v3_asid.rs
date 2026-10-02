@@ -36,13 +36,16 @@
 //! `ossl_v3_*`), so no court can name it; its drivable surface is the four exported item groups and
 //! the `X509v3_asid_*` accessors.
 //!
-//! **Also withheld by name**: the three path-validation names — `asid_validate_path_internal`
-//! (`:719-837`), `X509v3_asid_validate_path` (`:844-853`), `X509v3_asid_validate_resource_set`
-//! (`:859-869`) — and the `validation_err` macro (`:702-714`) they share. Their blocker is the
-//! unlanded `X509_STORE_CTX`: this crate models no `struct x509_store_ctx_st` (no `chain`, `error`,
-//! `error_depth`, `current_cert` or `verify_cb` surface), and `sk_X509_num`/`sk_X509_value` are
-//! absent too, so the functions cannot be transcribed without inventing types outside this unit.
-//! Withheld whole rather than stubbed: the names are named, not declared.
+//! * The path-validation surface lands: `asid_validate_path_internal` (`:719-837`),
+//!   `X509v3_asid_validate_path` (`:844-853`) and `X509v3_asid_validate_resource_set` (`:859-869`).
+//!   The `validation_err` macro (`:702-714`) is transcribed as a private function of the same name:
+//!   a `macro_rules!` body cannot name its caller's `ctx`/`x`/`i`/`ret`, so the macro's `goto done`
+//!   becomes the caller's `if ret == 0 { return ret; }` and the helper returns the callback's value.
+//!   The blocker this file used to record is resolved: `X509_STORE_CTX` is 11.1a's `X509StoreCtx`
+//!   (`src/x509/x509_lu.rs`), whose `pub(crate)` `chain`, `error`, `error_depth`, `current_cert` and
+//!   `verify_cb` members are read here; the walk uses the generic `OPENSSL_sk_num`/`OPENSSL_sk_value`
+//!   rather than typed `sk_X509_*` wrappers. No `ERR_raise` coordinate is added -- the block raises
+//!   nothing, as it raises nothing in the authority.
 //!
 //! ## The raise sites
 //!
@@ -90,6 +93,8 @@ use crate::x509::v3_utl::{
     conf_add_error_name_value, i2s_ASN1_INTEGER, ossl_v3_name_cmp, s2i_ASN1_INTEGER,
     X509V3_get_value_int,
 };
+use crate::x509::x509_lu::X509StoreCtx;
+use crate::x509::x_x509::X509;
 
 /// `ERR_LIB_X509V3` — `include/openssl/err.h.in:99`.
 const ERR_LIB_X509V3: c_int = 34;
@@ -1627,3 +1632,310 @@ pub static ossl_v3_asid: X509V3ExtMethod = X509V3ExtMethod {
     r2i: None,
     usr_data: ptr::null_mut(),
 };
+
+// ---------------------------------------------------------------------------------------------
+// Path validation -- `v3_asid.c:700-869`.
+// ---------------------------------------------------------------------------------------------
+
+/// The authority's `ossl_assert` under `-DNDEBUG`, which this profile sets: a plain check that
+/// returns its argument, not the `OPENSSL_die` form. `src/x509/x_pubkey.rs` carries the same helper.
+fn ossl_assert(expr: bool) -> c_int {
+    c_int::from(expr)
+}
+
+/// `X509_V_ERR_UNSPECIFIED` -- `include/openssl/x509_vfy.h.in:216`.
+const X509_V_ERR_UNSPECIFIED: c_int = 1;
+/// `X509_V_ERR_INVALID_EXTENSION` -- `include/openssl/x509_vfy.h.in:258`.
+const X509_V_ERR_INVALID_EXTENSION: c_int = 41;
+/// `X509_V_ERR_UNNESTED_RESOURCE` -- `include/openssl/x509_vfy.h.in:263`.
+const X509_V_ERR_UNNESTED_RESOURCE: c_int = 46;
+
+/// `validation_err(_err_)` -- the `crypto/x509/v3_asid.c:702-714` macro, over this frame's `ctx`,
+/// `x` and `i`.
+///
+/// The authority spells this as a statement macro whose `goto done` returns from
+/// `asid_validate_path_internal` with `ret` set to the callback's value; here it is a function
+/// returning that value (or 0 when `ctx` is NULL), which the caller stores in `ret` and returns
+/// from when it is zero.
+///
+/// # Safety
+///
+/// `ctx` is NULL or a live `X509StoreCtx` whose `verify_cb` is non-NULL whenever `ctx` is non-NULL;
+/// `x` is NULL or a live `X509`.
+unsafe fn validation_err(ctx: *mut X509StoreCtx, x: *mut X509, i: c_int, err: c_int) -> c_int {
+    if !ctx.is_null() {
+        // SAFETY: `ctx` is live and `verify_cb` is non-NULL per the caller's contract, and `x` is
+        // NULL or live; the callback's own contract is the `X509_STORE_CTX_verify_cb` ABI.
+        unsafe {
+            (*ctx).error = err;
+            (*ctx).error_depth = i;
+            (*ctx).current_cert = x;
+            ((*ctx).verify_cb.unwrap_unchecked())(0, ctx.cast::<c_void>())
+        }
+    } else {
+        0
+    }
+}
+
+/// `static int asid_validate_path_internal(X509_STORE_CTX *ctx, STACK_OF(X509) *chain, ASIdentifiers *ext)` -- `crypto/x509/v3_asid.c:719-837`.
+///
+/// # Safety
+///
+/// `chain` is a live non-empty `STACK_OF(X509)`; `ctx` is NULL or a live `X509StoreCtx`; `ext` is
+/// NULL or a live `ASIdentifiers`; and `ctx` is non-NULL whenever `ext` is NULL.
+unsafe fn asid_validate_path_internal(
+    ctx: *mut X509StoreCtx,
+    chain: *mut OpenSslStack,
+    mut ext: *mut AsIdentifiers,
+) -> c_int {
+    let mut child_as: *mut OpenSslStack = ptr::null_mut();
+    let mut child_rdi: *mut OpenSslStack = ptr::null_mut();
+    let mut i: c_int;
+    let mut ret: c_int = 1;
+    let mut inherit_as: c_int = 0;
+    let mut inherit_rdi: c_int = 0;
+    let mut x: *mut X509;
+
+    // SAFETY: `chain` is NULL or live per the contract; the `&&` short-circuits a NULL chain, and
+    // `ctx` is non-NULL on the arm that reads `verify_cb`.
+    let chain_nonempty = !chain.is_null() && unsafe { OPENSSL_sk_num(chain) } > 0;
+    let ctx_or_ext = !ctx.is_null() || !ext.is_null();
+    // SAFETY: `ctx` is non-NULL on the arm that reads `verify_cb`.
+    let cb_present = ctx.is_null() || unsafe { (*ctx).verify_cb.is_some() };
+    if ossl_assert(chain_nonempty) == 0
+        || ossl_assert(ctx_or_ext) == 0
+        || ossl_assert(cb_present) == 0
+    {
+        if !ctx.is_null() {
+            // SAFETY: `ctx` is live per the contract.
+            unsafe { (*ctx).error = X509_V_ERR_UNSPECIFIED };
+        }
+        return 0;
+    }
+
+    // Figure out where to start.  If we don't have an extension to check, we're done.  Otherwise,
+    // check canonical form and set up for walking up the chain.
+    if !ext.is_null() {
+        i = -1;
+        x = ptr::null_mut();
+    } else {
+        i = 0;
+        // SAFETY: `chain` is a live non-empty stack (asserted above).
+        x = unsafe { OPENSSL_sk_value(chain, i) }.cast::<X509>();
+        // SAFETY: `x` is a live certificate.
+        ext = unsafe { (*x).rfc3779_asid }.cast::<AsIdentifiers>();
+        if ext.is_null() {
+            return ret;
+        }
+    }
+    // SAFETY: `ext` is live.
+    if unsafe { X509v3_asid_is_canonical(ext) } == 0 {
+        // SAFETY: `validation_err`'s contract holds here: `ctx` is NULL or live, `x` is NULL or
+        // live, and `verify_cb` is non-NULL whenever `ctx` is.
+        ret = unsafe { validation_err(ctx, x, i, X509_V_ERR_INVALID_EXTENSION) };
+        if ret == 0 {
+            return ret;
+        }
+    }
+    // SAFETY: `ext` is live; its choices are NULL or live.
+    let asnum = unsafe { (*ext).asnum };
+    if !asnum.is_null() {
+        // SAFETY: `asnum` is live under both selector arms.
+        match unsafe { (*asnum).type_ } {
+            ASIdentifierChoice_inherit => inherit_as = 1,
+            ASIdentifierChoice_asIdsOrRanges => {
+                // SAFETY: `asnum` is live under this selector.
+                child_as = unsafe { (*asnum).u }.cast::<OpenSslStack>();
+            }
+            _ => {}
+        }
+    }
+    // SAFETY: `ext` is live; its choices are NULL or live.
+    let rdi = unsafe { (*ext).rdi };
+    if !rdi.is_null() {
+        // SAFETY: `rdi` is live under both selector arms.
+        match unsafe { (*rdi).type_ } {
+            ASIdentifierChoice_inherit => inherit_rdi = 1,
+            ASIdentifierChoice_asIdsOrRanges => {
+                // SAFETY: `rdi` is live under this selector.
+                child_rdi = unsafe { (*rdi).u }.cast::<OpenSslStack>();
+            }
+            _ => {}
+        }
+    }
+
+    // Now walk up the chain.  Extensions must be in canonical form, no cert may list resources
+    // that its parent doesn't list.
+    i += 1;
+    // SAFETY: `chain` is a live non-empty stack.
+    while i < unsafe { OPENSSL_sk_num(chain) } {
+        // SAFETY: `i` is in bounds.
+        x = unsafe { OPENSSL_sk_value(chain, i) }.cast::<X509>();
+        if ossl_assert(!x.is_null()) == 0 {
+            if !ctx.is_null() {
+                // SAFETY: `ctx` is live per the contract.
+                unsafe { (*ctx).error = X509_V_ERR_UNSPECIFIED };
+            }
+            return 0;
+        }
+        // SAFETY: `x` is a live certificate.
+        let x_asid = unsafe { (*x).rfc3779_asid }.cast::<AsIdentifiers>();
+        if x_asid.is_null() {
+            if !child_as.is_null() || !child_rdi.is_null() {
+                // SAFETY: `validation_err`'s contract holds here.
+                ret = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+                if ret == 0 {
+                    return ret;
+                }
+            }
+            i += 1;
+            continue;
+        }
+        // SAFETY: `x_asid` is live.
+        if unsafe { X509v3_asid_is_canonical(x_asid) } == 0 {
+            // SAFETY: `validation_err`'s contract holds here.
+            ret = unsafe { validation_err(ctx, x, i, X509_V_ERR_INVALID_EXTENSION) };
+            if ret == 0 {
+                return ret;
+            }
+        }
+        // SAFETY: `x_asid` is live; `asnum` is NULL or live.
+        let x_asnum = unsafe { (*x_asid).asnum };
+        if x_asnum.is_null() && !child_as.is_null() {
+            // SAFETY: `validation_err`'s contract holds here.
+            ret = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+            if ret == 0 {
+                return ret;
+            }
+            child_as = ptr::null_mut();
+            inherit_as = 0;
+        }
+        // SAFETY: `x_asnum` is live under this selector.
+        if !x_asnum.is_null() && unsafe { (*x_asnum).type_ } == ASIdentifierChoice_asIdsOrRanges {
+            // SAFETY: `x_asnum` is live under its `asIdsOrRanges` selector.
+            let list = unsafe { (*x_asnum).u }.cast::<OpenSslStack>();
+            // SAFETY: `list` and `child_as` are NULL or live ascending `ASIdOrRanges` stacks.
+            if inherit_as != 0 || unsafe { asid_contains(list, child_as) } != 0 {
+                child_as = list;
+                inherit_as = 0;
+            } else {
+                // SAFETY: `validation_err`'s contract holds here.
+                ret = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+                if ret == 0 {
+                    return ret;
+                }
+            }
+        }
+        // SAFETY: `x_asid` is live; `rdi` is NULL or live.
+        let x_rdi = unsafe { (*x_asid).rdi };
+        if x_rdi.is_null() && !child_rdi.is_null() {
+            // SAFETY: `validation_err`'s contract holds here.
+            ret = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+            if ret == 0 {
+                return ret;
+            }
+            child_rdi = ptr::null_mut();
+            inherit_rdi = 0;
+        }
+        // SAFETY: `x_rdi` is live under this selector.
+        if !x_rdi.is_null() && unsafe { (*x_rdi).type_ } == ASIdentifierChoice_asIdsOrRanges {
+            // SAFETY: `x_rdi` is live under its `asIdsOrRanges` selector.
+            let list = unsafe { (*x_rdi).u }.cast::<OpenSslStack>();
+            // SAFETY: `list` and `child_rdi` are NULL or live ascending `ASIdOrRanges` stacks.
+            if inherit_rdi != 0 || unsafe { asid_contains(list, child_rdi) } != 0 {
+                child_rdi = list;
+                inherit_rdi = 0;
+            } else {
+                // SAFETY: `validation_err`'s contract holds here.
+                ret = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+                if ret == 0 {
+                    return ret;
+                }
+            }
+        }
+        i += 1;
+    }
+
+    // Trust anchor can't inherit.
+    if ossl_assert(!x.is_null()) == 0 {
+        if !ctx.is_null() {
+            // SAFETY: `ctx` is live per the contract.
+            unsafe { (*ctx).error = X509_V_ERR_UNSPECIFIED };
+        }
+        return 0;
+    }
+    // SAFETY: `x` is a live certificate.
+    let ta_asid = unsafe { (*x).rfc3779_asid }.cast::<AsIdentifiers>();
+    if !ta_asid.is_null() {
+        // SAFETY: `ta_asid` is live; `asnum` is NULL or live.
+        let asnum = unsafe { (*ta_asid).asnum };
+        // SAFETY: `asnum` is live under this selector.
+        if !asnum.is_null() && unsafe { (*asnum).type_ } == ASIdentifierChoice_inherit {
+            // SAFETY: `validation_err`'s contract holds here.
+            ret = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+            if ret == 0 {
+                return ret;
+            }
+        }
+        // SAFETY: `ta_asid` is live; `rdi` is NULL or live.
+        let rdi = unsafe { (*ta_asid).rdi };
+        // SAFETY: `rdi` is live under this selector.
+        if !rdi.is_null() && unsafe { (*rdi).type_ } == ASIdentifierChoice_inherit {
+            // SAFETY: `validation_err`'s contract holds here.
+            ret = unsafe { validation_err(ctx, x, i, X509_V_ERR_UNNESTED_RESOURCE) };
+            if ret == 0 {
+                return ret;
+            }
+        }
+    }
+
+    ret
+}
+
+/// `int X509v3_asid_validate_path(X509_STORE_CTX *ctx)` -- `crypto/x509/v3_asid.c:844-853`.
+///
+/// # Safety
+///
+/// `ctx` is live.
+#[no_mangle]
+pub unsafe extern "C" fn X509v3_asid_validate_path(ctx: *mut X509StoreCtx) -> c_int {
+    // SAFETY: `ctx` is live per the contract.
+    let chain_is_null = unsafe { (*ctx).chain }.is_null();
+    // SAFETY: `ctx` is live and `chain` is non-NULL on the arm that reads it.
+    let chain_is_empty = !chain_is_null && unsafe { OPENSSL_sk_num((*ctx).chain) } == 0;
+    // SAFETY: `ctx` is live per the contract.
+    let no_verify_cb = unsafe { (*ctx).verify_cb.is_none() };
+    if chain_is_null || chain_is_empty || no_verify_cb {
+        // SAFETY: `ctx` is live per the contract.
+        unsafe { (*ctx).error = X509_V_ERR_UNSPECIFIED };
+        return 0;
+    }
+    // SAFETY: `ctx` and its non-empty chain are live per the checks above.
+    unsafe { asid_validate_path_internal(ctx, (*ctx).chain, ptr::null_mut()) }
+}
+
+/// `int X509v3_asid_validate_resource_set(STACK_OF(X509) *chain, ASIdentifiers *ext, int allow_inheritance)` -- `crypto/x509/v3_asid.c:859-869`.
+///
+/// # Safety
+///
+/// `chain` is NULL or a live `STACK_OF(X509)`; `ext` is NULL or a live `ASIdentifiers`.
+#[no_mangle]
+pub unsafe extern "C" fn X509v3_asid_validate_resource_set(
+    chain: *mut OpenSslStack,
+    ext: *mut AsIdentifiers,
+    allow_inheritance: c_int,
+) -> c_int {
+    if ext.is_null() {
+        return 1;
+    }
+    // SAFETY: `chain` is NULL or live and the `||` short-circuits.
+    if chain.is_null() || unsafe { OPENSSL_sk_num(chain) } == 0 {
+        return 0;
+    }
+    // SAFETY: `ext` is live per the checks above.
+    if allow_inheritance == 0 && unsafe { X509v3_asid_inherits(ext) } != 0 {
+        return 0;
+    }
+    // SAFETY: `chain` and `ext` are live per the checks above.
+    unsafe { asid_validate_path_internal(ptr::null_mut(), chain, ext) }
+}

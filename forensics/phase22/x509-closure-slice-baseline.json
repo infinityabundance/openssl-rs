@@ -1,0 +1,12 @@
+{
+  "implemented": [
+    "X509_self_signed"
+  ],
+  "note": "the exports of Phase 11.2's three units that were already implemented when Phase 22 was activated; a gate fires on a *growth* beyond this set, and re-freezing it after work has landed stops it being a gate",
+  "schema": "openssl-rs/phase22/x509-closure-slice-baseline/v1",
+  "units": [
+    "crypto/x509/x509_vfy.c",
+    "crypto/x509/x509_vpm.c",
+    "crypto/x509/pcy_tree.c"
+  ]
+}

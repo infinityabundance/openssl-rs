@@ -94,6 +94,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from atlas_common import (  # noqa: E402
     ATLAS,
+    NON_EXPORT_UNITS,
     REPO_ROOT,
     InputRef,
     envelope,
@@ -135,8 +136,12 @@ def discover_ledgers() -> dict[int, tuple[Path, dict]]:
     out: dict[int, tuple[Path, dict]] = {}
     for p in sorted(REPO_ROOT.glob(LEDGER_GLOB)):
         m = LEDGER_RE.fullmatch(p.name)
-        if m:
-            out[int(m.group(1))] = (p, read_json(p))
+        if not m:
+            continue
+        doc = read_json(p)
+        if doc.get("body", {}).get("unit") in NON_EXPORT_UNITS:
+            continue
+        out[int(m.group(1))] = (p, doc)
     return out
 
 
