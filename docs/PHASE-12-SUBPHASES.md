@@ -289,7 +289,17 @@ and `OCSP_response_status` -- the six `ocsp.h` names the open clause below carri
 implemented rather than open, joining the `ocsp_asn.c` item group above. Subphase 12.5b lands the
 TS response engine now that 12.7's ESS item group and its `OSSL_ESS_*` helpers have closed:
 `TS_RESP_create_response`, `TS_RESP_verify_response`, `TS_RESP_verify_signature` and
-`TS_RESP_verify_token` are now implemented rather than open.
+`TS_RESP_verify_token` are now implemented rather than open. Subphase 12.8 lands the SRP
+calculation surface and verifier database: the fourteen `srp_lib.c` names -- `SRP_Calc_A`,
+`SRP_Calc_B`, `SRP_Calc_B_ex`, `SRP_Calc_client_key`, `SRP_Calc_client_key_ex`,
+`SRP_Calc_server_key`, `SRP_Calc_u`, `SRP_Calc_u_ex`, `SRP_Calc_x`, `SRP_Calc_x_ex`,
+`SRP_Verify_A_mod_N`, `SRP_Verify_B_mod_N`, `SRP_check_known_gN_param` and `SRP_get_default_gN`
+-- and the fourteen `srp_vfy.c` names other than the handed-on verifier-file reader
+(`SRP_VBASE_add0_user`, `SRP_VBASE_free`,
+`SRP_VBASE_get1_by_user`, `SRP_VBASE_get_by_user`, `SRP_VBASE_new`, `SRP_create_verifier`,
+`SRP_create_verifier_ex`, `SRP_create_verifier_BN`, `SRP_create_verifier_BN_ex`,
+`SRP_user_pwd_new`, `SRP_user_pwd_free`, `SRP_user_pwd_set0_sv`, `SRP_user_pwd_set1_ids` and
+`SRP_user_pwd_set_gN`) are now implemented rather than open.
 
 Subphase 12.2 lands the PKCS#7 remainder: `pk7_asn1.c`'s other three `ANY DEFINED BY` arms
 (`signed`, `enveloped`, `signedAndEnveloped`) and the streaming callback's four arms, the whole of
@@ -340,6 +350,14 @@ Subphase 12.4b lands the CMP engine and closes CMP: the 15 rows 12.4 left open, 
 
 Subphase 12.5 lands the RFC 3161 timestamping surface. The whole of `ts_asn1.c` (six item groups, the `IMPLEMENT_ASN1_FUNCTIONS` accessors, the BIO and FILE stream wrappers and `PKCS7_to_TS_TST_INFO`), `ts_req_utils.c` and `ts_rsp_utils.c` (the `TS_REQ`/`TS_TST_INFO`/`TS_RESP`/`TS_STATUS_INFO`/`TS_ACCURACY` accessor families and their extension stacks), `ts_lib.c`'s five print helpers, `ts_req_print.c`'s `TS_REQ_print_bio`, `ts_rsp_print.c`'s three print entry points, `ts_verify_ctx.c` (the whole `TS_VERIFY_CTX` lifecycle and `TS_REQ_to_TS_VERIFY_CTX`) and `ts_rsp_sign.c`'s context-management surface (`TS_RESP_CTX_new`/`_new_ex`/`_free`, the signer/chain/policy/digest/accuracy setters, the three callbacks and `TS_RESP_CTX_set_status_info` and friends) are implemented -- **178 of the 184 `ts.h` rows**. `RT-TS` (`courts/phase12/rt_ts_probe.c`) drives them over in-process fixtures: the DER byte round trips and the BIO/FILE wrappers, the accessors, the print text compared byte for byte, `PKCS7_to_TS_TST_INFO` over a hand-built signed token carrying a `TST_INFO` and its refusal arms, the verify context, and the configuration readers over a fixed configuration and a fixed cert+key written at run time. The fetched-`EVP_MD` identity divergence the later CPS/CMS courts already name leaves the `EVP_get_digestbyname`-dependent configuration readers `pending`. The three `TS_RESP_CTX_set_status_info`, `TS_RESP_CTX_set_status_info_cond` and `TS_RESP_CTX_add_failure_info` names are referenced from a volatile table rather than called, because no landed entry point can make `ctx->response` non-NULL; the atlas records them at the honest `referenced` basis. The six rows still open are named in the next section.
 
+Subphase 12.5b lands the TS response engine and closes TS: `TS_RESP_create_response`
+(`ts_rsp_sign.c:373-423`) and the verifier entries `TS_RESP_verify_signature`
+(`ts_rsp_verify.c:87-165`), `TS_RESP_verify_response` (`:248-262`) and `TS_RESP_verify_token`
+(`:268-277`), with the ESS signing-certificate attachment and every static they reach, now that
+12.7's ESS item group and its `OSSL_ESS_*` helpers have closed. `RT-TS` extends to drive the
+builder and the verifier over the fixed token `courts/phase12/rt_ts_der.h` embeds. TS has no open
+row; the two ENGINE-reading configuration setters are handed on, below.
+
 Subphase 12.6 lands the whole OCSP surface. The four extension wrapper families `ocsp_ext.c`
 defines (nine functions each over the request, single-request, basic-response and single-response
 extension stacks), the nonce handling (`OCSP_request_add1_nonce`, `OCSP_basic_add1_nonce`,
@@ -365,25 +383,38 @@ over a response with no responder name (the authority dereferences the unset nam
 boundary) are named `pending` rather than driven. The response's signed body is built with the CMS
 signer-infrastructure 12.3 landed, per section 2.1.
 
+Subphase 12.8 lands SRP: the whole of `crypto/srp/`'s calculation surface and verifier database --
+the fourteen `srp_lib.c` exports and the fourteen non-`init` `srp_vfy.c` exports -- over the
+`crypto/bn/bn_srp.c` RFC 5054 groups and generators, which land crate-internally. `SRP_VBASE_init`
+is handed to Phase 13 because its only blocker is `TXT_DB_read`/`TXT_DB_free`, `txt_db.h`'s and
+Phase 13's. `RT-SRP` (`courts/phase12/rt_srp_probe.c`) drives the arithmetic over fixed BIGNUMs and
+the seven known groups, the `SRP_user_pwd_*` record, the verifier database and the
+`SRP_create_verifier*` family; the random-salt arms print only invariants (`v == g**x`, and a fixed
+SRP-base64 salt making the codec's verifier string a stable observable), so no random byte is
+compared.
+
 **Open exports (checked against the ledger):**
 
-Open is the 44-name remainder. CMS has closed: every one of its 149 `cms.h` rows is now
+Open is the 15-name remainder. CMS has closed: every one of its 149 `cms.h` rows is now
 implemented and no CMS name appears here. CMP has closed: 12.4b landed the engine, so every one of
 `cmp.h`'s 161 rows is now implemented and no CMP name appears here. TS has closed its engine: 12.5b
 lands the response builder and the three verify entry points, so no TS engine name appears here.
 OCSP has closed: every one of its 94 `ocsp.h` rows is now implemented and no OCSP name appears
 here. CRMF and ESS have closed: every one of `crmf.h`'s 92 rows and `ess.h`'s 30 rows is now
-implemented, and no CRMF or ESS name appears here. SRP opens 12.8 with `SRP_create_verifier`,
-`SRP_user_pwd_new`, `SRP_VBASE_new` and `SRP_Calc_A`. 12.9 opens the CT remainder with
-`CTLOG_STORE_load_default_file`, the shared `x_all.c` dispatch with `d2i_PKCS7_bio` and
-`PKCS7_ISSUER_AND_SERIAL_digest`, and the hand-offs with `SMIME_read_ASN1`, `SMIME_write_ASN1`,
-`ASN1_ITEM_get` and `X509_load_http`. A stratum is complete only when no export it owns is neither
-implemented nor handed on, and this is not that state yet -- the seal is 12.10's.
+implemented, and no CRMF or ESS name appears here. SRP has closed: 12.8 lands the whole `srp.h`
+calculation surface and verifier database, so no SRP name appears here. 12.9 opens the CT
+remainder with `CTLOG_STORE_load_default_file`, the shared `x_all.c` dispatch with `d2i_PKCS7_bio`
+and `PKCS7_ISSUER_AND_SERIAL_digest`, and the hand-offs with `SMIME_read_ASN1`,
+`SMIME_write_ASN1`, `ASN1_ITEM_get` and `X509_load_http`. A stratum is complete only when no
+export it owns is neither implemented nor handed on, and this is not that state yet -- the seal is
+12.10's.
 
-Two further `ts.h` rows are not open because they are handed to a later stratum:
-`TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` are Phase 13's, since their whole body
-is the ENGINE lookup and installation (`crypto/ts/ts_conf.c:171`, `:188`, `:192`) and
-`ENGINE_by_id`/`ENGINE_set_default` are `engine.h`'s.
+Three rows are not open because they are handed to a later stratum: the two `ts.h`
+configuration setters `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` are Phase 13's,
+since their whole body is the ENGINE lookup and installation (`crypto/ts/ts_conf.c:171`, `:188`,
+`:192`) and `ENGINE_by_id`/`ENGINE_set_default` are `engine.h`'s; and `SRP_VBASE_init` is Phase
+13's because its only blocker is `TXT_DB_read`/`TXT_DB_free` (`crypto/srp/srp_vfy.c:423`, `:504`),
+which are `txt_db.h`'s and Phase 13's.
 
 **12.7 -- CRMF and ESS (all 122 rows).** `crmf_asn.c`'s ten exported item groups (`OSSL_CRMF_CERTID`,
 `CERTTEMPLATE`, `ENCRYPTEDVALUE`, `ENCRYPTEDKEY`, `SINGLEPUBINFO`, `PKIPUBLICATIONINFO`,

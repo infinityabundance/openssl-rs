@@ -96,16 +96,17 @@ MODULE_OVERRIDES: list[tuple[str, tuple[str, ...]]] = []
 
 
 # ---------------------------------------------------------------------------------------------
-# The blocked hand-offs. **One pair, discovered by 12.5b, and it is not ts-local.**
+# The blocked hand-offs. **One pair from 12.5b, and one entry from 12.8.**
 #
 # The rule is Phase 8's through Phase 11's: a symbol whose declaring header is this stratum's
 # but whose *body* needs a name no module of this crate defines is recorded here with the reason
 # naming the callee, the authority file and line the call sits on, and the stratum that owns the
 # callee. Phase 12 is the *last* export stratum before the CLI and TLS strata, and almost every
 # callee its units reach is either already in the crate or owned by this same stratum -- a
-# same-stratum blocker is recorded as `open` (a stratum cannot hand a symbol to itself). The one
-# pair that is not is `TS_CONF_set_crypto_device`/`TS_CONF_set_default_engine`, whose declaring
-# header is `ts.h` but whose only callees are Phase 13's `ENGINE_by_id`/`ENGINE_set_default`.
+# same-stratum blocker is recorded as `open` (a stratum cannot hand a symbol to itself). The two
+# hand-offs that are not are `TS_CONF_set_crypto_device`/`TS_CONF_set_default_engine`, whose only
+# callees are Phase 13's `ENGINE_by_id`/`ENGINE_set_default`, and 12.8's `SRP_VBASE_init`, whose
+# only missing callee is Phase 13's `TXT_DB_read`.
 # ---------------------------------------------------------------------------------------------
 
 BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
@@ -121,6 +122,17 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "eng_list.rs` records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. Pulling "
         "the ENGINE registry forward to satisfy two `CONF` readers is disproportionate, so the "
         "rows are handed to Phase 13 rather than stubbed",
+    ),
+    (
+        ("SRP_VBASE_init",),
+        13,
+        "its body reads and releases a verifier file through `TXT_DB_read` "
+        "(`crypto/srp/srp_vfy.c:423`) and `TXT_DB_free` (`:504`), and both are declared in "
+        "`include/openssl/txt_db.h`, which is Phase 13's (`forensics/atlas/symbol-ownership.json`, "
+        "owner_phase 13). The rest of `crypto/srp/srp_vfy.c` lands in 12.8, including the private "
+        "helpers that only `SRP_VBASE_init` reaches; pulling the `TXT_DB` reader forward to "
+        "satisfy one deprecated entry point is disproportionate, so the row is handed to Phase 13 "
+        "rather than stubbed",
     ),
 ]
 
@@ -265,7 +277,8 @@ def main(argv: list[str]) -> int:
     # The fail-closed deferral mechanism, unchanged from Phases 8 through 11: a symbol in
     # `BLOCKED_HANDOFFS` that the crate now defines is a stale row rather than a harmless one,
     # because a table that can keep covering a landed symbol can hide the next real gap behind it.
-    # This stratum's table is empty, so the loop is the mechanism kept true rather than a policy.
+    # This stratum's table is one pair (12.5b's ENGINE setter pair) plus 12.8's `SRP_VBASE_init`,
+    # so the loop is the mechanism kept true rather than a claim of emptiness.
     blocked: dict[str, dict] = {}
     for symbols, phase, reason in BLOCKED_HANDOFFS:
         for sym in symbols:

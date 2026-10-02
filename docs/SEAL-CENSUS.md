@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 5603 | 293 |
+| libcrypto | 5896 | 5631 | 265 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **5603** | **896** |
+| **total** | **6499** | **5631** | **868** |
 
 ## Ownership atlas, by stratum
 
@@ -37,7 +37,7 @@ declared owner; this is that assignment.
 | 9 | RAND / DRBG + entropy | `complete` | 25 | 69 | 69 | 0 | 0 |
 | 10 | Key formats + PKCS + STORE | `complete` | 272 | 298 | 298 | 0 | 0 |
 | 11 | X.509 + verification | `complete` | 1455 | 1467 | 1465 | 2 | 0 |
-| 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `in-progress` | 1024 | 1033 | 987 | 2 | 44 |
+| 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `in-progress` | 1024 | 1033 | 1015 | 3 | 15 |
 | 13 | Legacy / deprecated compatibility | `not-started` | 189 | — | — | — | — |
 | 14 | TLS / DTLS (libssl) | `not-started` | 600 | — | — | — | — |
 | 15 | QUIC / ECH and modern SSL surface | `not-started` | 3 | — | — | — | — |
@@ -398,26 +398,26 @@ Courts: `all pass`, 9 court(s), **2638** authority observation(s) over 9 transcr
 ## Phase 12 — CMS / OCSP / CMP / CT / TS and remaining libcrypto families
 
 * state: `in-progress`
-* blocking: 44 open obligation(s) of this stratum recorded in forensics/phase12-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand and twenty-four of the exports it owns are its own twelve headers' (`ts.h`, `ocsp.h`, `cmp.h`, `cms.h`, `pkcs7.h`, `crmf.h`, `ct.h`, `ess.h`, `srp.h`, `http.h`, `cmp_util.h`, `pem.h`) and the nine remainder arrive as recorded hand-offs from phases 5 and 11. The ledger does not start with that whole working set open: the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-12-SUBPHASES.md sections 1 and 4)
+* blocking: 15 open obligation(s) of this stratum recorded in forensics/phase12-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand and twenty-four of the exports it owns are its own twelve headers' (`ts.h`, `ocsp.h`, `cmp.h`, `cms.h`, `pkcs7.h`, `crmf.h`, `ct.h`, `ess.h`, `srp.h`, `http.h`, `cmp_util.h`, `pem.h`) and the nine remainder arrive as recorded hand-offs from phases 5 and 11. The ledger does not start with that whole working set open: the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-12-SUBPHASES.md sections 1 and 4)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase12-obligations.json`
 * atlas-owned: 1024
 * owned working set: 1033
-* implemented: 987
-* deferred to a later stratum with a stated reason: 2
-* **open in this stratum: 44**
+* implemented: 1015
+* deferred to a later stratum with a stated reason: 3
+* **open in this stratum: 15**
 
 Deferred out, by receiving stratum:
 
-* to phase 13: 2 symbol(s)
-  `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine`
+* to phase 13: 3 symbol(s)
+  `SRP_VBASE_init`, `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine`
 
 Hand-offs received and discharged:
 
 * from phase 11: 2 symbol(s) — `X509_CRL_load_http`, `X509_load_http`
 * from phase 5: 7 symbol(s) — `ASN1_ITEM_get`, `ASN1_ITEM_lookup`, `SMIME_read_ASN1`, `SMIME_read_ASN1_ex`, `SMIME_text`, `SMIME_write_ASN1`, `SMIME_write_ASN1_ex`
 
-Courts: `all pass`, 9 court(s), **1625** authority observation(s) over 9 transcript court(s).
+Courts: `all pass`, 10 court(s), **1774** authority observation(s) over 10 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -430,6 +430,7 @@ Courts: `all pass`, 9 court(s), **1625** authority observation(s) over 9 transcr
 | RT-OCSP | `pass` | 266 |
 | RT-CRMF | `pass` | 138 |
 | RT-ESS | `pass` | 47 |
+| RT-SRP | `pass` | 149 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
@@ -487,8 +488,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 9 | 69 | 69 | 69 | 0 | 0 | 0 | 0 |
 | 10 | 298 | 298 | 237 | 61 | 0 | 0 | 0 |
 | 11 | 1465 | 1465 | 939 | 526 | 0 | 0 | 0 |
-| 12 | 987 | 987 | 855 | 132 | 0 | 0 | 0 |
-| **total** | **5476** | **5468** | **4485** | **983** | **8** | **0** | **0** |
+| 12 | 1015 | 1015 | 883 | 132 | 0 | 0 | 0 |
+| **total** | **5504** | **5496** | **4513** | **983** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

@@ -161,16 +161,32 @@
           "candidate": "artifacts/phase12/probes/rt_ess_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 149,
+        "candidate_exit_code": 0,
+        "candidate_observations": 149,
+        "candidate_stderr_tail": [],
+        "court": "RT-SRP",
+        "crashed": false,
+        "probe": "courts/phase12/rt_srp_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase12/probes/rt_srp_probe.authority",
+          "candidate": "artifacts/phase12/probes/rt_srp_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
-      "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs",
-      "RT-SRP": "12.8 -- the SRP verifier and library surface (`srp.h`)"
+      "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine hand-offs"
     },
     "summary": {
       "fail": 0,
-      "pass": 9,
-      "total": 9
+      "pass": 10,
+      "total": 10
     }
   },
   "generator": "forensics/tools/phase12_courts.py",
@@ -224,6 +240,11 @@
       "name": "probe",
       "path": "courts/phase12/rt_ess_probe.c",
       "sha256": "b093ff430bccf709bcd9de2cb2652a6b672c2b61b5e16be41a6452a5ac80e98f"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase12/rt_srp_probe.c",
+      "sha256": "760966aac239b62850d5238a7fc0cfbd0b94fbba470de1d0941f3e9105906692"
     }
   ],
   "kind": "phase12-courts",

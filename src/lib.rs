@@ -200,6 +200,11 @@ pub mod sm4;
 // Phase 8's `crypto/sm2/` (D406): the SM2 Z-digest/sign pair and the `SM2_Ciphertext` codec, the
 // two crypt units the `SM2` signature and asym-cipher rows publish on.
 pub(crate) mod sm2;
+// Phase 12.8 — `crypto/srp/`: the RFC 5054 SRP surface. The arithmetic (`srp_lib`), the
+// verifier store and creators (`srp_vfy`) and the group constants (`crypto/bn/bn_srp.c`, as
+// `crate::bn::bn_srp`) land here; `SRP_VBASE_init` waits on Phase 13's `TXT_DB_read`. See
+// `src/srp/mod.rs`.
+pub(crate) mod srp;
 pub mod status;
 // Phase 10 (10.5) — `crypto/store/`: the `OSSL_STORE_LOADER` object and its registry, the
 // provider-side loader method fetched over slot 15, and `store_lib.c`'s `OSSL_STORE_CTX` state
