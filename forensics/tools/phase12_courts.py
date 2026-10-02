@@ -86,6 +86,7 @@ RUN_TIMEOUT_S = "60"
 COURTS: list[tuple[str, str]] = [
     ("RT-PHASE12-REF", "rt_coverage_ref_probe.c"),
     ("RT-HTTP", "rt_http_probe.c"),
+    ("RT-PKCS7", "rt_pkcs7_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -94,7 +95,6 @@ COURTS: list[tuple[str, str]] = [
 # subphase; `RT-CRMF` and `RT-ESS` are the two courts of 12.7, whose two families share a
 # subphase but not a court.
 PENDING_COURTS: dict[str, str] = {
-    "RT-PKCS7": "12.2 -- the `pkcs7.h` remainder and the `PEM_*_PKCS7` container readers",
     "RT-CMS": "12.3 -- the `cms.h` container surface (`CMS_*` and the `PEM_*_CMS` readers)",
     "RT-CMP": "12.4 -- the CMP transaction surface (`cmp.h`, `cmp_util.h`)",
     "RT-TS": "12.5 -- the timestamping surface (`ts.h`)",

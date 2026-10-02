@@ -285,15 +285,21 @@ in: `OSSL_HTTP_REQ_CTX_new`, `OSSL_HTTP_REQ_CTX_free`, `OSSL_HTTP_REQ_CTX_get0_m
 land with it. Every one of the 23 is now implemented rather than open; `RT-HTTP`
 (`courts/phase12/rt_http_probe.c`) drives them.
 
+Subphase 12.2 lands the PKCS#7 remainder: `pk7_asn1.c`'s other three `ANY DEFINED BY` arms
+(`signed`, `enveloped`, `signedAndEnveloped`) and the streaming callback's four arms, the whole of
+`pk7_lib.c` (`PKCS7_add_signer`/`add_certificate`/`add_recipient`, `PKCS7_set_cipher`,
+`PKCS7_stream` and the rest), and the new units `pk7_doit.c`, `pk7_attr.c`, `pk7_smime.c`,
+`pk7_mime.c` and `bio_pk7.c`, together with `pem_all.c`'s four
+`PEM_read[_bio]_PKCS7`/`PEM_write[_bio]_PKCS7`. Every one of the 103 is now implemented rather
+than open; `RT-PKCS7` (`courts/phase12/rt_pkcs7_probe.c`) drives them from fixed DER fixtures.
+
 **Open exports (checked against the ledger):**
 
-Open is the 861-name remainder, and it is the whole of the container and protocol surface. The
-PKCS#7 remainder opens 12.2 with
-`PKCS7_sign`, `PKCS7_verify`, `PKCS7_dataInit`, `PEM_read_PKCS7` and `PKCS7_ENVELOPE_new`. CMS
-opens 12.3 with `CMS_sign`, `CMS_verify`, `CMS_ContentInfo_new`, `CMS_EncryptedData_encrypt` and
-`PEM_read_CMS`. CMP opens 12.4 with `OSSL_CMP_ATAV_create`, `OSSL_CMP_ATAVS_new` and
-`OSSL_CMP_ATAVS_free`. TS opens 12.5 with `TS_REQ_new`, `TS_RESP_CTX_new` and
-`TS_RESP_create_response`. OCSP opens 12.6 with `OCSP_request_sign`, `OCSP_basic_verify`,
+Open is the 758-name remainder, and it is the whole of the container and protocol surface 12.2's
+PKCS#7 landing left. CMS opens 12.3 with `CMS_sign`, `CMS_verify`, `CMS_ContentInfo_new`,
+`CMS_EncryptedData_encrypt` and `PEM_read_CMS`. CMP opens 12.4 with `OSSL_CMP_ATAV_create`,
+`OSSL_CMP_ATAVS_new` and `OSSL_CMP_ATAVS_free`. TS opens 12.5 with `TS_REQ_new`, `TS_RESP_CTX_new`
+and `TS_RESP_create_response`. OCSP opens 12.6 with `OCSP_request_sign`, `OCSP_basic_verify`,
 `OCSP_response_status`, `OCSP_cert_to_id`, `OCSP_check_validity` and `OCSP_resp_count`. CRMF opens
 12.7 with `OSSL_CRMF_CERTID_gen` and `OSSL_CRMF_CERTID_get0_issuer`, and ESS with `ESS_CERT_ID_new`,
 `ESS_SIGNING_CERT_new` and `ESS_ISSUER_SERIAL_free`. SRP opens 12.8 with `SRP_create_verifier`,

@@ -34853,3 +34853,33 @@ Verified (court container): `gen_frf_courts.py --check`; the `phase*_obligations
 `render_status.py`; `evidence_determinism.py` (31 artefacts); `regression_guard.py --require-current`
 (no regression); `probe_hygiene.py` clean; `run_courts.py` re-derives 11 phases with Phase 11
 `all_pass` over nine courts and 2,638 observations. Phase 11 is `complete`.
+
+## D513 -- the PKCS#7 remainder lands, and its first caller surfaces a fetch-identity divergence
+
+12.2 lands the 103 open Phase-12 exports defined by `crypto/pkcs7/` plus the four `PEM_*_PKCS7`:
+the `pk7_asn1.c` item groups and the `signed`/`enveloped`/`signedAndEnveloped` ADB arms Phase 10
+withheld, `pk7_lib.c`'s container and setters, `pk7_doit.c`'s data/sign/verify path, the
+`pk7_smime.c` doors, `pk7_attr.c`, `pk7_mime.c`, `bio_pk7.c` and the PEM spellings.
+`open_in_this_stratum` falls 861 -> 758; `RT-PKCS7` drives 126 observations with 0 residuals.
+
+Three exports (`SMIME_read_PKCS7(_ex)`, `SMIME_write_PKCS7`) delegate to Phase 5's `SMIME_*`
+hand-off to 12.9, and `PKCS7_verify`/`PKCS7_decrypt`'s `PKCS7_TEXT` arm delegates to `SMIME_text`;
+the court references those addresses and does not call them, which is faithful transcription of the
+authority's own prototype rather than a stub.
+
+**A latent divergence surfaced rather than being hidden.** `PKCS7_set_cipher` and the
+digest/enveloped `PKCS7_dataInit` fetch path compare the candidate's `EVP_MD_get_type`/
+`EVP_CIPHER_get_type`, which answer 0 where the authority answers 672/419, so those two arms are
+printed as `pending.` lines with the reason rather than driven; the `data` container's
+`dataInit`/`dataFinal` (no fetch) is driven instead. This is a lower-unit identity gap the new caller
+made observable and owes a `divergence-obligations` row; it is recorded here so the next slice does
+not rediscover it. The stale `pkcs7_get0_certificates` prerequisite row was retired (its own note
+says to remove it once built).
+
+Verified (court container): `RT-PKCS7` 126 observations, 0 residuals; `probe_hygiene.py` clean;
+`build_phase2.sh` all pass; `court_coverage.py`, `ownership_audit.py`, `prototype_court.py`,
+`dispatch_court.py`, `phase_state.py`, `plan_reconciliation.py`, `prerequisite_gate.py`,
+`render_seal_census.py`, `render_status.py`, `docs_consistency.py` and
+`evidence_determinism.py` (32 artefacts) green; `regression_guard.py --require-current` ok
+(137 courts, 49,158 observations); `cargo clippy --all-targets -- -D warnings` and
+`cargo fmt --all -- --check` clean; `cargo test --lib` 1131 passed.
