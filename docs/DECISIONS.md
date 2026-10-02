@@ -34957,3 +34957,69 @@ Verified (container): `RT-TS` 231 observations, 0 residuals; `probe_hygiene.py` 
 `cargo clippy --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean;
 `cargo test --lib` 1131 passed; `build_phase2.sh` all-ABI pass; the whole gate chain green;
 `regression_guard.py --require-current` ok.
+
+## D517 -- the OCSP exported surface lands
+
+12.6 lands the whole `ocsp.h` surface -- all 94 exports: `ocsp_ext.c` (44), `ocsp_cl.c` (20),
+`ocsp_srv.c` (15), `ocsp_lib.c` (5), `ocsp_prn.c` (5), `ocsp_vfy.c` (3) and `ocsp_http.c` (2).
+Sixteen are promoted from the internal `pub(crate)` cores Phase 11 pulled forward for
+`X509_verify_cert`; seventy-eight are newly transcribed. The exported ownership that remained
+Phase 12's now migrates to it without the pulled-forward substrate moving a byte.
+`open_in_this_stratum` falls 281 -> 187 and `RT-OCSP` drives 266 observations with 0 residuals,
+including the two byte-for-byte printers and the `OCSP_basic_verify` object graph.
+
+Verified (container): `RT-OCSP` 266 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `cargo test --lib` 1131 passed;
+`build_phase2.sh` all-ABI pass; the whole gate chain green.
+
+## D518 -- CRMF and ESS land, and the atlas is re-derived
+
+12.7 lands `crypto/crmf/` and `crypto/ess/`: `crmf_asn.c` (50), `crmf_lib.c` (40), `crmf_pbm.c`
+(2), `ess_asn1.c` (27) and `ess_lib.c` (3). `open_in_this_stratum` falls 187 -> 65; `RT-CRMF`
+drives 138 observations and `RT-ESS` 47, both with 0 residuals. The ESS item group and
+`OSSL_ESS_*` helpers are what TS's response engine waited on, so the TS rows become local rather
+than blocked once 12.7 closes.
+
+A Phase-8 defect surfaced: the new `OSSL_ESS_*` callers exposed a wrong `EVP_MD_is_a` result in
+`src/evp/`, fixed here rather than worked around. The authority-tier atlas was re-derived and is
+byte-identical on a second run; `prerequisite_gate.py` reports 0 findings.
+
+Verified (container): `RT-CRMF` 138 and `RT-ESS` 47 observations, 0 residuals; `cargo clippy
+--all-targets -- -D warnings` and `cargo fmt --all -- --check` clean; `cargo test --lib` 1131
+passed; `build_phase2.sh` all-ABI pass; `regression_guard.py --require-current` ok (143 courts,
+50,246 observations).
+
+## D519 -- the CMP engine lands, and its fifteen rows close
+
+12.4b lands the CMP engine the 12.4 slice left open: `cmp_protect.c`, the `cmp_client.c` state
+machine, `cmp_genm.c`, `cmp_server.c`'s request engine, `cmp_vfy.c` and the `cmp_msg.c`
+constructors. The fifteen `cmp.h` rows 12.4 held on CRMF close, and the thirteen `cmp_asn.c`
+item-lifecycle wrappers are built and called rather than referenced. `open_in_this_stratum` falls
+65 -> 50; `RT-CMP` grows from 230 to 320 observations with 0 residuals. Fifty-five stale deferrals
+are retired as the engine makes their blocker real rather than assumed (deferrals 60 -> 5).
+
+A real `cmp_server.c` failure-funnel bug was fixed. The authority-tier atlas is byte-identical on
+re-derivation.
+
+Verified (container): `RT-CMP` 320 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `cargo test --lib` 1131 passed;
+`build_phase2.sh` all-ABI pass; the whole gate chain green, no regression.
+
+## D520 -- the TS response engine lands (12.5b), and the stratum falls to 44 open
+
+12.5b finishes `crypto/ts/`: the response builder `TS_RESP_create_response`
+(`crypto/ts/ts_rsp_sign.c:373-423`) and the verifier entries `TS_RESP_verify_signature`
+(`ts_rsp_verify.c:87-165`), `TS_RESP_verify_response` (`:248-262`) and `TS_RESP_verify_token`
+(`:268-277`) land with every static they reach, now that 12.7's ESS item group and `OSSL_ESS_*`
+helpers have closed. `open_in_this_stratum` falls 50 -> 44 and `RT-TS` grows from 231 to 275
+observations with 0 residuals.
+
+The two remaining `ts.h` rows, `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine`, are
+recorded in `phase12_obligations.py`'s `BLOCKED_HANDOFFS` and handed to **Phase 13**, because their
+whole body is the ENGINE lookup and installation (`crypto/ts/ts_conf.c:171`, `:188`, `:192`) and
+`ENGINE_by_id`/`ENGINE_set_default` are `engine.h`'s and withheld on `crypto/engine/eng_dyn.c`.
+Pulling the ENGINE registry forward to satisfy two `CONF` readers would be disproportionate.
+
+Verified (container): `RT-TS` 275 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `build_phase2.sh` all-ABI pass; the
+authority-tier atlas byte-identical on a second run.

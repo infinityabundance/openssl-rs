@@ -286,7 +286,10 @@ land with it. Every one of the 23 is now implemented rather than open; `RT-HTTP`
 (`courts/phase12/rt_http_probe.c`) drives them. Subphase 12.6 lands the whole OCSP surface, so
 `OCSP_request_sign`, `OCSP_basic_verify`, `OCSP_cert_to_id`, `OCSP_check_validity`, `OCSP_resp_count`
 and `OCSP_response_status` -- the six `ocsp.h` names the open clause below carried -- are now
-implemented rather than open, joining the `ocsp_asn.c` item group above.
+implemented rather than open, joining the `ocsp_asn.c` item group above. Subphase 12.5b lands the
+TS response engine now that 12.7's ESS item group and its `OSSL_ESS_*` helpers have closed:
+`TS_RESP_create_response`, `TS_RESP_verify_response`, `TS_RESP_verify_signature` and
+`TS_RESP_verify_token` are now implemented rather than open.
 
 Subphase 12.2 lands the PKCS#7 remainder: `pk7_asn1.c`'s other three `ANY DEFINED BY` arms
 (`signed`, `enveloped`, `signedAndEnveloped`) and the streaming callback's four arms, the whole of
@@ -364,22 +367,23 @@ signer-infrastructure 12.3 landed, per section 2.1.
 
 **Open exports (checked against the ledger):**
 
-Open is the 50-name remainder. CMS has closed: every one of its 149 `cms.h` rows is now
+Open is the 44-name remainder. CMS has closed: every one of its 149 `cms.h` rows is now
 implemented and no CMS name appears here. CMP has closed: 12.4b landed the engine, so every one of
-`cmp.h`'s 161 rows is now implemented and no CMP name appears here. TS opens with the two engine-reading
-configuration setters `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` (blocked on
-Phase 13's ENGINE_by_id/ENGINE_set_default), and `TS_RESP_create_response` with the three verify
-entry points `TS_RESP_verify_response`/`TS_RESP_verify_signature`/`TS_RESP_verify_token` (the ESS
-item group and its signing-certificate helpers they reach are now landed by 12.7, so what remains
-open is the TS response engine itself). OCSP has closed: every one of its 94 `ocsp.h` rows is now
-implemented and no OCSP name appears here. CRMF and ESS have closed: every one of `crmf.h`'s 92
-rows and `ess.h`'s 30 rows is now implemented, and no CRMF or ESS name appears here. SRP opens
-12.8 with `SRP_create_verifier`,
+`cmp.h`'s 161 rows is now implemented and no CMP name appears here. TS has closed its engine: 12.5b
+lands the response builder and the three verify entry points, so no TS engine name appears here.
+OCSP has closed: every one of its 94 `ocsp.h` rows is now implemented and no OCSP name appears
+here. CRMF and ESS have closed: every one of `crmf.h`'s 92 rows and `ess.h`'s 30 rows is now
+implemented, and no CRMF or ESS name appears here. SRP opens 12.8 with `SRP_create_verifier`,
 `SRP_user_pwd_new`, `SRP_VBASE_new` and `SRP_Calc_A`. 12.9 opens the CT remainder with
 `CTLOG_STORE_load_default_file`, the shared `x_all.c` dispatch with `d2i_PKCS7_bio` and
-`PKCS7_ISSUER_AND_SERIAL_digest`, and the nine hand-offs with `SMIME_read_ASN1`, `SMIME_write_ASN1`,
+`PKCS7_ISSUER_AND_SERIAL_digest`, and the hand-offs with `SMIME_read_ASN1`, `SMIME_write_ASN1`,
 `ASN1_ITEM_get` and `X509_load_http`. A stratum is complete only when no export it owns is neither
 implemented nor handed on, and this is not that state yet -- the seal is 12.10's.
+
+Two further `ts.h` rows are not open because they are handed to a later stratum:
+`TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` are Phase 13's, since their whole body
+is the ENGINE lookup and installation (`crypto/ts/ts_conf.c:171`, `:188`, `:192`) and
+`ENGINE_by_id`/`ENGINE_set_default` are `engine.h`'s.
 
 **12.7 -- CRMF and ESS (all 122 rows).** `crmf_asn.c`'s ten exported item groups (`OSSL_CRMF_CERTID`,
 `CERTTEMPLATE`, `ENCRYPTEDVALUE`, `ENCRYPTEDKEY`, `SINGLEPUBINFO`, `PKIPUBLICATIONINFO`,

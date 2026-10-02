@@ -96,20 +96,33 @@ MODULE_OVERRIDES: list[tuple[str, tuple[str, ...]]] = []
 
 
 # ---------------------------------------------------------------------------------------------
-# The blocked hand-offs. **None, and that is a measurement rather than an omission.**
+# The blocked hand-offs. **One pair, discovered by 12.5b, and it is not ts-local.**
 #
 # The rule is Phase 8's through Phase 11's: a symbol whose declaring header is this stratum's
 # but whose *body* needs a name no module of this crate defines is recorded here with the reason
 # naming the callee, the authority file and line the call sits on, and the stratum that owns the
-# callee. Phase 12 is the *last* export stratum before the CLI and TLS strata, and every callee
-# its units reach is either already in the crate or owned by this same stratum -- so almost every
-# symbol it receives lands in `open` rather than here, because a same-stratum blocker is recorded
-# as `open` (a stratum cannot hand a symbol to itself). The mechanism is kept because the shape is
-# Phase 8's through Phase 11's, and a later slice that discovers a genuine forward edge records it
-# here rather than silently dropping the symbol.
+# callee. Phase 12 is the *last* export stratum before the CLI and TLS strata, and almost every
+# callee its units reach is either already in the crate or owned by this same stratum -- a
+# same-stratum blocker is recorded as `open` (a stratum cannot hand a symbol to itself). The one
+# pair that is not is `TS_CONF_set_crypto_device`/`TS_CONF_set_default_engine`, whose declaring
+# header is `ts.h` but whose only callees are Phase 13's `ENGINE_by_id`/`ENGINE_set_default`.
 # ---------------------------------------------------------------------------------------------
 
-BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = []
+BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
+    (
+        ("TS_CONF_set_crypto_device", "TS_CONF_set_default_engine"),
+        13,
+        "both are guarded by `#ifndef OPENSSL_NO_ENGINE` in `crypto/ts/ts_conf.c` and their body "
+        "is the ENGINE lookup and installation: `TS_CONF_set_default_engine` calls "
+        "`ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, "
+        "ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it "
+        "(`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase "
+        "13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13), and `src/engine/"
+        "eng_list.rs` records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. Pulling "
+        "the ENGINE registry forward to satisfy two `CONF` readers is disproportionate, so the "
+        "rows are handed to Phase 13 rather than stubbed",
+    ),
+]
 
 
 def load(path: Path) -> dict:

@@ -4,14 +4,29 @@
     "complete": false,
     "counts": {
       "atlas_owned": 1024,
-      "deferred_to_later_phase": 0,
-      "implemented": 983,
-      "open_in_this_stratum": 50,
+      "deferred_to_later_phase": 2,
+      "implemented": 987,
+      "open_in_this_stratum": 44,
       "owned": 1033,
       "received_by_handoff": 9
     },
-    "deferred": [],
-    "deferred_by_phase": {},
+    "deferred": [
+      {
+        "declaring_header": "ts.h",
+        "owning_phase": 13,
+        "reason": "both are guarded by `#ifndef OPENSSL_NO_ENGINE` in `crypto/ts/ts_conf.c` and their body is the ENGINE lookup and installation: `TS_CONF_set_default_engine` calls `ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it (`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13), and `src/engine/eng_list.rs` records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. Pulling the ENGINE registry forward to satisfy two `CONF` readers is disproportionate, so the rows are handed to Phase 13 rather than stubbed",
+        "symbol": "TS_CONF_set_crypto_device"
+      },
+      {
+        "declaring_header": "ts.h",
+        "owning_phase": 13,
+        "reason": "both are guarded by `#ifndef OPENSSL_NO_ENGINE` in `crypto/ts/ts_conf.c` and their body is the ENGINE lookup and installation: `TS_CONF_set_default_engine` calls `ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it (`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13), and `src/engine/eng_list.rs` records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. Pulling the ENGINE registry forward to satisfy two `CONF` readers is disproportionate, so the rows are handed to Phase 13 rather than stubbed",
+        "symbol": "TS_CONF_set_default_engine"
+      }
+    ],
+    "deferred_by_phase": {
+      "13": 2
+    },
     "handoffs_discharged": {
       "11": [
         "X509_CRL_load_http",
@@ -875,6 +890,7 @@
       "TS_RESP_CTX_set_status_info",
       "TS_RESP_CTX_set_status_info_cond",
       "TS_RESP_CTX_set_time_cb",
+      "TS_RESP_create_response",
       "TS_RESP_dup",
       "TS_RESP_free",
       "TS_RESP_get_status_info",
@@ -884,6 +900,9 @@
       "TS_RESP_print_bio",
       "TS_RESP_set_status_info",
       "TS_RESP_set_tst_info",
+      "TS_RESP_verify_response",
+      "TS_RESP_verify_signature",
+      "TS_RESP_verify_token",
       "TS_STATUS_INFO_dup",
       "TS_STATUS_INFO_free",
       "TS_STATUS_INFO_get0_failure_info",
@@ -1305,42 +1324,6 @@
         "symbol": "SRP_user_pwd_set_gN"
       },
       {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_crypto_device"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_default_engine"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_create_response"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_verify.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_verify_response"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_verify.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_verify_signature"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_verify.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_verify_token"
-      },
-      {
         "declaring_header": "x509.h",
         "module": "src/x509/x_all.rs",
         "received_from_phase": 11,
@@ -1496,17 +1479,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "e9bcb7f9eb43eaf7137d2ef30cc0483b474b2f168ab7fcde45116709eef8e5d9"
+      "sha256": "eb27b192d2b083e197cd3e34a5fc1dd39f773d1f035c10d7ef1f4dc4f43ecafb"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "c98a5a3ecf53c98ca2d7ff4f3af8e71bf9db35537728880dc093dfc667042c06"
+      "sha256": "dc7545583d8b3892d36f16a342747f5a94d6674e1430bd93463e1e9b355bd8bf"
     },
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "512be5e10090dfbe5f58c4dc090a69fc5ddb0ba47d3edef6615b5bd8a43e0e6b"
+      "sha256": "2f64f908b3016cef5bbac14554c9a0bca2e8e457970f2934e005e3ee5420a385"
     }
   ],
   "kind": "phase12-obligations",
