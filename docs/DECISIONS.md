@@ -34597,3 +34597,36 @@ names that are the stratum's purpose: `X509_verify_cert`, `X509_STORE_CTX_verify
 
 Verified: `docs_consistency.py`, `evidence_determinism.py` and `regression_guard.py
 --require-current` ok; no code or court change in this commit.
+
+## D506 -- the engine's OCSP and SSL_DANE substrate is pulled forward as internal transcriptions,
+## staged ahead of the engine
+
+D503 named the substrate `X509_verify_cert` reaches forward for and D505 wrote the rule down. This
+entry lands the substrate, before the engine that will call it, so the engine slice changes only
+`src/x509/x509_vfy.rs`.
+
+### What lands, and why it is internal rather than exported
+Thirty-point of the OCSP surface is transcribed under `src/ocsp/` -- `ocsp_lib.c`'s `OCSP_cert_to_id`
+family, `ocsp_srv.c`'s `OCSP_id_get0_info`, `ocsp_cl.c`'s response/status readers, and the seven
+`ocsp_vfy.c` signer checks -- plus the `SSL_DANE` representation and seven of the ten `x509_vfy.c`
+DANE-matrix functions under `src/x509/dane.rs`. **None carries `#[no_mangle]`**: ownership stays where
+`forensics/atlas/symbol-ownership.json` puts it (`ocsp.h` is Phase 12's, the DANE matrix is this
+stratum's own statics), and D503's rule is to pull the *implementation* forward, not the *public
+owning*. `implemented-surface.json` is the proof rather than the promise: libcrypto stays at 4,760
+implemented exports, and an `nm` over the archive finds no new `OCSP_*` symbol.
+
+The OCSP ASN.1 item groups were already landed in `src/ocsp/ocsp_asn.rs` (they are exports and were
+needed elsewhere), so only the functions are new. Both modules carry the `#![allow(dead_code)]`
+staging marker `src/runtime/defaults.rs` established, each naming the engine commit that retires it.
+
+### What is held, and the one-word change it waits on
+Three DANE functions and two OCSP functions are held with a `TODO(11.2c)` note rather than stubbed:
+`dane_verify`/`dane_verify_rpk`/`check_leaf_suiteb` call `verify_chain`/`verify_rpk`/`verify_cb_cert`
+(the engine's, and `verify_cb_cert` is private to `x509_vfy.rs`), and `OCSP_basic_verify` reaches
+`ocsp_verify_signer`, whose `X509_verify_cert`/`X509_STORE_CTX_init` calls are the five exports this
+stratum is finishing. The first engine edit is to widen `verify_cb_cert` to `pub(crate)`.
+
+Verified: `cargo build --release` and `cargo clippy --all-targets -- -D warnings` clean; no new
+libcrypto export; `docs_consistency.py`, `evidence_determinism.py` and `regression_guard.py
+--require-current` ok. The prerequisite census drops as transcriptions replace names
+(`x509_vfy.c` 115 -> 94 not-modelled), which is the movement the guard reports and accepts.
