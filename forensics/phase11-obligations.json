@@ -1755,12 +1755,12 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "e7e44eaf7464b3bbe9dfa2085ce8a674a6533b95466f8b71848a001f4389a7ec"
+      "sha256": "890510d7b80caee4039c895155fe7768206698024c85bd6079ef13812dc2ac56"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "c5c5886c1bd511aa0718bb9a655ef1704367094d969c892d8833aa1b26547811"
+      "sha256": "f870b47eda65851be1a0ca7070a8420404c6e4515e1f41ea968cd20adbcb3082"
     }
   ],
   "kind": "phase11-obligations",
