@@ -93,32 +93,63 @@ MODULE_OVERRIDES: list[tuple[str, tuple[str, ...]]] = []
 
 
 # ---------------------------------------------------------------------------------------------
-# The blocked hand-offs. **Two, and each names the later stratum that owns its callee.**
+# The blocked hand-offs. **Empty, and that is a measurement rather than an omission.**
 #
 # The rule is Phase 8's through Phase 10's: a symbol whose declaring header is this stratum's
 # but whose *body* needs a name no module of this crate defines is recorded here with the reason
 # naming the callee, the authority file and line the call sits on, and the stratum that owns the
 # callee. Phase 11 owns the X.509 object graph itself, so almost every symbol it receives lands in
 # `open` rather than here -- a same-stratum blocker is recorded as `open` because a stratum cannot
-# hand a symbol to itself. The one pair that is not is `X509_load_http`/`X509_CRL_load_http`,
-# whose declaring header is `x509.h` but whose only callee is Phase 12's `OSSL_HTTP_get`.
+# hand a symbol to itself.
+#
+# The one pair that was here -- `X509_load_http`/`X509_CRL_load_http`, blocked on Phase 12's
+# `OSSL_HTTP_get` -- is not retired but **retargeted** to `UNBLOCKED_HANDOFFS` below. 12.9 landed
+# the HTTP client (`src/http/http_client.rs`) and the two loaders (`src/x509/x_all.rs`), so the
+# blocker this row named is gone; the exports are still Phase 12's to have written, so retiring
+# the row would move two built exports into this sealed stratum's `implemented` list on the
+# strength of work it did not do.
 #
 # Where a row is blocked on a later stratum's *provider* primitive, `provider-algorithms.json`
 # carries its `blocked_by` and `phase_state.py` reads it -- not this file. And this stratum owns
 # no provider row at all (see the module doc), so there is no such row to carry it.
 # ---------------------------------------------------------------------------------------------
 
-BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
+BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = []
+
+
+# ---------------------------------------------------------------------------------------------
+# The third deferral mechanism: a hand-off whose blocker has since landed.
+#
+# `BLOCKED_HANDOFFS` above makes a *structured claim* -- "this export is withheld because file:line
+# calls `X`, and `X` is not in the crate" -- and `main` fires the moment `X` lands, because a table
+# that can keep covering a landed blocker can hide the next real gap behind it. The prescription is
+# "retire the row".
+#
+# **Retiring this row would be a false statement about this stratum, not a correction of one.**
+# `owning_phase` is the stratum that committed to building the export, and for both names here that
+# is Phase 12: `forensics/phase12-obligations.json` lists them in `handoffs_discharged[11]` and
+# built them in 12.9 (`src/x509/x_all.rs`). Removing the row would move each name into *this*
+# stratum's `implemented` list and drop them from Phase 12's `received_by_handoff`; the honest
+# difference is that the *blocker* is gone, not that the hand-off is. So the row is **retargeted**
+# from a blocked claim to an unconditional one -- Phase 7's `UNBLOCKED_HANDOFFS` precedent -- and
+# the reason records what landed rather than repeating a claim that no longer holds.
+#
+# The rows are authored as `(symbols, owning_phase, reason)`. They are not checked against
+# `implemented-surface.json`, because an unconditional hand-off is falsified by the owner's ledger,
+# which already counts them, rather than by a file:line.
+# ---------------------------------------------------------------------------------------------
+
+UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
     (
         ("X509_load_http", "X509_CRL_load_http"),
         12,
         "both are one-line delegations to the static `simple_get_asn1` "
         "(`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document "
-        "and whose `ASN1_item_d2i_bio` decodes it; `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` "
-        "transport under it are `http.h`'s and Phase 12's (`forensics/atlas/symbol-ownership.json`, "
-        "owner_phase 12), and this crate deliberately withholds the http/punycode units "
-        "(docs/DECISIONS.md D455; `src/http/http_lib.rs` lands only `OSSL_parse_url`), so pulling "
-        "the whole HTTP client forward to satisfy two convenience wrappers is disproportionate",
+        "and whose `ASN1_item_d2i_bio` decodes it. The blocker this row named has landed: 12.9 "
+        "transcribed `crypto/http/` into `src/http/http_client.rs` and the two loaders into "
+        "`src/x509/x_all.rs`, so `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it "
+        "are in the crate. The exports remain Phase 12's to have written, so the row stays as the "
+        "hand-off edge rather than being retired.",
     ),
 ]
 
@@ -260,7 +291,37 @@ def main(argv: list[str]) -> int:
             + "\n  ".join(f"{s}  ({owned[s]['declaring_header']})" for s in unlabelled)
         )
 
-    # The fail-closed deferral mechanism, unchanged from Phases 8 through 10: a symbol in
+    # The second mechanism (see `UNBLOCKED_HANDOFFS`): a hand-off whose blocker has landed. Same
+    # fail-closed rule as `BLOCKED_HANDOFFS` for a symbol outside the working set, and **not** the
+    # same rule for a symbol the crate now defines -- deliberately, and the asymmetry is the whole
+    # point:
+    #   * a `BLOCKED_HANDOFFS` row is falsified by its blocker landing, because its claim IS
+    #     "the body calls X and X is absent";
+    #   * an `UNBLOCKED_HANDOFFS` row makes no such claim, so it is not falsified by *itself*
+    #     being built. The row is the hand-off **edge**: it is what puts the symbol in the
+    #     receiving stratum's working set, and it is what `phase12_obligations.py` reads to count
+    #     the symbol as a discharged hand-off.
+    unblocked_handed_on: dict[str, dict] = {}
+    for symbols, phase, reason in UNBLOCKED_HANDOFFS:
+        for sym in symbols:
+            if sym not in owned:
+                raise SystemExit(
+                    f"phase11-obligations: UNBLOCKED_HANDOFFS names {sym}, which is not in this "
+                    f"stratum's working set (or is not an authority export at all)"
+                )
+            if any(sym in group for group, _, _ in BLOCKED_HANDOFFS):
+                raise SystemExit(
+                    f"phase11-obligations: {sym} is handed on by two of the three mechanisms; "
+                    f"one cause per symbol, or the reasons will disagree"
+                )
+            unblocked_handed_on[sym] = {
+                "symbol": sym,
+                "owning_phase": phase,
+                "declaring_header": owned[sym]["declaring_header"],
+                "reason": reason,
+            }
+
+    # The fail-closed deferral mechanism, unchanged from Phases 8 through Phase 10: a symbol in
     # `BLOCKED_HANDOFFS` that the crate now defines is a stale row rather than a harmless one,
     # because a table that can keep covering a landed symbol can hide the next real gap behind it.
     blocked: dict[str, dict] = {}
@@ -282,8 +343,11 @@ def main(argv: list[str]) -> int:
                 "declaring_header": owned[sym]["declaring_header"],
                 "reason": reason,
             }
-    deferred_names = set(blocked)
-    deferred: list[dict] = sorted(blocked.values(), key=lambda r: r["symbol"])
+    deferred_names = set(blocked) | set(unblocked_handed_on)
+    deferred: list[dict] = sorted(
+        list(blocked.values()) + list(unblocked_handed_on.values()),
+        key=lambda r: r["symbol"],
+    )
 
     implemented_here = sorted(s for s in owned if s in done and s not in deferred_names)
     open_rows = [

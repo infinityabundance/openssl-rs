@@ -131,10 +131,17 @@
         "translation_unit": "crypto/asn1/asn1_gen.c"
       },
       {
-        "module": "src/asn1/asn_mime.rs",
+        "module": "src/asn1/asn1_item_list.rs",
         "phase": 5,
-        "phase_source": "module-declaration",
+        "phase_source": "export-ownership",
         "share": "2/2",
+        "translation_unit": "crypto/asn1/asn1_item_list.c"
+      },
+      {
+        "module": "src/asn1/asn_mime.rs",
+        "phase": 12,
+        "phase_source": "module-declaration",
+        "share": "7/7",
         "translation_unit": "crypto/asn1/asn_mime.c"
       },
       {
@@ -778,7 +785,7 @@
         "module": "src/ct/ct_log.rs",
         "phase": 12,
         "phase_source": "export-ownership",
-        "share": "11/11",
+        "share": "12/12",
         "translation_unit": "crypto/ct/ct_log.c"
       },
       {
@@ -4061,7 +4068,7 @@
         "module": "src/x509/x_all.rs",
         "phase": 10,
         "phase_source": "module-declaration",
-        "share": "89/89",
+        "share": "96/96",
         "translation_unit": "crypto/x509/x_all.c"
       },
       {
@@ -7587,6 +7594,48 @@
           "src/asn1/asn1_gen.rs"
         ],
         "tu": "crypto/asn1/asn1_gen.c"
+      },
+      {
+        "identifiers": [
+          "ASN1_ITEM",
+          "ASN1_ITEM_get",
+          "ASN1_ITEM_lookup",
+          "ASN1_ITEM_ptr",
+          "NULL",
+          "OPENSSL_SUPPRESS_DEPRECATED",
+          "OSSL_NELEM",
+          "asn1",
+          "asn1_item_list",
+          "asn1t",
+          "char",
+          "cms",
+          "const",
+          "define",
+          "dh",
+          "for",
+          "h",
+          "i",
+          "if",
+          "include",
+          "it",
+          "name",
+          "ocsp",
+          "openssl",
+          "pkcs12",
+          "pkcs7",
+          "return",
+          "rsa",
+          "size_t",
+          "sname",
+          "stdio",
+          "strcmp",
+          "x509_acert",
+          "x509v3"
+        ],
+        "modules": [
+          "src/asn1/asn1_item_list.rs"
+        ],
+        "tu": "crypto/asn1/asn1_item_list.c"
       },
       {
         "identifiers": [

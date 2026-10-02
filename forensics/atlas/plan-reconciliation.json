@@ -4,22 +4,10 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "names_a_basename_the_authority_repeats": 1,
-      "units_not_reached": 1
-    },
-    "census_by_stratum": {
-      "12": 2
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "names_a_basename_the_authority_repeats": [
-        "docs/PHASE-12-SUBPHASES.md:12:12.3:cms_enc.c"
-      ],
-      "units_not_reached": [
-        "crypto/asn1/asn1_item_list.c"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -37,8 +25,8 @@
       "symbols_reached": 108,
       "unit_records": 97,
       "units_named_by_a_record": 99,
-      "units_named_by_a_row": 432,
-      "units_reached": 431
+      "units_named_by_a_row": 433,
+      "units_reached": 433
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -117,7 +105,9 @@
         "subphases": [
           "12:12.9"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/asn1/asn1_item_list.rs"
+        ]
       },
       "crypto/asn1/asn1_lib.c": {
         "defines": [
@@ -695,6 +685,20 @@
         ],
         "transcribed_by": [
           "src/cms/cms_att.rs"
+        ]
+      },
+      "crypto/cms/cms_enc.c": {
+        "defines": [
+          "ossl_cms_EncryptedContent_init",
+          "ossl_cms_EncryptedContent_init_bio",
+          "ossl_cms_EncryptedData_init_bio"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "12:12.3"
+        ],
+        "transcribed_by": [
+          "src/cms/cms_enc.rs"
         ]
       },
       "crypto/cms/cms_env.c": {
@@ -6285,31 +6289,31 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 523
+      "transcribed_units": 524
     }
   },
-  "body_hash": "579149816366cf677884ae5addf86e27c9a527af635a72bb9a1cc3f1be2a7b1d",
+  "body_hash": "44b46463d8956c3736efe00d53e1777a7393adfe7b5637141566e05076698aae",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "6bb468c21bb04ac885060f92713ff25f28085c6827f4ac2fa0e7f3f06a0571a5"
+      "sha256": "a45c07007b5a9b554b869015d272d9c6f806442ba4071c119faf188cc5a08134"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "ef45f924ef9ee7c731e4429d071513da80054e676451433e420c2f43f497ae3d"
+      "sha256": "cd4e197e8a5e2e58aff6886105764b4cbd2ec0d123ce91efcdc5cc4205195633"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8a383972390da47119e26b14456ae7dfacc6c2073891af474842d5ada90cb7cb"
+      "sha256": "05d5b881531fe52f57a5086a43b02d651e1a71f98a27552f383ef53e2c017bac"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "442b133d7baea75bd7935b35f2cc4b97d0e82cfe39c6bbbbad279fba4b030a98"
+      "sha256": "1896fe9f1708a7acb14b48aac5f30c4a593e62c3890a609694c801552a27fb44"
     },
     {
       "name": "prerequisites",
@@ -6334,7 +6338,7 @@
     {
       "name": "plan-PHASE-12-SUBPHASES",
       "path": "docs/PHASE-12-SUBPHASES.md",
-      "sha256": "bf643d15dbbf4c16ef43df217252be9251d5c2577be39a003ff9d66f6633cccc"
+      "sha256": "c16f753a30d8971f390864ca27195900faf743a66d2b00e8f3320ba218bbed07"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

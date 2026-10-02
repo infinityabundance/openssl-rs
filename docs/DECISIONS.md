@@ -35051,3 +35051,37 @@ transcoded verifier string is stable -- so no random byte is ever compared.
 Verified (container): `RT-SRP` 149 observations, 0 residuals; `cargo clippy --all-targets --
 -D warnings` and `cargo fmt --all -- --check` clean; `cargo build --release` clean;
 `build_phase2.sh` all-ABI pass.
+
+## D522 -- the 12.9 remainder lands, and the stratum's export ledger reaches zero open
+
+12.9 closes the stratum's own rows. `src/asn1/asn1_item_list.rs` lands `ASN1_ITEM_lookup`
+(`asn1_item_list.c:28`) and `ASN1_ITEM_get` (`:41`) over a table of the 147 `_it` accessors the
+authority's generated `crypto/asn1/asn1_item_list.h` names, in its exact order (`ASN1_ITEM_get` is
+index-addressed, so the order is the contract). `src/ct/ct_log.rs` lands
+`CTLOG_STORE_load_default_file` (`ct_log.c:161`) over the landed `CTLOG_STORE_load_file`.
+`src/x509/x_all.rs` lands the shared dispatch -- `PKCS7_ISSUER_AND_SERIAL_digest` (`:642`) and
+`d2i_PKCS7_fp`/`d2i_PKCS7_bio`/`i2d_PKCS7_fp`/`i2d_PKCS7_bio` (`:260`-`:303`) -- and the two
+Phase-11 hand-offs `X509_load_http`/`X509_CRL_load_http` (`:134`, `:188`) with the unit's static
+`simple_get_asn1`, over the 12.1 HTTP client. `src/asn1/asn_mime.rs` lands the MIME reader and
+writer the Phase-5 module header handed here: `SMIME_write_ASN1_ex`/`SMIME_write_ASN1` (`:258`,
+`:366`), `SMIME_read_ASN1_ex`/`SMIME_read_ASN1` (`:432`, `:539`) and `SMIME_text` (`:612`), with
+the `MIME_HEADER`/`MIME_PARAM` model, `multi_split`, `B64_write_ASN1`, `b64_read_asn1`,
+`asn1_output_data` and `asn1_write_micalg`. `open_in_this_stratum` falls 15 -> 0 and
+`RT-CMS-REMAINDER` drives 71 observations with 0 residuals.
+
+Three rows remain handed to Phase 13 rather than open -- `TS_CONF_set_crypto_device`,
+`TS_CONF_set_default_engine` (ENGINE) and `SRP_VBASE_init` (TXT_DB) -- so the stratum's
+disposition is 1030 implemented plus 3 handed on over 1033 owned. The stratum is not complete
+until 12.10's seal and the FRF/Gemel chain; `phase12_obligations.py`'s own `complete` is the
+ledger-level emptiness check, not the phase-exit predicate.
+
+Honest limits recorded rather than compared: the `SMIME_DETACHED` arm's random boundary is
+non-deterministic; `asn1_write_micalg`'s `EVP_get_digestbynid`/`md_ctrl` arm is the recorded
+Phase-13 legacy digest-name divergence (the authority's own `switch (md_nid)` still supplies the
+strings); and the authority's `d2i_PKCS7_fp(NULL, ...)`/`i2d_PKCS7_fp(NULL, ...)` arms segfault
+(they install a null `FILE *` into a `BIO_s_file`), so the FILE refusals drive bad content and a
+null value instead.
+
+Verified (container): `RT-CMS-REMAINDER` 71 observations, 0 residuals, `all_pass` over 11 courts;
+`cargo clippy --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean;
+`cargo build --release` clean; `build_phase2.sh` all-ABI pass.

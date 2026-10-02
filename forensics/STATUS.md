@@ -32,7 +32,7 @@ renderer does not know any phase status.
 | 9 | RAND / DRBG + entropy | `complete` |  |
 | 10 | Key formats + PKCS + STORE | `complete` |  |
 | 11 | X.509 + verification | `complete` |  |
-| 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `in-progress` | 15 open obligation(s) of this stratum recorded in forensics/phase12-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One thousand and twenty-four of the exports it owns are its own twelve headers' (`ts.h`, `ocsp.h`, `cmp.h`, `cms.h`, `pkcs7.h`, `crmf.h`, `ct.h`, `ess.h`, `srp.h`, `http.h`, `cmp_util.h`, `pem.h`) and the nine remainder arrive as recorded hand-offs from phases 5 and 11. The ledger does not start with that whole working set open: the `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row (docs/PHASE-12-SUBPHASES.md sections 1 and 4) |
+| 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` |  |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 13-21 (9 total).
@@ -124,9 +124,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 5631 | 265 |
+| libcrypto | 5896 | 5646 | 250 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **5631** | **868** |
+| **total** | **6499** | **5646** | **853** |
 
 ### Phase 10 obligation ledger
 
@@ -170,9 +170,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 12 working set: 1033
-* implemented: 1015
+* implemented: 1030
 * deferred to a later phase with a stated reason: 3
-* open in this stratum: 15
+* open in this stratum: 0
 
 Deferred to phase 13: `SRP_VBASE_init`, `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine`
 

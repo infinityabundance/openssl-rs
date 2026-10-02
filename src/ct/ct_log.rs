@@ -1,19 +1,19 @@
 //! `crypto/ct/ct_log.c` — the `CTLOG` object and the `CTLOG_STORE` that holds a log list. Phase
 //! 10.14.15's CT layer.
 //!
-//! `crypto/ct/ct_log.c` is 335 lines and transcribes whole except for one withheld name. It owns
+//! `crypto/ct/ct_log.c` is 335 lines and **transcribes whole**. It owns
 //! the `CTLOG` structure (`crypto/ct/ct_local.h`-adjacent, spelled in `ct_log.c:24-30`), the
 //! `CTLOG_STORE` (`:36-40`), the load context `CTLOG_STORE_LOAD_CTX` (`:43-47`), and every
 //! lifecycle, accessor and CONF loader.
 //!
-//! **Withheld by name**: `CTLOG_STORE_load_default_file` (`:161-169`). It consults the
-//! `CTLOG_FILE` environment variable and, when that is unset, falls back to `CTLOG_FILE` —
-//! `OPENSSLDIR "/ct_log_list.cnf"` (`include/internal/common.h:87`), a compile-time path built from
-//! the admitted build's **forensic** `OPENSSLDIR`. The candidate reports `OPENSSLDIR: N/A`
-//! (`src/runtime/init.rs:1133`) and the whole directory plane is Phase 16's (`ossl_get_openssldir`,
-//! `src/runtime/defaults.rs`), so a transcription would diverge on the default branch — the same
-//! class as the four withheld `crypto/x509/x509_def.c` names (`src/x509/x509_def.rs`). The env-only
-//! branch is not separately landable without inventing the other.
+//! **`CTLOG_STORE_load_default_file`** (`:161-169`) landed with 12.9. It consults the
+//! `CTLOG_FILE` environment variable through `ossl_safe_getenv` and, when that is unset, falls
+//! back to `CTLOG_FILE` — `OPENSSLDIR "/ct_log_list.cnf"` (`include/internal/common.h:87`). That
+//! path is built exactly as `src/x509/x509_def.rs` builds the certificate-area paths: from the
+//! build-time `OPENSSL_RS_OPENSSLDIR`, with the empty sentinel when the build configured none, so
+//! the default branch answers a path this distribution did not fabricate rather than the admitted
+//! build's forensic `OPENSSLDIR`. `ossl_get_openssldir` and the directory plane proper remain
+//! Phase 16's.
 //!
 //! ## The raise sites
 //!
@@ -44,6 +44,7 @@ use crate::runtime::err::err_reasons::{
 };
 use crate::runtime::err::err_sites::ErrSite;
 use crate::runtime::err::raise_site;
+use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_strndup, CRYPTO_zalloc};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
@@ -90,6 +91,29 @@ const CT_LOG_229: ErrSite = ct_log_site(229, c"CTLOG_STORE_load_file", CT_R_LOG_
 const CT_LOG_235: ErrSite = ct_log_site(235, c"CTLOG_STORE_load_file", CT_R_LOG_CONF_INVALID);
 /// `CTLOG_STORE_load_file` at `crypto/ct/ct_log.c:240`.
 const CT_LOG_240: ErrSite = ct_log_site(240, c"CTLOG_STORE_load_file", CT_R_LOG_CONF_INVALID);
+
+/// `CTLOG_FILE_EVP` — `include/internal/common.h:98`, the environment variable
+/// `CTLOG_STORE_load_default_file` reads first (`"CTLOG_FILE"`).
+const CTLOG_FILE_EVP: &CStr = c"CTLOG_FILE";
+
+/// `CTLOG_FILE` — `include/internal/common.h:87`, `OPENSSLDIR "/ct_log_list.cnf"`, the default
+/// the environment variable overrides.
+///
+/// Built like `src/x509/x509_def.rs`: the build's `OPENSSL_RS_OPENSSLDIR` appears exactly once
+/// and the terminator is appended at compile time, so no allocation is involved and the address
+/// is stable. An unset `OPENSSL_RS_OPENSSLDIR` answers the same empty sentinel
+/// `X509_get_default_cert_area` does rather than a fabricated path.
+fn ctlog_file_c() -> *const c_char {
+    match env!("OPENSSL_RS_OPENSSLDIR") {
+        "" => c"".as_ptr(),
+        _ => match CStr::from_bytes_with_nul(
+            concat!(env!("OPENSSL_RS_OPENSSLDIR"), "/ct_log_list.cnf\0").as_bytes(),
+        ) {
+            Ok(s) => s.as_ptr(),
+            Err(_) => c"".as_ptr(),
+        },
+    }
+}
 
 /// `struct ctlog_st` — `CTLOG`, from `crypto/ct/ct_log.c:24-30`.
 #[repr(C)]
@@ -464,6 +488,26 @@ pub unsafe extern "C" fn CTLOG_STORE_load_file(
     // SAFETY: `load_ctx` is this call's allocation.
     unsafe { ctlog_store_load_ctx_free(load_ctx) };
     ret
+}
+
+/// `int CTLOG_STORE_load_default_file(CTLOG_STORE *store)` — `crypto/ct/ct_log.c:161-169`.
+///
+/// The `CTLOG_FILE` environment variable is consulted first, through the secure lookup every
+/// `libcrypto` environment read uses; when it is unset the compile-time `CTLOG_FILE`
+/// (`OPENSSLDIR "/ct_log_list.cnf"`) is the fallback.
+///
+/// # Safety
+///
+/// `store` is a live `CTLOG_STORE`.
+#[no_mangle]
+pub unsafe extern "C" fn CTLOG_STORE_load_default_file(store: *mut CtlogStore) -> c_int {
+    // SAFETY: the literal is NUL-terminated.
+    let mut fpath: *const c_char = unsafe { ossl_safe_getenv(CTLOG_FILE_EVP.as_ptr()) };
+    if fpath.is_null() {
+        fpath = ctlog_file_c();
+    }
+    // SAFETY: `store` is live per the contract; `fpath` is NUL-terminated.
+    unsafe { CTLOG_STORE_load_file(store, fpath) }
 }
 
 /// `CTLOG *CTLOG_new_ex(EVP_PKEY *public_key, const char *name, OSSL_LIB_CTX *libctx, const char

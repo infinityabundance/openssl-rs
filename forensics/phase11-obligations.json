@@ -14,13 +14,13 @@
       {
         "declaring_header": "x509.h",
         "owning_phase": 12,
-        "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it; `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are `http.h`'s and Phase 12's (`forensics/atlas/symbol-ownership.json`, owner_phase 12), and this crate deliberately withholds the http/punycode units (docs/DECISIONS.md D455; `src/http/http_lib.rs` lands only `OSSL_parse_url`), so pulling the whole HTTP client forward to satisfy two convenience wrappers is disproportionate",
+        "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it. The blocker this row named has landed: 12.9 transcribed `crypto/http/` into `src/http/http_client.rs` and the two loaders into `src/x509/x_all.rs`, so `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are in the crate. The exports remain Phase 12's to have written, so the row stays as the hand-off edge rather than being retired.",
         "symbol": "X509_CRL_load_http"
       },
       {
         "declaring_header": "x509.h",
         "owning_phase": 12,
-        "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it; `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are `http.h`'s and Phase 12's (`forensics/atlas/symbol-ownership.json`, owner_phase 12), and this crate deliberately withholds the http/punycode units (docs/DECISIONS.md D455; `src/http/http_lib.rs` lands only `OSSL_parse_url`), so pulling the whole HTTP client forward to satisfy two convenience wrappers is disproportionate",
+        "reason": "both are one-line delegations to the static `simple_get_asn1` (`crypto/x509/x_all.c:115-132`), whose `OSSL_HTTP_get` call (`:121`) fetches the document and whose `ASN1_item_d2i_bio` decodes it. The blocker this row named has landed: 12.9 transcribed `crypto/http/` into `src/http/http_client.rs` and the two loaders into `src/x509/x_all.rs`, so `OSSL_HTTP_get` and the `OSSL_HTTP_REQ_CTX_*` transport under it are in the crate. The exports remain Phase 12's to have written, so the row stays as the hand-off edge rather than being retired.",
         "symbol": "X509_load_http"
       }
     ],
@@ -1750,17 +1750,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "02eb7edb713a1af55022c464ff17883c4f407ca7252a47c35740cdd5cd3b9967"
+      "sha256": "577168e52e5605593d048da5d1979f7ab821c0b1913384a60a96bb340375e8a9"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "3b622872f2161ec3eb9ac2d8dc1cf47978ff448ceec09d30823f08ecd056a2a4"
+      "sha256": "aa156db59af11e1dfd6d23749d65844fdd1e9e18292d442681f3b89a8ebdb486"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "ee116c09dbbf589e46bf4433a8a9a465c8a28ec8c5ed128fd24eeaeb1f8234b9"
+      "sha256": "a4a46da8dd550a7b3b613df4d6348f56d748821ce38fc382eeaebd6e5c0090b1"
     }
   ],
   "kind": "phase11-obligations",

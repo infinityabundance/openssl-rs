@@ -32,19 +32,17 @@ run yet" cannot be read as "passed" — the contract Phase 8's `PENDING_CORRECTN
 later activation established. `RT-PKCS7`, `RT-CMS`, `RT-CMP`, `RT-OCSP`, `RT-CRMF`, `RT-ESS`,
 `RT-TS` and `RT-SRP` are the subphases' own courts: `RT-HTTP` is registered by 12.1, `RT-PKCS7`,
 `RT-CMS` and `RT-CMP` by 12.3/12.4, `RT-TS` by 12.5, `RT-OCSP` by 12.6, `RT-CRMF`/`RT-ESS` by
-12.7 and `RT-SRP` by 12.8, leaving `RT-CMS-REMAINDER` (12.9's court for the CT remainder, the
-shared `x_all.c` dispatch and the nine hand-offs). Each court not yet registered is printed with
-its subphase on every run.
+12.7, `RT-SRP` by 12.8 and `RT-CMS-REMAINDER` (12.9's court for the CT remainder, the shared
+`x_all.c` dispatch and the nine hand-offs) by 12.9. No court the plan names is left pending.
 
-What the behavioural courts will compare, and what they will not
-----------------------------------------------------------------
-When they land, `RT-CMS`, `RT-PKCS7`, `RT-SMIME`, `RT-OCSP`, `RT-CMP`, `RT-TS`, `RT-CRMF`,
-`RT-ESS` and `RT-SRP` compare the authority's *behaviour*: the DER bytes of a signed or enveloped
-container, the print text, the OCSP response status and signature decision, the CMP transaction
-transcript, the timestamp token's `TSTInfo`, and the SRP arithmetic and verifier codec. A
-transcription whose writer emits bytes its own reader accepts is a different library, and
-docs/PHASE-12-SUBPHASES.md section 3 records where the difference is observable. Nothing here is
-a parity claim about a container's meaning.
+What the behavioural courts compare, and what they do not
+---------------------------------------------------------
+`RT-CMS`, `RT-PKCS7`, `RT-OCSP`, `RT-CMP`, `RT-TS`, `RT-CRMF`, `RT-ESS` and `RT-SRP` compare the
+authority's *behaviour*: the DER bytes of a signed or enveloped container, the print text, the OCSP
+response status and signature decision, the CMP transaction transcript, the timestamp token's
+`TSTInfo`, and the SRP arithmetic and verifier codec. A transcription whose writer emits bytes its
+own reader accepts is a different library, and docs/PHASE-12-SUBPHASES.md section 3 records where
+the difference is observable. Nothing here is a parity claim about a container's meaning.
 
 SPDX-License-Identifier: Apache-2.0"""
 
@@ -91,17 +89,15 @@ COURTS: list[tuple[str, str]] = [
     ("RT-CRMF", "rt_crmf_probe.c"),
     ("RT-ESS", "rt_ess_probe.c"),
     ("RT-SRP", "rt_srp_probe.c"),
+    ("RT-CMS-REMAINDER", "rt_cms_remainder_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
 # pass, and each is printed with the subphase that brings it so that "not run yet" cannot be read
 # as "passed". The court names are `docs/PHASE-12-SUBPHASES.md` section 2's, one per work
-# subphase; `RT-CRMF`/`RT-ESS` (12.7) and `RT-SRP` (12.8) are registered above and have left this
-# table, leaving 12.9's remainder court.
-PENDING_COURTS: dict[str, str] = {
-    "RT-CMS-REMAINDER": "12.9 -- the CT remainder, the shared `x_all.c` dispatch and the nine "
-                        "hand-offs",
-}
+# subphase. `RT-CRMF`/`RT-ESS` (12.7), `RT-SRP` (12.8) and `RT-CMS-REMAINDER` (12.9) are registered
+# above and have left this table, so it is now empty: every phase-12 court the plan names is run.
+PENDING_COURTS: dict[str, str] = {}
 
 
 def extra_defs(name: str, libdir: Path) -> list[str]:
@@ -271,11 +267,13 @@ def main(argv: list[str]) -> int:
             "`referenced`, never `called` (docs/DECISIONS.md D199). `RT-HTTP`, landed by 12.1, is "
             "the first behavioural court here: `rt_http_probe.c` drives the `OSSL_HTTP_REQ_CTX_*` "
             "engine over memory BIOs and the high-level `OSSL_HTTP_*` path with a supplied BIO "
-            "pair, comparing the two transcripts line by line. The plan's remaining courts "
-            "(`pending_courts`) are each printed with the subphase that brings them, so 'not run "
-            "yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not "
-            "`called`, and docs/PHASE-12-SUBPHASES.md section 3 records what the behavioural "
-            "courts compare."
+            "pair, comparing the two transcripts line by line. Every court the plan names is now "
+            "registered -- `pending_courts` is empty -- and 12.9's `RT-CMS-REMAINDER` "
+            "(`rt_cms_remainder_probe.c`) drives the CT default-file arm, the shared item-list "
+            "lookups, the PKCS#7 stream faces, the issuer-and-serial digest, the SMIME hand-offs "
+            "and the two `_load_http` dispatches over fixed fixtures. Nothing here is a parity "
+            "claim: `referenced` is not `called`, and docs/PHASE-12-SUBPHASES.md section 3 "
+            "records what the behavioural courts compare."
         ),
     }
 

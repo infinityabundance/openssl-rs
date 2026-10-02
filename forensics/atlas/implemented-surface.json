@@ -501,7 +501,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 15915,
+      "compiler_emitted_count": 16110,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -509,7 +509,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 5631,
+        "implemented": 5646,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -605,6 +605,8 @@
           "ASN1_INTEGER_set_int64",
           "ASN1_INTEGER_set_uint64",
           "ASN1_INTEGER_to_BN",
+          "ASN1_ITEM_get",
+          "ASN1_ITEM_lookup",
           "ASN1_NULL_free",
           "ASN1_NULL_it",
           "ASN1_NULL_new",
@@ -1520,6 +1522,7 @@
           "CRYPTO_zalloc",
           "CTLOG_STORE_free",
           "CTLOG_STORE_get0_log_by_id",
+          "CTLOG_STORE_load_default_file",
           "CTLOG_STORE_load_file",
           "CTLOG_STORE_new",
           "CTLOG_STORE_new_ex",
@@ -4219,6 +4222,7 @@
           "PKCS7_ENVELOPE_free",
           "PKCS7_ENVELOPE_it",
           "PKCS7_ENVELOPE_new",
+          "PKCS7_ISSUER_AND_SERIAL_digest",
           "PKCS7_ISSUER_AND_SERIAL_free",
           "PKCS7_ISSUER_AND_SERIAL_it",
           "PKCS7_ISSUER_AND_SERIAL_new",
@@ -4569,10 +4573,15 @@
           "SHA512_Transform",
           "SHA512_Update",
           "SMIME_crlf_copy",
+          "SMIME_read_ASN1",
+          "SMIME_read_ASN1_ex",
           "SMIME_read_CMS",
           "SMIME_read_CMS_ex",
           "SMIME_read_PKCS7",
           "SMIME_read_PKCS7_ex",
+          "SMIME_text",
+          "SMIME_write_ASN1",
+          "SMIME_write_ASN1_ex",
           "SMIME_write_CMS",
           "SMIME_write_PKCS7",
           "SRP_Calc_A",
@@ -5001,6 +5010,7 @@
           "X509_CRL_get_signature_nid",
           "X509_CRL_get_version",
           "X509_CRL_it",
+          "X509_CRL_load_http",
           "X509_CRL_match",
           "X509_CRL_new",
           "X509_CRL_new_ex",
@@ -5485,6 +5495,7 @@
           "X509_load_cert_file",
           "X509_load_cert_file_ex",
           "X509_load_crl_file",
+          "X509_load_http",
           "X509_new",
           "X509_new_ex",
           "X509_ocspid_print",
@@ -5763,6 +5774,8 @@
           "d2i_PKCS7_SIGNED",
           "d2i_PKCS7_SIGNER_INFO",
           "d2i_PKCS7_SIGN_ENVELOPE",
+          "d2i_PKCS7_bio",
+          "d2i_PKCS7_fp",
           "d2i_PKCS8PrivateKey_bio",
           "d2i_PKCS8PrivateKey_fp",
           "d2i_PKCS8_PRIV_KEY_INFO",
@@ -6029,7 +6042,9 @@
           "i2d_PKCS7_SIGNED",
           "i2d_PKCS7_SIGNER_INFO",
           "i2d_PKCS7_SIGN_ENVELOPE",
+          "i2d_PKCS7_bio",
           "i2d_PKCS7_bio_stream",
+          "i2d_PKCS7_fp",
           "i2d_PKCS8PrivateKey",
           "i2d_PKCS8PrivateKeyInfo_bio",
           "i2d_PKCS8PrivateKeyInfo_fp",
@@ -6143,7 +6158,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 265
+        "scaffolded": 250
       },
       "libssl": {
         "authority_exports": 603,
@@ -6154,18 +6169,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 5631,
-      "scaffolded": 868
+      "implemented": 5646,
+      "scaffolded": 853
     }
   },
-  "body_hash": "02eb7edb713a1af55022c464ff17883c4f407ca7252a47c35740cdd5cd3b9967",
+  "body_hash": "577168e52e5605593d048da5d1979f7ab821c0b1913384a60a96bb340375e8a9",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "0eec7ea155840bf188be2199ae894b567b0550b36431f4d116c3f40e530688cf"
+      "sha256": "cbfc5743bddab8c7cc074fd975520408e4eb79d7fd95fb19c2d4429ef76cbef8"
     },
     {
       "name": "authority-exports",
