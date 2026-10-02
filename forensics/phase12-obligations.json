@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 1024,
       "deferred_to_later_phase": 0,
-      "implemented": 574,
-      "open_in_this_stratum": 459,
+      "implemented": 752,
+      "open_in_this_stratum": 281,
       "owned": 1033,
       "received_by_handoff": 9
     },
@@ -550,6 +550,7 @@
       "PKCS7_signatureVerify",
       "PKCS7_simple_smimecap",
       "PKCS7_stream",
+      "PKCS7_to_TS_TST_INFO",
       "PKCS7_type_is_other",
       "PKCS7_verify",
       "SCT_LIST_free",
@@ -587,6 +588,155 @@
       "SMIME_read_PKCS7_ex",
       "SMIME_write_CMS",
       "SMIME_write_PKCS7",
+      "TS_ACCURACY_dup",
+      "TS_ACCURACY_free",
+      "TS_ACCURACY_get_micros",
+      "TS_ACCURACY_get_millis",
+      "TS_ACCURACY_get_seconds",
+      "TS_ACCURACY_new",
+      "TS_ACCURACY_set_micros",
+      "TS_ACCURACY_set_millis",
+      "TS_ACCURACY_set_seconds",
+      "TS_ASN1_INTEGER_print_bio",
+      "TS_CONF_get_tsa_section",
+      "TS_CONF_load_cert",
+      "TS_CONF_load_certs",
+      "TS_CONF_load_key",
+      "TS_CONF_set_accuracy",
+      "TS_CONF_set_certs",
+      "TS_CONF_set_clock_precision_digits",
+      "TS_CONF_set_def_policy",
+      "TS_CONF_set_digests",
+      "TS_CONF_set_ess_cert_id_chain",
+      "TS_CONF_set_ess_cert_id_digest",
+      "TS_CONF_set_ordering",
+      "TS_CONF_set_policies",
+      "TS_CONF_set_serial",
+      "TS_CONF_set_signer_cert",
+      "TS_CONF_set_signer_digest",
+      "TS_CONF_set_signer_key",
+      "TS_CONF_set_tsa_name",
+      "TS_MSG_IMPRINT_dup",
+      "TS_MSG_IMPRINT_free",
+      "TS_MSG_IMPRINT_get_algo",
+      "TS_MSG_IMPRINT_get_msg",
+      "TS_MSG_IMPRINT_new",
+      "TS_MSG_IMPRINT_print_bio",
+      "TS_MSG_IMPRINT_set_algo",
+      "TS_MSG_IMPRINT_set_msg",
+      "TS_OBJ_print_bio",
+      "TS_REQ_add_ext",
+      "TS_REQ_delete_ext",
+      "TS_REQ_dup",
+      "TS_REQ_ext_free",
+      "TS_REQ_free",
+      "TS_REQ_get_cert_req",
+      "TS_REQ_get_ext",
+      "TS_REQ_get_ext_by_NID",
+      "TS_REQ_get_ext_by_OBJ",
+      "TS_REQ_get_ext_by_critical",
+      "TS_REQ_get_ext_count",
+      "TS_REQ_get_ext_d2i",
+      "TS_REQ_get_exts",
+      "TS_REQ_get_msg_imprint",
+      "TS_REQ_get_nonce",
+      "TS_REQ_get_policy_id",
+      "TS_REQ_get_version",
+      "TS_REQ_new",
+      "TS_REQ_print_bio",
+      "TS_REQ_set_cert_req",
+      "TS_REQ_set_msg_imprint",
+      "TS_REQ_set_nonce",
+      "TS_REQ_set_policy_id",
+      "TS_REQ_set_version",
+      "TS_REQ_to_TS_VERIFY_CTX",
+      "TS_RESP_CTX_add_failure_info",
+      "TS_RESP_CTX_add_flags",
+      "TS_RESP_CTX_add_md",
+      "TS_RESP_CTX_add_policy",
+      "TS_RESP_CTX_free",
+      "TS_RESP_CTX_get_request",
+      "TS_RESP_CTX_get_tst_info",
+      "TS_RESP_CTX_new",
+      "TS_RESP_CTX_new_ex",
+      "TS_RESP_CTX_set_accuracy",
+      "TS_RESP_CTX_set_certs",
+      "TS_RESP_CTX_set_clock_precision_digits",
+      "TS_RESP_CTX_set_def_policy",
+      "TS_RESP_CTX_set_ess_cert_id_digest",
+      "TS_RESP_CTX_set_extension_cb",
+      "TS_RESP_CTX_set_serial_cb",
+      "TS_RESP_CTX_set_signer_cert",
+      "TS_RESP_CTX_set_signer_digest",
+      "TS_RESP_CTX_set_signer_key",
+      "TS_RESP_CTX_set_status_info",
+      "TS_RESP_CTX_set_status_info_cond",
+      "TS_RESP_CTX_set_time_cb",
+      "TS_RESP_dup",
+      "TS_RESP_free",
+      "TS_RESP_get_status_info",
+      "TS_RESP_get_token",
+      "TS_RESP_get_tst_info",
+      "TS_RESP_new",
+      "TS_RESP_print_bio",
+      "TS_RESP_set_status_info",
+      "TS_RESP_set_tst_info",
+      "TS_STATUS_INFO_dup",
+      "TS_STATUS_INFO_free",
+      "TS_STATUS_INFO_get0_failure_info",
+      "TS_STATUS_INFO_get0_status",
+      "TS_STATUS_INFO_get0_text",
+      "TS_STATUS_INFO_new",
+      "TS_STATUS_INFO_print_bio",
+      "TS_STATUS_INFO_set_status",
+      "TS_TST_INFO_add_ext",
+      "TS_TST_INFO_delete_ext",
+      "TS_TST_INFO_dup",
+      "TS_TST_INFO_ext_free",
+      "TS_TST_INFO_free",
+      "TS_TST_INFO_get_accuracy",
+      "TS_TST_INFO_get_ext",
+      "TS_TST_INFO_get_ext_by_NID",
+      "TS_TST_INFO_get_ext_by_OBJ",
+      "TS_TST_INFO_get_ext_by_critical",
+      "TS_TST_INFO_get_ext_count",
+      "TS_TST_INFO_get_ext_d2i",
+      "TS_TST_INFO_get_exts",
+      "TS_TST_INFO_get_msg_imprint",
+      "TS_TST_INFO_get_nonce",
+      "TS_TST_INFO_get_ordering",
+      "TS_TST_INFO_get_policy_id",
+      "TS_TST_INFO_get_serial",
+      "TS_TST_INFO_get_time",
+      "TS_TST_INFO_get_tsa",
+      "TS_TST_INFO_get_version",
+      "TS_TST_INFO_new",
+      "TS_TST_INFO_print_bio",
+      "TS_TST_INFO_set_accuracy",
+      "TS_TST_INFO_set_msg_imprint",
+      "TS_TST_INFO_set_nonce",
+      "TS_TST_INFO_set_ordering",
+      "TS_TST_INFO_set_policy_id",
+      "TS_TST_INFO_set_serial",
+      "TS_TST_INFO_set_time",
+      "TS_TST_INFO_set_tsa",
+      "TS_TST_INFO_set_version",
+      "TS_VERIFY_CTX_add_flags",
+      "TS_VERIFY_CTX_cleanup",
+      "TS_VERIFY_CTX_free",
+      "TS_VERIFY_CTX_init",
+      "TS_VERIFY_CTX_new",
+      "TS_VERIFY_CTX_set0_certs",
+      "TS_VERIFY_CTX_set0_data",
+      "TS_VERIFY_CTX_set0_imprint",
+      "TS_VERIFY_CTX_set0_store",
+      "TS_VERIFY_CTX_set_certs",
+      "TS_VERIFY_CTX_set_data",
+      "TS_VERIFY_CTX_set_flags",
+      "TS_VERIFY_CTX_set_imprint",
+      "TS_VERIFY_CTX_set_store",
+      "TS_X509_ALGOR_print_bio",
+      "TS_ext_print_bio",
       "d2i_CMS_ContentInfo",
       "d2i_CMS_ReceiptRequest",
       "d2i_CMS_bio",
@@ -621,6 +771,20 @@
       "d2i_PKCS7_SIGNER_INFO",
       "d2i_PKCS7_SIGN_ENVELOPE",
       "d2i_SCT_LIST",
+      "d2i_TS_ACCURACY",
+      "d2i_TS_MSG_IMPRINT",
+      "d2i_TS_MSG_IMPRINT_bio",
+      "d2i_TS_MSG_IMPRINT_fp",
+      "d2i_TS_REQ",
+      "d2i_TS_REQ_bio",
+      "d2i_TS_REQ_fp",
+      "d2i_TS_RESP",
+      "d2i_TS_RESP_bio",
+      "d2i_TS_RESP_fp",
+      "d2i_TS_STATUS_INFO",
+      "d2i_TS_TST_INFO",
+      "d2i_TS_TST_INFO_bio",
+      "d2i_TS_TST_INFO_fp",
       "i2d_CMS_ContentInfo",
       "i2d_CMS_ReceiptRequest",
       "i2d_CMS_bio",
@@ -658,6 +822,20 @@
       "i2d_PKCS7_SIGN_ENVELOPE",
       "i2d_PKCS7_bio_stream",
       "i2d_SCT_LIST",
+      "i2d_TS_ACCURACY",
+      "i2d_TS_MSG_IMPRINT",
+      "i2d_TS_MSG_IMPRINT_bio",
+      "i2d_TS_MSG_IMPRINT_fp",
+      "i2d_TS_REQ",
+      "i2d_TS_REQ_bio",
+      "i2d_TS_REQ_fp",
+      "i2d_TS_RESP",
+      "i2d_TS_RESP_bio",
+      "i2d_TS_RESP_fp",
+      "i2d_TS_STATUS_INFO",
+      "i2d_TS_TST_INFO",
+      "i2d_TS_TST_INFO_bio",
+      "i2d_TS_TST_INFO_fp",
       "i2o_SCT",
       "i2o_SCT_LIST",
       "o2i_SCT",
@@ -1910,12 +2088,6 @@
         "symbol": "PKCS7_ISSUER_AND_SERIAL_digest"
       },
       {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "PKCS7_to_TS_TST_INFO"
-      },
-      {
         "declaring_header": "asn1.h",
         "module": "src/asn1/asn_mime.rs",
         "received_from_phase": 5,
@@ -2121,117 +2293,9 @@
       },
       {
         "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ACCURACY_dup"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ACCURACY_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ACCURACY_get_micros"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ACCURACY_get_millis"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ACCURACY_get_seconds"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ACCURACY_new"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ACCURACY_set_micros"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ACCURACY_set_millis"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ACCURACY_set_seconds"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_lib.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ASN1_INTEGER_print_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_get_tsa_section"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_load_cert"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_load_certs"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_load_key"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_accuracy"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_certs"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_clock_precision_digits"
-      },
-      {
-        "declaring_header": "ts.h",
         "module": "src/ts/ts_conf.rs",
         "received_from_phase": null,
         "symbol": "TS_CONF_set_crypto_device"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_def_policy"
       },
       {
         "declaring_header": "ts.h",
@@ -2241,459 +2305,9 @@
       },
       {
         "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_digests"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_ess_cert_id_chain"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_ess_cert_id_digest"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_ordering"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_policies"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_serial"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_signer_cert"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_signer_digest"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_signer_key"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": null,
-        "symbol": "TS_CONF_set_tsa_name"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_MSG_IMPRINT_dup"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_MSG_IMPRINT_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_MSG_IMPRINT_get_algo"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_MSG_IMPRINT_get_msg"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_MSG_IMPRINT_new"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_lib.rs",
-        "received_from_phase": null,
-        "symbol": "TS_MSG_IMPRINT_print_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_MSG_IMPRINT_set_algo"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_MSG_IMPRINT_set_msg"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_lib.rs",
-        "received_from_phase": null,
-        "symbol": "TS_OBJ_print_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_add_ext"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_delete_ext"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_dup"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_ext_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_cert_req"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_ext"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_ext_by_NID"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_ext_by_OBJ"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_ext_by_critical"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_ext_count"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_ext_d2i"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_exts"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_msg_imprint"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_nonce"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_policy_id"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_get_version"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_new"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_print.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_print_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_set_cert_req"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_set_msg_imprint"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_set_nonce"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_set_policy_id"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_req_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_set_version"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_REQ_to_TS_VERIFY_CTX"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_add_failure_info"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_add_flags"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_add_md"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_add_policy"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_get_request"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_get_tst_info"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_new"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_new_ex"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_accuracy"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_certs"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_clock_precision_digits"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_def_policy"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_ess_cert_id_digest"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_extension_cb"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_serial_cb"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_signer_cert"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_signer_digest"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_signer_key"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_status_info"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_status_info_cond"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_sign.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_CTX_set_time_cb"
-      },
-      {
-        "declaring_header": "ts.h",
         "module": "src/ts/ts_rsp_sign.rs",
         "received_from_phase": null,
         "symbol": "TS_RESP_create_response"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_dup"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_get_status_info"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_get_token"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_get_tst_info"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_new"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_print.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_print_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_set_status_info"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_RESP_set_tst_info"
       },
       {
         "declaring_header": "ts.h",
@@ -2712,342 +2326,6 @@
         "module": "src/ts/ts_rsp_verify.rs",
         "received_from_phase": null,
         "symbol": "TS_RESP_verify_token"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_STATUS_INFO_dup"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_STATUS_INFO_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_STATUS_INFO_get0_failure_info"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_STATUS_INFO_get0_status"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_STATUS_INFO_get0_text"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_STATUS_INFO_new"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_print.rs",
-        "received_from_phase": null,
-        "symbol": "TS_STATUS_INFO_print_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_STATUS_INFO_set_status"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_add_ext"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_delete_ext"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_dup"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_ext_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_accuracy"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_ext"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_ext_by_NID"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_ext_by_OBJ"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_ext_by_critical"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_ext_count"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_ext_d2i"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_exts"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_msg_imprint"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_nonce"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_ordering"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_policy_id"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_serial"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_time"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_tsa"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_get_version"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_new"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_print.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_print_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_set_accuracy"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_set_msg_imprint"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_set_nonce"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_set_ordering"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_set_policy_id"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_set_serial"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_set_time"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_set_tsa"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_rsp_utils.rs",
-        "received_from_phase": null,
-        "symbol": "TS_TST_INFO_set_version"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_add_flags"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_cleanup"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_free"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_init"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_new"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_set0_certs"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_set0_data"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_set0_imprint"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_set0_store"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_set_certs"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_set_data"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_set_flags"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_set_imprint"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_verify_ctx.rs",
-        "received_from_phase": null,
-        "symbol": "TS_VERIFY_CTX_set_store"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_lib.rs",
-        "received_from_phase": null,
-        "symbol": "TS_X509_ALGOR_print_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_lib.rs",
-        "received_from_phase": null,
-        "symbol": "TS_ext_print_bio"
       },
       {
         "declaring_header": "x509.h",
@@ -3158,90 +2436,6 @@
         "symbol": "d2i_PKCS7_fp"
       },
       {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_ACCURACY"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_MSG_IMPRINT"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_MSG_IMPRINT_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_MSG_IMPRINT_fp"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_REQ"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_REQ_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_REQ_fp"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_RESP"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_RESP_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_RESP_fp"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_STATUS_INFO"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_TST_INFO"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_TST_INFO_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "d2i_TS_TST_INFO_fp"
-      },
-      {
         "declaring_header": "ess.h",
         "module": "src/ess/ess_asn1.rs",
         "received_from_phase": null,
@@ -3336,90 +2530,6 @@
         "module": "src/x509/x_all.rs",
         "received_from_phase": null,
         "symbol": "i2d_PKCS7_fp"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_ACCURACY"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_MSG_IMPRINT"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_MSG_IMPRINT_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_MSG_IMPRINT_fp"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_REQ"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_REQ_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_REQ_fp"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_RESP"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_RESP_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_RESP_fp"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_STATUS_INFO"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_TST_INFO"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_TST_INFO_bio"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_asn1.rs",
-        "received_from_phase": null,
-        "symbol": "i2d_TS_TST_INFO_fp"
       }
     ],
     "owned_by_header": {
@@ -3541,17 +2651,17 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "637d334073e3516ac91f93472be92aa96584234918acb881642af76bec78a449"
+      "sha256": "3a9196ca50063d6fad1ce583c57d57165ea26ee1a80ad3cab64d87b3bf8c644c"
     },
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "d9b8a994f63780d685a3fb504782aa42b867dcd31bf5a29e4241ec83b8cb75c4"
+      "sha256": "6caf99f38cfea41509c8c52665619baad85255ba33b7b0bbb389825cf034b0db"
     },
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "81032df90cac1d38216229fefa23ce51c06a1e9d24dc97dd3de3a6e2a8ba49c8"
+      "sha256": "0cec2dcc23fb34279dd72e3f87d3d9d3c7692e4c5724162a632c0712ff761ec9"
     }
   ],
   "kind": "phase12-obligations",
