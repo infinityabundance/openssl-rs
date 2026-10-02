@@ -34676,3 +34676,29 @@ Verified: the eight phase-11 courts pass (`all_pass=True`), the eleven phase-2 A
 `regression_guard.py --require-current` reports 133 courts and 48,515 observations with no
 regression. The stratum's ledger is `open_in_this_stratum: 0`, `deferred_to_later_phase: 2`,
 `implemented: 1465`.
+
+## D508 -- the v3 court lands, and the RFC 3779 layer moves from referenced to called
+
+The plan's row 11.5 named `RT-X509-V3`, and it stayed a pending court through the stratum's
+completion because the 11.5 surface *looked* covered: `RT-X509-STORE` calls the `v3_conf.c`
+builders, the four `v3_prn.c` printers and the `v3_utl.c` name checks. Measured against
+`forensics/atlas/court-coverage.json`, that was half true. `v3_addr.c`'s and `v3_asid.c`'s own
+arithmetic and item doors were basis `referenced` -- address-taken by `RT-X509-REF` and never
+driven -- which is exactly the weaker claim D502 exists to keep visible. Fifty-seven exports,
+including `X509v3_addr_subset`/`_is_canonical`/`_canonize`/`_get_afi`/`_get_range`,
+`X509v3_asid_subset`/`_is_canonical`/`_canonize`, and every `IPAddressFamily`/`IPAddressChoice`/
+`IPAddressOrRange`/`IPAddressRange` and `ASIdentifiers`/`ASIdentifierChoice`/`ASIdOrRange`/`ASRange`
+item door.
+
+`courts/phase11/rt_x509_v3_probe.c` builds the values with the builders
+(`X509v3_addr_add_prefix`/`_add_range`/`_add_inherit`, `X509v3_asid_add_id_or_range`/`_add_inherit`)
+rather than from hand-made DER, then exercises canonize, is-canonical, subset, get-afi, get-range,
+inherits, the i2d/d2i round-trips and the i2r printers through `X509V3_EXT_print`, with the refusal
+arms (`X509v3_addr_canonize` NULL -> `34.107`, `X509v3_asid_canonize` duplicate/empty -> `34.116`,
+`X509V3_EXT_i2d` unknown -> `34.129`). 240 observations, 0 residuals; the candidate matched the
+authority on every arm, so no `v3_*.rs` change was needed. `PENDING_COURTS` is now empty and
+`docs/PHASE-11-SUBPHASES.md` section 2 no longer marks the engine and v3 courts pending.
+
+Verified: nine phase-11 courts pass; 134 courts and 48,755 observations with no regression;
+`court_coverage.py`'s phase-11 `called` rises 880 -> 937 and `referenced` falls 585 -> 528 by exactly
+the 57 names; `probe_hygiene.py` clean.

@@ -381,7 +381,7 @@ Hand-offs received and discharged:
 * from phase 5: 10 symbol(s) — `ASN1_add_stable_module`, `ASN1_generate_nconf`, `ASN1_generate_v3`, `PEM_X509_INFO_read`, `PEM_X509_INFO_read_bio`, `PEM_X509_INFO_read_bio_ex`, `PEM_X509_INFO_read_ex`, `PEM_X509_INFO_write_bio`, `PEM_write_X509_REQ_NEW`, `PEM_write_bio_X509_REQ_NEW`
 * from phase 7: 2 symbol(s) — `EVP_CIPHER_CTX_get_algor`, `EVP_PKEY_CTX_get_algor`
 
-Courts: `all pass`, 8 court(s), **2398** authority observation(s) over 8 transcript court(s).
+Courts: `all pass`, 9 court(s), **2638** authority observation(s) over 9 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -389,6 +389,7 @@ Courts: `all pass`, 8 court(s), **2398** authority observation(s) over 8 transcr
 | RT-X509-STORE | `pass` | 525 |
 | RT-X509-VERIFY-SURFACE | `pass` | 197 |
 | RT-X509-VERIFY-ENGINE | `pass` | 242 |
+| RT-X509-V3 | `pass` | 240 |
 | RT-X509-PEM | `pass` | 121 |
 | RT-X509-ACERT | `pass` | 178 |
 | RT-X509-REQ | `pass` | 76 |
@@ -449,8 +450,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 8 | 786 | 778 | 778 | 0 | 8 | 0 | 0 |
 | 9 | 69 | 69 | 69 | 0 | 0 | 0 | 0 |
 | 10 | 298 | 298 | 237 | 61 | 0 | 0 | 0 |
-| 11 | 1465 | 1465 | 880 | 585 | 0 | 0 | 0 |
-| **total** | **4489** | **4481** | **3571** | **910** | **8** | **0** | **0** |
+| 11 | 1465 | 1465 | 937 | 528 | 0 | 0 | 0 |
+| **total** | **4489** | **4481** | **3628** | **853** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

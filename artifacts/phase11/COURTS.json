@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-X509-STORE` is a **behavioural** court: its probe calls the store/lookup/object objects 11.1a lands, the mutator surface 11.4a lands, the trust table and name checks 11.1b/11.5 land and the printers and `CONF`/`X509V3_CTX` builders 11.5 lands, over fixed DER fixtures, and the candidate's transcript must equal the authority's observation for observation. `RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's exports that no behavioural court drives -- the exports earlier strata inherited and the few of this stratum's own that `RT-X509-STORE` cannot reach (they need a store 11.1a does not build, read the opaque `X509_SIG_INFO`, or would compare the crate's recorded D333/D343 divergence) -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called`, and its phase-11 slice is the live count (docs/DECISIONS.md D199). `pending_courts` names the courts the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) and the subphase that brings each, and every name is printed on each run so that 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts must compare when they land.",
+    "claim": "`RT-X509-STORE` is a **behavioural** court: its probe calls the store/lookup/object objects 11.1a lands, the mutator surface 11.4a lands, the trust table and name checks 11.1b/11.5 land and the printers and `CONF`/`X509V3_CTX` builders 11.5 lands, over fixed DER fixtures, and the candidate's transcript must equal the authority's observation for observation. `RT-X509-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's exports that no behavioural court drives -- the exports earlier strata inherited and the few of this stratum's own that `RT-X509-STORE` cannot reach (they need a store 11.1a does not build, read the opaque `X509_SIG_INFO`, or would compare the crate's recorded D333/D343 divergence) -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called`, and its phase-11 slice is the live count (docs/DECISIONS.md D199). `pending_courts` is now empty: every court the plan gives this stratum (docs/PHASE-11-SUBPHASES.md section 2) is registered above and named on each run, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-11-SUBPHASES.md section 3 records what the behavioural courts compare.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -70,6 +70,23 @@
         "staged_binaries": {
           "authority": "artifacts/phase11/probes/rt_x509_verify_engine_probe.authority",
           "candidate": "artifacts/phase11/probes/rt_x509_verify_engine_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 240,
+        "candidate_exit_code": 0,
+        "candidate_observations": 240,
+        "candidate_stderr_tail": [],
+        "court": "RT-X509-V3",
+        "crashed": false,
+        "probe": "courts/phase11/rt_x509_v3_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase11/probes/rt_x509_v3_probe.authority",
+          "candidate": "artifacts/phase11/probes/rt_x509_v3_probe.candidate"
         },
         "verdict": "pass"
       },
@@ -142,13 +159,11 @@
         "verdict": "pass"
       }
     ],
-    "pending_courts": {
-      "RT-X509-V3": "11.5 -- `X509V3_EXT_nconf(_file)`, the `X509V3_EXT_*` helpers and the `GENERAL_NAMES`/`IPAddressFamily`/`ASIdentifiers` printers (`v3_conf.c`, `v3_utl.c`, `v3_prn.c`, `v3_addr.c`, `v3_asid.c`)"
-    },
+    "pending_courts": {},
     "summary": {
       "fail": 0,
-      "pass": 8,
-      "total": 8
+      "pass": 9,
+      "total": 9
     }
   },
   "generator": "forensics/tools/phase11_courts.py",
@@ -177,6 +192,11 @@
       "name": "probe",
       "path": "courts/phase11/rt_x509_verify_engine_probe.c",
       "sha256": "75c6983bb1b1a9312e1fa3f54ef1e5f4f35e86573b2406bfe7e71332716684e7"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase11/rt_x509_v3_probe.c",
+      "sha256": "79a43fa7b47a5d737ef98a0a62faf9d1dd8347d1d97eeb0abce5e5906d330745"
     },
     {
       "name": "probe",
