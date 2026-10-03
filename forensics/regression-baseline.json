@@ -390,6 +390,10 @@
       "observations": 608,
       "verdict": "pass"
     },
+    "RT-LEGACY-MODULE": {
+      "observations": 39,
+      "verdict": "pass"
+    },
     "RT-LEGACY-REMAINDER": {
       "observations": 78,
       "verdict": "pass"
@@ -715,7 +719,7 @@
     "phase13": 0,
     "phase14": 0,
     "phase15": 0,
-    "phase16": 48,
+    "phase16": 43,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -1731,23 +1735,28 @@
     "default/OSSL_OP_SIGNATURE/SM2",
     "default/OSSL_OP_SKEYMGMT/AES",
     "default/OSSL_OP_SKEYMGMT/GENERIC-SECRET",
-    "default/OSSL_OP_STORE/file"
+    "default/OSSL_OP_STORE/file",
+    "legacy/OSSL_OP_DIGEST/MD4",
+    "legacy/OSSL_OP_DIGEST/MDC2",
+    "legacy/OSSL_OP_DIGEST/RIPEMD-160",
+    "legacy/OSSL_OP_DIGEST/WHIRLPOOL",
+    "legacy/OSSL_OP_SKEYMGMT/GENERIC-SECRET"
   ],
   "provider_rows": {
     "handed_on_by_phase": {
-      "10": 39,
+      "10": 34,
       "16": 0,
-      "8": 39,
-      "9": 39
+      "8": 34,
+      "9": 34
     },
-    "implemented": 957,
+    "implemented": 962,
     "open_by_phase": {
       "10": 0,
-      "16": 39,
+      "16": 34,
       "8": 0,
       "9": 0
     },
     "total": 996,
-    "unimplemented": 39
+    "unimplemented": 34
   }
 }

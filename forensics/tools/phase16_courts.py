@@ -1,44 +1,47 @@
 #!/usr/bin/env python3
 """openssl-rs — Phase 16 courts: the CLI / config / filesystem contract.
 
-Each court would be a C probe in `courts/phase16/` compiled **twice** — once against the
-admitted authority, once against the candidate distribution shell — and run, the two transcripts
-compared line by line as every differential court from Phase 3 on does. **This stratum registers
-none yet**, and the emptiness is a measurement rather than an omission.
+Each court is a C probe in `courts/phase16/` compiled **twice** — once against the
+admitted authority, once against the candidate distribution shell — and run. The two
+transcripts are compared line by line, keyed on `key=value`, and every difference is a
+residual. The method is Phases 3 through 15's, for the same reason: a probe measures
+what the authority actually does, and the comparison is between two *executions* of the
+same program, so the expectation cannot drift.
 
-Why the registry is empty
--------------------------
-Phase 16 owns no exported symbol (`forensics/atlas/symbol-ownership.json` assigns it zero rows),
-so there is no symbol set for a coverage-reference probe to take addresses from, and its
-obligations — 39 legacy provider registration rows and six prerequisite deferrals — are not
-exports any differential probe over a symbol set can observe. This stratum's behavioural courts
-land with the subphases that build the things they drive, and each is named in `PENDING_COURTS`
-with the artefact it needs. Registering a court here that has no probe would make `run_courts.py`
-fail on a missing file rather than record the real state, so none is registered.
-
-Why a runner exists at all
---------------------------
-`run_courts.py` refuses a stratum that is not `not-started` and has no runner. Phase 16 is
-`in-progress` from 16.0, so it must carry one; this file writes the empty registry that says so,
-and `docs/PHASE-16-SUBPHASES.md` section 4.2 is the precondition.
+`RT-LEGACY-MODULE`, and what it compares
+----------------------------------------
+16.1's court, `courts/phase16/rt_legacy_module_probe.c`, loads the `legacy` provider
+through the same `OSSL_PROVIDER_load` path the authority's own CLI uses — the module's
+`OSSL_provider_init` on one side, the candidate's `ossl-modules/legacy.so` on the other,
+with `OPENSSL_MODULES` pointed at each side's own module directory. It compares the
+provider's `name` read through `OSSL_PROVIDER_get_params`, the **row count and first
+row's alias sequence** the module's `OSSL_PROVIDER_query_operation` answers for the two
+operations slice 1 publishes (`OSSL_OP_DIGEST`, `OSSL_OP_SKEYMGMT`), a fixed `"abc"`
+digest for each of the four legacy digests fetched by name and by OID through the
+`provider=legacy` property, and the refusal arms (an unknown digest name, and a legacy
+name asked of the `default` provider). It does **not** read the error queue, and it does
+not query `OSSL_OP_CIPHER` or `OSSL_OP_KDF`, whose rows are 16.1 slices 2 and 3 and are
+not published yet, so the comparison measures the landed surface rather than a known
+slice boundary. See docs/PHASE-16-SUBPHASES.md section 3.
 
 The pending courts, and what each awaits
-----------------------------------------
-  * `RT-LEGACY-MODULE` — the 39 `providers/legacyprov.c` rows (16.1).
+-----------------------------------------
   * `RT-ENGINE-DYN` — `engine_load_dynamic_int` and the `dynamic`/`rdrand` built-ins (16.2).
   * `RT-DEFAULTS` — the `OPENSSLDIR` directory plane and the install context (16.3).
-  * `RT-CLI`, `RT-CONFIG` — the `openssl` CLI and config loading, and the regenerated Phase-1
-    capture (16.4).
+  * `RT-CLI`, `RT-CONFIG` — the `openssl` CLI and config loading, and the regenerated
+    Phase-1 capture (16.4).
   * `RT-STATEM-REMAINDER` — `ssl/statem/statem_clnt.c` and `statem_srvr.c` (16.5).
 
-None is declared in `gen_frf_courts.py`: that registry is the stratum's seal, and a court with no
-probe cannot carry a declaration.
+None is declared in `gen_frf_courts.py`: that registry is the stratum's seal, and a court
+with no probe cannot carry a declaration.
 
 SPDX-License-Identifier: Apache-2.0"""
 
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -51,25 +54,28 @@ from atlas_common import (  # noqa: E402
     envelope,
     rel,
     resolve_authority,
+    run,
     write_json,
 )
 
 OUT = REPO_ROOT / "artifacts" / "phase16" / "COURTS.json"
 GENERATOR = "forensics/tools/phase16_courts.py"
 PROBE_DIR = REPO_ROOT / "courts" / "phase16"
+PHASE2 = REPO_ROOT / "artifacts" / "phase2"
+STAGED = REPO_ROOT / "artifacts" / "phase16" / "probes"
+RUN_TIMEOUT_S = "60"
 
-# The differential courts, in the order they land. `(name, probe filename)`. **Empty, and here
-# that is a measurement**: this stratum's obligations are not exports, so it has no courted
-# surface until a subphase lands one, and each is recorded in `PENDING_COURTS` below rather than
-# registered before its probe exists.
-COURTS: list[tuple[str, str]] = []
+# The differential courts, in the order they land. `(name, probe filename)`, and the probe is
+# declared in the same commit as the entry, so a runner that names a probe which does not exist
+# cannot be committed.
+COURTS: list[tuple[str, str]] = [
+    ("RT-LEGACY-MODULE", "rt_legacy_module_probe.c"),
+]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that
 # lands the probe and what the court will drive, so "nothing registered" is a stated distance
 # rather than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-LEGACY-MODULE": "16.1: the 39 providers/legacyprov.c registration rows and the "
-                        "ossl-modules/legacy.so loadable-module contract",
     "RT-ENGINE-DYN": "16.2: engine_load_dynamic_int and the dynamic/rdrand built-ins, through "
                      "DSO_load and OPENSSL_ENGINES",
     "RT-DEFAULTS": "16.3: the OPENSSLDIR directory plane and the install context",
@@ -79,6 +85,133 @@ PENDING_COURTS: dict[str, str] = {
 }
 
 
+def side_env(libdir: Path, modulesdir: Path) -> dict[str, str]:
+    """The environment a probe runs under on one side.
+
+    `OPENSSL_MODULES` points at that side's own `ossl-modules/`, which is what makes the
+    candidate load the candidate's `legacy.so` and the authority load its own. `LD_LIBRARY_PATH`
+    fixes the DSO the probe resolves against, and `OPENSSL_CONF=/dev/null` keeps the host's
+    configuration out of a deterministic transcript.
+    """
+    env = dict(os.environ)
+    env["LD_LIBRARY_PATH"] = str(libdir)
+    env["OPENSSL_MODULES"] = str(modulesdir)
+    env["OPENSSL_CONF"] = "/dev/null"
+    env.pop("OPENSSL_CONF_INCLUDE", None)
+    return env
+
+
+def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bool, str]:
+    res = run([
+        "clang", "-std=c11", "-Wall", "-Werror=implicit-function-declaration", "-O1",
+        "-D_GNU_SOURCE",
+        "-I", str(include),
+        "-o", str(out), str(src),
+        "-L", str(libdir), "-lcrypto",
+        f"-Wl,-rpath,{libdir}",
+    ])
+    return res.ok, res.stderr.strip()
+
+
+def run_probe(binary: Path, env: dict[str, str]) -> tuple[str, str, int | None]:
+    res = run(["timeout", RUN_TIMEOUT_S, str(binary)], env=env)
+    code = res.returncode
+    if code == 124:
+        return res.stdout, res.stderr, None
+    return res.stdout, res.stderr, code
+
+
+def diff(authority: str, candidate: str) -> list[dict]:
+    """Line-wise comparison keyed on `key=value`, so a missing or extra line produces exactly one
+    residual instead of shifting every following line."""
+    def parse(text: str) -> tuple[list[str], dict[str, str]]:
+        order: list[str] = []
+        values: dict[str, str] = {}
+        for line in text.splitlines():
+            if "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            if key not in values:
+                order.append(key)
+                values[key] = value
+            else:
+                values[key] = f"{values[key]}|{value}"
+        return order, values
+
+    a_order, a = parse(authority)
+    c_order, c = parse(candidate)
+    residuals: list[dict] = []
+    for key in a_order:
+        if key not in c:
+            residuals.append({"observation": key, "authority": a[key],
+                              "candidate": None, "class": "missing"})
+        elif a[key] != c[key]:
+            residuals.append({"observation": key, "authority": a[key],
+                              "candidate": c[key], "class": "value"})
+    for key in c_order:
+        if key not in a:
+            residuals.append({"observation": key, "authority": None,
+                              "candidate": c[key], "class": "extra"})
+    return residuals
+
+
+def court(name: str, src: Path, auth, work: Path) -> dict:
+    auth_lib = auth.libdir
+    auth_inc = auth.prefix / "include"
+
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+
+    ok, err = compile_probe(src, auth_bin, auth_inc, auth_lib)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    a_out, a_err, a_code = run_probe(auth_bin, side_env(auth_lib, auth_lib / "ossl-modules"))
+    c_out, c_err, c_code = run_probe(
+        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules")
+    )
+
+    staged = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{srcbin.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    if not a_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "authority-run",
+                "detail": {"exit_code": a_code,
+                           "stderr": a_err.splitlines()[:12]}}
+
+    residuals = diff(a_out, c_out)
+    # A probe that died on a signal compared nothing beyond the prefix it managed to print, so two
+    # sides dying the same way is not agreement.
+    crashed = a_code is None or a_code < 0 or c_code is None or c_code < 0
+    return {
+        "court": name,
+        "probe": rel(src),
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "crashed": crashed,
+        "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
+        "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
+        "residual_count": len(residuals),
+        "residuals": residuals,
+        "verdict": (
+            "pass" if not residuals and c_code == a_code and not crashed else "fail"
+        ),
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -86,6 +219,8 @@ def main(argv: list[str]) -> int:
     del args
 
     auth = resolve_authority(PRODUCTION_AUTHORITY)
+    work = REPO_ROOT / "court" / "phase16"
+    work.mkdir(parents=True, exist_ok=True)
 
     records: list[dict] = []
     for name, filename in COURTS:
@@ -94,9 +229,7 @@ def main(argv: list[str]) -> int:
             records.append({"court": name, "verdict": "fail",
                             "stage": "probe-missing", "detail": rel(src)})
             continue
-        # No court is registered yet; a registered one lands with its probe and its runner arm
-        # in the same commit, so this branch is the mechanism kept true rather than a claim.
-        records.append({"court": name, "verdict": "fail", "stage": "not-implemented"})
+        records.append(court(name, src, auth, work))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
@@ -107,15 +240,22 @@ def main(argv: list[str]) -> int:
                     "fail": len(records) - passed},
         "pending_courts": PENDING_COURTS,
         "claim": (
-            "This stratum owns no exported symbol, so it registers no coverage-reference probe: "
-            "there is no symbol set to take addresses from, and the coverage atlas records "
-            "nothing for it. Its obligations are 39 legacy provider registration rows and six "
-            "prerequisite deferrals, which are not exports a differential probe over a symbol "
-            "set can observe. Every behavioural court the plan names -- `RT-LEGACY-MODULE`, "
-            "`RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- is "
-            "named in `pending_courts` with the subphase that lands it, so this registry is "
-            "empty by measurement and not by omission. docs/PHASE-16-SUBPHASES.md sections 3 and "
-            "4 record what each court will compare and the precondition this runner satisfies."
+            "`RT-LEGACY-MODULE` is 16.1's behavioural court: it **loads** the `legacy` provider "
+            "module through `OSSL_PROVIDER_load` with `OPENSSL_MODULES` pointed at each side's "
+            "own module directory, **reads** the provider name through "
+            "`OSSL_PROVIDER_get_params`, **queries** the module's "
+            "`OSSL_PROVIDER_query_operation` for the two operations slice 1 publishes "
+            "(`OSSL_OP_DIGEST`, `OSSL_OP_SKEYMGMT`) and compares each table's row count and "
+            "first row's alias sequence, **fetches** the four `legacy_digests` rows by name and "
+            "by OID through the `provider=legacy` property and compares a fixed `\"abc\"` digest "
+            "for each, and exercises the refusal arms (an unknown digest name and a legacy name "
+            "asked of the `default` provider) -- not the error queue, and not "
+            "`OSSL_OP_CIPHER`/`OSSL_OP_KDF`, whose 32 and 2 rows are 16.1 slices 2 and 3 and "
+            "whose absence `forensics/atlas/provider-algorithms.json` records as the live "
+            "`provider_rows_open`. The other five courts the plan names -- `RT-ENGINE-DYN`, "
+            "`RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in "
+            "`pending_courts` with the subphase that lands each. docs/PHASE-16-SUBPHASES.md "
+            "sections 3 and 4 record what each court compares."
         ),
     }
 
@@ -124,15 +264,29 @@ def main(argv: list[str]) -> int:
         InputRef(name="phase16-obligations",
                  path=REPO_ROOT / "forensics" / "phase16-obligations.json"),
     ]
+    for _name, filename in COURTS:
+        inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))
     doc = envelope(kind="phase16-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
     for r in records:
         if r["verdict"] == "pass":
-            print(f"  {r['court']:<18} pass")
+            print(f"  {r['court']:<18} pass   "
+                  f"({r['authority_observations']} observations)")
         else:
             print(f"  {r['court']:<18} FAIL   stage={r.get('stage', 'compare')}")
+            detail = r.get("detail")
+            if isinstance(detail, dict):
+                print(f"      exit_code={detail.get('exit_code')}")
+                for line in detail.get("stderr", []):
+                    print(f"      {line}")
+            elif isinstance(detail, list):
+                for line in detail[:8]:
+                    print(f"      {line}")
+            for res in r.get("residuals", [])[:12]:
+                print(f"      {res['observation']}: authority={res['authority']!r} "
+                      f"candidate={res['candidate']!r} ({res['class']})")
     for name, needs in PENDING_COURTS.items():
         print(f"  {name:<18} PENDING (not registered as passing) -- {needs}")
     print(f"  -> {rel(OUT)} all_pass={body['all_pass']} over {len(records)} court(s)")

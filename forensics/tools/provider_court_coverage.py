@@ -111,6 +111,13 @@ COURT_PROBES: list[tuple[str, list[str], int]] = [
     # drives `OSSL_STORE_LOADER_fetch` and `OSSL_STORE_LOADER_do_all_provided` for real rather
     # than reference-taking them -- see courts/phase10/rt_store_probe.c).
     ("RT-STORE", ["courts/phase10/rt_store_probe.c"], 10),
+    # Phase 16.1's legacy-provider-module court. It is registered in the same commit as the five
+    # `providers/legacyprov.c` rows slice 1 publishes (the four `OSSL_OP_DIGEST` rows and the one
+    # `OSSL_OP_SKEYMGMT` row), which keeps this join preventive where it was preventive for the
+    # earlier provider strata: a landed legacy row with no observation is a finding on the commit
+    # that lands it, not at the stratum's seal. The cipher and KDF arms are slices 2 and 3 and have
+    # no implemented rows yet, so they are not registered here.
+    ("RT-LEGACY-MODULE", ["courts/phase16/rt_legacy_module_probe.c"], 16),
 ]
 
 # The arm whose name list must equal the census's implemented cipher rows. A static list in a probe

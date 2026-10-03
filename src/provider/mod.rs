@@ -180,6 +180,10 @@ pub(crate) mod kdf;
 pub(crate) mod kem;
 pub(crate) mod kem_util;
 pub(crate) mod keymgmt;
+// Phase 16.1's `providers/legacyprov.c`: the loadable legacy provider module. Its `OSSL_provider_init`
+// is the one exported symbol, and its `legacy_digests`/`legacy_skeymgmt` tables are the
+// registration rows slice 1 publishes.
+pub(crate) mod legacyprov;
 pub(crate) mod mac;
 pub(crate) mod mac_legacy_kmgmt;
 pub(crate) mod mac_legacy_sig;
