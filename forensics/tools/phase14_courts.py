@@ -31,9 +31,10 @@ stratum from the day it begins. See docs/PHASE-14-SUBPHASES.md section 4.3.
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 Every court `docs/PHASE-14-SUBPHASES.md` section 2 names is named in `PENDING_COURTS` below with
-the subphase that brings it -- `RT-SSL-OBJECT`, `RT-SSL-METHODS`, `RT-SSL-CIPH`, `RT-RECORD`,
-`RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and
-`RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'.
+the subphase that brings it, unless that subphase has landed its court. `RT-SSL-OBJECT` (14.1) is
+registered below; `RT-SSL-METHODS`, `RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`,
+`RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` remain pending, so
+'not run yet' cannot be read as 'passed'.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -84,6 +85,7 @@ RUN_TIMEOUT_S = "60"
 # link stays in `PENDING_COURTS` below, so "not run yet" is never read as "passed".
 COURTS: list[tuple[str, str]] = [
     ("RT-PHASE14-REF", "rt_coverage_ref_probe.c"),
+    ("RT-SSL-OBJECT", "rt_ssl_object_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. **Every one of the plan's behavioural
@@ -91,7 +93,6 @@ COURTS: list[tuple[str, str]] = [
 # working set is open and the only court it can register is the reference basis. Each row is
 # printed with the subphase that brings it so that "not run yet" cannot be read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "RT-SSL-OBJECT": "14.1 (the SSL_CTX/SSL object model)",
     "RT-SSL-METHODS": "14.2 (the method and version tables)",
     "RT-SSL-CIPH": "14.3 (the cipher and configuration surface)",
     "RT-RECORD": "14.4 (the record layer)",
@@ -270,17 +271,19 @@ def main(argv: list[str]) -> int:
             "exports and prints whether each is non-NULL. A symbol covered only by it means the "
             "candidate distribution defines the name -- which the link proves -- and NOT that any "
             "arm of it was driven; the court coverage atlas records those at basis `referenced`, "
-            "never `called` (docs/DECISIONS.md D199). This stratum is the first whose covered set "
-            "is entirely unimplemented at activation: `implemented-surface.json` records `0` "
-            "implemented `libssl` symbols, so the atlas's phase-14 row binds no `referenced` name "
-            "yet, and the probe takes addresses rather than calling because the Phase 2 ABI "
-            "scaffold aborts when called. Every behavioural court the plan names is named in "
-            "`pending_courts` with the subphase that brings it -- `RT-SSL-OBJECT`, "
-            "`RT-SSL-METHODS`, `RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`, "
-            "`RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` -- and "
-            "none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
-            "is a parity claim: `referenced` is not `called`, and docs/PHASE-14-SUBPHASES.md "
-            "section 3 records what the behavioural courts compare."
+            "never `called` (docs/DECISIONS.md D199). `RT-SSL-OBJECT` (14.1) is the stratum's "
+            "first **behavioural** court: `courts/phase14/rt_ssl_object_probe.c` drives the "
+            "`SSL_CTX`/`SSL` object model -- allocation, refcount, ex-data, the accessor and "
+            "control surface, the callback setters, `SSL_set_bio` over memory BIOs and the "
+            "NULL/uninitialised arms -- against a fixed `TLS_method()`, and the two transcripts "
+            "are compared line by line. It is not a parity claim about a completed handshake, "
+            "which no arm of it drives. Every other behavioural court the plan names is named in "
+            "`pending_courts` with the subphase that brings it -- `RT-SSL-METHODS`, "
+            "`RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, "
+            "`RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered "
+            "here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: "
+            "`referenced` is not `called`, and docs/PHASE-14-SUBPHASES.md section 3 records what "
+            "the behavioural courts compare."
         ),
     }
 

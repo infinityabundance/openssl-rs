@@ -189,10 +189,16 @@ def main() -> int:
     # that ledger's `implemented` list, so the assertion covers it again and the list
     # empties. Everything else -- an implemented export whose owner *has* begun -- is
     # still held to exactly the union.
+    #
+    # The manifest is the union over both distribution namespaces. Before Phase 14 the
+    # crate implemented no `libssl` symbol, so reading `libcrypto` alone was equivalent;
+    # 14.1 is the first stratum to implement `libssl` exports, so the union is now load
+    # bearing -- a libssl row in a ledger with no libcrypto twin would otherwise be
+    # reported as "in a ledger but not the manifest".
     surface = read_json(IMPL_SURFACE)
-    implemented_manifest = set(
-        surface["body"]["libraries"]["libcrypto"]["implemented_symbols"]
-    )
+    implemented_manifest: set[str] = set()
+    for _lib, librec in surface["body"]["libraries"].items():
+        implemented_manifest |= set(librec["implemented_symbols"])
     # The ownership atlas is one half of the universe assertion. It assigns every
     # *authority* export to exactly one owner phase; the ledgers' implemented sets are
     # drawn from it, and a ledger symbol the atlas has never heard of would mean this

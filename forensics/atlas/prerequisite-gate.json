@@ -9,7 +9,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 87,
-      "language_surface_not_modelled_by_name": 9102,
+      "language_surface_not_modelled_by_name": 9657,
       "planned_prerequisites": 4
     },
     "census_by_unit": {
@@ -620,7 +620,9 @@
         "crypto/x509/x_req.c": 26,
         "crypto/x509/x_x509.c": 28,
         "crypto/x509/x_x509a.c": 14,
-        "providers/baseprov.c": 25
+        "providers/baseprov.c": 25,
+        "ssl/methods.c": 35,
+        "ssl/ssl_lib.c": 520
       },
       "planned_prerequisites": {
         "ossl_get_openssldir": 3,
@@ -721,8 +723,8 @@
       ]
     },
     "checked": {
-      "authority_units": 561,
-      "crate_modules": 749,
+      "authority_units": 563,
+      "crate_modules": 752,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
       "divergence_names_covered": 47,
@@ -730,8 +732,795 @@
       "names_referenced_and_not_built": 19
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
-    "counts": {},
-    "findings": [],
+    "counts": {
+      "unwired_function_in_the_current_stratum": 56
+    },
+    "findings": [
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "dtls_bad_ver_client_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "dtlsv1_2_client_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "dtlsv1_2_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "dtlsv1_2_server_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "dtlsv1_client_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "dtlsv1_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "dtlsv1_server_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_undefined_function",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_1_client_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_1_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_1_server_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_2_client_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_2_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_2_server_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_3_client_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_3_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_3_server_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_client_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/methods.c",
+        "defines_it": "ssl/methods.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/methods.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "tlsv1_server_method",
+        "owner_module": "src/ssl/methods.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "SSL_CTX_is_quic",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ossl_adjust_domain_flags",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ossl_bytes_to_cipher_list",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ossl_ctrl_internal",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ossl_ssl_connection_free",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ossl_ssl_connection_new",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ossl_ssl_connection_new_int",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ossl_ssl_connection_reset",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ossl_ssl_get_error",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ossl_ssl_init",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl3_undef_enc_method",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_cache_cipherlist",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_check_srvr_ecc_cert_and_alg",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_cipher_id_cmp",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_cipher_ptr_id_cmp",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_evp_cipher_fetch",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_evp_cipher_free",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_evp_cipher_up_ref",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_evp_md_fetch",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_evp_md_free",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_evp_md_up_ref",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_free_wbio_buffer",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_get_ciphers_by_id",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_get_max_send_fragment",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_get_server_cert_serverinfo",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_get_split_send_fragment",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_handshake_hash",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_init_wbio_buffer",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_log_rsa_client_key_exchange",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_log_secret",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_protocol_to_string",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_set_masks",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_undefined_function",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_undefined_void_function",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_update_cache",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      },
+      {
+        "authority_unit": "ssl/ssl_lib.c",
+        "defines_it": "ssl/ssl_lib.c",
+        "detail": "the authority's unit calls this; the crate has a module for ssl/ssl_lib.c whose stratum is in-progress, and neither that module nor any module of this unit mentions it",
+        "direction": "B",
+        "kind": "unwired_function_in_the_current_stratum",
+        "name": "ssl_validate_ct",
+        "owner_module": "src/ssl/ssl_lib.rs",
+        "owner_phase": 14,
+        "owner_state": "in-progress",
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
+      }
+    ],
     "rule": "every authority-internal name a crate module references must be built by the crate or recorded with the stratum that owns it; every internal function a transcribed authority unit calls must exist, unless a divergence record covering exactly that name says why not; and a divergence record may not cover a name the gate did not observe",
     "sealed_stratum_census": {
       "by_defining_unit": {
@@ -833,7 +1622,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "07b3dc70b486a4473e6c0fe924f6b148012017ce95cb14147928a70b4ed23dc1",
+  "body_hash": "41973a314c079833672bcc30a979fa866454df42fb0725caf977729d58766f70",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -854,7 +1643,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "c4f7ca804708cb4317693043dc2a8e5f89e853983c49729fa041f369db32e5f9"
+      "sha256": "69ab4081548792916bccb9fad7929f8383061e9a8e99f03986b0f33693217bef"
     },
     {
       "name": "symbol-ownership",
@@ -869,12 +1658,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "69872bb9ff11d10c0f00c0b0c3affbc5326bffcf2a7e49cabcb5e7f67f6dcb67"
+      "sha256": "fe887222cd9d6c0f69b78a4df159079d73e716fe8b6c326d105c8a113763e6f1"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "805fe9759334cf8e8aa631407052f29090895a20f0d16f42b02e8da6f5037c31"
+      "sha256": "3c109f8b0faf5780b714e03fa224d93defb8488c146cd1188e1d109e602e3eeb"
     },
     {
       "name": "prerequisites",
