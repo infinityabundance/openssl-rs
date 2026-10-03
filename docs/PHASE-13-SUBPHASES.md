@@ -106,7 +106,7 @@ them. This is the opposite of Phase 12, whose census slice is empty.
 | 13.1 | **The ENGINE object, registry and dynamic loading** | `eng_lib.c` (0 open: the object and refcount already landed), `eng_init.c` (0), `eng_list.c` (1: `ENGINE_by_id`), `eng_all.c` (1: `ENGINE_load_builtin_engines`), `eng_cnf.c` (1). The object lifecycle, the registry walk, the built-in loader and the dynamic (`OPENSSL_ENGINES`) loader. **3 open rows over 5 units.** | 13.0 | `RT-ENGINE` |
 | 13.2 | **The ENGINE table and method binding** | `eng_pkey.c` (9), `tb_cipher.c` (8), `tb_pkmeth.c` (1), `tb_digest.c` (0), `tb_asnmth.c` (0), `tb_rand.c` (7), `tb_rsa.c` (7), `tb_dsa.c` (7), `tb_dh.c` (7), `tb_eckey.c` (7). The per-algorithm method tables and the `ENGINE_set_default_*`/`ENGINE_register_*`/`ENGINE_get_*` binding surface. **53 open rows over 10 units.** | 13.1 | `RT-ENGINE-TABLE` |
 | 13.3 | **The ENGINE control and command surface** | `eng_ctrl.c` (0), `eng_fat.c` (4). The control-command dispatcher and the `ENGINE_ctrl_cmd*` fat helpers. **4 open rows over 2 units.** | 13.1 | `RT-ENGINE-CTRL` |
-| 13.4 | **The UI framework** | `ui_lib.c` (0), `ui_openssl.c` (0), `ui_util.c` (0), `ui_null.c` (0). The `UI` object, the `UI_METHOD` callback table, the prompt constructor and the `UI_UTIL_*` helpers. **0 open rows** — all 62 names landed before activation as substrate the earlier strata needed, so this subphase's first act is to *drive* them. | 13.0 | `RT-UI` |
+| 13.4 | **The UI framework** | `ui_lib.c` (0), `ui_openssl.c` (0), `ui_util.c` (0), `ui_null.c` (0). The `UI` object, the `UI_METHOD` callback table, the prompt constructor and the `UI_UTIL_*` helpers. **0 open rows** — all 62 names landed before activation as substrate the earlier strata needed, so this subphase's act is to *drive* them through `RT-UI`. | 13.0 | `RT-UI` |
 | 13.5 | **TXT_DB** | `txt_db.c` (6): `TXT_DB_read`/`TXT_DB_free`/`TXT_DB_write`/`TXT_DB_insert`/`TXT_DB_create_index`/`TXT_DB_get_by_index`. **6 open rows over 1 unit** — the whole of `txt_db.h`. | 13.0 | `RT-TXTDB` |
 | 13.6 | **The legacy EVP method statics** | `e_aes.c` (38), `e_aria.c` (27), `e_camellia.c` (21), `e_des3.c` (13), `e_des.c` (6), `e_rc2.c` (6), `e_sm4.c` (5), `e_bf.c`/`e_cast.c`/`e_idea.c`/`e_seed.c` (4 each), `e_chacha20_poly1305.c`/`e_rc4.c`/`e_aes_cbc_hmac_sha1.c`/`e_aes_cbc_hmac_sha256.c` (2 each), `e_rc4_hmac_md5.c`/`e_xcbc_d.c` (1 each), `legacy_md4.c`/`legacy_mdc2.c`/`legacy_wp.c` (1 each), `p_lib.c` (2). The deprecated `EVP_CIPHER`/`EVP_MD` statics whose callbacks call the Phase 8 primitives, handed here by Phase 7. **148 open rows over 21 units** — the largest subphase. | 13.1 | `RT-EVP-LEGACY` |
 | 13.7 | **The PEM private-key readers and the ASYNC framework** | `pem_pkey.c` (7), `pem_pk8.c` (4), `async.c` (8), `async_wait.c` (11), `arch/async_posix.c` (3). The `PEM_read[_bio]_PrivateKey` typed readers (four of the eleven already landed) and the `ASYNC_*` job-and-wait framework handed here by Phase 3. **33 open rows over 5 units.** | 13.6 | `RT-LEGACY-REMAINDER` |
@@ -309,6 +309,19 @@ dispatch and its string spelling) and `ENGINE_register_complete`/`ENGINE_registe
 substrate. The `ENGINE_set_default_string` forward declaration `eng_cnf.rs` carried is dropped
 with this landing.
 
+Subphase 13.4 drove the UI framework rather than landing code: all 62 names — the UI object
+(`ui_lib.rs`), the built-in console method (`ui_openssl.rs`), the `UI_UTIL_*` helpers
+(`ui_util.rs`) and the null method (`ui_null.rs`) — had already landed as substrate the earlier
+strata needed, so the subphase's act was `RT-UI`. `courts/phase13/rt_ui_probe.c` calls every one
+of them over a deterministic in-process method so no terminal is opened: the object lifecycle and
+method identity, the method setter/getter pairs and their NULL arms, the string-add and
+`UI_dup_*` surface and its refusals, `UI_process`'s five phases over every string type, the result
+and prompt-construction accessors, the ex-data accessors, `UI_UTIL_read_pw` and
+`UI_UTIL_read_pw_string` and the PEM wrapper, and the null method's cancel. The court coverage
+atlas therefore records those 62 names at basis called rather than the referenced the activation
+probe left them at, and no name the ledger holds implemented is left referenced only by the
+reference basis.
+
 **Open exports (checked against the ledger):**
 
 The open set is the TXT_DB codec, the deprecated statics over it and the
@@ -317,4 +330,6 @@ legacy EVP method statics. Representative names are
 `TXT_DB_insert`, `TXT_DB_create_index`, `TXT_DB_get_by_index`, `ASYNC_WAIT_CTX_new`,
 `EVP_aes_128_cbc`, `PEM_write_bio_PrivateKey`, `TS_CONF_set_crypto_device`,
 `TS_CONF_set_default_engine` and `SRP_VBASE_init`. Every one is open rather than implemented, and
-each is assigned to a subphase by §2's partition.
+each is assigned to a subphase by §2's partition. The UI framework is not in this list: subphase
+13.4 drove all 62 of its names through the RT-UI court, so they are implemented and called rather
+than open, and none of them is left merely referenced by the activation basis.
