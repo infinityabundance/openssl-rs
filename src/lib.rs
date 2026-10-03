@@ -210,6 +210,11 @@ pub(crate) mod sm2;
 // `crate::bn::bn_srp`) land here; `SRP_VBASE_init` waits on Phase 13's `TXT_DB_read`. See
 // `src/srp/mod.rs`.
 pub(crate) mod srp;
+// Phase 14.1 — `ssl/`: the `libssl` (`SSL_CTX`/`SSL`) object model. The directory is new here; its
+// first slice lands `ssl_lib.c`'s object/accessor/control/callback/BIO surface and the one method
+// constructor that slice's court needs. See `src/ssl/mod.rs` for the slice record and the measured
+// divergences.
+pub mod ssl;
 pub mod status;
 // Phase 10 (10.5) — `crypto/store/`: the `OSSL_STORE_LOADER` object and its registry, the
 // provider-side loader method fetched over slot 15, and `store_lib.c`'s `OSSL_STORE_CTX` state

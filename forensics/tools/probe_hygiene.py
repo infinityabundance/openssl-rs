@@ -151,7 +151,7 @@ def compile_probe(src: Path, out: Path, include: Path, libdir: Path,
         *(defs or []),
         "-I", str(include),
         "-o", str(out), str(src),
-        "-L", str(libdir), "-lcrypto",
+        "-L", str(libdir), "-lssl", "-lcrypto",
         f"-Wl,-rpath,{libdir}",
     ])
     return res.ok, res.stderr.strip()

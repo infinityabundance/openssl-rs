@@ -1,0 +1,270 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "the `SSL_SESSION_get_max_fragment_length` over a zeroed session image. `RT-SSL-BIO` (14.6) is the sixth: `courts/phase14/rt_ssl_bio_probe.c` drives the `BIO_f_ssl` method over a fixed `TLS_method()` context, `BIO_new_ssl`/`BIO_new_ssl_connect`/`BIO_new_buffer_ssl_connect` and their NULL-context refusals, the `BIO_C_SSL_MODE` and renegotiation controls, `BIO_ssl_copy_session_id`'s refusal and accepted arms and `BIO_ssl_shutdown` over NULL and a BIO chain. `RT-DTLS` (14.8) is the seventh: `courts/phase14/rt_dtls_probe.c` drives `DTLSv1_listen`'s refusal arms over a fixed in-memory datagram BIO, `DTLS_get_data_mtu` and `DTLS_set_timer_cb` over NULL and a fresh DTLS connection, and the SRTP profile surface (`SSL_CTX_set_tlsext_use_srtp`/`SSL_set_tlsext_use_srtp`/`SSL_get_srtp_profiles`/`SSL_get_selected_srtp_profile`). `RT-SSL-INIT` (14.10) is the eighth: `courts/phase14/rt_ssl_init_probe.c` drives `OPENSSL_init_ssl` over fixed option words and its refusal arm, `ERR_load_SSL_strings`, and the QUIC TLS accessors' setter/refusal arms over an incomplete `OSSL_DISPATCH` table. `RT-SESSION-CERT` (14.7) is the ninth: `courts/phase14/rt_session_cert_probe.c` drives the session object `_session_cert_probe.c` drives the session object (new/free/dup/refcounts and the accessor, master-key, id and time setters/getters), the per-context session cache and the callback setters, the `i2d_SSL_SESSION`/`d2i_SSL_SESSION[_ex]` DER codec and the four PEM spellings over a fixed in-process session, the CA-list surface, the certificate/private-key loaders (the `use_certificate*`/`use_PrivateKey*` object, ASN1 and file spellings, `use_cert_and_key`, the serverinfo installers and the deprecated `use_RSAPrivateKey` spellings) over a fixed in-memory RSA certificate/key pair, the certificate-compression refusals, and `SSL_SESSION_print`/`_fp`/`_keylog` compared byte for byte. `RT-SSL-EXT` (14.9) is the tenth: `courts/phase14/rt_ssl_ext_probe.c` drives the SRP credential and callback surface, the alert and state string readers, `SSL_add_ssl_module`/`SSL_CTX_config`'s refusal arms over a fixed configuration, the deprecated temporary-DH callback setters, and `SSL_trace` over a fixed memory BIO for a record header, an alert, a change-cipher-spec, an inner content type and three handshake messages compared byte for byte. None is a parity claim about a completed handshake, which no arm of any of them drives. `SSL_get0_group_name` on a live connection and `SSL_group_to_name`'s known-NID arm are recorded in their modules as reduced rather than driven. Every other behavioural court the plan names is named in `pending_courts` with the subphase that brings it -- `RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural courts compare.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 600,
+        "candidate_exit_code": 0,
+        "candidate_observations": 600,
+        "candidate_stderr_tail": [],
+        "court": "RT-PHASE14-REF",
+        "crashed": false,
+        "probe": "courts/phase14/rt_coverage_ref_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 362,
+        "candidate_exit_code": 0,
+        "candidate_observations": 362,
+        "candidate_stderr_tail": [],
+        "court": "RT-SSL-OBJECT",
+        "crashed": false,
+        "probe": "courts/phase14/rt_ssl_object_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_ssl_object_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_ssl_object_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 304,
+        "candidate_exit_code": 0,
+        "candidate_observations": 304,
+        "candidate_stderr_tail": [],
+        "court": "RT-SSL-METHODS",
+        "crashed": false,
+        "probe": "courts/phase14/rt_ssl_methods_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_ssl_methods_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_ssl_methods_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 156,
+        "candidate_exit_code": 0,
+        "candidate_observations": 156,
+        "candidate_stderr_tail": [],
+        "court": "RT-SSL-CIPH",
+        "crashed": false,
+        "probe": "courts/phase14/rt_ssl_ciph_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_ssl_ciph_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_ssl_ciph_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 38,
+        "candidate_exit_code": 0,
+        "candidate_observations": 38,
+        "candidate_stderr_tail": [],
+        "court": "RT-RECORD",
+        "crashed": false,
+        "probe": "courts/phase14/rt_record_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_record_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_record_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 68,
+        "candidate_exit_code": 0,
+        "candidate_observations": 68,
+        "candidate_stderr_tail": [],
+        "court": "RT-STATEM",
+        "crashed": false,
+        "probe": "courts/phase14/rt_statem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_statem_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_statem_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 50,
+        "candidate_exit_code": 0,
+        "candidate_observations": 50,
+        "candidate_stderr_tail": [],
+        "court": "RT-SSL-BIO",
+        "crashed": false,
+        "probe": "courts/phase14/rt_ssl_bio_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_ssl_bio_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_ssl_bio_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 42,
+        "candidate_exit_code": 0,
+        "candidate_observations": 42,
+        "candidate_stderr_tail": [],
+        "court": "RT-DTLS",
+        "crashed": false,
+        "probe": "courts/phase14/rt_dtls_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_dtls_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_dtls_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 26,
+        "candidate_exit_code": 0,
+        "candidate_observations": 26,
+        "candidate_stderr_tail": [],
+        "court": "RT-SSL-INIT",
+        "crashed": false,
+        "probe": "courts/phase14/rt_ssl_init_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_ssl_init_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_ssl_init_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 208,
+        "candidate_exit_code": 0,
+        "candidate_observations": 208,
+        "candidate_stderr_tail": [],
+        "court": "RT-SESSION-CERT",
+        "crashed": false,
+        "probe": "courts/phase14/rt_session_cert_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_session_cert_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_session_cert_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 77,
+        "candidate_exit_code": 0,
+        "candidate_observations": 77,
+        "candidate_stderr_tail": [],
+        "court": "RT-SSL-EXT",
+        "crashed": false,
+        "probe": "courts/phase14/rt_ssl_ext_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_ssl_ext_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_ssl_ext_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {
+      "RT-HANDOFF": "14.11 (the received hand-offs)"
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 11,
+      "total": 11
+    }
+  },
+  "generator": "forensics/tools/phase14_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+      "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_coverage_ref_probe.c",
+      "sha256": "c0c730be28e10bae11a9a50a1a1caf79eacfce808e24e262e67ad88d9161f7ef"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_ssl_object_probe.c",
+      "sha256": "4648c1cbdeeac3837f6df3a5fa4ade8e68981110ea532fb165068b354a8e0247"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_ssl_methods_probe.c",
+      "sha256": "0ce27a777e12dbe66d9ca313193756b324c84189b38594b2a52e8adcd66f5a1b"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_ssl_ciph_probe.c",
+      "sha256": "1b27c49faed7aba7157e8a0ea5d7f8fb1bc8a36769d1b9cdf6d0d2ab007f3e82"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_record_probe.c",
+      "sha256": "05880aff71f711867b42138a688befa8acc0fc876662b0c4e26e331ab65c6a42"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_statem_probe.c",
+      "sha256": "bedb35e4b914d1e968aa2392cdf33f0db177fb522bae4b3c183d122fc2d4f796"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_ssl_bio_probe.c",
+      "sha256": "d2014f16dd78f9025393d7898d112c9176e64ed1276196e3c4df7df7162cb8c6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_dtls_probe.c",
+      "sha256": "f6010ec6dcc1054184005797789b99e9fb12c4b95f0aa555a29b00ee5791c95e"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_ssl_init_probe.c",
+      "sha256": "4bf8ada4448b904c3bcbc24c958518bad83d894c8996ca8abaa22bcdced01542"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_session_cert_probe.c",
+      "sha256": "01cfbf6e48f89c9a53bef0894ddf0749656f6fd63466f2a0cc194e29aa267591"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_ssl_ext_probe.c",
+      "sha256": "b6d89395ceb6dff119988672bedd89558dc5cb9ec7010a4cd77d20b2f2685544"
+    }
+  ],
+  "kind": "phase14-courts",
+  "schema": "openssl-rs/atlas/phase14-courts/v1"
+}

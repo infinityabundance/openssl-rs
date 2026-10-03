@@ -66,19 +66,25 @@ for lib in libcrypto libssl; do
 
   # Compile the scaffold set to a single relocatable object.
   #
-  # `libcrypto`'s scaffolds are `std` flavour because the crate archive is in the
-  # same link. `libssl`'s are `no_std` and reference only `write(2)`/`abort(3)`,
-  # because libssl.so.3 is linked WITHOUT the crate archive: giving it a private
-  # copy of libcrypto's implementation would also give it a private copy of
-  # libcrypto's observable *state* (the ERR queue is thread-local), and an
-  # application would then observe two divergent OpenSSLs in one process.
+  # Both libraries now link the crate archive. `libssl` gained a second reason in
+  # Phase 14.1: the object model's `#[no_mangle]` entry points live in the same
+  # archive as `libcrypto`'s, so the archive is the only source for them. Its
+  # scaffolds stay `no_std` (they reference only `write(2)`/`abort(3)`), so their
+  # `#[panic_handler]` collides with the `std` copy the archive carries; that one
+  # collision is resolved by `--allow-multiple-definition`, and the scaffold's
+  # panic path is never taken (it calls `abort` directly). The version script's
+  # `local: *;` keeps the crate's `libcrypto` definitions from being exported by
+  # `libssl.so.3`, though they are still linked into it -- a divergence recorded
+  # in `docs/PHASE-14-SUBPHASES.md` rather than hidden.
   if [ "$lib" = "libssl" ]; then
     rustc --edition 2021 --emit=obj --crate-type lib -O -C panic=abort \
       --crate-name "${lib}_shell" -o "$OBJ/$lib.shell.o" "shell/$lib.shell.rs"
-    inputs="$OBJ/$lib.shell.o"
-    # --no-as-needed is what actually creates DT_NEEDED libcrypto.so.3: nothing
-    # in a scaffold *calls* libcrypto yet, so without it the linker drops the
-    # dependency -- and the authority declares it (docs/CUSTODIAN_CONTRACT.md §2).
+    inputs="-Wl,--whole-archive $CRATE -Wl,--no-whole-archive $OBJ/$lib.shell.o"
+    ldflags="-Wl,--allow-multiple-definition"
+    # --no-as-needed is what actually creates DT_NEEDED libcrypto.so.3: a
+    # scaffold *references* libcrypto only when it aborts, so without this the
+    # linker drops the dependency -- and the authority declares it
+    # (docs/CUSTODIAN_CONTRACT.md §2).
     depflags="-Wl,--no-as-needed -L$PWD -lcrypto -Wl,--as-needed"
   else
     rustc --edition 2021 --emit=obj --crate-type lib -O \
@@ -88,12 +94,14 @@ for lib in libcrypto libssl; do
     # them. The version script's `local: *;` keeps the Rust runtime's thousands
     # of symbols from being exported.
     inputs="-Wl,--whole-archive $CRATE -Wl,--no-whole-archive $OBJ/$lib.shell.o"
+    ldflags=""
     depflags="-Wl,--as-needed"
   fi
 
   cc -shared -o "$lib.so.3" $inputs \
     -Wl,--version-script="$PWD/$lib.ld" \
     -Wl,-soname,"$lib.so.3" \
+    $ldflags \
     $depflags \
     -lpthread -ldl -lm -lrt -lutil
   echo "  built $(stat -c %s "$lib.so.3") bytes, NEEDED: $(readelf -d "$lib.so.3" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p' | tr '\n' ' ')"
@@ -107,6 +115,12 @@ done
 echo "--- static archives ---"
 cp "$CRATE" "$OBJ/libcrypto.a"
 ar_quiet rcs "$OBJ/libcrypto.a" "$OBJ/libcrypto.shell.o"
+# `libssl.a` carries the crate archive too, for the same reason the DSO does: the
+# implementation symbols live in it and a static consumer must find them. The
+# authority splits its archives so `libcrypto.a` has no `libssl` object; this
+# crate is monolithic, so both archives carry the same object graph. That is a
+# recorded divergence, not an oversight.
+cp "$CRATE" "$OBJ/libssl.a"
 ar_quiet rcs "$OBJ/libssl.a" "$OBJ/libssl.shell.o"
 
 # --- provider module (legacy.so) ---------------------------------------------

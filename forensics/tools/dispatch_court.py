@@ -411,6 +411,19 @@ LEGACY_CTX_CALLBACK = (
     "not a provider dispatch: a function-pointer typedef local to a legacy cipher static's context "
     "struct or the TXT_DB codec, which the atlas -- whose universe is the installed public "
     "surface -- records no typedef for")
+# Phase 14's libssl callback typedefs. The authority declares them in `ssl.h`/`tls1.h` and
+# `tls_depr.h` (`SSL_verify_cb`, `SSL_CTX_keylog_cb_func`, `SSL_async_callback_fn`,
+# `SSL_tmp_dh_cb` and their siblings); they are the application callbacks the `SSL_CTX`/`SSL`
+# setters take, not provider dispatch functions, and the crate's Rust alias names (`VerifyCb`,
+# `KeylogCb`, `TmpDhCb`, ...) do not squash to the authority's `SSL_*`/`TLS_*` names, so the
+# convention rule has no authority name to join on. They are exempted rather than linked for the
+# reason every non-dispatch family above is. Landed with 14.12, which is where the Phase-14
+# aliases first reached this court.
+SSL_CALLBACK = (
+    "not a provider dispatch: a libssl callback typedef (`ssl.h`/`tls1.h`/`tls_depr.h`), an "
+    "application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch "
+    "function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef "
+    "name, so the convention rule has no name to join on")
 
 
 # ---------------------------------------------------------------------------------------------
@@ -418,6 +431,47 @@ LEGACY_CTX_CALLBACK = (
 # naming an alias the crate does not declare is a failure.
 # ---------------------------------------------------------------------------------------------
 NOT_A_DISPATCH: dict[str, str] = {
+    # --- Phase 14: the libssl application callbacks (`ssl.h`/`tls1.h`/`tls_depr.h`) ----------
+    "SrpUsernameCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "SrpVerifyParamCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "SrpClientPwdCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "VerifyCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "AppVerifyCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "InfoCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "MsgCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "ClientHelloCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "CertCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "TicketKeyEvpCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "KeylogCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "AsyncCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "NotResumableCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "SecurityCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "RecordPaddingCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "AlpnSelectCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "SessionTicketCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "AllowEarlyDataCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "NewPendingConnCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "PskClientCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "PskServerCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "PskFindSessionCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "PskUseSessionCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "GenerateSessionIdCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "HandshakeFn@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "CtValidationCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "NpnSelectCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "NpnAdvertisedCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "NewSessionCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "RemoveSessionCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "GetSessionCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "ClientCertCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "GenCookieCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "VerifyCookieCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "GenStatelessCookieCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "VerifyStatelessCookieCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "SessionSecretCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "SessionTicketExtCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "ConfCmdFn@src/ssl/ssl_conf.rs": SSL_CALLBACK,
+    "TmpDhCb@src/ssl/tls_depr.rs": SSL_CALLBACK,
     # --- Phase 13: the legacy cipher statics and the TXT_DB codec -----------------------------
     # The legacy `EVP_CIPHER` statics' context structs carry `.c`-local callback typedefs
     # (`e_aes.c:68-71`'s XTS perlasm stream, `e_des.c:31-34`/`e_des3.c:31-34`'s `stream.cbc`),
