@@ -22,6 +22,10 @@
  *   * `SSL_check_chain`'s NULL-connection and NULL-chain refusal arms;
  *   * the max-fragment-length setters (0..4 accepted, 5 and 255 refused, NULL connection refused)
  *     and `SSL_SESSION_get_max_fragment_length` over a zeroed session image;
+ *   * the 14.5b handshake state machine over an empty memory-BIO peer: `SSL_connect` on a client
+ *     and `SSL_accept` on a server, then `SSL_get_state`/`SSL_want`/`SSL_in_init`/`SSL_in_before`/
+ *     `SSL_is_init_finished`/`SSL_get_error` and a second `SSL_do_handshake`. The client is left at
+ *     `TLS_ST_CW_CLNT_HELLO` (13) and the server at `TLS_ST_BEFORE` (0), both reading;
  *   * `SSL_free`/`SSL_CTX_free`, which exercise the custom-extension list's release.
  *
  * ## A note on the session image
@@ -35,7 +39,9 @@
  *
  * ## Arms that are deliberately absent
  *
- * No handshake, no socket and no wall clock move an answer. `SSL_check_chain` is not driven with a
+ * No socket and no wall clock move an answer. The state-machine arms never read a peer BIO's
+ * bytes: the message layer (14.5b's remaining work) is unlanded, so the client's first flight is
+ * not compared, only the state the read reaches. `SSL_check_chain` is not driven with a
  * real chain: its certificate path is 14.7's and the plan names only the refusal arms here.
  * `SSL_get1_builtin_sigalgs` is driven with a NULL library context (the default one), which is the
  * only context the probe has.
@@ -49,6 +55,7 @@
 #include <openssl/ssl.h>
 #include <openssl/tls1.h>
 #include <openssl/crypto.h>
+#include <openssl/bio.h>
 
 static void out_int(const char *key, long v)
 {
@@ -216,6 +223,47 @@ int main(void)
     memset(session_image, 0, sizeof(session_image));
     out_int("mfl.session.zero",
             (long)SSL_SESSION_get_max_fragment_length((SSL_SESSION *)session_image));
+
+    /* -------------------------------------------------------------------------------------
+     * G. The handshake state machine over an empty peer (14.5b).
+     *
+     * The message layer is unlanded, so no flight is compared: the return, the state the fresh
+     * connection is left in and `SSL_want` are. A client reaches `TLS_ST_CW_CLNT_HELLO` (13) and a
+     * server stays `TLS_ST_BEFORE` (0), both waiting to read; the values are the authority's.
+     * ----------------------------------------------------------------------------------- */
+    {
+        SSL *client = SSL_new(ctx);
+        SSL *server = SSL_new(ctx);
+        BIO *cr = BIO_new(BIO_s_mem()), *cw = BIO_new(BIO_s_mem());
+        BIO *sr = BIO_new(BIO_s_mem()), *sw = BIO_new(BIO_s_mem());
+
+        SSL_set_bio(client, cr, cw);
+        SSL_set_bio(server, sr, sw);
+
+        out_int("hs.connect.ret", SSL_connect(client));
+        out_int("hs.client.state", SSL_get_state(client));
+        out_int("hs.client.want", SSL_want(client));
+        out_int("hs.client.in_init", SSL_in_init(client));
+        out_int("hs.client.in_before", SSL_in_before(client));
+        out_int("hs.client.finished", SSL_is_init_finished(client));
+        out_int("hs.client.err", SSL_get_error(client, -1));
+
+        out_int("hs.accept.ret", SSL_accept(server));
+        out_int("hs.server.state", SSL_get_state(server));
+        out_int("hs.server.want", SSL_want(server));
+        out_int("hs.server.in_init", SSL_in_init(server));
+        out_int("hs.server.in_before", SSL_in_before(server));
+        out_int("hs.server.finished", SSL_is_init_finished(server));
+        out_int("hs.server.err", SSL_get_error(server, -1));
+
+        /* A second `do_handshake` re-enters the engine; only the return is compared, not the state
+         * a read transition would advance (the message layer is unlanded). */
+        out_int("hs.do_handshake.client2", SSL_do_handshake(client));
+        out_int("hs.do_handshake.server2", SSL_do_handshake(server));
+
+        SSL_free(client);
+        SSL_free(server);
+    }
 
     /* -----------------------------------------------------------------------------------------
      * F. Release, exercising the custom-extension list's teardown.

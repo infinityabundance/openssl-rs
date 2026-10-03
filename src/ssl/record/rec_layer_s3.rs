@@ -35,6 +35,30 @@ use core::ptr;
 
 use crate::ssl::ssl_lib::{Ssl, SslCtx};
 
+/// `RECORD_LAYER_write_pending(const RECORD_LAYER *rl)` — `ssl/record/rec_layer_s3.c:114-117`.
+///
+/// The authority's macro reads `rl->wpend_tot`, the pending write's byte count; a fresh connection
+/// has written nothing, so it is 0.
+///
+/// # Safety
+/// `s` must point to a live connection.
+pub(crate) unsafe fn record_layer_write_pending(s: *const Ssl) -> usize {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe { (*s).wpend_tot }
+}
+
+/// `RECORD_LAYER_read_pending(const RECORD_LAYER *rl)` — `ssl/record/rec_layer_s3.c:101-105`.
+///
+/// The authority reaches the read method's `unprocessed_read_pending`; this crate models no
+/// record-read method, and a fresh connection has no read-ahead data, so it answers 0 (recorded in
+/// `src/ssl/mod.rs`).
+///
+/// # Safety
+/// `s` must point to a live connection.
+pub(crate) unsafe fn record_layer_read_pending(_s: *const Ssl) -> c_int {
+    0
+}
+
 /// `SSL_ST_READ_HEADER` — `ssl.h:1113`.
 const SSL_ST_READ_HEADER: c_int = 0xF0;
 /// `SSL_ST_READ_BODY` — `ssl.h:1114`.
