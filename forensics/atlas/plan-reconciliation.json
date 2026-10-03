@@ -4,10 +4,19 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {},
-    "census_by_stratum": {},
+    "census": {
+      "symbols_not_reached": 2
+    },
+    "census_by_stratum": {
+      "15": 2
+    },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {},
+    "census_samples": {
+      "symbols_not_reached": [
+        "ssl3_undef_enc_method",
+        "tls1_default_timeout"
+      ]
+    },
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -15,6 +24,7 @@
         "docs/PHASE-12-SUBPHASES.md",
         "docs/PHASE-13-SUBPHASES.md",
         "docs/PHASE-14-SUBPHASES.md",
+        "docs/PHASE-15-SUBPHASES.md",
         "docs/PHASE-22-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
@@ -22,13 +32,13 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 165,
-      "symbols_named_by_a_row": 112,
+      "rows_judged": 168,
+      "symbols_named_by_a_row": 114,
       "symbols_reached": 112,
       "unit_records": 99,
       "units_named_by_a_record": 102,
-      "units_named_by_a_row": 489,
-      "units_reached": 489
+      "units_named_by_a_row": 490,
+      "units_reached": 490
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -6250,6 +6260,16 @@
           "src/ssl/quic/quic_impl.rs"
         ]
       },
+      "ssl/quic/quic_method.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "15:15.1"
+        ],
+        "transcribed_by": [
+          "src/ssl/quic/quic_method.rs"
+        ]
+      },
       "ssl/quic/quic_tls_api.c": {
         "defines": [],
         "recorded_by": null,
@@ -7271,10 +7291,10 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 591
+      "transcribed_units": 592
     }
   },
-  "body_hash": "f5247d1d4dc5d0e913b204802e9c6764472d03928d5d8525d13319ccedc2db11",
+  "body_hash": "51d0d6758da6d11bec30441233db8e653d6a692499e1818d41c619c6feae32a8",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -7285,17 +7305,17 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "22c703af429772e209604f46a48ae1dc27946fc13cf898b2b3392cdded897297"
+      "sha256": "b9a32440f4d93fd03471d1da570b62349ab29d5bd49c26316f6d5cdb55299cea"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4eec22d2e8141da5999d3cc012b05dd0ad36394f21c90f5e5b254753d2d4b8f5"
+      "sha256": "8102978e08655ad7bbb16b1be75cfb57893d7c9a4e0fe047d81a286c4e30372e"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "0707e69beaefe7a395b9c2ec9bea4f2e7f7b816b8b1152353d46e173d3c3abc1"
+      "sha256": "d178db4df809582861343a71b5ec7e91084bd2b73426929b2b86a0388f2cde1d"
     },
     {
       "name": "prerequisites",
@@ -7331,6 +7351,11 @@
       "name": "plan-PHASE-14-SUBPHASES",
       "path": "docs/PHASE-14-SUBPHASES.md",
       "sha256": "612998ffc8c7017163e0d1353fcc79384545fd15117a38d031aacee90a622bad"
+    },
+    {
+      "name": "plan-PHASE-15-SUBPHASES",
+      "path": "docs/PHASE-15-SUBPHASES.md",
+      "sha256": "b5df1c29004f4f8d25f70392681b129fe813957511db645bd84a5ca218c94ef1"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",
