@@ -1442,8 +1442,10 @@ pub struct Ssl {
 // Callback type aliases (their arities are the authority's; Slice 1 stores and returns them)
 // -------------------------------------------------------------------------------------------
 
-/// `pem_password_cb` — `evp.h`.
-pub type PemPasswordCb = unsafe extern "C" fn(*mut c_char, c_int, c_int, *mut c_void) -> c_int;
+/// `pem_password_cb` — `evp.h`. Re-exported from `src/evp/pem_bridge.rs`, the one definition:
+/// a second `type PemPasswordCb` here would duplicate the alias and defeat the prototype
+/// court's unique-alias resolution (`forensics/tools/prototype_court.py`).
+pub use crate::evp::pem_bridge::PemPasswordCb;
 /// `int (*)(int, X509_STORE_CTX *)` — the verify callback.
 pub type VerifyCb = unsafe extern "C" fn(c_int, *mut c_void) -> c_int;
 /// `int (*)(X509_STORE_CTX *, void *)` — the application verify callback.

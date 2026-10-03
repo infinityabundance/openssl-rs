@@ -277,6 +277,14 @@
       "reason": "Recording `crypto/engine/eng_dyn.c`'s absent dynamic loader as a deferral (D528) made a whole authority unit visible to the prerequisite gate for the first time. Nothing in the crate referenced `engine_load_dynamic_int` -- 13.1 transcribed `ENGINE_by_id`'s miss path whole and took the authority's own `notfound` arm -- so the unit sat unnamed and the gate could not see the gap. `forensics/prerequisites.json` now records it as owed to Phase 16 (the installed distribution / config / module stratum), which is the established mechanism this metric is for: the count rises because a name became *visible*, not because a prerequisite appeared. The same class as D132's 11 -> 12, D134's 12 -> 15 and the Phase-12 row above: an invariant that cannot tell a legitimate change from a hidden omission.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md D528"
+    },
+    {
+      "metric": "sealed_census",
+      "before": 50,
+      "after": 404,
+      "reason": "Phase 14 lands the whole of libssl -- 600 exports over 29 authority translation units -- and seals, so the gate's sealed-stratum census now counts the internals of those units that the crate does not build. The census counts authority internals a transcribed unit calls whose own defining unit's stratum has sealed, so a stratum that lands 29 new units and seals necessarily enters each unit's not-yet-built tail: the message layer (statem_clnt.c/statem_srvr.c, statem_lib.c's remainder, the extensions*.c units, the key schedule and the record protection) is unlanded by design (docs/PHASE-14-SUBPHASES.md row 14.5b and section 5), and the 29 units' unbuilt helpers and callbacks are now countable beside the modules that transcribe their observable surfaces. The count rises because whole authority units that nothing referenced became visible, which is the cause D132 recorded for the blocking list and D314/D324 for this same metric: landing work can move such a count up without any work being undone. A sealed-census entry is not a failure -- the gate prints the count rather than gating on it -- and Phase 14's own 600 exports are all implemented; the residue is the recorded unlanded message layer, deferred to Phase 15 in forensics/prerequisites.json.",
+      "authority_artifact": "forensics/atlas/prerequisite-gate.json",
+      "recorded_by": "docs/DECISIONS.md D529"
     }
   ]
 }

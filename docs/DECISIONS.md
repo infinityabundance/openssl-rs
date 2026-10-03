@@ -35295,4 +35295,79 @@ owner. The record makes the gap an owned dependency rather than an unowned one.
 
 **Evidence.** `prerequisite_gate.py` reports `engine_load_dynamic_int -> phase 16` among its four
 `blocking_dependencies`, alongside the three pre-existing Phase-16 entries.
+
+---
+
+## D529 -- the Phase-14 seal, and the FRF/Gemel chain closes it
+
+14.12 writes `docs/PHASE-14-TLS-SEAL.md` (registered in `atlas_common.py`'s `SEAL_DOCS` at `14`)
+and adds the stratum to the FRF chain. The seal follows `docs/RELEASE_GATES.md` section 2's ten
+items, records the eleven courts and their observation counts from `artifacts/phase14/COURTS.json`,
+and is explicit about the non-claims: no parity, no security assurance, and no completed-handshake
+claim -- the message layer is unlanded, so no flight is built or parsed and no court reads one. The
+stratum's export ledger reaches owned 600 / implemented 600 / deferred 0 / open 0, its
+`received_by_handoff` is 0 (the first stratum whose working set is exactly its atlas-owned
+universe), and its court coverage is 600 `directly_courted` (500 `called`, 100 `referenced`).
+
+**The chain entry.** Ten differential courts are declared
+(`gen_frf_courts.py`'s Phase-14 block: `rt-ssl-object`, `rt-ssl-methods`, `rt-ssl-ciph`, `rt-record`,
+`rt-statem`, `rt-ssl-bio`, `rt-dtls`, `rt-ssl-init`, `rt-session-cert`, `rt-ssl-ext`), moving the
+declaration count 230 files / 115 courts to **250 files / 125 courts** (`gen_frf_courts.py --check`),
+and `forensics/frf/README.md` and `docs/RELEASE_GATES.md` move 115 -> 125 with the per-phase
+breakdown gaining `ten Phase 14`. In the FRF tooling container the ten courts were run into the
+existing `.frf` store (added to, not recreated), each emitted one receipt, and each was challenged
+so that **both** declared operators -- `stdout-first-line` and `exit-class` -- are adjudicated with
+`saw_defect` and `specificity_clean` true (twenty challenge records). One `sensitivity-backed`
+claim over the ten receipts compiles with zero blockers --
+`39e7dc8cdb2551c598cd0655c9d6e3a8bd3ed3f9fdcd383097030557c9af0856` -- binding authority
+`openssl-rt-3.6.4-r2` to candidate `openssl-rs 0.0.18` (`identity_hash e4f60d8b`), which the fix-4
+identity clause of `phase_state.py`'s `frf_gemel_blocking_reason` requires. The Gemel change `C101`
+and checkpoint `K55`
+(`checkpoint.23b2564b0f48b12146b8b842338cd365879e9bf550a43e33f6d348d61ee7595e`) name Phase 14 and the
+FRF chain, and `forensics/GEMEL_TRAJECTORY.md` is re-rendered. The reference basis `RT-PHASE14-REF`
+is recorded as not declarable, because its probe takes addresses rather than diffing a transcript
+(D13, D199).
+
+**The predicate this engages.** D524's rule reads the requirement from
+`artifacts/phase14/COURTS.json` through `phase_state.frf_gemel_blocking_reason`: it refused Phase 14
+`complete` with the ten courts named as missing from the registry, their receipts, their challenges,
+the claim and the checkpoint, and this chain entry is what retires those clauses. With it the strand
+derives `complete` with an empty blocking reason.
+
+**Boundaries recorded rather than hidden.** The whole-archive link gives `libssl.so.3` its own copy
+of the crate's `ERR` and `CONF` state; the message layer is unlanded; the security callback and the
+signature mask are reduced; `ssl_cert_comp.c` answers the admitted build's `OPENSSL_NO_COMP_ALG`
+arm; the DANE context methods guard a NULL the authority dereferences; and the QUIC TLS accessors'
+success arms are Phase 15's. No divergence obligation names Phase 14; the register reads 10 rows
+and 0 blocking.
+
+**Four generator drifts the Phase-14 slices left, reconciled here.** The later subphases landed
+crate and tool changes without re-running the whole pipeline, so four artefacts drifted from their
+generators and only surfaced when 14.12 derived the stratum `complete`, the same class D525 item 9
+repaired for Phase 13:
+
+* `prototype_court.py` reported 89 type-plane mismatches the committed `prototype-court.json` did
+  not record, because 14.1/14.7 added a second `pub type PemPasswordCb` in `src/ssl/ssl_lib.rs` and
+  the court's unique-alias resolution refuses a name defined in more than one file. 14.12
+  re-exports the one definition from `src/evp/pem_bridge.rs`, and the type plane reads 0 again.
+* `dispatch_court.py` reported 40 unlinked Rust aliases -- the libssl application callback typedefs
+  (`VerifyCb`, `KeylogCb`, `TmpDhCb` and their siblings) declared in `src/ssl/ssl_lib.rs`,
+  `ssl_conf.rs` and `tls_depr.rs`. They are not provider dispatch functions, so 14.12 exempts the
+  family (`SSL_CALLBACK`) rather than linking it, the disposition every non-dispatch family uses.
+* `prerequisite_gate.py` reported `dtls_ver_ordinal` as an `undefined_prerequisite` because the
+  crate models the `ssl_local.h` macro as a `const fn` and the gate's definition scanner captures
+  the name after `const` as `fn`. 14.12 fixes the scanner to read `const fn NAME` before the bare
+  `const` arm.
+* `plan_reconciliation.py` reported the plan's 14.5b row as naming `ssl/statem/statem_clnt.c` and
+  `ssl/statem/statem_srvr.c` while nothing reached them. The unlanded message layer's two units are
+  now `deferred_to_later_stratum` in `forensics/prerequisites.json`, owned by Phase 15 (QUIC/ECH),
+  whose engine drives the TLS handshake through the message layer.
+
+After them, `evidence_determinism.py --keep` reproduces 34 artefacts.
+
+**Verified (container).** `phase_state.py` derives Phase 14 `complete` with empty blocking and its
+`--self-test` passes both controls; `docs_consistency.py`; `render_seal_census.py`;
+`render_status.py`; `gen_prerequisite_atlas.py` byte-identical on a second run;
+`evidence_determinism.py --keep`; `gen_frf_courts.py --check` (250 files / 125 courts);
+`regression_guard.py --update` then `--baseline-ref origin/main --require-current`; `probe_hygiene.py`.
 `src/runtime/init.rs`s

@@ -4,46 +4,10 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "units_not_reached": 29
-    },
-    "census_by_stratum": {
-      "14": 29
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "units_not_reached": [
-        "ssl/bio_ssl.c",
-        "ssl/d1_lib.c",
-        "ssl/d1_srtp.c",
-        "ssl/methods.c",
-        "ssl/quic/quic_impl.c",
-        "ssl/quic/quic_tls_api.c",
-        "ssl/record/rec_layer_s3.c",
-        "ssl/rio/poll_immediate.c",
-        "ssl/s3_lib.c",
-        "ssl/ssl_asn1.c",
-        "ssl/ssl_cert.c",
-        "ssl/ssl_cert_comp.c",
-        "ssl/ssl_ciph.c",
-        "ssl/ssl_conf.c",
-        "ssl/ssl_err_legacy.c",
-        "ssl/ssl_init.c",
-        "ssl/ssl_lib.c",
-        "ssl/ssl_mcnf.c",
-        "ssl/ssl_rsa.c",
-        "ssl/ssl_rsa_legacy.c",
-        "ssl/ssl_sess.c",
-        "ssl/ssl_stat.c",
-        "ssl/ssl_txt.c",
-        "ssl/statem/extensions_cust.c",
-        "ssl/statem/statem.c",
-        "ssl/t1_lib.c",
-        "ssl/t1_trce.c",
-        "ssl/tls_depr.c",
-        "ssl/tls_srp.c"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -58,13 +22,13 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 163,
-      "symbols_named_by_a_row": 108,
-      "symbols_reached": 108,
-      "unit_records": 97,
-      "units_named_by_a_record": 100,
-      "units_named_by_a_row": 486,
-      "units_reached": 457
+      "rows_judged": 165,
+      "symbols_named_by_a_row": 112,
+      "symbols_reached": 112,
+      "unit_records": 99,
+      "units_named_by_a_record": 102,
+      "units_named_by_a_row": 489,
+      "units_reached": 489
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -6182,7 +6146,9 @@
         "subphases": [
           "14:14.6"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/bio_ssl.rs"
+        ]
       },
       "ssl/d1_lib.c": {
         "defines": [
@@ -6209,7 +6175,9 @@
         "subphases": [
           "14:14.8"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/d1_lib.rs"
+        ]
       },
       "ssl/d1_srtp.c": {
         "defines": [],
@@ -6217,7 +6185,9 @@
         "subphases": [
           "14:14.8"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/d1_srtp.rs"
+        ]
       },
       "ssl/methods.c": {
         "defines": [
@@ -6245,7 +6215,9 @@
         "subphases": [
           "14:14.2"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/methods.rs"
+        ]
       },
       "ssl/quic/quic_impl.c": {
         "defines": [
@@ -6274,7 +6246,9 @@
         "subphases": [
           "14:14.10"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/quic/quic_impl.rs"
+        ]
       },
       "ssl/quic/quic_tls_api.c": {
         "defines": [],
@@ -6282,7 +6256,9 @@
         "subphases": [
           "14:14.10"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/quic/quic_tls_api.rs"
+        ]
       },
       "ssl/record/rec_layer_s3.c": {
         "defines": [
@@ -6304,9 +6280,12 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "14:14.4"
+          "14:14.4",
+          "14:14.5b"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/record/rec_layer_s3.rs"
+        ]
       },
       "ssl/rio/poll_immediate.c": {
         "defines": [
@@ -6317,7 +6296,9 @@
         "subphases": [
           "14:14.4"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/rio/poll_immediate.rs"
+        ]
       },
       "ssl/s3_lib.c": {
         "defines": [
@@ -6344,9 +6325,12 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "14:14.2"
+          "14:14.2",
+          "14:14.5b"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/s3_lib.rs"
+        ]
       },
       "ssl/ssl_asn1.c": {
         "defines": [],
@@ -6354,7 +6338,9 @@
         "subphases": [
           "14:14.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_asn1.rs"
+        ]
       },
       "ssl/ssl_cert.c": {
         "defines": [
@@ -6383,7 +6369,9 @@
         "subphases": [
           "14:14.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_cert.rs"
+        ]
       },
       "ssl/ssl_cert_comp.c": {
         "defines": [
@@ -6394,7 +6382,9 @@
         "subphases": [
           "14:14.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_cert_comp.rs"
+        ]
       },
       "ssl/ssl_ciph.c": {
         "defines": [
@@ -6416,7 +6406,9 @@
         "subphases": [
           "14:14.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_ciph.rs"
+        ]
       },
       "ssl/ssl_conf.c": {
         "defines": [],
@@ -6424,7 +6416,9 @@
         "subphases": [
           "14:14.3"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_conf.rs"
+        ]
       },
       "ssl/ssl_err_legacy.c": {
         "defines": [],
@@ -6432,7 +6426,9 @@
         "subphases": [
           "14:14.10"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_err_legacy.rs"
+        ]
       },
       "ssl/ssl_init.c": {
         "defines": [],
@@ -6440,7 +6436,9 @@
         "subphases": [
           "14:14.10"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_init.rs"
+        ]
       },
       "ssl/ssl_lib.c": {
         "defines": [
@@ -6467,9 +6465,14 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "14:14.1"
+          "14:14.1",
+          "14:14.3",
+          "14:14.5b",
+          "14:14.7b"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_lib.rs"
+        ]
       },
       "ssl/ssl_mcnf.c": {
         "defines": [
@@ -6479,7 +6482,9 @@
         "subphases": [
           "14:14.9"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_mcnf.rs"
+        ]
       },
       "ssl/ssl_rsa.c": {
         "defines": [],
@@ -6487,7 +6492,9 @@
         "subphases": [
           "14:14.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_rsa.rs"
+        ]
       },
       "ssl/ssl_rsa_legacy.c": {
         "defines": [],
@@ -6495,7 +6502,9 @@
         "subphases": [
           "14:14.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_rsa_legacy.rs"
+        ]
       },
       "ssl/ssl_sess.c": {
         "defines": [
@@ -6511,7 +6520,9 @@
         "subphases": [
           "14:14.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_sess.rs"
+        ]
       },
       "ssl/ssl_stat.c": {
         "defines": [],
@@ -6519,7 +6530,9 @@
         "subphases": [
           "14:14.9"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_stat.rs"
+        ]
       },
       "ssl/ssl_txt.c": {
         "defines": [],
@@ -6527,7 +6540,9 @@
         "subphases": [
           "14:14.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/ssl_txt.rs"
+        ]
       },
       "ssl/statem/extensions_cust.c": {
         "defines": [
@@ -6545,7 +6560,9 @@
         "subphases": [
           "14:14.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/statem/extensions_cust.rs"
+        ]
       },
       "ssl/statem/statem.c": {
         "defines": [
@@ -6570,7 +6587,100 @@
         ],
         "recorded_by": null,
         "subphases": [
-          "14:14.5"
+          "14:14.5",
+          "14:14.5b"
+        ],
+        "transcribed_by": [
+          "src/ssl/statem/statem.rs"
+        ]
+      },
+      "ssl/statem/statem_clnt.c": {
+        "defines": [
+          "dtls_process_hello_verify",
+          "ossl_gost18_cke_cipher_nid",
+          "ossl_gost_ukm",
+          "ossl_statem_client_construct_message",
+          "ossl_statem_client_max_message_size",
+          "ossl_statem_client_post_process_message",
+          "ossl_statem_client_post_work",
+          "ossl_statem_client_pre_work",
+          "ossl_statem_client_process_message",
+          "ossl_statem_client_read_transition",
+          "ossl_statem_client_write_transition",
+          "ssl3_check_cert_and_algorithm",
+          "ssl_do_client_cert_cb",
+          "tls_client_key_exchange_post_work",
+          "tls_construct_client_certificate",
+          "tls_construct_client_hello",
+          "tls_construct_client_key_exchange",
+          "tls_construct_end_of_early_data",
+          "tls_construct_next_proto",
+          "tls_post_process_server_certificate"
+        ],
+        "recorded_by": "units:ssl/statem/statem_clnt.c",
+        "subphases": [
+          "14:14.5b"
+        ],
+        "transcribed_by": []
+      },
+      "ssl/statem/statem_lib.c": {
+        "defines": [
+          "check_in_list",
+          "construct_ca_names",
+          "construct_key_exchange_tbs",
+          "create_synthetic_message_hash",
+          "get_ca_names",
+          "hrrrandom",
+          "ossl_statem_set_mutator",
+          "parse_ca_names",
+          "ssl3_do_write",
+          "ssl3_output_cert_chain",
+          "ssl3_take_mac",
+          "ssl_allow_compression",
+          "ssl_check_version_downgrade",
+          "ssl_choose_client_version",
+          "ssl_choose_server_version",
+          "ssl_get_min_max_version",
+          "ssl_set_client_hello_version",
+          "ssl_set_version_bound",
+          "ssl_version_cmp",
+          "ssl_version_supported"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "14:14.5b",
+          "14:14.7b"
+        ],
+        "transcribed_by": [
+          "src/ssl/statem/statem_lib.rs"
+        ]
+      },
+      "ssl/statem/statem_srvr.c": {
+        "defines": [
+          "GOST_KX_MESSAGE_free",
+          "GOST_KX_MESSAGE_it",
+          "GOST_KX_MESSAGE_new",
+          "d2i_GOST_KX_MESSAGE",
+          "dtls_construct_hello_verify_request",
+          "dtls_raw_hello_verify_request",
+          "i2d_GOST_KX_MESSAGE",
+          "ossl_get_ocsp_response",
+          "ossl_statem_server_construct_message",
+          "ossl_statem_server_max_message_size",
+          "ossl_statem_server_post_process_message",
+          "ossl_statem_server_post_work",
+          "ossl_statem_server_pre_work",
+          "ossl_statem_server_process_message",
+          "ossl_statem_server_read_transition",
+          "ossl_statem_server_write_transition",
+          "send_certificate_request",
+          "tls_construct_cert_status",
+          "tls_construct_cert_status_body",
+          "tls_construct_certificate_request"
+        ],
+        "recorded_by": "units:ssl/statem/statem_srvr.c",
+        "subphases": [
+          "14:14.5b"
         ],
         "transcribed_by": []
       },
@@ -6601,7 +6711,9 @@
         "subphases": [
           "14:14.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/t1_lib.rs"
+        ]
       },
       "ssl/t1_trce.c": {
         "defines": [],
@@ -6609,7 +6721,9 @@
         "subphases": [
           "14:14.9"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/t1_trce.rs"
+        ]
       },
       "ssl/tls_depr.c": {
         "defines": [
@@ -6631,7 +6745,9 @@
         "subphases": [
           "14:14.9"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/tls_depr.rs"
+        ]
       },
       "ssl/tls_srp.c": {
         "defines": [
@@ -6649,7 +6765,9 @@
         "subphases": [
           "14:14.9"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/tls_srp.rs"
+        ]
       }
     },
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
@@ -7138,41 +7256,51 @@
         "class": "not_in_this_profile",
         "crate_module": null,
         "owner_phase": null
+      },
+      "ssl/statem/statem_clnt.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 15
+      },
+      "ssl/statem/statem_srvr.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 15
       }
     },
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 561
+      "transcribed_units": 591
     }
   },
-  "body_hash": "ddfc4cf91afa5f1a360013441d84d2944c9b23acf4a764c96cf32bbd64e2e32c",
+  "body_hash": "f5247d1d4dc5d0e913b204802e9c6764472d03928d5d8525d13319ccedc2db11",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "307eeabd191cbd65ebbbc6df8ebb545fa7816344d2c0237a46f96d7d64f39e2f"
+      "sha256": "6db5644688a778f0dea5d99d53933d880739f4edc1514f88262af990cea88848"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "c4f7ca804708cb4317693043dc2a8e5f89e853983c49729fa041f369db32e5f9"
+      "sha256": "22c703af429772e209604f46a48ae1dc27946fc13cf898b2b3392cdded897297"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "69872bb9ff11d10c0f00c0b0c3affbc5326bffcf2a7e49cabcb5e7f67f6dcb67"
+      "sha256": "4eec22d2e8141da5999d3cc012b05dd0ad36394f21c90f5e5b254753d2d4b8f5"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "805fe9759334cf8e8aa631407052f29090895a20f0d16f42b02e8da6f5037c31"
+      "sha256": "0707e69beaefe7a395b9c2ec9bea4f2e7f7b816b8b1152353d46e173d3c3abc1"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "59377c9aa7800991c11c8bc15043b497e1a8054b8d9fc29525f209395de07f43"
+      "sha256": "70b06c7a0960cf287d99fe11526a98a1bc7a8a3990f1de0e0a7f3f2486cb75f4"
     },
     {
       "name": "source-manifest",
@@ -7202,7 +7330,7 @@
     {
       "name": "plan-PHASE-14-SUBPHASES",
       "path": "docs/PHASE-14-SUBPHASES.md",
-      "sha256": "8ac033ec31e84988aeb62213f33d360e31926517597b1ea0a8687f7a31860072"
+      "sha256": "612998ffc8c7017163e0d1353fcc79384545fd15117a38d031aacee90a622bad"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",
