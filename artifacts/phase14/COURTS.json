@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 277,
+        "authority_observations": 290,
         "candidate_exit_code": 0,
-        "candidate_observations": 277,
+        "candidate_observations": 290,
         "candidate_stderr_tail": [],
         "court": "RT-SSL-OBJECT",
         "crashed": false,
@@ -92,9 +92,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 52,
+        "authority_observations": 68,
         "candidate_exit_code": 0,
-        "candidate_observations": 52,
+        "candidate_observations": 68,
         "candidate_stderr_tail": [],
         "court": "RT-STATEM",
         "crashed": false,
@@ -217,7 +217,7 @@
     {
       "name": "probe",
       "path": "courts/phase14/rt_ssl_object_probe.c",
-      "sha256": "e0968cea9730edb5ada8c3835dca0201028a82aaee4d1a903bc4ef9df3707bd7"
+      "sha256": "825373e2e36c79856a6187b8eae53ab24960a632c978ebf9e399b0735f546173"
     },
     {
       "name": "probe",
@@ -237,7 +237,7 @@
     {
       "name": "probe",
       "path": "courts/phase14/rt_statem_probe.c",
-      "sha256": "f7aa5a9ad49d95ffb877df145853611213c11c6952a9cb6494b0035cbee3ee08"
+      "sha256": "bedb35e4b914d1e968aa2392cdf33f0db177fb522bae4b3c183d122fc2d4f796"
     },
     {
       "name": "probe",

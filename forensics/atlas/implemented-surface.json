@@ -508,7 +508,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 16724,
+      "compiler_emitted_count": 17012,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -6419,7 +6419,7 @@
       },
       "libssl": {
         "authority_exports": 603,
-        "implemented": 571,
+        "implemented": 584,
         "implemented_symbols": [
           "BIO_f_ssl",
           "BIO_new_buffer_ssl_connect",
@@ -6688,6 +6688,7 @@
           "SSL_SESSION_up_ref",
           "SSL_SRP_CTX_free",
           "SSL_SRP_CTX_init",
+          "SSL_accept",
           "SSL_accept_connection",
           "SSL_accept_stream",
           "SSL_add1_host",
@@ -6720,12 +6721,15 @@
           "SSL_client_version",
           "SSL_compress_certs",
           "SSL_config",
+          "SSL_connect",
           "SSL_copy_session_id",
           "SSL_ct_is_enabled",
           "SSL_ctrl",
           "SSL_do_handshake",
           "SSL_dup_CA_list",
           "SSL_enable_ct",
+          "SSL_export_keying_material",
+          "SSL_export_keying_material_early",
           "SSL_extension_supported",
           "SSL_free",
           "SSL_free_buffers",
@@ -6850,6 +6854,7 @@
           "SSL_is_server",
           "SSL_is_stream_local",
           "SSL_is_tls",
+          "SSL_key_update",
           "SSL_listen",
           "SSL_load_client_CA_file",
           "SSL_load_client_CA_file_ex",
@@ -6860,17 +6865,22 @@
           "SSL_new_from_listener",
           "SSL_new_listener",
           "SSL_new_listener_from",
+          "SSL_new_session_ticket",
           "SSL_new_stream",
           "SSL_peek",
           "SSL_peek_ex",
           "SSL_pending",
           "SSL_poll",
           "SSL_read",
+          "SSL_read_early_data",
           "SSL_read_ex",
+          "SSL_renegotiate",
+          "SSL_renegotiate_abbreviated",
           "SSL_renegotiate_pending",
           "SSL_rstate_string",
           "SSL_rstate_string_long",
           "SSL_select_next_proto",
+          "SSL_sendfile",
           "SSL_session_reused",
           "SSL_set0_CA_list",
           "SSL_set0_rbio",
@@ -6955,6 +6965,7 @@
           "SSL_srp_server_param_with_username",
           "SSL_state_string",
           "SSL_state_string_long",
+          "SSL_stateless",
           "SSL_stream_conclude",
           "SSL_stream_reset",
           "SSL_trace",
@@ -6971,10 +6982,12 @@
           "SSL_use_certificate_chain_file",
           "SSL_use_certificate_file",
           "SSL_use_psk_identity_hint",
+          "SSL_verify_client_post_handshake",
           "SSL_version",
           "SSL_waiting_for_async",
           "SSL_want",
           "SSL_write",
+          "SSL_write_early_data",
           "SSL_write_ex",
           "SSL_write_ex2",
           "TLS_client_method",
@@ -6993,23 +7006,23 @@
           "d2i_SSL_SESSION_ex",
           "i2d_SSL_SESSION"
         ],
-        "scaffolded": 32
+        "scaffolded": 19
       }
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 6467,
-      "scaffolded": 32
+      "implemented": 6480,
+      "scaffolded": 19
     }
   },
-  "body_hash": "6c119557d3f902c7758a311b19364d3f2b56209f22093bac1b18bec433a3afb7",
+  "body_hash": "3e1a1a79fd44c64a798e7398368b38f799fb351aa3914aaae07d19338808614a",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "97d394e1a2ce7ab94c5316b2b4f6c56a4fd2f006210efac14a2c673bcb510b3b"
+      "sha256": "1bad652a920669716b3aa873d7e7e8e6ad073767d96c6e09d977d1768f6e0989"
     },
     {
       "name": "authority-exports",

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 600,
       "deferred_to_later_phase": 0,
-      "implemented": 571,
-      "open_in_this_stratum": 29,
+      "implemented": 584,
+      "open_in_this_stratum": 16,
       "owned": 600,
       "received_by_handoff": 0
     },
@@ -282,6 +282,7 @@
       "SSL_SESSION_up_ref",
       "SSL_SRP_CTX_free",
       "SSL_SRP_CTX_init",
+      "SSL_accept",
       "SSL_accept_connection",
       "SSL_accept_stream",
       "SSL_add1_host",
@@ -314,12 +315,15 @@
       "SSL_client_version",
       "SSL_compress_certs",
       "SSL_config",
+      "SSL_connect",
       "SSL_copy_session_id",
       "SSL_ct_is_enabled",
       "SSL_ctrl",
       "SSL_do_handshake",
       "SSL_dup_CA_list",
       "SSL_enable_ct",
+      "SSL_export_keying_material",
+      "SSL_export_keying_material_early",
       "SSL_extension_supported",
       "SSL_free",
       "SSL_free_buffers",
@@ -444,6 +448,7 @@
       "SSL_is_server",
       "SSL_is_stream_local",
       "SSL_is_tls",
+      "SSL_key_update",
       "SSL_listen",
       "SSL_load_client_CA_file",
       "SSL_load_client_CA_file_ex",
@@ -454,17 +459,22 @@
       "SSL_new_from_listener",
       "SSL_new_listener",
       "SSL_new_listener_from",
+      "SSL_new_session_ticket",
       "SSL_new_stream",
       "SSL_peek",
       "SSL_peek_ex",
       "SSL_pending",
       "SSL_poll",
       "SSL_read",
+      "SSL_read_early_data",
       "SSL_read_ex",
+      "SSL_renegotiate",
+      "SSL_renegotiate_abbreviated",
       "SSL_renegotiate_pending",
       "SSL_rstate_string",
       "SSL_rstate_string_long",
       "SSL_select_next_proto",
+      "SSL_sendfile",
       "SSL_session_reused",
       "SSL_set0_CA_list",
       "SSL_set0_rbio",
@@ -549,6 +559,7 @@
       "SSL_srp_server_param_with_username",
       "SSL_state_string",
       "SSL_state_string_long",
+      "SSL_stateless",
       "SSL_stream_conclude",
       "SSL_stream_reset",
       "SSL_trace",
@@ -565,10 +576,12 @@
       "SSL_use_certificate_chain_file",
       "SSL_use_certificate_file",
       "SSL_use_psk_identity_hint",
+      "SSL_verify_client_post_handshake",
       "SSL_version",
       "SSL_waiting_for_async",
       "SSL_want",
       "SSL_write",
+      "SSL_write_early_data",
       "SSL_write_ex",
       "SSL_write_ex2",
       "TLS_client_method",
@@ -619,12 +632,6 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_accept"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_add_expected_rpk"
       },
       {
@@ -632,12 +639,6 @@
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_bytes_to_cipher_list"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_connect"
       },
       {
         "declaring_header": "ssl.h",
@@ -670,18 +671,6 @@
         "symbol": "SSL_dup"
       },
       {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_export_keying_material"
-      },
-      {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_export_keying_material_early"
-      },
-      {
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
@@ -709,61 +698,7 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_key_update"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_new_session_ticket"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_read_early_data"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_renegotiate"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_renegotiate_abbreviated"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_sendfile"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_set_SSL_CTX"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_stateless"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_verify_client_post_handshake"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_write_early_data"
       }
     ],
     "owned_by_header": {
@@ -836,7 +771,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "6c119557d3f902c7758a311b19364d3f2b56209f22093bac1b18bec433a3afb7"
+      "sha256": "3e1a1a79fd44c64a798e7398368b38f799fb351aa3914aaae07d19338808614a"
     }
   ],
   "kind": "phase14-obligations",

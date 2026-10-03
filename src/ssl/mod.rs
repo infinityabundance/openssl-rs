@@ -1,6 +1,6 @@
 //! Phase 14.1–14.10 — `ssl/`: the `libssl` object model, method tables, cipher/configuration
-//! surface, record layer, handshake-state readers, the BIO pair, the DTLS layer and the init/error/
-//! QUIC bridge.
+//! surface, record layer, handshake-state readers, the BIO pair, the DTLS layer, the init/error/
+//! QUIC bridge and the handshake/record-layer engine.
 //!
 //! `docs/PHASE-14-SUBPHASES.md` section 2 gives 14.1 the `ssl_lib.c` unit (342 open rows) and 14.2
 //! `methods.c` (21) plus `s3_lib.c` (3). The crate lays the authority's `ssl/` tree out as
@@ -318,6 +318,68 @@
 //! Its court is `RT-STATEM` (`courts/phase14/rt_statem_probe.c`), registered in
 //! `forensics/tools/phase14_courts.py`.
 //!
+//! ## 14.5b: the handshake and record-layer engine (a measured correction to the plan)
+//!
+//! The plan's table did not anticipate this slice, as Phase 12's did not anticipate 12.4b/12.5b.
+//! It is required because **thirteen `ssl_lib.c` entry points stayed open after 14.9** with a single
+//! recorded blocker: the state machine and record layer had landed their *readers and framing
+//! surfaces* (14.4/14.5), not a runnable engine, so calling one would start a handshake no arm
+//! could complete. 14.5b is that engine slice, and it is recorded in `docs/PHASE-14-SUBPHASES.md`
+//! section 2 with its dependency (14.5) and its courts (`RT-STATEM`, `RT-SSL-OBJECT`).
+//!
+//! **Landed, and checked against the ledger: the thirteen handshake entry points.** `SSL_accept`,
+//! `SSL_connect`, `SSL_key_update`, `SSL_renegotiate`, `SSL_renegotiate_abbreviated`,
+//! `SSL_new_session_ticket`, `SSL_read_early_data`, `SSL_write_early_data`,
+//! `SSL_export_keying_material`, `SSL_export_keying_material_early`, `SSL_sendfile`, `SSL_stateless`
+//! and `SSL_verify_client_post_handshake` moved from the ledger's `open` set to its `implemented`
+//! set; the stratum's open count falls from 29 to 16.
+//!
+//! **The state-machine core (`src/ssl/statem/statem.rs`).** The `ossl_statem_*` control surface —
+//! `get_state`, `clear`, `set_renegotiate`, `send_fatal`, `fatal`, `in_error`, `set_in_init`,
+//! `get`/`set_in_handshake`, `skip_early_data`, `check_finish_init`, `set_hello_verify_done`,
+//! `connect`, `accept`, `statem_flush` and the `app_data_allowed`/`export_allowed`/
+//! `export_early_allowed` predicates — is transcribed, together with a reduced `state_machine`. The
+//! public `SSL_set_accept_state`/`SSL_set_connect_state` now run `ossl_statem_clear` and install the
+//! engine's own `ossl_statem_accept`/`connect` as `handshake_func`, replacing 14.6's stand-in stub,
+//! and `ssl_read_internal`/`ssl_write_internal` now run `ossl_statem_check_finish_init` as the
+//! authority does. **The record-layer helpers** `RECORD_LAYER_write_pending` (`wpend_tot`),
+//! `RECORD_LAYER_read_pending`, `ssl3_renegotiate` and `ssl3_renegotiate_check` land in
+//! `src/ssl/record/rec_layer_s3.rs` and `src/ssl/s3_lib.rs`. `SSL_get_error` now returns the
+//! `WANT_READ`/`WANT_WRITE` arms from `rwstate` rather than answering `SYSCALL` for both.
+//!
+//! **Measured divergences, recorded rather than hidden.**
+//!
+//! * **The message layer is unlanded, so no flight is built or parsed.** `tls_setup_handshake` and
+//!   the `tls_process_*`/`tls_construct_*` handlers (`statem_lib.c`, `statem_clnt.c`,
+//!   `statem_srvr.c`, `statem_dtls.c`), the extension units (`extensions.c`, `extensions_clnt.c`,
+//!   `extensions_srvr.c`), the TLS exporter/key schedule (`t1_enc.c`, `tls13_enc.c`) and the record
+//!   layer's `ssl3_read_bytes`/`ssl3_write_bytes` protection path are what would build and parse the
+//!   messages. None is landed, so the reduced `state_machine` runs the authority's driver only up to
+//!   that boundary: it performs the `MSG_FLOW_ERROR` refusal, the `in_handshake` counter, the
+//!   fresh-connection `SSL_clear`, the error-queue clear, the role assignment and the TLS version-
+//!   family gate, then leaves the connection in the exact state the authority's first read reaches
+//!   for an empty peer BIO — a client at `TLS_ST_CW_CLNT_HELLO`, a server at `TLS_ST_BEFORE`, both at
+//!   `MSG_FLOW_READING` with `rwstate = SSL_READING` — and returns the authority's `-1`. The peer BIO
+//!   therefore receives no ClientHello where the authority's would; no court reads a flight's bytes.
+//! * **The DTLS family gate and `DTLSv1_listen`'s handshake path are unreachable.** Every object the
+//!   entry-point courts build is a TLS method; the reduced gate reproduces the TLS arm only.
+//! * **`ossl_statem_send_fatal` sends no alert.** The authority calls `ssl3_send_alert` when a
+//!   record-write method is installed; this crate models none, so only the `MSG_FLOW_ERROR`
+//!   transition is performed.
+//! * **The exporter tails are reduced.** `SSL_export_keying_material`'s
+//!   `ssl3_enc->export_keying_material` call and the key-schedule tail of
+//!   `tls13_export_keying_material_early` past `ossl_statem_export_early_allowed` are unlanded; the
+//!   no-session arm (`-1`) and the pre-handshake early-exporter arm (`0`, from the landed predicate)
+//!   are the authority's.
+//! * **`BIO_get_ktls_send` is not modelled, so `SSL_sendfile` always reaches the uninitialised
+//!   guard.** Every BIO this crate builds answers 0, so the authority's answer is `-1` there too.
+//! * **`RECORD_LAYER_read_pending` answers 0.** The authority reaches the read method's
+//!   `unprocessed_read_pending`; no record-read method is modelled and a fresh connection has no
+//!   read-ahead data, so the answer agrees for every state a court drives.
+//! * **The `SSL_get_error` BIO-flag refinements are omitted.** The authority refines the want arms
+//!   through `BIO_should_read`/`_write`/`_io_special`; the crate answers the want code directly from
+//!   `rwstate`, which is the value those flags produce for the memory-BIO arms the courts drive.
+//!
 //! ## 14.6: the BIO pair and buffers
 //!
 //! 14.6 lands the whole of `ssl/bio_ssl.c` as `src/ssl/bio_ssl.rs`: the `"ssl"` `BIO_METHOD` and
@@ -480,20 +542,22 @@
 //! does.
 //!
 //! The rows that stay open are blocked by internals this stratum has not landed, not by a later
-//! phase: the thirteen handshake entry points (`SSL_accept`, `SSL_connect`, `SSL_key_update`,
-//! `SSL_renegotiate`/`_abbreviated`, `SSL_new_session_ticket`, `SSL_read_early_data`,
-//! `SSL_write_early_data`, `SSL_export_keying_material`/`_early`, `SSL_sendfile`, `SSL_stateless`,
-//! `SSL_verify_client_post_handshake`) need the state machine and record layer's *engine* —
-//! `ssl/statem/statem.c` and `rec_layer_s3.c` landed their readers and framing surfaces, not a
-//! runnable handshake — so calling one would start a handshake no arm can complete;
-//! `SSL_bytes_to_cipher_list` and `SSL_get1_supported_ciphers` need `ssl_set_client_disabled`/
-//! `SSL_cipher_disabled` (`t1_lib.c:2848`/`:2882`), whose `s3.tmp.mask_a`/`mask_k`/`min_ver`/
-//! `max_ver` block this crate does not model (14.5's unit); `SSL_dup` and `SSL_set_SSL_CTX` need
-//! `ssl_cert_dup` plus `custom_exts_copy_conn`/`custom_exts_copy_flags` (14.7's `ssl_cert.c`); and
-//! the twelve DANE/RPK rows (`SSL_[CTX_]dane_*`, `SSL_get0_dane*`, `SSL_add_expected_rpk`) need
+//! phase: `SSL_bytes_to_cipher_list` and `SSL_get1_supported_ciphers` need
+//! `ssl_set_client_disabled`/`SSL_cipher_disabled` (`t1_lib.c:2848`/`:2882`), whose
+//! `s3.tmp.mask_a`/`mask_k`/`min_ver`/`max_ver` block this crate does not model (14.5's unit);
+//! `SSL_dup` and `SSL_set_SSL_CTX` need `ssl_cert_dup` plus `custom_exts_copy_conn`/
+//! `custom_exts_copy_flags` (14.7's `ssl_cert.c`); and the twelve DANE/RPK rows
+//! (`SSL_[CTX_]dane_*`, `SSL_get0_dane*`, `SSL_add_expected_rpk`) need
 //! `SSL_set_tlsext_host_name`'s `SSL_ctrl` command (`SSL_CTRL_SET_TLSEXT_HOSTNAME`, unlanded) and the
 //! certificate/public-key decode-and-insert path of `ssl_lib.c:264-443`. Each waits on its named
 //! helper rather than an invented body.
+//!
+//! **The thirteen handshake entry points closed in 14.5b** (see that section above): once the state
+//! machine's control surface and fresh-connection driver landed, `SSL_accept`, `SSL_connect`,
+//! `SSL_key_update`, `SSL_renegotiate`/`_abbreviated`, `SSL_new_session_ticket`,
+//! `SSL_read_early_data`, `SSL_write_early_data`, `SSL_export_keying_material`/`_early`,
+//! `SSL_sendfile`, `SSL_stateless` and `SSL_verify_client_post_handshake` are the authority's own
+//! guards over it. The 16 rows above are what remains open.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 

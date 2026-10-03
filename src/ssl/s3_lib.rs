@@ -37,7 +37,9 @@ use core::ffi::{c_char, c_int};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
+use crate::ssl::record::rec_layer_s3::{record_layer_read_pending, record_layer_write_pending};
 use crate::ssl::ssl_lib::{Ssl, SslCtx, TicketKeyEvpCb};
+use crate::ssl::statem::statem::{ossl_statem_set_renegotiate, SSL_in_init};
 
 /// `TLSEXT_nid_unknown` — `ssl_local.h`: the flag bit `SSL_group_to_name` strips before the lookup.
 const TLSEXT_NID_UNKNOWN: c_int = 0x0100_0000;
@@ -112,4 +114,56 @@ pub unsafe extern "C" fn SSL_group_to_name(s: *mut Ssl, nid: c_int) -> *const c_
         // SAFETY: `s` is non-NULL and live per the caller's contract.
         unsafe { tls1_group_id2name((*s).ctx, group_id) }
     })
+}
+
+// -------------------------------------------------------------------------------------------
+// The renegotiation method entries (14.5b)
+//
+// `s3_lib.c` owns `ssl3_renegotiate` and `ssl3_renegotiate_check`; the `IMPLEMENT_tls_meth_func`
+// macro installs them as the TLS method's `ssl_renegotiate`/`ssl_renegotiate_check`, and
+// `ssl_lib.c`'s `SSL_renegotiate*`/`SSL_do_handshake` reach them through that pointer. This crate's
+// method table stores scalars, so the entry points call these directly.
+// -------------------------------------------------------------------------------------------
+
+/// `int ssl3_renegotiate(SSL *s)` — `ssl/s3_lib.c:5161-5173`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+pub(crate) unsafe fn ssl3_renegotiate(s: *mut Ssl) -> c_int {
+    if s.is_null() {
+        return 0;
+    }
+    // SAFETY: `s` is non-NULL and live per the caller's contract.
+    unsafe {
+        if (*s).handshake_func.is_none() {
+            return 1;
+        }
+        (*s).s3_renegotiate = 1;
+    }
+    1
+}
+
+/// `int ssl3_renegotiate_check(SSL *s, int initok)` — `ssl/s3_lib.c:5183-5208`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+pub(crate) unsafe fn ssl3_renegotiate_check(s: *mut Ssl, initok: c_int) -> c_int {
+    if s.is_null() {
+        return 0;
+    }
+    // SAFETY: `s` is non-NULL and live per the caller's contract.
+    unsafe {
+        if (*s).s3_renegotiate != 0
+            && record_layer_read_pending(s) == 0
+            && record_layer_write_pending(s) == 0
+            && (initok != 0 || SSL_in_init(s) == 0)
+        {
+            ossl_statem_set_renegotiate(s);
+            (*s).s3_renegotiate = 0;
+            (*s).s3_num_renegotiations += 1;
+            (*s).s3_total_renegotiations += 1;
+            return 1;
+        }
+    }
+    0
 }

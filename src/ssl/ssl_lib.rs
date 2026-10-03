@@ -53,6 +53,11 @@ use crate::ssl::ssl_sess::{
     ssl_ctx_session_cache_free, SSL_SESSION_free, SSL_get_session, SSL_set_session,
 };
 use crate::ssl::statem::extensions_cust::CustomExtMethod;
+use crate::ssl::statem::statem::{
+    ossl_statem_accept, ossl_statem_check_finish_init, ossl_statem_clear, ossl_statem_connect,
+    ossl_statem_in_error, ossl_statem_set_in_init, SSL_in_before, SSL_in_init,
+    SSL_is_init_finished,
+};
 use crate::x509::by_dir::X509_LOOKUP_hash_dir;
 use crate::x509::by_file::X509_LOOKUP_file;
 use crate::x509::by_store::X509_LOOKUP_store;
@@ -113,6 +118,80 @@ const SSL_R_INVALID_CT_VALIDATION_TYPE: c_int = 212;
 const SSL_R_NO_VALID_SCTS: c_int = 216;
 /// `SSL_R_UNSUPPORTED_PROTOCOL` — `sslerr.h:258`.
 const SSL_R_UNSUPPORTED_PROTOCOL: c_int = 258;
+/// `SSL_R_WRONG_SSL_VERSION` — `sslerr.h:266`.
+const SSL_R_WRONG_SSL_VERSION: c_int = 266;
+/// `SSL_R_INVALID_KEY_UPDATE_TYPE` — `sslerr.h:120`.
+const SSL_R_INVALID_KEY_UPDATE_TYPE: c_int = 120;
+/// `SSL_R_STILL_IN_INIT` — `sslerr.h:121`.
+const SSL_R_STILL_IN_INIT: c_int = 121;
+/// `SSL_R_BAD_WRITE_RETRY` — `sslerr.h:127`.
+const SSL_R_BAD_WRITE_RETRY: c_int = 127;
+/// `SSL_R_NO_RENEGOTIATION` — `sslerr.h:339`.
+const SSL_R_NO_RENEGOTIATION: c_int = 339;
+/// `SSL_R_NOT_SERVER` — `sslerr.h:284`.
+const SSL_R_NOT_SERVER: c_int = 284;
+/// `SSL_R_EXTENSION_NOT_RECEIVED` — `sslerr.h:279`.
+const SSL_R_EXTENSION_NOT_RECEIVED: c_int = 279;
+/// `SSL_R_REQUEST_PENDING` — `sslerr.h:285`.
+const SSL_R_REQUEST_PENDING: c_int = 285;
+/// `SSL_R_REQUEST_SENT` — `sslerr.h:286`.
+const SSL_R_REQUEST_SENT: c_int = 286;
+/// `SSL_R_PROTOCOL_IS_SHUTDOWN` — `sslerr.h:207`.
+const SSL_R_PROTOCOL_IS_SHUTDOWN: c_int = 207;
+/// `SSL_R_UNSUPPORTED_WRITE_FLAG` — `sslerr.h:412`.
+const SSL_R_UNSUPPORTED_WRITE_FLAG: c_int = 412;
+/// `SSL_R_INVALID_CONFIG` — `sslerr.h:283`.
+const SSL_R_INVALID_CONFIG: c_int = 283;
+/// `SSL_KEY_UPDATE_NOT_REQUESTED` — `ssl.h:1003`.
+const SSL_KEY_UPDATE_NOT_REQUESTED: c_int = 0;
+/// `SSL_KEY_UPDATE_REQUESTED` — `ssl.h:1004`.
+const SSL_KEY_UPDATE_REQUESTED: c_int = 1;
+/// `SSL_OP_NO_RENEGOTIATION` — `ssl.h:413` (`SSL_OP_BIT(30)`).
+const SSL_OP_NO_RENEGOTIATION: u64 = 1 << 30;
+/// `TLS1_VERSION` — `tls1.h:199`.
+const TLS1_VERSION: c_int = 0x0301;
+/// `DTLS1_BAD_VER` — `ssl3.h:231`.
+const DTLS1_BAD_VER: c_int = 0x0100;
+/// `SSL_SENT_SHUTDOWN` — `ssl.h:216`.
+const SSL_SENT_SHUTDOWN: c_int = 1;
+/// `SSL_RECEIVED_SHUTDOWN` — `ssl.h:217`.
+const SSL_RECEIVED_SHUTDOWN: c_int = 2;
+/// `SSL_EARLY_DATA_CONNECT_RETRY` — `ssl_local.h:592`.
+const SSL_EARLY_DATA_CONNECT_RETRY: c_int = 1;
+/// `SSL_EARLY_DATA_ACCEPT_RETRY` — `ssl_local.h:599`.
+const SSL_EARLY_DATA_ACCEPT_RETRY: c_int = 8;
+/// `SSL_EARLY_DATA_WRITE_RETRY` — `ssl_local.h:594`.
+const SSL_EARLY_DATA_WRITE_RETRY: c_int = 3;
+/// `SSL_EARLY_DATA_FINISHED_READING` — `ssl_local.h:603`.
+const SSL_EARLY_DATA_FINISHED_READING: c_int = 12;
+/// `SSL_EARLY_DATA_READ_RETRY` — `ssl_local.h:601`.
+const SSL_EARLY_DATA_READ_RETRY: c_int = 10;
+/// `SSL_EARLY_DATA_NONE` — `ssl_local.h:591`.
+const SSL_EARLY_DATA_NONE: c_int = 0;
+/// `SSL_EARLY_DATA_CONNECTING` — `ssl_local.h:593`.
+const SSL_EARLY_DATA_CONNECTING: c_int = 2;
+/// `SSL_EARLY_DATA_ACCEPTING` — `ssl_local.h:600`.
+const SSL_EARLY_DATA_ACCEPTING: c_int = 9;
+/// `SSL_EARLY_DATA_READING` — `ssl_local.h:602`.
+const SSL_EARLY_DATA_READING: c_int = 11;
+/// `SSL_EARLY_DATA_ACCEPTED` — `ssl.h:1990`.
+const SSL_EARLY_DATA_ACCEPTED: c_int = 2;
+/// `SSL_READ_EARLY_DATA_ERROR` — `ssl.h:1963`.
+const SSL_READ_EARLY_DATA_ERROR: c_int = 0;
+/// `SSL_READ_EARLY_DATA_FINISH` — `ssl.h:1965`.
+const SSL_READ_EARLY_DATA_FINISH: c_int = 2;
+/// `SSL_PHA_NONE` — `ssl_local.h:371`.
+const SSL_PHA_NONE: c_int = 0;
+/// `SSL_PHA_REQUEST_PENDING` — `ssl_local.h:374`.
+const SSL_PHA_REQUEST_PENDING: c_int = 3;
+/// `SSL_PHA_REQUESTED` — `ssl_local.h:375`.
+const SSL_PHA_REQUESTED: c_int = 4;
+/// `TLS1_FLAGS_STATELESS` — `tls1.h:263`.
+const TLS1_FLAGS_STATELESS: u64 = 0x0002_0000;
+/// `SSL_HRR_PENDING` — `ssl_local.h:1535`.
+const SSL_HRR_PENDING: c_int = 1;
+/// `ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED` — `err.h.in:355` (`257 | ERR_R_FATAL`, `ERR_R_FATAL = 3 << 18`).
+const ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED: c_int = 257 | (3 << 18);
 /// `ERR_R_UNSUPPORTED` — `err.h.in:366` (`268 | ERR_RFLAG_COMMON`, `ERR_RFLAG_COMMON = 2 << 18`).
 const ERR_R_UNSUPPORTED: c_int = 268 | (2 << 18);
 /// `ERR_R_PASSED_INVALID_ARGUMENT` — `err.h.in:360` (`262 | ERR_RFLAG_COMMON`).
@@ -294,6 +373,10 @@ const SSL_WRITING: c_int = 2;
 const SSL_ERROR_NONE: c_int = 0;
 /// `SSL_ERROR_SSL` — `ssl.h:1259`.
 const SSL_ERROR_SSL: c_int = 1;
+/// `SSL_ERROR_WANT_READ` — `ssl.h:1260`.
+const SSL_ERROR_WANT_READ: c_int = 2;
+/// `SSL_ERROR_WANT_WRITE` — `ssl.h:1261`.
+const SSL_ERROR_WANT_WRITE: c_int = 3;
 /// `SSL_ERROR_SYSCALL` — `ssl.h:1263`.
 const SSL_ERROR_SYSCALL: c_int = 5;
 
@@ -932,6 +1015,38 @@ pub struct Ssl {
     pub statem_state: c_int,
     /// `int statem.in_init` — the flag `SSL_in_init`/`SSL_is_init_finished` read.
     pub in_init: c_int,
+    /// `OSSL_HANDSHAKE_STATE statem.request_state` — set by `ossl_statem_set_renegotiate` (14.5b).
+    pub statem_request_state: c_int,
+    /// `int statem.no_cert_verify` — cleared by `ossl_statem_clear` (14.5b).
+    pub statem_no_cert_verify: c_int,
+    /// `int statem.in_handshake` — the re-entry counter the state machine bumps (14.5b).
+    pub statem_in_handshake: c_int,
+    /// `uint32_t s3.flags` — the record/`TLS1_FLAGS_*` word (`SSL_stateless` sets `TLS1_FLAGS_STATELESS`).
+    pub s3_flags: u64,
+    /// `int s3.in_read_app_data` — the record layer's application-data re-entry flag (14.5b).
+    pub s3_in_read_app_data: c_int,
+    /// `uint32_t s3.previous_server_finished_len` — 0 before a handshake (`ossl_statem_export_allowed`).
+    pub s3_previous_server_finished_len: c_int,
+    /// `int s3.renegotiate` — the renegotiation request `ssl3_renegotiate[_check]` drive (14.5b).
+    pub s3_renegotiate: c_int,
+    /// `int s3.total_renegotiations` (`ossl_statem_app_data_allowed`).
+    pub s3_total_renegotiations: c_int,
+    /// `int s3.num_renegotiations` (`ssl3_renegotiate_check`).
+    pub s3_num_renegotiations: c_int,
+    /// `uint32_t s3.tmp.finish_md_len` — 0 before a handshake (`SSL_IS_FIRST_HANDSHAKE`, 14.5b).
+    pub s3_tmp_finish_md_len: c_int,
+    /// `uint32_t s3.tmp.peer_finish_md_len` — 0 before a handshake (`SSL_IS_FIRST_HANDSHAKE`, 14.5b).
+    pub s3_tmp_peer_finish_md_len: c_int,
+    /// `size_t rlayer.wpend_tot` — the pending-write counter (`RECORD_LAYER_write_pending`, 14.5b).
+    pub wpend_tot: usize,
+    /// `int ext.extra_tickets_expected` — `SSL_new_session_ticket`'s counter (14.5b).
+    pub extra_tickets_expected: c_int,
+    /// `int hello_retry_request` — `SSL_HRR_NONE`/`_PENDING`/`_COMPLETE` (14.5b).
+    pub hello_retry_request: c_int,
+    /// `int ext.cookieok` — the stateless cookie result (`SSL_stateless`, 14.5b).
+    pub cookieok: c_int,
+    /// `int post_handshake_auth` — the connection's `SSL_PHA_*` state (14.5b).
+    pub post_handshake_auth: c_int,
     /// `uint16_t *s3.tmp.peer_sigalgs` — the peer's signature-algorithm list (always NULL here).
     pub peer_sigalgs: *mut u16,
     /// `size_t s3.tmp.peer_sigalgslen`.
@@ -1364,6 +1479,20 @@ unsafe fn raise_ssl(reason: c_int, line: c_int) {
     // SAFETY: `FILE` is a static NUL-terminated string and `reason` is one of this file's
     // constants; `raise_with` writes the thread-local error queue only.
     unsafe { raise_with(ERR_LIB_SSL, reason, FILE, line) };
+}
+
+/// The state machine's `ERR_raise(ERR_LIB_SSL, reason)` at a `statem*.c` coordinate.
+///
+/// The authority's `ossl_statem_fatal`/`ossl_statem_send_fatal` live in `ssl/statem/statem.c` and
+/// raise through the same `ERR_LIB_SSL` queue; this crate keeps one raise helper so every libssl
+/// coordinate lands in one place.
+///
+/// # Safety
+/// Nothing beyond the FFI contract: the error state is thread-local.
+pub(crate) unsafe fn raise_statem(reason: c_int, file: *const core::ffi::c_char, line: c_int) {
+    // SAFETY: `file` is a static NUL-terminated string supplied by the caller and `reason` is a
+    // `statem*.c` reason constant; `raise_with` writes the thread-local error queue only.
+    unsafe { raise_with(ERR_LIB_SSL, reason, file, line) };
 }
 
 /// `CRYPTO_UP_REF(&refs, &i)` — the relaxed fetch-add the authority's header defines.
@@ -1822,7 +1951,7 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
 /// word, resets the message-flow state (`ossl_statem_clear`) and the record read state
 /// (`RECORD_LAYER_reset`), and sets the handshake entry. The authority's `handshake_func` is
 /// `method->ssl_accept`; this crate's method table carries no such pointer (14.2 stores scalars), so
-/// a stub stands in — no arm of any landing court drives a handshake.
+/// the engine's own `ossl_statem_accept` stands in (14.5b).
 ///
 /// # Safety
 /// `s` must be NULL or a live connection.
@@ -1834,10 +1963,8 @@ pub(crate) unsafe fn ssl_set_accept_state(s: *mut Ssl) {
     unsafe {
         (*s).server = 1;
         (*s).shutdown = 0;
-        (*s).hand_state = TLS_ST_BEFORE;
-        (*s).statem_state = MSG_FLOW_UNINITED;
-        (*s).in_init = 1;
-        (*s).handshake_func = Some(ssl_handshake_stub);
+        ossl_statem_clear(s);
+        (*s).handshake_func = Some(ossl_statem_accept);
         (*s).rstate = SSL_ST_READ_HEADER;
     }
 }
@@ -1855,18 +1982,10 @@ pub(crate) unsafe fn ssl_set_connect_state(s: *mut Ssl) {
     unsafe {
         (*s).server = 0;
         (*s).shutdown = 0;
-        (*s).hand_state = TLS_ST_BEFORE;
-        (*s).statem_state = MSG_FLOW_UNINITED;
-        (*s).in_init = 1;
-        (*s).handshake_func = Some(ssl_handshake_stub);
+        ossl_statem_clear(s);
+        (*s).handshake_func = Some(ossl_statem_connect);
         (*s).rstate = SSL_ST_READ_HEADER;
     }
-}
-
-/// The handshake entry [`ssl_set_accept_state`] installs; the authority's is the method's own
-/// `ssl_accept`/`ssl_connect`. Only its presence is observable in this stratum.
-unsafe extern "C" fn ssl_handshake_stub(_s: *mut Ssl) -> c_int {
-    0
 }
 
 /// `SSL_copy_session_id` — the reduced body of `int SSL_copy_session_id(SSL *t, const SSL *f)`
@@ -3637,9 +3756,12 @@ pub unsafe extern "C" fn SSL_want(s: *const Ssl) -> c_int {
 /// `int SSL_get_error(const SSL *s, int i)` — `ssl/ssl_lib.c:4826-4829`, via
 /// `ossl_ssl_get_error` (`:4831-4933`).
 ///
-/// The BIO-flag arms (`BIO_should_read`/`_write`/`_io_special`) belong to the record layer and the
-/// BIO pair (14.4/14.6) and are not reproduced; with no record layer installed they answer the
-/// authority's final `SSL_ERROR_SYSCALL` anyway.
+/// The order is the authority's: `i > 0` answers `SSL_ERROR_NONE`, then a non-empty error queue
+/// answers `SSL_ERROR_SSL`/`SSL_ERROR_SYSCALL`, then the `rwstate` want words answer the
+/// `WANT_READ`/`WANT_WRITE` arms. The BIO-flag refinements (`BIO_should_read`/`_write`/`_io_special`)
+/// belong to the record layer and the BIO pair and are not reproduced; the crate's state machine
+/// sets `rwstate` and leaves the want code the authority's retry flags would also produce, so the
+/// want arms answer the authority's values (recorded in `src/ssl/mod.rs`).
 ///
 /// # Safety
 /// `s` must be NULL or a live connection.
@@ -3657,11 +3779,11 @@ pub unsafe extern "C" fn SSL_get_error(s: *const Ssl, i: c_int) -> c_int {
             return SSL_ERROR_SSL;
         }
         // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
-        let want = unsafe { (*s).rwstate };
-        if want != SSL_READING && want != SSL_WRITING {
-            return SSL_ERROR_SYSCALL;
+        match unsafe { (*s).rwstate } {
+            SSL_READING => SSL_ERROR_WANT_READ,
+            SSL_WRITING => SSL_ERROR_WANT_WRITE,
+            _ => SSL_ERROR_SYSCALL,
         }
-        SSL_ERROR_SYSCALL
     })
 }
 
@@ -4673,7 +4795,11 @@ pub unsafe extern "C" fn SSL_set_rfd(s: *mut Ssl, fd: c_int) -> c_int {
 // The error/read/write/handshake entry guards
 // -------------------------------------------------------------------------------------------
 
-/// `ssl_read_internal` — `ssl/ssl_lib.c:2312-2362`, reduced to the uninitialised guard.
+/// `ssl_read_internal` — `ssl/ssl_lib.c:2312-2362`, reduced at the record layer's read.
+///
+/// The uninitialised, received-shutdown, early-data-retry and `ossl_statem_check_finish_init`
+/// guards are the authority's (14.5b lands the state machine those last two consult); the
+/// record-layer read the tail would call (`ssl3_read`) is unlanded, so it answers -1 there.
 ///
 /// # Safety
 /// `s` must be NULL or a live connection; `buf` must hold `num` writable bytes and `readbytes` be
@@ -4692,6 +4818,22 @@ pub(crate) unsafe fn ssl_read_internal(
         // SAFETY: a constant site.
         unsafe { raise_ssl(SSL_R_UNINITIALIZED, 2325) };
         return -1;
+    }
+    // SAFETY: `s` is live.
+    unsafe {
+        if (*s).shutdown & SSL_RECEIVED_SHUTDOWN != 0 {
+            (*s).rwstate = SSL_NOTHING;
+            return 0;
+        }
+        if (*s).early_data_state == SSL_EARLY_DATA_CONNECT_RETRY
+            || (*s).early_data_state == SSL_EARLY_DATA_ACCEPT_RETRY
+        {
+            raise_ssl(ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED, 2336);
+            return 0;
+        }
+        if ossl_statem_check_finish_init(s, 0) == 0 {
+            return -1;
+        }
     }
     -1
 }
@@ -4718,7 +4860,12 @@ unsafe fn ssl_peek_internal(
     -1
 }
 
-/// `ssl_write_internal` — `ssl/ssl_lib.c:2530-2585`, reduced to the uninitialised guard.
+/// `ssl_write_internal` — `ssl/ssl_lib.c:2530-2585`, reduced at the record layer's write.
+///
+/// The uninitialised, sent-shutdown, write-flag, early-data-retry and
+/// `ossl_statem_check_finish_init` guards are the authority's (14.5b lands the state machine the
+/// last consults); the record-layer write the tail would call (`ssl3_write`) is unlanded, so it
+/// answers -1 there.
 ///
 /// # Safety
 /// `s` must be NULL or a live connection; `buf` must hold `num` readable bytes and `written` be
@@ -4727,7 +4874,7 @@ pub(crate) unsafe fn ssl_write_internal(
     s: *mut Ssl,
     _buf: *const c_void,
     _num: usize,
-    _flags: u64,
+    flags: u64,
     _written: *mut usize,
 ) -> c_int {
     if s.is_null() {
@@ -4738,6 +4885,28 @@ pub(crate) unsafe fn ssl_write_internal(
         // SAFETY: a constant site.
         unsafe { raise_ssl(SSL_R_UNINITIALIZED, 2544) };
         return -1;
+    }
+    // SAFETY: `s` is live; every read below is from it.
+    unsafe {
+        if (*s).shutdown & SSL_SENT_SHUTDOWN != 0 {
+            (*s).rwstate = SSL_NOTHING;
+            raise_ssl(SSL_R_PROTOCOL_IS_SHUTDOWN, 2550);
+            return -1;
+        }
+        if flags != 0 {
+            raise_ssl(SSL_R_UNSUPPORTED_WRITE_FLAG, 2555);
+            return -1;
+        }
+        if (*s).early_data_state == SSL_EARLY_DATA_CONNECT_RETRY
+            || (*s).early_data_state == SSL_EARLY_DATA_ACCEPT_RETRY
+            || (*s).early_data_state == SSL_EARLY_DATA_READ_RETRY
+        {
+            raise_ssl(ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED, 2562);
+            return 0;
+        }
+        if ossl_statem_check_finish_init(s, 1) == 0 {
+            return -1;
+        }
     }
     -1
 }
@@ -4894,7 +5063,13 @@ pub unsafe extern "C" fn SSL_write_ex2(
     })
 }
 
-/// `int SSL_do_handshake(SSL *s)` — `ssl/ssl_lib.c:4947-4984`, reduced to the type guard.
+/// `int SSL_do_handshake(SSL *s)` — `ssl/ssl_lib.c:4947-4984`.
+///
+/// The authority's body drives `ossl_statem_check_finish_init`, the method's
+/// `ssl_renegotiate_check` (transcribed in `src/ssl/s3_lib.rs`) and the connection's
+/// `handshake_func` — the state machine 14.5b installs. The message layer the state machine would
+/// reach is unlanded, so a fresh connection returns the state machine's `-1`; the guards and the
+/// state it leaves are the authority's (see `src/ssl/statem/statem.rs`).
 ///
 /// # Safety
 /// `s` must point to a live connection.
@@ -4911,7 +5086,195 @@ pub unsafe extern "C" fn SSL_do_handshake(s: *mut Ssl) -> c_int {
             unsafe { raise_ssl(SSL_R_CONNECTION_TYPE_NOT_SET, 4961) };
             return -1;
         }
-        1
+        // SAFETY: `s` is live; `check_finish_init` and the renegotiation check read/write its
+        // state words, and `handshake_func` is the engine entry this crate installed.
+        unsafe {
+            if ossl_statem_check_finish_init(s, -1) == 0 {
+                return -1;
+            }
+            crate::ssl::s3_lib::ssl3_renegotiate_check(s, 0);
+            let mut ret = 1;
+            if SSL_in_init(s) != 0 || SSL_in_before(s) != 0 {
+                if let Some(func) = (*s).handshake_func {
+                    ret = func(s);
+                }
+            }
+            ret
+        }
+    })
+}
+
+/// `int SSL_accept(SSL *s)` — `ssl/ssl_lib.c:2188-2206`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_accept(s: *mut Ssl) -> c_int {
+    guard_ffi(-1, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; the setter installs the server role and the engine entry.
+        unsafe {
+            if (*s).handshake_func.is_none() {
+                ssl_set_accept_state(s);
+            }
+        }
+        // SAFETY: per the caller's contract.
+        unsafe { SSL_do_handshake(s) }
+    })
+}
+
+/// `int SSL_connect(SSL *s)` — `ssl/ssl_lib.c:2208-2226`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_connect(s: *mut Ssl) -> c_int {
+    guard_ffi(-1, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; the setter installs the client role and the engine entry.
+        unsafe {
+            if (*s).handshake_func.is_none() {
+                ssl_set_connect_state(s);
+            }
+        }
+        // SAFETY: per the caller's contract.
+        unsafe { SSL_do_handshake(s) }
+    })
+}
+
+/// `int SSL_read_early_data(SSL *s, void *buf, size_t num, size_t *readbytes)` —
+/// `ssl/ssl_lib.c:2395-2448`.
+///
+/// The client refusal (`sc == NULL || !sc->server`) is the authority's; the server arm enters the
+/// engine, whose driver returns the authority's `-1` for an empty peer BIO, so the retry/`ERROR`
+/// answer is the authority's too (see `src/ssl/statem/statem.rs`). The `SSL_read_ex` tail of the
+/// accepted-early-data arm is unreachable without the message layer.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `buf` must hold `num` writable bytes and `readbytes` be
+/// writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_read_early_data(
+    s: *mut Ssl,
+    buf: *mut c_void,
+    num: usize,
+    readbytes: *mut usize,
+) -> c_int {
+    guard_ffi(SSL_READ_EARLY_DATA_ERROR, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() || unsafe { (*s).server } == 0 {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED, 2402) };
+            return SSL_READ_EARLY_DATA_ERROR;
+        }
+        // SAFETY: `s` is live; every read/write below is to it.
+        unsafe {
+            match (*s).early_data_state {
+                SSL_EARLY_DATA_NONE => {
+                    if SSL_in_before(s) == 0 {
+                        raise_ssl(ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED, 2409);
+                        return SSL_READ_EARLY_DATA_ERROR;
+                    }
+                    (*s).early_data_state = SSL_EARLY_DATA_ACCEPTING;
+                    let ret = SSL_accept(s);
+                    if ret <= 0 {
+                        (*s).early_data_state = SSL_EARLY_DATA_ACCEPT_RETRY;
+                        return SSL_READ_EARLY_DATA_ERROR;
+                    }
+                }
+                SSL_EARLY_DATA_ACCEPT_RETRY => {
+                    (*s).early_data_state = SSL_EARLY_DATA_ACCEPTING;
+                    let ret = SSL_accept(s);
+                    if ret <= 0 {
+                        (*s).early_data_state = SSL_EARLY_DATA_ACCEPT_RETRY;
+                        return SSL_READ_EARLY_DATA_ERROR;
+                    }
+                }
+                _ => {}
+            }
+            // `SSL_EARLY_DATA_READ_RETRY`: the accepted-early-data `SSL_read_ex` tail needs the
+            // message layer, so the not-accepted arm answers the authority's `FINISH`.
+            if (*s).early_data_state == SSL_EARLY_DATA_READ_RETRY
+                && (*s).ext_early_data == SSL_EARLY_DATA_ACCEPTED
+            {
+                let _ = (buf, num, readbytes);
+                (*s).early_data_state = SSL_EARLY_DATA_READING;
+                return SSL_READ_EARLY_DATA_ERROR;
+            }
+            if !readbytes.is_null() {
+                *readbytes = 0;
+            }
+            (*s).early_data_state = SSL_EARLY_DATA_FINISHED_READING;
+            SSL_READ_EARLY_DATA_FINISH
+        }
+    })
+}
+
+/// `int SSL_write_early_data(SSL *s, const void *buf, size_t num, size_t *written)` —
+/// `ssl/ssl_lib.c:2691-2765`.
+///
+/// The `sc == NULL`, server-role, not-`SSL_in_before` and no-early-data-session refusals are the
+/// authority's; the `SSL_connect`/`SSL_write_ex` arms need the message layer and are unreachable
+/// for a fresh connection.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `buf` must hold `num` readable bytes and `written` be
+/// writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_write_early_data(
+    s: *mut Ssl,
+    buf: *const c_void,
+    num: usize,
+    written: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; every read/write below is to it.
+        unsafe {
+            match (*s).early_data_state {
+                SSL_EARLY_DATA_NONE => {
+                    if (*s).server != 0
+                        || SSL_in_before(s) == 0
+                        || (((*s).session.is_null() || (*(*s).session).ext_max_early_data == 0)
+                            && (*s).psk_use_session_cb.is_none())
+                    {
+                        raise_ssl(ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED, 2708);
+                        return 0;
+                    }
+                    (*s).early_data_state = SSL_EARLY_DATA_CONNECTING;
+                    let ret = SSL_connect(s);
+                    if ret <= 0 {
+                        (*s).early_data_state = SSL_EARLY_DATA_CONNECT_RETRY;
+                        return 0;
+                    }
+                }
+                SSL_EARLY_DATA_CONNECT_RETRY => {
+                    (*s).early_data_state = SSL_EARLY_DATA_CONNECTING;
+                    let ret = SSL_connect(s);
+                    if ret <= 0 {
+                        (*s).early_data_state = SSL_EARLY_DATA_CONNECT_RETRY;
+                        return 0;
+                    }
+                }
+                _ => {}
+            }
+            // `SSL_EARLY_DATA_WRITE_RETRY`/`_WRITE_FLUSH`: the `SSL_write_ex` and `statem_flush`
+            // tail needs a running handshake, so the fresh connection never reaches it here.
+            if (*s).early_data_state == SSL_EARLY_DATA_WRITE_RETRY {
+                let _ = (buf, num, written);
+                return 0;
+            }
+            0
+        }
     })
 }
 
@@ -4933,6 +5296,376 @@ pub unsafe extern "C" fn SSL_shutdown(s: *mut Ssl) -> c_int {
             return -1;
         }
         -1
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// The handshake entry points (14.5b)
+// -------------------------------------------------------------------------------------------
+
+/// `SSL_CONNECTION_IS_TLS13(s)` — `ssl_local.h:265-267`.
+///
+/// A method whose version is `TLS_ANY_VERSION` is *not* TLS 1.3 here even though its connection's
+/// `version` is the max; the authority negotiates that at runtime. Every method this crate builds
+/// is any-version, so this is false unless a pinned TLS 1.3 method is added.
+///
+/// # Safety
+/// `s` must point to a live connection.
+unsafe fn connection_is_tls13(s: *const Ssl) -> bool {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
+        if is_dtls(s) || (*s).method.is_null() {
+            return false;
+        }
+        let v = (*(*s).method).version;
+        v >= TLS1_3_VERSION && v != TLS_ANY_VERSION
+    }
+}
+
+/// `SSL_IS_FIRST_HANDSHAKE(s)` — `ssl_local.h:277-278`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+unsafe fn ssl_is_first_handshake(s: *const Ssl) -> bool {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe { (*s).s3_tmp_finish_md_len == 0 || (*s).s3_tmp_peer_finish_md_len == 0 }
+}
+
+/// `int SSL_key_update(SSL *s, int updatetype)` — `ssl/ssl_lib.c:2809-2845`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_key_update(s: *mut Ssl, updatetype: c_int) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is non-NULL and live; `connection_is_tls13` reads its method's version.
+        let is_tls13 = unsafe { connection_is_tls13(s) };
+        if !is_tls13 {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_WRONG_SSL_VERSION, 2822) };
+            return 0;
+        }
+        if updatetype != SSL_KEY_UPDATE_NOT_REQUESTED && updatetype != SSL_KEY_UPDATE_REQUESTED {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_INVALID_KEY_UPDATE_TYPE, 2828) };
+            return 0;
+        }
+        // SAFETY: `s` is live; every read/write below is to it.
+        unsafe {
+            if SSL_is_init_finished(s) == 0 {
+                raise_ssl(SSL_R_STILL_IN_INIT, 2833);
+                return 0;
+            }
+            if crate::ssl::record::rec_layer_s3::record_layer_write_pending(s) != 0 {
+                raise_ssl(SSL_R_BAD_WRITE_RETRY, 2837);
+                return 0;
+            }
+            ossl_statem_set_in_init(s, 1);
+            (*s).key_update = updatetype;
+        }
+        1
+    })
+}
+
+/// `can_renegotiate(const SSL_CONNECTION *sc)` — `ssl/ssl_lib.c:2866-2879`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+unsafe fn can_renegotiate(s: *const Ssl) -> bool {
+    // SAFETY: `s` is live per the caller's contract; `connection_is_tls13` reads its method
+    // version.
+    if unsafe { connection_is_tls13(s) } {
+        // SAFETY: a constant site.
+        unsafe { raise_ssl(SSL_R_WRONG_SSL_VERSION, 2869) };
+        return false;
+    }
+    // SAFETY: `s` is live per the caller's contract.
+    if unsafe { (*s).options } & SSL_OP_NO_RENEGOTIATION != 0 {
+        // SAFETY: a constant site.
+        unsafe { raise_ssl(SSL_R_NO_RENEGOTIATION, 2874) };
+        return false;
+    }
+    true
+}
+
+/// `int SSL_renegotiate(SSL *s)` — `ssl/ssl_lib.c:2881-2894`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_renegotiate(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is non-NULL and live; `can_renegotiate` reads its method version and options.
+        let ok = unsafe { can_renegotiate(s) };
+        if !ok {
+            return 0;
+        }
+        // SAFETY: `s` is live; the flags and the method's `ssl_renegotiate` are the authority's.
+        unsafe {
+            (*s).renegotiate = 1;
+            (*s).new_session = 1;
+            crate::ssl::s3_lib::ssl3_renegotiate(s)
+        }
+    })
+}
+
+/// `int SSL_renegotiate_abbreviated(SSL *s)` — `ssl/ssl_lib.c:2896-2909`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_renegotiate_abbreviated(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is non-NULL and live; `can_renegotiate` reads its method version and options.
+        let ok = unsafe { can_renegotiate(s) };
+        if !ok {
+            return 0;
+        }
+        // SAFETY: `s` is live; the flags and the method's `ssl_renegotiate` are the authority's.
+        unsafe {
+            (*s).renegotiate = 1;
+            (*s).new_session = 0;
+            crate::ssl::s3_lib::ssl3_renegotiate(s)
+        }
+    })
+}
+
+/// `int SSL_new_session_ticket(SSL *s)` — `ssl/ssl_lib.c:2925-2941`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_new_session_ticket(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; every read/write below is to it.
+        unsafe {
+            if (SSL_in_init(s) != 0 && (*s).extra_tickets_expected == 0)
+                || ssl_is_first_handshake(s)
+                || (*s).server == 0
+                || !connection_is_tls13(s)
+            {
+                return 0;
+            }
+            (*s).extra_tickets_expected += 1;
+            if crate::ssl::record::rec_layer_s3::record_layer_write_pending(s) == 0
+                && SSL_in_init(s) == 0
+            {
+                ossl_statem_set_in_init(s, 1);
+            }
+        }
+        1
+    })
+}
+
+/// `int SSL_export_keying_material(SSL *s, ...)` — `ssl/ssl_lib.c:3817-3835`, reduced at the
+/// encryption method's own exporter.
+///
+/// The NULL-connection and no-session/bad-version guards are the authority's; the tail delegates
+/// to `sc->ssl.method->ssl3_enc->export_keying_material`, and the `ssl3_enc` method table and its
+/// TLS exporter (`tls1_export_keying_material`/`tls13_export_keying_material`) are unlanded, so the
+/// reachable no-session arm returns -1 and the deeper arm is recorded rather than approximated.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `out` must hold `olen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_export_keying_material(
+    s: *mut Ssl,
+    out: *mut u8,
+    olen: usize,
+    label: *const c_char,
+    llen: usize,
+    context: *const u8,
+    contextlen: usize,
+    use_context: c_int,
+) -> c_int {
+    guard_ffi(-1, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return -1;
+        }
+        // SAFETY: `s` is live; every read below is from it.
+        unsafe {
+            if (*s).session.is_null()
+                || ((*s).version < TLS1_VERSION && (*s).version != DTLS1_BAD_VER)
+            {
+                return -1;
+            }
+        }
+        // The `ssl3_enc->export_keying_material` tail is unlanded (recorded in src/ssl/mod.rs).
+        let _ = (out, olen, label, llen, context, contextlen, use_context);
+        -1
+    })
+}
+
+/// `int SSL_export_keying_material_early(SSL *s, ...)` — `ssl/ssl_lib.c:3837-3852`, reduced to the
+/// early-exporter predicate.
+///
+/// The version guard is the authority's; `tls13_export_keying_material_early`'s own first check is
+/// `ossl_statem_export_early_allowed`, which is 0 for every pre-handshake state, so the answer is
+/// the authority's 0. The key-schedule tail beyond that check is unlanded and recorded.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `out` must hold `olen` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_export_keying_material_early(
+    s: *mut Ssl,
+    out: *mut u8,
+    olen: usize,
+    label: *const c_char,
+    llen: usize,
+    context: *const u8,
+    contextlen: usize,
+) -> c_int {
+    guard_ffi(-1, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return -1;
+        }
+        // SAFETY: `s` is live; every read below is from it.
+        unsafe {
+            if (*s).version != TLS1_3_VERSION {
+                return 0;
+            }
+            if crate::ssl::statem::statem::ossl_statem_export_early_allowed(s) == 0 {
+                return 0;
+            }
+        }
+        // The key-schedule tail is unlanded (recorded in src/ssl/mod.rs).
+        let _ = (out, olen, label, llen, context, contextlen);
+        -1
+    })
+}
+
+/// `ossl_ssize_t SSL_sendfile(SSL *s, int fd, off_t offset, size_t size, int flags)` —
+/// `ssl/ssl_lib.c:2587-2652`, reduced to the guards.
+///
+/// The NULL-connection, uninitialised and sent-shutdown guards are the authority's; the KTLS-send
+/// check is 0 for every BIO this crate builds (no record method reports it), so the authority's
+/// next guard answers -1 as well. The KTLS arm is unlanded and recorded.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_sendfile(
+    s: *mut Ssl,
+    fd: c_int,
+    offset: i64,
+    size: usize,
+    flags: c_int,
+) -> isize {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; every read below is from it.
+        unsafe {
+            if (*s).handshake_func.is_none() {
+                raise_ssl(SSL_R_UNINITIALIZED, 2596);
+                return -1;
+            }
+            if (*s).shutdown & SSL_SENT_SHUTDOWN != 0 {
+                (*s).rwstate = SSL_NOTHING;
+                raise_ssl(SSL_R_PROTOCOL_IS_SHUTDOWN, 2602);
+                return -1;
+            }
+            // `BIO_get_ktls_send(wbio)` is 0 here: no BIO this crate builds reports KTLS send, so
+            // the authority's next guard answers -1.
+            raise_ssl(SSL_R_UNINITIALIZED, 2607);
+        }
+        let _ = (fd, offset, size, flags);
+        -1
+    })
+}
+
+/// `int SSL_stateless(SSL *s)` — `ssl/ssl_lib.c:7350-7375`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_stateless(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; every read/write below is to it.
+        unsafe {
+            if SSL_clear(s) == 0 {
+                return 0;
+            }
+            crate::runtime::err::ERR_clear_error();
+            (*s).s3_flags |= TLS1_FLAGS_STATELESS;
+            let ret = SSL_accept(s);
+            (*s).s3_flags &= !TLS1_FLAGS_STATELESS;
+            if ret > 0 && (*s).cookieok != 0 {
+                return 1;
+            }
+            if (*s).hello_retry_request == SSL_HRR_PENDING && ossl_statem_in_error(s) == 0 {
+                return 0;
+            }
+        }
+        -1
+    })
+}
+
+/// `int SSL_verify_client_post_handshake(SSL *ssl)` — `ssl/ssl_lib.c:7392-7449`, reduced to the
+/// refusal ladder.
+///
+/// The NULL-connection, non-TLS-1.3, non-server and not-init-finished refusals plus the
+/// `post_handshake_auth` switch's refusal arms are the authority's; the `send_certificate_request`
+/// success arm needs the message layer and is unreachable for the states this crate reaches.
+///
+/// # Safety
+/// `ssl` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_verify_client_post_handshake(ssl: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if ssl.is_null() {
+            return 0;
+        }
+        // SAFETY: `ssl` is non-NULL and live; `connection_is_tls13` reads its method version.
+        let is_tls13 = unsafe { connection_is_tls13(ssl) };
+        if !is_tls13 {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_WRONG_SSL_VERSION, 7407) };
+            return 0;
+        }
+        // SAFETY: `ssl` is live; every read below is from it.
+        unsafe {
+            if (*ssl).server == 0 {
+                raise_ssl(SSL_R_NOT_SERVER, 7411);
+                return 0;
+            }
+            if SSL_is_init_finished(ssl) == 0 {
+                raise_ssl(SSL_R_STILL_IN_INIT, 7416);
+                return 0;
+            }
+            match (*ssl).post_handshake_auth {
+                SSL_PHA_NONE => raise_ssl(SSL_R_EXTENSION_NOT_RECEIVED, 7422),
+                SSL_PHA_REQUEST_PENDING => raise_ssl(SSL_R_REQUEST_PENDING, 7431),
+                SSL_PHA_REQUESTED => raise_ssl(SSL_R_REQUEST_SENT, 7434),
+                _ => raise_ssl(SSL_R_INVALID_CONFIG, 7443),
+            }
+        }
+        0
     })
 }
 

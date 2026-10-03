@@ -28,17 +28,21 @@
  *     `SSL_want`, `SSL_pending`, `SSL_get_error`, `SSL_get_default_timeout`);
  *   * the read/write/handshake entry guards on a freshly allocated connection, where the authority
  *     answers `SSL_R_UNINITIALIZED`/`SSL_R_CONNECTION_TYPE_NOT_SET`;
- *   * `SSL_set_bio` over memory BIOs, including the `rbio == wbio` ownership case and the no-op.
+ *   * `SSL_set_bio` over memory BIOs, including the `rbio == wbio` ownership case and the no-op;
+ *   * the 14.5b handshake entry points' refusal/flag arms over a fresh connection — `SSL_key_update`,
+ *     `SSL_new_session_ticket`, `SSL_export_keying_material[_early]`, `SSL_sendfile`,
+ *     `SSL_verify_client_post_handshake`, `SSL_read/write_early_data`, `SSL_renegotiate[_abbreviated]`
+ *     and `SSL_stateless`. The state-machine transitions `SSL_connect`/`SSL_accept` drive live in
+ *     `RT-STATEM`.
  *
  * ## Arms that are deliberately absent
  *
- * No handshake, no socket and no wall clock move an answer. `SSL_accept`/`SSL_connect` are not
- * driven: they install a `handshake_func` and start a real handshake, which would reach the record
- * layer (14.4) and the state machine (14.5), neither of which this subphase lands. `SSL_get_error`
- * is read before any error is raised and after `ERR_clear_error`, so the error queue never moves a
- * value. The NULL arms of `SSL_CTX_get_options`, `SSL_CTX_get_verify_mode`, `SSL_is_tls`/`_quic`
- * and the like are not driven: those dereference their argument in the authority, so a probe would
- * crash both sides rather than compare them.
+ * No socket and no wall clock move an answer. The flight a client's `SSL_connect` would write is
+ * not compared: the message layer (14.5b's remaining work) is unlanded, so no arm reads a peer
+ * BIO's bytes. `SSL_get_error` is read before any error is raised and after `ERR_clear_error`, so
+ * the error queue never moves a value. The NULL arms of `SSL_CTX_get_options`,
+ * `SSL_CTX_get_verify_mode`, `SSL_is_tls`/`_quic` and the like are not driven: those dereference
+ * their argument in the authority, so a probe would crash both sides rather than compare them.
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -115,6 +119,7 @@ int main(void)
     SSL *ssl;
     BIO *m1, *m2, *m3;
     unsigned char sid[40];
+    unsigned char ebuf[8];
     char buf[8];
     size_t n = 0;
     int idx;
@@ -611,6 +616,43 @@ int main(void)
         out_int("copy_session_id.two_fresh", SSL_copy_session_id(t2, f2));
         SSL_free(t2);
         SSL_free(f2);
+    }
+
+    /* ----------------------------------------------------------------------------------------
+     * N. The handshake entry points (14.5b).
+     *
+     * Every arm is a fixed input and a small-integer answer over a fresh connection (or, for
+     * `SSL_stateless`, a fresh memory-BIO pair). No arm reads a flight, the error queue or a clock;
+     * the state-machine arms that *do* move state are in `RT-STATEM`.
+     * -------------------------------------------------------------------------------------- */
+    {
+        SSL *hs = SSL_new(ctx);
+        BIO *hr = BIO_new(BIO_s_mem()), *hw = BIO_new(BIO_s_mem());
+        SSL_set_bio(hs, hr, hw);
+        ERR_clear_error();
+        out_int("hs.key_update.notreq", SSL_key_update(hs, 0));
+        out_int("hs.key_update.req", SSL_key_update(hs, 1));
+        out_int("hs.key_update.bad", SSL_key_update(hs, 7));
+        out_int("hs.new_session_ticket", SSL_new_session_ticket(hs));
+        out_int("hs.export_keying",
+                SSL_export_keying_material(hs, ebuf, 8, "label", 5, NULL, 0, 1));
+        out_int("hs.export_keying_early",
+                SSL_export_keying_material_early(hs, ebuf, 8, "label", 5, NULL, 0));
+        out_int("hs.sendfile", (long)SSL_sendfile(hs, -1, 0, 0, 0));
+        out_int("hs.verify_pha", SSL_verify_client_post_handshake(hs));
+        out_int("hs.read_early", SSL_read_early_data(hs, buf, 4, &n));
+        out_int("hs.write_early", SSL_write_early_data(hs, buf, 4, &n));
+        out_int("hs.renegotiate", SSL_renegotiate(hs));
+        out_int("hs.renegotiate_abbr", SSL_renegotiate_abbreviated(hs));
+        SSL_free(hs);
+    }
+    {
+        SSL *st = SSL_new(ctx);
+        BIO *sr = BIO_new(BIO_s_mem()), *sw = BIO_new(BIO_s_mem());
+        SSL_set_bio(st, sr, sw);
+        ERR_clear_error();
+        out_int("hs.stateless", SSL_stateless(st));
+        SSL_free(st);
     }
 
     /* ----------------------------------------------------------------------------------------
