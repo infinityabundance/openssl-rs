@@ -67,6 +67,20 @@ absence of a partial default. It does **not** pass a NULL engine (both bodies de
 never reads the error queue. See docs/PHASE-13-SUBPHASES.md section 3.3 for what the court is
 required to compare.
 
+`RT-TXTDB`, and what it compares
+-------------------------------
+13.5's court, `courts/phase13/rt_txtdb_probe.c`, drives the whole of `include/openssl/txt_db.h` --
+the six names this subphase lands -- over a fixed in-memory database. It compares the parsed
+rows field by field (the leading `#` comment record skipped, an escaped tab a literal tab), the
+`TXT_DB_write` bytes and a re-read of them, `TXT_DB_create_index` with the probe's own hash and
+comparison functions, `TXT_DB_get_by_index`'s hit, miss, out-of-range and no-index arms by their
+return and the `DB_ERROR_*` the object records, `TXT_DB_insert`'s accept and duplicate-key clash
+(with `arg1` and the identity of `arg_row`), the two wrong-field-count read failures, and
+`TXT_DB_free` by running the frees to completion. It does **not** drive a negative index or
+field (the authority indexes out of bounds there, so the arm is undefined rather than comparable),
+never passes a NULL object to a function that dereferences one, and never reads the error queue.
+See docs/PHASE-13-SUBPHASES.md section 3.5.
+
 `RT-UI`, and what it compares
 -----------------------------
 13.4's court, `courts/phase13/rt_ui_probe.c`, drives the whole 62-name `ui.h` framework the earlier
@@ -92,10 +106,9 @@ The behavioural courts the plan gives the later subphases
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" -- the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and
-`RT-HANDOFF` are the remaining subphases' own courts: 13.5's TXT_DB database,
-13.6's legacy EVP method statics, 13.7's PEM readers and ASYNC framework, and 13.8's received
-TS_CONF and SRP hand-offs.
+later activation established. `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` are the
+remaining subphases' own courts: 13.6's legacy EVP method statics, 13.7's PEM readers and ASYNC
+framework, and 13.8's received TS_CONF and SRP hand-offs.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -148,6 +161,7 @@ COURTS: list[tuple[str, str]] = [
     ("RT-ENGINE-TABLE", "rt_engine_table_probe.c"),
     ("RT-ENGINE-CTRL", "rt_engine_ctrl_probe.c"),
     ("RT-UI", "rt_ui_probe.c"),
+    ("RT-TXTDB", "rt_txtdb_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -155,7 +169,6 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-13-SUBPHASES.md` section 2's, one per work
 # subphase.
 PENDING_COURTS: dict[str, str] = {
-    "RT-TXTDB": "13.5 (the TXT_DB text database)",
     "RT-EVP-LEGACY": "13.6 (the legacy EVP method statics)",
     "RT-LEGACY-REMAINDER": "13.7 (the PEM private-key readers and the ASYNC framework)",
     "RT-HANDOFF": "13.8 (the received TS_CONF and SRP hand-offs)",
@@ -353,9 +366,17 @@ def main(argv: list[str]) -> int:
             "`_read_pw_string` and the PEM wrapper, and the null method's cancel -- so those "
             "names are `called` and not merely `referenced`; it passes no NULL that an accessor "
             "would dereference, does not call `UI_create_method(NULL)`, and never reads the "
-            "error queue. Every other behavioural court the "
+            "error queue. `RT-TXTDB` is 13.5's behavioural court: it **calls** all six "
+            "`txt_db.h` names over a fixed in-memory database and compares the parsed rows field "
+            "by field (the `#` comment record skipped, an escaped tab a literal tab), the "
+            "`TXT_DB_write` bytes and their re-read, `TXT_DB_create_index` and "
+            "`TXT_DB_get_by_index`'s hit/miss/out-of-range/no-index arms by return and "
+            "`DB_ERROR_*`, `TXT_DB_insert`'s accept and duplicate-key clash (`arg1` and the "
+            "identity of `arg_row`), the two wrong-field-count read failures, and "
+            "`TXT_DB_free` -- not a negative index or field (the authority indexes out of "
+            "bounds there) and not the error queue. Every other behavioural court the "
             "plan names is named in `pending_courts` with the subphase that brings it -- "
-            "`RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
+            "`RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
             "none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
             "is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md "
             "section 3 records what the behavioural courts compare."
