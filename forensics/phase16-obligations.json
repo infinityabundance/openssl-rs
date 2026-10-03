@@ -20,8 +20,8 @@
       },
       {
         "closure": "every provider registration row this stratum owns is published",
-        "observation": "5/39 provider row(s) implemented",
-        "state": "open",
+        "observation": "39/39 provider row(s) implemented",
+        "state": "implemented",
         "surface": "forensics/atlas/provider-algorithms.json",
         "unit": "filesystem",
         "what": "the installed distribution layout, including the `ossl-modules/` module contract"
@@ -32,10 +32,10 @@
       "contract_units": 3,
       "deferrals_received": 4,
       "deferred_to_later_phase": 0,
-      "implemented": 5,
-      "open_in_this_stratum": 43,
+      "implemented": 40,
+      "open_in_this_stratum": 8,
       "owned": 48,
-      "provider_rows_open": 34,
+      "provider_rows_open": 0,
       "provider_rows_owned": 39,
       "unit_deferrals_received": 2
     },
@@ -112,306 +112,306 @@
       },
       {
         "algorithm_names": "CAST5-ECB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "CAST5-CBC",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "CAST5-OFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "CAST5-CFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "BF-ECB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "BF-CBC",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "BF-OFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "BF-CFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "IDEA-ECB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "IDEA-CBC",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "IDEA-OFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "IDEA-CFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "SEED-ECB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "SEED-CBC",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "SEED-OFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "SEED-CFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "RC2-ECB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "RC2-CBC",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "RC2-40-CBC",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "RC2-64-CBC",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "RC2-CFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "RC2-OFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "RC4",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "RC4-40",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "RC4-HMAC-MD5",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "DESX-CBC",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "DES-ECB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "DES-CBC",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "DES-OFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "DES-CFB",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "DES-CFB1",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "DES-CFB8",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_CIPHER",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_ciphers"
       },
       {
         "algorithm_names": "PBKDF1",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_KDF",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_kdfs"
       },
       {
         "algorithm_names": "PVKKDF",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_KDF",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_kdfs"
@@ -457,7 +457,7 @@
     {
       "name": "provider-algorithms",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "50bc1af925412d0ae0d013227684315987462d8fa78e50f14ad1a72dd52f0951"
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
     },
     {
       "name": "provider-algorithm-plans",
@@ -477,7 +477,7 @@
     {
       "name": "phase-16-plan",
       "path": "docs/PHASE-16-SUBPHASES.md",
-      "sha256": "c252a6f3f140a98013548a81441b6534393eb0a7aad35591cd3fc3d870d61d6b"
+      "sha256": "2c4f8de6d3c82c2ff77a64031fa0f691fce258f0fa34a84eb5426fb404f1c7a9"
     }
   ],
   "kind": "phase16-obligations",

@@ -15,14 +15,16 @@ through the same `OSSL_PROVIDER_load` path the authority's own CLI uses — the 
 `OSSL_provider_init` on one side, the candidate's `ossl-modules/legacy.so` on the other,
 with `OPENSSL_MODULES` pointed at each side's own module directory. It compares the
 provider's `name` read through `OSSL_PROVIDER_get_params`, the **row count and first
-row's alias sequence** the module's `OSSL_PROVIDER_query_operation` answers for the two
-operations slice 1 publishes (`OSSL_OP_DIGEST`, `OSSL_OP_SKEYMGMT`), a fixed `"abc"`
-digest for each of the four legacy digests fetched by name and by OID through the
-`provider=legacy` property, and the refusal arms (an unknown digest name, and a legacy
-name asked of the `default` provider). It does **not** read the error queue, and it does
-not query `OSSL_OP_CIPHER` or `OSSL_OP_KDF`, whose rows are 16.1 slices 2 and 3 and are
-not published yet, so the comparison measures the landed surface rather than a known
-slice boundary. See docs/PHASE-16-SUBPHASES.md section 3.
+row's alias sequence** the module's `OSSL_PROVIDER_query_operation` answers for all four
+operations 16.1 publishes (`OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_KDF`,
+`OSSL_OP_SKEYMGMT`), a fixed `"abc"` digest for each of the four legacy digests fetched
+by name and by OID through the `provider=legacy` property, a fixed-key/fixed-IV
+encrypt-and-decrypt of each of the 32 `legacy_ciphers` rows, and a fixed
+password/salt/iteration derive of each of the two `legacy_kdfs` rows. It closes with the
+refusal arms: an unknown digest/cipher/KDF name, a legacy cipher asked of the `default`
+provider, and two `PBKDF1` derives the row must refuse. It does **not** read the error
+queue; every slice of 16.1 is landed, so `OSSL_OP_CIPHER` and `OSSL_OP_KDF` are queried
+and the comparison measures the whole table. See docs/PHASE-16-SUBPHASES.md section 3.
 
 The pending courts, and what each awaits
 -----------------------------------------
@@ -244,18 +246,21 @@ def main(argv: list[str]) -> int:
             "module through `OSSL_PROVIDER_load` with `OPENSSL_MODULES` pointed at each side's "
             "own module directory, **reads** the provider name through "
             "`OSSL_PROVIDER_get_params`, **queries** the module's "
-            "`OSSL_PROVIDER_query_operation` for the two operations slice 1 publishes "
-            "(`OSSL_OP_DIGEST`, `OSSL_OP_SKEYMGMT`) and compares each table's row count and "
-            "first row's alias sequence, **fetches** the four `legacy_digests` rows by name and "
-            "by OID through the `provider=legacy` property and compares a fixed `\"abc\"` digest "
-            "for each, and exercises the refusal arms (an unknown digest name and a legacy name "
-            "asked of the `default` provider) -- not the error queue, and not "
-            "`OSSL_OP_CIPHER`/`OSSL_OP_KDF`, whose 32 and 2 rows are 16.1 slices 2 and 3 and "
-            "whose absence `forensics/atlas/provider-algorithms.json` records as the live "
-            "`provider_rows_open`. The other five courts the plan names -- `RT-ENGINE-DYN`, "
-            "`RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in "
-            "`pending_courts` with the subphase that lands each. docs/PHASE-16-SUBPHASES.md "
-            "sections 3 and 4 record what each court compares."
+            "`OSSL_PROVIDER_query_operation` for all four operations 16.1 publishes "
+            "(`OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_KDF`, `OSSL_OP_SKEYMGMT`) and "
+            "compares each table's row count and first row's alias sequence, **fetches** the "
+            "four `legacy_digests` rows by name and by OID through the `provider=legacy` "
+            "property and compares a fixed `\"abc\"` digest for each, **fetches and drives** "
+            "each of the 32 `legacy_ciphers` rows with a fixed key/IV encrypt-and-decrypt and "
+            "each of the two `legacy_kdfs` rows with a fixed password/salt/iteration derive, "
+            "and exercises the refusal arms (an unknown digest/cipher/KDF name, a legacy name "
+            "asked of the `default` provider, and two `PBKDF1` derives the row must refuse) -- "
+            "not the error queue. The 39-row table is fully published, so "
+            "`forensics/atlas/provider-algorithms.json` records `provider_rows_open` 0. The "
+            "other five courts the plan names -- `RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, "
+            "`RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in `pending_courts` with the "
+            "subphase that lands each. docs/PHASE-16-SUBPHASES.md sections 3 and 4 record what "
+            "each court compares."
         ),
     }
 

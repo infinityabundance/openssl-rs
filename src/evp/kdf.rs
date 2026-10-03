@@ -130,10 +130,12 @@ const OSSL_FUNC_KDF_GET_PARAMS: c_int = 9;
 pub(crate) const OSSL_FUNC_KDF_GET_CTX_PARAMS: c_int = 10;
 /// `OSSL_FUNC_KDF_SET_CTX_PARAMS`.
 pub(crate) const OSSL_FUNC_KDF_SET_CTX_PARAMS: c_int = 11;
-/// `OSSL_FUNC_KDF_SET_SKEY`. Filled by the walk, called by 7.3f.
-const OSSL_FUNC_KDF_SET_SKEY: c_int = 12;
-/// `OSSL_FUNC_KDF_DERIVE_SKEY`. Filled by the walk, called by 7.3f.
-const OSSL_FUNC_KDF_DERIVE_SKEY: c_int = 13;
+/// `OSSL_FUNC_KDF_SET_SKEY`. Filled by the walk, called by 7.3f, and published by the legacy
+/// provider's `PBKDF1` row (`pbkdf1.c:357`), which is the only KDF in this profile to carry it.
+pub(crate) const OSSL_FUNC_KDF_SET_SKEY: c_int = 12;
+/// `OSSL_FUNC_KDF_DERIVE_SKEY`. Filled by the walk, called by 7.3f, and published by `PBKDF1`
+/// (`pbkdf1.c:358`).
+pub(crate) const OSSL_FUNC_KDF_DERIVE_SKEY: c_int = 13;
 
 /// `OSSL_FUNC_kdf_newctx_fn` — `void *(*)(void *provctx)`.
 pub(crate) type KdfNewCtxFn = unsafe extern "C" fn(*mut c_void) -> *mut c_void;

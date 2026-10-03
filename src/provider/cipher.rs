@@ -17842,6 +17842,3827 @@ cipher_row!(
     FILE_ARIA
 );
 
+// =============================================================================================
+// 16.1 slice 2 — `providers/legacyprov.c`'s `legacy_ciphers[]` rows
+// =============================================================================================
+//
+// The 32 legacy cipher rows are thin instantiations of the generic cipher engine above over the
+// crate's own primitives, exactly as `providers/implementations/ciphers/cipher_cast5.c` and its
+// siblings are instantiations of `ciphercommon.c.in`'s macros. Each family transcribes its
+// authority `*_hw.c` key-schedule hook and mode bodies; the crate reaches the same bytes the
+// authority does because the mode bodies call the same primitive entry points.
+//
+// **The 64-bit block ciphers cannot use `ossl_cipher_hw_generic_*`.** `CRYPTO_cbc128_encrypt`
+// and its siblings are hardcoded to 128-bit blocks (`crypto/modes/cbc128.c`), so CAST5, Blowfish,
+// IDEA, SEED, RC2, DES and DESX each carry their own CBC/ECB/OFB/CFB bodies, which is what the
+// authority's `IMPLEMENT_CIPHER_HW_*` macros expand to. SEED's block is 128-bit but the authority
+// still reaches `SEED_cbc_encrypt` et al. rather than the generic helpers, so its own bodies are
+// transcribed too.
+//
+// **`RC5` is absent by profile.** `OPENSSL_NO_RC5` compiles the authority's four `legacy_ciphers[]`
+// RC5 rows out (module header), so they are not among the 32 and no row is written here.
+//
+// **One recorded divergence: the two `*_skey` dispatch slots.** The authority's `IMPLEMENT_des_cipher`,
+// `IMPLEMENT_cipher` (RC2/RC4) and `IMPLEMENT_tdes_cipher` tables omit the
+// `ENCRYPT_SKEY_INIT`/`DECRYPT_SKEY_INIT` slots, while the generic `IMPLEMENT_generic_cipher` and
+// `IMPLEMENT_var_keylen_cipher` tables carry them. Every table here publishes the generic engine's
+// two skey arms. This matches how the default provider's 3DES rows already land in this crate: the
+// `cipher_row!` macro has always emitted the two slots for them (see `DEFLT_CIPHERS`). A caller
+// that drives a skey through a DES/DESX/RC2/RC4/RC4-HMAC row therefore reaches
+// `ossl_cipher_generic_skey_*` where the authority would answer `NULL`; no court in this stratum
+// drives such a path.
+//
+// **DES's `RANDOM_KEY` get-ctx arm is not transcribed**, for the reason `ossl_tdes_get_ctx_params`
+// already records for the 3DES rows (its body is `RAND_priv_bytes_ex`); the `gettable` list still
+// advertises it, exactly as the authority's does.
+
+pub(crate) mod legacy {
+    use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
+    use core::ptr;
+
+    use super::*;
+    use crate::asn1::a_type::{d2i_ASN1_TYPE, i2d_ASN1_TYPE, ASN1_TYPE_free, ASN1_TYPE_new};
+    use crate::asn1::evp_asn1::{ASN1_TYPE_get_int_octetstring, ASN1_TYPE_set_int_octetstring};
+    use crate::blowfish::{
+        BF_cbc_encrypt, BF_cfb64_encrypt, BF_ecb_encrypt, BF_ofb64_encrypt, BF_set_key, BfKey,
+    };
+    use crate::cast::{
+        CAST_cbc_encrypt, CAST_cfb64_encrypt, CAST_ecb_encrypt, CAST_ofb64_encrypt, CAST_set_key,
+        CastKey,
+    };
+    use crate::des::{
+        DES_cfb64_encrypt, DES_cfb_encrypt, DES_ecb_encrypt, DES_ncbc_encrypt, DES_ofb64_encrypt,
+        DES_set_key_unchecked, DES_xcbc_encrypt, DesKeySchedule,
+    };
+    use crate::digest::md5::{MD5_Final, MD5_Init, MD5_Update, Md5Ctx};
+    use crate::idea::{
+        IDEA_cbc_encrypt, IDEA_cfb64_encrypt, IDEA_ecb_encrypt, IDEA_ofb64_encrypt,
+        IDEA_set_decrypt_key, IDEA_set_encrypt_key, IdeaKeySchedule,
+    };
+    use crate::params::{
+        OSSL_PARAM_get_size_t, OSSL_PARAM_get_uint, OSSL_PARAM_locate, OSSL_PARAM_locate_const,
+        OSSL_PARAM_set_size_t,
+    };
+    use crate::rc2::{
+        RC2_cbc_encrypt, RC2_cfb64_encrypt, RC2_ecb_encrypt, RC2_ofb64_encrypt, RC2_set_key, Rc2Key,
+    };
+    use crate::rc4::{RC4_set_key, Rc4Key, RC4};
+    use crate::seed::{
+        SEED_cbc_encrypt, SEED_cfb128_encrypt, SEED_ecb_encrypt, SEED_ofb128_encrypt, SEED_set_key,
+        SeedKeySchedule,
+    };
+
+    /// `OSSL_CIPHER_PARAM_RC2_KEYBITS` — `include/openssl/core_names.h:206`.
+    const OSSL_CIPHER_PARAM_RC2_KEYBITS: *const c_char = c"keybits".as_ptr();
+    /// `OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS` — `include/openssl/core_names.h:187`.
+    const OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS: *const c_char = c"algorithm-id-params".as_ptr();
+    /// `OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD` — `core_names.h:188`.
+    const OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD: *const c_char = c"alg_id_param".as_ptr();
+
+    /// `MD5_DIGEST_LENGTH` — `include/openssl/md5.h`.
+    const MD5_DIGEST_LENGTH: usize = 16;
+    /// `NO_PAYLOAD_LENGTH` — `cipher_rc4_hmac_md5_hw.c:20`: `(size_t)-1`.
+    const NO_PAYLOAD_LENGTH: usize = usize::MAX;
+
+    /// `FILE_CAST5` — the invoking unit's own `__FILE__`.
+    const FILE_CAST5: *const c_char = c"providers/implementations/ciphers/cipher_cast5.c".as_ptr();
+    /// `FILE_BLOWFISH`.
+    const FILE_BLOWFISH: *const c_char =
+        c"providers/implementations/ciphers/cipher_blowfish.c".as_ptr();
+    /// `FILE_IDEA`.
+    const FILE_IDEA: *const c_char = c"providers/implementations/ciphers/cipher_idea.c".as_ptr();
+    /// `FILE_SEED`.
+    const FILE_SEED: *const c_char = c"providers/implementations/ciphers/cipher_seed.c".as_ptr();
+    /// `FILE_RC2`.
+    const FILE_RC2: *const c_char = c"providers/implementations/ciphers/cipher_rc2.c".as_ptr();
+    /// `FILE_RC4`.
+    const FILE_RC4: *const c_char = c"providers/implementations/ciphers/cipher_rc4.c".as_ptr();
+    /// `FILE_RC4_HMAC_MD5`.
+    const FILE_RC4_HMAC_MD5: *const c_char =
+        c"providers/implementations/ciphers/cipher_rc4_hmac_md5.c".as_ptr();
+    /// `FILE_DES`.
+    const FILE_DES: *const c_char = c"providers/implementations/ciphers/cipher_des.c".as_ptr();
+
+    // -----------------------------------------------------------------------------------------
+    // The shared dispatch machinery
+    // -----------------------------------------------------------------------------------------
+
+    /// The generic row's `newctx`/`get_params` pair, `IMPLEMENT_generic_cipher_genfn`.
+    macro_rules! legacy_newctx {
+        ($newctx:ident, $getparams:ident, $ctx:ty, $hw:path, $kbits:expr, $blkbits:expr,
+         $ivbits:expr, $mode:expr, $flags:expr, $file:expr) => {
+            unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
+                if is_running() == 0 {
+                    return ptr::null_mut();
+                }
+                let ctx = CRYPTO_zalloc(core::mem::size_of::<$ctx>(), $file, LINE);
+                if !ctx.is_null() {
+                    // SAFETY: `ctx` is a fresh zeroed context of this row's type.
+                    unsafe {
+                        ossl_cipher_generic_initkey(
+                            ctx,
+                            $kbits,
+                            $blkbits,
+                            $ivbits,
+                            $mode,
+                            $flags,
+                            ptr::addr_of!($hw).cast::<ProvCipherHw>(),
+                            provctx,
+                        );
+                    }
+                }
+                ctx
+            }
+
+            unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+                // SAFETY: the dispatch contract.
+                unsafe {
+                    ossl_cipher_generic_get_params(params, $mode, $flags, $kbits, $blkbits, $ivbits)
+                }
+            }
+        };
+    }
+
+    /// The dispatch table `IMPLEMENT_*_cipher_func` publishes, with the engine's own `cipher`
+    /// slot and both skey arms.
+    macro_rules! legacy_table {
+        ($newctx:path, $getparams:path, $table:ident, $freectx:path, $dupctx:path, $einit:path,
+         $dinit:path, $update:path, $final:path, $getctx:path, $setctx:path, $gettable:path,
+         $settable:path) => {
+            pub(crate) static $table: &[OsslDispatch] = &[
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_NEWCTX,
+                    function: $newctx as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_FREECTX,
+                    function: $freectx as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_DUPCTX,
+                    function: $dupctx as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_ENCRYPT_INIT,
+                    function: $einit as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_DECRYPT_INIT,
+                    function: $dinit as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_UPDATE,
+                    function: $update as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_FINAL,
+                    function: $final as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_CIPHER,
+                    function: ossl_cipher_generic_cipher as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_GET_PARAMS,
+                    function: $getparams as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_GET_CTX_PARAMS,
+                    function: $getctx as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_SET_CTX_PARAMS,
+                    function: $setctx as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_GETTABLE_PARAMS,
+                    function: ossl_cipher_generic_gettable_params as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_GETTABLE_CTX_PARAMS,
+                    function: $gettable as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_SETTABLE_CTX_PARAMS,
+                    function: $settable as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_ENCRYPT_SKEY_INIT,
+                    function: ossl_cipher_generic_skey_einit as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_FUNC_CIPHER_DECRYPT_SKEY_INIT,
+                    function: ossl_cipher_generic_skey_dinit as *mut c_void,
+                },
+                OsslDispatch {
+                    function_id: OSSL_DISPATCH_END,
+                    function: ptr::null_mut(),
+                },
+            ];
+        };
+    }
+
+    /// `ossl_cipher_var_keylen_settable_ctx_params` — `ciphercommon.c.in:163-166`.
+    static VAR_KEYLEN_SETTABLE_CTX_PARAMS: [OsslParam; 7] = [
+        param_uint(OSSL_CIPHER_PARAM_PADDING),
+        param_uint(OSSL_CIPHER_PARAM_NUM),
+        param_uint(OSSL_CIPHER_PARAM_USE_BITS),
+        param_uint(OSSL_CIPHER_PARAM_TLS_VERSION),
+        param_size_t(OSSL_CIPHER_PARAM_TLS_MAC_SIZE),
+        param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+        END,
+    ];
+
+    /// `ossl_cipher_var_keylen_settable_ctx_params`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn var_keylen_settable_ctx_params(
+        _cctx: *mut c_void,
+        _provctx: *mut c_void,
+    ) -> *const OsslParam {
+        VAR_KEYLEN_SETTABLE_CTX_PARAMS.as_ptr()
+    }
+
+    /// `int ossl_cipher_var_keylen_set_ctx_params(...)` — `ciphercommon.c.in:168-191`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn var_keylen_set_ctx_params(
+        vctx: *mut c_void,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if vctx.is_null() || ossl_cipher_common_set_ctx_params(vctx.cast(), params) == 0 {
+                return 0;
+            }
+            let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+            if !p.is_null() {
+                let mut keylen: usize = 0;
+                if OSSL_PARAM_get_size_t(p, &mut keylen) == 0 {
+                    return 0;
+                }
+                let ctx = vctx.cast::<ProvCipherCtx>();
+                if (*ctx).keylen != keylen {
+                    (*ctx).keylen = keylen;
+                    bits_set(ctx, CTX_KEY_SET, false);
+                }
+            }
+            1
+        }
+    }
+
+    // =========================================================================================
+    // CAST5 — `cipher_cast5.c` / `cipher_cast5_hw.c`
+    // =========================================================================================
+
+    /// `PROV_CAST_CTX` — `cipher_cast.h:13-19`.
+    #[repr(C)]
+    pub(crate) struct ProvCastCtx {
+        /// `PROV_CIPHER_CTX base`.
+        pub base: ProvCipherCtx,
+        /// `union { OSSL_UNION_ALIGN; CAST_KEY ks; } ks`.
+        pub ks: CastKey,
+    }
+
+    /// `cipher_hw_cast5_initkey` — `cipher_cast5_hw.c:18-25`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::init` contract.
+    unsafe extern "C" fn cipher_hw_cast5_initkey(
+        ctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        keylen: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract; `ctx` is a `PROV_CAST_CTX`.
+        unsafe {
+            let bctx = ctx.cast::<ProvCastCtx>();
+            CAST_set_key(ptr::addr_of_mut!((*bctx).ks), keylen as c_int, key);
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CBC(cbc, cast5, ..., CAST_cbc)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_cast5_cbc_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of!((*ctx.cast::<ProvCastCtx>()).ks);
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                CAST_cbc_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    (*ctx).enc_int(),
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                CAST_cbc_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    (*ctx).enc_int(),
+                );
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_ECB(ecb, cast5, ..., CAST_ecb)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_cast5_ecb_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let bl = (*ctx).blocksize;
+            let key = ptr::addr_of!((*ctx.cast::<ProvCastCtx>()).ks);
+            if len < bl {
+                return 1;
+            }
+            let mut i = 0usize;
+            let end = len - bl;
+            while i <= end {
+                CAST_ecb_encrypt(in_.add(i), out.add(i), key, (*ctx).enc_int());
+                i += bl;
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_OFB(ofb64, cast5, ..., CAST_ofb64)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_cast5_ofb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of!((*ctx.cast::<ProvCastCtx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                CAST_ofb64_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                CAST_ofb64_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                );
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CFB(cfb64, cast5, ..., CAST_cfb64)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_cast5_cfb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of!((*ctx.cast::<ProvCastCtx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut chunk = MAXCHUNK;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            if l < chunk {
+                chunk = l;
+            }
+            while l > 0 && l >= chunk {
+                CAST_cfb64_encrypt(
+                    pin,
+                    pout,
+                    chunk as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                    (*ctx).enc_int(),
+                );
+                l -= chunk;
+                pin = pin.add(chunk);
+                pout = pout.add(chunk);
+                if l < chunk {
+                    chunk = l;
+                }
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    static CAST5_CBC_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_cast5_initkey,
+        cipher: cipher_hw_cast5_cbc_cipher,
+        copyctx: None,
+    };
+    static CAST5_ECB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_cast5_initkey,
+        cipher: cipher_hw_cast5_ecb_cipher,
+        copyctx: None,
+    };
+    static CAST5_OFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_cast5_initkey,
+        cipher: cipher_hw_cast5_ofb64_cipher,
+        copyctx: None,
+    };
+    static CAST5_CFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_cast5_initkey,
+        cipher: cipher_hw_cast5_cfb64_cipher,
+        copyctx: None,
+    };
+
+    /// `cast5_freectx` — `cipher_cast5.c:28-34`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn cast5_freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
+        unsafe {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvCastCtx>(), FILE_CAST5, LINE);
+        }
+    }
+
+    /// `cast5_dupctx` — `cipher_cast5.c:36-50`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn cast5_dupctx(ctx: *mut c_void) -> *mut c_void {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if is_running() == 0 {
+                return ptr::null_mut();
+            }
+            let ret = CRYPTO_malloc(core::mem::size_of::<ProvCastCtx>(), FILE_CAST5, LINE);
+            if !ret.is_null() {
+                ptr::copy_nonoverlapping(ctx.cast::<ProvCastCtx>(), ret.cast::<ProvCastCtx>(), 1);
+            }
+            ret
+        }
+    }
+
+    legacy_newctx!(
+        cast5_ecb_newctx,
+        cast5_ecb_get_params,
+        ProvCastCtx,
+        CAST5_ECB_HW,
+        128,
+        64,
+        0,
+        EVP_CIPH_ECB_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_CAST5
+    );
+    legacy_table!(
+        cast5_ecb_newctx,
+        cast5_ecb_get_params,
+        CAST5_ECB_FUNCTIONS,
+        cast5_freectx,
+        cast5_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        cast5_cbc_newctx,
+        cast5_cbc_get_params,
+        ProvCastCtx,
+        CAST5_CBC_HW,
+        128,
+        64,
+        64,
+        EVP_CIPH_CBC_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_CAST5
+    );
+    legacy_table!(
+        cast5_cbc_newctx,
+        cast5_cbc_get_params,
+        CAST5_CBC_FUNCTIONS,
+        cast5_freectx,
+        cast5_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        cast5_ofb64_newctx,
+        cast5_ofb64_get_params,
+        ProvCastCtx,
+        CAST5_OFB_HW,
+        128,
+        8,
+        64,
+        EVP_CIPH_OFB_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_CAST5
+    );
+    legacy_table!(
+        cast5_ofb64_newctx,
+        cast5_ofb64_get_params,
+        CAST5_OFB_FUNCTIONS,
+        cast5_freectx,
+        cast5_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        cast5_cfb64_newctx,
+        cast5_cfb64_get_params,
+        ProvCastCtx,
+        CAST5_CFB_HW,
+        128,
+        8,
+        64,
+        EVP_CIPH_CFB_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_CAST5
+    );
+    legacy_table!(
+        cast5_cfb64_newctx,
+        cast5_cfb64_get_params,
+        CAST5_CFB_FUNCTIONS,
+        cast5_freectx,
+        cast5_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    // =========================================================================================
+    // Blowfish — `cipher_blowfish.c` / `cipher_blowfish_hw.c`
+    // =========================================================================================
+
+    /// `PROV_BLOWFISH_CTX` — `cipher_blowfish.h:13-19`.
+    #[repr(C)]
+    pub(crate) struct ProvBlowfishCtx {
+        /// `PROV_CIPHER_CTX base`.
+        pub base: ProvCipherCtx,
+        /// `union { OSSL_UNION_ALIGN; BF_KEY ks; } ks`.
+        pub ks: BfKey,
+    }
+
+    /// `cipher_hw_blowfish_initkey` — `cipher_blowfish_hw.c:18-25`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::init` contract.
+    unsafe extern "C" fn cipher_hw_blowfish_initkey(
+        ctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        keylen: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract; `ctx` is a `PROV_BLOWFISH_CTX`.
+        unsafe {
+            let bctx = ctx.cast::<ProvBlowfishCtx>();
+            BF_set_key(ptr::addr_of_mut!((*bctx).ks), keylen as c_int, key);
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CBC(cbc, blowfish, ..., BF_cbc)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_blowfish_cbc_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of!((*ctx.cast::<ProvBlowfishCtx>()).ks);
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                BF_cbc_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    (*ctx).enc_int(),
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                BF_cbc_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    (*ctx).enc_int(),
+                );
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_ECB(ecb, blowfish, ..., BF_ecb)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_blowfish_ecb_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let bl = (*ctx).blocksize;
+            let key = ptr::addr_of!((*ctx.cast::<ProvBlowfishCtx>()).ks);
+            if len < bl {
+                return 1;
+            }
+            let mut i = 0usize;
+            let end = len - bl;
+            while i <= end {
+                BF_ecb_encrypt(in_.add(i), out.add(i), key, (*ctx).enc_int());
+                i += bl;
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_OFB(ofb64, blowfish, ..., BF_ofb64)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_blowfish_ofb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of!((*ctx.cast::<ProvBlowfishCtx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                BF_ofb64_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                BF_ofb64_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                );
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CFB(cfb64, blowfish, ..., BF_cfb64)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_blowfish_cfb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of!((*ctx.cast::<ProvBlowfishCtx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut chunk = MAXCHUNK;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            if l < chunk {
+                chunk = l;
+            }
+            while l > 0 && l >= chunk {
+                BF_cfb64_encrypt(
+                    pin,
+                    pout,
+                    chunk as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                    (*ctx).enc_int(),
+                );
+                l -= chunk;
+                pin = pin.add(chunk);
+                pout = pout.add(chunk);
+                if l < chunk {
+                    chunk = l;
+                }
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    static BF_CBC_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_blowfish_initkey,
+        cipher: cipher_hw_blowfish_cbc_cipher,
+        copyctx: None,
+    };
+    static BF_ECB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_blowfish_initkey,
+        cipher: cipher_hw_blowfish_ecb_cipher,
+        copyctx: None,
+    };
+    static BF_OFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_blowfish_initkey,
+        cipher: cipher_hw_blowfish_ofb64_cipher,
+        copyctx: None,
+    };
+    static BF_CFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_blowfish_initkey,
+        cipher: cipher_hw_blowfish_cfb64_cipher,
+        copyctx: None,
+    };
+
+    /// `blowfish_freectx` — `cipher_blowfish.c:27-33`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn blowfish_freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
+        unsafe {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(
+                vctx,
+                core::mem::size_of::<ProvBlowfishCtx>(),
+                FILE_BLOWFISH,
+                LINE,
+            );
+        }
+    }
+
+    /// `blowfish_dupctx` — `cipher_blowfish.c:35-49`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn blowfish_dupctx(ctx: *mut c_void) -> *mut c_void {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if is_running() == 0 {
+                return ptr::null_mut();
+            }
+            let ret = CRYPTO_malloc(core::mem::size_of::<ProvBlowfishCtx>(), FILE_BLOWFISH, LINE);
+            if !ret.is_null() {
+                ptr::copy_nonoverlapping(
+                    ctx.cast::<ProvBlowfishCtx>(),
+                    ret.cast::<ProvBlowfishCtx>(),
+                    1,
+                );
+            }
+            ret
+        }
+    }
+
+    legacy_newctx!(
+        bf_ecb_newctx,
+        bf_ecb_get_params,
+        ProvBlowfishCtx,
+        BF_ECB_HW,
+        128,
+        64,
+        0,
+        EVP_CIPH_ECB_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_BLOWFISH
+    );
+    legacy_table!(
+        bf_ecb_newctx,
+        bf_ecb_get_params,
+        BF_ECB_FUNCTIONS,
+        blowfish_freectx,
+        blowfish_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        bf_cbc_newctx,
+        bf_cbc_get_params,
+        ProvBlowfishCtx,
+        BF_CBC_HW,
+        128,
+        64,
+        64,
+        EVP_CIPH_CBC_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_BLOWFISH
+    );
+    legacy_table!(
+        bf_cbc_newctx,
+        bf_cbc_get_params,
+        BF_CBC_FUNCTIONS,
+        blowfish_freectx,
+        blowfish_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        bf_ofb64_newctx,
+        bf_ofb64_get_params,
+        ProvBlowfishCtx,
+        BF_OFB_HW,
+        128,
+        8,
+        64,
+        EVP_CIPH_OFB_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_BLOWFISH
+    );
+    legacy_table!(
+        bf_ofb64_newctx,
+        bf_ofb64_get_params,
+        BF_OFB_FUNCTIONS,
+        blowfish_freectx,
+        blowfish_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        bf_cfb64_newctx,
+        bf_cfb64_get_params,
+        ProvBlowfishCtx,
+        BF_CFB_HW,
+        128,
+        8,
+        64,
+        EVP_CIPH_CFB_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_BLOWFISH
+    );
+    legacy_table!(
+        bf_cfb64_newctx,
+        bf_cfb64_get_params,
+        BF_CFB_FUNCTIONS,
+        blowfish_freectx,
+        blowfish_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    // =========================================================================================
+    // IDEA — `cipher_idea.c` / `cipher_idea_hw.c`
+    // =========================================================================================
+
+    /// `PROV_IDEA_CTX` — `cipher_idea.h:13-19`.
+    #[repr(C)]
+    pub(crate) struct ProvIdeaCtx {
+        /// `PROV_CIPHER_CTX base`.
+        pub base: ProvCipherCtx,
+        /// `union { OSSL_UNION_ALIGN; IDEA_KEY_SCHEDULE ks; } ks`.
+        pub ks: IdeaKeySchedule,
+    }
+
+    /// `cipher_hw_idea_initkey` — `cipher_idea_hw.c:19-37`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::init` contract.
+    unsafe extern "C" fn cipher_hw_idea_initkey(
+        ctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        keylen: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract; `ctx` is a `PROV_IDEA_CTX`.
+        unsafe {
+            let _ = keylen;
+            let ictx = ctx.cast::<ProvIdeaCtx>();
+            let ks = ptr::addr_of_mut!((*ictx).ks);
+            if (*ctx).enc_int() != 0
+                || (*ctx).mode == EVP_CIPH_OFB_MODE
+                || (*ctx).mode == EVP_CIPH_CFB_MODE
+            {
+                IDEA_set_encrypt_key(key, ks);
+            } else {
+                let mut tmp = core::mem::MaybeUninit::<IdeaKeySchedule>::uninit();
+                IDEA_set_encrypt_key(key, tmp.as_mut_ptr());
+                IDEA_set_decrypt_key(tmp.as_mut_ptr(), ks);
+                OPENSSL_cleanse(
+                    tmp.as_mut_ptr().cast(),
+                    core::mem::size_of::<IdeaKeySchedule>(),
+                );
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CBC(cbc, idea, ..., IDEA_cbc)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_idea_cbc_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvIdeaCtx>()).ks);
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                IDEA_cbc_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    (*ctx).enc_int(),
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                IDEA_cbc_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    (*ctx).enc_int(),
+                );
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_ECB(ecb, idea, ..., IDEA2_ecb)` — the `enc` argument is dropped.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_idea_ecb_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let bl = (*ctx).blocksize;
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvIdeaCtx>()).ks);
+            if len < bl {
+                return 1;
+            }
+            let mut i = 0usize;
+            let end = len - bl;
+            while i <= end {
+                IDEA_ecb_encrypt(in_.add(i), out.add(i), key);
+                i += bl;
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_OFB(ofb64, idea, ..., IDEA_ofb64)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_idea_ofb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvIdeaCtx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                IDEA_ofb64_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                IDEA_ofb64_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                );
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CFB(cfb64, idea, ..., IDEA_cfb64)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_idea_cfb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvIdeaCtx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut chunk = MAXCHUNK;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            if l < chunk {
+                chunk = l;
+            }
+            while l > 0 && l >= chunk {
+                IDEA_cfb64_encrypt(
+                    pin,
+                    pout,
+                    chunk as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                    (*ctx).enc_int(),
+                );
+                l -= chunk;
+                pin = pin.add(chunk);
+                pout = pout.add(chunk);
+                if l < chunk {
+                    chunk = l;
+                }
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    static IDEA_CBC_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_idea_initkey,
+        cipher: cipher_hw_idea_cbc_cipher,
+        copyctx: None,
+    };
+    static IDEA_ECB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_idea_initkey,
+        cipher: cipher_hw_idea_ecb_cipher,
+        copyctx: None,
+    };
+    static IDEA_OFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_idea_initkey,
+        cipher: cipher_hw_idea_ofb64_cipher,
+        copyctx: None,
+    };
+    static IDEA_CFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_idea_initkey,
+        cipher: cipher_hw_idea_cfb64_cipher,
+        copyctx: None,
+    };
+
+    /// `idea_freectx` — `cipher_idea.c:26-32`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn idea_freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
+        unsafe {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvIdeaCtx>(), FILE_IDEA, LINE);
+        }
+    }
+
+    /// `idea_dupctx` — `cipher_idea.c:34-48`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn idea_dupctx(ctx: *mut c_void) -> *mut c_void {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if is_running() == 0 {
+                return ptr::null_mut();
+            }
+            let ret = CRYPTO_malloc(core::mem::size_of::<ProvIdeaCtx>(), FILE_IDEA, LINE);
+            if !ret.is_null() {
+                ptr::copy_nonoverlapping(ctx.cast::<ProvIdeaCtx>(), ret.cast::<ProvIdeaCtx>(), 1);
+            }
+            ret
+        }
+    }
+
+    legacy_newctx!(
+        idea_ecb_newctx,
+        idea_ecb_get_params,
+        ProvIdeaCtx,
+        IDEA_ECB_HW,
+        128,
+        64,
+        0,
+        EVP_CIPH_ECB_MODE,
+        0,
+        FILE_IDEA
+    );
+    legacy_table!(
+        idea_ecb_newctx,
+        idea_ecb_get_params,
+        IDEA_ECB_FUNCTIONS,
+        idea_freectx,
+        idea_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        idea_cbc_newctx,
+        idea_cbc_get_params,
+        ProvIdeaCtx,
+        IDEA_CBC_HW,
+        128,
+        64,
+        64,
+        EVP_CIPH_CBC_MODE,
+        0,
+        FILE_IDEA
+    );
+    legacy_table!(
+        idea_cbc_newctx,
+        idea_cbc_get_params,
+        IDEA_CBC_FUNCTIONS,
+        idea_freectx,
+        idea_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        idea_ofb64_newctx,
+        idea_ofb64_get_params,
+        ProvIdeaCtx,
+        IDEA_OFB_HW,
+        128,
+        8,
+        64,
+        EVP_CIPH_OFB_MODE,
+        0,
+        FILE_IDEA
+    );
+    legacy_table!(
+        idea_ofb64_newctx,
+        idea_ofb64_get_params,
+        IDEA_OFB_FUNCTIONS,
+        idea_freectx,
+        idea_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        idea_cfb64_newctx,
+        idea_cfb64_get_params,
+        ProvIdeaCtx,
+        IDEA_CFB_HW,
+        128,
+        8,
+        64,
+        EVP_CIPH_CFB_MODE,
+        0,
+        FILE_IDEA
+    );
+    legacy_table!(
+        idea_cfb64_newctx,
+        idea_cfb64_get_params,
+        IDEA_CFB_FUNCTIONS,
+        idea_freectx,
+        idea_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    // =========================================================================================
+    // SEED — `cipher_seed.c` / `cipher_seed_hw.c`
+    // =========================================================================================
+
+    /// `PROV_SEED_CTX` — `cipher_seed.h:13-19`.
+    #[repr(C)]
+    pub(crate) struct ProvSeedCtx {
+        /// `PROV_CIPHER_CTX base`.
+        pub base: ProvCipherCtx,
+        /// `union { OSSL_UNION_ALIGN; SEED_KEY_SCHEDULE ks; } ks`.
+        pub ks: SeedKeySchedule,
+    }
+
+    /// `cipher_hw_seed_initkey` — `cipher_seed_hw.c:18-25`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::init` contract.
+    unsafe extern "C" fn cipher_hw_seed_initkey(
+        ctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        keylen: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract; `ctx` is a `PROV_SEED_CTX`.
+        unsafe {
+            let _ = keylen;
+            let sctx = ctx.cast::<ProvSeedCtx>();
+            SEED_set_key(key, ptr::addr_of_mut!((*sctx).ks));
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CBC(cbc, seed, ..., SEED_cbc)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_seed_cbc_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of!((*ctx.cast::<ProvSeedCtx>()).ks);
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                SEED_cbc_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    (*ctx).enc_int(),
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                SEED_cbc_encrypt(pin, pout, l, key, (*ctx).iv.as_mut_ptr(), (*ctx).enc_int());
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_ECB(ecb, seed, ..., SEED_ecb)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_seed_ecb_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let bl = (*ctx).blocksize;
+            let key = ptr::addr_of!((*ctx.cast::<ProvSeedCtx>()).ks);
+            if len < bl {
+                return 1;
+            }
+            let mut i = 0usize;
+            let end = len - bl;
+            while i <= end {
+                SEED_ecb_encrypt(in_.add(i), out.add(i), key, (*ctx).enc_int());
+                i += bl;
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_OFB(ofb128, seed, ..., SEED_ofb128)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_seed_ofb128_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of!((*ctx.cast::<ProvSeedCtx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                SEED_ofb128_encrypt(pin, pout, MAXCHUNK, key, (*ctx).iv.as_mut_ptr(), &mut num);
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                SEED_ofb128_encrypt(pin, pout, l, key, (*ctx).iv.as_mut_ptr(), &mut num);
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CFB(cfb128, seed, ..., SEED_cfb128)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_seed_cfb128_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of!((*ctx.cast::<ProvSeedCtx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut chunk = MAXCHUNK;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            if l < chunk {
+                chunk = l;
+            }
+            while l > 0 && l >= chunk {
+                SEED_cfb128_encrypt(
+                    pin,
+                    pout,
+                    chunk,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                    (*ctx).enc_int(),
+                );
+                l -= chunk;
+                pin = pin.add(chunk);
+                pout = pout.add(chunk);
+                if l < chunk {
+                    chunk = l;
+                }
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    static SEED_CBC_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_seed_initkey,
+        cipher: cipher_hw_seed_cbc_cipher,
+        copyctx: None,
+    };
+    static SEED_ECB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_seed_initkey,
+        cipher: cipher_hw_seed_ecb_cipher,
+        copyctx: None,
+    };
+    static SEED_OFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_seed_initkey,
+        cipher: cipher_hw_seed_ofb128_cipher,
+        copyctx: None,
+    };
+    static SEED_CFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_seed_initkey,
+        cipher: cipher_hw_seed_cfb128_cipher,
+        copyctx: None,
+    };
+
+    /// `seed_freectx` — `cipher_seed.c:25-31`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn seed_freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
+        unsafe {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvSeedCtx>(), FILE_SEED, LINE);
+        }
+    }
+
+    /// `seed_dupctx` — `cipher_seed.c:33-47`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn seed_dupctx(ctx: *mut c_void) -> *mut c_void {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if is_running() == 0 {
+                return ptr::null_mut();
+            }
+            let ret = CRYPTO_malloc(core::mem::size_of::<ProvSeedCtx>(), FILE_SEED, LINE);
+            if !ret.is_null() {
+                ptr::copy_nonoverlapping(ctx.cast::<ProvSeedCtx>(), ret.cast::<ProvSeedCtx>(), 1);
+            }
+            ret
+        }
+    }
+
+    legacy_newctx!(
+        seed_ecb_newctx,
+        seed_ecb_get_params,
+        ProvSeedCtx,
+        SEED_ECB_HW,
+        128,
+        128,
+        0,
+        EVP_CIPH_ECB_MODE,
+        0,
+        FILE_SEED
+    );
+    legacy_table!(
+        seed_ecb_newctx,
+        seed_ecb_get_params,
+        SEED_ECB_FUNCTIONS,
+        seed_freectx,
+        seed_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        seed_cbc_newctx,
+        seed_cbc_get_params,
+        ProvSeedCtx,
+        SEED_CBC_HW,
+        128,
+        128,
+        128,
+        EVP_CIPH_CBC_MODE,
+        0,
+        FILE_SEED
+    );
+    legacy_table!(
+        seed_cbc_newctx,
+        seed_cbc_get_params,
+        SEED_CBC_FUNCTIONS,
+        seed_freectx,
+        seed_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        seed_ofb128_newctx,
+        seed_ofb128_get_params,
+        ProvSeedCtx,
+        SEED_OFB_HW,
+        128,
+        8,
+        128,
+        EVP_CIPH_OFB_MODE,
+        0,
+        FILE_SEED
+    );
+    legacy_table!(
+        seed_ofb128_newctx,
+        seed_ofb128_get_params,
+        SEED_OFB_FUNCTIONS,
+        seed_freectx,
+        seed_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        seed_cfb128_newctx,
+        seed_cfb128_get_params,
+        ProvSeedCtx,
+        SEED_CFB_HW,
+        128,
+        8,
+        128,
+        EVP_CIPH_CFB_MODE,
+        0,
+        FILE_SEED
+    );
+    legacy_table!(
+        seed_cfb128_newctx,
+        seed_cfb128_get_params,
+        SEED_CFB_FUNCTIONS,
+        seed_freectx,
+        seed_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    // =========================================================================================
+    // RC2 — `cipher_rc2.c` / `cipher_rc2_hw.c`
+    // =========================================================================================
+
+    /// `PROV_RC2_CTX` — `cipher_rc2.h:13-20`.
+    #[repr(C)]
+    pub(crate) struct ProvRc2Ctx {
+        /// `PROV_CIPHER_CTX base`.
+        pub base: ProvCipherCtx,
+        /// `union { OSSL_UNION_ALIGN; RC2_KEY ks; } ks`.
+        pub ks: Rc2Key,
+        /// `size_t key_bits`.
+        pub key_bits: usize,
+    }
+
+    /// `cipher_hw_rc2_initkey` — `cipher_rc2_hw.c:18-26`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::init` contract.
+    unsafe extern "C" fn cipher_hw_rc2_initkey(
+        ctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        _keylen: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract; `ctx` is a `PROV_RC2_CTX`.
+        unsafe {
+            let rctx = ctx.cast::<ProvRc2Ctx>();
+            RC2_set_key(
+                ptr::addr_of_mut!((*rctx).ks),
+                (*ctx).keylen as c_int,
+                key,
+                (*rctx).key_bits as c_int,
+            );
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CBC(cbc, rc2, ..., RC2_cbc)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_rc2_cbc_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvRc2Ctx>()).ks);
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                RC2_cbc_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    (*ctx).enc_int(),
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                RC2_cbc_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    (*ctx).enc_int(),
+                );
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_ECB(ecb, rc2, ..., RC2_ecb)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_rc2_ecb_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let bl = (*ctx).blocksize;
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvRc2Ctx>()).ks);
+            if len < bl {
+                return 1;
+            }
+            let mut i = 0usize;
+            let end = len - bl;
+            while i <= end {
+                RC2_ecb_encrypt(in_.add(i), out.add(i), key, (*ctx).enc_int());
+                i += bl;
+            }
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_OFB(ofb64, rc2, ..., RC2_ofb64)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_rc2_ofb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvRc2Ctx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                RC2_ofb64_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                RC2_ofb64_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                );
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    /// `IMPLEMENT_CIPHER_HW_CFB(cfb64, rc2, ..., RC2_cfb64)`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_rc2_cfb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvRc2Ctx>()).ks);
+            let mut num = (*ctx).num as c_int;
+            let mut chunk = MAXCHUNK;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            if l < chunk {
+                chunk = l;
+            }
+            while l > 0 && l >= chunk {
+                RC2_cfb64_encrypt(
+                    pin,
+                    pout,
+                    chunk as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr(),
+                    &mut num,
+                    (*ctx).enc_int(),
+                );
+                l -= chunk;
+                pin = pin.add(chunk);
+                pout = pout.add(chunk);
+                if l < chunk {
+                    chunk = l;
+                }
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    static RC2_CBC_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_rc2_initkey,
+        cipher: cipher_hw_rc2_cbc_cipher,
+        copyctx: None,
+    };
+    static RC2_ECB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_rc2_initkey,
+        cipher: cipher_hw_rc2_ecb_cipher,
+        copyctx: None,
+    };
+    static RC2_OFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_rc2_initkey,
+        cipher: cipher_hw_rc2_ofb64_cipher,
+        copyctx: None,
+    };
+    static RC2_CFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_rc2_initkey,
+        cipher: cipher_hw_rc2_cfb64_cipher,
+        copyctx: None,
+    };
+
+    /// `RC2_40_MAGIC`/`RC2_64_MAGIC`/`RC2_128_MAGIC` — `cipher_rc2.c:23-25`.
+    const RC2_40_MAGIC: c_int = 0xa0;
+    const RC2_64_MAGIC: c_int = 0x78;
+    const RC2_128_MAGIC: c_int = 0x3a;
+
+    /// `rc2_keybits_to_magic` — `cipher_rc2.c:60-72`.
+    fn rc2_keybits_to_magic(keybits: c_int) -> c_int {
+        match keybits {
+            128 => RC2_128_MAGIC,
+            64 => RC2_64_MAGIC,
+            40 => RC2_40_MAGIC,
+            _ => 0,
+        }
+    }
+
+    /// `rc2_magic_to_keybits` — `cipher_rc2.c:74-86`.
+    fn rc2_magic_to_keybits(magic: c_int) -> c_int {
+        match magic {
+            RC2_128_MAGIC => 128,
+            RC2_64_MAGIC => 64,
+            RC2_40_MAGIC => 40,
+            _ => 0,
+        }
+    }
+
+    /// `rc2_freectx` — `cipher_rc2.c:36-42`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc2_freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
+        unsafe {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvRc2Ctx>(), FILE_RC2, LINE);
+        }
+    }
+
+    /// `rc2_dupctx` — `cipher_rc2.c:44-58`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc2_dupctx(ctx: *mut c_void) -> *mut c_void {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if is_running() == 0 {
+                return ptr::null_mut();
+            }
+            let ret = CRYPTO_malloc(core::mem::size_of::<ProvRc2Ctx>(), FILE_RC2, LINE);
+            if !ret.is_null() {
+                ptr::copy_nonoverlapping(ctx.cast::<ProvRc2Ctx>(), ret.cast::<ProvRc2Ctx>(), 1);
+            }
+            ret
+        }
+    }
+
+    /// `rc2_get_ctx_params` — `cipher_rc2.c:106-172`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc2_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if ossl_cipher_generic_get_ctx_params(vctx, params) == 0 {
+                return 0;
+            }
+            let ctx = vctx.cast::<ProvRc2Ctx>();
+            let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_RC2_KEYBITS);
+            if !p.is_null() && OSSL_PARAM_set_size_t(p, (*ctx).key_bits) == 0 {
+                return 0;
+            }
+            let p1 = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS);
+            let p2 = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS_OLD);
+            if !p1.is_null() || !p2.is_null() {
+                let mut d1 = if p1.is_null() {
+                    ptr::null_mut()
+                } else {
+                    (*p1).data.cast::<c_uchar>()
+                };
+                let mut d2 = if p2.is_null() {
+                    ptr::null_mut()
+                } else {
+                    (*p2).data.cast::<c_uchar>()
+                };
+                let dd1: *mut *mut c_uchar = if d1.is_null() {
+                    ptr::null_mut()
+                } else {
+                    &mut d1
+                };
+                let dd2: *mut *mut c_uchar = if d2.is_null() {
+                    ptr::null_mut()
+                } else {
+                    &mut d2
+                };
+                if (!p1.is_null() && (*p1).data_type != OSSL_PARAM_OCTET_STRING)
+                    || (!p2.is_null() && (*p2).data_type != OSSL_PARAM_OCTET_STRING)
+                {
+                    return 0;
+                }
+                let type_ = ASN1_TYPE_new();
+                if type_.is_null() {
+                    return 0;
+                }
+                let num = rc2_keybits_to_magic((*ctx).key_bits as c_int) as c_long;
+                if ASN1_TYPE_set_int_octetstring(
+                    type_,
+                    num,
+                    (*ctx).base.iv.as_mut_ptr(),
+                    (*ctx).base.ivlen as c_int,
+                ) == 0
+                {
+                    ASN1_TYPE_free(type_);
+                    return 0;
+                }
+                let mut i = i2d_ASN1_TYPE(type_, dd1);
+                if !p1.is_null() && i >= 0 {
+                    (*p1).return_size = i as usize;
+                }
+                if d1 != d2 {
+                    i = i2d_ASN1_TYPE(type_, dd2);
+                }
+                if !p2.is_null() && i >= 0 {
+                    (*p2).return_size = i as usize;
+                }
+                ASN1_TYPE_free(type_);
+                if i < 0 {
+                    return 0;
+                }
+            }
+            1
+        }
+    }
+
+    /// `rc2_set_ctx_params` — `cipher_rc2.c:174-221`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc2_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if ossl_param_is_empty(params) {
+                return 1;
+            }
+            if var_keylen_set_ctx_params(vctx, params) == 0 {
+                return 0;
+            }
+            let ctx = vctx.cast::<ProvRc2Ctx>();
+            let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_RC2_KEYBITS);
+            if !p.is_null() && OSSL_PARAM_get_size_t(p, ptr::addr_of_mut!((*ctx).key_bits)) == 0 {
+                return 0;
+            }
+            let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS);
+            if !p.is_null() {
+                let mut iv = [0u8; 16];
+                let mut num: c_long = 0;
+                let mut d = (*p).data.cast::<c_uchar>() as *const c_uchar;
+                let mut ret = 1;
+                if (*p).data_type != OSSL_PARAM_OCTET_STRING || (*ctx).base.ivlen > 16 {
+                    return 0;
+                }
+                let type_ = d2i_ASN1_TYPE(ptr::null_mut(), &mut d, (*p).data_size as c_long);
+                if type_.is_null()
+                    || ASN1_TYPE_get_int_octetstring(
+                        type_,
+                        &mut num,
+                        iv.as_mut_ptr(),
+                        (*ctx).base.ivlen as c_int,
+                    ) != (*ctx).base.ivlen as c_int
+                    || ossl_cipher_generic_initiv(
+                        ptr::addr_of_mut!((*ctx).base),
+                        iv.as_ptr(),
+                        (*ctx).base.ivlen,
+                    ) == 0
+                {
+                    ASN1_TYPE_free(type_);
+                    ret = 0;
+                } else {
+                    let kb = rc2_magic_to_keybits(num as c_int);
+                    if kb == 0 {
+                        ASN1_TYPE_free(type_);
+                        ret = 0;
+                    } else {
+                        (*ctx).key_bits = kb as usize;
+                        ASN1_TYPE_free(type_);
+                    }
+                }
+                if ret == 0 {
+                    return 0;
+                }
+                (*ctx).base.keylen = (*ctx).key_bits / 8;
+            }
+            1
+        }
+    }
+
+    /// `rc2_gettable_ctx_params` — `cipher_rc2.c:223-226`.
+    static RC2_GETTABLE_CTX_PARAMS: [OsslParam; 9] = [
+        param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+        param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+        param_uint(OSSL_CIPHER_PARAM_PADDING),
+        param_uint(OSSL_CIPHER_PARAM_NUM),
+        param_octet_string(OSSL_CIPHER_PARAM_IV),
+        param_octet_string(OSSL_CIPHER_PARAM_UPDATED_IV),
+        param_size_t(OSSL_CIPHER_PARAM_RC2_KEYBITS),
+        param_octet_string(OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS),
+        END,
+    ];
+
+    /// `rc2_gettable_ctx_params`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc2_gettable_ctx_params(
+        _cctx: *mut c_void,
+        _provctx: *mut c_void,
+    ) -> *const OsslParam {
+        RC2_GETTABLE_CTX_PARAMS.as_ptr()
+    }
+
+    /// `rc2_settable_ctx_params` — `cipher_rc2.c:228-232`.
+    static RC2_SETTABLE_CTX_PARAMS: [OsslParam; 6] = [
+        param_uint(OSSL_CIPHER_PARAM_PADDING),
+        param_uint(OSSL_CIPHER_PARAM_NUM),
+        param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+        param_size_t(OSSL_CIPHER_PARAM_RC2_KEYBITS),
+        param_octet_string(OSSL_CIPHER_PARAM_ALGORITHM_ID_PARAMS),
+        END,
+    ];
+
+    /// `rc2_settable_ctx_params`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc2_settable_ctx_params(
+        _cctx: *mut c_void,
+        _provctx: *mut c_void,
+    ) -> *const OsslParam {
+        RC2_SETTABLE_CTX_PARAMS.as_ptr()
+    }
+
+    /// `rc2_einit` — `cipher_rc2.c:88-95`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc2_einit(
+        ctx: *mut c_void,
+        key: *const c_uchar,
+        keylen: usize,
+        iv: *const c_uchar,
+        ivlen: usize,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if ossl_cipher_generic_einit(ctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+                return 0;
+            }
+            rc2_set_ctx_params(ctx, params)
+        }
+    }
+
+    /// `rc2_dinit` — `cipher_rc2.c:97-104`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc2_dinit(
+        ctx: *mut c_void,
+        key: *const c_uchar,
+        keylen: usize,
+        iv: *const c_uchar,
+        ivlen: usize,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if ossl_cipher_generic_dinit(ctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+                return 0;
+            }
+            rc2_set_ctx_params(ctx, params)
+        }
+    }
+
+    /// The RC2 `newctx` carries the row's `key_bits` after `ossl_cipher_generic_initkey`.
+    macro_rules! legacy_newctx_rc2 {
+        ($newctx:ident, $getparams:ident, $hw:path, $kbits:expr, $blkbits:expr, $ivbits:expr,
+         $mode:expr, $flags:expr) => {
+            unsafe extern "C" fn $newctx(provctx: *mut c_void) -> *mut c_void {
+                if is_running() == 0 {
+                    return ptr::null_mut();
+                }
+                let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvRc2Ctx>(), FILE_RC2, LINE);
+                if !ctx.is_null() {
+                    // SAFETY: a fresh zeroed `PROV_RC2_CTX`.
+                    unsafe {
+                        ossl_cipher_generic_initkey(
+                            ctx,
+                            $kbits,
+                            $blkbits,
+                            $ivbits,
+                            $mode,
+                            $flags,
+                            ptr::addr_of!($hw).cast::<ProvCipherHw>(),
+                            provctx,
+                        );
+                        (*ctx.cast::<ProvRc2Ctx>()).key_bits = $kbits;
+                    }
+                }
+                ctx
+            }
+
+            unsafe extern "C" fn $getparams(params: *mut OsslParam) -> c_int {
+                // SAFETY: the dispatch contract.
+                unsafe {
+                    ossl_cipher_generic_get_params(params, $mode, $flags, $kbits, $blkbits, $ivbits)
+                }
+            }
+        };
+    }
+
+    legacy_newctx_rc2!(
+        rc2_ecb_newctx,
+        rc2_ecb_get_params,
+        RC2_ECB_HW,
+        128,
+        64,
+        0,
+        EVP_CIPH_ECB_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH
+    );
+    legacy_table!(
+        rc2_ecb_newctx,
+        rc2_ecb_get_params,
+        RC2_ECB_FUNCTIONS,
+        rc2_freectx,
+        rc2_dupctx,
+        rc2_einit,
+        rc2_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        rc2_get_ctx_params,
+        rc2_set_ctx_params,
+        rc2_gettable_ctx_params,
+        rc2_settable_ctx_params
+    );
+
+    legacy_newctx_rc2!(
+        rc2_cbc_newctx,
+        rc2_cbc_get_params,
+        RC2_CBC_HW,
+        128,
+        64,
+        64,
+        EVP_CIPH_CBC_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH
+    );
+    legacy_table!(
+        rc2_cbc_newctx,
+        rc2_cbc_get_params,
+        RC2_CBC_FUNCTIONS,
+        rc2_freectx,
+        rc2_dupctx,
+        rc2_einit,
+        rc2_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        rc2_get_ctx_params,
+        rc2_set_ctx_params,
+        rc2_gettable_ctx_params,
+        rc2_settable_ctx_params
+    );
+
+    legacy_newctx_rc2!(
+        rc2_40cbc_newctx,
+        rc2_40cbc_get_params,
+        RC2_CBC_HW,
+        40,
+        64,
+        64,
+        EVP_CIPH_CBC_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH
+    );
+    legacy_table!(
+        rc2_40cbc_newctx,
+        rc2_40cbc_get_params,
+        RC2_40CBC_FUNCTIONS,
+        rc2_freectx,
+        rc2_dupctx,
+        rc2_einit,
+        rc2_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        rc2_get_ctx_params,
+        rc2_set_ctx_params,
+        rc2_gettable_ctx_params,
+        rc2_settable_ctx_params
+    );
+
+    legacy_newctx_rc2!(
+        rc2_64cbc_newctx,
+        rc2_64cbc_get_params,
+        RC2_CBC_HW,
+        64,
+        64,
+        64,
+        EVP_CIPH_CBC_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH
+    );
+    legacy_table!(
+        rc2_64cbc_newctx,
+        rc2_64cbc_get_params,
+        RC2_64CBC_FUNCTIONS,
+        rc2_freectx,
+        rc2_dupctx,
+        rc2_einit,
+        rc2_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        rc2_get_ctx_params,
+        rc2_set_ctx_params,
+        rc2_gettable_ctx_params,
+        rc2_settable_ctx_params
+    );
+
+    legacy_newctx_rc2!(
+        rc2_ofb128_newctx,
+        rc2_ofb128_get_params,
+        RC2_OFB_HW,
+        128,
+        8,
+        64,
+        EVP_CIPH_OFB_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH
+    );
+    legacy_table!(
+        rc2_ofb128_newctx,
+        rc2_ofb128_get_params,
+        RC2_OFB_FUNCTIONS,
+        rc2_freectx,
+        rc2_dupctx,
+        rc2_einit,
+        rc2_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        rc2_get_ctx_params,
+        rc2_set_ctx_params,
+        rc2_gettable_ctx_params,
+        rc2_settable_ctx_params
+    );
+
+    legacy_newctx_rc2!(
+        rc2_cfb128_newctx,
+        rc2_cfb128_get_params,
+        RC2_CFB_HW,
+        128,
+        8,
+        64,
+        EVP_CIPH_CFB_MODE,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH
+    );
+    legacy_table!(
+        rc2_cfb128_newctx,
+        rc2_cfb128_get_params,
+        RC2_CFB_FUNCTIONS,
+        rc2_freectx,
+        rc2_dupctx,
+        rc2_einit,
+        rc2_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        rc2_get_ctx_params,
+        rc2_set_ctx_params,
+        rc2_gettable_ctx_params,
+        rc2_settable_ctx_params
+    );
+
+    // =========================================================================================
+    // RC4 — `cipher_rc4.c` / `cipher_rc4_hw.c`
+    // =========================================================================================
+
+    /// `PROV_RC4_CTX` — `cipher_rc4.h:13-19`.
+    #[repr(C)]
+    pub(crate) struct ProvRc4Ctx {
+        /// `PROV_CIPHER_CTX base`.
+        pub base: ProvCipherCtx,
+        /// `union { OSSL_UNION_ALIGN; RC4_KEY ks; } ks`.
+        pub ks: Rc4Key,
+    }
+
+    /// `cipher_hw_rc4_initkey` — `cipher_rc4_hw.c:18-25`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::init` contract.
+    unsafe extern "C" fn cipher_hw_rc4_initkey(
+        ctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        keylen: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract; `ctx` is a `PROV_RC4_CTX`.
+        unsafe {
+            let rctx = ctx.cast::<ProvRc4Ctx>();
+            RC4_set_key(ptr::addr_of_mut!((*rctx).ks), keylen as c_int, key);
+            1
+        }
+    }
+
+    /// `cipher_hw_rc4_cipher` — `cipher_rc4_hw.c:27-34`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_rc4_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            RC4(
+                ptr::addr_of_mut!((*ctx.cast::<ProvRc4Ctx>()).ks),
+                len,
+                in_,
+                out,
+            );
+            1
+        }
+    }
+
+    static RC4_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_rc4_initkey,
+        cipher: cipher_hw_rc4_cipher,
+        copyctx: None,
+    };
+
+    /// `rc4_freectx` — `cipher_rc4.c:29-35`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
+        unsafe {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvRc4Ctx>(), FILE_RC4, LINE);
+        }
+    }
+
+    /// `rc4_dupctx` — `cipher_rc4.c:37-51`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_dupctx(ctx: *mut c_void) -> *mut c_void {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if is_running() == 0 {
+                return ptr::null_mut();
+            }
+            let ret = CRYPTO_malloc(core::mem::size_of::<ProvRc4Ctx>(), FILE_RC4, LINE);
+            if !ret.is_null() {
+                ptr::copy_nonoverlapping(ctx.cast::<ProvRc4Ctx>(), ret.cast::<ProvRc4Ctx>(), 1);
+            }
+            ret
+        }
+    }
+
+    /// `rc4_einit` — `cipher_rc4.c:53-60`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_einit(
+        ctx: *mut c_void,
+        key: *const c_uchar,
+        keylen: usize,
+        iv: *const c_uchar,
+        ivlen: usize,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if ossl_cipher_generic_einit(ctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+                return 0;
+            }
+            var_keylen_set_ctx_params(ctx, params)
+        }
+    }
+
+    /// `rc4_dinit` — `cipher_rc4.c:62-69`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_dinit(
+        ctx: *mut c_void,
+        key: *const c_uchar,
+        keylen: usize,
+        iv: *const c_uchar,
+        ivlen: usize,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if ossl_cipher_generic_dinit(ctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+                return 0;
+            }
+            var_keylen_set_ctx_params(ctx, params)
+        }
+    }
+
+    legacy_newctx!(
+        rc4_40_newctx,
+        rc4_40_get_params,
+        ProvRc4Ctx,
+        RC4_HW,
+        40,
+        8,
+        0,
+        0,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_RC4
+    );
+    legacy_table!(
+        rc4_40_newctx,
+        rc4_40_get_params,
+        RC4_40_FUNCTIONS,
+        rc4_freectx,
+        rc4_dupctx,
+        rc4_einit,
+        rc4_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        rc4_128_newctx,
+        rc4_128_get_params,
+        ProvRc4Ctx,
+        RC4_HW,
+        128,
+        8,
+        0,
+        0,
+        PROV_CIPHER_FLAG_VARIABLE_LENGTH,
+        FILE_RC4
+    );
+    legacy_table!(
+        rc4_128_newctx,
+        rc4_128_get_params,
+        RC4_128_FUNCTIONS,
+        rc4_freectx,
+        rc4_dupctx,
+        rc4_einit,
+        rc4_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_cipher_generic_get_ctx_params,
+        var_keylen_set_ctx_params,
+        ossl_cipher_generic_gettable_ctx_params,
+        var_keylen_settable_ctx_params
+    );
+
+    // =========================================================================================
+    // DES — `cipher_des.c` / `cipher_des_hw.c`
+    // =========================================================================================
+
+    /// `void (*cbc)(const void *, void *, size_t, const DES_key_schedule *, unsigned char *)` —
+    /// `cipher_des.h:21-24`. Never set on this portable profile.
+    type DesCbcF = unsafe extern "C" fn(
+        *const c_void,
+        *mut c_void,
+        usize,
+        *const DesKeySchedule,
+        *mut c_uchar,
+    );
+
+    /// `PROV_DES_CTX` — `cipher_des.h:15-26`.
+    #[repr(C)]
+    pub(crate) struct ProvDesCtx {
+        /// `PROV_CIPHER_CTX base`.
+        pub base: ProvCipherCtx,
+        /// `union { OSSL_UNION_ALIGN; DES_key_schedule ks; } dks`.
+        pub dks: DesKeySchedule,
+        /// `union { void (*cbc)(...); } dstream`.
+        pub dstream_cbc: Option<DesCbcF>,
+    }
+
+    /// `cipher_hw_des_initkey` — `cipher_des_hw.c:19-38`, portable arm.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::init` contract.
+    unsafe extern "C" fn cipher_hw_des_initkey(
+        ctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        _keylen: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract; `ctx` is a `PROV_DES_CTX`.
+        unsafe {
+            let dctx = ctx.cast::<ProvDesCtx>();
+            (*dctx).dstream_cbc = None;
+            DES_set_key_unchecked(key as *mut [u8; 8], ptr::addr_of_mut!((*dctx).dks));
+            1
+        }
+    }
+
+    /// `cipher_hw_des_copyctx` — `cipher_des_hw.c:40-48`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::copyctx` contract.
+    unsafe extern "C" fn cipher_hw_des_copyctx(dst: *mut ProvCipherCtx, src: *const ProvCipherCtx) {
+        // SAFETY: both are `PROV_DES_CTX`.
+        unsafe {
+            ptr::copy_nonoverlapping(src.cast::<ProvDesCtx>(), dst.cast::<ProvDesCtx>(), 1);
+            (*dst.cast::<ProvDesCtx>()).base.ks =
+                ptr::addr_of!((*dst.cast::<ProvDesCtx>()).dks).cast();
+        }
+    }
+
+    /// `cipher_hw_des_ecb_cipher` — `cipher_des_hw.c:50-62`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_des_ecb_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let bl = (*ctx).blocksize;
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvDesCtx>()).dks);
+            if len < bl {
+                return 1;
+            }
+            let mut i = 0usize;
+            let end = len - bl;
+            while i <= end {
+                DES_ecb_encrypt(
+                    in_.add(i) as *mut [u8; 8],
+                    out.add(i) as *mut [u8; 8],
+                    key,
+                    (*ctx).enc_int(),
+                );
+                i += bl;
+            }
+            1
+        }
+    }
+
+    /// `cipher_hw_des_cbc_cipher` — `cipher_des_hw.c:64-86`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_des_cbc_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let dctx = ctx.cast::<ProvDesCtx>();
+            let key = ptr::addr_of_mut!((*dctx).dks);
+            if let Some(cbc) = (*dctx).dstream_cbc {
+                cbc(in_.cast(), out.cast(), len, key, (*ctx).iv.as_mut_ptr());
+                return 1;
+            }
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                DES_ncbc_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                    (*ctx).enc_int(),
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                DES_ncbc_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                    (*ctx).enc_int(),
+                );
+            }
+            1
+        }
+    }
+
+    /// `cipher_hw_des_ofb64_cipher` — `cipher_des_hw.c:88-105`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_des_ofb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvDesCtx>()).dks);
+            let mut num = (*ctx).num as c_int;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                DES_ofb64_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                    &mut num,
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                DES_ofb64_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                    &mut num,
+                );
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    /// `cipher_hw_des_cfb64_cipher` — `cipher_des_hw.c:107-127`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_des_cfb64_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvDesCtx>()).dks);
+            let mut num = (*ctx).num as c_int;
+            let mut chunk = MAXCHUNK;
+            let mut l = len;
+            let mut pin = in_;
+            let mut pout = out;
+            if l < chunk {
+                chunk = l;
+            }
+            while l > 0 && l >= chunk {
+                DES_cfb64_encrypt(
+                    pin,
+                    pout,
+                    chunk as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                    &mut num,
+                    (*ctx).enc_int(),
+                );
+                l -= chunk;
+                pin = pin.add(chunk);
+                pout = pout.add(chunk);
+                if l < chunk {
+                    chunk = l;
+                }
+            }
+            (*ctx).num = num as c_uint;
+            1
+        }
+    }
+
+    /// `cipher_hw_des_cfb1_cipher` — `cipher_des_hw.c:133-158`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_des_cfb1_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        inl: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvDesCtx>()).dks);
+            let mut chunk = MAXCHUNK / 8;
+            let mut inl = inl;
+            let mut pin = in_;
+            let mut pout = out;
+            let mut c = [0u8; 1];
+            let mut d = [0u8; 1];
+            if inl < chunk {
+                chunk = inl;
+            }
+            while inl != 0 && inl >= chunk {
+                let mut n = 0usize;
+                while n < chunk * 8 {
+                    c[0] = if pin.add(n / 8).read() & (1u8 << (7 - n % 8)) != 0 {
+                        0x80
+                    } else {
+                        0
+                    };
+                    DES_cfb_encrypt(
+                        c.as_ptr(),
+                        d.as_mut_ptr(),
+                        1,
+                        1,
+                        key,
+                        (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                        (*ctx).enc_int(),
+                    );
+                    let cur = pout.add(n / 8).read();
+                    pout.add(n / 8)
+                        .write((cur & !(0x80u8 >> (n % 8))) | ((d[0] & 0x80) >> (n % 8)));
+                    n += 1;
+                }
+                inl -= chunk;
+                pin = pin.add(chunk);
+                pout = pout.add(chunk);
+                if inl < chunk {
+                    chunk = inl;
+                }
+            }
+            1
+        }
+    }
+
+    /// `cipher_hw_des_cfb8_cipher` — `cipher_des_hw.c:160-176`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_des_cfb8_cipher(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        inl: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let key = ptr::addr_of_mut!((*ctx.cast::<ProvDesCtx>()).dks);
+            let mut inl = inl;
+            let mut pin = in_;
+            let mut pout = out;
+            while inl >= MAXCHUNK {
+                DES_cfb_encrypt(
+                    pin,
+                    pout,
+                    8,
+                    MAXCHUNK as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                    (*ctx).enc_int(),
+                );
+                inl -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if inl > 0 {
+                DES_cfb_encrypt(
+                    pin,
+                    pout,
+                    8,
+                    inl as c_long,
+                    key,
+                    (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                    (*ctx).enc_int(),
+                );
+            }
+            1
+        }
+    }
+
+    static DES_CBC_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_des_initkey,
+        cipher: cipher_hw_des_cbc_cipher,
+        copyctx: Some(cipher_hw_des_copyctx),
+    };
+    static DES_ECB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_des_initkey,
+        cipher: cipher_hw_des_ecb_cipher,
+        copyctx: Some(cipher_hw_des_copyctx),
+    };
+    static DES_OFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_des_initkey,
+        cipher: cipher_hw_des_ofb64_cipher,
+        copyctx: Some(cipher_hw_des_copyctx),
+    };
+    static DES_CFB_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_des_initkey,
+        cipher: cipher_hw_des_cfb64_cipher,
+        copyctx: Some(cipher_hw_des_copyctx),
+    };
+    static DES_CFB1_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_des_initkey,
+        cipher: cipher_hw_des_cfb1_cipher,
+        copyctx: Some(cipher_hw_des_copyctx),
+    };
+    static DES_CFB8_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_des_initkey,
+        cipher: cipher_hw_des_cfb8_cipher,
+        copyctx: Some(cipher_hw_des_copyctx),
+    };
+
+    /// `des_freectx` — `cipher_des.c:63-69`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn des_freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
+        unsafe {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(vctx, core::mem::size_of::<ProvDesCtx>(), FILE_DES, LINE);
+        }
+    }
+
+    /// `des_dupctx` — `cipher_des.c:47-61`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn des_dupctx(ctx: *mut c_void) -> *mut c_void {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if is_running() == 0 {
+                return ptr::null_mut();
+            }
+            let ret = CRYPTO_malloc(core::mem::size_of::<ProvDesCtx>(), FILE_DES, LINE);
+            if ret.is_null() {
+                return ptr::null_mut();
+            }
+            let in_ = ctx.cast::<ProvDesCtx>();
+            let copy = match (*(*in_).base.hw).copyctx {
+                Some(f) => f,
+                // The authority calls through this pointer unconditionally; every DES hw static
+                // publishes one, so this arm is unreachable for a correct transcription.
+                None => {
+                    CRYPTO_free(ret, FILE_DES, LINE);
+                    return ptr::null_mut();
+                }
+            };
+            copy(ret.cast::<ProvCipherCtx>(), ctx.cast::<ProvCipherCtx>());
+            ret
+        }
+    }
+
+    /// `des_init` — `cipher_des.c:71-102`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe fn des_init(
+        vctx: *mut c_void,
+        key: *const c_uchar,
+        keylen: usize,
+        iv: *const c_uchar,
+        ivlen: usize,
+        params: *const OsslParam,
+        enc: c_int,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let ctx = vctx.cast::<ProvCipherCtx>();
+            if is_running() == 0 {
+                return 0;
+            }
+            (*ctx).num = 0;
+            (*ctx).bufsz = 0;
+            bits_set(ctx, CTX_ENC, enc != 0);
+            if !iv.is_null() {
+                if ossl_cipher_generic_initiv(ctx, iv, ivlen) == 0 {
+                    return 0;
+                }
+            } else if bits(ctx) & CTX_IV_SET != 0 {
+                ptr::copy_nonoverlapping((*ctx).oiv.as_ptr(), (*ctx).iv.as_mut_ptr(), (*ctx).ivlen);
+            }
+            if !key.is_null() {
+                if keylen != (*ctx).keylen {
+                    return 0;
+                }
+                let hw = (*ctx).hw;
+                if ((*hw).init)(ctx, key, keylen) == 0 {
+                    return 0;
+                }
+                bits_set(ctx, CTX_KEY_SET, true);
+            }
+            ossl_cipher_generic_set_ctx_params(vctx, params)
+        }
+    }
+
+    /// `des_einit` — `cipher_des.c:104-109`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn des_einit(
+        vctx: *mut c_void,
+        key: *const c_uchar,
+        keylen: usize,
+        iv: *const c_uchar,
+        ivlen: usize,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe { des_init(vctx, key, keylen, iv, ivlen, params, 1) }
+    }
+
+    /// `des_dinit` — `cipher_des.c:111-116`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn des_dinit(
+        vctx: *mut c_void,
+        key: *const c_uchar,
+        keylen: usize,
+        iv: *const c_uchar,
+        ivlen: usize,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe { des_init(vctx, key, keylen, iv, ivlen, params, 0) }
+    }
+
+    legacy_newctx!(
+        des_ecb_newctx,
+        des_ecb_get_params,
+        ProvDesCtx,
+        DES_ECB_HW,
+        64,
+        64,
+        0,
+        EVP_CIPH_ECB_MODE,
+        PROV_CIPHER_FLAG_RAND_KEY,
+        FILE_DES
+    );
+    legacy_table!(
+        des_ecb_newctx,
+        des_ecb_get_params,
+        DES_ECB_FUNCTIONS,
+        des_freectx,
+        des_dupctx,
+        des_einit,
+        des_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_tdes_get_ctx_params,
+        ossl_tdes_set_ctx_params,
+        ossl_tdes_gettable_ctx_params,
+        ossl_tdes_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        des_cbc_newctx,
+        des_cbc_get_params,
+        ProvDesCtx,
+        DES_CBC_HW,
+        64,
+        64,
+        64,
+        EVP_CIPH_CBC_MODE,
+        PROV_CIPHER_FLAG_RAND_KEY,
+        FILE_DES
+    );
+    legacy_table!(
+        des_cbc_newctx,
+        des_cbc_get_params,
+        DES_CBC_FUNCTIONS,
+        des_freectx,
+        des_dupctx,
+        des_einit,
+        des_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_tdes_get_ctx_params,
+        ossl_tdes_set_ctx_params,
+        ossl_tdes_gettable_ctx_params,
+        ossl_tdes_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        des_ofb64_newctx,
+        des_ofb64_get_params,
+        ProvDesCtx,
+        DES_OFB_HW,
+        64,
+        8,
+        64,
+        EVP_CIPH_OFB_MODE,
+        PROV_CIPHER_FLAG_RAND_KEY,
+        FILE_DES
+    );
+    legacy_table!(
+        des_ofb64_newctx,
+        des_ofb64_get_params,
+        DES_OFB_FUNCTIONS,
+        des_freectx,
+        des_dupctx,
+        des_einit,
+        des_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_tdes_get_ctx_params,
+        ossl_tdes_set_ctx_params,
+        ossl_tdes_gettable_ctx_params,
+        ossl_tdes_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        des_cfb64_newctx,
+        des_cfb64_get_params,
+        ProvDesCtx,
+        DES_CFB_HW,
+        64,
+        8,
+        64,
+        EVP_CIPH_CFB_MODE,
+        PROV_CIPHER_FLAG_RAND_KEY,
+        FILE_DES
+    );
+    legacy_table!(
+        des_cfb64_newctx,
+        des_cfb64_get_params,
+        DES_CFB_FUNCTIONS,
+        des_freectx,
+        des_dupctx,
+        des_einit,
+        des_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_tdes_get_ctx_params,
+        ossl_tdes_set_ctx_params,
+        ossl_tdes_gettable_ctx_params,
+        ossl_tdes_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        des_cfb1_newctx,
+        des_cfb1_get_params,
+        ProvDesCtx,
+        DES_CFB1_HW,
+        64,
+        8,
+        64,
+        EVP_CIPH_CFB_MODE,
+        PROV_CIPHER_FLAG_RAND_KEY,
+        FILE_DES
+    );
+    legacy_table!(
+        des_cfb1_newctx,
+        des_cfb1_get_params,
+        DES_CFB1_FUNCTIONS,
+        des_freectx,
+        des_dupctx,
+        des_einit,
+        des_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_tdes_get_ctx_params,
+        ossl_tdes_set_ctx_params,
+        ossl_tdes_gettable_ctx_params,
+        ossl_tdes_settable_ctx_params
+    );
+
+    legacy_newctx!(
+        des_cfb8_newctx,
+        des_cfb8_get_params,
+        ProvDesCtx,
+        DES_CFB8_HW,
+        64,
+        8,
+        64,
+        EVP_CIPH_CFB_MODE,
+        PROV_CIPHER_FLAG_RAND_KEY,
+        FILE_DES
+    );
+    legacy_table!(
+        des_cfb8_newctx,
+        des_cfb8_get_params,
+        DES_CFB8_FUNCTIONS,
+        des_freectx,
+        des_dupctx,
+        des_einit,
+        des_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        ossl_tdes_get_ctx_params,
+        ossl_tdes_set_ctx_params,
+        ossl_tdes_gettable_ctx_params,
+        ossl_tdes_settable_ctx_params
+    );
+
+    // =========================================================================================
+    // DESX — `cipher_desx.c` / `cipher_desx_hw.c`
+    // =========================================================================================
+
+    /// `cipher_hw_desx_cbc_initkey` — `cipher_desx_hw.c:27-38`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::init` contract; `key` is twenty-four bytes.
+    unsafe extern "C" fn cipher_hw_desx_cbc_initkey(
+        ctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        _keylen: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract; `ctx` is a `PROV_TDES_CTX`.
+        unsafe {
+            let tctx = ctx.cast::<ProvTdesCtx>();
+            DES_set_key_unchecked(key as *mut [u8; 8], ptr::addr_of_mut!((*tctx).tks[0]));
+            ptr::copy_nonoverlapping(
+                key.add(8),
+                ptr::addr_of_mut!((*tctx).tks[1]).cast::<u8>(),
+                8,
+            );
+            ptr::copy_nonoverlapping(
+                key.add(16),
+                ptr::addr_of_mut!((*tctx).tks[2]).cast::<u8>(),
+                8,
+            );
+            1
+        }
+    }
+
+    /// `cipher_hw_desx_cbc` — `cipher_desx_hw.c:50-68`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_desx_cbc(
+        ctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        inl: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let tctx = ctx.cast::<ProvTdesCtx>();
+            let ks = ptr::addr_of_mut!((*tctx).tks).cast::<DesKeySchedule>();
+            let mut l = inl;
+            let mut pin = in_;
+            let mut pout = out;
+            while l >= MAXCHUNK {
+                DES_xcbc_encrypt(
+                    pin,
+                    pout,
+                    MAXCHUNK as c_long,
+                    ks,
+                    (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                    ptr::addr_of_mut!((*tctx).tks[1]).cast::<[u8; 8]>(),
+                    ptr::addr_of_mut!((*tctx).tks[2]).cast::<[u8; 8]>(),
+                    (*ctx).enc_int(),
+                );
+                l -= MAXCHUNK;
+                pin = pin.add(MAXCHUNK);
+                pout = pout.add(MAXCHUNK);
+            }
+            if l > 0 {
+                DES_xcbc_encrypt(
+                    pin,
+                    pout,
+                    l as c_long,
+                    ks,
+                    (*ctx).iv.as_mut_ptr() as *mut [u8; 8],
+                    ptr::addr_of_mut!((*tctx).tks[1]).cast::<[u8; 8]>(),
+                    ptr::addr_of_mut!((*tctx).tks[2]).cast::<[u8; 8]>(),
+                    (*ctx).enc_int(),
+                );
+            }
+            1
+        }
+    }
+
+    static TDES_DESX_CBC_HW: ProvCipherHw = ProvCipherHw {
+        init: cipher_hw_desx_cbc_initkey,
+        cipher: cipher_hw_desx_cbc,
+        copyctx: Some(cipher_hw_tdes_copyctx),
+    };
+
+    /// `tdes_newctx`'s DESX instantiation, with the row's `ossl_tdes_get_params`.
+    unsafe extern "C" fn tdes_desx_cbc_newctx(provctx: *mut c_void) -> *mut c_void {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<ProvTdesCtx>(), FILE_TDES, LINE);
+        if !ctx.is_null() {
+            // SAFETY: a fresh zeroed `PROV_TDES_CTX`.
+            unsafe {
+                ossl_cipher_generic_initkey(
+                    ctx,
+                    192,
+                    64,
+                    64,
+                    EVP_CIPH_CBC_MODE,
+                    TDES_FLAGS,
+                    ptr::addr_of!(TDES_DESX_CBC_HW),
+                    provctx,
+                );
+            }
+        }
+        ctx
+    }
+
+    /// `tdes_desx_cbc_get_params` — `cipher_desx.c:20`'s `IMPLEMENT_tdes_cipher`.
+    unsafe extern "C" fn tdes_desx_cbc_get_params(params: *mut OsslParam) -> c_int {
+        // SAFETY: the dispatch contract.
+        unsafe { ossl_tdes_get_params(params, EVP_CIPH_CBC_MODE, TDES_FLAGS, 192, 64, 64) }
+    }
+
+    legacy_table!(
+        tdes_desx_cbc_newctx,
+        tdes_desx_cbc_get_params,
+        TDES_DESX_CBC_FUNCTIONS,
+        tdes_freectx,
+        tdes_dupctx,
+        ossl_cipher_generic_einit,
+        ossl_cipher_generic_dinit,
+        ossl_cipher_generic_block_update,
+        ossl_cipher_generic_block_final,
+        ossl_tdes_get_ctx_params,
+        ossl_tdes_set_ctx_params,
+        ossl_tdes_gettable_ctx_params,
+        ossl_tdes_settable_ctx_params
+    );
+
+    // =========================================================================================
+    // RC4-HMAC-MD5 — `cipher_rc4_hmac_md5.c` / `cipher_rc4_hmac_md5_hw.c`
+    // =========================================================================================
+
+    /// `PROV_RC4_HMAC_MD5_CTX` — `cipher_rc4_hmac_md5.h:14-23`.
+    #[repr(C)]
+    pub(crate) struct ProvRc4HmacMd5Ctx {
+        /// `PROV_CIPHER_CTX base`.
+        pub base: ProvCipherCtx,
+        /// `union { OSSL_UNION_ALIGN; RC4_KEY ks; } ks`.
+        pub ks: Rc4Key,
+        /// `MD5_CTX head`.
+        pub head: Md5Ctx,
+        /// `MD5_CTX tail`.
+        pub tail: Md5Ctx,
+        /// `MD5_CTX md`.
+        pub md: Md5Ctx,
+        /// `size_t payload_length`.
+        pub payload_length: usize,
+        /// `size_t tls_aad_pad_sz`.
+        pub tls_aad_pad_sz: usize,
+    }
+
+    /// `PROV_CIPHER_HW_RC4_HMAC_MD5` — `cipher_rc4_hmac_md5.h:25-31`.
+    #[repr(C)]
+    struct ProvCipherHwRc4HmacMd5 {
+        /// `PROV_CIPHER_HW base`.
+        base: ProvCipherHw,
+        /// `int (*tls_init)(PROV_CIPHER_CTX *, unsigned char *, size_t)`.
+        tls_init: unsafe extern "C" fn(*mut ProvCipherCtx, *mut c_uchar, usize) -> c_int,
+        /// `void (*init_mackey)(PROV_CIPHER_CTX *, const unsigned char *, size_t)`.
+        init_mackey: unsafe extern "C" fn(*mut ProvCipherCtx, *const c_uchar, usize),
+    }
+
+    /// `cipher_hw_rc4_hmac_md5_initkey` — `cipher_rc4_hmac_md5_hw.c:35-47`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW::init` contract.
+    unsafe extern "C" fn cipher_hw_rc4_hmac_md5_initkey(
+        bctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        keylen: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract; `bctx` is a `PROV_RC4_HMAC_MD5_CTX`.
+        unsafe {
+            let ctx = bctx.cast::<ProvRc4HmacMd5Ctx>();
+            RC4_set_key(ptr::addr_of_mut!((*ctx).ks), keylen as c_int, key);
+            MD5_Init(ptr::addr_of_mut!((*ctx).head));
+            ptr::copy_nonoverlapping(
+                ptr::addr_of!((*ctx).head),
+                ptr::addr_of_mut!((*ctx).tail),
+                1,
+            );
+            ptr::copy_nonoverlapping(ptr::addr_of!((*ctx).head), ptr::addr_of_mut!((*ctx).md), 1);
+            (*ctx).payload_length = NO_PAYLOAD_LENGTH;
+            (*bctx).removetlsfixed = MD5_DIGEST_LENGTH;
+            1
+        }
+    }
+
+    /// `cipher_hw_rc4_hmac_md5_cipher` — `cipher_rc4_hmac_md5_hw.c:49-163`, portable arm.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_FN` contract.
+    unsafe extern "C" fn cipher_hw_rc4_hmac_md5_cipher(
+        bctx: *mut ProvCipherCtx,
+        out: *mut c_uchar,
+        in_: *const c_uchar,
+        len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let ctx = bctx.cast::<ProvRc4HmacMd5Ctx>();
+            let ks = ptr::addr_of_mut!((*ctx).ks);
+            let mut plen = (*ctx).payload_length;
+            if plen != NO_PAYLOAD_LENGTH && len != plen + MD5_DIGEST_LENGTH {
+                return 0;
+            }
+            if (*bctx).enc_int() != 0 {
+                if plen == NO_PAYLOAD_LENGTH {
+                    plen = len;
+                }
+                MD5_Update(ptr::addr_of_mut!((*ctx).md), in_.cast(), plen);
+                if plen != len {
+                    if in_ != out {
+                        ptr::copy_nonoverlapping(in_, out, plen);
+                    }
+                    MD5_Final(out.add(plen), ptr::addr_of_mut!((*ctx).md));
+                    ptr::copy_nonoverlapping(
+                        ptr::addr_of!((*ctx).tail),
+                        ptr::addr_of_mut!((*ctx).md),
+                        1,
+                    );
+                    MD5_Update(
+                        ptr::addr_of_mut!((*ctx).md),
+                        out.add(plen).cast(),
+                        MD5_DIGEST_LENGTH,
+                    );
+                    MD5_Final(out.add(plen), ptr::addr_of_mut!((*ctx).md));
+                    RC4(ks, len, out, out);
+                } else {
+                    RC4(ks, len, in_, out);
+                }
+            } else {
+                let mut mac = [0u8; MD5_DIGEST_LENGTH];
+                RC4(ks, len, in_, out);
+                if plen != NO_PAYLOAD_LENGTH {
+                    MD5_Update(ptr::addr_of_mut!((*ctx).md), out.cast(), plen);
+                    MD5_Final(mac.as_mut_ptr(), ptr::addr_of_mut!((*ctx).md));
+                    ptr::copy_nonoverlapping(
+                        ptr::addr_of!((*ctx).tail),
+                        ptr::addr_of_mut!((*ctx).md),
+                        1,
+                    );
+                    MD5_Update(
+                        ptr::addr_of_mut!((*ctx).md),
+                        mac.as_ptr().cast(),
+                        MD5_DIGEST_LENGTH,
+                    );
+                    MD5_Final(mac.as_mut_ptr(), ptr::addr_of_mut!((*ctx).md));
+                    if CRYPTO_memcmp(out.add(plen).cast(), mac.as_ptr().cast(), MD5_DIGEST_LENGTH)
+                        != 0
+                    {
+                        return 0;
+                    }
+                } else {
+                    MD5_Update(ptr::addr_of_mut!((*ctx).md), out.cast(), len);
+                }
+            }
+            (*ctx).payload_length = NO_PAYLOAD_LENGTH;
+            1
+        }
+    }
+
+    /// `cipher_hw_rc4_hmac_md5_tls_init` — `cipher_rc4_hmac_md5_hw.c:165-188`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_RC4_HMAC_MD5::tls_init` contract.
+    unsafe extern "C" fn cipher_hw_rc4_hmac_md5_tls_init(
+        bctx: *mut ProvCipherCtx,
+        aad: *mut c_uchar,
+        aad_len: usize,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let ctx = bctx.cast::<ProvRc4HmacMd5Ctx>();
+            if aad_len != EVP_AEAD_TLS1_AAD_LEN {
+                return 0;
+            }
+            let mut len = ((*aad.add(aad_len - 2)) as u32) << 8 | (*aad.add(aad_len - 1)) as u32;
+            if (*bctx).enc_int() == 0 {
+                if len < MD5_DIGEST_LENGTH as u32 {
+                    return 0;
+                }
+                len -= MD5_DIGEST_LENGTH as u32;
+                *aad.add(aad_len - 2) = (len >> 8) as c_uchar;
+                *aad.add(aad_len - 1) = len as c_uchar;
+            }
+            (*ctx).payload_length = len as usize;
+            ptr::copy_nonoverlapping(ptr::addr_of!((*ctx).head), ptr::addr_of_mut!((*ctx).md), 1);
+            MD5_Update(ptr::addr_of_mut!((*ctx).md), aad.cast(), aad_len);
+            MD5_DIGEST_LENGTH as c_int
+        }
+    }
+
+    /// `cipher_hw_rc4_hmac_md5_init_mackey` — `cipher_rc4_hmac_md5_hw.c:190-219`.
+    ///
+    /// # Safety
+    /// The `PROV_CIPHER_HW_RC4_HMAC_MD5::init_mackey` contract.
+    unsafe extern "C" fn cipher_hw_rc4_hmac_md5_init_mackey(
+        bctx: *mut ProvCipherCtx,
+        key: *const c_uchar,
+        len: usize,
+    ) {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let ctx = bctx.cast::<ProvRc4HmacMd5Ctx>();
+            let mut hmac_key = [0u8; 64];
+            if len > hmac_key.len() {
+                MD5_Init(ptr::addr_of_mut!((*ctx).head));
+                MD5_Update(ptr::addr_of_mut!((*ctx).head), key.cast(), len);
+                MD5_Final(hmac_key.as_mut_ptr(), ptr::addr_of_mut!((*ctx).head));
+            } else {
+                ptr::copy_nonoverlapping(key, hmac_key.as_mut_ptr(), len);
+            }
+            for b in hmac_key.iter_mut() {
+                *b ^= 0x36;
+            }
+            MD5_Init(ptr::addr_of_mut!((*ctx).head));
+            MD5_Update(
+                ptr::addr_of_mut!((*ctx).head),
+                hmac_key.as_ptr().cast(),
+                hmac_key.len(),
+            );
+            for b in hmac_key.iter_mut() {
+                *b ^= 0x36 ^ 0x5c;
+            }
+            MD5_Init(ptr::addr_of_mut!((*ctx).tail));
+            MD5_Update(
+                ptr::addr_of_mut!((*ctx).tail),
+                hmac_key.as_ptr().cast(),
+                hmac_key.len(),
+            );
+            OPENSSL_cleanse(hmac_key.as_mut_ptr().cast(), hmac_key.len());
+        }
+    }
+
+    static RC4_HMAC_MD5_HW: ProvCipherHwRc4HmacMd5 = ProvCipherHwRc4HmacMd5 {
+        base: ProvCipherHw {
+            init: cipher_hw_rc4_hmac_md5_initkey,
+            cipher: cipher_hw_rc4_hmac_md5_cipher,
+            copyctx: None,
+        },
+        tls_init: cipher_hw_rc4_hmac_md5_tls_init,
+        init_mackey: cipher_hw_rc4_hmac_md5_init_mackey,
+    };
+
+    /// `GET_HW(ctx)` — `cipher_rc4_hmac_md5.c:31`.
+    ///
+    /// # Safety
+    /// `ctx` is a live `PROV_RC4_HMAC_MD5_CTX` whose `base.hw` is `RC4_HMAC_MD5_HW`'s base.
+    unsafe fn rc4_hmac_md5_hw(ctx: *mut ProvCipherCtx) -> *const ProvCipherHwRc4HmacMd5 {
+        // SAFETY: the caller's contract.
+        unsafe { (*ctx).hw.cast() }
+    }
+
+    /// `rc4_hmac_md5_freectx` — `cipher_rc4_hmac_md5.c:67-73`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_hmac_md5_freectx(vctx: *mut c_void) {
+        // SAFETY: `vctx` is `newctx`'s allocation or NULL.
+        unsafe {
+            ossl_cipher_generic_reset_ctx(vctx.cast());
+            CRYPTO_clear_free(
+                vctx,
+                core::mem::size_of::<ProvRc4HmacMd5Ctx>(),
+                FILE_RC4_HMAC_MD5,
+                LINE,
+            );
+        }
+    }
+
+    /// `rc4_hmac_md5_dupctx` — `cipher_rc4_hmac_md5.c:75-82`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_hmac_md5_dupctx(vctx: *mut c_void) -> *mut c_void {
+        // SAFETY: `vctx` is a live context.
+        unsafe {
+            if vctx.is_null() {
+                return ptr::null_mut();
+            }
+            let ret = CRYPTO_malloc(
+                core::mem::size_of::<ProvRc4HmacMd5Ctx>(),
+                FILE_RC4_HMAC_MD5,
+                LINE,
+            );
+            if !ret.is_null() {
+                ptr::copy_nonoverlapping(
+                    vctx.cast::<ProvRc4HmacMd5Ctx>(),
+                    ret.cast::<ProvRc4HmacMd5Ctx>(),
+                    1,
+                );
+            }
+            ret
+        }
+    }
+
+    /// `rc4_hmac_md5_einit` — `cipher_rc4_hmac_md5.c:84-91`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_hmac_md5_einit(
+        ctx: *mut c_void,
+        key: *const c_uchar,
+        keylen: usize,
+        iv: *const c_uchar,
+        ivlen: usize,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if ossl_cipher_generic_einit(ctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+                return 0;
+            }
+            rc4_hmac_md5_set_ctx_params(ctx, params)
+        }
+    }
+
+    /// `rc4_hmac_md5_dinit` — `cipher_rc4_hmac_md5.c:93-100`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_hmac_md5_dinit(
+        ctx: *mut c_void,
+        key: *const c_uchar,
+        keylen: usize,
+        iv: *const c_uchar,
+        ivlen: usize,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if ossl_cipher_generic_dinit(ctx, key, keylen, iv, ivlen, ptr::null()) == 0 {
+                return 0;
+            }
+            rc4_hmac_md5_set_ctx_params(ctx, params)
+        }
+    }
+
+    /// `rc4_hmac_md5_known_gettable_ctx_params` — `cipher_rc4_hmac_md5.c:102-107`.
+    static RC4_HMAC_MD5_GETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+        param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+        param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+        param_size_t(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD),
+        END,
+    ];
+
+    /// `rc4_hmac_md5_gettable_ctx_params` — `cipher_rc4_hmac_md5.c:108-112`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_hmac_md5_gettable_ctx_params(
+        _cctx: *mut c_void,
+        _provctx: *mut c_void,
+    ) -> *const OsslParam {
+        RC4_HMAC_MD5_GETTABLE_CTX_PARAMS.as_ptr()
+    }
+
+    /// `rc4_hmac_md5_get_ctx_params` — `cipher_rc4_hmac_md5.c:114-136`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_hmac_md5_get_ctx_params(
+        vctx: *mut c_void,
+        params: *mut OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            let ctx = vctx.cast::<ProvRc4HmacMd5Ctx>();
+            let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_KEYLEN);
+            if !p.is_null() && OSSL_PARAM_set_size_t(p, (*ctx).base.keylen) == 0 {
+                return 0;
+            }
+            let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_IVLEN);
+            if !p.is_null() && OSSL_PARAM_set_size_t(p, (*ctx).base.ivlen) == 0 {
+                return 0;
+            }
+            let p = OSSL_PARAM_locate(params, OSSL_CIPHER_PARAM_AEAD_TLS1_AAD_PAD);
+            if !p.is_null() && OSSL_PARAM_set_size_t(p, (*ctx).tls_aad_pad_sz) == 0 {
+                return 0;
+            }
+            1
+        }
+    }
+
+    /// `rc4_hmac_md5_known_settable_ctx_params` — `cipher_rc4_hmac_md5.c:138-143`.
+    static RC4_HMAC_MD5_SETTABLE_CTX_PARAMS: [OsslParam; 4] = [
+        param_size_t(OSSL_CIPHER_PARAM_KEYLEN),
+        param_size_t(OSSL_CIPHER_PARAM_IVLEN),
+        param_octet_string(OSSL_CIPHER_PARAM_AEAD_TLS1_AAD),
+        END,
+    ];
+
+    /// `rc4_hmac_md5_settable_ctx_params` — `cipher_rc4_hmac_md5.c:144-148`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_hmac_md5_settable_ctx_params(
+        _cctx: *mut c_void,
+        _provctx: *mut c_void,
+    ) -> *const OsslParam {
+        RC4_HMAC_MD5_SETTABLE_CTX_PARAMS.as_ptr()
+    }
+
+    /// `rc4_hmac_md5_set_ctx_params` — `cipher_rc4_hmac_md5.c:150-213`.
+    ///
+    /// # Safety
+    /// The dispatch contract.
+    unsafe extern "C" fn rc4_hmac_md5_set_ctx_params(
+        vctx: *mut c_void,
+        params: *const OsslParam,
+    ) -> c_int {
+        // SAFETY: the caller's contract.
+        unsafe {
+            if ossl_param_is_empty(params) {
+                return 1;
+            }
+            let ctx = vctx.cast::<ProvRc4HmacMd5Ctx>();
+            let mut sz: usize = 0;
+
+            let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_KEYLEN);
+            if !p.is_null() {
+                if OSSL_PARAM_get_size_t(p, &mut sz) == 0 {
+                    return 0;
+                }
+                if (*ctx).base.keylen != sz {
+                    return 0;
+                }
+            }
+            let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_IVLEN);
+            if !p.is_null() {
+                if OSSL_PARAM_get_size_t(p, &mut sz) == 0 {
+                    return 0;
+                }
+                if (*ctx).base.ivlen != sz {
+                    return 0;
+                }
+            }
+            let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_TLS1_AAD);
+            if !p.is_null() {
+                if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                    return 0;
+                }
+                let hw = rc4_hmac_md5_hw(vctx.cast());
+                let r = ((*hw).tls_init)(vctx.cast(), (*p).data.cast(), (*p).data_size);
+                if r == 0 {
+                    return 0;
+                }
+                (*ctx).tls_aad_pad_sz = r as usize;
+            }
+            let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_AEAD_MAC_KEY);
+            if !p.is_null() {
+                if (*p).data_type != OSSL_PARAM_OCTET_STRING {
+                    return 0;
+                }
+                let hw = rc4_hmac_md5_hw(vctx.cast());
+                ((*hw).init_mackey)(vctx.cast(), (*p).data.cast(), (*p).data_size);
+            }
+            let p = OSSL_PARAM_locate_const(params, OSSL_CIPHER_PARAM_TLS_VERSION);
+            if !p.is_null() {
+                let mut v: c_uint = 0;
+                if OSSL_PARAM_get_uint(p, &mut v) == 0 {
+                    return 0;
+                }
+                (*ctx).base.tlsversion = v;
+            }
+            1
+        }
+    }
+
+    /// `rc4_hmac_md5_get_params` — `cipher_rc4_hmac_md5.c:215-222`.
+    unsafe extern "C" fn rc4_hmac_md5_get_params(params: *mut OsslParam) -> c_int {
+        // SAFETY: the dispatch contract.
+        unsafe { ossl_cipher_generic_get_params(params, 0, RC4_HMAC_MD5_FLAGS, 128, 8, 0) }
+    }
+
+    /// `RC4_HMAC_MD5_FLAGS` — `cipher_rc4_hmac_md5.c:23-24`.
+    const RC4_HMAC_MD5_FLAGS: u64 = PROV_CIPHER_FLAG_VARIABLE_LENGTH | PROV_CIPHER_FLAG_AEAD;
+
+    /// `rc4_hmac_md5_newctx` — `cipher_rc4_hmac_md5.c:48-65`.
+    unsafe extern "C" fn rc4_hmac_md5_newctx(provctx: *mut c_void) -> *mut c_void {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(
+            core::mem::size_of::<ProvRc4HmacMd5Ctx>(),
+            FILE_RC4_HMAC_MD5,
+            LINE,
+        );
+        if !ctx.is_null() {
+            // SAFETY: a fresh zeroed `PROV_RC4_HMAC_MD5_CTX`.
+            unsafe {
+                ossl_cipher_generic_initkey(
+                    ctx,
+                    128,
+                    8,
+                    0,
+                    0,
+                    RC4_HMAC_MD5_FLAGS,
+                    ptr::addr_of!(RC4_HMAC_MD5_HW).cast::<ProvCipherHw>(),
+                    provctx,
+                );
+            }
+        }
+        ctx
+    }
+
+    legacy_table!(
+        rc4_hmac_md5_newctx,
+        rc4_hmac_md5_get_params,
+        RC4_HMAC_MD5_FUNCTIONS,
+        rc4_hmac_md5_freectx,
+        rc4_hmac_md5_dupctx,
+        rc4_hmac_md5_einit,
+        rc4_hmac_md5_dinit,
+        ossl_cipher_generic_stream_update,
+        ossl_cipher_generic_stream_final,
+        rc4_hmac_md5_get_ctx_params,
+        rc4_hmac_md5_set_ctx_params,
+        rc4_hmac_md5_gettable_ctx_params,
+        rc4_hmac_md5_settable_ctx_params
+    );
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
