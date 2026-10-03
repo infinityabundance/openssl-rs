@@ -1,0 +1,70 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "complete": true,
+    "counts": {
+      "atlas_owned": 3,
+      "deferred_to_later_phase": 0,
+      "implemented": 3,
+      "open_in_this_stratum": 0,
+      "owned": 3,
+      "received_by_handoff": 0
+    },
+    "deferred": [],
+    "deferred_by_phase": {},
+    "handoffs_discharged": {},
+    "handoffs_discharged_with_reasons": {},
+    "implemented": [
+      "OSSL_QUIC_client_method",
+      "OSSL_QUIC_client_thread_method",
+      "OSSL_QUIC_server_method"
+    ],
+    "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs, and ssl/<dir>/<stem>.c -> src/ssl/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
+    "module_overrides": [],
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. **`complete` here is the ledger-level emptiness check, not the phase-exit predicate**: like Phase 14 (docs/DECISIONS.md D529), this stratum is not complete until its seal and its FRF/Gemel chain land, so a reader must not read the ledger's `complete` as the stratum's state -- `forensics/phase-state.json` is where that is derived. Phase 15's working set is exactly its atlas-owned universe -- the three `quic.h` exports `OSSL_QUIC_client_method`, `OSSL_QUIC_client_thread_method` and `OSSL_QUIC_server_method` -- and no earlier stratum defers a symbol to it, so `received_by_handoff` is 0. The two authority *units* `forensics/prerequisites.json` defers to this stratum's engine (`ssl/statem/statem_clnt.c` and `ssl/statem/statem_srvr.c`) are unit deferrals, not export hand-offs, and do not move that count. This stratum ships no provider registration row: QUIC is not a provider and this stratum activates none. Nothing here is a parity claim: a symbol in `implemented` would be at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-15-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "open": [],
+    "owned_by_header": {
+      "quic.h": 3
+    },
+    "owned_by_module": {
+      "src/ssl/quic/quic_method.rs": 3
+    },
+    "provider_rows_owned": 0,
+    "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 15, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
+  },
+  "generator": "forensics/tools/phase15_obligations.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+      "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+    },
+    {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "export-defining-units",
+      "path": "forensics/atlas/export-defining-units.json",
+      "sha256": "fed68223839cb890b8d34359d806945316f67bf2fa08353b7e43e608a3722fed"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "49798d9f9eb936aee03e1b62046a8979823756112021cf10e4ad1ac94d8e2aa7"
+    },
+    {
+      "name": "implemented-surface",
+      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
+      "sha256": "9142d43a2c462ae820b76e2fb9f9c0eef7d52404c0b0964e440b7b86f21ca2e3"
+    }
+  ],
+  "kind": "phase15-obligations",
+  "schema": "openssl-rs/atlas/phase15-obligations/v1"
+}

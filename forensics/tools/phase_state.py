@@ -995,6 +995,24 @@ PHASE14_MODULES = [
     "forensics/tools/phase14_obligations.py",
 ]
 
+# Phase 15 is the QUIC/ECH stratum: the three `quic.h` exports Phase 14 left it. Its evidence is
+# its plan and its ledger generator; the ledger's universe is the ownership atlas's
+# `owner_phase == 15` rows -- exactly three -- plus every row an earlier stratum's ledger records
+# as handed to it, of which there are none, so `forensics/phase15-obligations.json` reports
+# `received_by_handoff: 0`. It begins on Phase 14's landed libssl substrate: the three `quic.h`
+# names are the only `libssl` exports that stratum did not own, so at activation they are open and
+# the split moves as 15.1 lands them. It owns **no provider registration row**: QUIC is not a
+# provider and this stratum activates none. The two authority units `forensics/prerequisites.json`
+# defers to this stratum (`ssl/statem/statem_clnt.c`, `ssl/statem/statem_srvr.c`) are unit
+# deferrals for the prerequisite gate, not export hand-offs. `docs/PHASE-15-SUBPHASES.md` section 4
+# records the activation measurement and the precondition it places on the runner.
+PHASE15_COURTS = "artifacts/phase15/COURTS.json"
+PHASE15_OBLIGATIONS = "forensics/phase15-obligations.json"
+PHASE15_MODULES = [
+    "docs/PHASE-15-SUBPHASES.md",
+    "forensics/tools/phase15_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1109,6 +1127,24 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "stratum owns no provider registration row: libssl is not a provider "
                             "and this stratum activates none (docs/PHASE-14-SUBPHASES.md "
                             "sections 1 and 4)"
+                        )),
+    15: StratumEvidence(PHASE15_MODULES, PHASE15_OBLIGATIONS, PHASE15_COURTS,
+                        ledger_note=(
+                            "All three of the exports it owns are its own header's "
+                            "(`quic.h`), and no earlier stratum's ledger records a hand-off to "
+                            "it, so its working set is exactly the atlas projection: "
+                            "`OSSL_QUIC_client_method`, `OSSL_QUIC_client_thread_method` and "
+                            "`OSSL_QUIC_server_method`. Its plan and seal record that the QUIC "
+                            "object and the TLS message layer are not this unit's, and the two "
+                            "authority units `forensics/prerequisites.json` defers to it "
+                            "(`ssl/statem/statem_clnt.c`, `ssl/statem/statem_srvr.c`) are unit "
+                            "deferrals for the prerequisite gate, not export hand-offs. That "
+                            "split moves as this stratum lands its own units, so this note "
+                            "does not restate its counts; the ledger's `counts` and "
+                            "`forensics/atlas/implemented-surface.json` are the live record. "
+                            "The stratum owns no provider registration row: QUIC is not a "
+                            "provider and this stratum activates none "
+                            "(docs/PHASE-15-SUBPHASES.md sections 1 and 4)"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no

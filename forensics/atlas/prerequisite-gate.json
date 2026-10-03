@@ -9,7 +9,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 87,
-      "language_surface_not_modelled_by_name": 11461,
+      "language_surface_not_modelled_by_name": 11459,
       "planned_prerequisites": 4
     },
     "census_by_unit": {
@@ -625,7 +625,8 @@
         "ssl/d1_lib.c": 56,
         "ssl/d1_srtp.c": 24,
         "ssl/methods.c": 6,
-        "ssl/quic/quic_impl.c": 164,
+        "ssl/quic/quic_impl.c": 163,
+        "ssl/quic/quic_method.c": 1,
         "ssl/quic/quic_tls_api.c": 9,
         "ssl/record/rec_layer_s3.c": 94,
         "ssl/rio/poll_immediate.c": 12,
@@ -637,7 +638,7 @@
         "ssl/ssl_conf.c": 32,
         "ssl/ssl_err_legacy.c": 2,
         "ssl/ssl_init.c": 7,
-        "ssl/ssl_lib.c": 256,
+        "ssl/ssl_lib.c": 254,
         "ssl/ssl_mcnf.c": 9,
         "ssl/ssl_rsa.c": 26,
         "ssl/ssl_rsa_legacy.c": 11,
@@ -751,8 +752,8 @@
       ]
     },
     "checked": {
-      "authority_units": 591,
-      "crate_modules": 785,
+      "authority_units": 592,
+      "crate_modules": 786,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 5,
       "divergence_names_covered": 47,
@@ -1247,7 +1248,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "93e2e076363ce57ae62819a0a09b9df8d166a0ba2d67bd9f6c1b85fc1f289d0c",
+  "body_hash": "5aaf134a5d2fc4a7816e8f5eddf9a741812c4e54fa9f7fc10a1f86c5476285ac",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1268,7 +1269,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "22c703af429772e209604f46a48ae1dc27946fc13cf898b2b3392cdded897297"
+      "sha256": "b9a32440f4d93fd03471d1da570b62349ab29d5bd49c26316f6d5cdb55299cea"
     },
     {
       "name": "symbol-ownership",
@@ -1283,17 +1284,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4eec22d2e8141da5999d3cc012b05dd0ad36394f21c90f5e5b254753d2d4b8f5"
+      "sha256": "8102978e08655ad7bbb16b1be75cfb57893d7c9a4e0fe047d81a286c4e30372e"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "0707e69beaefe7a395b9c2ec9bea4f2e7f7b816b8b1152353d46e173d3c3abc1"
+      "sha256": "1b4970bf209e4a21ba14b42ae304fedefbcc65b7e896f8b622b47e591d608e67"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "70b06c7a0960cf287d99fe11526a98a1bc7a8a3990f1de0e0a7f3f2486cb75f4"
+      "sha256": "4dde21f48014bf43bed6b24ab5551f7b93ad27dfb5b7668f5165740d76958282"
     },
     {
       "name": "crate-source-tree",

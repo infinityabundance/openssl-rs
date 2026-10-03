@@ -18,8 +18,8 @@ name is defined; `open` means the stratum owns it and has not built it;
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
 | libcrypto | 5896 | 5896 | 0 |
-| libssl | 603 | 600 | 3 |
-| **total** | **6499** | **6496** | **3** |
+| libssl | 603 | 603 | 0 |
+| **total** | **6499** | **6499** | **0** |
 
 ## Ownership atlas, by stratum
 
@@ -40,7 +40,7 @@ declared owner; this is that assignment.
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` | 1024 | 1033 | 1030 | 3 | 0 |
 | 13 | Legacy / deprecated compatibility | `complete` | 189 | 377 | 377 | 0 | 0 |
 | 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
-| 15 | QUIC / ECH and modern SSL surface | `not-started` | 3 | — | — | — | — |
+| 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
 | 16 | CLI / config / filesystem contract | `not-started` | 0 | — | — | — | — |
 | 17 | Downstream replacement court | `not-started` | 0 | — | — | — | — |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
@@ -490,6 +490,24 @@ Courts: `all pass`, 11 court(s), **1931** authority observation(s) over 11 trans
 | RT-SESSION-CERT | `pass` | 208 |
 | RT-SSL-EXT | `pass` | 77 |
 
+## Phase 15 — QUIC / ECH and modern SSL surface
+
+* state: `complete`
+* seal: `docs/PHASE-15-QUIC-SEAL.md`
+* ledger: `forensics/phase15-obligations.json`
+* atlas-owned: 3
+* owned working set: 3
+* implemented: 3
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 0**
+
+Courts: `all pass`, 2 court(s), **33** authority observation(s) over 2 transcript court(s).
+
+| court | verdict | observations |
+|---|---|---|
+| RT-PHASE15-REF | `pass` | 3 |
+| RT-QUIC | `pass` | 30 |
+
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
 * state: `complete`
@@ -549,7 +567,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 12 | 1030 | 1030 | 902 | 128 | 0 | 0 | 0 |
 | 13 | 377 | 377 | 348 | 29 | 0 | 0 | 0 |
 | 14 | 600 | 600 | 500 | 100 | 0 | 0 | 0 |
-| **total** | **6496** | **6488** | **5380** | **1108** | **8** | **0** | **0** |
+| 15 | 3 | 3 | 3 | 0 | 0 | 0 | 0 |
+| **total** | **6499** | **6491** | **5383** | **1108** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 
@@ -571,5 +590,6 @@ row for another stratum's export is a hand-off that stratum recorded.
 | 12 | 1024 | 1033 | 0 | 9 |
 | 13 | 189 | 377 | 0 | 188 |
 | 14 | 600 | 600 | 0 | 0 |
+| 15 | 3 | 3 | 0 | 0 |
 
 Problems recorded by the audit: 0.
