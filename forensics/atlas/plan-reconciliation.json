@@ -5,20 +5,15 @@
       "in-progress"
     ],
     "census": {
-      "names_a_file_the_authority_does_not_have": 1,
-      "units_not_reached": 2
+      "names_a_file_the_authority_does_not_have": 1
     },
     "census_by_stratum": {
-      "13": 3
+      "13": 1
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
       "names_a_file_the_authority_does_not_have": [
         "docs/PHASE-13-SUBPHASES.md:13:13.7:arch/async_posix.c"
-      ],
-      "units_not_reached": [
-        "crypto/async/async_wait.c",
-        "crypto/txt_db/txt_db.c"
       ]
     },
     "checked": {
@@ -40,7 +35,7 @@
       "unit_records": 97,
       "units_named_by_a_record": 99,
       "units_named_by_a_row": 456,
-      "units_reached": 454
+      "units_reached": 456
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -347,7 +342,9 @@
           "13:13.7",
           "6:6.10"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/async/async.rs"
+        ]
       },
       "crypto/async/async_wait.c": {
         "defines": [
@@ -357,7 +354,9 @@
         "subphases": [
           "13:13.7"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/async/async_wait.rs"
+        ]
       },
       "crypto/bio/bss_core.c": {
         "defines": [
@@ -2416,7 +2415,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_aes.rs"
+        ]
       },
       "crypto/evp/e_aes_cbc_hmac_sha1.c": {
         "defines": [],
@@ -2426,7 +2427,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_aes_cbc_hmac_sha1.rs"
+        ]
       },
       "crypto/evp/e_aes_cbc_hmac_sha256.c": {
         "defines": [],
@@ -2436,7 +2439,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_aes_cbc_hmac_sha256.rs"
+        ]
       },
       "crypto/evp/e_aria.c": {
         "defines": [],
@@ -2446,7 +2451,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_aria.rs"
+        ]
       },
       "crypto/evp/e_bf.c": {
         "defines": [],
@@ -2456,7 +2463,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_bf.rs"
+        ]
       },
       "crypto/evp/e_camellia.c": {
         "defines": [],
@@ -2466,7 +2475,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_camellia.rs"
+        ]
       },
       "crypto/evp/e_cast.c": {
         "defines": [],
@@ -2476,7 +2487,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_cast.rs"
+        ]
       },
       "crypto/evp/e_chacha20_poly1305.c": {
         "defines": [],
@@ -2486,7 +2499,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_chacha20_poly1305.rs"
+        ]
       },
       "crypto/evp/e_des.c": {
         "defines": [],
@@ -2496,7 +2511,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_des.rs"
+        ]
       },
       "crypto/evp/e_des3.c": {
         "defines": [],
@@ -2506,7 +2523,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_des3.rs"
+        ]
       },
       "crypto/evp/e_idea.c": {
         "defines": [],
@@ -2516,7 +2535,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_idea.rs"
+        ]
       },
       "crypto/evp/e_null.c": {
         "defines": [],
@@ -2555,7 +2576,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_rc2.rs"
+        ]
       },
       "crypto/evp/e_rc4.c": {
         "defines": [],
@@ -2565,7 +2588,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_rc4.rs"
+        ]
       },
       "crypto/evp/e_rc4_hmac_md5.c": {
         "defines": [],
@@ -2575,7 +2600,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_rc4_hmac_md5.rs"
+        ]
       },
       "crypto/evp/e_seed.c": {
         "defines": [],
@@ -2585,7 +2612,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_seed.rs"
+        ]
       },
       "crypto/evp/e_sm4.c": {
         "defines": [],
@@ -2595,7 +2624,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_sm4.rs"
+        ]
       },
       "crypto/evp/e_xcbc_d.c": {
         "defines": [],
@@ -2605,7 +2636,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/e_xcbc_d.rs"
+        ]
       },
       "crypto/evp/ec_ctrl.c": {
         "defines": [],
@@ -2934,7 +2967,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_md4.rs"
+        ]
       },
       "crypto/evp/legacy_md5.c": {
         "defines": [],
@@ -2963,7 +2998,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_mdc2.rs"
+        ]
       },
       "crypto/evp/legacy_ripemd.c": {
         "defines": [],
@@ -2996,7 +3033,9 @@
           "7:7.3",
           "7:7.3g"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/evp/legacy_wp.rs"
+        ]
       },
       "crypto/evp/m_null.c": {
         "defines": [],
@@ -3139,6 +3178,7 @@
           "8:8.8"
         ],
         "transcribed_by": [
+          "src/evp/p_lib.rs",
           "src/evp/pkey.rs"
         ]
       },
@@ -4628,7 +4668,9 @@
         "subphases": [
           "13:13.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/txt_db/txt_db.rs"
+        ]
       },
       "crypto/ui/ui_lib.c": {
         "defines": [],
@@ -6577,31 +6619,31 @@
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 534
+      "transcribed_units": 559
     }
   },
-  "body_hash": "8545150e2928ef91dc2c607a339a863ad61ffc75db084ca5dd950970426506e5",
+  "body_hash": "a7718f1240b190bf70e5ca1d29382d5b2f96122c1c39bab4b7737ed84ebbfa6e",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "a45c07007b5a9b554b869015d272d9c6f806442ba4071c119faf188cc5a08134"
+      "sha256": "307eeabd191cbd65ebbbc6df8ebb545fa7816344d2c0237a46f96d7d64f39e2f"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "80a8d5b6f54ef9fdb61f472d71c05ee42178fbfd8d6297e7d5ea860094dbb05e"
+      "sha256": "74e601da326e2a12496db802cbd81ce2638f0045d435641494bd607d2a1fc78f"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f21d56f9b221d55216ee68a9d2417ed9e283262068fca150bc27394795c9b8f6"
+      "sha256": "c32d900bdf9a834b6fa0159a5897f67f607677c3c2aa20f290286ee5f5668e74"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7f8ca26dc2174adc478bf36a6c07a51112f6e6412e7f60b3f8c23f11eeb57c9d"
+      "sha256": "e1192109d61a0a1eff9956f19a5d0bc9a729342ff6ce3bc7ce7e46d3a77949cf"
     },
     {
       "name": "prerequisites",
@@ -6631,7 +6673,7 @@
     {
       "name": "plan-PHASE-13-SUBPHASES",
       "path": "docs/PHASE-13-SUBPHASES.md",
-      "sha256": "97409959df0c6a527bd792f4fb1fba51b7f310e42b42e2ae944ae2ec79338c4a"
+      "sha256": "28e0e1f2994ebf168b32b45a403bfc5d00de4c1ca769dee8bc261c6df26293a2"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

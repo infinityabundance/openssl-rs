@@ -238,6 +238,16 @@ fn build_c_adapters(manifest_dir: &Path) -> Result<(), String> {
         // the C side of the ABI so that no field offset is assumed. See the
         // file's own header.
         ("src/runtime/dir_posix.c", "openssl_rs_dir_posix"),
+        // Not a variadic adapter either: `ucontext_t`'s layout and the stack
+        // fields inside it are the platform's business, so the ASYNC fibre's
+        // `getcontext`/`makecontext`/`swapcontext` calls are made on the C side
+        // of the ABI. Every behavioural decision -- the stack size, the
+        // substitutable allocators, the failure policy -- is in
+        // `src/async/arch/async_posix.rs`. See the file's own header.
+        (
+            "src/async/arch/async_ucontext.c",
+            "openssl_rs_async_ucontext",
+        ),
     ];
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").map_err(|_| "OUT_DIR is not set")?);

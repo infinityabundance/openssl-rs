@@ -614,6 +614,7 @@
               "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
+              "RT-LEGACY-REMAINDER",
               "RT-LIBCTX",
               "RT-MEM",
               "RT-MEM-DEFAULT",
@@ -2509,6 +2510,7 @@
               "RT-EVP-PEM",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-OCSP",
               "RT-PARAM",
               "RT-PEM-KEY",
@@ -2759,6 +2761,7 @@
               "RT-EVP-PEM",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-LHASH",
               "RT-OBJ-STREAM",
               "RT-OCSP",
@@ -3231,6 +3234,7 @@
               "RT-EVP-PEM",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-LHASH",
               "RT-OCSP",
               "RT-PARAM",
@@ -3326,6 +3330,7 @@
               "RT-CONF",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-OBJ-STREAM",
               "RT-PEM-KEY",
               "RT-PKCS7",
@@ -3588,6 +3593,7 @@
               "RT-EVP-PEM",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-LHASH",
               "RT-OCSP",
               "RT-PARAM",
@@ -6761,6 +6767,7 @@
               "RT-DSA",
               "RT-EC",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-PARAM",
               "RT-PEM-KEY",
               "RT-PUBKEY",
@@ -7209,6 +7216,7 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
+              "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA"
@@ -7381,6 +7389,7 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
+              "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA"
@@ -10626,6 +10635,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-FETCH"
             ],
@@ -10644,6 +10654,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH"
@@ -10711,6 +10722,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH"
@@ -11586,6 +11598,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
@@ -11662,6 +11675,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
@@ -11824,6 +11838,7 @@
             "courts": [
               "RT-DIGEST",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_block_size"
@@ -11832,6 +11847,7 @@
             "basis": "called",
             "courts": [
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_flags"
@@ -11855,6 +11871,7 @@
             "courts": [
               "RT-DIGEST",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-FETCH",
               "RT-RSA"
             ],
@@ -11864,6 +11881,7 @@
             "basis": "called",
             "courts": [
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_type"
@@ -13098,12 +13116,14 @@
               "RT-CODEC",
               "RT-CRMF",
               "RT-ECX",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
               "RT-HPKE",
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
+              "RT-LEGACY-REMAINDER",
               "RT-OCSP",
               "RT-PKCS12",
               "RT-PUBKEY",
@@ -13225,6 +13245,7 @@
               "RT-EVP-PKEY",
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
+              "RT-LEGACY-REMAINDER",
               "RT-PKCS12"
             ],
             "symbol": "EVP_PKEY_get_bits"
@@ -13274,6 +13295,7 @@
               "RT-ECX",
               "RT-EVP-PKEY",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-PKCS12",
               "RT-PUBKEY",
               "RT-STORE"
@@ -13783,9 +13805,11 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-PUBKEY",
               "RT-STORE"
             ],
@@ -18932,6 +18956,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-LEGACY-REMAINDER",
               "RT-PUBKEY"
             ],
             "symbol": "EVP_PKEY_assign"
@@ -19766,6 +19791,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA"
@@ -20154,6 +20180,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA"
@@ -23569,7 +23596,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-KEYFORMAT"
+              "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER"
             ],
             "symbol": "i2d_PKCS8PrivateKey_bio"
           },
@@ -41865,15 +41893,169 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 235,
-          "directly_courted_called": 206,
+          "directly_courted": 374,
+          "directly_courted_called": 345,
           "directly_courted_referenced": 29,
-          "implemented": 235,
+          "implemented": 374,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
         },
         "directly_courted": [
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_clear_fd"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_all_fds"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_changed_fds"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_fd"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_set_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_set_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_set_wait_fd"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_block_pause"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_cleanup_thread"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_get_current_job"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_get_mem_functions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_get_wait_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_init_thread"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_is_capable"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_pause_job"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_set_mem_functions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_start_job"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_unblock_pause"
+          },
           {
             "basis": "called",
             "courts": [
@@ -42802,6 +42984,21 @@
             "courts": [
               "RT-EVP-LEGACY"
             ],
+            "symbol": "EVP_PKEY_get0_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_PKEY_set1_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY",
+              "RT-LEGACY-REMAINDER"
+            ],
             "symbol": "EVP_aes_128_cbc"
           },
           {
@@ -43094,8 +43291,737 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_bf_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_bf_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_bf_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_bf_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_cast5_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_cast5_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_cast5_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_cast5_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_chacha20"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_chacha20_poly1305"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_wrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_desx_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_idea_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_idea_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_idea_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_idea_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_md4"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_mdc2"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_40_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_64_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc4"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc4_40"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc4_hmac_md5"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_seed_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_seed_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_seed_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_seed_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm3"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_whirlpool"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-CMP",
               "RT-CRMF",
+              "RT-LEGACY-REMAINDER",
               "RT-OCSP",
               "RT-PHASE13-REF",
               "RT-PUBKEY"
@@ -43105,6 +44031,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-LEGACY-REMAINDER",
               "RT-PHASE13-REF",
               "RT-PUBKEY"
             ],
@@ -43113,7 +44040,22 @@
           {
             "basis": "called",
             "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_read_bio_Parameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_read_bio_Parameters_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-CMS",
+              "RT-LEGACY-REMAINDER",
               "RT-PHASE13-REF",
               "RT-PUBKEY",
               "RT-X509",
@@ -43124,10 +44066,74 @@
           {
             "basis": "called",
             "courts": [
+              "RT-LEGACY-REMAINDER",
               "RT-PHASE13-REF",
               "RT-PUBKEY"
             ],
             "symbol": "PEM_read_bio_PrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_PKCS8PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_PKCS8PrivateKey_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_PrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_PKCS8PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_Parameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_PrivateKey_ex"
           },
           {
             "basis": "called",
@@ -43674,14 +44680,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 13,
-        "staged_candidate_probes": 7
+        "staged_candidate_probes": 8
       }
     ],
     "totals": {
-      "directly_courted": 5746,
-      "directly_courted_called": 4738,
+      "directly_courted": 5885,
+      "directly_courted_called": 4877,
       "directly_courted_referenced": 1008,
-      "implemented": 5754,
+      "implemented": 5893,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -43692,7 +44698,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b20decc24183486015f43d65db576099fb884c506242d1c036537a122d7dea23"
+      "sha256": "76514909b60039cef899670ec22f6935da47c85153abd0347e80c4b32f201ade"
     },
     {
       "name": "symbol-ownership",
@@ -43807,12 +44813,12 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "f9345bcb6e6b1fa2aa8d5571e9f58e2a9b4a12e394c9a9cb1725f374be9dafa7"
+      "sha256": "5cf451f133301641fdaf2b080b1697ae57be3213fc6fb57d244636412932a9ec"
     },
     {
       "name": "phase13-courts",
       "path": "artifacts/phase13/COURTS.json",
-      "sha256": "15170fde8caa9d3150343b6ad3b133bc0aa250dd082af023235ae04dd2c1b10f"
+      "sha256": "97ed34c07519221239aa050977a7eb36c8eb7e635d04118dea1ae2b2072961f3"
     }
   ],
   "kind": "court-coverage",

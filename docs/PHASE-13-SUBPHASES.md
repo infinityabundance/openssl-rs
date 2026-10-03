@@ -389,13 +389,33 @@ atlas therefore records those 62 names at basis called rather than the reference
 probe left them at, and no name the ledger holds implemented is left referenced only by the
 reference basis.
 
+Subphase 13.7 closed the stratum's PEM private-key remainder and landed the ASYNC job-and-wait
+framework. `src/pem/pem_pkey.rs` gained the five write spellings -- `PEM_write_bio_PrivateKey[_ex]`
+and `PEM_write_PrivateKey[_ex]` with the `PEM_write_cb_*_fnsig` bodies, and
+`PEM_write_bio_Parameters` -- and the two `PEM_read_bio_Parameters*` readers;
+`src/pem/pem_pk8.rs` gained the four `PEM_write[_bio]_PKCS8PrivateKey[_nid]` wrappers their
+`legacy:` fall-through reaches. The ASYNC framework landed whole, in the authority's own directory
+layout: `src/async/async.rs` (8 exports), `src/async/async_wait.rs` (11) and
+`src/async/arch/async_posix.rs` (3), with the platform's `ucontext_t` fibre primitives kept on the C
+side of the ABI (`src/async/arch/async_ucontext.c`, the `src/runtime/dir_posix.c` pattern for a
+platform struct). Because every `ASYNC_*` entry point reaches
+`OPENSSL_init_crypto(OPENSSL_INIT_ASYNC)`, that bit left `INIT_UNSUPPORTED` in `src/runtime/init.rs`
+and its step landed at the authority's position (`crypto/init.c:647`), with `async_deinit` in
+`OPENSSL_cleanup`. Its court is `RT-LEGACY-REMAINDER`. The two `PEM_read_bio_Parameters*` readers
+answer NULL where the authority answers a key for a written `DH PARAMETERS` block -- the
+decoder-absence divergence `D-DECODER-ABSENT-1` already names -- so the court drives them over an
+empty BIO and leaves the divergent arm undriven rather than compared.
+
 **Open exports (checked against the ledger):**
 
-The open set is the ASYNC job-and-wait framework, the remaining PEM private-key readers and the
-three Phase 12 hand-offs. Representative names are `ASYNC_WAIT_CTX_new`, `ASYNC_start_job`,
-`PEM_write_bio_PrivateKey`, `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and
-`SRP_VBASE_init`. Every one is open rather than implemented, and each is assigned to a subphase by
-§2's partition. The AES statics are not in this list: subphase 13.6a landed the thirty-eight
+The open set is the three Phase 12 hand-offs. Representative names are
+`TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`, each assigned to
+subphase 13.8 by §2's partition. The ASYNC job-and-wait framework is not in this list: subphase
+13.7 landed all twenty-two `ASYNC_*` names (`src/async/async.rs`, `async_wait.rs` and
+`arch/async_posix.rs`), so they are implemented and courted by `RT-LEGACY-REMAINDER` rather than
+open. The remaining PEM private-key readers and writers are not in this list either: subphase 13.7
+landed them, so they are implemented and courted by `RT-LEGACY-REMAINDER` rather than open. The AES
+statics are not in this list: subphase 13.6a landed the thirty-eight
 `EVP_aes_*` accessors and the four `EVP_aes_*_cbc_hmac_sha*` stitched statics, subphase 13.6b landed
 the twenty-seven `EVP_aria_*` and twenty-one `EVP_camellia_*` accessors, and subphase 13.6c landed
 the remaining fifty-two legacy EVP cipher statics (DES, 3DES, DESX, Blowfish, CAST5, IDEA, SEED,
