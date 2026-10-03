@@ -16,644 +16,10 @@
       12
     ],
     "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
-    "in_progress": [],
-    "not_yet_begun": [
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_add"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_cmd_is_executable"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_ctrl"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_ctrl_cmd"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_ctrl_cmd_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_finish"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_free"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_cmd_defns"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_ctrl_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_destroy_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_digest"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_digest_engine"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_finish_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_first"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_id"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_init_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_last"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_name"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_next"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_asn1_meth"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_asn1_meth_engine"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_asn1_meth_str"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_meth_engine"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_prev"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_static_state"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_table_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_init"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_new"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_pkey_asn1_find_str"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_all_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_all_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_all_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_remove"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_cmd_defns"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_ctrl_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_default_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_default_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_default_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_destroy_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_finish_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_id"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_init_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_name"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_table_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_unregister_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_unregister_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_unregister_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_up_ref"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 7,
-        "symbol": "PEM_read_PrivateKey"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 7,
-        "symbol": "PEM_read_PrivateKey_ex"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 7,
-        "symbol": "PEM_read_bio_PrivateKey"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 7,
-        "symbol": "PEM_read_bio_PrivateKey_ex"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_OpenSSL"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_UTIL_read_pw"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_UTIL_read_pw_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_UTIL_wrap_read_pem_callback"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_error_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_info_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_input_boolean"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_input_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_user_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_verify_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_construct_prompt"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_create_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_ctrl"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_destroy_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_error_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_info_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_input_boolean"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_input_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_user_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_verify_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_free"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_action_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_output_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_result"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_result_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_test_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_user_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_default_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_input_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_result_length"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_result_maxsize"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_result_minsize"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_result_string_length"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_string_type"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_closer"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_data_destructor"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_data_duplicator"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_flusher"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_opener"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_prompt_constructor"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_reader"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_writer"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_closer"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_data_duplicator"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_flusher"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_opener"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_prompt_constructor"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_reader"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_writer"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_new"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_new_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_null"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_process"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_default_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_result"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_result_ex"
-      }
+    "in_progress": [
+      13
     ],
+    "not_yet_begun": [],
     "strata": [
       {
         "completed": true,
@@ -42467,13 +41833,955 @@
         "non_observable": [],
         "phase": 12,
         "staged_candidate_probes": 11
+      },
+      {
+        "completed": false,
+        "counts": {
+          "directly_courted": 127,
+          "directly_courted_called": 29,
+          "directly_courted_referenced": 98,
+          "implemented": 127,
+          "indirectly_courted": 0,
+          "non_observable": 0,
+          "unmatched": 0
+        },
+        "directly_courted": [
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_add"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_cmd_is_executable"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_ctrl"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_ctrl_cmd"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_ctrl_cmd_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_cmd_defns"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_ctrl_function"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_destroy_function"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_digest_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_digests"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_finish_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_first"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_init_function"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_last"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_next"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_asn1_meth"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_asn1_meth_engine"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_asn1_meth_str"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_asn1_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_meth_engine"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_prev"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_static_state"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_table_flags"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_pkey_asn1_find_str"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_all_digests"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_all_pkey_asn1_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_all_pkey_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_register_digests"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_pkey_asn1_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_pkey_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_remove"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_cmd_defns"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_ctrl_function"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_default_digests"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_default_pkey_asn1_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_default_pkey_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_destroy_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_digests"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_finish_function"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_init_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_name"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_pkey_asn1_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_pkey_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_table_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_unregister_digests"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_unregister_pkey_asn1_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_unregister_pkey_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_up_ref"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP",
+              "RT-CRMF",
+              "RT-OCSP",
+              "RT-PHASE13-REF",
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_PrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS",
+              "RT-PHASE13-REF",
+              "RT-PUBKEY",
+              "RT-X509",
+              "RT-X509-REQ"
+            ],
+            "symbol": "PEM_read_bio_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_bio_PrivateKey_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_OpenSSL"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_UTIL_read_pw"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_UTIL_read_pw_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_UTIL_wrap_read_pem_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_add_error_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_add_info_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_add_input_boolean"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_add_input_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_add_user_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_add_verify_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_construct_prompt"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_create_method"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_ctrl"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_destroy_method"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_dup_error_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_dup_info_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_dup_input_boolean"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_dup_input_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_dup_user_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_dup_verify_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get0_action_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get0_output_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get0_result"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get0_result_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get0_test_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get0_user_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get_default_method"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get_input_flags"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get_method"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get_result_length"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get_result_maxsize"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get_result_minsize"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get_result_string_length"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_get_string_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_get_closer"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_get_data_destructor"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_get_data_duplicator"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_get_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_get_flusher"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_get_opener"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_get_prompt_constructor"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_get_reader"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_get_writer"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_set_closer"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_set_data_duplicator"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_set_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_set_flusher"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_set_opener"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_set_prompt_constructor"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_set_reader"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_method_set_writer"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_new_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_null"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_process"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_set_default_method"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_set_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_set_method"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_set_result"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "UI_set_result_ex"
+          }
+        ],
+        "indirectly_courted": [],
+        "non_observable": [],
+        "phase": 13,
+        "staged_candidate_probes": 1
       }
     ],
     "totals": {
-      "directly_courted": 5511,
-      "directly_courted_called": 4532,
-      "directly_courted_referenced": 979,
-      "implemented": 5519,
+      "directly_courted": 5638,
+      "directly_courted_called": 4561,
+      "directly_courted_referenced": 1077,
+      "implemented": 5646,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -42494,7 +42802,7 @@
     {
       "name": "coverage-rows",
       "path": "forensics/atlas/court-coverage-rows.json",
-      "sha256": "0f0a7a77777a6c5aa6e8ffce57703d0965311c5860fda2bae83e58e01e4f7d0c"
+      "sha256": "c8184a493d6a14536af711c09aa95e0e2d6b6da83ea9bf66c293400348f3d331"
     },
     {
       "name": "phase3-obligations",
@@ -42539,7 +42847,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "2295f13789b8f905fbd65afc7ea3b449d8d14f3a1cc71ec24a26ba4a3ec8cdd2"
+      "sha256": "ac879cdead11c10b4328ef254732b78b6315c476a56fe5226ea3fd2753a1dadf"
     },
     {
       "name": "phase7-courts",
@@ -42549,7 +42857,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "22d3070345f20d4f7ff97442e0727f6f16b12203472606b4bdd8ff3164abf901"
+      "sha256": "c872d591dcdbb07f9b8b43f8cb4311d17d44343af045d7995982b45d683e3771"
     },
     {
       "name": "phase8-courts",
@@ -42559,7 +42867,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "097a9aba4529b38b4c44c405c0c7aa9da21447461f5a6795e9bc25a4c8c6ebc6"
+      "sha256": "c7a57c821812edd39e4da28e445d1028bc05dca75fcf70d70fd41f1fe24f1942"
     },
     {
       "name": "phase9-courts",
@@ -42569,7 +42877,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "c9d1098192387d604ad3fd7c6c1a51e589ce7eacf19d1961b2dc040457710019"
+      "sha256": "f25d1e673afd56cb5d9e84d996baaaedfb7082e21b4feb27d5a293f6c4153d94"
     },
     {
       "name": "phase10-courts",
@@ -42579,7 +42887,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "8fbcd310de64b281dfa2cfc2017fc7f77f6a0f0eb95842c5ca4fa8b29ade4580"
+      "sha256": "844ef3070989d26e2c7c38461b5ddcfe6253bb3a39564160cede9df49524ae10"
     },
     {
       "name": "phase11-courts",
@@ -42589,12 +42897,22 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "1985b2b088600380db782e89ac00ed04cc0aa0e187f20931e23f4542d7581166"
+      "sha256": "4ad1b2ff5b0d246a262a3fcd2d754830bf5e1518fd2feb23795d5474ff48b293"
     },
     {
       "name": "phase12-courts",
       "path": "artifacts/phase12/COURTS.json",
       "sha256": "4800f6238d923a989cb6898369cf8d1c94a7a5953da831d78ed76d49b5b1c621"
+    },
+    {
+      "name": "phase13-obligations",
+      "path": "forensics/phase13-obligations.json",
+      "sha256": "dbbfb2e4b90ee0a17f9d66adef021a3caf67f7700c72127863d263ff360a7cd0"
+    },
+    {
+      "name": "phase13-courts",
+      "path": "artifacts/phase13/COURTS.json",
+      "sha256": "1de24ceb7413376ca8abdd536a3f01ba9c54759743dfeb6cfc1e42e12114421b"
     }
   ],
   "kind": "court-coverage",

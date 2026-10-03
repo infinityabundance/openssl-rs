@@ -1,0 +1,3512 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "complete": false,
+    "counts": {
+      "atlas_owned": 189,
+      "deferred_to_later_phase": 0,
+      "implemented": 127,
+      "open_in_this_stratum": 250,
+      "owned": 377,
+      "received_by_handoff": 188
+    },
+    "deferred": [],
+    "deferred_by_phase": {},
+    "handoffs_discharged": {
+      "12": [
+        "SRP_VBASE_init",
+        "TS_CONF_set_crypto_device",
+        "TS_CONF_set_default_engine"
+      ],
+      "3": [
+        "ASYNC_WAIT_CTX_clear_fd",
+        "ASYNC_WAIT_CTX_free",
+        "ASYNC_WAIT_CTX_get_all_fds",
+        "ASYNC_WAIT_CTX_get_callback",
+        "ASYNC_WAIT_CTX_get_changed_fds",
+        "ASYNC_WAIT_CTX_get_fd",
+        "ASYNC_WAIT_CTX_get_status",
+        "ASYNC_WAIT_CTX_new",
+        "ASYNC_WAIT_CTX_set_callback",
+        "ASYNC_WAIT_CTX_set_status",
+        "ASYNC_WAIT_CTX_set_wait_fd",
+        "ASYNC_block_pause",
+        "ASYNC_cleanup_thread",
+        "ASYNC_get_current_job",
+        "ASYNC_get_mem_functions",
+        "ASYNC_get_wait_ctx",
+        "ASYNC_init_thread",
+        "ASYNC_is_capable",
+        "ASYNC_pause_job",
+        "ASYNC_set_mem_functions",
+        "ASYNC_start_job",
+        "ASYNC_unblock_pause"
+      ],
+      "7": [
+        "EVP_PKEY_get0_engine",
+        "EVP_PKEY_set1_engine",
+        "EVP_aes_128_cbc",
+        "EVP_aes_128_cbc_hmac_sha1",
+        "EVP_aes_128_cbc_hmac_sha256",
+        "EVP_aes_128_ccm",
+        "EVP_aes_128_cfb1",
+        "EVP_aes_128_cfb128",
+        "EVP_aes_128_cfb8",
+        "EVP_aes_128_ctr",
+        "EVP_aes_128_ecb",
+        "EVP_aes_128_gcm",
+        "EVP_aes_128_ocb",
+        "EVP_aes_128_ofb",
+        "EVP_aes_128_wrap",
+        "EVP_aes_128_wrap_pad",
+        "EVP_aes_128_xts",
+        "EVP_aes_192_cbc",
+        "EVP_aes_192_ccm",
+        "EVP_aes_192_cfb1",
+        "EVP_aes_192_cfb128",
+        "EVP_aes_192_cfb8",
+        "EVP_aes_192_ctr",
+        "EVP_aes_192_ecb",
+        "EVP_aes_192_gcm",
+        "EVP_aes_192_ocb",
+        "EVP_aes_192_ofb",
+        "EVP_aes_192_wrap",
+        "EVP_aes_192_wrap_pad",
+        "EVP_aes_256_cbc",
+        "EVP_aes_256_cbc_hmac_sha1",
+        "EVP_aes_256_cbc_hmac_sha256",
+        "EVP_aes_256_ccm",
+        "EVP_aes_256_cfb1",
+        "EVP_aes_256_cfb128",
+        "EVP_aes_256_cfb8",
+        "EVP_aes_256_ctr",
+        "EVP_aes_256_ecb",
+        "EVP_aes_256_gcm",
+        "EVP_aes_256_ocb",
+        "EVP_aes_256_ofb",
+        "EVP_aes_256_wrap",
+        "EVP_aes_256_wrap_pad",
+        "EVP_aes_256_xts",
+        "EVP_aria_128_cbc",
+        "EVP_aria_128_ccm",
+        "EVP_aria_128_cfb1",
+        "EVP_aria_128_cfb128",
+        "EVP_aria_128_cfb8",
+        "EVP_aria_128_ctr",
+        "EVP_aria_128_ecb",
+        "EVP_aria_128_gcm",
+        "EVP_aria_128_ofb",
+        "EVP_aria_192_cbc",
+        "EVP_aria_192_ccm",
+        "EVP_aria_192_cfb1",
+        "EVP_aria_192_cfb128",
+        "EVP_aria_192_cfb8",
+        "EVP_aria_192_ctr",
+        "EVP_aria_192_ecb",
+        "EVP_aria_192_gcm",
+        "EVP_aria_192_ofb",
+        "EVP_aria_256_cbc",
+        "EVP_aria_256_ccm",
+        "EVP_aria_256_cfb1",
+        "EVP_aria_256_cfb128",
+        "EVP_aria_256_cfb8",
+        "EVP_aria_256_ctr",
+        "EVP_aria_256_ecb",
+        "EVP_aria_256_gcm",
+        "EVP_aria_256_ofb",
+        "EVP_bf_cbc",
+        "EVP_bf_cfb64",
+        "EVP_bf_ecb",
+        "EVP_bf_ofb",
+        "EVP_camellia_128_cbc",
+        "EVP_camellia_128_cfb1",
+        "EVP_camellia_128_cfb128",
+        "EVP_camellia_128_cfb8",
+        "EVP_camellia_128_ctr",
+        "EVP_camellia_128_ecb",
+        "EVP_camellia_128_ofb",
+        "EVP_camellia_192_cbc",
+        "EVP_camellia_192_cfb1",
+        "EVP_camellia_192_cfb128",
+        "EVP_camellia_192_cfb8",
+        "EVP_camellia_192_ctr",
+        "EVP_camellia_192_ecb",
+        "EVP_camellia_192_ofb",
+        "EVP_camellia_256_cbc",
+        "EVP_camellia_256_cfb1",
+        "EVP_camellia_256_cfb128",
+        "EVP_camellia_256_cfb8",
+        "EVP_camellia_256_ctr",
+        "EVP_camellia_256_ecb",
+        "EVP_camellia_256_ofb",
+        "EVP_cast5_cbc",
+        "EVP_cast5_cfb64",
+        "EVP_cast5_ecb",
+        "EVP_cast5_ofb",
+        "EVP_chacha20",
+        "EVP_chacha20_poly1305",
+        "EVP_des_cbc",
+        "EVP_des_cfb1",
+        "EVP_des_cfb64",
+        "EVP_des_cfb8",
+        "EVP_des_ecb",
+        "EVP_des_ede",
+        "EVP_des_ede3",
+        "EVP_des_ede3_cbc",
+        "EVP_des_ede3_cfb1",
+        "EVP_des_ede3_cfb64",
+        "EVP_des_ede3_cfb8",
+        "EVP_des_ede3_ecb",
+        "EVP_des_ede3_ofb",
+        "EVP_des_ede3_wrap",
+        "EVP_des_ede_cbc",
+        "EVP_des_ede_cfb64",
+        "EVP_des_ede_ecb",
+        "EVP_des_ede_ofb",
+        "EVP_des_ofb",
+        "EVP_desx_cbc",
+        "EVP_idea_cbc",
+        "EVP_idea_cfb64",
+        "EVP_idea_ecb",
+        "EVP_idea_ofb",
+        "EVP_md4",
+        "EVP_mdc2",
+        "EVP_rc2_40_cbc",
+        "EVP_rc2_64_cbc",
+        "EVP_rc2_cbc",
+        "EVP_rc2_cfb64",
+        "EVP_rc2_ecb",
+        "EVP_rc2_ofb",
+        "EVP_rc4",
+        "EVP_rc4_40",
+        "EVP_rc4_hmac_md5",
+        "EVP_seed_cbc",
+        "EVP_seed_cfb128",
+        "EVP_seed_ecb",
+        "EVP_seed_ofb",
+        "EVP_sm3",
+        "EVP_sm4_cbc",
+        "EVP_sm4_cfb128",
+        "EVP_sm4_ctr",
+        "EVP_sm4_ecb",
+        "EVP_sm4_ofb",
+        "EVP_whirlpool",
+        "PEM_read_PrivateKey",
+        "PEM_read_PrivateKey_ex",
+        "PEM_read_bio_Parameters",
+        "PEM_read_bio_Parameters_ex",
+        "PEM_read_bio_PrivateKey",
+        "PEM_read_bio_PrivateKey_ex",
+        "PEM_write_PKCS8PrivateKey",
+        "PEM_write_PKCS8PrivateKey_nid",
+        "PEM_write_PrivateKey",
+        "PEM_write_PrivateKey_ex",
+        "PEM_write_bio_PKCS8PrivateKey",
+        "PEM_write_bio_PKCS8PrivateKey_nid",
+        "PEM_write_bio_Parameters",
+        "PEM_write_bio_PrivateKey",
+        "PEM_write_bio_PrivateKey_ex"
+      ]
+    },
+    "handoffs_discharged_with_reasons": {
+      "12": [
+        {
+          "declaring_header": "srp.h",
+          "owning_phase": 13,
+          "reason": "its body reads and releases a verifier file through `TXT_DB_read` (`crypto/srp/srp_vfy.c:423`) and `TXT_DB_free` (`:504`), and both are declared in `include/openssl/txt_db.h`, which is Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13). The rest of `crypto/srp/srp_vfy.c` lands in 12.8, including the private helpers that only `SRP_VBASE_init` reaches; pulling the `TXT_DB` reader forward to satisfy one deprecated entry point is disproportionate, so the row is handed to Phase 13 rather than stubbed",
+          "symbol": "SRP_VBASE_init"
+        },
+        {
+          "declaring_header": "ts.h",
+          "owning_phase": 13,
+          "reason": "both are guarded by `#ifndef OPENSSL_NO_ENGINE` in `crypto/ts/ts_conf.c` and their body is the ENGINE lookup and installation: `TS_CONF_set_default_engine` calls `ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it (`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13), and `src/engine/eng_list.rs` records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. Pulling the ENGINE registry forward to satisfy two `CONF` readers is disproportionate, so the rows are handed to Phase 13 rather than stubbed",
+          "symbol": "TS_CONF_set_crypto_device"
+        },
+        {
+          "declaring_header": "ts.h",
+          "owning_phase": 13,
+          "reason": "both are guarded by `#ifndef OPENSSL_NO_ENGINE` in `crypto/ts/ts_conf.c` and their body is the ENGINE lookup and installation: `TS_CONF_set_default_engine` calls `ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it (`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13), and `src/engine/eng_list.rs` records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. Pulling the ENGINE registry forward to satisfy two `CONF` readers is disproportionate, so the rows are handed to Phase 13 rather than stubbed",
+          "symbol": "TS_CONF_set_default_engine"
+        }
+      ],
+      "3": [
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_clear_fd"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_free"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_get_all_fds"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_get_callback"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_get_changed_fds"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_get_fd"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_get_status"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_new"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_set_callback"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_set_status"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_WAIT_CTX_set_wait_fd"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_block_pause"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_cleanup_thread"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_get_current_job"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_get_mem_functions"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_get_wait_ctx"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_init_thread"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_is_capable"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_pause_job"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_set_mem_functions"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_start_job"
+        },
+        {
+          "declaring_header": "async.h",
+          "implemented_by_owner": false,
+          "module": "src/runtime/async/",
+          "owning_phase": 13,
+          "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
+          "symbol": "ASYNC_unblock_pause"
+        }
+      ],
+      "7": [
+        {
+          "binding_phase": 13,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/engine/eng_init.c",
+              "kind": "exported",
+              "line": 86,
+              "name": "ENGINE_init",
+              "owning_phase": 13
+            },
+            {
+              "authority_unit": "crypto/engine/tb_pkmeth.c",
+              "kind": "exported",
+              "line": 74,
+              "name": "ENGINE_get_pkey_meth",
+              "owning_phase": 13
+            },
+            {
+              "authority_unit": "crypto/engine/eng_init.c",
+              "kind": "exported",
+              "line": 106,
+              "name": "ENGINE_finish",
+              "owning_phase": 13
+            }
+          ],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; `:750` reads `pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this crate's `EvpPkey` has neither field -- they are absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else.",
+          "symbol": "EVP_PKEY_get0_engine"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [
+            {
+              "authority_unit": "crypto/engine/eng_init.c",
+              "kind": "exported",
+              "line": 86,
+              "name": "ENGINE_init",
+              "owning_phase": 13
+            },
+            {
+              "authority_unit": "crypto/engine/tb_pkmeth.c",
+              "kind": "exported",
+              "line": 74,
+              "name": "ENGINE_get_pkey_meth",
+              "owning_phase": 13
+            },
+            {
+              "authority_unit": "crypto/engine/eng_init.c",
+              "kind": "exported",
+              "line": 106,
+              "name": "ENGINE_finish",
+              "owning_phase": 13
+            }
+          ],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; `:750` reads `pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this crate's `EvpPkey` has neither field -- they are absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else.",
+          "symbol": "EVP_PKEY_set1_engine"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_cbc_hmac_sha1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_cbc_hmac_sha256"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_ccm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_gcm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_ocb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_wrap"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_wrap_pad"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_128_xts"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_ccm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_gcm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_ocb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_wrap"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_192_wrap_pad"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_cbc_hmac_sha1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_cbc_hmac_sha256"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_ccm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_gcm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_ocb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_wrap"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_wrap_pad"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aes/'s own primitives; `e_aes.c`, `e_aes_cbc_hmac_sha1.c` and `e_aes_cbc_hmac_sha256.c` build them over the low-level AES API, and the CBC-HMAC pair additionally over `HMAC_Init_ex`",
+          "symbol": "EVP_aes_256_xts"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_128_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_128_ccm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_128_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_128_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_128_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_128_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_128_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_128_gcm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_128_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_192_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_192_ccm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_192_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_192_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_192_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_192_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_192_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_192_gcm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_192_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_256_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_256_ccm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_256_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_256_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_256_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_256_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_256_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_256_gcm"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/aria/'s own primitives; `e_aria.c`",
+          "symbol": "EVP_aria_256_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/bf/'s own primitives; `e_bf.c`",
+          "symbol": "EVP_bf_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/bf/'s own primitives; `e_bf.c`",
+          "symbol": "EVP_bf_cfb64"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/bf/'s own primitives; `e_bf.c`",
+          "symbol": "EVP_bf_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/bf/'s own primitives; `e_bf.c`",
+          "symbol": "EVP_bf_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_128_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_128_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_128_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_128_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_128_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_128_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_128_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_192_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_192_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_192_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_192_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_192_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_192_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_192_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_256_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_256_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_256_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_256_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_256_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_256_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/camellia/'s own primitives; `e_camellia.c`",
+          "symbol": "EVP_camellia_256_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/cast/'s own primitives; `e_cast.c`",
+          "symbol": "EVP_cast5_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/cast/'s own primitives; `e_cast.c`",
+          "symbol": "EVP_cast5_cfb64"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/cast/'s own primitives; `e_cast.c`",
+          "symbol": "EVP_cast5_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/cast/'s own primitives; `e_cast.c`",
+          "symbol": "EVP_cast5_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/chacha/ and crypto/poly1305/'s own primitives; `e_chacha20_poly1305.c`; the AEAD is a composition of the two primitive units",
+          "symbol": "EVP_chacha20"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/chacha/ and crypto/poly1305/'s own primitives; `e_chacha20_poly1305.c`; the AEAD is a composition of the two primitive units",
+          "symbol": "EVP_chacha20_poly1305"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_cfb64"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede3"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede3_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede3_cfb1"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede3_cfb64"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede3_cfb8"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede3_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede3_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede3_wrap"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede_cfb64"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ede_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_des_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/des/'s own primitives; `e_des.c`, `e_des3.c` and `e_old.c`; `EVP_desx_cbc` is `e_des.c`'s DESX construction",
+          "symbol": "EVP_desx_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/idea/'s own primitives; `e_idea.c`",
+          "symbol": "EVP_idea_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/idea/'s own primitives; `e_idea.c`",
+          "symbol": "EVP_idea_cfb64"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/idea/'s own primitives; `e_idea.c`",
+          "symbol": "EVP_idea_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/idea/'s own primitives; `e_idea.c`",
+          "symbol": "EVP_idea_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/md4/'s own primitives; `legacy_md4.c`",
+          "symbol": "EVP_md4"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/mdc2/'s own primitives; `legacy_mdc2.c`, itself over `crypto/des/`",
+          "symbol": "EVP_mdc2"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+          "symbol": "EVP_rc2_40_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+          "symbol": "EVP_rc2_64_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+          "symbol": "EVP_rc2_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+          "symbol": "EVP_rc2_cfb64"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+          "symbol": "EVP_rc2_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/rc2/'s own primitives; `e_rc2.c`",
+          "symbol": "EVP_rc2_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/rc4/'s own primitives; `e_rc4.c` and `e_rc4_hmac_md5.c`, the second being a composition with `crypto/md5/`",
+          "symbol": "EVP_rc4"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/rc4/'s own primitives; `e_rc4.c` and `e_rc4_hmac_md5.c`, the second being a composition with `crypto/md5/`",
+          "symbol": "EVP_rc4_40"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/rc4/'s own primitives; `e_rc4.c` and `e_rc4_hmac_md5.c`, the second being a composition with `crypto/md5/`",
+          "symbol": "EVP_rc4_hmac_md5"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
+          "symbol": "EVP_seed_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
+          "symbol": "EVP_seed_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
+          "symbol": "EVP_seed_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/seed/'s own primitives; `e_seed.c`",
+          "symbol": "EVP_seed_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/sm3/'s own primitives; `legacy_sm3.c`",
+          "symbol": "EVP_sm3"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+          "symbol": "EVP_sm4_cbc"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+          "symbol": "EVP_sm4_cfb128"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+          "symbol": "EVP_sm4_ctr"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+          "symbol": "EVP_sm4_ecb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/sm4/'s own primitives; `e_sm4.c`",
+          "symbol": "EVP_sm4_ofb"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "evp.h",
+          "owning_phase": 13,
+          "reason": "a legacy method static whose callbacks call crypto/whrlpool/'s own primitives; `legacy_wp.c`, whose callbacks call `crypto/whrlpool/`'s own primitives; the directory is spelled `whrlpool`, and the `crypto/whirlpool/` this row carried from D196 was a typo the unit check found",
+          "symbol": "EVP_whirlpool"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_read_PrivateKey"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_read_PrivateKey_ex"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_read_bio_Parameters"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_read_bio_Parameters_ex"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_read_bio_PrivateKey"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_read_bio_PrivateKey_ex"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_write_PKCS8PrivateKey"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_write_PKCS8PrivateKey_nid"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_write_PrivateKey"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_write_PrivateKey_ex"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_write_bio_PKCS8PrivateKey"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_write_bio_Parameters"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_write_bio_PrivateKey"
+        },
+        {
+          "binding_phase": 13,
+          "blocked_by": [],
+          "declaring_header": "pem.h",
+          "owning_phase": 13,
+          "reason": "the six readers are `pem_read_bio_key` (`crypto/pem/pem_pkey.c:216`), whose first attempt is `pem_read_bio_key_decoder` (`:35`) -> `OSSL_DECODER_CTX_new_for_pkey` (`:49`, `decoder.h`, Phase 10) and whose fallback is `pem_read_bio_key_legacy` (`:101`) -> `PEM_bytes_read_bio_secmem` (`:116`) or `PEM_bytes_read_bio` (`:127`) -- Phase 13's. The six writers expand `IMPLEMENT_PEM_provided_write_body_*` (`crypto/pem/pem_local.h`), whose encoder call is Phase 10 and whose `legacy:` label reaches `PEM_write_bio_PKCS8PrivateKey`/`PEM_write_bio_PrivateKey_traditional` (Phase 13 and 10); the four PKCS#8 spellings are `do_pk8pkey` (`crypto/pem/pem_pk8.c:69`), whose `OSSL_ENCODER_CTX_new_for_pkey` (`:75`) is Phase 10 and whose `cb = PEM_def_callback` (`:91`) is Phase 13. **Every blocker this row's `blocked_by` named has landed** -- `OSSL_DECODER_CTX_new_for_pkey` with D367, `OSSL_ENCODER_CTX_new_for_pkey` with D362, and `UI_new` with `src/ui/ui_lib.rs` -- so the row becomes an unconditional hand-off rather than retiring: the fifteen are still a later stratum's to write in the ledger's arithmetic, and retiring the row would move them into this sealed stratum's `implemented` list on the strength of work it did not do. The fallback legs cannot be omitted, which is why the receiving stratum is the latest of the three.",
+          "symbol": "PEM_write_bio_PrivateKey_ex"
+        }
+      ]
+    },
+    "implemented": [
+      "ENGINE_add",
+      "ENGINE_cmd_is_executable",
+      "ENGINE_ctrl",
+      "ENGINE_ctrl_cmd",
+      "ENGINE_ctrl_cmd_string",
+      "ENGINE_finish",
+      "ENGINE_free",
+      "ENGINE_get_cmd_defns",
+      "ENGINE_get_ctrl_function",
+      "ENGINE_get_destroy_function",
+      "ENGINE_get_digest",
+      "ENGINE_get_digest_engine",
+      "ENGINE_get_digests",
+      "ENGINE_get_ex_data",
+      "ENGINE_get_finish_function",
+      "ENGINE_get_first",
+      "ENGINE_get_flags",
+      "ENGINE_get_id",
+      "ENGINE_get_init_function",
+      "ENGINE_get_last",
+      "ENGINE_get_name",
+      "ENGINE_get_next",
+      "ENGINE_get_pkey_asn1_meth",
+      "ENGINE_get_pkey_asn1_meth_engine",
+      "ENGINE_get_pkey_asn1_meth_str",
+      "ENGINE_get_pkey_asn1_meths",
+      "ENGINE_get_pkey_meth_engine",
+      "ENGINE_get_pkey_meths",
+      "ENGINE_get_prev",
+      "ENGINE_get_static_state",
+      "ENGINE_get_table_flags",
+      "ENGINE_init",
+      "ENGINE_new",
+      "ENGINE_pkey_asn1_find_str",
+      "ENGINE_register_all_digests",
+      "ENGINE_register_all_pkey_asn1_meths",
+      "ENGINE_register_all_pkey_meths",
+      "ENGINE_register_digests",
+      "ENGINE_register_pkey_asn1_meths",
+      "ENGINE_register_pkey_meths",
+      "ENGINE_remove",
+      "ENGINE_set_cmd_defns",
+      "ENGINE_set_ctrl_function",
+      "ENGINE_set_default_digests",
+      "ENGINE_set_default_pkey_asn1_meths",
+      "ENGINE_set_default_pkey_meths",
+      "ENGINE_set_destroy_function",
+      "ENGINE_set_digests",
+      "ENGINE_set_ex_data",
+      "ENGINE_set_finish_function",
+      "ENGINE_set_flags",
+      "ENGINE_set_id",
+      "ENGINE_set_init_function",
+      "ENGINE_set_name",
+      "ENGINE_set_pkey_asn1_meths",
+      "ENGINE_set_pkey_meths",
+      "ENGINE_set_table_flags",
+      "ENGINE_unregister_digests",
+      "ENGINE_unregister_pkey_asn1_meths",
+      "ENGINE_unregister_pkey_meths",
+      "ENGINE_up_ref",
+      "PEM_read_PrivateKey",
+      "PEM_read_PrivateKey_ex",
+      "PEM_read_bio_PrivateKey",
+      "PEM_read_bio_PrivateKey_ex",
+      "UI_OpenSSL",
+      "UI_UTIL_read_pw",
+      "UI_UTIL_read_pw_string",
+      "UI_UTIL_wrap_read_pem_callback",
+      "UI_add_error_string",
+      "UI_add_info_string",
+      "UI_add_input_boolean",
+      "UI_add_input_string",
+      "UI_add_user_data",
+      "UI_add_verify_string",
+      "UI_construct_prompt",
+      "UI_create_method",
+      "UI_ctrl",
+      "UI_destroy_method",
+      "UI_dup_error_string",
+      "UI_dup_info_string",
+      "UI_dup_input_boolean",
+      "UI_dup_input_string",
+      "UI_dup_user_data",
+      "UI_dup_verify_string",
+      "UI_free",
+      "UI_get0_action_string",
+      "UI_get0_output_string",
+      "UI_get0_result",
+      "UI_get0_result_string",
+      "UI_get0_test_string",
+      "UI_get0_user_data",
+      "UI_get_default_method",
+      "UI_get_ex_data",
+      "UI_get_input_flags",
+      "UI_get_method",
+      "UI_get_result_length",
+      "UI_get_result_maxsize",
+      "UI_get_result_minsize",
+      "UI_get_result_string_length",
+      "UI_get_string_type",
+      "UI_method_get_closer",
+      "UI_method_get_data_destructor",
+      "UI_method_get_data_duplicator",
+      "UI_method_get_ex_data",
+      "UI_method_get_flusher",
+      "UI_method_get_opener",
+      "UI_method_get_prompt_constructor",
+      "UI_method_get_reader",
+      "UI_method_get_writer",
+      "UI_method_set_closer",
+      "UI_method_set_data_duplicator",
+      "UI_method_set_ex_data",
+      "UI_method_set_flusher",
+      "UI_method_set_opener",
+      "UI_method_set_prompt_constructor",
+      "UI_method_set_reader",
+      "UI_method_set_writer",
+      "UI_new",
+      "UI_new_method",
+      "UI_null",
+      "UI_process",
+      "UI_set_default_method",
+      "UI_set_ex_data",
+      "UI_set_method",
+      "UI_set_result",
+      "UI_set_result_ex"
+    ],
+    "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
+    "module_overrides": [],
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation, this ledger's working set is more than its atlas-owned universe: 189 exports are `engine.h`'s, `ui.h`'s and `txt_db.h`'s, and 188 more arrive as recorded hand-offs from phases 3, 7 and 12. It also does not start with that whole working set open: 123 atlas-owned exports were landed before activation as substrate the earlier strata needed, and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` hand-offs are already implemented (Phase 8 landed them, D369), so the ledger's `implemented` count is not zero and its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum owns 39 provider registration rows, all unimplemented at activation (`forensics/atlas/provider-algorithms.json`). Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-13-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "open": [
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_clear_fd"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_free"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_get_all_fds"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_get_callback"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_get_changed_fds"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_get_fd"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_get_status"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_new"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_set_callback"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_set_status"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async_wait.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_WAIT_CTX_set_wait_fd"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_block_pause"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_cleanup_thread"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_get_current_job"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/arch/async_posix.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_get_mem_functions"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_get_wait_ctx"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_init_thread"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/arch/async_posix.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_is_capable"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_pause_job"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/arch/async_posix.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_set_mem_functions"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_start_job"
+      },
+      {
+        "declaring_header": "async.h",
+        "module": "src/async/async.rs",
+        "received_from_phase": 3,
+        "symbol": "ASYNC_unblock_pause"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_cnf.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_add_conf_module"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_list.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_by_id"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dh.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_DH"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_DSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_eckey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_EC"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rand.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_RAND"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_RSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_cipher"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_cipher_engine"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_ciphers"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dh.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_default_DH"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_default_DSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_eckey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_default_EC"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rand.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_default_RAND"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_default_RSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_pkey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_load_privkey_function"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_pkey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_load_pubkey_function"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_pkmeth.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_pkey_meth"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_pkey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_get_ssl_client_cert_function"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_all.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_load_builtin_engines"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_pkey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_load_private_key"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_pkey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_load_public_key"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_pkey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_load_ssl_client_cert"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dh.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_DH"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_DSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_eckey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_EC"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rand.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_RAND"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_RSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dh.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_all_DH"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_all_DSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_eckey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_all_EC"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rand.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_all_RAND"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_all_RSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_all_ciphers"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_fat.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_all_complete"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_ciphers"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_fat.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_register_complete"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dh.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_DH"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_DSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_eckey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_EC"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rand.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_RAND"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_RSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_ciphers"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_fat.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_default"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dh.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_default_DH"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_default_DSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_eckey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_default_EC"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rand.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_default_RAND"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_default_RSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_default_ciphers"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_fat.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_default_string"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_pkey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_load_privkey_function"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_pkey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_load_pubkey_function"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/eng_pkey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_set_load_ssl_client_cert_function"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dh.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_unregister_DH"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_dsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_unregister_DSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_eckey.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_unregister_EC"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rand.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_unregister_RAND"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_rsa.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_unregister_RSA"
+      },
+      {
+        "declaring_header": "engine.h",
+        "module": "src/engine/tb_cipher.rs",
+        "received_from_phase": null,
+        "symbol": "ENGINE_unregister_ciphers"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_get0_engine"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/p_lib.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_PKEY_set1_engine"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes_cbc_hmac_sha1.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_cbc_hmac_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes_cbc_hmac_sha256.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_cbc_hmac_sha256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_ocb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_wrap_pad"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_128_xts"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_ocb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_192_wrap_pad"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes_cbc_hmac_sha1.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_cbc_hmac_sha1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes_cbc_hmac_sha256.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_cbc_hmac_sha256"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_ocb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_wrap_pad"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aes.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aes_256_xts"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_128_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_128_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_128_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_128_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_128_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_128_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_128_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_128_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_128_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_192_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_192_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_192_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_192_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_192_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_192_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_192_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_192_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_192_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_256_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_256_ccm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_256_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_256_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_256_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_256_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_256_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_256_gcm"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_aria.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_aria_256_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_bf.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_bf_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_bf.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_bf_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_bf.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_bf_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_bf.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_bf_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_128_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_128_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_128_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_128_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_128_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_128_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_128_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_192_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_192_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_192_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_192_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_192_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_192_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_192_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_256_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_256_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_256_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_256_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_256_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_256_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_camellia.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_camellia_256_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_cast.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_cast5_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_cast.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_cast5_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_cast.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_cast5_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_cast.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_cast5_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_chacha20_poly1305.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_chacha20"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_chacha20_poly1305.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_chacha20_poly1305"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede3"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede3_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede3_cfb1"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede3_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede3_cfb8"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede3_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede3_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede3_wrap"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ede_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_des.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_des_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_xcbc_d.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_desx_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_idea.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_idea_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_idea.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_idea_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_idea.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_idea_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_idea.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_idea_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_md4.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_md4"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_mdc2.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_mdc2"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_rc2.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_rc2_40_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_rc2.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_rc2_64_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_rc2.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_rc2_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_rc2.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_rc2_cfb64"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_rc2.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_rc2_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_rc2.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_rc2_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_rc4.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_rc4"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_rc4.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_rc4_40"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_rc4_hmac_md5.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_rc4_hmac_md5"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_seed.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_seed_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_seed.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_seed_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_seed.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_seed_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_seed.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_seed_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/sm3/legacy_sm3.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_sm3"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_sm4.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_sm4_cbc"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_sm4.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_sm4_cfb128"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_sm4.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_sm4_ctr"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_sm4.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_sm4_ecb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/e_sm4.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_sm4_ofb"
+      },
+      {
+        "declaring_header": "evp.h",
+        "module": "src/evp/legacy_wp.rs",
+        "received_from_phase": 7,
+        "symbol": "EVP_whirlpool"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pkey.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_read_bio_Parameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pkey.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_read_bio_Parameters_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_PKCS8PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_PKCS8PrivateKey_nid"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pkey.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pkey.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_PrivateKey_ex"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_bio_PKCS8PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pk8.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pkey.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_bio_Parameters"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pkey.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_bio_PrivateKey"
+      },
+      {
+        "declaring_header": "pem.h",
+        "module": "src/pem/pem_pkey.rs",
+        "received_from_phase": 7,
+        "symbol": "PEM_write_bio_PrivateKey_ex"
+      },
+      {
+        "declaring_header": "srp.h",
+        "module": "src/srp/srp_vfy.rs",
+        "received_from_phase": 12,
+        "symbol": "SRP_VBASE_init"
+      },
+      {
+        "declaring_header": "ts.h",
+        "module": "src/ts/ts_conf.rs",
+        "received_from_phase": 12,
+        "symbol": "TS_CONF_set_crypto_device"
+      },
+      {
+        "declaring_header": "ts.h",
+        "module": "src/ts/ts_conf.rs",
+        "received_from_phase": 12,
+        "symbol": "TS_CONF_set_default_engine"
+      },
+      {
+        "declaring_header": "txt_db.h",
+        "module": "src/txt_db/txt_db.rs",
+        "received_from_phase": null,
+        "symbol": "TXT_DB_create_index"
+      },
+      {
+        "declaring_header": "txt_db.h",
+        "module": "src/txt_db/txt_db.rs",
+        "received_from_phase": null,
+        "symbol": "TXT_DB_free"
+      },
+      {
+        "declaring_header": "txt_db.h",
+        "module": "src/txt_db/txt_db.rs",
+        "received_from_phase": null,
+        "symbol": "TXT_DB_get_by_index"
+      },
+      {
+        "declaring_header": "txt_db.h",
+        "module": "src/txt_db/txt_db.rs",
+        "received_from_phase": null,
+        "symbol": "TXT_DB_insert"
+      },
+      {
+        "declaring_header": "txt_db.h",
+        "module": "src/txt_db/txt_db.rs",
+        "received_from_phase": null,
+        "symbol": "TXT_DB_read"
+      },
+      {
+        "declaring_header": "txt_db.h",
+        "module": "src/txt_db/txt_db.rs",
+        "received_from_phase": null,
+        "symbol": "TXT_DB_write"
+      }
+    ],
+    "owned_by_header": {
+      "async.h": 22,
+      "engine.h": 121,
+      "evp.h": 148,
+      "pem.h": 15,
+      "srp.h": 1,
+      "ts.h": 2,
+      "txt_db.h": 6,
+      "ui.h": 62
+    },
+    "owned_by_module": {
+      "src/async/arch/async_posix.rs": 3,
+      "src/async/async.rs": 8,
+      "src/async/async_wait.rs": 11,
+      "src/engine/eng_all.rs": 1,
+      "src/engine/eng_cnf.rs": 1,
+      "src/engine/eng_ctrl.rs": 4,
+      "src/engine/eng_fat.rs": 4,
+      "src/engine/eng_init.rs": 2,
+      "src/engine/eng_lib.rs": 21,
+      "src/engine/eng_list.rs": 8,
+      "src/engine/eng_pkey.rs": 9,
+      "src/engine/eng_table.rs": 2,
+      "src/engine/tb_asnmth.rs": 10,
+      "src/engine/tb_cipher.rs": 8,
+      "src/engine/tb_dh.rs": 7,
+      "src/engine/tb_digest.rs": 8,
+      "src/engine/tb_dsa.rs": 7,
+      "src/engine/tb_eckey.rs": 7,
+      "src/engine/tb_pkmeth.rs": 8,
+      "src/engine/tb_rand.rs": 7,
+      "src/engine/tb_rsa.rs": 7,
+      "src/evp/e_aes.rs": 38,
+      "src/evp/e_aes_cbc_hmac_sha1.rs": 2,
+      "src/evp/e_aes_cbc_hmac_sha256.rs": 2,
+      "src/evp/e_aria.rs": 27,
+      "src/evp/e_bf.rs": 4,
+      "src/evp/e_camellia.rs": 21,
+      "src/evp/e_cast.rs": 4,
+      "src/evp/e_chacha20_poly1305.rs": 2,
+      "src/evp/e_des.rs": 6,
+      "src/evp/e_des3.rs": 13,
+      "src/evp/e_idea.rs": 4,
+      "src/evp/e_rc2.rs": 6,
+      "src/evp/e_rc4.rs": 2,
+      "src/evp/e_rc4_hmac_md5.rs": 1,
+      "src/evp/e_seed.rs": 4,
+      "src/evp/e_sm4.rs": 5,
+      "src/evp/e_xcbc_d.rs": 1,
+      "src/evp/legacy_md4.rs": 1,
+      "src/evp/legacy_mdc2.rs": 1,
+      "src/evp/legacy_wp.rs": 1,
+      "src/evp/p_lib.rs": 2,
+      "src/pem/pem_pk8.rs": 4,
+      "src/pem/pem_pkey.rs": 11,
+      "src/sm3/legacy_sm3.rs": 1,
+      "src/srp/srp_vfy.rs": 1,
+      "src/ts/ts_conf.rs": 2,
+      "src/txt_db/txt_db.rs": 6,
+      "src/ui/ui_lib.rs": 55,
+      "src/ui/ui_null.rs": 1,
+      "src/ui/ui_openssl.rs": 3,
+      "src/ui/ui_util.rs": 3
+    },
+    "provider_rows_owned": 39,
+    "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 13, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
+  },
+  "generator": "forensics/tools/phase13_obligations.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "authority-functions",
+      "path": "forensics/atlas/openssl-3.6.4-production/functions.json",
+      "sha256": "0add7610e574dc030773b0f76a6cc80215d73cfbca411392bd6b64f3f8de80d0"
+    },
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "export-defining-units",
+      "path": "forensics/atlas/export-defining-units.json",
+      "sha256": "fed68223839cb890b8d34359d806945316f67bf2fa08353b7e43e608a3722fed"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "d7b2138ccf175e9d3ffa58b738729344f315b6a52e1b3c81427e593d6659bba5"
+    },
+    {
+      "name": "implemented-surface",
+      "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
+      "sha256": "577168e52e5605593d048da5d1979f7ab821c0b1913384a60a96bb340375e8a9"
+    },
+    {
+      "name": "phase3-obligations",
+      "path": "forensics/phase3-obligations.json",
+      "sha256": "1ab151efd06efcd8781d230fff45c785b5cfca289423bd8bf9d3ce95dd537329"
+    },
+    {
+      "name": "phase7-obligations",
+      "path": "forensics/phase7-obligations.json",
+      "sha256": "ac879cdead11c10b4328ef254732b78b6315c476a56fe5226ea3fd2753a1dadf"
+    },
+    {
+      "name": "phase12-obligations",
+      "path": "forensics/phase12-obligations.json",
+      "sha256": "4ad1b2ff5b0d246a262a3fcd2d754830bf5e1518fd2feb23795d5474ff48b293"
+    }
+  ],
+  "kind": "phase13-obligations",
+  "schema": "openssl-rs/atlas/phase13-obligations/v1"
+}
