@@ -33,13 +33,79 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int};
+use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
 use crate::ffi::guard_ffi;
+use crate::runtime::bio::sys::strlen;
+use crate::runtime::err::err_reasons::{
+    SSL_R_SSL3_EXT_INVALID_SERVERNAME, SSL_R_SSL3_EXT_INVALID_SERVERNAME_TYPE,
+};
+use crate::runtime::err::raise_with;
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup};
 use crate::ssl::record::rec_layer_s3::{record_layer_read_pending, record_layer_write_pending};
 use crate::ssl::ssl_lib::{Ssl, SslCtx, TicketKeyEvpCb};
 use crate::ssl::statem::statem::{ossl_statem_set_renegotiate, SSL_in_init};
+
+/// `OPENSSL_FILE` of this translation unit, used on `ERR_raise` sites.
+const FILE: *const c_char = c"ssl/s3_lib.c".as_ptr();
+/// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
+const ERR_LIB_SSL: c_int = 20;
+/// `TLSEXT_NAMETYPE_host_name` — `tls1.h:171`.
+const TLSEXT_NAMETYPE_HOST_NAME: c_int = 0;
+/// `TLSEXT_MAXLEN_host_name` — `tls1.h:172`.
+const TLSEXT_MAXLEN_HOST_NAME: usize = 255;
+/// `ERR_R_INTERNAL_ERROR` — `err.h` (`1 | ERR_RFLAG_COMMON | ERR_RFLAG_FATAL`).
+const ERR_R_INTERNAL_ERROR: c_int = 1 | (2 << 18) | (1 << 18);
+
+/// `ERR_raise(ERR_LIB_SSL, reason)` at `ssl/s3_lib.c:line`.
+fn raise_ssl(reason: c_int, line: c_int) {
+    // SAFETY: thread-local error state.
+    unsafe { raise_with(ERR_LIB_SSL, reason, FILE, line) };
+}
+
+/// `ssl3_ctrl`'s `SSL_CTRL_SET_TLSEXT_HOSTNAME` arm — `ssl/s3_lib.c:4024-4054`.
+///
+/// The authority's `SSL_ctrl` (`ossl_ctrl_internal`) does not handle this command itself; it
+/// falls through to `method->ssl_ctrl`, which for every method this crate builds is `ssl3_ctrl`.
+/// The crate's control dispatcher has no method pointer to fall through to, so this arm is landed
+/// and reached from `SSL_ctrl` directly.
+///
+/// # Safety
+/// `s` must be a live connection; `parg` must be NULL or a NUL-terminated name.
+pub(crate) unsafe fn ssl3_ctrl_set_tlsext_host_name(
+    s: *mut Ssl,
+    larg: c_long,
+    parg: *mut c_void,
+) -> c_long {
+    if larg != TLSEXT_NAMETYPE_HOST_NAME as c_long {
+        raise_ssl(SSL_R_SSL3_EXT_INVALID_SERVERNAME_TYPE, 4051);
+        return 0;
+    }
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
+        CRYPTO_free((*s).ext_hostname.cast(), FILE, 4029);
+        (*s).ext_hostname = ptr::null_mut();
+    }
+    if parg.is_null() {
+        return 1;
+    }
+    // SAFETY: `parg` is a NUL-terminated name per the contract.
+    let len = unsafe { strlen(parg.cast::<c_char>()) };
+    if len == 0 || len > TLSEXT_MAXLEN_HOST_NAME {
+        raise_ssl(SSL_R_SSL3_EXT_INVALID_SERVERNAME, 4040);
+        return 0;
+    }
+    // SAFETY: `parg` is the NUL-terminated name and `s` is live.
+    let host = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4043) };
+    if host.is_null() {
+        raise_ssl(ERR_R_INTERNAL_ERROR, 4044);
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    unsafe { (*s).ext_hostname = host };
+    1
+}
 
 /// `TLSEXT_nid_unknown` — `ssl_local.h`: the flag bit `SSL_group_to_name` strips before the lookup.
 const TLSEXT_NID_UNKNOWN: c_int = 0x0100_0000;

@@ -203,7 +203,7 @@ const _: () = {
 /// The per-connection DANE state, installed on an `X509_STORE_CTX` by
 /// [`crate::x509::x509_vfy::X509_STORE_CTX_set0_dane`] and read here.
 #[repr(C)]
-pub(crate) struct SslDane {
+pub struct SslDane {
     /// `struct dane_ctx_st *dctx` — the shared context.
     pub(crate) dctx: *mut DaneCtx,
     /// `STACK_OF(danetls_record) *trecs` — the TLSA records.

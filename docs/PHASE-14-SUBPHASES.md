@@ -94,6 +94,7 @@ against this stratum -- the mirror of Phases 12 and 13.
 | 14.5b | **The handshake and record-layer engine (a measured correction)** | `ssl_lib.c`'s thirteen handshake entry points re-owned from 14.1's remainder (`SSL_accept`, `SSL_connect`, `SSL_key_update`, `SSL_renegotiate`/`_abbreviated`, `SSL_new_session_ticket`, `SSL_read_early_data`, `SSL_write_early_data`, `SSL_export_keying_material`/`_early`, `SSL_sendfile`, `SSL_stateless`, `SSL_verify_client_post_handshake`), plus the `statem.c` engine core, `s3_lib.c`'s `ssl3_renegotiate`/`ssl3_renegotiate_check` and `rec_layer_s3.c`'s two `RECORD_LAYER_*_pending` readers. **0 new defining units** — the thirteen names are `ssl_lib.c` rows 14.1 already owns, so this is a slice row, not an activation-partition row. **Landed (checked against the ledger): all thirteen rows, driven by the `statem.c` control surface and fresh-connection driver in `src/ssl/statem/statem.rs`. The stratum now stands at 584 of the 600 atlas-owned exports implemented, with 16 open.** The message layer (`statem_lib.c`/`statem_clnt.c`/`statem_srvr.c`, the `extensions*.c` units, the key schedule and the record protection) remains unlanded; `src/ssl/mod.rs` records it. | 14.5 | `RT-STATEM`, `RT-SSL-OBJECT` |
 | 14.6 | **The BIO pair and buffers** | `bio_ssl.c` (6). `BIO_f_ssl`/`BIO_new_ssl`/`BIO_new_ssl_connect`/`BIO_new_buffer_ssl_connect` and the session-copy/shutdown BIO controls. **6 open rows over 1 unit.** **Landed (checked against the ledger): all 6 rows — `BIO_f_ssl`, `BIO_new_ssl`, `BIO_new_ssl_connect`, `BIO_new_buffer_ssl_connect`, `BIO_ssl_copy_session_id` and `BIO_ssl_shutdown`. The stratum now stands at 384 of the 600 atlas-owned exports implemented, with 216 open.** | 14.1 | `RT-SSL-BIO` |
 | 14.7 | **The session and certificate plumbing** | `ssl_sess.c` (65), `ssl_cert.c` (20), `ssl_rsa.c` (19), `ssl_rsa_legacy.c` (6), `ssl_cert_comp.c` (8), `ssl_asn1.c` (3), `ssl_txt.c` (3). The session cache and PEM/DER session codec, the CA-list and certificate/private-key loaders (including the deprecated `use_RSAPrivateKey` spellings), certificate compression and the session printers. **124 open rows over 7 units** — the largest subphase. **Landed (checked against the ledger), in four slices: Slice 1 the session object, DER codec and printers (71 rows); Slice 2 the certificate-compression unit (8); Slice 3 the CA-list plumbing (20); Slice 4 the certificate/private-key loaders (25). All 124 rows moved to the ledger's implemented set; the stratum now stands at 521 of the 600 atlas-owned exports implemented, with 79 open (14.9's and 14.11's units and 14.1's remainder).** | 14.1 | `RT-SESSION-CERT` |
+| 14.7b | **The DANE/RPK surface and the last blocked rows (a measured correction)** | `ssl_lib.c`'s sixteen remaining rows re-owned from 14.1's remainder (the twelve DANE/RPK rows — `SSL_[CTX_]dane_*`, `SSL_get0_dane*`, `SSL_add_expected_rpk` — plus `SSL_bytes_to_cipher_list`, `SSL_get1_supported_ciphers`, `SSL_dup` and `SSL_set_SSL_CTX`), with the helpers they waited on: `ssl_cert_dup`, the custom-extension copies, the `s3.tmp` disabled-mask and version tracker, and `statem_lib.c`'s version helpers. **0 new defining units** — all sixteen are `ssl_lib.c` rows 14.1 already owns, so this is a slice row, not an activation-partition row. **Landed (checked against the ledger): all sixteen rows; the stratum now stands at 600 of the 600 atlas-owned exports implemented, with 0 open.** | 14.7 | `RT-SSL-OBJECT` |
 | 14.8 | **The DTLS layer** | `d1_lib.c` (3), `d1_srtp.c` (4). `DTLSv1_listen`, the DTLS data-MTU and timer callbacks, and the DTLS-SRTP profile surface. **7 open rows over 2 units.** **Landed (checked against the ledger): all 7 rows — `d1_lib.c`'s three (`DTLSv1_listen`, `DTLS_get_data_mtu`, `DTLS_set_timer_cb`) and `d1_srtp.c`'s four. The stratum now stands at 391 of the 600 atlas-owned exports implemented, with 209 open.** | 14.2 | `RT-DTLS` |
 | 14.9 | **The TLS extension, SRP and diagnostic glue** | `tls_srp.c` (19), `ssl_stat.c` (6), `ssl_mcnf.c` (3), `tls_depr.c` (3), `t1_trce.c` (1). The SRP credential and callback surface, the alert/state string readers, the `SSL_CTX_config`/`SSL_add_ssl_module` config glue, the deprecated DH-callback setters and `SSL_trace`. **32 open rows over 5 units.** **Landed (checked against the ledger): all 32 rows — `tls_srp.c`'s nineteen, `ssl_stat.c`'s six, `ssl_mcnf.c`'s three, `tls_depr.c`'s three and `t1_trce.c`'s one. The stratum now stands at 571 of the 600 atlas-owned exports implemented, with 29 open (14.1's remainder).** | 14.1, 14.3 | `RT-SSL-EXT` |
 | 14.10 | **The init, error and QUIC bridge** | `ssl_init.c` (1), `ssl_err_legacy.c` (1), `quic_tls_api.c` (3), `quic_impl.c` (1). `OPENSSL_init_ssl`, the legacy error-string loader, and the QUIC TLS accessors (`SSL_set_quic_tls_cbs`/`_transport_params`/`_early_data_enabled`, `SSL_inject_net_dgram`). **6 open rows over 4 units.** **Landed (checked against the ledger): all 6 rows — `OPENSSL_init_ssl`, `ERR_load_SSL_strings`, `quic_tls_api.c`'s three and `quic_impl.c`'s one. The stratum now stands at 397 of the 600 atlas-owned exports implemented, with 203 open.** | 14.1 | `RT-SSL-INIT` |
@@ -111,6 +112,12 @@ handshake/record-layer engine, as Phase 12's plan did not anticipate 12.4b/12.5b
 because the slice, its dependency (14.5) and its courts must be named, but its thirteen names are
 `ssl_lib.c` rows 14.1 already owns, so it adds no defining unit and the partition above is
 unchanged. §5 records the correction and its measurement.
+
+**14.7b is the same shape of correction, closing the partition.** After 14.9 the remainder was the
+sixteen `ssl_lib.c` rows 14.1 owns; 14.7b lands them over the helpers 14.3/14.5/14.7 left, so it
+adds no defining unit and the activation partition is unchanged. §5 records the correction and its
+measurement. With it the stratum's atlas-owned universe is fully implemented and the ledger's `open`
+set is empty.
 
 **2.1 The order, and the dependency it rests on.** 14.1 first because every other subphase binds to
 an `SSL_CTX` or `SSL` object it allocates: the method constructors return into it, the cipher and
@@ -422,6 +429,29 @@ callback reports no serverinfo data because `ssl_get_server_cert_serverinfo` is 
 court is `RT-SESSION-CERT` (`courts/phase14/rt_session_cert_probe.c`), registered in
 `forensics/tools/phase14_courts.py`.
 
+**Subphase 14.7b — the measured correction: the DANE/RPK surface and the last blocked rows.** The
+plan's table did not name this slice, as it did not name 14.5b. Measurement after 14.9 and 14.5b
+found 14.1's remainder down to sixteen `ssl_lib.c` rows, each waiting on one named helper rather
+than an invented body: the twelve DANE/RPK rows on `ssl_lib.c`'s own DANE container and its
+certificate/public-key decode-and-insert path, `SSL_bytes_to_cipher_list` on the cipher-by-char
+parser, `SSL_get1_supported_ciphers` on `ssl_set_client_disabled`/`ssl_cipher_disabled`'s
+`s3.tmp` word, and `SSL_dup`/`SSL_set_SSL_CTX` on `ssl_cert_dup` and the custom-extension copies.
+14.7b lands all sixteen with those helpers. `src/ssl/ssl_lib.rs` gains the twelve DANE/RPK exports
+and their internals (`dane_ctx_enable`/`_final`, the `dane_mds` table, `tlsa_free`/`dane_final`,
+`ssl_dane_dup`, `dane_mtype_set`, `tlsa_md_get`, `dane_tlsa_add`), `ssl_cert_dup` and `dup_ca_names`,
+`SSL_dup` and `SSL_set_SSL_CTX`, `ossl_bytes_to_cipher_list`, and `SSL_get1_supported_ciphers`;
+`src/ssl/s3_lib.rs` gains `ssl3_ctrl`'s `SSL_CTRL_SET_TLSEXT_HOSTNAME` arm; `src/ssl/t1_lib.rs`
+gains `ssl_set_client_disabled`/`ssl_cipher_disabled`; `src/ssl/statem/statem_lib.rs` lands
+`statem_lib.c`'s `ssl_version_cmp`/`ssl_method_error`/`ssl_get_min_max_version` trio; and
+`src/ssl/statem/extensions_cust.rs` gains `custom_exts_copy`/`_copy_conn`/`_copy_flags`. All sixteen
+rows moved to the ledger's implemented set; the stratum now stands at **600 of the 600 atlas-owned
+exports implemented, with 0 open**, and `forensics/phase14-obligations.json`'s `complete` is true.
+`RT-SSL-OBJECT` extends with the DANE setters and read-backs over a fixed certificate, the four
+`SSL_bytes_to_cipher_list` forms, `SSL_get1_supported_ciphers` over a fixed cipher set, `SSL_dup`
+over a fixed connection and `SSL_set_SSL_CTX` over a fixed context pair; `src/ssl/mod.rs` records the
+reductions — the `ssl_set_sig_mask` family walk, the version floor the reduced security callback
+leaves, `ssl_cert_dup`'s unmodelled fields, and `SSL_dup`'s handshake-dependent session arms.
+
 **14.9, and 14.1's remainder (checked against the ledger):**
 
 14.9 landed all 32 rows over its five units — `tls_srp.c` (19), `ssl_stat.c` (6), `ssl_mcnf.c`
@@ -432,9 +462,6 @@ chain-certificate controls). `RT-SSL-OBJECT` drives them.
 
 **Open exports (checked against the ledger):**
 
-The remaining 16 exports are all `ssl_lib.c` rows of 14.1's remainder: the twelve DANE/RPK rows
-(`SSL_add_expected_rpk` included), `SSL_bytes_to_cipher_list`, `SSL_get1_supported_ciphers`,
-`SSL_dup` and `SSL_set_SSL_CTX`. Each waits on a named helper rather than an invented body; the
-blockers are recorded in `src/ssl/mod.rs`. Representative names are `SSL_dup`, `SSL_get0_dane` and
-`SSL_CTX_dane_enable`. The thirteen handshake entry points that stood here before 14.5b are closed
-and named in that subphase's record and in the landed clause above.
+None. 14.7b landed the last sixteen rows of 14.1's remainder, so the ledger's open list is empty
+and its counts read six hundred implemented and zero open in this stratum; the record above names
+which rows those were.

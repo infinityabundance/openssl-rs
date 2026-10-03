@@ -128,7 +128,7 @@ pub(crate) unsafe fn ssl3_get_cipher_by_id(id: u32) -> *const SslCipher {
 ///
 /// # Safety
 /// `p` must point at two readable bytes.
-unsafe fn ssl3_get_cipher_by_char(p: *const u8) -> *const SslCipher {
+pub(crate) unsafe fn ssl3_get_cipher_by_char(p: *const u8) -> *const SslCipher {
     // SAFETY: the caller guarantees two readable bytes.
     let id = (t::SSL3_CK_CIPHERSUITE_FLAG as u32)
         | ((unsafe { *p } as u32) << 8)

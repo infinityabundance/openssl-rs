@@ -171,7 +171,9 @@ pub type SslCustomExtParseCbEx = unsafe extern "C" fn(
 /// The callback pointers are kept erased (`*const c_void`) because the old- and new-style APIs
 /// register different signatures and this slice never invokes either; erasure keeps one record type
 /// for both while preserving the authority's fields, including the NULL tests the refusal ladder
-/// performs.
+/// performs. `Copy` is derived so `custom_exts_copy*` (`extensions_cust.c:256-370`) can duplicate
+/// the record table, which the authority does with `memcpy`.
+#[derive(Clone, Copy)]
 pub struct CustomExtMethod {
     /// `unsigned short ext_type`.
     pub ext_type: c_uint,
@@ -202,6 +204,60 @@ fn custom_ext_find(exts: &[CustomExtMethod], role: c_int, ext_type: c_uint) -> O
         m.ext_type == ext_type
             && (role == ENDPOINT_BOTH || role == m.role || m.role == ENDPOINT_BOTH)
     })
+}
+
+/// `SSL_EXT_FLAG_CONN` — `ssl/ssl_local.h:2073`.
+const SSL_EXT_FLAG_CONN: c_uint = 0x4;
+
+/// `int custom_exts_copy(custom_ext_methods *dst, const custom_ext_methods *src)` —
+/// `ssl/statem/extensions_cust.c:301-323`.
+///
+/// The authority `memdup`s the source table and then rewrites each old-style wrapper argument;
+/// this crate stores the old-style callbacks verbatim (the wrapper allocation is 14.5's recorded
+/// divergence), so the copy is the record-table duplication alone.
+#[allow(dead_code)] // reached once `ssl_cert_dup`/`SSL_set_SSL_CTX` land their callers
+pub(crate) fn custom_exts_copy(dst: &mut Vec<CustomExtMethod>, src: &[CustomExtMethod]) -> c_int {
+    if !src.is_empty() {
+        dst.clear();
+        dst.extend_from_slice(src);
+    }
+    1
+}
+
+/// `int custom_exts_copy_conn(custom_ext_methods *dst, const custom_ext_methods *src)` —
+/// `ssl/statem/extensions_cust.c:326-370`.
+///
+/// Only the records the connection set itself (`SSL_EXT_FLAG_CONN`) are appended; the authority's
+/// old-style wrapper argument copy is the same recorded reduction as [`custom_exts_copy`].
+#[allow(dead_code)] // reached once `SSL_set_SSL_CTX` lands its caller
+pub(crate) fn custom_exts_copy_conn(
+    dst: &mut Vec<CustomExtMethod>,
+    src: &[CustomExtMethod],
+) -> c_int {
+    for m in src {
+        if (m.ext_flags & SSL_EXT_FLAG_CONN) != 0 {
+            dst.push(*m);
+        }
+    }
+    1
+}
+
+/// `int custom_exts_copy_flags(custom_ext_methods *dst, const custom_ext_methods *src)` —
+/// `ssl/statem/extensions_cust.c:256-273`.
+///
+/// Copies the flag word from every source record into the destination record with the same role
+/// and extension type, when one exists.
+#[allow(dead_code)] // reached once `SSL_set_SSL_CTX` lands its caller
+pub(crate) fn custom_exts_copy_flags(
+    dst: &mut [CustomExtMethod],
+    src: &[CustomExtMethod],
+) -> c_int {
+    for ms in src {
+        if let Some(i) = custom_ext_find(dst, ms.role, ms.ext_type) {
+            dst[i].ext_flags = ms.ext_flags;
+        }
+    }
+    1
 }
 
 /// `int SSL_extension_supported(unsigned int ext_type)` — `ssl/statem/extensions_cust.c:550-595`.
