@@ -40,7 +40,7 @@ declared owner; this is that assignment.
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` | 1024 | 1033 | 1030 | 3 | 0 |
 | 13 | Legacy / deprecated compatibility | `complete` | 189 | 377 | 377 | 0 | 0 |
 | 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
-| 15 | QUIC / ECH and modern SSL surface | `in-progress` | 3 | 3 | 3 | 0 | 0 |
+| 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
 | 16 | CLI / config / filesystem contract | `not-started` | 0 | — | — | — | — |
 | 17 | Downstream replacement court | `not-started` | 0 | — | — | — | — |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
@@ -492,9 +492,8 @@ Courts: `all pass`, 11 court(s), **1931** authority observation(s) over 11 trans
 
 ## Phase 15 — QUIC / ECH and modern SSL surface
 
-* state: `in-progress`
-* blocking: Phase 15's FRF chain entry is incomplete: 1 court(s) that artifacts/phase15/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-quic; 1 of 1 required court(s) have no FRF declaration staging their artifacts/phase15/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-quic; 1 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-quic; 1 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-quic; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 1 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 15 and the FRF chain
-* seal: none written yet (`unnamed`)
+* state: `complete`
+* seal: `docs/PHASE-15-QUIC-SEAL.md`
 * ledger: `forensics/phase15-obligations.json`
 * atlas-owned: 3
 * owned working set: 3

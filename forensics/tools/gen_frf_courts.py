@@ -617,6 +617,15 @@ COURTS: list[tuple[str, int, str, str]] = [
     ("rt-ssl-ext", 14, "rt_ssl_ext_probe",
      "the SRP credential and callback surface, the alert and state string readers, the config "
      "glue and SSL_trace, driven"),
+    #
+    # Phase 15 -- the QUIC / ECH and modern SSL surface stratum. One court, a differential probe
+    # compiled against both sides. `RT-PHASE15-REF` is this stratum's reference basis: its probe
+    # takes the address of each of the stratum's three atlas-owned exports and prints whether each
+    # is non-NULL, so the court-coverage atlas records those names at basis `referenced`, never
+    # `called` (D199), and it is not declarable here. The one row below diffs a real transcript and
+    # stages an `artifacts/phase15/probes/<probe>.{authority,candidate}` pair, so it is declarable.
+    ("rt-quic", 15, "rt_quic_probe",
+     "the three OSSL_QUIC_*_method constructors and the context each installs, driven"),
 ]
 
 

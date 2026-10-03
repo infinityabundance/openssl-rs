@@ -4,19 +4,10 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "symbols_not_reached": 2
-    },
-    "census_by_stratum": {
-      "15": 2
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "symbols_not_reached": [
-        "ssl3_undef_enc_method",
-        "tls1_default_timeout"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -33,7 +24,7 @@
         "docs/PHASE-9-SUBPHASES.md"
       ],
       "rows_judged": 168,
-      "symbols_named_by_a_row": 114,
+      "symbols_named_by_a_row": 112,
       "symbols_reached": 112,
       "unit_records": 99,
       "units_named_by_a_record": 102,
@@ -7280,12 +7271,12 @@
       "ssl/statem/statem_clnt.c": {
         "class": "deferred_to_later_stratum",
         "crate_module": null,
-        "owner_phase": 15
+        "owner_phase": 16
       },
       "ssl/statem/statem_srvr.c": {
         "class": "deferred_to_later_stratum",
         "crate_module": null,
-        "owner_phase": 15
+        "owner_phase": 16
       }
     },
     "universes": {
@@ -7294,7 +7285,7 @@
       "transcribed_units": 592
     }
   },
-  "body_hash": "51d0d6758da6d11bec30441233db8e653d6a692499e1818d41c619c6feae32a8",
+  "body_hash": "e069e7d78e56d8a4bb6acac0b600787a3fa8b0e8c556e879e4dcf078966bcb97",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -7315,12 +7306,12 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "d178db4df809582861343a71b5ec7e91084bd2b73426929b2b86a0388f2cde1d"
+      "sha256": "1b4970bf209e4a21ba14b42ae304fedefbcc65b7e896f8b622b47e591d608e67"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "70b06c7a0960cf287d99fe11526a98a1bc7a8a3990f1de0e0a7f3f2486cb75f4"
+      "sha256": "4dde21f48014bf43bed6b24ab5551f7b93ad27dfb5b7668f5165740d76958282"
     },
     {
       "name": "source-manifest",
@@ -7355,7 +7346,7 @@
     {
       "name": "plan-PHASE-15-SUBPHASES",
       "path": "docs/PHASE-15-SUBPHASES.md",
-      "sha256": "b5df1c29004f4f8d25f70392681b129fe813957511db645bd84a5ca218c94ef1"
+      "sha256": "b1a9606959d2c988c114dcfd6ac58f00b85aa1607841631b82849cd920caac76"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",
