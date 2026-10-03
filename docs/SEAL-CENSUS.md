@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 5646 | 250 |
+| libcrypto | 5896 | 5649 | 247 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **5646** | **853** |
+| **total** | **6499** | **5649** | **850** |
 
 ## Ownership atlas, by stratum
 
@@ -38,7 +38,7 @@ declared owner; this is that assignment.
 | 10 | Key formats + PKCS + STORE | `complete` | 272 | 298 | 298 | 0 | 0 |
 | 11 | X.509 + verification | `complete` | 1455 | 1467 | 1465 | 2 | 0 |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` | 1024 | 1033 | 1030 | 3 | 0 |
-| 13 | Legacy / deprecated compatibility | `in-progress` | 189 | 377 | 127 | 0 | 250 |
+| 13 | Legacy / deprecated compatibility | `in-progress` | 189 | 377 | 130 | 0 | 247 |
 | 14 | TLS / DTLS (libssl) | `not-started` | 600 | — | — | — | — |
 | 15 | QUIC / ECH and modern SSL surface | `not-started` | 3 | — | — | — | — |
 | 16 | CLI / config / filesystem contract | `not-started` | 0 | — | — | — | — |
@@ -435,14 +435,14 @@ Courts: `all pass`, 11 court(s), **1845** authority observation(s) over 11 trans
 ## Phase 13 — Legacy / deprecated compatibility
 
 * state: `in-progress`
-* blocking: 250 open obligation(s) of this stratum recorded in forensics/phase13-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One hundred and eighty-nine of the exports it owns are its own three headers' (`engine.h`, `ui.h`, `txt_db.h`) and the one hundred and eighty-eight remainder arrive as recorded hand-offs from phases 3, 7 and 12 -- the deprecated METHOD-era EVP statics and PEM readers, the ASYNC framework, and the three Phase 12 rows `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`. The ledger does not start with that whole working set open: 123 atlas-owned exports and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` spellings are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns 39 provider registration rows, all unimplemented (docs/PHASE-13-SUBPHASES.md sections 1 and 4)
+* blocking: 247 open obligation(s) of this stratum recorded in forensics/phase13-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One hundred and eighty-nine of the exports it owns are its own three headers' (`engine.h`, `ui.h`, `txt_db.h`) and the one hundred and eighty-eight remainder arrive as recorded hand-offs from phases 3, 7 and 12 -- the deprecated METHOD-era EVP statics and PEM readers, the ASYNC framework, and the three Phase 12 rows `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`. The ledger does not start with that whole working set open: 123 atlas-owned exports and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` spellings are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns 39 provider registration rows, all unimplemented (docs/PHASE-13-SUBPHASES.md sections 1 and 4)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase13-obligations.json`
 * atlas-owned: 189
 * owned working set: 377
-* implemented: 127
+* implemented: 130
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 250**
+* **open in this stratum: 247**
 
 Hand-offs received and discharged:
 
@@ -450,11 +450,12 @@ Hand-offs received and discharged:
 * from phase 3: 22 symbol(s) — `ASYNC_WAIT_CTX_clear_fd`, `ASYNC_WAIT_CTX_free`, `ASYNC_WAIT_CTX_get_all_fds`, `ASYNC_WAIT_CTX_get_callback`, `ASYNC_WAIT_CTX_get_changed_fds`, `ASYNC_WAIT_CTX_get_fd`, `ASYNC_WAIT_CTX_get_status`, `ASYNC_WAIT_CTX_new`, `ASYNC_WAIT_CTX_set_callback`, `ASYNC_WAIT_CTX_set_status`, `ASYNC_WAIT_CTX_set_wait_fd`, `ASYNC_block_pause`, `ASYNC_cleanup_thread`, `ASYNC_get_current_job`, `ASYNC_get_mem_functions`, `ASYNC_get_wait_ctx`, `ASYNC_init_thread`, `ASYNC_is_capable`, `ASYNC_pause_job`, `ASYNC_set_mem_functions`, `ASYNC_start_job`, `ASYNC_unblock_pause`
 * from phase 7: 163 symbol(s) — `EVP_PKEY_get0_engine`, `EVP_PKEY_set1_engine`, `EVP_aes_128_cbc`, `EVP_aes_128_cbc_hmac_sha1`, `EVP_aes_128_cbc_hmac_sha256`, `EVP_aes_128_ccm`, `EVP_aes_128_cfb1`, `EVP_aes_128_cfb128`, `EVP_aes_128_cfb8`, `EVP_aes_128_ctr`, `EVP_aes_128_ecb`, `EVP_aes_128_gcm`, `EVP_aes_128_ocb`, `EVP_aes_128_ofb`, `EVP_aes_128_wrap`, `EVP_aes_128_wrap_pad`, `EVP_aes_128_xts`, `EVP_aes_192_cbc`, `EVP_aes_192_ccm`, `EVP_aes_192_cfb1`, `EVP_aes_192_cfb128`, `EVP_aes_192_cfb8`, `EVP_aes_192_ctr`, `EVP_aes_192_ecb`, `EVP_aes_192_gcm`, `EVP_aes_192_ocb`, `EVP_aes_192_ofb`, `EVP_aes_192_wrap`, `EVP_aes_192_wrap_pad`, `EVP_aes_256_cbc`, `EVP_aes_256_cbc_hmac_sha1`, `EVP_aes_256_cbc_hmac_sha256`, `EVP_aes_256_ccm`, `EVP_aes_256_cfb1`, `EVP_aes_256_cfb128`, `EVP_aes_256_cfb8`, `EVP_aes_256_ctr`, `EVP_aes_256_ecb`, `EVP_aes_256_gcm`, `EVP_aes_256_ocb`, `EVP_aes_256_ofb`, `EVP_aes_256_wrap`, `EVP_aes_256_wrap_pad`, `EVP_aes_256_xts`, `EVP_aria_128_cbc`, `EVP_aria_128_ccm`, `EVP_aria_128_cfb1`, `EVP_aria_128_cfb128`, `EVP_aria_128_cfb8`, `EVP_aria_128_ctr`, `EVP_aria_128_ecb`, `EVP_aria_128_gcm`, `EVP_aria_128_ofb`, `EVP_aria_192_cbc`, `EVP_aria_192_ccm`, `EVP_aria_192_cfb1`, `EVP_aria_192_cfb128`, `EVP_aria_192_cfb8`, `EVP_aria_192_ctr`, `EVP_aria_192_ecb`, `EVP_aria_192_gcm`, `EVP_aria_192_ofb`, `EVP_aria_256_cbc`, `EVP_aria_256_ccm`, `EVP_aria_256_cfb1`, `EVP_aria_256_cfb128`, `EVP_aria_256_cfb8`, `EVP_aria_256_ctr`, `EVP_aria_256_ecb`, `EVP_aria_256_gcm`, `EVP_aria_256_ofb`, `EVP_bf_cbc`, `EVP_bf_cfb64`, `EVP_bf_ecb`, `EVP_bf_ofb`, `EVP_camellia_128_cbc`, `EVP_camellia_128_cfb1`, `EVP_camellia_128_cfb128`, `EVP_camellia_128_cfb8`, `EVP_camellia_128_ctr`, `EVP_camellia_128_ecb`, `EVP_camellia_128_ofb`, `EVP_camellia_192_cbc`, `EVP_camellia_192_cfb1`, `EVP_camellia_192_cfb128`, `EVP_camellia_192_cfb8`, `EVP_camellia_192_ctr`, `EVP_camellia_192_ecb`, `EVP_camellia_192_ofb`, `EVP_camellia_256_cbc`, `EVP_camellia_256_cfb1`, `EVP_camellia_256_cfb128`, `EVP_camellia_256_cfb8`, `EVP_camellia_256_ctr`, `EVP_camellia_256_ecb`, `EVP_camellia_256_ofb`, `EVP_cast5_cbc`, `EVP_cast5_cfb64`, `EVP_cast5_ecb`, `EVP_cast5_ofb`, `EVP_chacha20`, `EVP_chacha20_poly1305`, `EVP_des_cbc`, `EVP_des_cfb1`, `EVP_des_cfb64`, `EVP_des_cfb8`, `EVP_des_ecb`, `EVP_des_ede`, `EVP_des_ede3`, `EVP_des_ede3_cbc`, `EVP_des_ede3_cfb1`, `EVP_des_ede3_cfb64`, `EVP_des_ede3_cfb8`, `EVP_des_ede3_ecb`, `EVP_des_ede3_ofb`, `EVP_des_ede3_wrap`, `EVP_des_ede_cbc`, `EVP_des_ede_cfb64`, `EVP_des_ede_ecb`, `EVP_des_ede_ofb`, `EVP_des_ofb`, `EVP_desx_cbc`, `EVP_idea_cbc`, `EVP_idea_cfb64`, `EVP_idea_ecb`, `EVP_idea_ofb`, `EVP_md4`, `EVP_mdc2`, `EVP_rc2_40_cbc`, `EVP_rc2_64_cbc`, `EVP_rc2_cbc`, `EVP_rc2_cfb64`, `EVP_rc2_ecb`, `EVP_rc2_ofb`, `EVP_rc4`, `EVP_rc4_40`, `EVP_rc4_hmac_md5`, `EVP_seed_cbc`, `EVP_seed_cfb128`, `EVP_seed_ecb`, `EVP_seed_ofb`, `EVP_sm3`, `EVP_sm4_cbc`, `EVP_sm4_cfb128`, `EVP_sm4_ctr`, `EVP_sm4_ecb`, `EVP_sm4_ofb`, `EVP_whirlpool`, `PEM_read_PrivateKey`, `PEM_read_PrivateKey_ex`, `PEM_read_bio_Parameters`, `PEM_read_bio_Parameters_ex`, `PEM_read_bio_PrivateKey`, `PEM_read_bio_PrivateKey_ex`, `PEM_write_PKCS8PrivateKey`, `PEM_write_PKCS8PrivateKey_nid`, `PEM_write_PrivateKey`, `PEM_write_PrivateKey_ex`, `PEM_write_bio_PKCS8PrivateKey`, `PEM_write_bio_PKCS8PrivateKey_nid`, `PEM_write_bio_Parameters`, `PEM_write_bio_PrivateKey`, `PEM_write_bio_PrivateKey_ex`
 
-Courts: `all pass`, 1 court(s), **127** authority observation(s) over 1 transcript court(s).
+Courts: `all pass`, 2 court(s), **157** authority observation(s) over 2 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-PHASE13-REF | `pass` | 127 |
+| RT-ENGINE | `pass` | 30 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
@@ -513,8 +514,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 10 | 298 | 298 | 237 | 61 | 0 | 0 | 0 |
 | 11 | 1465 | 1465 | 939 | 526 | 0 | 0 | 0 |
 | 12 | 1030 | 1030 | 902 | 128 | 0 | 0 | 0 |
-| 13 | 127 | 127 | 29 | 98 | 0 | 0 | 0 |
-| **total** | **5646** | **5638** | **4561** | **1077** | **8** | **0** | **0** |
+| 13 | 130 | 130 | 33 | 97 | 0 | 0 | 0 |
+| **total** | **5649** | **5641** | **4565** | **1076** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

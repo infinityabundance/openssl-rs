@@ -4,14 +4,13 @@
     "blocking_dependencies": [
       "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
       "cli_option_list_parse -> phase 16 (Transferred to 22.9 and repaired there; what remains deferred to Phase 16 is regenerating the Phase-1 capture with the fixed parser. parse_option_list() (forensics/tools/atlas_runtime.py) matched the authority's `openssl list -options <cmd>` rows against a help-text shape (`-in val        Input file`) that the output never produces, and the real rows are `name type` pairs (`help -`, `in <`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count was 0 and all 2,008 raw rows stayed unstructured. 22.9 rewrote the parser to the authority's actual grammar and re-enumerated the whole namespace from the authority's own built binary (forensics/authorities/build/openssl-3.6.4-production/apps/openssl): forensics/atlas/phase22/cli-surface.json now carries 120 commands with 4,314 structured options, 0 refused rows and 0 commands_with_zero_options, and RT-PHASE22-CLI proves the repaired parser reads a real row and refuses a malformed one (and turns to fail when the parser is broken in memory). The Phase-16-owned Phase-1 capture forensics/atlas/openssl-3.6.4-production/cli-commands.json still carries option_count 0 on all 55 commands: it is Phase 16 (cli-config) that owns the CLI stratum and would regenerate production and historical in lockstep, since regenerating only the production authority would leave a spurious option-set differential against the historical one. Closure: parse_option_list() reads the authority's actual option shape and the structured surface (22.9's cli-surface.json now, and the Phase-16 capture once regenerated) has a non-zero structured option_count for every command.)",
-      "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
-      "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
-      "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
+      "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; `ossl_get_enginesdir`, its sibling, moved to Phase 13.1 with `ENGINE_by_id`)",
+      "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with `ossl_get_openssldir` rather than special-cased)"
     ],
     "census": {
       "covered_by_a_divergence": 86,
-      "language_surface_not_modelled_by_name": 8818,
-      "planned_prerequisites": 7
+      "language_surface_not_modelled_by_name": 8828,
+      "planned_prerequisites": 4
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -195,7 +194,7 @@
         "crypto/conf/conf_api.c": 22,
         "crypto/conf/conf_def.c": 38,
         "crypto/conf/conf_lib.c": 19,
-        "crypto/conf/conf_mod.c": 32,
+        "crypto/conf/conf_mod.c": 31,
         "crypto/conf/conf_sap.c": 3,
         "crypto/conf/conf_ssl.c": 13,
         "crypto/context.c": 22,
@@ -279,10 +278,12 @@
         "crypto/encode_decode/encoder_lib.c": 30,
         "crypto/encode_decode/encoder_meth.c": 20,
         "crypto/encode_decode/encoder_pkey.c": 30,
+        "crypto/engine/eng_all.c": 1,
+        "crypto/engine/eng_cnf.c": 14,
         "crypto/engine/eng_ctrl.c": 6,
         "crypto/engine/eng_init.c": 7,
         "crypto/engine/eng_lib.c": 19,
-        "crypto/engine/eng_list.c": 12,
+        "crypto/engine/eng_list.c": 9,
         "crypto/engine/eng_table.c": 14,
         "crypto/engine/tb_asnmth.c": 13,
         "crypto/engine/tb_digest.c": 10,
@@ -487,7 +488,7 @@
         "crypto/threads_pthread.c": 24,
         "crypto/trace.c": 24,
         "crypto/ts/ts_asn1.c": 40,
-        "crypto/ts/ts_conf.c": 28,
+        "crypto/ts/ts_conf.c": 27,
         "crypto/ts/ts_lib.c": 9,
         "crypto/ts/ts_req_print.c": 3,
         "crypto/ts/ts_req_utils.c": 10,
@@ -587,7 +588,6 @@
         "providers/baseprov.c": 25
       },
       "planned_prerequisites": {
-        "ossl_get_enginesdir": 3,
         "ossl_get_openssldir": 3,
         "ossl_get_wininstallcontext": 1
       }
@@ -679,9 +679,6 @@
         "crypto/asn1/a_i2d_fp.c:ASN1_ITEM"
       ],
       "planned_prerequisites": [
-        "ossl_get_enginesdir",
-        "ossl_get_enginesdir",
-        "ossl_get_enginesdir",
         "ossl_get_openssldir",
         "ossl_get_openssldir",
         "ossl_get_openssldir",
@@ -689,10 +686,10 @@
       ]
     },
     "checked": {
-      "authority_units": 524,
-      "crate_modules": 711,
+      "authority_units": 526,
+      "crate_modules": 712,
       "deferral_blocker_rows": 0,
-      "deferrals_recorded": 5,
+      "deferrals_recorded": 4,
       "divergence_names_covered": 47,
       "divergence_rows": 11,
       "names_referenced_and_not_built": 19
@@ -801,7 +798,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "f51923e492898a3f47891397d6f5911344cbc6d2aef95db6c351c0eb9dcc2a67",
+  "body_hash": "3f6231112fe6b3d9b05ab945e6987813951e69bec95b5e51dea78a753fac56dd",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -822,7 +819,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "cd4e197e8a5e2e58aff6886105764b4cbd2ec0d123ce91efcdc5cc4205195633"
+      "sha256": "5ca2928efb00d9b9505f4651b5f5a77bb4883921d6b29af3cebc0deb803e92e0"
     },
     {
       "name": "symbol-ownership",
@@ -837,17 +834,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "decad8cffc4290b4cbb71933173ea6d511b67fe5c604fb339d00e2d99239ea54"
+      "sha256": "c795695a7fd016a7f5fc777a5b86c594daf9743532479bab99d5d8a8572f7c95"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "cd83962bacc5963c25d1f31c8e57e12b3d49bd7345b92d2340df5de8320899a9"
+      "sha256": "24d26696377e1bad3f7c1692474743a9b50c05f7ca17bdd96a4f6255d54ee90b"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "1e202ddb05d3e7606b8201e9207bf86606c794c0595f80da95e3238837bab2b3"
+      "sha256": "7a2cc1623c36669b1b8f880c0d7da54c7a2578426f875c7b8b34e3192a4d5d05"
     },
     {
       "name": "crate-source-tree",

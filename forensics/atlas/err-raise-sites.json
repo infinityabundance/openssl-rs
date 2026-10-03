@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4636,
+      "sites": 4641,
       "unattributed": 0
     },
     "covered_files": [
@@ -394,6 +394,7 @@
       "crypto/ec/ecx_backend.c",
       "crypto/ec/ecx_meth.c",
       "crypto/engine/eng_ctrl.c",
+      "crypto/engine/eng_cnf.c",
       "crypto/engine/eng_init.c",
       "crypto/engine/eng_lib.c",
       "crypto/engine/eng_list.c",
@@ -69122,6 +69123,81 @@
         "rel_source": "crypto/engine/eng_ctrl.c"
       },
       {
+        "const_name": "ENG_CNF_60",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+        "function": "int_engine_configure",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 60,
+        "macro": "ERR_raise",
+        "reason": 149,
+        "reason_symbol": "ENGINE_R_ENGINE_SECTION_ERROR",
+        "rel_source": "crypto/engine/eng_cnf.c"
+      },
+      {
+        "const_name": "ENG_CNF_118",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+        "function": "int_engine_configure",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 118,
+        "macro": "ERR_raise",
+        "reason": 151,
+        "reason_symbol": "ENGINE_R_INVALID_INIT_VALUE",
+        "rel_source": "crypto/engine/eng_cnf.c"
+      },
+      {
+        "const_name": "ENG_CNF_136",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+        "function": "int_engine_configure",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 136,
+        "macro": "ERR_raise",
+        "reason": 102,
+        "reason_symbol": "ENGINE_R_ENGINE_CONFIGURATION_ERROR",
+        "rel_source": "crypto/engine/eng_cnf.c"
+      },
+      {
+        "const_name": "ENG_CNF_138",
+        "data_format": "\"section=%s, name=%s, value=%s\"",
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+        "function": "int_engine_configure",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 138,
+        "macro": "ERR_raise_data",
+        "reason": 102,
+        "reason_symbol": "ENGINE_R_ENGINE_CONFIGURATION_ERROR",
+        "rel_source": "crypto/engine/eng_cnf.c"
+      },
+      {
+        "const_name": "ENG_CNF_157",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+        "function": "int_engine_module_init",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 157,
+        "macro": "ERR_raise",
+        "reason": 148,
+        "reason_symbol": "ENGINE_R_ENGINES_SECTION_ERROR",
+        "rel_source": "crypto/engine/eng_cnf.c"
+      },
+      {
         "const_name": "ENG_INIT_79",
         "data_format": null,
         "dynamic_reason": false,
@@ -72026,6 +72102,11 @@
       "name": "authority:crypto/engine/eng_ctrl.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/engine/eng_ctrl.c",
       "sha256": "45d03aa4e4cb600e699aa0a374a4e4174db77e7ea7dfadb0de49ffe791e5b1d6"
+    },
+    {
+      "name": "authority:crypto/engine/eng_cnf.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+      "sha256": "e2319f68ab91eb97c5188e1fec384812961218bd9087c52556bccbaab06b99cb"
     },
     {
       "name": "authority:crypto/engine/eng_init.c",

@@ -11,29 +11,43 @@ between two *executions* of the same program, so the expectation cannot drift.
 
 `RT-PHASE13-REF`, and what it claims
 ------------------------------------
-This stratum lands no behavioural court at activation, because 13.0 lands no unit of its own: the
-127 exports the crate already defines were landed by earlier strata as substrate, and the
-subphases after 13.0 are what build the rest. But `court_coverage.py` refuses a stratum that has
-begun while any of its implemented exports has no court edge, so those 127 names need one -- a
-reference basis. `RT-PHASE13-REF`, `courts/phase13/rt_coverage_ref_probe.c`, is that basis: it
-takes each into a `volatile` table, prints one `coverage_ref.N=nonnull` line per symbol, and
-stops. **It does not call any of them and claims no behaviour about them.** The court coverage
+This stratum landed its reference basis at activation, because 13.0 lands no unit of its own: the
+127 exports the crate already defines were landed by earlier strata as substrate. 13.1 then lands
+the ENGINE object, registry and dynamic-loading surface, and its court is `RT-ENGINE`.
+
+`RT-PHASE13-REF`, `courts/phase13/rt_coverage_ref_probe.c`, is the activation basis: it
+takes each of the stratum's inherited `implemented` exports into a `volatile` table, prints one
+`coverage_ref.N=nonnull` line per symbol, and stops. **It does not call any of them and claims no
+behaviour about them.** The court coverage
 atlas records every symbol covered only by it at basis `referenced`, never `called`, because the
 probe's name is in that atlas's `reference_probes` table; the atlas's `claim` is the weaker, true
 statement, and the atlas's phase-13 slice is the live count of the names each basis covers. See
 docs/DECISIONS.md D199 and docs/PHASE-13-SUBPHASES.md section 4.3, which is where this stratum's
-activation requires it.
+activation required it.
+
+`RT-ENGINE`, and what it compares
+---------------------------------
+13.1's court, `courts/phase13/rt_engine_probe.c`, drives the three exports the subphase lands --
+`ENGINE_by_id` (`eng_list.c`), `ENGINE_load_builtin_engines` (`eng_all.c`) and
+`ENGINE_add_conf_module` (`eng_cnf.c`) -- over the 10.9 registry core. It compares the observed
+`id`/`name` a lookup answers, object identity across lookups, the two refusal arms (NULL and absent
+id), the refcount's effect on `ENGINE_free`/`ENGINE_remove`, and the one arm of the built-in
+loader's registry effect both sides share (an engine registered before the call survives it). It
+does **not** observe the built-in registry directly, because the authority registers `rdrand` and
+`dynamic` and this crate registers nothing -- the divergence `src/engine/eng_all.rs` records -- nor
+does it read the error queue. See docs/PHASE-13-SUBPHASES.md section 3.1 for what the court is
+required to compare.
 
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
-run yet" cannot be read as "passed" — the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-ENGINE`, `RT-ENGINE-TABLE`, `RT-ENGINE-CTRL`, `RT-UI`,
-`RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` are the subphases' own courts:
-13.1's ENGINE object/registry surface, 13.2's table and method binding, 13.3's control and command
-surface, 13.4's UI framework, 13.5's TXT_DB database, 13.6's legacy EVP method statics, 13.7's PEM
-readers and ASYNC framework, and 13.8's received TS_CONF and SRP hand-offs.
+run yet" cannot be read as "passed" -- the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
+later activation established. `RT-ENGINE-TABLE`, `RT-ENGINE-CTRL`, `RT-UI`, `RT-TXTDB`,
+`RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` are the remaining subphases' own courts:
+13.2's table and method binding, 13.3's control and command surface, 13.4's UI framework, 13.5's
+TXT_DB database, 13.6's legacy EVP method statics, 13.7's PEM readers and ASYNC framework, and
+13.8's received TS_CONF and SRP hand-offs.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -82,6 +96,7 @@ RUN_TIMEOUT_S = "60"
 # link stays in `PENDING_COURTS` below, so "not run yet" is never read as "passed".
 COURTS: list[tuple[str, str]] = [
     ("RT-PHASE13-REF", "rt_coverage_ref_probe.c"),
+    ("RT-ENGINE", "rt_engine_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -89,7 +104,6 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-13-SUBPHASES.md` section 2's, one per work
 # subphase.
 PENDING_COURTS: dict[str, str] = {
-    "RT-ENGINE": "13.1 (the ENGINE object, registry and dynamic-loading surface)",
     "RT-ENGINE-TABLE": "13.2 (the ENGINE table and method binding)",
     "RT-ENGINE-CTRL": "13.3 (the ENGINE control and command surface)",
     "RT-UI": "13.4 (the UI framework)",
@@ -258,19 +272,24 @@ def main(argv: list[str]) -> int:
                     "fail": len(records) - passed},
         "pending_courts": PENDING_COURTS,
         "claim": (
-            "`RT-PHASE13-REF` is a **reference-basis** court: its probe takes the address of "
-            "each of this stratum's 127 inherited `implemented` exports -- the 61 `ENGINE_*` "
+            "`RT-PHASE13-REF` is the activation **reference basis**: its probe takes the address "
+            "of each of this stratum's inherited `implemented` exports -- the 61 `ENGINE_*` "
             "object, accessor and table names, the 62 `UI_*` names and the four "
             "`PEM_read[_bio]_PrivateKey` spellings -- and prints whether each is non-NULL. A "
             "symbol covered only by it means the candidate distribution defines the name -- "
             "which the link proves -- and NOT that any arm of it was driven; the court coverage "
             "atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md "
-            "D199). Every behavioural court the plan names is named in `pending_courts` with "
-            "the subphase that brings it -- `RT-ENGINE`, `RT-ENGINE-TABLE`, `RT-ENGINE-CTRL`, "
-            "`RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
-            "none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
-            "is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md "
-            "section 3 records what the behavioural courts compare."
+            "D199). `RT-ENGINE` is 13.1's behavioural court: it **calls** `ENGINE_by_id`, "
+            "`ENGINE_load_builtin_engines` and `ENGINE_add_conf_module` and compares the "
+            "registry's observed `id`/`name`, object identity, the NULL/absent refusals, the "
+            "refcount effect and the built-in loader's shared registry arm -- not the built-in "
+            "registry itself, whose `rdrand`/`dynamic` divergence src/engine/eng_all.rs records, "
+            "and not the error queue. Every other behavioural court the plan names is named in "
+            "`pending_courts` with the subphase that brings it -- `RT-ENGINE-TABLE`, "
+            "`RT-ENGINE-CTRL`, `RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and "
+            "`RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as "
+            "'passed'. Nothing here is a parity claim: `referenced` is not `called`, and "
+            "docs/PHASE-13-SUBPHASES.md section 3 records what the behavioural courts compare."
         ),
     }
 

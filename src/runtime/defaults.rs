@@ -1,10 +1,13 @@
 //! Phase 6.8c — `crypto/defaults.c`: the compiled-in directory defaults.
 //!
-//! Only one function of this file is implemented here: `ossl_get_modulesdir`, which
+//! Only two functions of this file are implemented here. `ossl_get_modulesdir`, which
 //! `provider_init` calls when a provider's module is loaded by name and neither the store's
-//! default search path nor `OPENSSL_MODULES` answers one. Its siblings
-//! (`ossl_get_openssldir`, `ossl_get_enginesdir`, `ossl_get_wininstallcontext`) are Phase
-//! 16's, because they are the `OPENSSL_info` strings rather than anything the registry reads.
+//! default search path nor `OPENSSL_MODULES` answers one, and `ossl_get_enginesdir`, which the
+//! registry's `ENGINE_by_id` (`crypto/engine/eng_list.c:462`) calls when `OPENSSL_ENGINES` is
+//! unset and the id is not in the list, to hand the dynamic engine its `DIR_ADD`. The second is
+//! Phase 13.1's because that is the first caller; the remaining siblings
+//! (`ossl_get_openssldir`, `ossl_get_wininstallcontext`) stay Phase 16's, because they are the
+//! `OPENSSL_info` strings rather than anything the registry reads.
 //!
 //! ## The value is a build fact, and this build has a different one from the authority
 //!
@@ -39,6 +42,12 @@ use core::ptr;
 /// prefix.
 const MODULESDIR: &str = env!("OPENSSL_RS_MODULESDIR");
 
+/// The build-time engines directory, or the sentinel the build emits when none was given.
+///
+/// The same sentinel rule as `MODULESDIR` above: an empty string means "no compiled-in
+/// engines directory" and answers NULL.
+const ENGINESDIR: &str = env!("OPENSSL_RS_ENGINESDIR");
+
 /// `const char *ossl_get_modulesdir(void)` — `crypto/defaults.c`.
 ///
 /// A `'static` C string, so the answer is the same address on every call and the caller must
@@ -54,6 +63,20 @@ pub(crate) fn ossl_get_modulesdir() -> *const c_char {
     }
 }
 
+/// `const char *ossl_get_enginesdir(void)` — `crypto/defaults.c`.
+///
+/// The twin of [`ossl_get_modulesdir`], and the same contract: a `'static` C string the caller
+/// must not free, or NULL when the build gave no prefix. The one caller is `ENGINE_by_id`
+/// (`crypto/engine/eng_list.c:462`), which passes it to the dynamic engine's `DIR_ADD` exactly
+/// as the authority does, so a NULL means "no fallback directory" rather than an empty one.
+pub(crate) fn ossl_get_enginesdir() -> *const c_char {
+    // SAFETY: the same `'static` literal rule as `ossl_get_modulesdir` above.
+    match ENGINESDIR {
+        "" => ptr::null(),
+        _ => enginesdir_c(),
+    }
+}
+
 /// The compiled-in path as a C string.
 ///
 /// Spelled as a separate function so that the `env!` expansion appears exactly once and the
@@ -64,6 +87,22 @@ fn modulesdir_c() -> *const c_char {
     // `expect` is denied crate-wide.
     match core::ffi::CStr::from_bytes_with_nul(
         concat!(env!("OPENSSL_RS_MODULESDIR"), "\0").as_bytes(),
+    ) {
+        Ok(s) => s.as_ptr(),
+        Err(_) => ptr::null(),
+    }
+}
+
+/// The compiled-in engines path as a C string.
+///
+/// Spelled as a separate function for the same reason as [`modulesdir_c`]: the `env!`
+/// expansion appears exactly once and the sentinel test above reads as the sentinel it is.
+fn enginesdir_c() -> *const c_char {
+    // SAFETY: `build.rs` rejects a NUL-bearing value, so the `CStr` construction cannot fail
+    // and the `Err` arm is unreachable; it answers NULL rather than panicking because `panic`
+    // is denied crate-wide.
+    match core::ffi::CStr::from_bytes_with_nul(
+        concat!(env!("OPENSSL_RS_ENGINESDIR"), "\0").as_bytes(),
     ) {
         Ok(s) => s.as_ptr(),
         Err(_) => ptr::null(),

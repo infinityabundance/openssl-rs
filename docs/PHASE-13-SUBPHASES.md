@@ -270,25 +270,26 @@ forcing the row.
 
 **Landed exports (checked against the ledger):**
 
-No unit of this stratum's own has landed yet; every name below is a *pre-activation* landing that
-the ledger's implemented list already carries, and the ledger is the record. The ENGINE object
-and accessor surface is in: `ENGINE_new`, `ENGINE_free`, `ENGINE_up_ref`, `ENGINE_init`,
+Subphase 13.1 landed this stratum's own first slice: `ENGINE_by_id` (`eng_list.rs`),
+`ENGINE_load_builtin_engines` (`eng_all.rs`) and `ENGINE_add_conf_module` (`eng_cnf.rs`), over the
+ENGINE registry core. Before that slice every name below was a *pre-activation* landing that the
+ledger's implemented list already carried, and the ledger is the record. The ENGINE object
+and accessor surface was already in: `ENGINE_new`, `ENGINE_free`, `ENGINE_up_ref`, `ENGINE_init`,
 `ENGINE_finish`, `ENGINE_add`, `ENGINE_remove`, `ENGINE_get_first`, `ENGINE_get_next`,
 `ENGINE_get_prev`, `ENGINE_get_id`, `ENGINE_get_name`, `ENGINE_set_id`, `ENGINE_set_name`,
 `ENGINE_ctrl`, `ENGINE_ctrl_cmd`, `ENGINE_ctrl_cmd_string`, `ENGINE_set_flags` and
-`ENGINE_get_flags`. The whole `UI_*` framework is in: `UI_new`, `UI_new_method`, `UI_free`,
+`ENGINE_get_flags`. The whole `UI_*` framework was already in: `UI_new`, `UI_new_method`, `UI_free`,
 `UI_process`, `UI_ctrl`, `UI_method_set_reader`, `UI_method_get_reader`, `UI_UTIL_read_pw` and
 `UI_OpenSSL`. The four Phase 7 -> 13 spellings `PEM_read_PrivateKey`, `PEM_read_PrivateKey_ex`,
 `PEM_read_bio_PrivateKey` and `PEM_read_bio_PrivateKey_ex` landed with Phase 8 (D369). The bulk of
 that list was landed before this stratum's first slice as substrate the earlier strata needed; the
-ledger is the record and this sentence names only what those landings left here. Subphase 13.1
-lands this stratum's own first slice.
+ledger is the record and this sentence names only what those landings left here.
 
 **Open exports (checked against the ledger):**
 
-The open set is the ENGINE registry, table, control and dynamic-loading surface, the TXT_DB
-codec and the deprecated statics over them. Representative names are `ENGINE_by_id`,
-`ENGINE_set_default`, `ENGINE_load_builtin_engines`, `TXT_DB_read`, `TXT_DB_free`, `TXT_DB_write`,
+The open set is the ENGINE table and control surface, the TXT_DB
+codec and the deprecated statics over them. Representative names are
+`ENGINE_set_default`, `ENGINE_register_all_ciphers`, `TXT_DB_read`, `TXT_DB_free`, `TXT_DB_write`,
 `TXT_DB_insert`, `TXT_DB_create_index`, `TXT_DB_get_by_index`, `ASYNC_WAIT_CTX_new`,
 `EVP_aes_128_cbc`, `PEM_write_bio_PrivateKey`, `TS_CONF_set_crypto_device`,
 `TS_CONF_set_default_engine` and `SRP_VBASE_init`. Every one is open rather than implemented, and

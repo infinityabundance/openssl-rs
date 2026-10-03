@@ -45752,6 +45752,56 @@ pub(crate) const ENG_CTRL_308: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `int_engine_configure` at `crypto/engine/eng_cnf.c:60` (ENGINE_R_ENGINE_SECTION_ERROR).
+pub(crate) const ENG_CNF_60: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+    line: 60,
+    func: c"int_engine_configure",
+    lib: 38,
+    reason: 149,
+    dynamic_reason: false,
+};
+
+/// `int_engine_configure` at `crypto/engine/eng_cnf.c:118` (ENGINE_R_INVALID_INIT_VALUE).
+pub(crate) const ENG_CNF_118: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+    line: 118,
+    func: c"int_engine_configure",
+    lib: 38,
+    reason: 151,
+    dynamic_reason: false,
+};
+
+/// `int_engine_configure` at `crypto/engine/eng_cnf.c:136` (ENGINE_R_ENGINE_CONFIGURATION_ERROR).
+pub(crate) const ENG_CNF_136: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+    line: 136,
+    func: c"int_engine_configure",
+    lib: 38,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `int_engine_configure` at `crypto/engine/eng_cnf.c:138` (ENGINE_R_ENGINE_CONFIGURATION_ERROR).
+pub(crate) const ENG_CNF_138: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+    line: 138,
+    func: c"int_engine_configure",
+    lib: 38,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `int_engine_module_init` at `crypto/engine/eng_cnf.c:157` (ENGINE_R_ENGINES_SECTION_ERROR).
+pub(crate) const ENG_CNF_157: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
+    line: 157,
+    func: c"int_engine_module_init",
+    lib: 38,
+    reason: 148,
+    dynamic_reason: false,
+};
+
 /// `engine_unlocked_finish` at `crypto/engine/eng_init.c:79` (ENGINE_R_FINISH_FAILED).
 pub(crate) const ENG_INIT_79: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/engine/eng_init.c",
@@ -50975,6 +51025,11 @@ pub(crate) static ALL: &[ErrSite] = &[
     ENG_CTRL_286,
     ENG_CTRL_303,
     ENG_CTRL_308,
+    ENG_CNF_60,
+    ENG_CNF_118,
+    ENG_CNF_136,
+    ENG_CNF_138,
+    ENG_CNF_157,
     ENG_INIT_79,
     ENG_INIT_90,
     ENG_INIT_95,

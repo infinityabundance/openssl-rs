@@ -1425,12 +1425,15 @@ COVERED_FILES = [
     # (`eng_lib.c`), the linked list (`eng_list.c`), the implementation table
     # (`eng_table.c`), the init/finish pair (`eng_init.c`), the control-command surface
     # (`eng_ctrl.c`) and the three algorithm tables this slice carries (`tb_digest.c`,
-    # `tb_pkmeth.c`, `tb_asnmth.c`). Each stem is the unit's own name so a line number
+    # `tb_pkmeth.c`, `tb_asnmth.c`). Phase 13.1 added the `engines` configuration module
+    # (`eng_cnf.c`), whose section/init/default-algorithms refusals are `ENGINE_R_*`.
+    # Each stem is the unit's own name so a line number
     # cannot collide with another unit's, and the whole file is listed rather than the
     # landed subset: an unused coordinate is harmless, a missing one is not. `eng_all.c`
     # is deliberately **not** listed -- it raises nothing (its one function is the
     # `OPENSSL_init_crypto` call).
     ("crypto/engine/eng_ctrl.c", "ENG_CTRL"),
+    ("crypto/engine/eng_cnf.c", "ENG_CNF"),
     ("crypto/engine/eng_init.c", "ENG_INIT"),
     ("crypto/engine/eng_lib.c", "ENG_LIB"),
     ("crypto/engine/eng_list.c", "ENG_LIST"),
