@@ -352,6 +352,84 @@
 //! object the success arms drive is Phase 15's. Its court is `RT-SSL-INIT`
 //! (`courts/phase14/rt_ssl_init_probe.c`), registered in `forensics/tools/phase14_courts.py`.
 //!
+//! ## 14.7: the session and certificate plumbing (the largest subphase, landed in four slices)
+//!
+//! 14.7 is 124 open rows over seven units. It lands in four ordered slices, recorded here because
+//! the unit is never left half-transcribed without the record:
+//!
+//! **Slice 1 — the session object, the DER codec and the printers** (71 rows). `ssl/ssl_sess.c`
+//! is `src/ssl/ssl_sess.rs`: `SSL_SESSION_new`/`_free`/`_up_ref`/`_dup` and `ssl_session_dup_intern`,
+//! the whole accessor surface (id, id-context, master key via `ssl_lib.rs`, hostname, ALPN, ticket
+//! appdata, time/timeout, protocol version, cipher, early data, compress id, peer/peer-rpk),
+//! ex-data, the per-context internal cache (`SSL_CTX_add_session`/`_remove_session`/
+//! `_flush_sessions[_ex]` and the `remove_session_locked` helper), `SSL_get_session`/`_get1_session`/
+//! `SSL_set_session`, the callback setters and their getters, `SSL_set_session_secret_cb`/
+//! `_ticket_ext_cb`/`_ticket_ext`, and the four PEM entry points the `IMPLEMENT_PEM_rw` macro
+//! generates. `ssl/ssl_asn1.c` is `src/ssl/ssl_asn1.rs`: the `SSL_SESSION_ASN1` template and
+//! `i2d_SSL_SESSION`/`d2i_SSL_SESSION`/`d2i_SSL_SESSION_ex`. `ssl/ssl_txt.c` is
+//! `src/ssl/ssl_txt.rs`: `SSL_SESSION_print`/`_fp`/`_keylog`.
+//!
+//! **Slice 2 — the certificate-compression substrate and its exports** (8 rows).
+//! `ssl/ssl_cert_comp.c` is `src/ssl/ssl_cert_comp.rs`: the `OSS_COMP_CERT` record and its
+//! `new`/`free`/`up_ref` helpers, `ossl_calculate_comp_expansion`/`ossl_comp_has_alg` and the eight
+//! exports. It landed with Slice 1 because `CertKey` carries the `comp_cert[]` slots. **The
+//! admitted build defines `OPENSSL_NO_COMP_ALG`** (`configuration.h:198-202`), so every export's
+//! `#ifndef` body is not compiled and each answers 0; the transcribed bodies behind the guard are
+//! recorded, not compiled.
+//!
+//! **Slice 3 — the CA-list and certificate-subject plumbing** (20 rows). `ssl/ssl_cert.c` is
+//! `src/ssl/ssl_cert.rs`: the `X509_STORE_CTX` ex-data index, the `SSL[_CTX]_[set0|get0|add1|add]_
+//! CA_list`/`client_CA` surface, `SSL_dup_CA_list`, the four subject-list loaders, and the internal
+//! helpers `ssl_cert_lookup_by_pkey`/`ssl_security`/`ssl_ctx_security`/`ssl_security_cert` that
+//! `ssl_rsa.c` and `t1_lib.c` reach.
+//!
+//! **Slice 4 — the certificate and private-key loaders** (25 rows). `ssl/ssl_rsa.c` is
+//! `src/ssl/ssl_rsa.rs` (19 rows): the in-memory `SSL[_CTX]_use_certificate*`/`use_PrivateKey*`
+//! surface, the `use_certificate_chain_file` spellings, the serverinfo installers and
+//! `SSL[_CTX]_use_cert_and_key`. `ssl/ssl_rsa_legacy.c` is `src/ssl/ssl_rsa_legacy.rs` (6 rows):
+//! the deprecated `use_RSAPrivateKey` spellings. The `Cert`/`CertKey` records grew the `pkeys[]`
+//! array, `key_index`, `references`, `cert_comp_prefs`, the per-slot `chain`/`serverinfo`/
+//! `comp_cert[]`, and `SSL_new`'s reduced `cert_copy_security` now **up-refs** the active leaf pair
+//! so a connection's `cert_free` cannot free the context's objects (the borrowed-copy double free
+//! the `RT-SESSION-CERT` court caught).
+//!
+//! After Slice 4 the ledger's `open_in_this_stratum` stands at 79, all of them 14.9's and 14.11's
+//! and 14.1's remaining units; the seven 14.7 units are closed. The court is `RT-SESSION-CERT`
+//! (`courts/phase14/rt_session_cert_probe.c`), registered in `forensics/tools/phase14_courts.py`.
+//!
+//! **14.7's measured divergences, recorded rather than hidden.**
+//!
+//! * **The session cache is an `OpenSslStack` searched linearly, not an `LHASH`.** The authority
+//!   keys an lhash on `(ssl_version, session_id)` (`ssl_lib.c:3854`, `:3877`) and keeps a
+//!   `calc_timeout`-ordered doubly linked list; this crate compares the same two fields in a linear
+//!   scan. Eviction and `SSL_CTX_flush_sessions_ex` process insertion order, not `calc_timeout`
+//!   order; no court arm depends on the eviction order. See `src/ssl/ssl_sess.rs`.
+//! * **The session's `time`/`timeout`/`calc_timeout` are seconds, not `OSSL_TIME` nanoseconds.**
+//!   Every reader converts to `time_t`, so the codec and the accessors agree.
+//! * **`ssl_generate_session_id`/`ssl_get_new_session` are not landed.** They are internal to
+//!   `ssl_sess.c` and drive the handshake; no exported row names them.
+//! * **The certificate security check reduces to the crate's default callback.**
+//!   `ssl_security_cert` calls the `Cert`'s `sec_cb`, which `ssl_lib.rs` initialises to a callback
+//!   that answers 1 for every operation (14.1's recorded reduction), so a weak-key rejection the
+//!   authority would raise is accepted. The court's fixtures are strong keys, where both sides
+//!   answer 1.
+//! * **`ssl_cert_lookup_by_pkey` adds an id comparison.** The authority matches through
+//!   `EVP_PKEY_is_a` alone; this crate's `evp_pkey_name2type` (Phase 8) answers `NID_undef` for
+//!   `"rsaEncryption"`/`"rsassaPss"` on a legacy key, so the key id and base id are compared as a
+//!   fallback. The table row is the same for every classic type.
+//! * **The file/dir/store subject loaders read the filesystem and are only driven at their
+//!   refusal arms.** `SSL_load_client_CA_file[_ex]` and `SSL_add_file_cert_subjects_to_stack`
+//!   open a file, `SSL_add_dir_cert_subjects_to_stack` walks a directory, and
+//!   `SSL_add_store_cert_subjects_to_stack` walks an `OSSL_STORE` URI; duplicate detection is a
+//!   linear `X509_NAME_cmp` scan rather than an `LHASH_OF(X509_NAME)`.
+//! * **`use_certificate_chain_file` installs the leaf and skips the chain walk.**
+//!   `SSL_CTX_clear_chain_certs`/`SSL_CTX_add0_chain_cert` are still-open `ssl_lib.c` rows.
+//! * **The serverinfo add callback reports no serverinfo data.** The authority reads
+//!   `ssl_get_server_cert_serverinfo`, a helper this crate does not land; with no handshake the
+//!   callback is never invoked. The installer's validation and storage are the authority's.
+//! * **`SSL_set1_compressed_cert`/the compression exports answer the `OPENSSL_NO_COMP_ALG`
+//!   refusal.** The admitted build defines it, so every `ssl_cert_comp.c` export answers 0.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod bio_ssl;
@@ -362,11 +440,18 @@ pub mod quic;
 pub mod record;
 pub mod rio;
 pub mod s3_lib;
+pub mod ssl_asn1;
+pub mod ssl_cert;
+pub mod ssl_cert_comp;
 pub mod ssl_ciph;
 pub mod ssl_ciph_table;
 pub mod ssl_conf;
 pub mod ssl_err_legacy;
 pub mod ssl_init;
 pub mod ssl_lib;
+pub mod ssl_rsa;
+pub mod ssl_rsa_legacy;
+pub mod ssl_sess;
+pub mod ssl_txt;
 pub mod statem;
 pub mod t1_lib;

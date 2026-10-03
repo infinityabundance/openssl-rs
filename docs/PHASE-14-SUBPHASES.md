@@ -92,7 +92,7 @@ against this stratum -- the mirror of Phases 12 and 13.
 | 14.4 | **The record layer** | `rec_layer_s3.c` (4), `poll_immediate.c` (1). The default read-buffer length accessors, the record-state string readers and the non-blocking `SSL_poll`. **5 open rows over 2 units.** **Landed (checked against the ledger): all 5 rows — `rec_layer_s3.c`'s four (`SSL_CTX_set_default_read_buffer_len`, `SSL_set_default_read_buffer_len`, `SSL_rstate_string`, `SSL_rstate_string_long`) and `poll_immediate.c`'s one (`SSL_poll`). The stratum stood at 360 of the 600 atlas-owned exports implemented, with 240 open.** | 14.1 | `RT-RECORD` |
 | 14.5 | **The handshake state machine** | `statem.c` (4), `extensions_cust.c` (5), `t1_lib.c` (9). The state readers (`SSL_get_state`, `SSL_in_before`, `SSL_in_init`, `SSL_is_init_finished`), the custom-extension registration surface and the signature-algorithm and max-fragment-length surface. **18 open rows over 3 units.** **Landed (checked against the ledger): all 18 rows — `statem.c`'s four, `extensions_cust.c`'s five and `t1_lib.c`'s nine. The stratum now stands at 378 of the 600 atlas-owned exports implemented, with 222 open.** | 14.1 | `RT-STATEM` |
 | 14.6 | **The BIO pair and buffers** | `bio_ssl.c` (6). `BIO_f_ssl`/`BIO_new_ssl`/`BIO_new_ssl_connect`/`BIO_new_buffer_ssl_connect` and the session-copy/shutdown BIO controls. **6 open rows over 1 unit.** **Landed (checked against the ledger): all 6 rows — `BIO_f_ssl`, `BIO_new_ssl`, `BIO_new_ssl_connect`, `BIO_new_buffer_ssl_connect`, `BIO_ssl_copy_session_id` and `BIO_ssl_shutdown`. The stratum now stands at 384 of the 600 atlas-owned exports implemented, with 216 open.** | 14.1 | `RT-SSL-BIO` |
-| 14.7 | **The session and certificate plumbing** | `ssl_sess.c` (65), `ssl_cert.c` (20), `ssl_rsa.c` (19), `ssl_rsa_legacy.c` (6), `ssl_cert_comp.c` (8), `ssl_asn1.c` (3), `ssl_txt.c` (3). The session cache and PEM/DER session codec, the CA-list and certificate/private-key loaders (including the deprecated `use_RSAPrivateKey` spellings), certificate compression and the session printers. **124 open rows over 7 units** — the largest subphase. | 14.1 | `RT-SESSION-CERT` |
+| 14.7 | **The session and certificate plumbing** | `ssl_sess.c` (65), `ssl_cert.c` (20), `ssl_rsa.c` (19), `ssl_rsa_legacy.c` (6), `ssl_cert_comp.c` (8), `ssl_asn1.c` (3), `ssl_txt.c` (3). The session cache and PEM/DER session codec, the CA-list and certificate/private-key loaders (including the deprecated `use_RSAPrivateKey` spellings), certificate compression and the session printers. **124 open rows over 7 units** — the largest subphase. **Landed (checked against the ledger), in four slices: Slice 1 the session object, DER codec and printers (71 rows); Slice 2 the certificate-compression unit (8); Slice 3 the CA-list plumbing (20); Slice 4 the certificate/private-key loaders (25). All 124 rows moved to the ledger's implemented set; the stratum now stands at 521 of the 600 atlas-owned exports implemented, with 79 open (14.9's and 14.11's units and 14.1's remainder).** | 14.1 | `RT-SESSION-CERT` |
 | 14.8 | **The DTLS layer** | `d1_lib.c` (3), `d1_srtp.c` (4). `DTLSv1_listen`, the DTLS data-MTU and timer callbacks, and the DTLS-SRTP profile surface. **7 open rows over 2 units.** **Landed (checked against the ledger): all 7 rows — `d1_lib.c`'s three (`DTLSv1_listen`, `DTLS_get_data_mtu`, `DTLS_set_timer_cb`) and `d1_srtp.c`'s four. The stratum now stands at 391 of the 600 atlas-owned exports implemented, with 209 open.** | 14.2 | `RT-DTLS` |
 | 14.9 | **The TLS extension, SRP and diagnostic glue** | `tls_srp.c` (19), `ssl_stat.c` (6), `ssl_mcnf.c` (3), `tls_depr.c` (3), `t1_trce.c` (1). The SRP credential and callback surface, the alert/state string readers, the `SSL_CTX_config`/`SSL_add_ssl_module` config glue, the deprecated DH-callback setters and `SSL_trace`. **32 open rows over 5 units.** | 14.1, 14.3 | `RT-SSL-EXT` |
 | 14.10 | **The init, error and QUIC bridge** | `ssl_init.c` (1), `ssl_err_legacy.c` (1), `quic_tls_api.c` (3), `quic_impl.c` (1). `OPENSSL_init_ssl`, the legacy error-string loader, and the QUIC TLS accessors (`SSL_set_quic_tls_cbs`/`_transport_params`/`_early_data_enabled`, `SSL_inject_net_dgram`). **6 open rows over 4 units.** **Landed (checked against the ledger): all 6 rows — `OPENSSL_init_ssl`, `ERR_load_SSL_strings`, `quic_tls_api.c`'s three and `quic_impl.c`'s one. The stratum now stands at 397 of the 600 atlas-owned exports implemented, with 203 open.** | 14.1 | `RT-SSL-INIT` |
@@ -365,13 +365,37 @@ likewise. Its court is `RT-SSL-INIT` (`courts/phase14/rt_ssl_init_probe.c`), reg
 `forensics/tools/phase14_courts.py`. The stratum now stands at 397 of the 600 atlas-owned exports
 implemented, with 203 open.
 
+Subphase 14.7 landed the session and certificate plumbing, the largest subphase, in four ordered
+slices. **Slice 1** landed the session object, the DER codec and the printers: `src/ssl/ssl_sess.rs`
+(`ssl_sess.c`, 65 rows — `SSL_SESSION_new`/`_free`/`_up_ref`/`_dup` and the whole accessor surface,
+the session cache, `SSL_get_session`/`_get1_session`/`SSL_set_session`, the callback setters and the
+four PEM entry points), `src/ssl/ssl_asn1.rs` (`ssl_asn1.c`, 3 rows — the `SSL_SESSION_ASN1`
+template and `i2d_SSL_SESSION`/`d2i_SSL_SESSION`/`d2i_SSL_SESSION_ex`) and `src/ssl/ssl_txt.rs`
+(`ssl_txt.c`, 3 rows — the session printers). **Slice 2** landed the certificate-compression unit
+(`src/ssl/ssl_cert_comp.rs`, 8 rows), with the `OSS_COMP_CERT` record the `CertKey` slots carry;
+the admitted build defines `OPENSSL_NO_COMP_ALG`, so every export answers the `#else return 0;` arm.
+**Slice 3** landed the CA-list and certificate-subject plumbing (`src/ssl/ssl_cert.rs`, 20 rows),
+including the internal `ssl_cert_lookup_by_pkey`/`ssl_security_cert` helpers `ssl_rsa.c` and
+`t1_lib.c` reach. **Slice 4** landed the certificate and private-key loaders (`src/ssl/ssl_rsa.rs`,
+19 rows, and `src/ssl/ssl_rsa_legacy.rs`, 6 rows). The `Cert`/`CertKey` records grew the `pkeys[]`
+array, `key_index`, `references` and the per-slot `chain`/`serverinfo`/`comp_cert[]`, and
+`SSL_new`'s reduced `cert_copy_security` now up-refs the active leaf pair so a connection's
+`cert_free` cannot free the context's objects. Each file records its divergences: the cache is a
+linearly searched `OpenSslStack` rather than an `LHASH` (eviction and flush process insertion order),
+the session's `time`/`timeout` are seconds rather than `OSSL_TIME`, the certificate security check
+reduces to the crate's default callback, `ssl_cert_lookup_by_pkey` adds a key-id fallback where the
+crate's `evp_pkey_name2type` gap would miss a legacy key, the file/dir/store subject loaders are
+driven only at their refusal arms (and dedup linearly), `use_certificate_chain_file` skips the chain
+walk while `SSL_CTX_clear_chain_certs`/`SSL_CTX_add0_chain_cert` stay open, and the serverinfo add
+callback reports no serverinfo data because `ssl_get_server_cert_serverinfo` is not landed. Its
+court is `RT-SESSION-CERT` (`courts/phase14/rt_session_cert_probe.c`), registered in
+`forensics/tools/phase14_courts.py`. The stratum now stands at 521 of the 600 atlas-owned exports
+implemented, with 79 open.
+
 **Open exports (checked against the ledger):**
 
-The remaining 203 exports are the object model's deeper surface and the strata that depend on it:
-47 `ssl_lib.c` rows (14.1's own session/certificate plumbing, DANE, the CT surface, the client-hello
-readers and the QUIC stream accessors), 65 `ssl_sess.c` rows and the rest distributed across
-subphases 14.7 and 14.9 as section 2 partitions them — `ssl_cert.c` (20),
-`ssl_rsa.c` (19), `ssl_rsa_legacy.c` (6), `ssl_cert_comp.c` (8), `ssl_asn1.c` (3), `ssl_txt.c` (3),
+The remaining 79 exports are subphase 14.9's and 14.11's units and 14.1's remainder, as section 2
+partitions them — 47 `ssl_lib.c` rows (14.1's DANE, CT, client-hello and QUIC-stream surface),
 `tls_srp.c` (19), `ssl_stat.c` (6), `ssl_mcnf.c` (3), `tls_depr.c` (3) and `t1_trce.c` (1).
-Representative names are `PEM_read_SSL_SESSION`, `SSL_CTX_use_certificate`, `SSL_CTX_config` and
+Representative names are `SSL_CTX_dane_enable`, `SSL_CTX_set_srp_username`, `SSL_CTX_config` and
 `SSL_trace`.
