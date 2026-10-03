@@ -219,12 +219,15 @@ const OPENSSL_INIT_ATFORK: u64 = 0x0002_0000;
 /// `rand_lib.c`'s `ossl_rand_ctx_new` calls `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`,
 /// and a second literal for the same flag is a second thing that can drift.
 pub(crate) const OPENSSL_INIT_BASE_ONLY: u64 = 0x0004_0000;
-/// The two legacy-adder bits, which are **accepted and do nothing yet**.
+/// The two legacy-adder bits, which register the crate's deprecated `EVP_CIPHER`/`EVP_MD`
+/// statics in the `OBJ_NAME` table.
 ///
-/// The authority's action for `OPENSSL_INIT_ADD_ALL_CIPHERS` is
-/// `openssl_add_all_ciphers_int()` -- one hundred and sixty-odd
-/// `EVP_add_cipher(EVP_aes_...)` calls over primitives this crate does not have yet, which is why
-/// `crypto/evp/c_allc.c` and `c_alld.c` are Phase 13's. What the authority *returns* is 1 with
+/// The authority's action for `OPENSSL_INIT_ADD_ALL_CIPHERS` is `openssl_add_all_ciphers_int()`
+/// and for `OPENSSL_INIT_ADD_ALL_DIGESTS` is `openssl_add_all_digests_int()`, under
+/// `RUN_ONCE(&add_all_ciphers, ...)` / `RUN_ONCE(&add_all_digests, ...)`. Those two functions are
+/// Phase 13's `crypto/evp/c_allc.c` and `c_alld.c`, and the crate's transcribed copies are
+/// `crate::evp::c_allc::openssl_add_all_ciphers_int` and
+/// `crate::evp::c_alld::openssl_add_all_digests_int`. What the authority *returns* is 1 with
 /// nothing raised, and `OpenSSL_add_all_algorithms_noconf()` is a macro over exactly these two
 /// bits -- so a refusal here is a caller-visible failure where the authority has none.
 ///
@@ -234,10 +237,15 @@ pub(crate) const OPENSSL_INIT_BASE_ONLY: u64 = 0x0004_0000;
 /// named. `RT-EVP-NAMES` measured the difference, because `EVP_CIPHER_do_all`'s first statement is
 /// one of these calls and the probe reads the error queue after it.
 ///
-/// The single expression below is the whole action, and it is written as an expression rather than
-/// as a comment so that Phase 13 has one line to replace rather than a paragraph to find.
+/// The two branches are written out rather than folded into one call because the authority's two
+/// `RUN_ONCE` objects are separate: a caller that sets only one bit runs only that half.
 fn add_all_legacy_methods(opts: u64) {
-    let _ = opts;
+    if opts & OPENSSL_INIT_ADD_ALL_CIPHERS != 0 {
+        crate::evp::c_allc::openssl_add_all_ciphers_int();
+    }
+    if opts & OPENSSL_INIT_ADD_ALL_DIGESTS != 0 {
+        crate::evp::c_alld::openssl_add_all_digests_int();
+    }
 }
 
 /// `OPENSSL_INIT_NO_ATEXIT` — fully honoured: suppresses the `atexit` handler.

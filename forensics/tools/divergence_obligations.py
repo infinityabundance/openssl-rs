@@ -121,12 +121,22 @@ INPUTS = [
 # copies through.
 DISPOSITIONS = ("open", "fixed", "explicitly_deferred", "accepted_permanent_divergence")
 
-# The two trigger bases, in the order the vocabulary is stated. A row's `trigger_basis` must be
+# The trigger bases, in the order the vocabulary is stated. A row's `trigger_basis` must be
 # one of these; anything else is a typo the tool refuses. `predicate` means the trigger is decided
 # by a named function that reads generated evidence; `manual` means it is a human judgement that no
 # artefact decides, so its `trigger_satisfied` is `null` and an `adjudication` is what keeps it from
 # blocking.
 TRIGGER_BASES = ("predicate", "manual")
+
+# The phase states a manual adjudication may rest on. A manual adjudication is a human judgement,
+# but the *facts* it cites are frequently machine facts -- "Phase N is not-started" is the one
+# D-EVP-CIPHER-LEGACY-NID-1 cited. A manual row with a nonempty `adjudication` must name the phase
+# it rests on in `adjudication_phase` and the state it requires in `adjudication_requires`, so that
+# `phase_state.py` can re-evaluate the predicate against the freshly derived states on every run
+# and block the owner when the fact no longer holds, rather than letting the prose adjudication
+# keep the row open-but-nonblocking forever. This is the vocabulary those states come from, and it
+# is exactly `phase_state.py`'s own three states.
+ADJUDICATION_STATES = ("not-started", "in-progress", "complete")
 
 # The stratum registry: `phase_state.py`'s `STRATA`, phases 0 through 21. Validating
 # against the range rather than a bare integer means a row cannot name a phase that does
@@ -207,6 +217,14 @@ class Row(NamedTuple):
     disposition: str
     evidence: str
     note: str
+    # The machine fact a manual adjudication rests on: the phase whose derived state it cites and
+    # the state it requires for the adjudication to remain true. `-1`/`""` mean "no machine fact"
+    # (every non-manual row and every manual row with no adjudication). `phase_state.py`
+    # re-evaluates `(adjudication_phase, adjudication_requires)` against the derived states and the
+    # row blocks its owner the moment the derived state is anything else -- which is what makes a
+    # stale manual adjudication fail closed instead of reading open-but-nonblocking.
+    adjudication_phase: int = -1
+    adjudication_requires: str = ""
 
 
 # The table. Nine of these are the register's `**Trigger:**` entries; the tenth,
@@ -468,25 +486,32 @@ OBLIGATIONS: list[Row] = [
         ),
         trigger_basis="manual",
         trigger_predicate="",
-        adjudication=(
-            "The trigger has not fired, and the machine facts that show it are: its phrase is "
-            "Phase 13's first legacy cipher wrapper, and Phase 13 is `not-started` "
-            "(`forensics/phase-state.json`), so no wrapper has been written; and the legacy "
-            "`OBJ_NAME` table those wrappers populate is still empty because the crate's own "
-            "adder is inert -- `src/runtime/init.rs`'s `add_all_legacy_methods` is "
-            "`fn add_all_legacy_methods(opts: u64) { let _ = opts; }`, so `OPENSSL_init_crypto`'s "
-            "two adder bits do nothing and `set_legacy_nid` finds nothing. The divergence -- "
-            "`EVP_CIPHER_get_nid` answers `NID_undef` where the authority answers `NID_des_cbc` "
-            "-- is therefore still real, and it is adjudicated rather than assumed quiet."
+        adjudication="",
+        disposition="fixed",
+        evidence=(
+            "src/evp/c_allc.rs (openssl_add_all_ciphers_int, c_allc.c's rows and aliases); "
+            "src/evp/c_alld.rs; src/runtime/init.rs (add_all_legacy_methods calls both for "
+            "OPENSSL_INIT_ADD_ALL_CIPHERS/DIGESTS); src/context/namemap.rs (ossl_namemap_stored's "
+            "first-use pre-population runs OPENSSL_init_crypto(ADD_ALL_CIPHERS|ADD_ALL_DIGESTS), "
+            "so the table is filled on the fetch path before set_legacy_nid); "
+            "courts/phase13/rt_evp_legacy_probe.c (the compared `<name>.byname` arms); "
+            "courts/phase7/rt_evp_pbe_probe.c (the compared `pbe.alg_add.methods_nids` arm); "
+            "RT-EVP-LEGACY; RT-EVP-PBE; docs/DECISIONS.md D526"
         ),
-        disposition="open",
-        evidence="RT-EVP-PBE (the `pbe.cipher_nid.legacy` marker)",
         note=(
-            "The trigger phrase names Phase 13, which is not yet `complete`, so this row may be "
-            "`open`. `evp_cipher_from_algorithm` calls `set_legacy_nid`, whose code landed in "
-            "7.3b; what it searches is the legacy wrappers' table, which is Phase 13's and "
-            "empty, so `EVP_CIPHER_get_nid` answers `NID_undef` (0) where the authority answers "
-            "31 (`NID_des_cbc`)."
+            "The trigger fired when Phase 13 landed the legacy wrappers, and the last missing "
+            "piece was the registration, not a wrapper: `src/runtime/init.rs`'s "
+            "`add_all_legacy_methods` was `{ let _ = opts; }`, so `OPENSSL_init_crypto`'s two "
+            "adder bits registered nothing and the `OBJ_NAME` table `set_legacy_nid` searches "
+            "stayed empty. 13.6 transcribes `crypto/evp/c_allc.c`/`c_alld.c` and wires both bits "
+            "to it; `ossl_namemap_stored` runs the authority's own first-use pre-population, "
+            "whose `OPENSSL_init_crypto(ADD_ALL_CIPHERS|ADD_ALL_DIGESTS)` call fills the table on "
+            "the fetch path too. `EVP_CIPHER_get_nid` on a fetched `DES-CBC` now answers "
+            "`NID_des_cbc` (31) as the authority does, `EVP_get_cipherbyname` and "
+            "`EVP_get_digestbyname` resolve, and the two courts compare the values instead of a "
+            "marker. The row is kept, not deleted: it is the record that the divergence existed "
+            "and was closed. This is the correction D526 records, and the stale manual "
+            "adjudication it exposed is the general bug D527 closes."
         ),
     ),
     # -- Phase 8's decoder boundary --------------------------------------------------
@@ -575,6 +600,26 @@ def validate(rows: list[Row]) -> list[str]:
                 f"{r.id}: `trigger_basis` is `manual`, so `trigger_predicate` must be empty, "
                 f"but it is {r.trigger_predicate!r}"
             )
+        # A manual adjudication is a machine-checked claim: the fact it rests on must be named, so
+        # `phase_state.py` can re-evaluate it. A manual row with no adjudication must name none.
+        if r.trigger_basis == "manual" and r.adjudication.strip():
+            if r.adjudication_phase not in PHASE_NUMBERS:
+                problems.append(
+                    f"{r.id}: its manual `adjudication` must name the phase it rests on in "
+                    f"`adjudication_phase`, but that is {r.adjudication_phase!r}"
+                )
+            if r.adjudication_requires not in ADJUDICATION_STATES:
+                problems.append(
+                    f"{r.id}: its manual `adjudication` must name the state it requires in "
+                    f"`adjudication_requires` (one of {list(ADJUDICATION_STATES)}), but that is "
+                    f"{r.adjudication_requires!r}"
+                )
+        elif r.adjudication_phase != -1 or r.adjudication_requires:
+            problems.append(
+                f"{r.id}: `adjudication_phase`/`adjudication_requires` are only for a manual row "
+                f"with a nonempty `adjudication`, but they are {r.adjudication_phase!r}/"
+                f"{r.adjudication_requires!r}"
+            )
         if not r.trigger_condition.strip():
             problems.append(f"{r.id}: `trigger_condition` is empty")
         if r.disposition == "fixed" and not EVIDENCE.search(r.evidence):
@@ -603,15 +648,32 @@ def derive_blocking(row: dict) -> bool:
     has either materially fired (`trigger_satisfied is True`, which for a `predicate` row is its
     named predicate's answer) or is unobservable and unadjudicated (`trigger_basis` is `manual`
     with no `adjudication`). The manual clause is the fail-closed half: an open manual row is
-    presumed fired until an `adjudication` records why it has not. `phase_state.py` applies the
-    same test scoped to the stratum being asked about (`current_owner == phase`), and its
-    `--self-test` imports this function so a reconstructed row is judged by the real rule.
+    presumed fired until an `adjudication` records why it has not.
+
+    **A manual adjudication must itself be machine-checked.** An adjudication that rests on a
+    machine fact -- `adjudication_requires` names the state the cited `adjudication_phase` must be
+    in -- is only as good as the fact, so the row blocks its owner the moment
+    `adjudication_predicate_satisfied` is false. `phase_state.py` fills that field by
+    re-evaluating `(adjudication_phase, adjudication_requires)` against the freshly derived states
+    on every run; the generator leaves it `None`, because it runs before the states exist and
+    must not read a stale `phase-state.json`. A manual row with no machine fact
+    (`adjudication_predicate_satisfied` absent/`None`) keeps the pre-existing behaviour: a
+    nonempty `adjudication` is enough to keep it from blocking.
+
+    `phase_state.py` applies the same test scoped to the stratum being asked about
+    (`current_owner == phase`), and its `--self-test` imports this function so a reconstructed row
+    is judged by the real rule.
     """
     if row["disposition"] != "open":
         return False
     if row["trigger_satisfied"] is True:
         return True
-    return row["trigger_basis"] == "manual" and not row.get("adjudication", "").strip()
+    if row["trigger_basis"] != "manual":
+        return False
+    if not row.get("adjudication", "").strip():
+        return True
+    # A manual adjudication that rests on a machine fact blocks when that fact no longer holds.
+    return row.get("adjudication_predicate_satisfied") is False
 
 
 def build() -> dict:
@@ -627,9 +689,14 @@ def build() -> dict:
         if r.trigger_basis == "predicate":
             satisfied, observation = PREDICATES[r.trigger_predicate]()
             row["trigger_satisfied"] = satisfied
+            row["adjudication_predicate_satisfied"] = None
         else:
             row["trigger_satisfied"] = None
             observation = MANUAL_OBSERVATION
+            # Undecided here: `phase_state.py` re-evaluates the machine fact against the freshly
+            # derived states. `None` keeps the artefact honest (the generator runs before the
+            # states exist) and `derive_blocking` reads `is False`, so a `None` cannot block.
+            row["adjudication_predicate_satisfied"] = None
         row["trigger_observation"] = observation
         # Derived, never typed: see `derive_blocking`.
         row["blocking"] = derive_blocking(row)
@@ -649,7 +716,12 @@ def build() -> dict:
             "evidence) or it is a `trigger_basis: manual` row with no `adjudication` -- a manual "
             "row's `trigger_satisfied` is null because the trigger is not machine-observable, so "
             "an open manual row blocks its owner until an `adjudication` records, with evidence, "
-            "why the trigger has not fired; `phase_state.py` applies that test to each stratum"
+            "why the trigger has not fired. An `adjudication` that rests on a machine fact names "
+            "`adjudication_phase`/`adjudication_requires`, and `phase_state.py` re-evaluates that "
+            "fact against the freshly derived states on every run: when the named phase's derived "
+            "state is no longer the required one, `adjudication_predicate_satisfied` is false and "
+            "the row blocks. Its own stale-fact behaviour is exercised by `phase_state.py "
+            "--self-test`; `phase_state.py` applies that test to each stratum"
         ),
         "counts": {
             "rows": len(rows),

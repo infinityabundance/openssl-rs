@@ -86,11 +86,10 @@
  *     `pbe.cipherinit.pbes2` arms are. The plain spelling has no caller on either side: the table
  *     names it in the `keygen` column and every caller prefers `keygen_ex`.
  *   * **`EVP_CIPHER_get_nid` on a fetched provider cipher**, which is what
- *     `EVP_PBE_alg_add`'s cipher read is: the authority answers `NID_des_cbc` for a fetched
- *     `DES-CBC` and this crate answers `NID_undef`, because `set_legacy_nid` consults the *legacy*
- *     method table, whose contents are Phase 13's. `docs/SECURITY_DIVERGENCE_POLICY.md`
- *     **D-EVP-CIPHER-LEGACY-NID-1**; the arm's return code is compared and the two NIDs are the
- *     marker.
+ *     `EVP_PBE_alg_add`'s cipher read is: `set_legacy_nid` consults the *legacy* method table,
+ *     which `OPENSSL_init_crypto(ADD_ALL_CIPHERS)` fills from `crypto/evp/c_allc.c`, so a fetched
+ *     `DES-CBC` answers `NID_des_cbc` (31) on both sides. `docs/SECURITY_DIVERGENCE_POLICY.md`
+ *     **D-EVP-CIPHER-LEGACY-NID-1** is retired here; the two NIDs the call stored are compared.
  *   * **The raising *line* of the records Phase 5's ASN.1 decoder adds under one refusal.** The
  *     `v2.wrong_shape` arm's chain carries `asn1_template_noexp_d2i`'s nested error, and the
  *     authority raises it at `crypto/asn1/tasn_dec.c:712` where this crate records `:703` -- the
@@ -1242,15 +1241,21 @@ int main(void)
            kg != NULL ? "K" : "-", ERR_peek_error());
     ERR_clear_error();
 
-    /* `EVP_PBE_alg_add` reads both NIDs out of the methods it is handed, and the *cipher* read is
-     * where the register entry lands: the authority answers `NID_des_cbc` and this crate answers
-     * `NID_undef`, because the legacy method table `set_legacy_nid` consults is Phase 13's. The
-     * call is driven and its return code compared; the two NIDs it stored are not, and the
-     * boundary's own line names the entry. */
+    /* `EVP_PBE_alg_add` reads both NIDs out of the methods it is handed. `EVP_CIPHER_get_nid`
+     * on the fetched `DES-CBC` answers `NID_des_cbc` on both sides now: the legacy `OBJ_NAME`
+     * table `set_legacy_nid` consults is filled by `OPENSSL_init_crypto(ADD_ALL_CIPHERS)`
+     * (`crypto/evp/c_allc.c`), so the registered divergence
+     * `D-EVP-CIPHER-LEGACY-NID-1` is retired and both NIDs are compared. */
     rc = EVP_PBE_alg_add(NID_rc4, cipher8, md_md2, PKCS5_PBE_keyivgen);
     printf("pbe.alg_add.methods=%d err=%lu\n", rc, ERR_peek_error());
     ERR_clear_error();
-    printf("pbe.alg_add.methods_nids=NOT_COMPARED_REGISTERED_DIVERGENCE_D_EVP_CIPHER_LEGACY_NID_1\n");
+    pcnid = 0;
+    pmnid = 0;
+    kg = NULL;
+    rc = EVP_PBE_find(EVP_PBE_TYPE_OUTER, NID_rc4, &pcnid, &pmnid, &kg);
+    printf("pbe.alg_add.methods_nids=%d,%d,%d,%s err=%lu\n", rc, pcnid, pmnid,
+           kg != NULL ? "K" : "-", ERR_peek_error());
+    ERR_clear_error();
 
     pbeparam = der_to_type(pbeparam_der, sizeof pbeparam_der);
     wrong_type = ASN1_TYPE_new();

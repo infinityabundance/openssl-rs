@@ -274,12 +274,15 @@ were corrected in 13.6c, and the court grew 720 → 1135 observations with 0 res
 objects. That is exactly the class the differential court exists to reach: a field the authority
 publishes and a transcription can get wrong without any caller noticing.
 
-**A lower-unit identity divergence surfaces rather than being hidden, and the court names it.** The
-legacy `OBJ_NAME` cipher table the authority fills at `OPENSSL_init_crypto` is empty in this crate,
-so `EVP_get_cipherbyname(name)` cannot resolve the fetched identity the authority resolves. Every
-such arm is printed as a `pending.` line with its reason rather than compared
-(`courts/phase13/rt_evp_legacy_probe.c:376-383`); §5 records every arm it reaches. This is the
-same lower-unit divergence the Phase-12 CPS/CMS/TS and OCSP courts already name.
+**A lower-unit identity divergence surfaced and was then closed.** While the legacy `OBJ_NAME`
+cipher table was empty, `EVP_get_cipherbyname(name)` could not resolve the fetched identity the
+authority resolves, and every such arm was printed as a `pending.` line with its reason rather than
+compared (`courts/phase13/rt_evp_legacy_probe.c:376-383`). The registration the table needs then
+landed (D526): `src/evp/c_allc.rs`/`c_alld.rs` transcribe `crypto/evp/c_allc.c`/`c_alld.c`,
+`src/runtime/init.rs`'s `add_all_legacy_methods` calls them for the two `OPENSSL_INIT_ADD_ALL_*`
+bits, and `src/context/namemap.rs`'s `ossl_namemap_stored` runs the authority's first-use
+pre-population, so the table is filled on the fetch path too. The arms now compare the values, and
+`EVP_CIPHER_get_nid` on a fetched `DES-CBC` answers `NID_des_cbc` as the authority does.
 
 **A random boundary is named rather than compared.** `EVP_des_ede3_wrap` draws its eight-byte IV
 with `RAND_bytes`, so its round-trip value is not a function of the library alone; the arm is
@@ -303,19 +306,21 @@ convention Phases 9 through 12 established.
 ## 5. Fault boundaries — recorded, not reproduced
 
 Where the authority dereferences a NULL, relies on an unset field, or crashes, the court does not
-call it and the divergence is recorded. **One divergence obligation names Phase 13 as its
-`current_owner`, and it does not block.** `forensics/divergence-obligations.json` reads 10 rows and
-**0 blocking**; `D-EVP-CIPHER-LEGACY-NID-1` is Phase 13's, its trigger basis is `manual` and
-unadjudicated, and its derived `blocking` is false, so no live obligation outran this stratum's
-evidence and `phase_state.py` derives `complete`. The boundaries this stratum actually met are
-recorded in the places below.
+call it and the divergence is recorded. **One divergence obligation named Phase 13 as its
+`current_owner`, and it did not block.** `forensics/divergence-obligations.json` read 10 rows and
+**0 blocking** at seal time; `D-EVP-CIPHER-LEGACY-NID-1` was Phase 13's, its trigger basis is
+`manual`, and its derived `blocking` was false, so no live obligation outran this stratum's
+evidence and `phase_state.py` derives `complete`. D526 then retired the row to `fixed` by landing
+the legacy `OBJ_NAME` registration the entry records as missing. The boundaries this stratum
+actually met are recorded in the places below.
 
-- **The legacy `OBJ_NAME` / `EVP_get_cipherbyname` divergence is named, not hidden.** The legacy
-  `OBJ_NAME` cipher table the authority fills at `OPENSSL_init_crypto` is empty in the candidate, so
-  every `EVP_get_cipherbyname(name)` arm is a `pending.<name>.byname=` line whose value is
-  `legacy-OBJ_NAME-cipher-table-empty-in-candidate`; `RT-EVP-LEGACY`'s transcript carries one per
-  cipher static (`courts/phase13/rt_evp_legacy_probe.c:25-28,376-383`). D525 records it; the
-  accessors, the object sizes and the round trips are compared.
+- **The legacy `OBJ_NAME` / `EVP_get_cipherbyname` divergence was named, then closed.** While the
+  legacy `OBJ_NAME` cipher table was empty in the candidate, every `EVP_get_cipherbyname(name)` arm
+  was a `pending.<name>.byname=` line whose value was
+  `legacy-OBJ_NAME-cipher-table-empty-in-candidate` (`courts/phase13/rt_evp_legacy_probe.c:25-28,376-383`).
+  D526 landed the registration (`src/evp/c_allc.rs`, `src/runtime/init.rs`,
+  `src/context/namemap.rs`), so the arms are compared now; the accessors, the object sizes and the
+  round trips always were.
 - **The `EVP_des_ede3_wrap` random IV is not compared.** Its round trip draws an eight-byte IV with
   `RAND_bytes`, so the arm is `pending.<name>.roundtrip=tdes-wrap-draws-a-random-iv`
   (`courts/phase13/rt_evp_legacy_probe.c:401-407`); the object's sizes and flags are still compared.
@@ -405,7 +410,7 @@ asserted.
 | every implemented export is observed by a court | `forensics/atlas/court-coverage.json` phase-13 block (`:44712`); `unmatched` 0, enforced for `complete` by `forensics/tools/phase_state.py` |
 | the reference basis covers the inherited exports | `RT-PHASE13-REF` (`courts/phase13/rt_coverage_ref_probe.c`), registered with the ledger and runner (`docs/PHASE-13-SUBPHASES.md:237-259`); D199/D236 |
 | no authority fault is reproduced | §5, and the boundaries recorded in the probes and D525 |
-| no blocking divergence obligation names this stratum | `forensics/divergence-obligations.json`: 10 rows, 0 blocking; `D-EVP-CIPHER-LEGACY-NID-1` is Phase 13's and does not block |
+| no blocking divergence obligation names this stratum | `forensics/divergence-obligations.json`: 10 rows, 0 blocking; `D-EVP-CIPHER-LEGACY-NID-1` was Phase 13's and did not block, and D526 has since retired it to `fixed` |
 | `ABI-PROTOTYPE`, `ABI-SYMBOL` and `ABI-DYNAMIC` stay clean | `forensics/atlas/ownership-audit.json`: `problems` empty, `implemented_by_two_strata` empty |
 | the prototype court clean | `forensics/atlas/prototype-court.json`: `mismatches` 0 |
 | the dispatch court clean | `forensics/atlas/dispatch-court.json`: `problems` 0 |
@@ -526,9 +531,12 @@ the evidence forced rather than the ones a reviewer might have preferred.
    `ENGINE_by_id`'s miss path whole and takes the authority's own `notfound` arm, so the dynamic
    fallback is recorded rather than fabricated; the built-in `rdrand`/`dynamic` ids are therefore
    not observed (`src/engine/eng_list.rs:9-19`, `src/engine/mod.rs:77-79`).
-4. **The legacy `OBJ_NAME` table is empty in the candidate, and the divergence is named.** The
-   `EVP_get_cipherbyname` arms are `pending.` with the reason rather than compared, and §5 collects
-   every arm the divergence reaches (`courts/phase13/rt_evp_legacy_probe.c:25-28,376-383`).
+4. **The legacy `OBJ_NAME` table was empty in the candidate, and D526 later filled it.** The
+   `EVP_get_cipherbyname` arms were `pending.` with the reason rather than compared
+   (`courts/phase13/rt_evp_legacy_probe.c:25-28,376-383`); 13.6's registration
+   (`src/evp/c_allc.rs`/`c_alld.rs`, wired by `src/runtime/init.rs`'s `add_all_legacy_methods`, with
+   `ossl_namemap_stored`'s first-use pre-population) closed it, and `D-EVP-CIPHER-LEGACY-NID-1` is
+   now `fixed`.
 5. **Two candidate bugs were found and fixed by the court.** `RT-EVP-LEGACY` exposed the
    `IDEA_ECB`/`SEED_ECB` `iv_len`, corrected in 13.6c; the court grew 720 → 1135 observations and
    the authority-tier atlas re-derives byte-identically (D525).

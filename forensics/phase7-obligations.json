@@ -3007,12 +3007,12 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "5245b767d6239352b2e130bbbcdad5db7b2486b463e2c54bb4bad367c742ebf2"
+      "sha256": "59377c9aa7800991c11c8bc15043b497e1a8054b8d9fc29525f209395de07f43"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "a0cbd212606075a0a95178fd07fa3dbc01ac1ae1c56a30a76d26bc64d8d20e19"
+      "sha256": "bc8092d08796ec877c2f46a99e291950f27e0088b834e2254e5177c505933bb7"
     },
     {
       "name": "authority-source-tree-and-crate-source",
