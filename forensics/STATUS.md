@@ -33,7 +33,7 @@ renderer does not know any phase status.
 | 10 | Key formats + PKCS + STORE | `complete` |  |
 | 11 | X.509 + verification | `complete` |  |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` |  |
-| 13 | Legacy / deprecated compatibility | `in-progress` | 250 open obligation(s) of this stratum recorded in forensics/phase13-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One hundred and eighty-nine of the exports it owns are its own three headers' (`engine.h`, `ui.h`, `txt_db.h`) and the one hundred and eighty-eight remainder arrive as recorded hand-offs from phases 3, 7 and 12 -- the deprecated METHOD-era EVP statics and PEM readers, the ASYNC framework, and the three Phase 12 rows `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`. The ledger does not start with that whole working set open: 123 atlas-owned exports and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` spellings are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns 39 provider registration rows, all unimplemented (docs/PHASE-13-SUBPHASES.md sections 1 and 4) |
+| 13 | Legacy / deprecated compatibility | `in-progress` | 247 open obligation(s) of this stratum recorded in forensics/phase13-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One hundred and eighty-nine of the exports it owns are its own three headers' (`engine.h`, `ui.h`, `txt_db.h`) and the one hundred and eighty-eight remainder arrive as recorded hand-offs from phases 3, 7 and 12 -- the deprecated METHOD-era EVP statics and PEM readers, the ASYNC framework, and the three Phase 12 rows `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`. The ledger does not start with that whole working set open: 123 atlas-owned exports and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` spellings are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns 39 provider registration rows, all unimplemented (docs/PHASE-13-SUBPHASES.md sections 1 and 4) |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 14-21 (8 total).
@@ -125,9 +125,9 @@ that name is defined, nothing more.
 
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 5646 | 250 |
+| libcrypto | 5896 | 5649 | 247 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **5646** | **853** |
+| **total** | **6499** | **5649** | **850** |
 
 ### Phase 10 obligation ledger
 
@@ -189,9 +189,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 13 working set: 377
-* implemented: 127
+* implemented: 130
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 250
+* open in this stratum: 247
 
 Hand-offs from phase 12 discharged by this stratum: `SRP_VBASE_init`, `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine`
 

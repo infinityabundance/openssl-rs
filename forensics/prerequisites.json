@@ -4,19 +4,13 @@
       {
         "evidence": "src/runtime/defaults.rs module doc",
         "owner_phase": 16,
-        "reason": "The OPENSSL_info strings rather than anything the registry reads",
-        "symbol": "ossl_get_enginesdir"
-      },
-      {
-        "evidence": "src/runtime/defaults.rs module doc",
-        "owner_phase": 16,
-        "reason": "The OPENSSL_info strings rather than anything the registry reads; so is its sibling",
+        "reason": "The OPENSSL_info strings rather than anything the registry reads; `ossl_get_enginesdir`, its sibling, moved to Phase 13.1 with `ENGINE_by_id`",
         "symbol": "ossl_get_openssldir"
       },
       {
         "evidence": "src/runtime/defaults.rs module doc",
         "owner_phase": 16,
-        "reason": "A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased",
+        "reason": "A Windows-only string the admitted Linux/x86-64 profile does not build, carried with `ossl_get_openssldir` rather than special-cased",
         "symbol": "ossl_get_wininstallcontext"
       },
       {

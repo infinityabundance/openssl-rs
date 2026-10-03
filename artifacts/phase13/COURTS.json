@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-PHASE13-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 127 inherited `implemented` exports -- the 61 `ENGINE_*` object, accessor and table names, the 62 `UI_*` names and the four `PEM_read[_bio]_PrivateKey` spellings -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). Every behavioural court the plan names is named in `pending_courts` with the subphase that brings it -- `RT-ENGINE`, `RT-ENGINE-TABLE`, `RT-ENGINE-CTRL`, `RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md section 3 records what the behavioural courts compare.",
+    "claim": "`RT-PHASE13-REF` is the activation **reference basis**: its probe takes the address of each of this stratum's inherited `implemented` exports -- the 61 `ENGINE_*` object, accessor and table names, the 62 `UI_*` names and the four `PEM_read[_bio]_PrivateKey` spellings -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-ENGINE` is 13.1's behavioural court: it **calls** `ENGINE_by_id`, `ENGINE_load_builtin_engines` and `ENGINE_add_conf_module` and compares the registry's observed `id`/`name`, object identity, the NULL/absent refusals, the refcount effect and the built-in loader's shared registry arm -- not the built-in registry itself, whose `rdrand`/`dynamic` divergence src/engine/eng_all.rs records, and not the error queue. Every other behavioural court the plan names is named in `pending_courts` with the subphase that brings it -- `RT-ENGINE-TABLE`, `RT-ENGINE-CTRL`, `RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md section 3 records what the behavioural courts compare.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -21,10 +21,26 @@
           "candidate": "artifacts/phase13/probes/rt_coverage_ref_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 30,
+        "candidate_exit_code": 0,
+        "candidate_observations": 30,
+        "candidate_stderr_tail": [],
+        "court": "RT-ENGINE",
+        "crashed": false,
+        "probe": "courts/phase13/rt_engine_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_engine_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_engine_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
-      "RT-ENGINE": "13.1 (the ENGINE object, registry and dynamic-loading surface)",
       "RT-ENGINE-CTRL": "13.3 (the ENGINE control and command surface)",
       "RT-ENGINE-TABLE": "13.2 (the ENGINE table and method binding)",
       "RT-EVP-LEGACY": "13.6 (the legacy EVP method statics)",
@@ -35,8 +51,8 @@
     },
     "summary": {
       "fail": 0,
-      "pass": 1,
-      "total": 1
+      "pass": 2,
+      "total": 2
     }
   },
   "generator": "forensics/tools/phase13_courts.py",
@@ -50,6 +66,11 @@
       "name": "probe",
       "path": "courts/phase13/rt_coverage_ref_probe.c",
       "sha256": "8e55fbec579f2306cfa2623c3d375ad940beeb69b4c2a19238bf1ab726bc81fe"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_engine_probe.c",
+      "sha256": "0cae0dab6a1dd19473e6a235b7d4f15bfbc1191ad9ace912846f5c40134426bc"
     }
   ],
   "kind": "phase13-courts",

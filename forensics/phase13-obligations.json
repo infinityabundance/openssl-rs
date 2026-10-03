@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 189,
       "deferred_to_later_phase": 0,
-      "implemented": 127,
-      "open_in_this_stratum": 250,
+      "implemented": 130,
+      "open_in_this_stratum": 247,
       "owned": 377,
       "received_by_handoff": 188
     },
@@ -1760,6 +1760,8 @@
     },
     "implemented": [
       "ENGINE_add",
+      "ENGINE_add_conf_module",
+      "ENGINE_by_id",
       "ENGINE_cmd_is_executable",
       "ENGINE_ctrl",
       "ENGINE_ctrl_cmd",
@@ -1791,6 +1793,7 @@
       "ENGINE_get_static_state",
       "ENGINE_get_table_flags",
       "ENGINE_init",
+      "ENGINE_load_builtin_engines",
       "ENGINE_new",
       "ENGINE_pkey_asn1_find_str",
       "ENGINE_register_all_digests",
@@ -2025,18 +2028,6 @@
       },
       {
         "declaring_header": "engine.h",
-        "module": "src/engine/eng_cnf.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_add_conf_module"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_list.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_by_id"
-      },
-      {
-        "declaring_header": "engine.h",
         "module": "src/engine/tb_dh.rs",
         "received_from_phase": null,
         "symbol": "ENGINE_get_DH"
@@ -2136,12 +2127,6 @@
         "module": "src/engine/eng_pkey.rs",
         "received_from_phase": null,
         "symbol": "ENGINE_get_ssl_client_cert_function"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_all.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_load_builtin_engines"
       },
       {
         "declaring_header": "engine.h",
@@ -3489,22 +3474,22 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "577168e52e5605593d048da5d1979f7ab821c0b1913384a60a96bb340375e8a9"
+      "sha256": "bf867360099ec1a3838fd0db57613bf7a7c940dc5c4f9f58bb96b0023d17b373"
     },
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "1ab151efd06efcd8781d230fff45c785b5cfca289423bd8bf9d3ce95dd537329"
+      "sha256": "6ad3db673ef924410417b17d61c2a157f4b9a269b54a30598e487de1895c95a5"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "ac879cdead11c10b4328ef254732b78b6315c476a56fe5226ea3fd2753a1dadf"
+      "sha256": "5f09a2446e0202c471f4401440a9f97c6392559fb602b9a797be482046c55099"
     },
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "4ad1b2ff5b0d246a262a3fcd2d754830bf5e1518fd2feb23795d5474ff48b293"
+      "sha256": "6e0880606bf48322a628836b021a62d3e85800c99a51cdf63e8f9b9aa5d2329e"
     }
   ],
   "kind": "phase13-obligations",
