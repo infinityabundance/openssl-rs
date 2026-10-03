@@ -270,6 +270,7 @@
               "RT-SRP",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-UI",
               "RT-X509",
               "RT-X509-ACERT",
@@ -334,6 +335,7 @@
               "RT-PUBKEY",
               "RT-SECURE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-STORE"
@@ -1899,6 +1901,7 @@
               "RT-SRP",
               "RT-STACK",
               "RT-STORE",
+              "RT-TXTDB",
               "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-REQ",
@@ -2018,6 +2021,7 @@
               "RT-PKCS7",
               "RT-STACK",
               "RT-STORE",
+              "RT-TXTDB",
               "RT-X509-PEM",
               "RT-X509-STORE",
               "RT-X509-V3",
@@ -2766,6 +2770,7 @@
               "RT-RUNTIME-EXT",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -3236,6 +3241,7 @@
               "RT-RUNTIME-EXT",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -3325,6 +3331,7 @@
               "RT-PUBKEY",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -3471,7 +3478,8 @@
               "RT-HTTP",
               "RT-LHASH",
               "RT-RUNTIME-EXT",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-TXTDB"
             ],
             "symbol": "BIO_read"
           },
@@ -3589,6 +3597,7 @@
               "RT-RUNTIME-EXT",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -41839,10 +41848,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 187,
-          "directly_courted_called": 158,
+          "directly_courted": 193,
+          "directly_courted_called": 164,
           "directly_courted_referenced": 29,
-          "implemented": 187,
+          "implemented": 193,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -42812,6 +42821,48 @@
           {
             "basis": "called",
             "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_create_index"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_get_by_index"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_insert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_read"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_write"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PHASE13-REF",
               "RT-UI"
             ],
@@ -43312,14 +43363,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 13,
-        "staged_candidate_probes": 5
+        "staged_candidate_probes": 6
       }
     ],
     "totals": {
-      "directly_courted": 5698,
-      "directly_courted_called": 4690,
+      "directly_courted": 5704,
+      "directly_courted_called": 4696,
       "directly_courted_referenced": 1008,
-      "implemented": 5706,
+      "implemented": 5712,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -43330,7 +43381,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f21d56f9b221d55216ee68a9d2417ed9e283262068fca150bc27394795c9b8f6"
+      "sha256": "5aa040f6645a54d65f9facc4027402217ad1ce2e7936e69a6ccc1412cfb28713"
     },
     {
       "name": "symbol-ownership",
@@ -43445,12 +43496,12 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "7c890295d4410381b832bf318c1039ec67b78667fb03e1e7a8746171b99f12ff"
+      "sha256": "716439072afe0e99e626b50976afc7c226715ad6f38865d9cb6f4c81e60f2d0d"
     },
     {
       "name": "phase13-courts",
       "path": "artifacts/phase13/COURTS.json",
-      "sha256": "8ed130ea4f5418863b9ffa14dedf3628bc1e5c5c88d6ec2ed737e20ddbfe3ce6"
+      "sha256": "9d5c57a5328b297f4bfd40a88d2b155d61a60e4e3164ee13498f6e2b3f89fa35"
     }
   ],
   "kind": "court-coverage",

@@ -501,7 +501,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 15769,
+      "compiler_emitted_count": 16262,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -509,7 +509,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 5706,
+        "implemented": 5712,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -4839,6 +4839,12 @@
           "TS_VERIFY_CTX_set_store",
           "TS_X509_ALGOR_print_bio",
           "TS_ext_print_bio",
+          "TXT_DB_create_index",
+          "TXT_DB_free",
+          "TXT_DB_get_by_index",
+          "TXT_DB_insert",
+          "TXT_DB_read",
+          "TXT_DB_write",
           "UINT32_it",
           "UINT64_it",
           "UI_OpenSSL",
@@ -6218,7 +6224,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 190
+        "scaffolded": 184
       },
       "libssl": {
         "authority_exports": 603,
@@ -6229,18 +6235,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 5706,
-      "scaffolded": 793
+      "implemented": 5712,
+      "scaffolded": 787
     }
   },
-  "body_hash": "25b434c571d612a3579ca8ef113e55070969dd80f16c67c658e667879d80cfa0",
+  "body_hash": "93ff66093f5599956fe3d14465cc575600b3ac2f5e72a383951a4d1cfb1a5bbd",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "9525eebc0503b408d44c6d191e034423c5f69b679c9262ef7a6df0d9491f3c94"
+      "sha256": "1d66d15996ee2ceab1fc6896fca69b93e1d85b3a31f3ee060ca33b92bd946938"
     },
     {
       "name": "authority-exports",

@@ -285,7 +285,9 @@ and accessor surface was already in: `ENGINE_new`, `ENGINE_free`, `ENGINE_up_ref
 that list was landed before this stratum's first slice as substrate the earlier strata needed; the
 ledger is the record and this sentence names only what those landings left here. Subphase 13.3
 later landed the control fat helpers `ENGINE_set_default`, `ENGINE_set_default_string`,
-`ENGINE_register_complete` and `ENGINE_register_all_complete`.
+`ENGINE_register_complete` and `ENGINE_register_all_complete`. Subphase 13.5 later landed the
+whole of `txt_db.h` -- `TXT_DB_read`, `TXT_DB_write`, `TXT_DB_insert`, `TXT_DB_create_index`,
+`TXT_DB_get_by_index` and `TXT_DB_free` (`src/txt_db/txt_db.rs`).
 
 Subphase 13.2 landed the ENGINE table and method-binding surface. The cipher table
 (`src/engine/tb_cipher.rs`) contributes `ENGINE_set_ciphers`, `ENGINE_get_ciphers`,
@@ -309,9 +311,17 @@ dispatch and its string spelling) and `ENGINE_register_complete`/`ENGINE_registe
 substrate. The `ENGINE_set_default_string` forward declaration `eng_cnf.rs` carried is dropped
 with this landing.
 
-Subphase 13.4 drove the UI framework rather than landing code: all 62 names — the UI object
+Subphase 13.5 landed the `TXT_DB` codec. `src/txt_db/txt_db.rs` contributes all six
+`txt_db.h` exports — `TXT_DB_read` (`crypto/txt_db/txt_db.c:20-125`) and its inverse
+`TXT_DB_write` (`:187-232`), `TXT_DB_insert` (`:234-277`), `TXT_DB_create_index` (`:147-185`)
+and `TXT_DB_get_by_index` (`:127-145`) over the `LHASH_OF(OPENSSL_STRING)` indexes they drive,
+and `TXT_DB_free` (`:279-314`) — and its court is `RT-TXTDB`. The module records that
+`SRP_VBASE_init`'s blocker (its `TXT_DB_read`/`TXT_DB_free` dependency, §1's Phase 12 -> 13
+hand-off) is now removable; the row itself is 13.8's and is not landed here.
+
+Subphase 13.4 drove the UI framework rather than landing code: all 62 names -- the UI object
 (`ui_lib.rs`), the built-in console method (`ui_openssl.rs`), the `UI_UTIL_*` helpers
-(`ui_util.rs`) and the null method (`ui_null.rs`) — had already landed as substrate the earlier
+(`ui_util.rs`) and the null method (`ui_null.rs`) -- had already landed as substrate the earlier
 strata needed, so the subphase's act was `RT-UI`. `courts/phase13/rt_ui_probe.c` calls every one
 of them over a deterministic in-process method so no terminal is opened: the object lifecycle and
 method identity, the method setter/getter pairs and their NULL arms, the string-add and
@@ -324,12 +334,11 @@ reference basis.
 
 **Open exports (checked against the ledger):**
 
-The open set is the TXT_DB codec, the deprecated statics over it and the
-legacy EVP method statics. Representative names are
-`TXT_DB_read`, `TXT_DB_free`, `TXT_DB_write`,
-`TXT_DB_insert`, `TXT_DB_create_index`, `TXT_DB_get_by_index`, `ASYNC_WAIT_CTX_new`,
-`EVP_aes_128_cbc`, `PEM_write_bio_PrivateKey`, `TS_CONF_set_crypto_device`,
-`TS_CONF_set_default_engine` and `SRP_VBASE_init`. Every one is open rather than implemented, and
-each is assigned to a subphase by §2's partition. The UI framework is not in this list: subphase
+The open set is the deprecated statics over TXT_DB and the legacy EVP method statics.
+Representative names are `ASYNC_WAIT_CTX_new`, `EVP_aes_128_cbc`, `PEM_write_bio_PrivateKey`,
+`TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`. Every one is open
+rather than implemented, and each is assigned to a subphase by §2's partition. The TXT_DB codec
+is not in this list: subphase 13.5 landed all six of its names, so they are implemented and
+courted by `RT-TXTDB` rather than open. The UI framework is not in this list either: subphase
 13.4 drove all 62 of its names through the RT-UI court, so they are implemented and called rather
 than open, and none of them is left merely referenced by the activation basis.

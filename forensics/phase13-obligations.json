@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 189,
       "deferred_to_later_phase": 0,
-      "implemented": 187,
-      "open_in_this_stratum": 190,
+      "implemented": 193,
+      "open_in_this_stratum": 184,
       "owned": 377,
       "received_by_handoff": 188
     },
@@ -1840,6 +1840,12 @@
       "PEM_read_PrivateKey_ex",
       "PEM_read_bio_PrivateKey",
       "PEM_read_bio_PrivateKey_ex",
+      "TXT_DB_create_index",
+      "TXT_DB_free",
+      "TXT_DB_get_by_index",
+      "TXT_DB_insert",
+      "TXT_DB_read",
+      "TXT_DB_write",
       "UI_OpenSSL",
       "UI_UTIL_read_pw",
       "UI_UTIL_read_pw_string",
@@ -3010,42 +3016,6 @@
         "module": "src/ts/ts_conf.rs",
         "received_from_phase": 12,
         "symbol": "TS_CONF_set_default_engine"
-      },
-      {
-        "declaring_header": "txt_db.h",
-        "module": "src/txt_db/txt_db.rs",
-        "received_from_phase": null,
-        "symbol": "TXT_DB_create_index"
-      },
-      {
-        "declaring_header": "txt_db.h",
-        "module": "src/txt_db/txt_db.rs",
-        "received_from_phase": null,
-        "symbol": "TXT_DB_free"
-      },
-      {
-        "declaring_header": "txt_db.h",
-        "module": "src/txt_db/txt_db.rs",
-        "received_from_phase": null,
-        "symbol": "TXT_DB_get_by_index"
-      },
-      {
-        "declaring_header": "txt_db.h",
-        "module": "src/txt_db/txt_db.rs",
-        "received_from_phase": null,
-        "symbol": "TXT_DB_insert"
-      },
-      {
-        "declaring_header": "txt_db.h",
-        "module": "src/txt_db/txt_db.rs",
-        "received_from_phase": null,
-        "symbol": "TXT_DB_read"
-      },
-      {
-        "declaring_header": "txt_db.h",
-        "module": "src/txt_db/txt_db.rs",
-        "received_from_phase": null,
-        "symbol": "TXT_DB_write"
       }
     ],
     "owned_by_header": {
@@ -3145,7 +3115,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "25b434c571d612a3579ca8ef113e55070969dd80f16c67c658e667879d80cfa0"
+      "sha256": "93ff66093f5599956fe3d14465cc575600b3ac2f5e72a383951a4d1cfb1a5bbd"
     },
     {
       "name": "phase3-obligations",

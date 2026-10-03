@@ -219,6 +219,14 @@ pub mod store;
 // verify entry points wait on the Phase 12.7 ESS item group and the two engine-reading `CONF`
 // setters wait on Phase 13's `ENGINE_by_id`. See `src/ts/mod.rs`.
 pub mod ts;
+// Phase 13.5 — `crypto/txt_db/`: the `TXT_DB` two-dimensional text database the `ca` app
+// reads. The directory is new here; the module lands the whole of `include/openssl/txt_db.h`
+// (six exports) and records that `SRP_VBASE_init`'s blocker is now removable. The module's
+// file is named for its authority unit (`crypto/txt_db/txt_db.c` -> `src/txt_db/txt_db.rs`),
+// so it is declared here rather than through a `mod.rs` that would trigger
+// `clippy::module_inception`.
+#[path = "txt_db/txt_db.rs"]
+pub mod txt_db;
 // Test-only: the one process-wide lock that serialises tests touching the crate's
 // process-global state (init/cleanup, the default `OSSL_LIB_CTX`, the memory
 // functions, the error registry, the object database, the property/method stores,
