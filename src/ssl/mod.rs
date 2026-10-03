@@ -1,4 +1,5 @@
-//! Phase 14.1–14.2 — `ssl/`: the `libssl` object model and method tables.
+//! Phase 14.1–14.5 — `ssl/`: the `libssl` object model, method tables, cipher/configuration
+//! surface, record layer and handshake-state readers.
 //!
 //! `docs/PHASE-14-SUBPHASES.md` section 2 gives 14.1 the `ssl_lib.c` unit (342 open rows) and 14.2
 //! `methods.c` (21) plus `s3_lib.c` (3). The crate lays the authority's `ssl/` tree out as
@@ -288,11 +289,43 @@
 //! * **`ssl_set_version_bound` is pulled forward from 14.5.** `min_protocol`/`max_protocol` call it
 //!   (`ssl/statem/statem_lib.c:2107-2156`); it is transcribed in `src/ssl/ssl_conf.rs`.
 //!
+//! ## 14.4: the record layer
+//!
+//! 14.4 lands the two units the plan names. **`ssl/record/rec_layer_s3.c`** is
+//! `src/ssl/record/rec_layer_s3.rs`: `SSL_CTX_set_default_read_buffer_len`,
+//! `SSL_set_default_read_buffer_len`, `SSL_rstate_string` and `SSL_rstate_string_long`.
+//! **`ssl/rio/poll_immediate.c`** is `src/ssl/rio/poll_immediate.rs`: the non-QUIC `SSL_poll`
+//! readout and its refusal arms. Each file records its own measured divergences: the record read
+//! state is not modelled, so the state strings answer `"unknown"` (the authority's own answer with
+//! no record-read method installed); the buffer-length setter has no public reader on either side;
+//! and `SSL_poll`'s QUIC and blocking arms are unreachable for objects this crate builds.
+//! Its court is `RT-RECORD` (`courts/phase14/rt_record_probe.c`), registered in
+//! `forensics/tools/phase14_courts.py`.
+//!
+//! ## 14.5: the handshake state machine
+//!
+//! 14.5 lands the three units the plan names. **`ssl/statem/statem.c`** is `src/ssl/statem/statem.rs`:
+//! the four state readers (`SSL_get_state`, `SSL_in_before`, `SSL_in_init`, `SSL_is_init_finished`),
+//! reading three state words `SSL_new` installs to the authority's post-`SSL_new` values.
+//! **`ssl/statem/extensions_cust.c`** is `src/ssl/statem/extensions_cust.rs`: the custom-extension
+//! registration surface, which required a `custext` record list on `Cert`. **`ssl/t1_lib.c`** is
+//! `src/ssl/t1_lib.rs`: the MFL accessors, the sigalg readers, `SSL_check_chain`'s refusal arms and
+//! the provider-probing `SSL_get1_builtin_sigalgs`. Each file records its own divergences: the sigalg
+//! lookup cache is not loaded (14.1's recorded `SSL_CTX_new_ex` divergence), `SSL_check_chain` lands
+//! only its refusal arms, and the GOST rows of the sigalg table are omitted because the admitted
+//! authority's default provider publishes neither their digests nor their key types.
+//! Its court is `RT-STATEM` (`courts/phase14/rt_statem_probe.c`), registered in
+//! `forensics/tools/phase14_courts.py`.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod methods;
+pub mod record;
+pub mod rio;
 pub mod s3_lib;
 pub mod ssl_ciph;
 pub mod ssl_ciph_table;
 pub mod ssl_conf;
 pub mod ssl_lib;
+pub mod statem;
+pub mod t1_lib;

@@ -269,6 +269,7 @@
               "RT-PUBKEY",
               "RT-RSA",
               "RT-SRP",
+              "RT-STATEM",
               "RT-STORE",
               "RT-TS",
               "RT-TXTDB",
@@ -44723,10 +44724,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 355,
-          "directly_courted_called": 260,
+          "directly_courted": 378,
+          "directly_courted_called": 283,
           "directly_courted_referenced": 95,
-          "implemented": 355,
+          "implemented": 378,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -45070,6 +45071,30 @@
             "symbol": "SSL_CONF_cmd_value_type"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_add_client_custom_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_add_custom_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_add_server_custom_ext"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE14-REF"
@@ -45122,9 +45147,11 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-RECORD",
               "RT-SSL-CIPH",
               "RT-SSL-METHODS",
-              "RT-SSL-OBJECT"
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
             ],
             "symbol": "SSL_CTX_free"
           },
@@ -45339,6 +45366,14 @@
             "symbol": "SSL_CTX_get_verify_mode"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_has_client_custom_ext"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE14-REF"
@@ -45372,9 +45407,11 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-RECORD",
               "RT-SSL-CIPH",
               "RT-SSL-METHODS",
-              "RT-SSL-OBJECT"
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
             ],
             "symbol": "SSL_CTX_new"
           },
@@ -45562,6 +45599,14 @@
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_CTX_set_default_passwd_cb_userdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_CTX_set_default_read_buffer_len"
           },
           {
             "basis": "referenced",
@@ -45768,6 +45813,14 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_set_tlsext_max_fragment_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-METHODS"
             ],
             "symbol": "SSL_CTX_set_tlsext_ticket_key_evp_cb"
@@ -45818,6 +45871,14 @@
               "RT-PHASE14-REF"
             ],
             "symbol": "SSL_SESSION_get_master_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_SESSION_get_max_fragment_length"
           },
           {
             "basis": "referenced",
@@ -45872,6 +45933,14 @@
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_certs_clear"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_check_chain"
           },
           {
             "basis": "called",
@@ -46013,9 +46082,19 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_extension_supported"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD",
               "RT-SSL-CIPH",
               "RT-SSL-METHODS",
-              "RT-SSL-OBJECT"
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
             ],
             "symbol": "SSL_free"
           },
@@ -46135,6 +46214,14 @@
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_get0_verified_chain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get1_builtin_sigalgs"
           },
           {
             "basis": "called",
@@ -46402,6 +46489,14 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_peer_signature_type_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_get_privatekey"
@@ -46517,6 +46612,14 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_shared_sigalgs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_get_shutdown"
@@ -46525,9 +46628,33 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_sigalgs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_signature_type_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_get_ssl_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_state"
           },
           {
             "basis": "called",
@@ -46676,6 +46803,22 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_in_before"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_in_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_is_connection"
@@ -46696,6 +46839,14 @@
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_is_dtls"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_is_init_finished"
           },
           {
             "basis": "called",
@@ -46766,9 +46917,11 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-RECORD",
               "RT-SSL-CIPH",
               "RT-SSL-METHODS",
-              "RT-SSL-OBJECT"
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
             ],
             "symbol": "SSL_new"
           },
@@ -46840,6 +46993,14 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_poll"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_read"
@@ -46859,6 +47020,22 @@
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_renegotiate_pending"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_rstate_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_rstate_string_long"
           },
           {
             "basis": "called",
@@ -47047,6 +47224,14 @@
               "RT-PHASE14-REF"
             ],
             "symbol": "SSL_set_default_passwd_cb_userdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_set_default_read_buffer_len"
           },
           {
             "basis": "called",
@@ -47264,6 +47449,14 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_set_tlsext_max_fragment_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_set_trust"
@@ -47415,9 +47608,11 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-RECORD",
               "RT-SSL-CIPH",
               "RT-SSL-METHODS",
-              "RT-SSL-OBJECT"
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
             ],
             "symbol": "TLS_method"
           },
@@ -47505,14 +47700,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 14,
-        "staged_candidate_probes": 4
+        "staged_candidate_probes": 6
       }
     ],
     "totals": {
-      "directly_courted": 6243,
-      "directly_courted_called": 5140,
+      "directly_courted": 6266,
+      "directly_courted_called": 5163,
       "directly_courted_referenced": 1103,
-      "implemented": 6251,
+      "implemented": 6274,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -47523,7 +47718,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "b569b3503e1389a9b8a22de2c911e1179a6791c1545409990d59695fd0110a34"
+      "sha256": "a7534c1c34aa10adb0da3a7c1a29eb7a8a689bc20d51904c5975e65b7dcd764a"
     },
     {
       "name": "symbol-ownership",
@@ -47648,12 +47843,12 @@
     {
       "name": "phase14-obligations",
       "path": "forensics/phase14-obligations.json",
-      "sha256": "3ca4786731a19cf22bcee31c083414bef749965f40147734e8f442bc2f2a77e3"
+      "sha256": "55a9addd2291774ef84bfec3e215c50cff3ea5cf2c44625a3896bc5bc9a7e258"
     },
     {
       "name": "phase14-courts",
       "path": "artifacts/phase14/COURTS.json",
-      "sha256": "d9f5dc98bea1c748843862722c7fe32028fe3cfd3cfcea0117e7b7bf74c20038"
+      "sha256": "48be261c4a5d7ffd85a43cdad1f31d65a2a6dd0d90f20b390d101afd281a5242"
     }
   ],
   "kind": "court-coverage",
