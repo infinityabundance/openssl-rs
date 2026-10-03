@@ -58,14 +58,23 @@ const TIMEOUT_SECS: u64 = 60 * 60 * 2;
 
 /// `ssl3_enc->enc_flags` — `SSL_ENC_FLAG_TLS1_2_CIPHERS` (`ssl_local.h:2195`).
 const SSL_ENC_FLAG_TLS1_2_CIPHERS: c_uint = 0x10;
+/// `ssl3_enc->enc_flags` — `SSL_ENC_FLAG_SIGALGS` (`ssl_local.h:2186`).
+const SSL_ENC_FLAG_SIGALGS: c_uint = 0x2;
 /// `ssl3_enc->enc_flags` — `SSL_ENC_FLAG_DTLS` (`ssl_local.h:2190`).
 const SSL_ENC_FLAG_DTLS: c_uint = 0x8;
 
 /// Build a TLS table row: `timeout_secs` is `tls1_default_timeout`, `dtls` is false.
-const fn tls(version: c_int, flags: c_uint, mask: u64, default_server: bool) -> SslMethod {
-    // `TLSv1_2_enc_data` carries `SSL_ENC_FLAG_TLS1_2_CIPHERS`; the older enc tables do not.
+const fn tls(
+    version: c_int,
+    flags: c_uint,
+    mask: u64,
+    default_server: bool,
+    default_client: bool,
+) -> SslMethod {
+    // `TLSv1_2_enc_data` carries `SSL_ENC_FLAG_SIGALGS | SSL_ENC_FLAG_TLS1_2_CIPHERS`; the older
+    // enc tables (`TLSv1_enc_data`, `TLSv1_1_enc_data`) carry neither.
     let enc_flags = if version == TLS_ANY_VERSION || version == TLS1_2_VERSION {
-        SSL_ENC_FLAG_TLS1_2_CIPHERS
+        SSL_ENC_FLAG_SIGALGS | SSL_ENC_FLAG_TLS1_2_CIPHERS
     } else {
         0
     };
@@ -77,16 +86,24 @@ const fn tls(version: c_int, flags: c_uint, mask: u64, default_server: bool) -> 
         dtls: false,
         enc_flags,
         default_server,
+        default_client,
     }
 }
 
 /// Build a DTLS table row: `timeout_secs` is `dtls1_default_timeout` (`d1_lib.c:56-63`), also two
 /// hours, and `dtls` is true (the `DTLSv1_enc_data`/`DTLSv1_2_enc_data` `SSL_ENC_FLAG_DTLS` bit).
-const fn dtls(version: c_int, flags: c_uint, mask: u64, default_server: bool) -> SslMethod {
-    // `DTLSv1_2_enc_data` adds `SSL_ENC_FLAG_TLS1_2_CIPHERS`; `DTLSv1_enc_data` does not.
+const fn dtls(
+    version: c_int,
+    flags: c_uint,
+    mask: u64,
+    default_server: bool,
+    default_client: bool,
+) -> SslMethod {
+    // `DTLSv1_2_enc_data` adds `SSL_ENC_FLAG_SIGALGS | SSL_ENC_FLAG_TLS1_2_CIPHERS`; `DTLSv1_enc_data`
+    // does not.
     let enc_flags = SSL_ENC_FLAG_DTLS
         | if version == DTLS_ANY_VERSION || version == DTLS1_2_VERSION {
-            SSL_ENC_FLAG_TLS1_2_CIPHERS
+            SSL_ENC_FLAG_SIGALGS | SSL_ENC_FLAG_TLS1_2_CIPHERS
         } else {
             0
         };
@@ -98,6 +115,7 @@ const fn dtls(version: c_int, flags: c_uint, mask: u64, default_server: bool) ->
         dtls: true,
         enc_flags,
         default_server,
+        default_client,
     }
 }
 
@@ -106,11 +124,11 @@ const fn dtls(version: c_int, flags: c_uint, mask: u64, default_server: bool) ->
 // ---------------------------------------------------------------------------------------------
 
 /// `TLS_method`'s static table — `IMPLEMENT_tls_meth_func(TLS_ANY_VERSION, 0, 0, TLS_method, ...)`.
-static TLS_METHOD_DATA: SslMethod = tls(TLS_ANY_VERSION, 0, 0, true);
+static TLS_METHOD_DATA: SslMethod = tls(TLS_ANY_VERSION, 0, 0, true, true);
 /// `TLS_server_method`'s table — `s_accept = ossl_statem_accept`, `s_connect = ssl_undefined_function`.
-static TLS_SERVER_METHOD_DATA: SslMethod = tls(TLS_ANY_VERSION, 0, 0, true);
+static TLS_SERVER_METHOD_DATA: SslMethod = tls(TLS_ANY_VERSION, 0, 0, true, false);
 /// `TLS_client_method`'s table — `s_accept = ssl_undefined_function`.
-static TLS_CLIENT_METHOD_DATA: SslMethod = tls(TLS_ANY_VERSION, 0, 0, false);
+static TLS_CLIENT_METHOD_DATA: SslMethod = tls(TLS_ANY_VERSION, 0, 0, false, true);
 
 /// `const SSL_METHOD *TLS_method(void)` — `ssl/methods.c:19-22`.
 ///
@@ -144,11 +162,13 @@ pub unsafe extern "C" fn TLS_client_method() -> *const SslMethod {
 }
 
 /// `tlsv1_2_method`'s table — `methods.c:28-31` (`TLS1_2_VERSION`, no flags, `SSL_OP_NO_TLSv1_2`).
-static TLSV1_2_METHOD_DATA: SslMethod = tls(TLS1_2_VERSION, 0, SSL_OP_NO_TLSV1_2, true);
+static TLSV1_2_METHOD_DATA: SslMethod = tls(TLS1_2_VERSION, 0, SSL_OP_NO_TLSV1_2, true, true);
 /// `tlsv1_2_server_method`'s table — `methods.c:59-62`.
-static TLSV1_2_SERVER_METHOD_DATA: SslMethod = tls(TLS1_2_VERSION, 0, SSL_OP_NO_TLSV1_2, true);
+static TLSV1_2_SERVER_METHOD_DATA: SslMethod =
+    tls(TLS1_2_VERSION, 0, SSL_OP_NO_TLSV1_2, true, false);
 /// `tlsv1_2_client_method`'s table — `methods.c:92-95`.
-static TLSV1_2_CLIENT_METHOD_DATA: SslMethod = tls(TLS1_2_VERSION, 0, SSL_OP_NO_TLSV1_2, false);
+static TLSV1_2_CLIENT_METHOD_DATA: SslMethod =
+    tls(TLS1_2_VERSION, 0, SSL_OP_NO_TLSV1_2, false, true);
 
 /// `const SSL_METHOD *TLSv1_2_method(void)` — `ssl/methods.c:178-181` (returns `tlsv1_2_method()`).
 ///
@@ -186,6 +206,7 @@ static TLSV1_1_METHOD_DATA: SslMethod = tls(
     SSL_METHOD_NO_SUITEB,
     SSL_OP_NO_TLSV1_1,
     true,
+    true,
 );
 /// `tlsv1_1_server_method`'s table — `methods.c:65-68`.
 static TLSV1_1_SERVER_METHOD_DATA: SslMethod = tls(
@@ -193,6 +214,7 @@ static TLSV1_1_SERVER_METHOD_DATA: SslMethod = tls(
     SSL_METHOD_NO_SUITEB,
     SSL_OP_NO_TLSV1_1,
     true,
+    false,
 );
 /// `tlsv1_1_client_method`'s table — `methods.c:98-101`.
 static TLSV1_1_CLIENT_METHOD_DATA: SslMethod = tls(
@@ -200,6 +222,7 @@ static TLSV1_1_CLIENT_METHOD_DATA: SslMethod = tls(
     SSL_METHOD_NO_SUITEB,
     SSL_OP_NO_TLSV1_1,
     false,
+    true,
 );
 
 /// `const SSL_METHOD *TLSv1_1_method(void)` — `ssl/methods.c:195-198`.
@@ -233,14 +256,29 @@ pub unsafe extern "C" fn TLSv1_1_client_method() -> *const SslMethod {
 }
 
 /// `tlsv1_method`'s table — `methods.c:40-42` (`SSL_METHOD_NO_SUITEB`, `SSL_OP_NO_TLSv1`).
-static TLSV1_METHOD_DATA: SslMethod =
-    tls(TLS1_VERSION, SSL_METHOD_NO_SUITEB, SSL_OP_NO_TLSV1, true);
+static TLSV1_METHOD_DATA: SslMethod = tls(
+    TLS1_VERSION,
+    SSL_METHOD_NO_SUITEB,
+    SSL_OP_NO_TLSV1,
+    true,
+    true,
+);
 /// `tlsv1_server_method`'s table — `methods.c:71-74`.
-static TLSV1_SERVER_METHOD_DATA: SslMethod =
-    tls(TLS1_VERSION, SSL_METHOD_NO_SUITEB, SSL_OP_NO_TLSV1, true);
+static TLSV1_SERVER_METHOD_DATA: SslMethod = tls(
+    TLS1_VERSION,
+    SSL_METHOD_NO_SUITEB,
+    SSL_OP_NO_TLSV1,
+    true,
+    false,
+);
 /// `tlsv1_client_method`'s table — `methods.c:104-107`.
-static TLSV1_CLIENT_METHOD_DATA: SslMethod =
-    tls(TLS1_VERSION, SSL_METHOD_NO_SUITEB, SSL_OP_NO_TLSV1, false);
+static TLSV1_CLIENT_METHOD_DATA: SslMethod = tls(
+    TLS1_VERSION,
+    SSL_METHOD_NO_SUITEB,
+    SSL_OP_NO_TLSV1,
+    false,
+    true,
+);
 
 /// `const SSL_METHOD *TLSv1_method(void)` — `ssl/methods.c:212-215`.
 ///
@@ -278,27 +316,44 @@ pub unsafe extern "C" fn TLSv1_client_method() -> *const SslMethod {
 
 /// `dtlsv1_method`'s table — `methods.c:117-120` (`DTLS1_VERSION`, `SSL_METHOD_NO_SUITEB`,
 /// `SSL_OP_NO_DTLSv1`).
-static DTLSV1_METHOD_DATA: SslMethod =
-    dtls(DTLS1_VERSION, SSL_METHOD_NO_SUITEB, SSL_OP_NO_DTLSV1, true);
+static DTLSV1_METHOD_DATA: SslMethod = dtls(
+    DTLS1_VERSION,
+    SSL_METHOD_NO_SUITEB,
+    SSL_OP_NO_DTLSV1,
+    true,
+    true,
+);
 /// `dtlsv1_server_method`'s table — `methods.c:137-140`.
-static DTLSV1_SERVER_METHOD_DATA: SslMethod =
-    dtls(DTLS1_VERSION, SSL_METHOD_NO_SUITEB, SSL_OP_NO_DTLSV1, true);
+static DTLSV1_SERVER_METHOD_DATA: SslMethod = dtls(
+    DTLS1_VERSION,
+    SSL_METHOD_NO_SUITEB,
+    SSL_OP_NO_DTLSV1,
+    true,
+    false,
+);
 /// `dtlsv1_client_method`'s table — `methods.c:157-160`.
-static DTLSV1_CLIENT_METHOD_DATA: SslMethod =
-    dtls(DTLS1_VERSION, SSL_METHOD_NO_SUITEB, SSL_OP_NO_DTLSV1, false);
+static DTLSV1_CLIENT_METHOD_DATA: SslMethod = dtls(
+    DTLS1_VERSION,
+    SSL_METHOD_NO_SUITEB,
+    SSL_OP_NO_DTLSV1,
+    false,
+    true,
+);
 /// `dtlsv1_2_method`'s table — `methods.c:123-126` (`DTLS1_2_VERSION`, no flags,
 /// `SSL_OP_NO_DTLSv1_2`).
-static DTLSV1_2_METHOD_DATA: SslMethod = dtls(DTLS1_2_VERSION, 0, SSL_OP_NO_DTLSV1_2, true);
+static DTLSV1_2_METHOD_DATA: SslMethod = dtls(DTLS1_2_VERSION, 0, SSL_OP_NO_DTLSV1_2, true, true);
 /// `dtlsv1_2_server_method`'s table — `methods.c:143-146`.
-static DTLSV1_2_SERVER_METHOD_DATA: SslMethod = dtls(DTLS1_2_VERSION, 0, SSL_OP_NO_DTLSV1_2, true);
+static DTLSV1_2_SERVER_METHOD_DATA: SslMethod =
+    dtls(DTLS1_2_VERSION, 0, SSL_OP_NO_DTLSV1_2, true, false);
 /// `dtlsv1_2_client_method`'s table — `methods.c:167-170`.
-static DTLSV1_2_CLIENT_METHOD_DATA: SslMethod = dtls(DTLS1_2_VERSION, 0, SSL_OP_NO_DTLSV1_2, false);
+static DTLSV1_2_CLIENT_METHOD_DATA: SslMethod =
+    dtls(DTLS1_2_VERSION, 0, SSL_OP_NO_DTLSV1_2, false, true);
 /// `DTLS_method`'s table — `methods.c:128-131` (`DTLS_ANY_VERSION`, no flags, no mask).
-static DTLS_METHOD_DATA: SslMethod = dtls(DTLS_ANY_VERSION, 0, 0, true);
+static DTLS_METHOD_DATA: SslMethod = dtls(DTLS_ANY_VERSION, 0, 0, true, true);
 /// `DTLS_server_method`'s table — `methods.c:148-151`.
-static DTLS_SERVER_METHOD_DATA: SslMethod = dtls(DTLS_ANY_VERSION, 0, 0, true);
+static DTLS_SERVER_METHOD_DATA: SslMethod = dtls(DTLS_ANY_VERSION, 0, 0, true, false);
 /// `DTLS_client_method`'s table — `methods.c:172-175`.
-static DTLS_CLIENT_METHOD_DATA: SslMethod = dtls(DTLS_ANY_VERSION, 0, 0, false);
+static DTLS_CLIENT_METHOD_DATA: SslMethod = dtls(DTLS_ANY_VERSION, 0, 0, false, true);
 
 /// `const SSL_METHOD *DTLSv1_method(void)` — `ssl/methods.c:263-266`.
 ///

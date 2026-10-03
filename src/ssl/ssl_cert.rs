@@ -48,7 +48,9 @@ use crate::runtime::stack::{
     OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::ssl::ssl_lib::{SSL_is_quic, Ssl, SslCtx};
+use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
 use crate::x509::x509_cmp::{X509_NAME_cmp, X509_get_subject_name};
+use crate::x509::x509_set::X509_up_ref;
 use crate::x509::x_name::{X509Name, X509_NAME_dup, X509_NAME_free};
 use crate::x509::x_x509::{X509_free, X509};
 
@@ -990,6 +992,123 @@ pub(crate) unsafe fn ssl_security_cert(
         if unsafe { ssl_security_cert_key(s, ctx, x, SSL_SECOP_CA_KEY) } == 0 {
             return SSL_R_CA_KEY_TOO_SMALL;
         }
+    }
+    1
+}
+
+/// The active `CERT_PKEY` of a connection or a context — `s != NULL ? s->cert->key : ctx->cert->key`.
+///
+/// # Safety
+/// Exactly one of `s`/`ctx` must be live.
+unsafe fn chain_active_key(s: *mut Ssl, ctx: *mut SslCtx) -> *mut crate::ssl::ssl_lib::CertKey {
+    let cert = if !s.is_null() {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe { (*s).cert }
+    } else {
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe { (*ctx).cert }
+    };
+    if cert.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `cert` is live; the helper reads its own `key_index`.
+    unsafe { crate::ssl::ssl_lib::cert_active_key(cert) }
+}
+
+/// `int ssl_cert_set0_chain(SSL_CONNECTION *s, SSL_CTX *ctx, STACK_OF(X509) *chain)` —
+/// `ssl/ssl_cert.c:299-318`.
+///
+/// # Safety
+/// Exactly one of `s`/`ctx` must be live; `chain` NULL or a live stack of `X509`.
+pub(crate) unsafe fn ssl_cert_set0_chain(
+    s: *mut Ssl,
+    ctx: *mut SslCtx,
+    chain: *mut OpenSslStack,
+) -> c_int {
+    // SAFETY: the caller's contract makes the chosen container live.
+    let cpk = unsafe { chain_active_key(s, ctx) };
+    if cpk.is_null() {
+        return 0;
+    }
+    // SAFETY: `chain` is NULL or a live stack.
+    let n = if chain.is_null() {
+        0
+    } else {
+        // SAFETY: `chain` is non-NULL and a live stack per the caller's contract.
+        unsafe { OPENSSL_sk_num(chain) }
+    };
+    for i in 0..n {
+        // SAFETY: the index is in range.
+        let x = unsafe { OPENSSL_sk_value(chain, i) }.cast::<X509>();
+        // SAFETY: `s`/`ctx` and `x` live per the contract.
+        let r = unsafe { ssl_security_cert(s, ctx, x, 0) };
+        if r != 1 {
+            // SAFETY: `raise_with` writes only the thread-local error queue.
+            unsafe { raise_with(ERR_LIB_SSL, r, FILE, 311) };
+            return 0;
+        }
+    }
+    // SAFETY: `cpk` is live; `chain` is NULL or a live stack whose ownership transfers.
+    unsafe {
+        OSSL_STACK_OF_X509_free((*cpk).chain);
+        (*cpk).chain = chain;
+    }
+    1
+}
+
+/// `int ssl_cert_add0_chain_cert(SSL_CONNECTION *s, SSL_CTX *ctx, X509 *x)` —
+/// `ssl/ssl_cert.c:336-353`.
+///
+/// # Safety
+/// Exactly one of `s`/`ctx` must be live; `x` a live certificate.
+pub(crate) unsafe fn ssl_cert_add0_chain_cert(
+    s: *mut Ssl,
+    ctx: *mut SslCtx,
+    x: *mut X509,
+) -> c_int {
+    // SAFETY: the caller's contract makes the chosen container live.
+    let cpk = unsafe { chain_active_key(s, ctx) };
+    if cpk.is_null() {
+        return 0;
+    }
+    // SAFETY: `s`/`ctx` and `x` live per the contract.
+    let r = unsafe { ssl_security_cert(s, ctx, x, 0) };
+    if r != 1 {
+        // SAFETY: `raise_with` writes only the thread-local error queue.
+        unsafe { raise_with(ERR_LIB_SSL, r, FILE, 345) };
+        return 0;
+    }
+    // SAFETY: `cpk` is live.
+    unsafe {
+        if (*cpk).chain.is_null() {
+            (*cpk).chain = OPENSSL_sk_new_null();
+        }
+        if (*cpk).chain.is_null() || OPENSSL_sk_push((*cpk).chain, x.cast()) == 0 {
+            return 0;
+        }
+    }
+    1
+}
+
+/// `int ssl_cert_add1_chain_cert(SSL_CONNECTION *s, SSL_CTX *ctx, X509 *x)` —
+/// `ssl/ssl_cert.c:355-364`.
+///
+/// # Safety
+/// Exactly one of `s`/`ctx` must be live; `x` a live certificate.
+pub(crate) unsafe fn ssl_cert_add1_chain_cert(
+    s: *mut Ssl,
+    ctx: *mut SslCtx,
+    x: *mut X509,
+) -> c_int {
+    // SAFETY: `x` is live per the contract.
+    if unsafe { X509_up_ref(x) } == 0 {
+        return 0;
+    }
+    // SAFETY: forwarded per the contract.
+    if unsafe { ssl_cert_add0_chain_cert(s, ctx, x) } == 0 {
+        // SAFETY: `x` is live and this call owns the reference just taken.
+        unsafe { X509_free(x) };
+        return 0;
     }
     1
 }

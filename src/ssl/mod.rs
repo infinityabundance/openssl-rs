@@ -430,6 +430,71 @@
 //! * **`SSL_set1_compressed_cert`/the compression exports answer the `OPENSSL_NO_COMP_ALG`
 //!   refusal.** The admitted build defines it, so every `ssl_cert_comp.c` export answers 0.
 //!
+//! ## 14.9: the TLS extension, SRP and diagnostic glue
+//!
+//! 14.9 lands five units. **`ssl/tls_srp.c`** is `src/ssl/tls_srp.rs` (19 rows): the credential and
+//! callback surface over the authority's `SRP_CTX` block (`ssl_local.h:571-586`), now a field on
+//! both `SslCtx` and `Ssl`; the context setters reproduce `ssl3_ctx_ctrl`/`ssl3_ctx_callback_ctrl`
+//! (`src/ssl/ssl_lib.rs`), and `SSL_new` copies the context block onto the connection as `ssl3_new`
+//! does. **`ssl/ssl_stat.c`** is `src/ssl/ssl_stat.rs` (6 rows): the state and alert string tables in
+//! full. **`ssl/ssl_mcnf.c`** is `src/ssl/ssl_mcnf.rs` (3 rows): `SSL_add_ssl_module`'s no-op and
+//! `ssl_do_config`, wired into `SSL_CTX_new_ex` as `ssl_lib.c:4280` wires `ssl_ctx_system_config`.
+//! **`ssl/tls_depr.c`** is `src/ssl/tls_depr.rs` (3 rows): `SSL_CTX_set_client_cert_engine` and the
+//! deprecated temporary-DH callback setters. **`ssl/t1_trce.c`** is `src/ssl/t1_trce.rs` (1 row):
+//! `SSL_trace`, the whole decoder.
+//!
+//! Its court is `RT-SSL-EXT` (`courts/phase14/rt_ssl_ext_probe.c`), registered in
+//! `forensics/tools/phase14_courts.py`.
+//!
+//! **14.9's measured divergences, recorded rather than hidden.**
+//!
+//! * **The candidate's libssl carries its own copy of the `ssl_conf` store.** The whole-archive
+//!   link duplicates the crate's globals across `libssl.so.3` and `libcrypto.so.3` (the same
+//!   duplication the error-state note above records), so a command set loaded through libcrypto's
+//!   `CONF_modules_load_file` is not visible to libssl's `SSL_CTX_config`. The authority's libssl
+//!   imports `conf_ssl_name_find`/`conf_ssl_get`/`conf_ssl_get_cmd` from libcrypto; the candidate
+//!   binds its own local copies. `RT-SSL-EXT` therefore compares `SSL_CTX_config`'s refusal arms,
+//!   which read the same (empty) store on both sides, and names the success arm `pending`.
+//! * **`SSL_trace`'s key-exchange arm answers `UNKNOWN`.** `ssl_get_keyex` reads
+//!   `sc->s3.tmp.new_cipher`, which is NULL before a handshake; the authority would fault, so the
+//!   court never hands `SSL_trace` a `ClientKeyExchange`/`ServerKeyExchange`, and the transcribed
+//!   helper answers `UNKNOWN`/0 for the states this crate reaches. No arm of `RT-SSL-EXT` drives it.
+//! * **`SSL_get_current_compression`/`SSL_get_current_expansion` answer NULL.** The authority asks
+//!   the record layer's compression callback; this crate models no record method, and the
+//!   authority's own default record method answers NULL for a connection with no negotiated
+//!   compression.
+//!
+//! ## 14.1's remainder: what its landed dependencies unblock, and what still waits
+//!
+//! After 14.3/14.4/14.5/14.7 landed, eighteen more `ssl_lib.c` rows close: `SSL_CTX_sessions`,
+//! `SSL_CTX_set_ssl_version`, `SSL_copy_session_id`, `SSL_has_matching_session_id`,
+//! `SSL_get_client_ciphers`, `SSL_get_current_cipher`, `SSL_get_pending_cipher`,
+//! `SSL_get_current_compression`, `SSL_get_current_expansion`, `SSL_get_shared_ciphers`,
+//! `SSL_get0_peer_rpk`, `SSL_set0_tmp_dh_pkey`, `SSL_CTX_set0_tmp_dh_pkey`,
+//! `SSL_CTX_set_default_verify_dir`/`_file`/`_store`, and the public `SSL_set_accept_state`/
+//! `SSL_set_connect_state` over the internal helpers 14.6/14.8 already share. The chain-certificate
+//! controls `SSL_CTX_clear_chain_certs`/`SSL_CTX_add0_chain_cert` (macros over `SSL_CTRL_CHAIN`/
+//! `SSL_CTRL_CHAIN_CERT`) land as `ssl3_ctx_ctrl` arms over the `ssl_cert_set0_chain`/
+//! `ssl_cert_add0_chain_cert`/`ssl_cert_add1_chain_cert` helpers added to `src/ssl/ssl_cert.rs`,
+//! which lets `use_certificate_chain_file` read the trailing CA certificates as `ssl_rsa.c:546-573`
+//! does.
+//!
+//! The rows that stay open are blocked by internals this stratum has not landed, not by a later
+//! phase: the thirteen handshake entry points (`SSL_accept`, `SSL_connect`, `SSL_key_update`,
+//! `SSL_renegotiate`/`_abbreviated`, `SSL_new_session_ticket`, `SSL_read_early_data`,
+//! `SSL_write_early_data`, `SSL_export_keying_material`/`_early`, `SSL_sendfile`, `SSL_stateless`,
+//! `SSL_verify_client_post_handshake`) need the state machine and record layer's *engine* —
+//! `ssl/statem/statem.c` and `rec_layer_s3.c` landed their readers and framing surfaces, not a
+//! runnable handshake — so calling one would start a handshake no arm can complete;
+//! `SSL_bytes_to_cipher_list` and `SSL_get1_supported_ciphers` need `ssl_set_client_disabled`/
+//! `SSL_cipher_disabled` (`t1_lib.c:2848`/`:2882`), whose `s3.tmp.mask_a`/`mask_k`/`min_ver`/
+//! `max_ver` block this crate does not model (14.5's unit); `SSL_dup` and `SSL_set_SSL_CTX` need
+//! `ssl_cert_dup` plus `custom_exts_copy_conn`/`custom_exts_copy_flags` (14.7's `ssl_cert.c`); and
+//! the twelve DANE/RPK rows (`SSL_[CTX_]dane_*`, `SSL_get0_dane*`, `SSL_add_expected_rpk`) need
+//! `SSL_set_tlsext_host_name`'s `SSL_ctrl` command (`SSL_CTRL_SET_TLSEXT_HOSTNAME`, unlanded) and the
+//! certificate/public-key decode-and-insert path of `ssl_lib.c:264-443`. Each waits on its named
+//! helper rather than an invented body.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod bio_ssl;
@@ -449,9 +514,14 @@ pub mod ssl_conf;
 pub mod ssl_err_legacy;
 pub mod ssl_init;
 pub mod ssl_lib;
+pub mod ssl_mcnf;
 pub mod ssl_rsa;
 pub mod ssl_rsa_legacy;
 pub mod ssl_sess;
+pub mod ssl_stat;
 pub mod ssl_txt;
 pub mod statem;
 pub mod t1_lib;
+pub mod t1_trce;
+pub mod tls_depr;
+pub mod tls_srp;

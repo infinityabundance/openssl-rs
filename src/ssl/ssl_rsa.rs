@@ -16,10 +16,10 @@
 //!   `Cert`'s `sec_cb`; this crate's `ssl_security_default_callback` (`src/ssl/ssl_lib.rs`) answers
 //!   1 for every operation (14.1's recorded reduction), so a weak-key rejection the authority would
 //!   raise is accepted. The court's fixtures are strong keys, where both sides answer 1.
-//! * **`use_certificate_chain_file` installs the leaf and skips the chain walk.**
-//!   `SSL_CTX_clear_chain_certs`/`SSL_CTX_add0_chain_cert` are still open `ssl_lib.c` rows, so the
-//!   loop that reads the trailing CA certificates (`ssl_rsa.c:546-573`) is not transcribed. The
-//!   court does not drive this loader (it opens a file), so the reachable difference is unobserved.
+//! * **`use_certificate_chain_file` reads the trailing CA certificates.** The leaf install and the
+//!   loop that reads the following `PEM_read_bio_X509` certificates (`ssl_rsa.c:546-573`) are the
+//!   authority's; the chain installs through `ssl_cert_set0_chain`/`ssl_cert_add0_chain_cert`
+//!   (`ssl_cert.c`), the helpers behind `SSL_CTX_clear_chain_certs`/`SSL_CTX_add0_chain_cert`.
 //! * **The serverinfo add callback reports no serverinfo data.** The authority's
 //!   `serverinfoex_srv_add_cb` reads `ssl_get_server_cert_serverinfo` (`ssl_rsa.c:680`), a helper
 //!   that is not in this crate; with no handshake the callback is never invoked, and the reduced
@@ -66,6 +66,8 @@ use crate::x509::x_x509::{d2i_X509, X509_free, X509_new_ex, X509};
 const FILE: *const c_char = c"ssl/ssl_rsa.c".as_ptr();
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
+/// `ERR_LIB_PEM` — `err.h:81`.
+const ERR_LIB_PEM: core::ffi::c_ulong = 9;
 /// `ERR_RFLAG_COMMON` — `err.h:239`.
 const ERR_RFLAG_COMMON: c_int = 2 << 18;
 /// `ERR_RFLAG_FATAL` — `err.h:238`.
@@ -747,8 +749,80 @@ unsafe fn use_certificate_chain_file(
     if ERR_peek_error() != 0 {
         ret = 0;
     }
-    // The trailing CA-certificate walk (`ssl_rsa.c:546-573`) needs
-    // `SSL_CTX_clear_chain_certs`/`SSL_CTX_add0_chain_cert`, still-open `ssl_lib.c` rows.
+    if ret != 0 {
+        // `SSL_CTX_clear_chain_certs`/`SSL_clear_chain_certs` (`ssl_rsa.c:536-544`): the
+        // `SSL_CTRL_CHAIN` control with a NULL stack.
+        // SAFETY: exactly one of `ctx`/`ssl` is non-NULL and live.
+        let r = unsafe {
+            if !ctx.is_null() {
+                crate::ssl::ssl_cert::ssl_cert_set0_chain(ptr::null_mut(), ctx, ptr::null_mut())
+            } else {
+                crate::ssl::ssl_cert::ssl_cert_set0_chain(ssl, ptr::null_mut(), ptr::null_mut())
+            }
+        };
+        if r == 0 {
+            ret = 0;
+            // SAFETY: both owned here.
+            unsafe {
+                X509_free(x);
+                BIO_free(in_);
+            }
+            return ret;
+        }
+        loop {
+            // SAFETY: `real_ctx` is live.
+            let mut ca = unsafe { X509_new_ex((*real_ctx).libctx, (*real_ctx).propq) };
+            if ca.is_null() {
+                raise_ssl(ERR_R_ASN1_LIB, 549);
+                ret = 0;
+                // SAFETY: both owned here.
+                unsafe {
+                    X509_free(x);
+                    BIO_free(in_);
+                }
+                return ret;
+            }
+            // SAFETY: `in_` is a live readable BIO; `ca` is live.
+            let read = unsafe { PEM_read_bio_X509(in_, &mut ca, None, ptr::null_mut()) };
+            if !read.is_null() {
+                // SAFETY: exactly one of `ctx`/`ssl` is non-NULL and live; `ca` is live.
+                let r = unsafe {
+                    if !ctx.is_null() {
+                        crate::ssl::ssl_cert::ssl_cert_add0_chain_cert(ptr::null_mut(), ctx, ca)
+                    } else {
+                        crate::ssl::ssl_cert::ssl_cert_add0_chain_cert(ssl, ptr::null_mut(), ca)
+                    }
+                };
+                if r == 0 {
+                    // SAFETY: `ca` was not added, so this call owns it.
+                    unsafe { X509_free(ca) };
+                    ret = 0;
+                    // SAFETY: both owned here.
+                    unsafe {
+                        X509_free(x);
+                        BIO_free(in_);
+                    }
+                    return ret;
+                }
+            } else {
+                // SAFETY: `ca` is live and this call owns it.
+                unsafe { X509_free(ca) };
+                break;
+            }
+        }
+        // The loop usually ends at EOF with the PEM reader's `PEM_R_NO_START_LINE`; any other
+        // error is real.
+        let lib = crate::runtime::err::peek_last_lib();
+        let reason = crate::runtime::err::peek_last_reason();
+        if lib == ERR_LIB_PEM
+            && reason == crate::runtime::err::err_reasons::PEM_R_NO_START_LINE as core::ffi::c_ulong
+        {
+            // SAFETY: thread-local error state.
+            ERR_clear_error();
+        } else {
+            ret = 0;
+        }
+    }
     // SAFETY: both owned here.
     unsafe {
         X509_free(x);

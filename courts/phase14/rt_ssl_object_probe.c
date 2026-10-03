@@ -569,6 +569,51 @@ int main(void)
     }
 
     /* ----------------------------------------------------------------------------------------
+     * N. The 14.1 remainder: the rows 14.3/14.4/14.5/14.7 unblock.
+     *
+     * Every arm is a fixed input and a small-integer / pointer-identity answer. The chain-cert
+     * add (`SSL_CTX_add0_chain_cert`) is not driven: the authority's security callback inspects the
+     * certificate's key, so an empty certificate is refused there while the candidate's recorded
+     * default callback accepts it; the clear arm (`SSL_CTX_clear_chain_certs`) runs no security
+     * check and is driven. `SSL_CTX_set0_tmp_dh_pkey` is likewise not driven for want of a key
+     * whose security bits both sides agree on.
+     * -------------------------------------------------------------------------------------- */
+    out_int("ctx.sessions.nonnull", SSL_CTX_sessions(ctx) != NULL);
+    out_int("has_matching_session_id",
+            SSL_has_matching_session_id(ssl, (const unsigned char *)"abcd", 4));
+    out_int("client_ciphers.null", SSL_get_client_ciphers(ssl) == NULL);
+    out_int("current_cipher.null", SSL_get_current_cipher(ssl) == NULL);
+    out_int("pending_cipher.null", SSL_get_pending_cipher(ssl) == NULL);
+    out_int("current_compression.null", SSL_get_current_compression(ssl) == NULL);
+    out_int("current_expansion.null", SSL_get_current_expansion(ssl) == NULL);
+    out_int("peer_rpk.null", SSL_get0_peer_rpk(ssl) == NULL);
+    {
+        char sbuf[16];
+        char *r = SSL_get_shared_ciphers(ssl, sbuf, sizeof sbuf);
+        out_int("shared_ciphers.nonnull", r != NULL);
+        out_int("shared_ciphers.empty", sbuf[0] == '\0');
+    }
+    out_int("default_verify_dir", SSL_CTX_set_default_verify_dir(ctx));
+    out_int("default_verify_file", SSL_CTX_set_default_verify_file(ctx));
+    out_int("default_verify_store", SSL_CTX_set_default_verify_store(ctx));
+    out_int("clear_chain_certs", SSL_CTX_clear_chain_certs(ctx));
+    out_int("set_ssl_version", SSL_CTX_set_ssl_version(ctx, TLSv1_2_method()));
+    out_int("set_ssl_version.identity", SSL_CTX_get_ssl_method(ctx) == TLSv1_2_method());
+    /* the public role setters over the internal helpers */
+    SSL_set_accept_state(ssl);
+    out_int("set_accept_state.server", SSL_is_server(ssl));
+    SSL_set_connect_state(ssl);
+    out_int("set_connect_state.server", SSL_is_server(ssl));
+    /* copy_session_id over two fresh connections of the same method */
+    {
+        SSL *t2 = SSL_new(ctx);
+        SSL *f2 = SSL_new(ctx);
+        out_int("copy_session_id.two_fresh", SSL_copy_session_id(t2, f2));
+        SSL_free(t2);
+        SSL_free(f2);
+    }
+
+    /* ----------------------------------------------------------------------------------------
      * L. The refcount effect on free.
      * -------------------------------------------------------------------------------------- */
     out_int("ssl.up_ref", SSL_up_ref(ssl));
