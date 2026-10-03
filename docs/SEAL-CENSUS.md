@@ -398,7 +398,7 @@ Courts: `all pass`, 9 court(s), **2638** authority observation(s) over 9 transcr
 ## Phase 12 — CMS / OCSP / CMP / CT / TS and remaining libcrypto families
 
 * state: `complete`
-* seal: none written yet (`unnamed`)
+* seal: `docs/PHASE-12-PROTOCOL-FAMILIES-SEAL.md`
 * ledger: `forensics/phase12-obligations.json`
 * atlas-owned: 1024
 * owned working set: 1033

@@ -127,7 +127,7 @@ and CT name is an `libcrypto` export reached through a caller, not a dispatch-ta
 | 12.7 | **CRMF and ESS** | `crmf_asn.c` (50), `crmf_lib.c` (40), `crmf_pbm.c` (2), `ess_asn1.c` (27), `ess_lib.c` (3): the `OSSL_CRMF_*` certificate-request item groups, controls and accessors, and the `ESS_SIGNING_CERT`/`ESS_CERT_ID` item groups CMP and CMS both reach. **122 open rows over 5 units** — the whole of `crmf.h`'s open 92 and `ess.h`'s open 30. | 12.4 | `RT-CRMF`; `RT-ESS` |
 | 12.8 | **SRP** | `srp_vfy.c` (15), `srp_lib.c` (14): the SRP verifier database (`SRP_VBASE_*`), the `SRP_user_pwd_*` record and the `SRP_Calc_*`/`SRP_create_verifier_*` calculation surface. **29 open rows over 2 units** — the whole of `srp.h`'s open 29. | 12.0 | `RT-SRP` |
 | 12.9 | **The CT remainder, the shared dispatch and the hand-offs** | `ct_log.c` (1: `CTLOG_STORE_load_default_file`), the shared `x_all.c` dispatch (5: `PKCS7_ISSUER_AND_SERIAL_digest`, `d2i_PKCS7_bio`/`_fp`, `i2d_PKCS7_bio`/`_fp`) and the 9 hand-offs (`asn_mime.c` 5, `asn1_item_list.c` 2, `x_all.c` 2). **15 open rows over 6 units.** The units are the ones whose closure crosses into the strata above; each is "to be measured at its slice", as §2 of `docs/PHASE-10-SUBPHASES.md` measured its own remainder. | 12.1–12.8 | `RT-CMS-REMAINDER` |
-| 12.10 | **The seal** | nothing in the crate — evidence: `docs/PHASE-12-CMS-SEAL.md` | 12.0–12.9 | — |
+| 12.10 | **The seal** | nothing in the crate — evidence: `docs/PHASE-12-PROTOCOL-FAMILIES-SEAL.md` | 12.0–12.9 | — |
 
 The nine rows above the seal partition the 884 open exports exactly, by defining unit: 23 + 103 +
 153 + 161 + 184 + 94 + 122 + 29 + 15 = 884 (the activation partition, which moves as subphases
