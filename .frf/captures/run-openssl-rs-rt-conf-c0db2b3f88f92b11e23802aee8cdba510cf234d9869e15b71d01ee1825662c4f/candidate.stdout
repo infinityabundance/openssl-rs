@@ -1,0 +1,739 @@
+transcript.sha256=7663d34401d740bf8e48129b7c351df162bf37e4478a03ab7e8062c482ca6c59
+methods.default.nonnull=1
+methods.win32.nonnull=1
+methods.distinct=1
+methods.default.stable=1
+methods.default.name=[OpenSSL default]
+methods.win32.name=[WIN32]
+methods.default.hooks=1
+methods.win32.hooks=1
+methods.same.create=1
+methods.same.load=1
+methods.same.dump=1
+methods.same.is_number=1
+methods.same.to_int=1
+methods.same.init=0
+fresh.new.nonnull=1
+fresh.libctx.null=1
+fresh.libctx.from_new_ex=1
+fresh.section.null=1
+fresh.get_string.null=1
+fresh.get_string.null_group=1
+fresh.get_string.null_name=1
+fresh.get_number_e.absent=0
+fresh.get_number_e.absent_out=-1
+fresh.get_number_e.null_result=0
+fresh.names.nonnull=1
+fresh.names.count=0
+fresh.null.load_bio=0
+fresh.null.load=0
+fresh.null.get_section=1
+fresh.null.dump_bio=0
+fresh.null.get_number_e=0
+fresh.empty.load_bio=1
+fresh.empty.line=-1
+fresh.empty.section_exists=1
+fresh.empty.names.count=1
+fresh.dump.ret=1
+fresh.dump.text=[[[default]]|]
+fresh.err.0=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=nope name=nope|3]
+fresh.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group= name=nope|3]
+fresh.err.2=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=g name=<NULL>|3]
+fresh.err.3=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group= name=nope|3]
+fresh.err.4=[70C0102|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|340|NCONF_get_number_e||0]
+fresh.err.5=[7000069|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|279|NCONF_load_bio||0]
+fresh.err.6=[7000069|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|254|NCONF_load||0]
+fresh.err.7=[7000069|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|289|NCONF_get_section||0]
+fresh.err.8=[7000069|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|399|NCONF_dump_bio||0]
+fresh.err.9=[700006A|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|313|NCONF_get_string||0]
+fresh.err.count=10
+fresh.err.drained=1
+fresh.free_data.load=1
+fresh.free_data.lookup_before=1
+fresh.free_data.survived=1
+fresh.free.null_is_safe=1
+basic.ret=1
+basic.eline=-1
+basic.lookup=[value]
+basic.dump.ret=1
+basic.dump.text=[[default] name=value|[[default]]|]
+basic.err.count=0
+basic.err.drained=1
+comments.ret=0
+comments.eline=3
+comments.lookup=[<NULL>]
+comments.dump.ret=1
+comments.dump.text=[]
+comments.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE-->semicolon lineline 3|3]
+comments.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=key|3]
+comments.err.count=2
+comments.err.drained=1
+comments.semicolon_hash.ret=0
+comments.semicolon_hash.eline=1
+comments.semicolon_hash.lookup=[<NULL>]
+comments.semicolon_hash.dump.ret=1
+comments.semicolon_hash.dump.text=[]
+comments.semicolon_hash.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE-->semicolon lineline 1|3]
+comments.semicolon_hash.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=; semicolon line|3]
+comments.semicolon_hash.err.count=2
+comments.semicolon_hash.err.drained=1
+quotes.ret=1
+quotes.eline=-1
+quotes.lookup=[gh]
+quotes.dump.ret=1
+quotes.dump.text=[[default] q6=k'l|[default] q5=i"j|[default] q3=e'f|[default] q4=gh|[default] q7=premidpost|[default] q1=a b|[[default]]|[default] q2=c d|[default] q8=a#b|]
+quotes.err.count=0
+quotes.err.drained=1
+escapes.ret=1
+escapes.eline=-1
+escapes.lookup=[a^b]
+escapes.dump.ret=1
+escapes.dump.text=[[default] e4=a\x09b|[default] e1=a^b|[default] e2=a|b|[default] e6=aqb|[default] e5=a\b|[default] e7=xqy|[default] e3=a\x08b|[[default]]|]
+escapes.err.count=0
+escapes.err.drained=1
+continuation.ret=1
+continuation.eline=-1
+continuation.lookup=[one  two]
+continuation.dump.ret=1
+continuation.dump.text=[[default] c1=one  two|[default] c2=x\|[default] c3=a     b|[[default]]|]
+continuation.err.count=0
+continuation.err.drained=1
+bom.ret=1
+bom.eline=-1
+bom.lookup=[bom]
+bom.dump.ret=1
+bom.dump.text=[[[default]]|[default] key=bom|]
+bom.err.count=0
+bom.err.drained=1
+bom.key.ret=1
+bom.key.eline=-1
+bom.key.lookup=[v]
+bom.key.dump.ret=1
+bom.key.dump.text=[[default] k=v|[[default]]|]
+bom.key.err.count=0
+bom.key.err.drained=1
+sections.ret=1
+sections.eline=-1
+sections.lookup=[3]
+sections.dump.ret=1
+sections.dump.text=[[s2] b=2|[[default]]|[[s1]]|[s1] a=1|[[s2]]|[s1] c=3|]
+sections.err.count=0
+sections.err.drained=1
+badsection.ret=0
+badsection.eline=1
+badsection.lookup=[<NULL>]
+badsection.dump.ret=1
+badsection.dump.text=[]
+badsection.err.0=[7000064|../../src/openssl-3.6.4/crypto/conf/conf_def.c|366|def_load_bio|line 1|3]
+badsection.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=key|3]
+badsection.err.count=2
+badsection.err.drained=1
+spacesection.ret=1
+spacesection.eline=-1
+spacesection.lookup=[v]
+spacesection.dump.ret=1
+spacesection.dump.text=[[name with space] k=v|[[name with space]]|[[default]]|]
+spacesection.err.count=0
+spacesection.err.drained=1
+qualified.ret=1
+qualified.eline=-1
+qualified.lookup=[val]
+qualified.dump.ret=1
+qualified.dump.text=[[other] k2=v2|[[s]]|[[default]]|[[sec]]|[sec] key=val|[[other]]|]
+qualified.err.count=0
+qualified.err.drained=1
+qualified.in_section.ret=1
+qualified.in_section.eline=-1
+qualified.in_section.lookup=[v2]
+qualified.in_section.dump.ret=1
+qualified.in_section.dump.text=[[other] k2=v2|[[s]]|[[default]]|[[sec]]|[sec] key=val|[[other]]|]
+qualified.in_section.err.count=0
+qualified.in_section.err.drained=1
+emptyvalue.ret=1
+emptyvalue.eline=-1
+emptyvalue.lookup=[]
+emptyvalue.dump.ret=1
+emptyvalue.dump.text=[[default] k2=|[default] k=|[[default]]|[default] k3=x|]
+emptyvalue.err.count=0
+emptyvalue.err.drained=1
+nokey.ret=1
+nokey.eline=-1
+nokey.lookup=[<NULL>]
+nokey.dump.ret=1
+nokey.dump.text=[[[default]]|[default] =value|]
+nokey.err.0=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=value|3]
+nokey.err.count=1
+nokey.err.drained=1
+duplicate.ret=1
+duplicate.eline=-1
+duplicate.lookup=[2]
+duplicate.dump.ret=1
+duplicate.dump.text=[[default] k=2|[[default]]|]
+duplicate.err.count=0
+duplicate.err.drained=1
+nonascii.ret=0
+nonascii.eline=1
+nonascii.lookup=[<NULL>]
+nonascii.dump.ret=1
+nonascii.dump.text=[]
+nonascii.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE-->\xc3\xa9 = vline 1|3]
+nonascii.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=ok|3]
+nonascii.err.count=2
+nonascii.err.drained=1
+blanklines.ret=1
+blanklines.eline=-1
+blanklines.lookup=[v]
+blanklines.dump.ret=1
+blanklines.dump.text=[[default] k=v|[[default]]|]
+blanklines.err.count=0
+blanklines.err.drained=1
+crlf.ret=1
+crlf.eline=-1
+crlf.lookup=[v]
+crlf.dump.ret=1
+crlf.dump.text=[[default] k2=v2|[default] k=v|[[default]]|]
+crlf.err.count=0
+crlf.err.drained=1
+noeol.ret=1
+noeol.eline=-1
+noeol.lookup=[v]
+noeol.dump.ret=1
+noeol.dump.text=[[default] k=v|[[default]]|]
+noeol.err.count=0
+noeol.err.drained=1
+tabkey.ret=1
+tabkey.eline=-1
+tabkey.lookup=[v]
+tabkey.dump.ret=1
+tabkey.dump.text=[[default] k=v|[[default]]|]
+tabkey.err.count=0
+tabkey.err.drained=1
+colonname.ret=0
+colonname.eline=1
+colonname.lookup=[<NULL>]
+colonname.dump.ret=1
+colonname.dump.text=[]
+colonname.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE-->:b = vline 1|3]
+colonname.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=a:b|3]
+colonname.err.count=2
+colonname.err.drained=1
+quotedkey.ret=0
+quotedkey.eline=1
+quotedkey.lookup=[<NULL>]
+quotedkey.dump.ret=1
+quotedkey.dump.text=[]
+quotedkey.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE-->'k' = vline 1|3]
+quotedkey.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=k|3]
+quotedkey.err.count=2
+quotedkey.err.drained=1
+dotkey.ret=1
+dotkey.eline=-1
+dotkey.lookup=[v]
+dotkey.dump.ret=1
+dotkey.dump.text=[[default] .key=v|[[default]]|]
+dotkey.err.count=0
+dotkey.err.drained=1
+bracketkey.ret=1
+bracketkey.eline=-1
+bracketkey.lookup=[<NULL>]
+bracketkey.dump.ret=1
+bracketkey.dump.text=[[[default]]|[[a]]|]
+bracketkey.err.0=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=a name=a|3]
+bracketkey.err.count=1
+bracketkey.err.drained=1
+longline.ret=1
+longline.eline=-1
+longline.lookup=[1]
+longline.dump.ret=1
+longline.dump.text=[[default] after=1|[default] k=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx|[[default]]|]
+longline.err.count=0
+longline.err.drained=1
+err.missing_equals.ret=0
+err.missing_equals.eline=2
+err.missing_equals.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE-->line has no equalsline 2|3]
+err.missing_equals.err.count=1
+err.missing_equals.err.drained=1
+err.missing_equals.section.after_failure=0
+err.missing_equals.late.ret=0
+err.missing_equals.late.eline=3
+err.missing_equals.late.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE-->hereline 3|3]
+err.missing_equals.late.err.count=1
+err.missing_equals.late.err.drained=1
+err.missing_equals.late.section.after_failure=0
+err.open_bracket.ret=0
+err.open_bracket.eline=1
+err.open_bracket.err.0=[7000064|../../src/openssl-3.6.4/crypto/conf/conf_def.c|366|def_load_bio|line 1|3]
+err.open_bracket.err.count=1
+err.open_bracket.err.drained=1
+err.open_bracket.section.after_failure=0
+err.open_bracket.tight.ret=0
+err.open_bracket.tight.eline=1
+err.open_bracket.tight.err.0=[7000064|../../src/openssl-3.6.4/crypto/conf/conf_def.c|366|def_load_bio|line 1|3]
+err.open_bracket.tight.err.count=1
+err.open_bracket.tight.err.drained=1
+err.open_bracket.tight.section.after_failure=0
+err.bad_pragma.ret=0
+err.bad_pragma.eline=1
+err.bad_pragma.err.0=[700007A|../../src/openssl-3.6.4/crypto/conf/conf_def.c|201|parsebool|line 1|3]
+err.bad_pragma.err.count=1
+err.bad_pragma.err.drained=1
+err.bad_pragma.section.after_failure=0
+err.pragma_no_colon.ret=0
+err.pragma_no_colon.eline=1
+err.pragma_no_colon.err.0=[700007A|../../src/openssl-3.6.4/crypto/conf/conf_def.c|405|def_load_bio|line 1|3]
+err.pragma_no_colon.err.count=1
+err.pragma_no_colon.err.drained=1
+err.pragma_no_colon.section.after_failure=0
+err.pragma_empty_value.ret=0
+err.pragma_empty_value.eline=1
+err.pragma_empty_value.err.0=[700007A|../../src/openssl-3.6.4/crypto/conf/conf_def.c|405|def_load_bio|line 1|3]
+err.pragma_empty_value.err.count=1
+err.pragma_empty_value.err.drained=1
+err.pragma_empty_value.section.after_failure=0
+err.pragma_empty_name.ret=0
+err.pragma_empty_name.eline=1
+err.pragma_empty_name.err.0=[700007A|../../src/openssl-3.6.4/crypto/conf/conf_def.c|405|def_load_bio|line 1|3]
+err.pragma_empty_name.err.count=1
+err.pragma_empty_name.err.drained=1
+err.pragma_empty_name.section.after_failure=0
+err.var_missing.ret=0
+err.var_missing.eline=1
+err.var_missing.err.0=[7000068|../../src/openssl-3.6.4/crypto/conf/conf_def.c|757|str_copy|line 1|3]
+err.var_missing.err.count=1
+err.var_missing.err.drained=1
+err.var_missing.section.after_failure=0
+err.var_missing.braced.ret=0
+err.var_missing.braced.eline=1
+err.var_missing.braced.err.0=[7000068|../../src/openssl-3.6.4/crypto/conf/conf_def.c|757|str_copy|line 1|3]
+err.var_missing.braced.err.count=1
+err.var_missing.braced.err.drained=1
+err.var_missing.braced.section.after_failure=0
+err.var_unclosed.ret=0
+err.var_unclosed.eline=1
+err.var_unclosed.err.0=[7000066|../../src/openssl-3.6.4/crypto/conf/conf_def.c|737|str_copy|line 1|3]
+err.var_unclosed.err.count=1
+err.var_unclosed.err.drained=1
+err.var_unclosed.section.after_failure=0
+err.var_unclosed.paren.ret=0
+err.var_unclosed.paren.eline=1
+err.var_unclosed.paren.err.0=[7000066|../../src/openssl-3.6.4/crypto/conf/conf_def.c|737|str_copy|line 1|3]
+err.var_unclosed.paren.err.count=1
+err.var_unclosed.paren.err.drained=1
+err.var_unclosed.paren.section.after_failure=0
+err.include_missing.ret=1
+err.include_missing.eline=-1
+err.include_missing.err.0=[80000002|../../src/openssl-3.6.4/crypto/conf/conf_def.c|806|process_include|calling stat(/tmp/openssl-rs-rtconf/nosuchfile.cnf)|3]
+err.include_missing.err.count=1
+err.include_missing.err.drained=1
+err.include_missing.section.after_failure=1
+err.include_recursive.ret=1
+err.include_recursive.eline=-1
+err.include_recursive.err.0=[700006F|../../src/openssl-3.6.4/crypto/conf/conf_def.c|813|process_include|/tmp/openssl-rs-rtconf/rec|3]
+err.include_recursive.err.count=1
+err.include_recursive.err.drained=1
+err.include_recursive.section.after_failure=1
+err.relative_abspath.ret=0
+err.relative_abspath.eline=2
+err.relative_abspath.err.0=[700007D|../../src/openssl-3.6.4/crypto/conf/conf_def.c|488|def_load_bio|line 2|3]
+err.relative_abspath.err.count=1
+err.relative_abspath.err.drained=1
+err.relative_abspath.section.after_failure=0
+pragma.unknown.ret=1
+pragma.unknown.eline=-1
+pragma.unknown.lookup=[v]
+pragma.unknown.dump.ret=1
+pragma.unknown.dump.text=[[default] k=v|[[default]]|]
+pragma.unknown.err.count=0
+pragma.unknown.err.drained=1
+pragma.dollarid_off.ret=0
+pragma.dollarid_off.eline=1
+pragma.dollarid_off.lookup=[<NULL>]
+pragma.dollarid_off.dump.ret=1
+pragma.dollarid_off.dump.text=[]
+pragma.dollarid_off.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE-->$foo = barline 1|3]
+pragma.dollarid_off.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=$foo|3]
+pragma.dollarid_off.err.count=2
+pragma.dollarid_off.err.drained=1
+pragma.dollarid_on.ret=1
+pragma.dollarid_on.eline=-1
+pragma.dollarid_on.lookup=[bar]
+pragma.dollarid_on.dump.ret=1
+pragma.dollarid_on.dump.text=[[default] k=$foo|[[default]]|[default] $foo=bar|]
+pragma.dollarid_on.err.count=0
+pragma.dollarid_on.err.drained=1
+pragma.dollarid_on.expand.ret=0
+pragma.dollarid_on.expand.eline=3
+pragma.dollarid_on.expand.lookup=[<NULL>]
+pragma.dollarid_on.expand.dump.ret=1
+pragma.dollarid_on.expand.dump.text=[]
+pragma.dollarid_on.expand.err.0=[7000068|../../src/openssl-3.6.4/crypto/conf/conf_def.c|757|str_copy|line 3|3]
+pragma.dollarid_on.expand.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=k|3]
+pragma.dollarid_on.expand.err.count=2
+pragma.dollarid_on.expand.err.drained=1
+pragma.dollarid_eq_form.ret=0
+pragma.dollarid_eq_form.eline=3
+pragma.dollarid_eq_form.lookup=[<NULL>]
+pragma.dollarid_eq_form.dump.ret=1
+pragma.dollarid_eq_form.dump.text=[]
+pragma.dollarid_eq_form.err.0=[7000068|../../src/openssl-3.6.4/crypto/conf/conf_def.c|757|str_copy|line 3|3]
+pragma.dollarid_eq_form.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=k|3]
+pragma.dollarid_eq_form.err.count=2
+pragma.dollarid_eq_form.err.drained=1
+pragma.dollarid_off_again.ret=0
+pragma.dollarid_off_again.eline=3
+pragma.dollarid_off_again.lookup=[<NULL>]
+pragma.dollarid_off_again.dump.ret=1
+pragma.dollarid_off_again.dump.text=[]
+pragma.dollarid_off_again.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE-->$foo = barline 3|3]
+pragma.dollarid_off_again.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=$foo|3]
+pragma.dollarid_off_again.err.count=2
+pragma.dollarid_off_again.err.drained=1
+pragma.abspath_absolute.ret=1
+pragma.abspath_absolute.eline=-1
+pragma.abspath_absolute.lookup=[1]
+pragma.abspath_absolute.dump.ret=1
+pragma.abspath_absolute.dump.text=[[abs] k=v|[abs] absolute=1|[[abs]]|[[default]]|]
+pragma.abspath_absolute.err.count=0
+pragma.abspath_absolute.err.drained=1
+pragma.includedir.ret=1
+pragma.includedir.eline=-1
+pragma.includedir.lookup=[1]
+pragma.includedir.dump.ret=1
+pragma.includedir.dump.text=[[z] z=1|[d] aa=1|[[d]]|[d] bb=2|[[default]]|[[z]]|]
+pragma.includedir.err.count=0
+pragma.includedir.err.drained=1
+pragma.includedir_abs_include.ret=1
+pragma.includedir_abs_include.eline=-1
+pragma.includedir_abs_include.lookup=[1]
+pragma.includedir_abs_include.dump.ret=1
+pragma.includedir_abs_include.dump.text=[[abs] absolute=1|[[abs]]|[[default]]|]
+pragma.includedir_abs_include.err.count=0
+pragma.includedir_abs_include.err.drained=1
+include.absolute.ret=1
+include.absolute.eline=-1
+include.absolute.lookup=[1]
+include.absolute.dump.ret=1
+include.absolute.dump.text=[[nested] deep=1|[top] top=1|[inc] from_include=yes|[[nested]]|[[top]]|[[default]]|[[inc]]|]
+include.absolute.err.count=0
+include.absolute.err.drained=1
+include.absolute.inc.ret=1
+include.absolute.inc.eline=-1
+include.absolute.inc.lookup=[yes]
+include.absolute.inc.dump.ret=1
+include.absolute.inc.dump.text=[[nested] deep=1|[top] top=1|[inc] from_include=yes|[[nested]]|[[top]]|[[default]]|[[inc]]|]
+include.absolute.inc.err.count=0
+include.absolute.inc.err.drained=1
+include.directory.ret=1
+include.directory.eline=-1
+include.directory.lookup=[1]
+include.directory.dump.ret=1
+include.directory.dump.text=[[top] top=1|[d] aa=1|[[d]]|[[top]]|[d] bb=2|[[default]]|]
+include.directory.err.count=0
+include.directory.err.drained=1
+include.directory.bb.ret=1
+include.directory.bb.eline=-1
+include.directory.bb.lookup=[2]
+include.directory.bb.dump.ret=1
+include.directory.bb.dump.text=[[top] top=1|[d] aa=1|[[d]]|[[top]]|[d] bb=2|[[default]]|]
+include.directory.bb.err.count=0
+include.directory.bb.err.drained=1
+include.directory.txt.ret=1
+include.directory.txt.eline=-1
+include.directory.txt.lookup=[<NULL>]
+include.directory.txt.dump.ret=1
+include.directory.txt.dump.text=[[top] top=1|[d] aa=1|[[d]]|[[top]]|[d] bb=2|[[default]]|]
+include.directory.txt.err.0=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=d name=cc|3]
+include.directory.txt.err.count=1
+include.directory.txt.err.drained=1
+include.directory.dotcnf.ret=1
+include.directory.dotcnf.eline=-1
+include.directory.dotcnf.lookup=[<NULL>]
+include.directory.dotcnf.dump.ret=1
+include.directory.dotcnf.dump.text=[[top] top=1|[d] aa=1|[[d]]|[[top]]|[d] bb=2|[[default]]|]
+include.directory.dotcnf.err.0=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=d name=dotcnf|3]
+include.directory.dotcnf.err.count=1
+include.directory.dotcnf.err.drained=1
+expand.same_section.ret=1
+expand.same_section.eline=-1
+expand.same_section.lookup=[one]
+expand.same_section.dump.ret=1
+expand.same_section.dump.text=[[default] b=one|[[default]]|[default] a=one|]
+expand.same_section.err.count=0
+expand.same_section.err.drained=1
+expand.braced.ret=1
+expand.braced.eline=-1
+expand.braced.lookup=[one]
+expand.braced.dump.ret=1
+expand.braced.dump.text=[[default] b=one|[[default]]|[default] a=one|]
+expand.braced.err.count=0
+expand.braced.err.drained=1
+expand.paren.ret=1
+expand.paren.eline=-1
+expand.paren.lookup=[one]
+expand.paren.dump.ret=1
+expand.paren.dump.text=[[default] b=one|[[default]]|[default] a=one|]
+expand.paren.err.count=0
+expand.paren.err.drained=1
+expand.qualified.ret=1
+expand.qualified.eline=-1
+expand.qualified.lookup=[v]
+expand.qualified.dump.ret=1
+expand.qualified.dump.text=[[s] k=v|[default] b=v|[[s]]|[[default]]|]
+expand.qualified.err.count=0
+expand.qualified.err.drained=1
+expand.default_section.ret=0
+expand.default_section.eline=5
+expand.default_section.lookup=[<NULL>]
+expand.default_section.dump.ret=1
+expand.default_section.dump.text=[]
+expand.default_section.err.0=[7000068|../../src/openssl-3.6.4/crypto/conf/conf_def.c|757|str_copy|line 5|3]
+expand.default_section.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=b|3]
+expand.default_section.err.count=2
+expand.default_section.err.drained=1
+expand.env.ret=0
+expand.env.eline=2
+expand.env.lookup=[<NULL>]
+expand.env.dump.ret=1
+expand.env.dump.text=[]
+expand.env.err.0=[7000068|../../src/openssl-3.6.4/crypto/conf/conf_def.c|757|str_copy|line 2|3]
+expand.env.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=b|3]
+expand.env.err.count=2
+expand.env.err.drained=1
+expand.literal_dollar.ret=1
+expand.literal_dollar.eline=-1
+expand.literal_dollar.lookup=[a$b]
+expand.literal_dollar.dump.ret=1
+expand.literal_dollar.dump.text=[[default] b=a$b|[[default]]|]
+expand.literal_dollar.err.count=0
+expand.literal_dollar.err.drained=1
+expand.double_dollar.ret=0
+expand.double_dollar.eline=2
+expand.double_dollar.lookup=[<NULL>]
+expand.double_dollar.dump.ret=1
+expand.double_dollar.dump.text=[]
+expand.double_dollar.err.0=[7000068|../../src/openssl-3.6.4/crypto/conf/conf_def.c|757|str_copy|line 2|3]
+expand.double_dollar.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=b|3]
+expand.double_dollar.err.count=2
+expand.double_dollar.err.drained=1
+expand.recursive.ret=0
+expand.recursive.eline=1
+expand.recursive.lookup=[<NULL>]
+expand.recursive.dump.ret=1
+expand.recursive.dump.text=[]
+expand.recursive.err.0=[7000068|../../src/openssl-3.6.4/crypto/conf/conf_def.c|757|str_copy|line 1|3]
+expand.recursive.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=c|3]
+expand.recursive.err.count=2
+expand.recursive.err.drained=1
+expand.in_quotes.ret=1
+expand.in_quotes.eline=-1
+expand.in_quotes.lookup=[$a]
+expand.in_quotes.dump.ret=1
+expand.in_quotes.dump.text=[[default] b=$a|[[default]]|[default] a=one|]
+expand.in_quotes.err.count=0
+expand.in_quotes.err.drained=1
+expand.in_dquotes.ret=1
+expand.in_dquotes.eline=-1
+expand.in_dquotes.lookup=[$a]
+expand.in_dquotes.dump.ret=1
+expand.in_dquotes.dump.text=[[default] b=$a|[[default]]|[default] a=one|]
+expand.in_dquotes.err.count=0
+expand.in_dquotes.err.drained=1
+expand.after_quote.ret=1
+expand.after_quote.eline=-1
+expand.after_quote.lookup=[$aone]
+expand.after_quote.dump.ret=1
+expand.after_quote.dump.text=[[default] b=$aone|[[default]]|[default] a=one|]
+expand.after_quote.err.count=0
+expand.after_quote.err.drained=1
+expand.too_long.ret=0
+expand.too_long.eline=2
+expand.too_long.lookup=[<NULL>]
+expand.too_long.dump.ret=1
+expand.too_long.dump.text=[]
+expand.too_long.err.0=[7000074|../../src/openssl-3.6.4/crypto/conf/conf_def.c|762|str_copy|line 2|3]
+expand.too_long.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=b|3]
+expand.too_long.err.count=2
+expand.too_long.err.drained=1
+win.comments.ret=0
+win.comments.eline=1
+win.comments.lookup=[<NULL>]
+win.comments.dump.ret=1
+win.comments.dump.text=[]
+win.comments.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE--># full lineline 1|3]
+win.comments.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=key|3]
+win.comments.err.count=2
+win.comments.err.drained=1
+win.comment_hash_is_key.ret=0
+win.comment_hash_is_key.eline=1
+win.comment_hash_is_key.lookup=[<NULL>]
+win.comment_hash_is_key.dump.ret=1
+win.comment_hash_is_key.dump.text=[]
+win.comment_hash_is_key.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE--># full lineline 1|3]
+win.comment_hash_is_key.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=hash|3]
+win.comment_hash_is_key.err.count=2
+win.comment_hash_is_key.err.drained=1
+win.comment_semicolon_line.ret=0
+win.comment_semicolon_line.eline=1
+win.comment_semicolon_line.lookup=[<NULL>]
+win.comment_semicolon_line.dump.ret=1
+win.comment_semicolon_line.dump.text=[]
+win.comment_semicolon_line.err.0=[7000065|../../src/openssl-3.6.4/crypto/conf/conf_def.c|524|def_load_bio|HERE--># full lineline 1|3]
+win.comment_semicolon_line.err.1=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=# full line|3]
+win.comment_semicolon_line.err.count=2
+win.comment_semicolon_line.err.drained=1
+win.quotes.ret=1
+win.quotes.eline=-1
+win.quotes.lookup=[g"h]
+win.quotes.dump.ret=1
+win.quotes.dump.text=[[default] q6=k'l|[default] q5='ij'|[default] q4=g"h|[[default]]|]
+win.quotes.err.count=0
+win.quotes.err.drained=1
+win.quotes.single.ret=1
+win.quotes.single.eline=-1
+win.quotes.single.lookup=['ij']
+win.quotes.single.dump.ret=1
+win.quotes.single.dump.text=[[default] q6=k'l|[default] q5='ij'|[default] q4=g"h|[[default]]|]
+win.quotes.single.err.count=0
+win.quotes.single.err.drained=1
+win.quotes.both.ret=1
+win.quotes.both.eline=-1
+win.quotes.both.lookup=[k'l]
+win.quotes.both.dump.ret=1
+win.quotes.both.dump.text=[[default] q6=k'l|[default] q5='ij'|[default] q4=g"h|[[default]]|]
+win.quotes.both.err.count=0
+win.quotes.both.err.drained=1
+number.load=1
+number.n1.ret=1
+number.n1.out=42
+number.n1.err.count=0
+number.n1.err.drained=1
+number.n2.ret=1
+number.n2.out=42
+number.n2.err.count=0
+number.n2.err.drained=1
+number.n3.ret=1
+number.n3.out=0
+number.n3.err.count=0
+number.n3.err.drained=1
+number.n4.ret=1
+number.n4.out=0
+number.n4.err.count=0
+number.n4.err.drained=1
+number.n5.ret=1
+number.n5.out=0
+number.n5.err.count=0
+number.n5.err.drained=1
+number.n6.ret=1
+number.n6.out=0
+number.n6.err.count=0
+number.n6.err.drained=1
+number.n7.ret=1
+number.n7.out=7
+number.n7.err.count=0
+number.n7.err.drained=1
+number.n8.ret=1
+number.n8.out=9223372036854775807
+number.n8.err.count=0
+number.n8.err.drained=1
+number.n9.ret=0
+number.n9.out=-12345
+number.n9.err.0=[7000079|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|359|NCONF_get_number_e||1]
+number.n9.err.count=1
+number.n9.err.drained=1
+number.n10.ret=1
+number.n10.out=99
+number.n10.err.count=0
+number.n10.err.drained=1
+number.n11.ret=1
+number.n11.out=1
+number.n11.err.count=0
+number.n11.err.drained=1
+number.classic.get_number.missing=0
+number.classic.get_number.present=0
+number.classic.err.count=0
+number.classic.err.drained=1
+number.classic.get_number.null_hash=0
+number.classic.err.null_hash.count=0
+number.classic.err.null_hash.drained=1
+names.load=1
+names.count=5
+names.00=[ENV]
+names.01=[alpha]
+names.02=[default]
+names.03=[middle]
+names.04=[zeta]
+names.is_sorted=1
+plain.ret=1
+plain.count=3
+plain.log=[a;b;c;]
+trailing.ret=1
+trailing.count=2
+trailing.log=[a;<NULL>:0;]
+leading.ret=1
+leading.count=2
+leading.log=[<NULL>:0;a;]
+double.ret=1
+double.count=3
+double.log=[a;<NULL>:0;b;]
+empty.ret=1
+empty.count=1
+empty.log=[<NULL>:0;]
+spaces.ret=1
+spaces.count=3
+spaces.log=[a;b;c;]
+spaces.off.ret=1
+spaces.off.count=3
+spaces.off.log=[  a ; b  ;c;]
+allspace.ret=1
+allspace.count=1
+allspace.log=[<NULL>:0;]
+colon.ret=1
+colon.count=2
+colon.log=[a;b;]
+nosep.ret=1
+nosep.count=1
+nosep.log=[abc;]
+onlysep.ret=1
+onlysep.count=2
+onlysep.log=[<NULL>:0;<NULL>:0;]
+parselist.null.ret=0
+parselist.null.err.0=[7000073|../../src/openssl-3.6.4/crypto/conf/conf_mod.c|734|CONF_parse_list||1]
+parselist.null.err.count=1
+parselist.null.err.drained=1
+parselist.stop.ret=-3
+parselist.nocb.value=NOT_MEASURED_AUTHORITY_FAULTS
+classic.new.nonnull=1
+classic.empty.get_section.null=1
+classic.empty.get_string.null=1
+classic.null_hash.get_string.env=[from-env]
+classic.null_hash.get_string.other=[<NULL>]
+classic.null_hash.err.0=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=default name=k|3]
+classic.null_hash.err.1=[700006A|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|313|NCONF_get_string||1]
+classic.null_hash.err.count=2
+classic.null_hash.err.drained=1
+classic.load.returns_input_hash=1
+classic.get_string.inc=[yes]
+classic.get_string.nested=[1]
+classic.get_string.missing=1
+classic.retrieve.direct=1
+classic.num_items=1
+classic.dump.ret=1
+classic.dump.text=[[nested] deep=1|[inc] from_include=yes|[[nested]]|[[default]]|[[inc]]|]
+classic.get_number.present=0
+classic.get_number.err.0=[700006C|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|316|NCONF_get_string|group=inc name=nope|3]
+classic.get_number.err.count=1
+classic.get_number.err.drained=1
+classic.free.null_is_safe=1
+classic.missing.load=1
+classic.missing.err.0=[80000002|../../src/openssl-3.6.4/crypto/bio/bss_file.c|67|BIO_new_file|calling fopen(/tmp/openssl-rs-rtconf/nosuchfile.cnf, rb)|3]
+classic.missing.err.1=[10000080|../../src/openssl-3.6.4/crypto/bio/bss_file.c|75|BIO_new_file||1]
+classic.missing.err.2=[7080002|../../src/openssl-3.6.4/crypto/conf/conf_lib.c|58|CONF_load||1]
+classic.missing.err.count=3
+classic.missing.err.drained=1
+defaultcfg.env=[/tmp/openssl-rs-probe.cnf]
+defaultcfg.env.nonnull=1
+defaultcfg.env_empty=[]
+defaultcfg.env_empty.nonnull=1
+defaultcfg.unset.nonnull=1
+defaultcfg.unset=RECORDED_DIVERGENCE_OBL_CONF_DEFAULT_CONFIG_FILE
+probe.done=1

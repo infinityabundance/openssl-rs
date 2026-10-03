@@ -1235,6 +1235,49 @@ def _frf_declaration(court: str) -> str:
     return f"{FRF_DECLARATIONS}/{court}/manifest.yaml"
 
 
+def _frf_declared_candidate(court: str) -> tuple[str | None, str | None]:
+    """`(version_or_commit, artifact_sha256)` the current declaration binds for `court`.
+
+    A compiled claim records a candidate identity as `candidate.version_or_commit` plus
+    `candidate.identity_hash`, and `identity_hash` is FRF's hash of the candidate reference
+    object the declaration names (`candidate.path`). Reading both from the declaration is what
+    lets clause 4 require the *compiled* claim to carry the *current* candidate identity rather
+    than merely covering the receipts: the object hash is over the reference file itself, which is
+    exactly what FRF stores content-addressed and what the claim records, so the two are
+    comparable without opening the FRF store (which this container cannot do).
+
+    `(None, None)` when the declaration or the reference it names is absent, so the clause cannot
+    manufacture a match it did not measure.
+    """
+    path = REPO_ROOT / _frf_declaration(court)
+    if not path.is_file():
+        return None, None
+    version = cpath = None
+    in_candidate = False
+    for line in path.read_text().splitlines():
+        if re.match(r"^  candidate:\s*$", line):
+            in_candidate = True
+            continue
+        if not in_candidate:
+            continue
+        m = re.match(r'^    version_or_commit:\s*"?([^"]+?)"?\s*$', line)
+        if m:
+            version = m.group(1)
+            continue
+        m = re.match(r"^    path:\s*(\S+)\s*$", line)
+        if m:
+            cpath = m.group(1)
+            continue
+        if line and not line.startswith("    "):
+            in_candidate = False
+    artifact = None
+    if cpath:
+        ref = REPO_ROOT / cpath
+        if ref.is_file():
+            artifact = sha256_file(ref)
+    return version, artifact
+
+
 def _reference_probes() -> frozenset[str]:
     """The authored `reference_probes` set from the court-coverage rows.
 
@@ -1384,7 +1427,7 @@ def _gemel_checkpoint_summaries() -> list[tuple[str, str]]:
     return out
 
 
-def frf_gemel_blocking_reason(phase: int) -> str:
+def frf_gemel_blocking_reason(phase: int, claims: list[dict] | None = None) -> str:
     """The reason a stratum's FRF/Gemel chain entry is incomplete, or "" when it is complete.
 
     `docs/RELEASE_GATES.md` section 2 items 6, 8 and 10 are the same three items every stratum
@@ -1405,7 +1448,12 @@ def frf_gemel_blocking_reason(phase: int) -> str:
       3. every declarable court has two adjudicated challenges -- `saw_defect` and
          `specificity_clean` both true -- covering both operators;
       4. one `sensitivity-backed` claim with no blockers covers a receipt of every declarable
-         court (the claim's `requires`, matched to the receipts' own `court.id`); and
+         court (the claim's `requires`, matched to the receipts' own `court.id`) **and records the
+         current candidate identity** -- `candidate.version_or_commit == CANDIDATE_VERSION` and,
+         when the claim carries the artifact hash, `candidate.identity_hash` equal to the hash of
+         the candidate reference the declarations name. Without the identity clause a release
+         could move the candidate to `0.0.18` while every compiled claim still recorded `0.0.17`,
+         and the phase would derive `complete` on a claim about the previous release; and
       5. a Gemel checkpoint in the projection names the stratum and the chain (with the measured
          exemption `FRF_CHAIN_CHECKPOINT_EXEMPT` for the strata whose checkpoints predate the
          phrase).
@@ -1480,19 +1528,62 @@ def frf_gemel_blocking_reason(phase: int) -> str:
             f"{FRF_CHALLENGE_OPERATORS} in {FRF_CHALLENGES}: " + ", ".join(unadjudicated)
         )
 
-    covered = False
-    for claim in _frf_claim_docs():
+    # **The claim must bind the current release identity, not merely cover the receipts.** A
+    # `sensitivity-backed` claim is a claim about ONE candidate artifact; FRF records the artifact
+    # hash and the `version_or_commit` of the release it was compiled at. Covering the receipts is
+    # necessary but not sufficient: the claim's `requires` name content-addressed receipt ids, and
+    # the material kind of a claim is "this candidate is what the authority does", so a claim
+    # compiled at `0.0.17` over receipts whose declared candidate was `0.0.17` is not evidence
+    # about the `0.0.18` release even though every receipt still exists. The two coexist silently
+    # because nothing compared the claim's recorded identity to the current one -- which is what
+    # this clause does.
+    current_version = gen_frf_courts.CANDIDATE_VERSION
+    current_artifact = None
+    if required:
+        _v, current_artifact = _frf_declared_candidate(required[0][0])
+    claim_docs = _frf_claim_docs() if claims is None else claims
+
+    covering: list[dict] = []
+    for claim in claim_docs:
         if claim.get("policy") != "sensitivity-backed" or claim.get("blockers"):
             continue
         premises = set(claim.get("requires") or ())
         if all(receipts.get(court, set()) & premises for court, _probe in required):
-            covered = True
-            break
+            covering.append(claim)
+
+    stale: list[str] = []
+    covered = False
+    for claim in covering:
+        candidate = claim.get("candidate") or {}
+        recorded_version = candidate.get("version_or_commit")
+        recorded_artifact = candidate.get("identity_hash")
+        if recorded_version != current_version or (
+            current_artifact is not None
+            and recorded_artifact is not None
+            and recorded_artifact != current_artifact
+        ):
+            stale.append(
+                f"{claim.get('id')} records candidate "
+                f"version_or_commit={recorded_version!r}, identity_hash={recorded_artifact!r}"
+            )
+            continue
+        covered = True
+        break
     if not covered:
-        problems.append(
-            f"no `sensitivity-backed` claim with zero blockers in {FRF_CLAIMS} covers a receipt "
-            f"of every one of the {len(required)} required court(s)"
-        )
+        if covering:
+            identity = f"version_or_commit={current_version!r}"
+            if current_artifact is not None:
+                identity += f", identity_hash={current_artifact!r}"
+            problems.append(
+                f"{len(covering)} `sensitivity-backed` claim(s) with zero blockers in "
+                f"{FRF_CLAIMS} cover every one of the {len(required)} required court(s) but none "
+                f"records the current candidate identity ({identity}): " + "; ".join(stale)
+            )
+        else:
+            problems.append(
+                f"no `sensitivity-backed` claim with zero blockers in {FRF_CLAIMS} covers a "
+                f"receipt of every one of the {len(required)} required court(s)"
+            )
 
     if phase not in FRF_CHAIN_CHECKPOINT_EXEMPT and not any(
         f"Phase {phase}" in summary and "FRF chain" in summary
@@ -1505,6 +1596,20 @@ def frf_gemel_blocking_reason(phase: int) -> str:
     if not problems:
         return ""
     return f"Phase {phase}'s FRF chain entry is incomplete: " + "; ".join(problems)
+
+
+def _frf_owner_is_in_scope(row: dict) -> bool:
+    """Whether the FRF/Gemel rule can fire for `row`'s stratum.
+
+    In `STRATUM_EVIDENCE`, not Phase 22, and the stratum's own `artifacts/phase<N>/COURTS.json`
+    declares at least one FRF-declarable court. Reads the inventory, never the registry the rule
+    checks, for the reason `_frf_court_inventory` records.
+    """
+    return (
+        row["phase"] != 22
+        and row["phase"] in STRATUM_EVIDENCE
+        and any(declarable for _c, _p, declarable, _e in _frf_court_inventory(row["phase"]))
+    )
 
 
 def derive_state_rows() -> list[dict]:
@@ -1606,6 +1711,8 @@ def derive_state_rows() -> list[dict]:
 SELF_TEST_STALE_ID = "SELF-TEST-STALE-ROW"
 # The id the second control stamps on the stale-*adjudication* row it reconstructs.
 SELF_TEST_STALE_ADJ_ID = "SELF-TEST-STALE-ADJUDICATION"
+# The id the fourth control stamps on the stale-*candidate-identity* claim it reconstructs.
+SELF_TEST_STALE_CANDIDATE_ID = "SELF-TEST-STALE-CANDIDATE-CLAIM"
 
 
 def self_test() -> int:
@@ -1689,21 +1796,28 @@ def self_test() -> int:
     # -- discovered from that inventory, never from the registry it is about to empty.
     frf_owner_row = next(
         (row for row in reversed(complete)
-         if row["phase"] != 22
-         and row["phase"] in STRATUM_EVIDENCE
-         and any(declarable for _c, _p, declarable, _e
-                 in _frf_court_inventory(row["phase"]))),
+         if _frf_owner_is_in_scope(row)),
         None,
     )
+    frf_owner_derives_complete = frf_owner_row is not None
+    if frf_owner_row is None:
+        # The FRF rule fires for any stratum whose own court inventory declares a declarable
+        # court, whatever its derived state; the fallback keeps this control runnable while a
+        # release's claims are stale and no FRF-bearing stratum derives `complete` (which is
+        # exactly the state Part A's identity clause produces before the claims are recompiled).
+        frf_owner_row = next((row for row in reversed(rows) if _frf_owner_is_in_scope(row)), None)
     if frf_owner_row is None:
         print(
-            "[phase-state] SELF-TEST FAILED: no stratum derives `complete` with an "
-            "FRF-declarable court in its own court inventory, so the registry-independence "
-            "control cannot run",
+            "[phase-state] SELF-TEST FAILED: no stratum declares an FRF-declarable court in its "
+            "own court inventory, so the registry-independence control cannot run",
             file=sys.stderr,
         )
         return 1
     frf_owner = frf_owner_row["phase"]
+    frf_owner_state = (
+        "which derives `complete`" if frf_owner_derives_complete
+        else "whose claims currently record a stale candidate identity"
+    )
     saved_courts = gen_frf_courts.COURTS
     try:
         gen_frf_courts.COURTS = [row for row in saved_courts if row[1] != frf_owner]
@@ -1712,7 +1826,7 @@ def self_test() -> int:
         gen_frf_courts.COURTS = saved_courts
     print(
         f"[phase-state] self-test: emptied the gen_frf_courts.py registry for phase {frf_owner} "
-        f"({frf_owner_row['name']}), which derives `complete`:"
+        f"({frf_owner_row['name']}), {frf_owner_state}:"
     )
     print(f"  {frf_reason or '(no reason: the requirement vanished with its registry)'}")
     if not frf_reason or "gen_frf_courts.py registry" not in frf_reason:
@@ -1725,6 +1839,64 @@ def self_test() -> int:
     print(
         "[phase-state] self-test ok: emptying the FRF registry refuses the stratum through its "
         "own court inventory, so a forgotten registry row cannot define completion"
+    )
+
+    # ---- fourth control: a covering claim whose candidate identity is stale must fail closed ----
+    # Clause 4 used to require only that a claim cover the receipts; it never required the claim's
+    # *candidate identity* to equal the current one, so a release could move the candidate to
+    # `0.0.18` while every compiled claim still recorded `0.0.17`, and the phase derived `complete`
+    # on a claim about the previous release. The control reconstructs a covering claim whose
+    # `candidate.version_or_commit` is deliberately stale and requires the rule to name it. It
+    # refuses to pass otherwise, because a check that has never been seen to fire is not evidence.
+    owner_required = [court for court, _p, declarable, _e
+                      in _frf_court_inventory(frf_owner) if declarable]
+    owner_receipts = _frf_receipt_index()
+    covering_claim = next(
+        (claim for claim in _frf_claim_docs()
+         if claim.get("policy") == "sensitivity-backed" and not claim.get("blockers")
+         and all(owner_receipts.get(court, set()) & set(claim.get("requires") or ())
+                 for court in owner_required)),
+        None,
+    )
+    if covering_claim is None:
+        print(
+            f"[phase-state] SELF-TEST FAILED: no `sensitivity-backed` claim with zero blockers "
+            f"covers every required court of phase {frf_owner}, so the stale-candidate-identity "
+            f"control cannot be reconstructed against it",
+            file=sys.stderr,
+        )
+        return 1
+    stale_claim = copy.deepcopy(covering_claim)
+    stale_claim["id"] = SELF_TEST_STALE_CANDIDATE_ID
+    stale_claim["candidate"] = dict(
+        stale_claim.get("candidate") or {},
+        version_or_commit="0.0.0-stale-self-test",
+    )
+    stale_candidate_reason = frf_gemel_blocking_reason(frf_owner, claims=[stale_claim])
+    print(
+        f"[phase-state] self-test: reconstructed a covering `sensitivity-backed` claim "
+        f"({SELF_TEST_STALE_CANDIDATE_ID}, copied from {covering_claim.get('id')}) for phase "
+        f"{frf_owner} ({frf_owner_row['name']}) with a stale candidate identity "
+        f"(version_or_commit was {covering_claim.get('candidate', {}).get('version_or_commit')!r}, "
+        f"stamped {stale_claim['candidate']['version_or_commit']!r}; current is "
+        f"{gen_frf_courts.CANDIDATE_VERSION!r}):"
+    )
+    print(f"  {stale_candidate_reason or '(no reason: the rule did not fire)'}")
+    if (
+        not stale_candidate_reason
+        or SELF_TEST_STALE_CANDIDATE_ID not in stale_candidate_reason
+        or "candidate identity" not in stale_candidate_reason
+    ):
+        print(
+            "[phase-state] SELF-TEST FAILED: a covering claim whose recorded candidate identity "
+            "is stale did not block",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        "[phase-state] self-test ok: a covering claim that records a stale candidate identity "
+        "is refused, so a released product cannot derive `complete` on a claim about the "
+        "previous release"
     )
 
     # ---- third control: a stale manual adjudication must fail closed ----

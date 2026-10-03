@@ -1,0 +1,1 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=f5b9b873b6da6463d545f6cfa036cd949b1eff6a919d787b9313e6840ca9d99e

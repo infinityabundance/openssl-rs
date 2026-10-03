@@ -1,0 +1,250 @@
+transcript.sha256=64218046689904b7c1ab3629b3eb7543eb3a047ee55d334670b14cd31af2aed3
+
+# method-identity
+mem.name=memory buffer
+mem.type=1025
+secmem.name=secure memory buffer
+secmem.type=1025
+null.name=NULL
+null.type=1030
+fnull.name=NULL filter
+fnull.type=529
+socket.name=socket
+socket.type=1285
+socket.new.num=-1
+fd0.after_socket_identity=1
+
+# lifecycle
+new.nonnull=1
+new.init=1
+new.shutdown=1
+new.method=memory buffer
+new.num_read=0
+new.num_written=0
+up_ref=1
+free.one=1
+free.two=1
+null.new.init=1
+null.new.shutdown=1
+
+# memory-write-read
+write=11
+write.ex=1
+write.ex.n=2
+pending=13
+wpending=0
+num_written=13
+read.5=5
+read.5.bytes=hello
+read.ex.3=1
+read.ex.3.n=3
+read.ex.3.bytes= wo
+pending.after=5
+num_read=8
+read.rest=5
+read.rest.bytes=rld!!
+read.empty=-1
+read.empty.should_retry=8
+read.empty.should_read=1
+set.eof_return=1
+read.empty0=0
+read.empty0.should_retry=0
+eof=1
+info.len=0
+pending.macro=0
+
+# memory-gets-seek-reset
+gets=4
+gets.line=one
+gets.again=4
+gets.again.line=two
+tell=8
+seek.0=0
+tell.after_seek=0
+seek.past_end=-1
+seek.negative=-1
+reset=1
+pending.after_reset=0
+get_mem_ptr=1
+mem.length=10
+mem.max=20
+get_mem_ptr2=1
+mem2.length=36
+mem2.max=52
+
+# read-only-memory
+ro.init=1
+ro.read=6
+ro.bytes=abcdef
+ro.eofread=0
+ro.write=-1
+ro.err.lib=32
+ro.err.reason=126
+
+# chains
+push.head=1
+push.head2=1
+next.c=1
+next.b=1
+next.a.null=1
+find.mem=1
+find.filter=1
+find.null=1
+find.bad=1
+chain.write=3
+chain.pending=0
+pop.c.ret=1
+pop.c.next_is_null=1
+
+# dup-chain
+dup.nonnull=1
+dup.method=memory buffer
+dup.next_null=1
+dup.flags=1
+src.pending=3
+dup.pending=0
+dup.read=-1
+dup.bytes=abc
+src.pending.after=3
+
+# callbacks
+cb.log=ddccgg
+cb.legacy.set=1
+cb.legacy.cleared=1
+
+# flags-and-retry
+flags.initial=0
+flags.set=9
+should_read=1
+retry_type=1
+retry_reason=2
+retry_bio.self=1
+retry_bio.reason=2
+flags.cleared=0
+
+# misc-control
+ctrl.null_bio=-1
+ctrl.set_close=1
+ctrl.get_close=1
+ctrl.unknown=0
+ctrl.flush=1
+ctrl.dup=1
+callback_ctrl.bad_cmd=-2
+int_ctrl=1
+ptr_ctrl.null=1
+ctrl.unsupported=-2
+ctrl.unsupported.reason=121
+plain.init=1
+
+# method-api
+meth.name_null=1
+meth.get_read.initial=1
+meth.get_read_ex.initial=1
+meth.get_write.initial=1
+meth.get_write_ex.initial=1
+meth.set_read=1
+meth.get_read.after_legacy=1
+meth.get_read_ex.after_legacy=1
+meth.get_read_ex.same=1
+meth.set_read_ex=1
+meth.get_read.after_ex=1
+meth.get_read_ex.after_ex=1
+meth.set_ctrl=1
+meth.get_ctrl=1
+meth.set_create=1
+meth.get_create=1
+meth.set_destroy=1
+meth.get_destroy=1
+meth.set_callback_ctrl=1
+meth.get_callback_ctrl=1
+meth.set_puts=1
+meth.get_puts=1
+new_index.first_delta=1
+new_index.second_delta=2
+
+# printf-and-dump
+printf.ret=4
+printf.out=n=42
+snprintf.ret=6
+snprintf.out=00ff-z
+snprintf.trunc=-1
+snprintf.trunc.out=abc
+indent=1
+indent.out=[   ]
+indent.clamped=1
+indent.clamped.out=[  ]
+dump.ret=136
+dump.out=0000 - 00 01 02 03 04 05 06 07-f8 f9 61 62 20 7e 7f 0a   ..........ab ~..
+0010 - 80 ff 41 42                                       ..AB
+dump.indent.ret=146
+dump.indent.out=        0000 - 00 01 02 03 04 05 06 07-f8 f9 61 62 20 7e 7f   ..........ab ~.
+        000f - 0a 80 ff 41 42                                 ...AB
+dump.short.ret=61
+dump.short.out=0000 - 00 01 02                                          ...
+hex.ret=1
+hex.out=00:01:02:03:04:05:06:07:
+    F8:F9:61:62:20:7E:7F:0A:
+    80:FF:41:42
+
+# buffer-object
+bufmem.new=1
+bufmem.length=0
+bufmem.max=0
+bufmem.grow10=10
+bufmem.max10=16
+bufmem.length10=10
+bufmem.grow100=100
+bufmem.max100=136
+bufmem.shrink=5
+bufmem.length5=5
+bufmem.grow_clean=200
+bufmem.max_clean=268
+bufmem.secure.flags=1
+
+# sockets
+fd0.before_socketpair=1
+socketpair=0
+socketpair.fd0_is_zero=0
+sock.nonnull=1
+sock.method=socket
+sock.init=1
+sock.get_fd.returns_desc=1
+sock.get_fd.sets_parg=1
+sock.get_fd.null_parg=1
+sock.write=4
+sock.peer_read=4
+sock.peer_bytes=ping
+sock.nbio=1
+sock.nbio_get=0
+sock.non_fatal.EAGAIN=1
+sock.non_fatal.EINTR=1
+sock.non_fatal.0=0
+sock.non_fatal.EBADF=0
+sock.should_retry.-1=0
+sock.should_retry.1=0
+sock.should_retry.0=0
+sock.err_is_non_fatal.sys=0
+sock.err_is_non_fatal.0=0
+sock.init=1
+sock.error=9
+wait.ready.n=1
+wait.ready=1
+
+# ex-data-and-data
+exdata.index=1
+exdata.set=1
+exdata.get=1
+exdata.missing=1
+data.get=1
+set.flags.roundtrip=1
+set.init=0
+set.shutdown=0
+set.next=1
+cb_arg=1
+getline=6
+getline.out=alpha
+
+getline.2=4
+getline.2.out=beta
+
+# end
