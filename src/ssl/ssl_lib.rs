@@ -16,6 +16,7 @@ use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
 use crate::asn1::string::ASN1_STRING_free;
+use crate::bn::bignum::BigNum;
 use crate::crypto_async::async_wait::{
     ASYNC_WAIT_CTX_get_all_fds, ASYNC_WAIT_CTX_get_changed_fds, ASYNC_WAIT_CTX_get_status,
     AsyncWaitCtx, OsslAsyncFd,
@@ -24,7 +25,8 @@ use crate::ct::ct_log::{
     CTLOG_STORE_free, CTLOG_STORE_load_default_file, CTLOG_STORE_load_file, CTLOG_STORE_new_ex,
     CtlogStore,
 };
-use crate::evp::pkey::EVP_PKEY_free;
+use crate::engine::eng_lib::Engine;
+use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_get_security_bits};
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::bss_sock::BIO_s_socket;
 use crate::runtime::bio::iolib::{BIO_get_rpoll_descriptor, BIO_get_wpoll_descriptor};
@@ -33,18 +35,28 @@ use crate::runtime::bio::{
     BIO_pop, BIO_push, BIO_up_ref, Bio, BioPollDescriptor, BIO_C_GET_FD, BIO_C_SET_FD, BIO_NOCLOSE,
     BIO_TYPE_DESCRIPTOR,
 };
-use crate::runtime::err::{raise_with, ERR_peek_error};
+use crate::runtime::err::{raise_with, ERR_peek_error, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data, CryptoExData,
     CRYPTO_EX_INDEX_SSL, CRYPTO_EX_INDEX_SSL_CTX,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
-use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_pop_free, OpenSslStack};
+use crate::runtime::stack::{
+    OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
+    OPENSSL_sk_value, OpenSslStack,
+};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
 use crate::ssl::d1_lib::{dtls1_free, dtls1_new_state, Dtls1State};
 use crate::ssl::quic::quic_tls_api::QuicTlsCallbacks;
-use crate::ssl::ssl_sess::{ssl_ctx_session_cache_free, SSL_SESSION_free};
+use crate::ssl::ssl_cert::{ssl_ctx_security, ssl_security};
+use crate::ssl::ssl_sess::{
+    ssl_ctx_session_cache_free, SSL_SESSION_free, SSL_get_session, SSL_set_session,
+};
 use crate::ssl::statem::extensions_cust::CustomExtMethod;
+use crate::x509::by_dir::X509_LOOKUP_hash_dir;
+use crate::x509::by_file::X509_LOOKUP_file;
+use crate::x509::by_store::X509_LOOKUP_store;
+use crate::x509::dane::SslDane;
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
 use crate::x509::v3_utl::a2i_IPADDRESS;
 use crate::x509::x509_cmp::X509_check_private_key;
@@ -52,7 +64,10 @@ use crate::x509::x509_d2::{
     X509_STORE_load_file_ex, X509_STORE_load_path, X509_STORE_load_store_ex,
     X509_STORE_set_default_paths_ex,
 };
-use crate::x509::x509_lu::{X509Store, X509_STORE_free, X509_STORE_new, X509_STORE_up_ref};
+use crate::x509::x509_lu::{
+    X509Store, X509_LOOKUP_ctrl, X509_LOOKUP_ctrl_ex, X509_STORE_add_lookup, X509_STORE_free,
+    X509_STORE_new, X509_STORE_up_ref,
+};
 use crate::x509::x509_set::X509_up_ref;
 use crate::x509::x509_vpm::{
     X509VerifyParam, X509_VERIFY_PARAM_add1_host, X509_VERIFY_PARAM_free,
@@ -228,6 +243,46 @@ const SSL_CTRL_GET_MIN_PROTO_VERSION: c_int = 130;
 const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
 /// `SSL_CTRL_GET_MAX_PROTO_VERSION` — `ssl.h:1385`.
 const SSL_CTRL_GET_MAX_PROTO_VERSION: c_int = 131;
+/// `SSL_R_SSL_LIBRARY_HAS_NO_CIPHERS` — `sslerr.h:288`.
+const SSL_R_SSL_LIBRARY_HAS_NO_CIPHERS: c_int = 230;
+/// `SSL_R_DH_KEY_TOO_SMALL` — `sslerr.h:106`.
+const SSL_R_DH_KEY_TOO_SMALL: c_int = 394;
+/// `SSL_SECOP_TMP_DH` — `ssl.h:2775` (`7 | SSL_SECOP_OTHER_PKEY`).
+const SSL_SECOP_TMP_DH: c_int = 7 | (4 << 16);
+/// `X509_L_FILE_LOAD` — `x509_vfy.h:283`.
+const X509_L_FILE_LOAD: c_int = 1;
+/// `X509_L_ADD_DIR` — `x509_vfy.h:284`.
+const X509_L_ADD_DIR: c_int = 2;
+/// `X509_L_ADD_STORE` — `x509_vfy.h:285`.
+const X509_L_ADD_STORE: c_int = 3;
+/// `X509_FILETYPE_DEFAULT` — `x509.h:170`.
+const X509_FILETYPE_DEFAULT: c_long = 3;
+/// `SSL_CTRL_SET_TMP_DH_CB` — `ssl.h:1276`; the deprecated temporary-DH callback command.
+pub(crate) const SSL_CTRL_SET_TMP_DH_CB: c_int = 6;
+/// `SSL_CTRL_CHAIN` — `ssl.h:1349` (`SSL_CTX_set0_chain`/`SSL_CTX_set1_chain`).
+const SSL_CTRL_CHAIN: c_int = 88;
+/// `SSL_CTRL_CHAIN_CERT` — `ssl.h:1350` (`SSL_CTX_add0_chain_cert`/`add1`).
+const SSL_CTRL_CHAIN_CERT: c_int = 89;
+/// `SSL_CTRL_SET_TLS_EXT_SRP_USERNAME_CB` — `ssl.h:1335` (the callback ctrl).
+pub(crate) const SSL_CTRL_SET_TLS_EXT_SRP_USERNAME_CB: c_int = 75;
+/// `SSL_CTRL_SET_SRP_VERIFY_PARAM_CB` — `ssl.h:1336` (the callback ctrl).
+pub(crate) const SSL_CTRL_SET_SRP_VERIFY_PARAM_CB: c_int = 76;
+/// `SSL_CTRL_SET_SRP_GIVE_CLIENT_PWD_CB` — `ssl.h:1337` (the callback ctrl).
+pub(crate) const SSL_CTRL_SET_SRP_GIVE_CLIENT_PWD_CB: c_int = 77;
+/// `SSL_CTRL_SET_SRP_ARG` — `ssl.h:1338`.
+pub(crate) const SSL_CTRL_SET_SRP_ARG: c_int = 78;
+/// `SSL_CTRL_SET_TLS_EXT_SRP_USERNAME` — `ssl.h:1339`.
+pub(crate) const SSL_CTRL_SET_TLS_EXT_SRP_USERNAME: c_int = 79;
+/// `SSL_CTRL_SET_TLS_EXT_SRP_STRENGTH` — `ssl.h:1340`.
+pub(crate) const SSL_CTRL_SET_TLS_EXT_SRP_STRENGTH: c_int = 80;
+/// `SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD` — `ssl.h:1341`.
+pub(crate) const SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD: c_int = 81;
+/// `SSL_R_INVALID_SRP_USERNAME` — `sslerr.h:159`.
+const SSL_R_INVALID_SRP_USERNAME: c_int = 357;
+/// `SSL_kSRP` — `ssl_local.h:91`; the SRP key-exchange bit the SRP setters OR into `srp_Mask`.
+pub(crate) const SSL_KSRP: c_ulong = 0x20;
+/// `ERR_R_INTERNAL_ERROR` — `err.h:356` (`259 | ERR_R_FATAL`).
+const ERR_R_INTERNAL_ERROR: c_int = 259 | (3 << 18);
 
 /// `SSL_NOTHING` — `ssl.h:932`.
 const SSL_NOTHING: c_int = 1;
@@ -318,6 +373,9 @@ pub struct SslMethod {
     /// `method->ssl_accept != ssl_undefined_function` — the default role `SSL_new` installs
     /// (`ssl_lib.c:917`).
     pub default_server: bool,
+    /// `method->ssl_connect != ssl_undefined_function` — whether the method can drive a client
+    /// handshake (`ssl_mcnf.c:70-73`). A server-only method is `default_server && !default_client`.
+    pub default_client: bool,
 }
 
 // -------------------------------------------------------------------------------------------
@@ -374,6 +432,13 @@ pub struct Cert {
     pub cert_cb_arg: *mut c_void,
     /// `char *psk_identity_hint` — the PSK identity hint (`SSL_[CTX_]use_psk_identity_hint`).
     pub psk_identity_hint: *mut c_char,
+    /// `EVP_PKEY *dh_tmp` — the explicit temporary DH key (`SSL_[CTX_]set0_tmp_dh_pkey`).
+    #[allow(dead_code)] // stored for the tmp-DH setter; read by the DH key-exchange path
+    pub dh_tmp: *mut c_void,
+    /// `DH *(*dh_tmp_cb)(SSL *, int, int)` — the deprecated temporary-DH callback
+    /// `SSL_CTRL_SET_TMP_DH_CB` installs (`s3_lib.c:4665-4667`).
+    #[allow(dead_code)] // stored for the setter's contract; read by the DH path
+    pub dh_tmp_cb: *mut c_void,
     /// `custom_ext_methods custext` — the registered custom extensions. The authority stores a
     /// heap array of `custom_ext_method`; this crate stores the same records in a `Vec`, because
     /// the table is this crate's own and never crosses the FFI boundary as a struct. The
@@ -457,6 +522,8 @@ unsafe fn cert_free(c: *mut Cert) {
             // array when the old-style wrapper is absent).
             ptr::drop_in_place(ptr::addr_of_mut!((*c).custext));
             CRYPTO_free((*c).psk_identity_hint.cast(), FILE, 0);
+            // SAFETY: `dh_tmp` is NULL or the key the tmp-DH setter installed.
+            EVP_PKEY_free((*c).dh_tmp.cast());
             CRYPTO_free(c.cast(), FILE, 0);
         }
     }
@@ -498,6 +565,51 @@ unsafe fn cert_copy_security(to: *mut Cert, from: *const Cert) {
 // -------------------------------------------------------------------------------------------
 // SSL_CTX and SSL
 // -------------------------------------------------------------------------------------------
+
+/// `int (*TLS_ext_srp_username_callback)(SSL *, int *, void *)` — `ssl_local.h:575`.
+pub type SrpUsernameCb = unsafe extern "C" fn(*mut Ssl, *mut c_int, *mut c_void) -> c_int;
+/// `int (*SRP_verify_param_callback)(SSL *, void *)` — `ssl_local.h:577`.
+pub type SrpVerifyParamCb = unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int;
+/// `char *(*SRP_give_srp_client_pwd_callback)(SSL *, void *)` — `ssl_local.h:579`.
+pub type SrpClientPwdCb = unsafe extern "C" fn(*mut Ssl, *mut c_void) -> *mut c_char;
+
+/// `struct srp_ctx_st` — `ssl_local.h:571-586`, the SRP credential block on a context or a
+/// connection (`tls_srp.c`).
+#[repr(C)]
+pub struct SrpCtx {
+    /// `void *SRP_cb_arg` — the argument for all the callbacks.
+    pub srp_cb_arg: *mut c_void,
+    /// `int (*TLS_ext_srp_username_callback)(SSL *, int *, void *)`.
+    pub username_callback: Option<SrpUsernameCb>,
+    /// `int (*SRP_verify_param_callback)(SSL *, void *)`.
+    pub verify_param_callback: Option<SrpVerifyParamCb>,
+    /// `char *(*SRP_give_srp_client_pwd_callback)(SSL *, void *)`.
+    pub give_client_pwd_callback: Option<SrpClientPwdCb>,
+    /// `char *login` — the client login name.
+    pub login: *mut c_char,
+    /// `BIGNUM *N` — the group prime.
+    pub n: *mut BigNum,
+    /// `BIGNUM *g` — the group generator.
+    pub g: *mut BigNum,
+    /// `BIGNUM *s` — the salt.
+    pub s: *mut BigNum,
+    /// `BIGNUM *B` — the server public value.
+    pub b_pub: *mut BigNum,
+    /// `BIGNUM *A` — the client public value.
+    pub a_pub: *mut BigNum,
+    /// `BIGNUM *a` — the client private value.
+    pub a: *mut BigNum,
+    /// `BIGNUM *b` — the server private value.
+    pub b: *mut BigNum,
+    /// `BIGNUM *v` — the verifier.
+    pub v: *mut BigNum,
+    /// `char *info` — the password the `SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD` handler stores.
+    pub info: *mut c_char,
+    /// `int strength` — the minimum group bit length (`SRP_MINIMAL_N` unless set).
+    pub strength: c_int,
+    /// `unsigned long srp_Mask` — `SSL_kSRP` once any SRP setter runs.
+    pub srp_mask: c_ulong,
+}
 
 /// `struct ssl_cert_st` — `ssl_local.h:2008-2145`.
 #[repr(C)]
@@ -642,7 +754,14 @@ pub struct SslCtx {
     #[allow(dead_code)] // stored for the setter's contract; read by the session path (14.7)
     pub generate_session_id: Option<GenerateSessionIdCb>,
     /// `unsigned long dane.flags` — the DANE flag word `SSL_CTX_dane_[set|clear]_flags` touches.
-    pub dane_flags: c_ulong,
+    #[allow(dead_code)] // stored for the DANE setters/getters (14.1 remainder)
+    pub(crate) dane: SslDane,
+    /// `ENGINE *client_cert_engine` — the engine `SSL_CTX_set_client_cert_engine` installs
+    /// (`ssl_local.h:1065`).
+    #[allow(dead_code)] // stored for the setter's contract; read by the client-cert path
+    pub client_cert_engine: *mut Engine,
+    /// `SRP_CTX srp_ctx` — the SRP credential block (`ssl_local.h:1089`).
+    pub srp_ctx: SrpCtx,
     /// `ssl_ct_validation_cb ct_validation_callback`.
     pub ct_validation_callback: Option<CtValidationCb>,
     /// `void *ct_validation_callback_arg`.
@@ -895,6 +1014,19 @@ pub struct Ssl {
     pub session: *mut SslSession,
     /// `SSL_CTX *session_ctx` — the session-cache context (14.7).
     pub session_ctx: *mut SslCtx,
+    /// `STACK_OF(SSL_CIPHER) *peer_ciphers` — the ClientHello's offered ciphers
+    /// (`SSL_get_client_ciphers`). The authority builds it from the ClientHello; no handshake
+    /// reaches it here, so it stays NULL.
+    pub peer_ciphers: *mut OpenSslStack,
+    /// `const SSL_CIPHER *s3.tmp.new_cipher` — the pending cipher (`SSL_get_pending_cipher`). Set
+    /// by the handshake; NULL before one.
+    pub pending_cipher: *const crate::ssl::ssl_ciph_table::SslCipher,
+    /// `SSL_DANE dane` — the DANE per-connection state (`ssl_local.h:1792`).
+    #[allow(dead_code)] // stored for the DANE setters/getters (14.1 remainder)
+    pub(crate) dane: SslDane,
+    /// `SRP_CTX srp_ctx` — the SRP credential block a connection copies from its context
+    /// (`ssl_local.h:1794`).
+    pub srp_ctx: SrpCtx,
     /// `STACK_OF(X509) *verified_chain` — 14.7's; NULL here.
     pub verified_chain: *mut c_void,
     /// `ASYNC_WAIT_CTX *waitctx` — allocated by the async path (14.5).
@@ -1358,6 +1490,15 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
                 SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
+            // `ssl_lib.c:4174`: the authority initialises the SRP credential block at construction
+            // (`ssl_ctx_srp_ctx_init_intern`), which zeroes it and sets `strength = SRP_MINIMAL_N`.
+            crate::ssl::tls_srp::ssl_ctx_srp_ctx_init_intern(ret);
+            // `ssl_lib.c:4056`: allocate the internal session cache at construction.
+            (*ret).sessions = OPENSSL_sk_new_null();
+            if (*ret).sessions.is_null() {
+                SSL_CTX_free(ret);
+                return ptr::null_mut();
+            }
             // `ssl_lib.c:4067` allocates the CT log store for every context.
             (*ret).ctlog_store = CTLOG_STORE_new_ex(libctx, propq);
             if (*ret).ctlog_store.is_null() {
@@ -1397,6 +1538,11 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
                 (*ret).cert,
             );
             if sk.is_null() || crate::runtime::stack::OPENSSL_sk_num(sk) <= 0 {
+                SSL_CTX_free(ret);
+                return ptr::null_mut();
+            }
+            // `ssl_lib.c:4280`: apply the configuration's `system_default` command set.
+            if crate::ssl::ssl_mcnf::ssl_ctx_system_config(ret) == 0 {
                 SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
@@ -1453,6 +1599,7 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
             OPENSSL_sk_free((*ctx).tls13_ciphersuites);
             OPENSSL_sk_free((*ctx).srtp_profiles);
             ssl_ctx_session_cache_free(ctx);
+            crate::ssl::tls_srp::ssl_ctx_srp_ctx_free_intern(ctx);
             OPENSSL_sk_pop_free((*ctx).ca_names, Some(x509_name_free_void));
             OPENSSL_sk_pop_free((*ctx).client_ca_names, Some(x509_name_free_void));
             X509_VERIFY_PARAM_free((*ctx).param);
@@ -1603,6 +1750,15 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
                 return ptr::null_mut();
             }
             cert_copy_security((*s).cert, (*ctx).cert);
+
+            // `ssl3_new` (`s3_lib.c:3808-3824`) runs `ssl_srp_ctx_init_intern`, copying the
+            // context's SRP credentials and callbacks onto the connection. The crate's `SSL_new`
+            // does not run the method's `ssl_init`, so the copy is made here for the one field that
+            // an observable reader (`SSL_SRP_CTX_init`, the `SSL_get_srp_*` accessors) reaches.
+            if crate::ssl::tls_srp::ssl_srp_ctx_init_intern(s) == 0 {
+                SSL_free(s);
+                return ptr::null_mut();
+            }
 
             // `ssl_lib.c:763-956` copies the remaining connection configuration from the context.
             (*s).session_ctx = ctx;
@@ -1785,6 +1941,7 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             OPENSSL_sk_pop_free((*s).client_ca_names, Some(x509_name_free_void));
             OPENSSL_sk_pop_free((*s).peer_ca_names, Some(x509_name_free_void));
             SSL_SESSION_free((*s).session);
+            crate::ssl::tls_srp::ssl_srp_ctx_free_intern(s);
             CRYPTO_free((*s).session_ticket.cast(), FILE, 0);
             dtls1_free(s);
             BIO_free_all((*s).wbio);
@@ -2779,6 +2936,14 @@ pub unsafe extern "C" fn SSL_callback_ctrl(
                 }
                 1
             }
+            SSL_CTRL_SET_TMP_DH_CB => {
+                // SAFETY: `s` is live; only the pointer bits are stored (`s3_lib.c:4394-4396`).
+                unsafe {
+                    (*(*s).cert).dh_tmp_cb =
+                        fp.map(|f| f as *mut c_void).unwrap_or(ptr::null_mut());
+                }
+                1
+            }
             _ => 0,
         }
     })
@@ -2892,9 +3057,127 @@ pub unsafe extern "C" fn SSL_CTX_ctrl(
             }
             SSL_CTRL_GET_MIN_PROTO_VERSION => c.min_proto_version as c_long,
             SSL_CTRL_GET_MAX_PROTO_VERSION => c.max_proto_version as c_long,
-            _ => 0,
+            // The authority's fall-through is `ctx->method->ssl_ctx_ctrl` (`ssl3_ctx_ctrl`); the
+            // crate's reduced method carries the SRP credential arms there.
+            // SAFETY: `ctx` is live per the caller's contract; `cmd`/`larg`/`parg` are the
+            // caller's control arguments.
+            _ => unsafe { ssl3_ctx_ctrl(ctx, cmd, larg, parg) },
         }
     })
+}
+
+/// `long ssl3_ctx_ctrl(SSL_CTX *ctx, int cmd, long larg, void *parg)` — `ssl/s3_lib.c:4207`,
+/// reduced to the SRP credential arms (`s3_lib.c:4517-4550`).
+///
+/// The authority's `SSL_CTX_set_srp_*` setters call this through `tls1_ctx_ctrl`; the crate keeps
+/// it separate from `SSL_CTX_ctrl` because `SSL_CTRL_SET_SRP_ARG` (78) collides with
+/// `SSL_CTRL_CLEAR_MODE` (78), so a command-78 call on `SSL_CTX_ctrl` is the mode clear and only a
+/// direct `ssl3_ctx_ctrl` call is the SRP argument set — exactly as the authority splits them.
+///
+/// # Safety
+/// `ctx` must point to a live context; `parg` must be valid for `cmd`.
+pub(crate) unsafe fn ssl3_ctx_ctrl(
+    ctx: *mut SslCtx,
+    cmd: c_int,
+    larg: c_long,
+    parg: *mut c_void,
+) -> c_long {
+    // SAFETY: `ctx` is live per the caller's contract.
+    let c = unsafe { &mut *ctx };
+    match cmd {
+        SSL_CTRL_SET_TLS_EXT_SRP_USERNAME => {
+            c.srp_ctx.srp_mask |= SSL_KSRP;
+            // SAFETY: `c` is live; `login` is NULL or an owned string.
+            unsafe { CRYPTO_free(c.srp_ctx.login.cast(), FILE, 0) };
+            c.srp_ctx.login = ptr::null_mut();
+            if parg.is_null() {
+                return 1;
+            }
+            // SAFETY: `parg` is a NUL-terminated string for this command.
+            let len = unsafe { core::ffi::CStr::from_ptr(parg.cast::<c_char>()) }
+                .to_bytes()
+                .len();
+            if !(1..=255).contains(&len) {
+                // SAFETY: a constant site.
+                unsafe { raise_ssl(SSL_R_INVALID_SRP_USERNAME, 4525) };
+                return 0;
+            }
+            // SAFETY: `parg` is NUL-terminated; `CRYPTO_strdup` copies it.
+            let dup = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4528) };
+            if dup.is_null() {
+                // SAFETY: a constant site.
+                unsafe { raise_ssl(ERR_R_INTERNAL_ERROR, 4529) };
+                return 0;
+            }
+            c.srp_ctx.login = dup;
+            1
+        }
+        SSL_CTRL_SET_TLS_EXT_SRP_PASSWORD => {
+            c.srp_ctx.give_client_pwd_callback =
+                Some(crate::ssl::tls_srp::srp_password_from_info_cb);
+            // SAFETY: `c` is live; `info` is NULL or an owned string.
+            unsafe { CRYPTO_free(c.srp_ctx.info.cast(), FILE, 0) };
+            // SAFETY: `parg` is a NUL-terminated string for this command.
+            let dup = unsafe { CRYPTO_strdup(parg.cast::<c_char>(), FILE, 4537) };
+            if dup.is_null() {
+                // SAFETY: a constant site.
+                unsafe { raise_ssl(ERR_R_INTERNAL_ERROR, 4538) };
+                return 0;
+            }
+            c.srp_ctx.info = dup;
+            1
+        }
+        SSL_CTRL_SET_SRP_ARG => {
+            c.srp_ctx.srp_mask |= SSL_KSRP;
+            c.srp_ctx.srp_cb_arg = parg;
+            1
+        }
+        SSL_CTRL_SET_TLS_EXT_SRP_STRENGTH => {
+            c.srp_ctx.strength = larg as c_int;
+            1
+        }
+        // `ssl_cert_set0_chain`/`ssl_cert_set1_chain` and `ssl_cert_add[01]_chain_cert`
+        // (`s3_lib.c:4633-4645`).
+        SSL_CTRL_CHAIN => {
+            if larg == 0 {
+                // SAFETY: `ctx` is live; `parg` is the chain to take ownership of.
+                unsafe {
+                    crate::ssl::ssl_cert::ssl_cert_set0_chain(
+                        ptr::null_mut(),
+                        ctx,
+                        parg.cast::<OpenSslStack>(),
+                    ) as c_long
+                }
+            } else {
+                // SAFETY: `parg` is a live chain; `X509_chain_up_ref` copies it.
+                let dchain = unsafe { crate::x509::x509_cmp::X509_chain_up_ref(parg.cast()) };
+                if dchain.is_null() {
+                    return 0;
+                }
+                // SAFETY: `dchain` is a fresh owned chain; the helper takes it.
+                let r = unsafe {
+                    crate::ssl::ssl_cert::ssl_cert_set0_chain(ptr::null_mut(), ctx, dchain)
+                };
+                if r == 0 {
+                    // SAFETY: `dchain` is live and this call owns it.
+                    unsafe { OSSL_STACK_OF_X509_free(dchain) };
+                }
+                r as c_long
+            }
+        }
+        SSL_CTRL_CHAIN_CERT => {
+            let x = parg.cast::<X509>();
+            // SAFETY: `ctx` is live; `x` is the certificate for this command.
+            unsafe {
+                (if larg == 0 {
+                    crate::ssl::ssl_cert::ssl_cert_add0_chain_cert(ptr::null_mut(), ctx, x)
+                } else {
+                    crate::ssl::ssl_cert::ssl_cert_add1_chain_cert(ptr::null_mut(), ctx, x)
+                }) as c_long
+            }
+        }
+        _ => 0,
+    }
 }
 
 /// `long SSL_CTX_callback_ctrl(SSL_CTX *ctx, int cmd, void (*fp)(void))` — `ssl/ssl_lib.c:3216-3228`.
@@ -2912,6 +3195,48 @@ pub unsafe extern "C" fn SSL_CTX_callback_ctrl(
             // SAFETY: `ctx` is live; the same callback-pointer argument as `SSL_callback_ctrl`.
             unsafe {
                 (*ctx).msg_callback = fp.map(|f| core::mem::transmute::<_, MsgCb>(f));
+            }
+            1
+        }
+        SSL_CTRL_SET_NOT_RESUMABLE_SESS_CB => {
+            // SAFETY: `ctx` is live; a `void (*)(void)` is pointer-sized (`s3_lib.c:4700-4702`).
+            unsafe {
+                (*ctx).not_resumable_session_cb =
+                    fp.map(|f| core::mem::transmute::<_, NotResumableCb>(f));
+            }
+            1
+        }
+        SSL_CTRL_SET_TMP_DH_CB => {
+            // SAFETY: `ctx` is live; only the pointer bits are stored (`s3_lib.c:4665-4667`).
+            unsafe {
+                (*(*ctx).cert).dh_tmp_cb = fp.map(|f| f as *mut c_void).unwrap_or(ptr::null_mut());
+            }
+            1
+        }
+        SSL_CTRL_SET_SRP_VERIFY_PARAM_CB => {
+            // SAFETY: `ctx` is live; the pointer is stored as the SRP verify callback.
+            unsafe {
+                (*ctx).srp_ctx.srp_mask |= SSL_KSRP;
+                (*ctx).srp_ctx.verify_param_callback =
+                    fp.map(|f| core::mem::transmute::<_, SrpVerifyParamCb>(f));
+            }
+            1
+        }
+        SSL_CTRL_SET_TLS_EXT_SRP_USERNAME_CB => {
+            // SAFETY: `ctx` is live; the pointer is stored as the SRP username callback.
+            unsafe {
+                (*ctx).srp_ctx.srp_mask |= SSL_KSRP;
+                (*ctx).srp_ctx.username_callback =
+                    fp.map(|f| core::mem::transmute::<_, SrpUsernameCb>(f));
+            }
+            1
+        }
+        SSL_CTRL_SET_SRP_GIVE_CLIENT_PWD_CB => {
+            // SAFETY: `ctx` is live; the pointer is stored as the SRP client-password callback.
+            unsafe {
+                (*ctx).srp_ctx.srp_mask |= SSL_KSRP;
+                (*ctx).srp_ctx.give_client_pwd_callback =
+                    fp.map(|f| core::mem::transmute::<_, SrpClientPwdCb>(f));
             }
             1
         }
@@ -7413,5 +7738,558 @@ pub unsafe extern "C" fn SSL_set_cipher_list(s: *mut Ssl, str_: *const c_char) -
             return 0;
         }
         1
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// Phase 14.1 remainder — the rows its now-landed dependencies (14.3/14.4/14.5/14.7) unblock
+// -------------------------------------------------------------------------------------------
+
+/** Used to change an SSL_CTXs default SSL method type */
+/// `int SSL_CTX_set_ssl_version(SSL_CTX *ctx, const SSL_METHOD *meth)` — `ssl/ssl_lib.c:662-687`.
+///
+/// # Safety
+/// `ctx` must be a live context; `meth` a live method table.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_ssl_version(
+    ctx: *mut SslCtx,
+    meth: *const SslMethod,
+) -> c_int {
+    guard_ffi(0, || {
+        if ctx.is_null() || meth.is_null() {
+            return 0;
+        }
+        // `IS_QUIC_CTX(ctx)` is unreachable for the contexts this crate builds.
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe { (*ctx).method = meth };
+        // SAFETY: `ctx` is live; the ciphersuite setter takes the default list.
+        if unsafe {
+            crate::ssl::ssl_ciph::SSL_CTX_set_ciphersuites(
+                ctx,
+                crate::ssl::ssl_ciph::OSSL_default_ciphersuites(),
+            )
+        } == 0
+        {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_SSL_LIBRARY_HAS_NO_CIPHERS, 675) };
+            return 0;
+        }
+        // SAFETY: `ctx` and its cert are live.
+        let sk = unsafe {
+            crate::ssl::ssl_ciph::ssl_create_cipher_list(
+                ctx,
+                (*ctx).tls13_ciphersuites,
+                &mut (*ctx).cipher_list,
+                &mut (*ctx).cipher_list_by_id,
+                crate::ssl::ssl_ciph::OSSL_default_cipher_list(),
+                (*ctx).cert,
+            )
+        };
+        // SAFETY: `sk` is the live stack `ssl_create_cipher_list` just built.
+        if sk.is_null() || unsafe { OPENSSL_sk_num(sk) } <= 0 {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_SSL_LIBRARY_HAS_NO_CIPHERS, 683) };
+            return 0;
+        }
+        1
+    })
+}
+
+/// `LHASH_OF(SSL_SESSION) *SSL_CTX_sessions(SSL_CTX *ctx)` — `ssl/ssl_lib.c:3081-3084`.
+///
+/// The crate's internal cache is an `OpenSslStack` rather than an `LHASH`; the returned pointer is
+/// the same cache the `SSL_CTX_sess_*` controls and `SSL_CTX_add_session` operate on.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_sessions(ctx: *mut SslCtx) -> *mut c_void {
+    guard_ffi(ptr::null_mut(), || {
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe { (*ctx).sessions.cast() }
+    })
+}
+
+/// `int SSL_has_matching_session_id(const SSL *ssl, const unsigned char *id, unsigned int id_len)`
+/// — `ssl/ssl_lib.c:1081-1106`.
+///
+/// # Safety
+/// `ssl` must be a live connection; `id` readable for `id_len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_has_matching_session_id(
+    ssl: *const Ssl,
+    id: *const u8,
+    id_len: c_uint,
+) -> c_int {
+    guard_ffi(0, || {
+        if ssl.is_null() || id_len as usize > SSL_MAX_SSL_SESSION_ID_LENGTH {
+            return 0;
+        }
+        // SAFETY: `ssl` is live per the caller's contract.
+        let version = unsafe { (*ssl).version };
+        // SAFETY: `ssl` is live; its session-cache context is live.
+        let ctx = unsafe { (*ssl).session_ctx };
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is live; its cache is an `OpenSslStack`.
+        let st = unsafe { (*ctx).sessions };
+        if st.is_null() {
+            return 0;
+        }
+        // SAFETY: `st` is the non-NULL cache stack per the guard above.
+        let n = unsafe { OPENSSL_sk_num(st) };
+        for i in 0..n {
+            // SAFETY: the index is in range.
+            let p = unsafe { OPENSSL_sk_value(st, i).cast::<SslSession>() };
+            if p.is_null() {
+                continue;
+            }
+            // SAFETY: `p` is a live cached session.
+            if unsafe { (*p).ssl_version } != version
+                // SAFETY: `p` is a live cached session.
+                || unsafe { (*p).session_id_length } != id_len as usize
+            {
+                continue;
+            }
+            if id_len == 0 {
+                return 1;
+            }
+            let mut same = true;
+            for j in 0..id_len as usize {
+                // SAFETY: `id` is readable for `id_len`; the session's id for its length.
+                if unsafe { *id.add(j) } != unsafe { (*p).session_id[j] } {
+                    same = false;
+                    break;
+                }
+            }
+            if same {
+                return 1;
+            }
+        }
+        0
+    })
+}
+
+/// `void SSL_set_accept_state(SSL *s)` — `ssl/ssl_lib.c:4986-5004`.
+///
+/// # Safety
+/// `s` must be a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_accept_state(s: *mut Ssl) {
+    guard_ffi((), || {
+        // SAFETY: `s` is live per the caller's contract; the QUIC arm is unreachable here.
+        unsafe { ssl_set_accept_state(s) };
+    })
+}
+
+/// `void SSL_set_connect_state(SSL *s)` — `ssl/ssl_lib.c:5006-5024`.
+///
+/// # Safety
+/// `s` must be a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_connect_state(s: *mut Ssl) {
+    guard_ffi((), || {
+        // SAFETY: `s` is live per the caller's contract; the QUIC arm is unreachable here.
+        unsafe { ssl_set_connect_state(s) };
+    })
+}
+
+/// `const SSL_CIPHER *SSL_get_current_cipher(const SSL *s)` — `ssl/ssl_lib.c:5310-5320`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_current_cipher(
+    s: *const Ssl,
+) -> *const crate::ssl::ssl_ciph_table::SslCipher {
+    guard_ffi(ptr::null(), || {
+        if s.is_null() {
+            return ptr::null();
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        let session = unsafe { (*s).session };
+        if !session.is_null() {
+            // SAFETY: `session` is live.
+            if !unsafe { (*session).cipher }.is_null() {
+                // SAFETY: `session` is live.
+                return unsafe { (*session).cipher };
+            }
+        }
+        ptr::null()
+    })
+}
+
+/// `const SSL_CIPHER *SSL_get_pending_cipher(const SSL *s)` — `ssl/ssl_lib.c:5322-5330`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_pending_cipher(
+    s: *const Ssl,
+) -> *const crate::ssl::ssl_ciph_table::SslCipher {
+    guard_ffi(ptr::null(), || {
+        if s.is_null() {
+            return ptr::null();
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe { (*s).pending_cipher }
+    })
+}
+
+/// `const COMP_METHOD *SSL_get_current_compression(const SSL *s)` — `ssl/ssl_lib.c:5332-5344`.
+///
+/// The authority asks the write record method; this crate models no record method, and the
+/// authority's own default record method answers NULL for a connection that has negotiated no
+/// compression, so NULL is its answer for the states this stratum reaches.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_current_compression(_s: *const Ssl) -> *const c_void {
+    ptr::null()
+}
+
+/// `const COMP_METHOD *SSL_get_current_expansion(const SSL *s)` — `ssl/ssl_lib.c:5346-5358`.
+///
+/// As [`SSL_get_current_compression`], for the read record method.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_current_expansion(_s: *const Ssl) -> *const c_void {
+    ptr::null()
+}
+
+/// `STACK_OF(SSL_CIPHER) *SSL_get_client_ciphers(const SSL *s)` — `ssl/ssl_lib.c:3267-3274`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_client_ciphers(s: *const Ssl) -> *mut OpenSslStack {
+    guard_ffi(ptr::null_mut(), || {
+        if s.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        if unsafe { (*s).server } == 0 {
+            return ptr::null_mut();
+        }
+        // SAFETY: `s` is live.
+        unsafe { (*s).peer_ciphers }
+    })
+}
+
+/// `char *SSL_get_shared_ciphers(const SSL *s, char *buf, int size)` — `ssl/ssl_lib.c:3414-3460`.
+///
+/// # Safety
+/// `s` NULL or live; `buf` writable for `size` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_shared_ciphers(
+    s: *const Ssl,
+    buf: *mut c_char,
+    size: c_int,
+) -> *mut c_char {
+    guard_ffi(ptr::null_mut(), || {
+        if size < 2 || buf.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `buf` is writable for `size` bytes.
+        unsafe { *buf = 0 };
+        if s.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        if unsafe { (*s).server } == 0 {
+            return ptr::null_mut();
+        }
+        // SAFETY: `s` is live.
+        let clntsk = unsafe { (*s).peer_ciphers };
+        // SAFETY: `s` is live.
+        let srvrsk = unsafe { SSL_get_ciphers(s) };
+        let cnum = if clntsk.is_null() {
+            0
+        } else {
+            // SAFETY: `clntsk` is non-NULL, so it is a live stack.
+            unsafe { OPENSSL_sk_num(clntsk) }
+        };
+        let snum = if srvrsk.is_null() {
+            0
+        } else {
+            // SAFETY: `srvrsk` is non-NULL, so it is a live stack.
+            unsafe { OPENSSL_sk_num(srvrsk) }
+        };
+        if cnum == 0 || snum == 0 {
+            return buf;
+        }
+        let mut p = buf;
+        let mut remaining = size;
+        for i in 0..cnum {
+            // SAFETY: the index is in range.
+            let c = unsafe { OPENSSL_sk_value(clntsk, i) }
+                .cast::<crate::ssl::ssl_ciph_table::SslCipher>();
+            if c.is_null() {
+                continue;
+            }
+            // SAFETY: `srvrsk` is a live stack; `c` is a live cipher.
+            if unsafe { OPENSSL_sk_find(srvrsk, c.cast()) } < 0 {
+                continue;
+            }
+            // SAFETY: `c` is a live cipher.
+            let name = unsafe { (*c).name };
+            let n = if name.len() >= remaining as usize {
+                remaining as usize
+            } else {
+                name.len()
+            };
+            if n >= remaining as usize {
+                break;
+            }
+            // SAFETY: `p` is writable for `remaining` bytes and `n < remaining`; `name` is readable.
+            unsafe {
+                ptr::copy_nonoverlapping(name.as_ptr(), p.cast::<u8>(), n);
+                p = p.add(n);
+                *p.cast::<u8>() = b':';
+                p = p.add(1);
+            }
+            remaining -= (n + 1) as c_int;
+        }
+        if p != buf {
+            // SAFETY: `p > buf`, so `p - 1` is inside the buffer.
+            unsafe { *p.sub(1) = 0 };
+        }
+        buf
+    })
+}
+
+/// `int SSL_set0_tmp_dh_pkey(SSL *s, EVP_PKEY *dhpkey)` — `ssl/ssl_lib.c:7588-7603`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `dhpkey` a live key.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set0_tmp_dh_pkey(s: *mut Ssl, dhpkey: *mut c_void) -> c_int {
+    guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; `dhpkey` is a live key.
+        if unsafe {
+            ssl_security(
+                s,
+                SSL_SECOP_TMP_DH,
+                EVP_PKEY_get_security_bits(dhpkey.cast()),
+                0,
+                dhpkey,
+            )
+        } == 0
+        {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_DH_KEY_TOO_SMALL, 7597) };
+            return 0;
+        }
+        // SAFETY: `s` and its cert are live; `dhpkey` is live.
+        unsafe {
+            let cert = (*s).cert;
+            EVP_PKEY_free((*cert).dh_tmp.cast());
+            (*cert).dh_tmp = dhpkey;
+        }
+        1
+    })
+}
+
+/// `int SSL_CTX_set0_tmp_dh_pkey(SSL_CTX *ctx, EVP_PKEY *dhpkey)` — `ssl/ssl_lib.c:7605-7615`.
+///
+/// # Safety
+/// `ctx` must be a live context; `dhpkey` a live key.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set0_tmp_dh_pkey(ctx: *mut SslCtx, dhpkey: *mut c_void) -> c_int {
+    guard_ffi(0, || {
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is live; `dhpkey` is a live key.
+        if unsafe {
+            ssl_ctx_security(
+                ctx,
+                SSL_SECOP_TMP_DH,
+                EVP_PKEY_get_security_bits(dhpkey.cast()),
+                0,
+                dhpkey,
+            )
+        } == 0
+        {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_DH_KEY_TOO_SMALL, 7609) };
+            return 0;
+        }
+        // SAFETY: `ctx` and its cert are live; `dhpkey` is live.
+        unsafe {
+            let cert = (*ctx).cert;
+            EVP_PKEY_free((*cert).dh_tmp.cast());
+            (*cert).dh_tmp = dhpkey;
+        }
+        1
+    })
+}
+
+/// `int SSL_CTX_set_default_verify_dir(SSL_CTX *ctx)` — `ssl/ssl_lib.c:5551-5567`.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_default_verify_dir(ctx: *mut SslCtx) -> c_int {
+    guard_ffi(0, || {
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` and its store are live; the method is a process-lifetime static.
+        let lookup = unsafe { X509_STORE_add_lookup((*ctx).cert_store, X509_LOOKUP_hash_dir()) };
+        if lookup.is_null() {
+            return 0;
+        }
+        // The authority ignores a missing directory.
+        // SAFETY: thread-local error queue only.
+        ERR_set_mark();
+        // SAFETY: `lookup` is live; NULL name is the default-path arm.
+        unsafe {
+            X509_LOOKUP_ctrl(
+                lookup,
+                X509_L_ADD_DIR,
+                ptr::null(),
+                X509_FILETYPE_DEFAULT,
+                ptr::null_mut(),
+            )
+        };
+        // SAFETY: thread-local error queue only.
+        ERR_pop_to_mark();
+        1
+    })
+}
+
+/// `int SSL_CTX_set_default_verify_file(SSL_CTX *ctx)` — `ssl/ssl_lib.c:5569-5586`.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_default_verify_file(ctx: *mut SslCtx) -> c_int {
+    guard_ffi(0, || {
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` and its store are live.
+        let lookup = unsafe { X509_STORE_add_lookup((*ctx).cert_store, X509_LOOKUP_file()) };
+        if lookup.is_null() {
+            return 0;
+        }
+        // SAFETY: thread-local error queue only.
+        ERR_set_mark();
+        // SAFETY: `ctx` is live; `lookup` is live; NULL name is the default-path arm.
+        unsafe {
+            X509_LOOKUP_ctrl_ex(
+                lookup,
+                X509_L_FILE_LOAD,
+                ptr::null(),
+                X509_FILETYPE_DEFAULT as c_long,
+                ptr::null_mut(),
+                (*ctx).libctx,
+                (*ctx).propq,
+            )
+        };
+        // SAFETY: thread-local error queue only.
+        ERR_pop_to_mark();
+        1
+    })
+}
+
+/// `int SSL_CTX_set_default_verify_store(SSL_CTX *ctx)` — `ssl/ssl_lib.c:5588-5604`.
+///
+/// # Safety
+/// `ctx` must be a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_default_verify_store(ctx: *mut SslCtx) -> c_int {
+    guard_ffi(0, || {
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` and its store are live.
+        let lookup = unsafe { X509_STORE_add_lookup((*ctx).cert_store, X509_LOOKUP_store()) };
+        if lookup.is_null() {
+            return 0;
+        }
+        // SAFETY: thread-local error queue only.
+        ERR_set_mark();
+        // SAFETY: `ctx` is live; `lookup` is live; NULL name is the default-path arm.
+        unsafe {
+            X509_LOOKUP_ctrl_ex(
+                lookup,
+                X509_L_ADD_STORE,
+                ptr::null(),
+                0,
+                ptr::null_mut(),
+                (*ctx).libctx,
+                (*ctx).propq,
+            )
+        };
+        // SAFETY: thread-local error queue only.
+        ERR_pop_to_mark();
+        1
+    })
+}
+
+/// `int SSL_copy_session_id(SSL *t, const SSL *f)` — `ssl/ssl_lib.c:2029-2062`.
+///
+/// The crate copies the session-id context and the certificate security attributes rather than
+/// sharing the certificate pointer: `SSL_cert_free` in this reduced model releases the leaf, so a
+/// shared pointer would be freed twice. The observable (`SSL_get_certificate`, the sid context) is
+/// the authority's for the fresh-connection pair the court drives; the method-changed arm's
+/// `ssl_deinit`/`ssl_init` is the record layer's and is recorded in `src/ssl/mod.rs`.
+///
+/// # Safety
+/// `t` and `f` must be live connections.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_copy_session_id(t: *mut Ssl, f: *const Ssl) -> c_int {
+    guard_ffi(0, || {
+        if t.is_null() || f.is_null() {
+            return 0;
+        }
+        // SAFETY: both pointers are live per the caller's contract.
+        if unsafe { SSL_set_session(t, SSL_get_session(f)) } == 0 {
+            return 0;
+        }
+        // SAFETY: `t` and `f` are live.
+        unsafe {
+            if (*t).method != (*f).method {
+                (*t).method = (*f).method;
+            }
+            cert_copy_security((*t).cert, (*f).cert);
+            let len = (*f).sid_ctx_length;
+            if SSL_set_session_id_context(t, (*f).sid_ctx.as_ptr(), len) == 0 {
+                return 0;
+            }
+        }
+        1
+    })
+}
+
+/// `EVP_PKEY *SSL_get0_peer_rpk(const SSL *s)` — `ssl/ssl_lib.c:8210-8217`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_peer_rpk(s: *const Ssl) -> *mut c_void {
+    guard_ffi(ptr::null_mut(), || {
+        if s.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        let session = unsafe { (*s).session };
+        if session.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `session` is live.
+        unsafe { (*session).peer_rpk }
     })
 }
