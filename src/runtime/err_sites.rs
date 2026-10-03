@@ -45802,6 +45802,16 @@ pub(crate) const ENG_CNF_157: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ENGINE_set_default_string` at `crypto/engine/eng_fat.c:86` (ENGINE_R_INVALID_STRING).
+pub(crate) const ENG_FAT_86: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_fat.c",
+    line: 86,
+    func: c"ENGINE_set_default_string",
+    lib: 38,
+    reason: 150,
+    dynamic_reason: false,
+};
+
 /// `engine_unlocked_finish` at `crypto/engine/eng_init.c:79` (ENGINE_R_FINISH_FAILED).
 pub(crate) const ENG_INIT_79: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/engine/eng_init.c",
@@ -51150,6 +51160,7 @@ pub(crate) static ALL: &[ErrSite] = &[
     ENG_CNF_136,
     ENG_CNF_138,
     ENG_CNF_157,
+    ENG_FAT_86,
     ENG_INIT_79,
     ENG_INIT_90,
     ENG_INIT_95,

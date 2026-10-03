@@ -283,7 +283,9 @@ and accessor surface was already in: `ENGINE_new`, `ENGINE_free`, `ENGINE_up_ref
 `UI_OpenSSL`. The four Phase 7 -> 13 spellings `PEM_read_PrivateKey`, `PEM_read_PrivateKey_ex`,
 `PEM_read_bio_PrivateKey` and `PEM_read_bio_PrivateKey_ex` landed with Phase 8 (D369). The bulk of
 that list was landed before this stratum's first slice as substrate the earlier strata needed; the
-ledger is the record and this sentence names only what those landings left here.
+ledger is the record and this sentence names only what those landings left here. Subphase 13.3
+later landed the control fat helpers `ENGINE_set_default`, `ENGINE_set_default_string`,
+`ENGINE_register_complete` and `ENGINE_register_all_complete`.
 
 Subphase 13.2 landed the ENGINE table and method-binding surface. The cipher table
 (`src/engine/tb_cipher.rs`) contributes `ENGINE_set_ciphers`, `ENGINE_get_ciphers`,
@@ -298,11 +300,20 @@ the three `ENGINE_set_load_*_function`/`ENGINE_get_load_*_function` pairs and
 `ENGINE_load_private_key`, `ENGINE_load_public_key` and `ENGINE_load_ssl_client_cert`. Those, with
 the three names 13.1 landed, are the ledger's `implemented` additions.
 
+Subphase 13.3 landed the control and command surface. `src/engine/eng_fat.rs` contributes the four
+fat helpers: `ENGINE_set_default` and `ENGINE_set_default_string` (the `ENGINE_METHOD_*` mask
+dispatch and its string spelling) and `ENGINE_register_complete`/`ENGINE_register_all_complete`
+(the nine-arm bulk registration and its registry walk), all binding into the 13.2 tables.
+`src/engine/eng_ctrl.rs`'s dispatcher (`ENGINE_ctrl`, `ENGINE_ctrl_cmd`,
+`ENGINE_ctrl_cmd_string` and `ENGINE_cmd_is_executable`) was already in as pre-activation
+substrate. The `ENGINE_set_default_string` forward declaration `eng_cnf.rs` carried is dropped
+with this landing.
+
 **Open exports (checked against the ledger):**
 
-The open set is the ENGINE control surface, the TXT_DB
-codec and the deprecated statics over them. Representative names are
-`ENGINE_set_default`, `TXT_DB_read`, `TXT_DB_free`, `TXT_DB_write`,
+The open set is the TXT_DB codec, the deprecated statics over it and the
+legacy EVP method statics. Representative names are
+`TXT_DB_read`, `TXT_DB_free`, `TXT_DB_write`,
 `TXT_DB_insert`, `TXT_DB_create_index`, `TXT_DB_get_by_index`, `ASYNC_WAIT_CTX_new`,
 `EVP_aes_128_cbc`, `PEM_write_bio_PrivateKey`, `TS_CONF_set_crypto_device`,
 `TS_CONF_set_default_engine` and `SRP_VBASE_init`. Every one is open rather than implemented, and

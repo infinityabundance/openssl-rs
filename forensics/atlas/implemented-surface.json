@@ -501,7 +501,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 16241,
+      "compiler_emitted_count": 15769,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -509,7 +509,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 5702,
+        "implemented": 5706,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -2006,10 +2006,12 @@
           "ENGINE_register_all_RAND",
           "ENGINE_register_all_RSA",
           "ENGINE_register_all_ciphers",
+          "ENGINE_register_all_complete",
           "ENGINE_register_all_digests",
           "ENGINE_register_all_pkey_asn1_meths",
           "ENGINE_register_all_pkey_meths",
           "ENGINE_register_ciphers",
+          "ENGINE_register_complete",
           "ENGINE_register_digests",
           "ENGINE_register_pkey_asn1_meths",
           "ENGINE_register_pkey_meths",
@@ -2022,6 +2024,7 @@
           "ENGINE_set_ciphers",
           "ENGINE_set_cmd_defns",
           "ENGINE_set_ctrl_function",
+          "ENGINE_set_default",
           "ENGINE_set_default_DH",
           "ENGINE_set_default_DSA",
           "ENGINE_set_default_EC",
@@ -2031,6 +2034,7 @@
           "ENGINE_set_default_digests",
           "ENGINE_set_default_pkey_asn1_meths",
           "ENGINE_set_default_pkey_meths",
+          "ENGINE_set_default_string",
           "ENGINE_set_destroy_function",
           "ENGINE_set_digests",
           "ENGINE_set_ex_data",
@@ -6214,7 +6218,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 194
+        "scaffolded": 190
       },
       "libssl": {
         "authority_exports": 603,
@@ -6225,18 +6229,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 5702,
-      "scaffolded": 797
+      "implemented": 5706,
+      "scaffolded": 793
     }
   },
-  "body_hash": "9e091327797e44490708e5a734bf8bb21f936cf97129e8ceaa34731540a4185d",
+  "body_hash": "25b434c571d612a3579ca8ef113e55070969dd80f16c67c658e667879d80cfa0",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "5caac59ce22e15ded07288b4d1454b81d9dac32fdbc521257dbb9a7ba57dadaf"
+      "sha256": "9525eebc0503b408d44c6d191e034423c5f69b679c9262ef7a6df0d9491f3c94"
     },
     {
       "name": "authority-exports",

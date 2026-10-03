@@ -41837,10 +41837,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 183,
-          "directly_courted_called": 90,
-          "directly_courted_referenced": 93,
-          "implemented": 183,
+          "directly_courted": 187,
+          "directly_courted_called": 99,
+          "directly_courted_referenced": 88,
+          "implemented": 187,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -41850,6 +41850,7 @@
             "basis": "called",
             "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
@@ -41901,6 +41902,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
@@ -41911,6 +41913,7 @@
             "basis": "called",
             "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
@@ -41962,6 +41965,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_get_cipher_engine"
@@ -41990,6 +41994,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_get_default_DH"
@@ -41997,6 +42002,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_get_default_DSA"
@@ -42004,6 +42010,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_get_default_EC"
@@ -42011,6 +42018,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_get_default_RAND"
@@ -42018,6 +42026,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_get_default_RSA"
@@ -42039,6 +42048,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
@@ -42078,6 +42088,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
@@ -42145,8 +42156,9 @@
             "symbol": "ENGINE_get_pkey_asn1_meth"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_get_pkey_asn1_meth_engine"
@@ -42175,6 +42187,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE",
               "RT-PHASE13-REF"
             ],
@@ -42258,6 +42271,7 @@
             "basis": "called",
             "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
@@ -42349,6 +42363,13 @@
             "symbol": "ENGINE_register_all_ciphers"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL"
+            ],
+            "symbol": "ENGINE_register_all_complete"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE13-REF"
@@ -42375,6 +42396,13 @@
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_register_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL"
+            ],
+            "symbol": "ENGINE_register_complete"
           },
           {
             "basis": "called",
@@ -42410,6 +42438,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_set_DH"
@@ -42417,6 +42446,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_set_DSA"
@@ -42424,6 +42454,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_set_EC"
@@ -42431,6 +42462,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_set_RAND"
@@ -42438,6 +42470,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_set_RSA"
@@ -42445,6 +42478,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_set_ciphers"
@@ -42462,6 +42496,13 @@
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_set_ctrl_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL"
+            ],
+            "symbol": "ENGINE_set_default"
           },
           {
             "basis": "called",
@@ -42527,6 +42568,13 @@
             "symbol": "ENGINE_set_default_pkey_meths"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL"
+            ],
+            "symbol": "ENGINE_set_default_string"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE13-REF"
@@ -42536,6 +42584,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
@@ -42557,8 +42606,9 @@
             "symbol": "ENGINE_set_finish_function"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_set_flags"
@@ -42567,6 +42617,7 @@
             "basis": "called",
             "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
@@ -42605,6 +42656,7 @@
             "basis": "called",
             "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
@@ -42612,8 +42664,9 @@
             "symbol": "ENGINE_set_name"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_set_pkey_asn1_meths"
@@ -42621,6 +42674,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE",
               "RT-PHASE13-REF"
             ],
@@ -42637,6 +42691,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_unregister_DH"
@@ -42644,6 +42699,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_unregister_DSA"
@@ -42651,6 +42707,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_unregister_EC"
@@ -42658,6 +42715,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_unregister_RAND"
@@ -42665,6 +42723,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_unregister_RSA"
@@ -42672,6 +42731,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-ENGINE-TABLE"
             ],
             "symbol": "ENGINE_unregister_ciphers"
@@ -42679,21 +42739,24 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
             "symbol": "ENGINE_unregister_digests"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_unregister_pkey_asn1_meths"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ENGINE-CTRL",
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_unregister_pkey_meths"
@@ -43185,14 +43248,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 13,
-        "staged_candidate_probes": 3
+        "staged_candidate_probes": 4
       }
     ],
     "totals": {
-      "directly_courted": 5694,
-      "directly_courted_called": 4622,
-      "directly_courted_referenced": 1072,
-      "implemented": 5702,
+      "directly_courted": 5698,
+      "directly_courted_called": 4631,
+      "directly_courted_referenced": 1067,
+      "implemented": 5706,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -43203,7 +43266,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8f23605ea8dd028cf13baf7dac90f05287e5980e7c47d302f21e171fe102bbd5"
+      "sha256": "f21d56f9b221d55216ee68a9d2417ed9e283262068fca150bc27394795c9b8f6"
     },
     {
       "name": "symbol-ownership",
@@ -43218,7 +43281,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "b3519abe4294c601fe453f914caf0df520b8bc21c31712a82ce608743b5b7a82"
+      "sha256": "9ff1fa774fbe685c9b36cb17d4992bc5722b10c871989ea52bbef61f5bf59528"
     },
     {
       "name": "phase3-courts",
@@ -43228,7 +43291,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "5ebc6a6d32b6c6f71394ecc04f275727a2f8bf122d21a6f2974e66223cb60ddc"
+      "sha256": "cc2aed1c83dd566b5a7abc6d03b7847924fd2c55f12464dbab1437a422d55036"
     },
     {
       "name": "phase4-courts",
@@ -43238,7 +43301,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "034ff2fa751a2b6875edf05dc4b449c5f31704a494815ce5a4bafc8e68e538d7"
+      "sha256": "65c48ead37b38d42abeea54e92af1b20785db1e4086851d07569537d10db28bb"
     },
     {
       "name": "phase5-courts",
@@ -43248,7 +43311,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "c436a170523929ebac634dac1ba9bd8e1cdb02d4e145cb15139099d78491b765"
+      "sha256": "9e69dcd2225ee4c9551e26a4a6543ffa687cd3758c70935a4c3716b32d0b75fe"
     },
     {
       "name": "phase6-courts",
@@ -43258,7 +43321,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "1eab612867d3b9cf4b6782671c4a4689743e49dacb96291521066328f3c12446"
+      "sha256": "b77680db279fa421ebdb67a775ffdb3bde25d5dca480724db41e03921d20de88"
     },
     {
       "name": "phase7-courts",
@@ -43268,7 +43331,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "460f4702b1724ce6a769b88a3bb8c3ab6bb560b2ed0b115d98feba298440412c"
+      "sha256": "31df0a0c29733a6a24541124139a204c6ae6a54d7292d47b69fe031b509b28ec"
     },
     {
       "name": "phase8-courts",
@@ -43278,7 +43341,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "3d033eaa81a1e8db197d51371b85c394b0052130557d431603e3dbb7ab48f1b7"
+      "sha256": "396cba566b8d4c80b529eb15e905be39a7c37efe4515613ec229ed560afb14f4"
     },
     {
       "name": "phase9-courts",
@@ -43288,7 +43351,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "fdacaeaa25d3591911e4f34350273db3edff9772c86c777c8a580079ac350145"
+      "sha256": "1e948988d669d4191f03a601e61614ff2b928a1deb1dc5e4418bf2d576220224"
     },
     {
       "name": "phase10-courts",
@@ -43298,7 +43361,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "2015b615aaaac3e400e78d5385d028a388db51c37901e9977780041b37e614ac"
+      "sha256": "0335b7cd441fbe72f748c3e2cf84e55d8e4fc375326cf94b8a4f11a66ec661c8"
     },
     {
       "name": "phase11-courts",
@@ -43308,7 +43371,7 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "49006c9fc2610753b9a3febb8091e1a958d6f49ba39e56311e9ee4382cc48747"
+      "sha256": "c77e513937b0b436970479d493288905e04bb4a6fff473940ecb0e47847c832b"
     },
     {
       "name": "phase12-courts",
@@ -43318,12 +43381,12 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "b1866d789a7fc2dbc4ed10e263eb7fb3cc52eaa417f8d8dc1ba8d41e0e262954"
+      "sha256": "a73e539079ada740f767104f5b807a1fd2bc93b71be29de14c377132f0a82250"
     },
     {
       "name": "phase13-courts",
       "path": "artifacts/phase13/COURTS.json",
-      "sha256": "65de2ab734badc5062bad71f26c7861dc2d9f9207c35ec18e6e486823e78f795"
+      "sha256": "2b399602dbcc58d6c3bdd0d2705d1629ed062988328db229f97e5dae91db8e8d"
     }
   ],
   "kind": "court-coverage",

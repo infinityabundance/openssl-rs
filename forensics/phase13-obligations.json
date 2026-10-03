@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 189,
       "deferred_to_later_phase": 0,
-      "implemented": 183,
-      "open_in_this_stratum": 194,
+      "implemented": 187,
+      "open_in_this_stratum": 190,
       "owned": 377,
       "received_by_handoff": 188
     },
@@ -1783,10 +1783,12 @@
       "ENGINE_register_all_RAND",
       "ENGINE_register_all_RSA",
       "ENGINE_register_all_ciphers",
+      "ENGINE_register_all_complete",
       "ENGINE_register_all_digests",
       "ENGINE_register_all_pkey_asn1_meths",
       "ENGINE_register_all_pkey_meths",
       "ENGINE_register_ciphers",
+      "ENGINE_register_complete",
       "ENGINE_register_digests",
       "ENGINE_register_pkey_asn1_meths",
       "ENGINE_register_pkey_meths",
@@ -1799,6 +1801,7 @@
       "ENGINE_set_ciphers",
       "ENGINE_set_cmd_defns",
       "ENGINE_set_ctrl_function",
+      "ENGINE_set_default",
       "ENGINE_set_default_DH",
       "ENGINE_set_default_DSA",
       "ENGINE_set_default_EC",
@@ -1808,6 +1811,7 @@
       "ENGINE_set_default_digests",
       "ENGINE_set_default_pkey_asn1_meths",
       "ENGINE_set_default_pkey_meths",
+      "ENGINE_set_default_string",
       "ENGINE_set_destroy_function",
       "ENGINE_set_digests",
       "ENGINE_set_ex_data",
@@ -2034,30 +2038,6 @@
         "module": "src/async/async.rs",
         "received_from_phase": 3,
         "symbol": "ASYNC_unblock_pause"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_fat.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_all_complete"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_fat.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_complete"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_fat.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_default"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_fat.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_default_string"
       },
       {
         "declaring_header": "evp.h",
@@ -3165,22 +3145,22 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "9e091327797e44490708e5a734bf8bb21f936cf97129e8ceaa34731540a4185d"
+      "sha256": "25b434c571d612a3579ca8ef113e55070969dd80f16c67c658e667879d80cfa0"
     },
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "b3519abe4294c601fe453f914caf0df520b8bc21c31712a82ce608743b5b7a82"
+      "sha256": "9ff1fa774fbe685c9b36cb17d4992bc5722b10c871989ea52bbef61f5bf59528"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "1eab612867d3b9cf4b6782671c4a4689743e49dacb96291521066328f3c12446"
+      "sha256": "b77680db279fa421ebdb67a775ffdb3bde25d5dca480724db41e03921d20de88"
     },
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "49006c9fc2610753b9a3febb8091e1a958d6f49ba39e56311e9ee4382cc48747"
+      "sha256": "c77e513937b0b436970479d493288905e04bb4a6fff473940ecb0e47847c832b"
     }
   ],
   "kind": "phase13-obligations",
