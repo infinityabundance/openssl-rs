@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4653,
+      "sites": 4654,
       "unattributed": 0
     },
     "covered_files": [
@@ -395,6 +395,7 @@
       "crypto/ec/ecx_meth.c",
       "crypto/engine/eng_ctrl.c",
       "crypto/engine/eng_cnf.c",
+      "crypto/engine/eng_fat.c",
       "crypto/engine/eng_init.c",
       "crypto/engine/eng_lib.c",
       "crypto/engine/eng_list.c",
@@ -69200,6 +69201,21 @@
         "rel_source": "crypto/engine/eng_cnf.c"
       },
       {
+        "const_name": "ENG_FAT_86",
+        "data_format": "\"str=%s\"",
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_fat.c",
+        "function": "ENGINE_set_default_string",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 86,
+        "macro": "ERR_raise_data",
+        "reason": 150,
+        "reason_symbol": "ENGINE_R_INVALID_STRING",
+        "rel_source": "crypto/engine/eng_fat.c"
+      },
+      {
         "const_name": "ENG_INIT_79",
         "data_format": null,
         "dynamic_reason": false,
@@ -72289,6 +72305,11 @@
       "name": "authority:crypto/engine/eng_cnf.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/engine/eng_cnf.c",
       "sha256": "e2319f68ab91eb97c5188e1fec384812961218bd9087c52556bccbaab06b99cb"
+    },
+    {
+      "name": "authority:crypto/engine/eng_fat.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/engine/eng_fat.c",
+      "sha256": "6a647d84277c9d904a0f12ddf72318def863db957456ae41222d7c4b296e0ccc"
     },
     {
       "name": "authority:crypto/engine/eng_init.c",

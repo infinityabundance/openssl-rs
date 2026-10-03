@@ -1436,9 +1436,12 @@ COVERED_FILES = [
     # `ERR_R_*` and `ENGINE_R_*`, and the cipher table (`tb_cipher.c`), whose
     # `ENGINE_get_cipher` raises `ENGINE_R_UNIMPLEMENTED_CIPHER`. The five legacy method
     # tables (`tb_rsa`/`tb_dsa`/`tb_dh`/`tb_eckey`/`tb_rand`) raise nothing and are not
-    # listed, for the `eng_all.c` reason.
+    # listed, for the `eng_all.c` reason. Phase 13.3 added the control fat helpers
+    # (`eng_fat.c`), whose one site is `ENGINE_set_default_string`'s
+    # `ENGINE_R_INVALID_STRING` refusal (`str=%s`) -- the dispatch itself raises nothing.
     ("crypto/engine/eng_ctrl.c", "ENG_CTRL"),
     ("crypto/engine/eng_cnf.c", "ENG_CNF"),
+    ("crypto/engine/eng_fat.c", "ENG_FAT"),
     ("crypto/engine/eng_init.c", "ENG_INIT"),
     ("crypto/engine/eng_lib.c", "ENG_LIB"),
     ("crypto/engine/eng_list.c", "ENG_LIST"),

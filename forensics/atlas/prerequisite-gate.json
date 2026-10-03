@@ -9,7 +9,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 86,
-      "language_surface_not_modelled_by_name": 8870,
+      "language_surface_not_modelled_by_name": 8873,
       "planned_prerequisites": 4
     },
     "census_by_unit": {
@@ -281,6 +281,7 @@
         "crypto/engine/eng_all.c": 1,
         "crypto/engine/eng_cnf.c": 14,
         "crypto/engine/eng_ctrl.c": 6,
+        "crypto/engine/eng_fat.c": 5,
         "crypto/engine/eng_init.c": 7,
         "crypto/engine/eng_lib.c": 19,
         "crypto/engine/eng_list.c": 9,
@@ -495,7 +496,7 @@
         "crypto/threads_pthread.c": 24,
         "crypto/trace.c": 24,
         "crypto/ts/ts_asn1.c": 40,
-        "crypto/ts/ts_conf.c": 27,
+        "crypto/ts/ts_conf.c": 25,
         "crypto/ts/ts_lib.c": 9,
         "crypto/ts/ts_req_print.c": 3,
         "crypto/ts/ts_req_utils.c": 10,
@@ -693,8 +694,8 @@
       ]
     },
     "checked": {
-      "authority_units": 533,
-      "crate_modules": 719,
+      "authority_units": 534,
+      "crate_modules": 720,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 4,
       "divergence_names_covered": 47,
@@ -805,7 +806,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "8b7ea0419e9ef81b8a66acd55fb4b31836338985229ab0797a575f75001a75e0",
+  "body_hash": "141b5bfc21a7b0b5c9f1b3e14a569edb444125edbb2eb1ff448893549ca28141",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -826,7 +827,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "890e359ad83e4ab18640b06a3721485fd289d767e318725b49fa802908de731f"
+      "sha256": "80a8d5b6f54ef9fdb61f472d71c05ee42178fbfd8d6297e7d5ea860094dbb05e"
     },
     {
       "name": "symbol-ownership",
@@ -841,12 +842,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8f23605ea8dd028cf13baf7dac90f05287e5980e7c47d302f21e171fe102bbd5"
+      "sha256": "f21d56f9b221d55216ee68a9d2417ed9e283262068fca150bc27394795c9b8f6"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "0cb45e8a146b6697deebe4de182fbecd7a0eb023030667c3a0176c91549d583e"
+      "sha256": "7f8ca26dc2174adc478bf36a6c07a51112f6e6412e7f60b3f8c23f11eeb57c9d"
     },
     {
       "name": "prerequisites",

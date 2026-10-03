@@ -52,15 +52,30 @@ It does **not** pass a NULL engine to a method getter (the authority dereference
 reads the error queue, so the refusal arms' `ENGINE_R_*` raises cannot leak into a comparison. See
 docs/PHASE-13-SUBPHASES.md section 3.2 for what the court is required to compare.
 
+`RT-ENGINE-CTRL`, and what it compares
+--------------------------------------
+13.3's court, `courts/phase13/rt_engine_ctrl_probe.c`, drives the four control fat helpers the
+subphase lands -- `ENGINE_set_default` and `ENGINE_set_default_string` (`eng_fat.c`), and
+`ENGINE_register_complete`/`ENGINE_register_all_complete` -- over a synthetic ENGINE and the
+`ENGINE_METHOD_*` bit names. It compares the mask dispatch one bit at a time and with
+`ENGINE_METHOD_ALL` and `0`, every string spelling `int_def_cb` recognises (`RSA`, `RSA,DSA`,
+`CIPHERS,DIGESTS`, `PKEY`, `PKEY_CRYPTO`, `PKEY_ASN1`, `ALL`, and space-trimmed elements), the
+nine-arm registration through each table's select, the registry walk and its
+`ENGINE_FLAGS_NO_REGISTER_ALL` skip, and the four refusal arms (an unknown element, an unknown
+element after a known one, the NULL list and the empty list) by their return values and the
+absence of a partial default. It does **not** pass a NULL engine (both bodies dereference it) and
+never reads the error queue. See docs/PHASE-13-SUBPHASES.md section 3.3 for what the court is
+required to compare.
+
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" -- the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-ENGINE-CTRL`, `RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`,
-`RT-LEGACY-REMAINDER` and `RT-HANDOFF` are the remaining subphases' own courts: 13.3's control and
-command surface, 13.4's UI framework, 13.5's TXT_DB database, 13.6's legacy EVP method statics,
-13.7's PEM readers and ASYNC framework, and 13.8's received TS_CONF and SRP hand-offs.
+later activation established. `RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and
+`RT-HANDOFF` are the remaining subphases' own courts: 13.4's UI framework, 13.5's TXT_DB database,
+13.6's legacy EVP method statics, 13.7's PEM readers and ASYNC framework, and 13.8's received
+TS_CONF and SRP hand-offs.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -111,6 +126,7 @@ COURTS: list[tuple[str, str]] = [
     ("RT-PHASE13-REF", "rt_coverage_ref_probe.c"),
     ("RT-ENGINE", "rt_engine_probe.c"),
     ("RT-ENGINE-TABLE", "rt_engine_table_probe.c"),
+    ("RT-ENGINE-CTRL", "rt_engine_ctrl_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -118,7 +134,6 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-13-SUBPHASES.md` section 2's, one per work
 # subphase.
 PENDING_COURTS: dict[str, str] = {
-    "RT-ENGINE-CTRL": "13.3 (the ENGINE control and command surface)",
     "RT-UI": "13.4 (the UI framework)",
     "RT-TXTDB": "13.5 (the TXT_DB text database)",
     "RT-EVP-LEGACY": "13.6 (the legacy EVP method statics)",
@@ -303,8 +318,13 @@ def main(argv: list[str]) -> int:
             "ENGINE and compares the bound method identities, the register/select/unregister "
             "cycle, the `ENGINE_register_all_*` walk, the `dummy_nid` default select and the "
             "NULL/uninitialised/no-loader refusals -- not a NULL engine handed to a method "
-            "getter, and not the error queue. Every other behavioural court the plan names is "
-            "named in `pending_courts` with the subphase that brings it -- `RT-ENGINE-CTRL`, "
+            "getter, and not the error queue. `RT-ENGINE-CTRL` is 13.3's behavioural court: it "
+            "**calls** the four control fat helpers `eng_fat.c` lands and compares the "
+            "`ENGINE_METHOD_*` mask dispatch, every `int_def_cb` string spelling, the nine-arm "
+            "`ENGINE_register_complete` and the `ENGINE_register_all_complete` walk and its "
+            "`ENGINE_FLAGS_NO_REGISTER_ALL` skip, and the unknown/partial/NULL/empty refusals "
+            "-- not a NULL engine, and not the error queue. Every other behavioural court the "
+            "plan names is named in `pending_courts` with the subphase that brings it -- "
             "`RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
             "none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
             "is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md "

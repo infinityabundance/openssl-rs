@@ -6,16 +6,15 @@
 //! pseudo-controls (`init`, `default_algorithms`, `dynamic_path`, `soft_load`) and then any
 //! remaining `ENGINE_ctrl_cmd_string` the section names. This is one of 13.1's three exports.
 //!
-//! ## The one callee that is a later subphase's
+//! ## The one callee that was a later subphase's
 //!
 //! `int_engine_configure`'s `default_algorithms` arm calls `ENGINE_set_default_string`
-//! (`crypto/engine/eng_fat.c:82-91`), which is subphase 13.3's row and is not landed yet. The
-//! call is **transcribed rather than elided**: it is declared here exactly as `eng_local.h`
-//! spells it and resolves to the candidate distribution shell's scaffold, the pattern
-//! `src/cms/cms_sd.rs` established for the same situation (D199's reference is not the same
-//! thing, but the forward-declaration rule is). When 13.3 lands `eng_fat.rs` the scaffold is
-//! replaced by the real function and this declaration is dropped. It is not stubbed: the
-//! authority's own call is present, and the coordinate it sits on is the authority's.
+//! (`crypto/engine/eng_fat.c:82-91`), which was subphase 13.3's row and is now landed by
+//! `src/engine/eng_fat.rs`. Until 13.3 the call was **transcribed rather than elided**: it was
+//! declared here exactly as `eng_local.h` spells it and resolved to the candidate distribution
+//! shell's scaffold, the pattern `src/cms/cms_sd.rs` established for the same situation. 13.3
+//! landed `eng_fat.rs`, so the scaffold is gone and the name is imported from its real
+//! definition; the authority's own call and its coordinate are unchanged.
 //!
 //! ## The two pseudo-controls that share the configuration's own section
 //!
@@ -39,6 +38,7 @@ use core::ptr;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::engine::eng_ctrl::ENGINE_ctrl_cmd_string;
+use crate::engine::eng_fat::ENGINE_set_default_string;
 use crate::engine::eng_init::{ENGINE_finish, ENGINE_init};
 use crate::engine::eng_lib::{ENGINE_free, Engine};
 use crate::engine::eng_list::ENGINE_by_id;
@@ -54,12 +54,9 @@ use crate::runtime::stack::{
     OPENSSL_sk_value, OpenSslStack,
 };
 
-// `ENGINE_set_default_string` is Phase 13.3's export (`crypto/engine/eng_fat.c`). It is declared
-// with the authority's prototype and resolved by the candidate distribution shell's scaffold, the
-// forward-reference pattern `src/cms/cms_sd.rs` uses; the module header says when it is dropped.
-extern "C" {
-    fn ENGINE_set_default_string(e: *mut Engine, def_list: *const c_char) -> c_int;
-}
+// `ENGINE_set_default_string` used to be declared here as a Phase-13.3 forward reference; 13.3
+// landed `src/engine/eng_fat.rs`, so the call resolves to that definition and the `extern "C"`
+// scaffold is gone. See the module header.
 
 /// `static STACK_OF(ENGINE) *initialized_engines = NULL` (`:28`).
 static INITIALIZED_ENGINES: AtomicPtr<OpenSslStack> = AtomicPtr::new(ptr::null_mut());

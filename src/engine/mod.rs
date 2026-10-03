@@ -67,11 +67,13 @@
 //!   landed `OPENSSL_cleanup` does not yet name it. See `eng_lib.rs`.
 //! * `ENGINE_get_pkey_meth` (`tb_pkmeth.c:74-83`) — landed by 13.2, which owns the name; its
 //!   10.9-withheld status and the Phase-7 deferral it unblocked are recorded in `tb_pkmeth.rs`.
-//! * `crypto/engine/eng_fat.c` and `eng_err.c`/`eng_openssl.c`/`eng_rdrand.c` — later 13.x
-//!   subphases' units; the control fat helpers and the built-in `openssl`/`rdrand` engines are
-//!   therefore not transcribed. 13.2 lands `eng_pkey.c` and the six `tb_*` method tables
+//! * `crypto/engine/eng_err.c`/`eng_openssl.c`/`eng_rdrand.c` — later 13.x subphases' units;
+//!   the built-in `openssl`/`rdrand` engines are therefore not transcribed. 13.2 lands
+//!   `eng_pkey.c` and the six `tb_*` method tables
 //!   (`tb_cipher`/`tb_rsa`/`tb_dsa`/`tb_dh`/`tb_eckey`/`tb_rand`) and lifts
-//!   `ENGINE_get_pkey_meth`'s withholding.
+//!   `ENGINE_get_pkey_meth`'s withholding; 13.3 lands `eng_fat.c`'s four control fat helpers
+//!   (`eng_fat.rs`), which `eng_cnf.rs`'s `default_algorithms` arm already called through a
+//!   forward declaration.
 //! * `crypto/engine/eng_dyn.c` — the dynamic engine `ENGINE_by_id`'s miss path would drive.
 //!   No subphase owns it yet, so no dynamic engine is registered and the recursion answers
 //!   NULL; `ENGINE_by_id` transcribes the authority's own `goto notfound` for that arm.
@@ -88,6 +90,7 @@
 pub mod eng_all;
 pub mod eng_cnf;
 pub mod eng_ctrl;
+pub mod eng_fat;
 pub mod eng_init;
 pub mod eng_lib;
 pub mod eng_list;
