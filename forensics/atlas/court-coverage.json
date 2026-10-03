@@ -17,7 +17,9 @@
       13
     ],
     "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
-    "in_progress": [],
+    "in_progress": [
+      14
+    ],
     "not_yet_begun": [],
     "strata": [
       {
@@ -44711,6 +44713,23 @@
         "non_observable": [],
         "phase": 13,
         "staged_candidate_probes": 9
+      },
+      {
+        "completed": false,
+        "counts": {
+          "directly_courted": 0,
+          "directly_courted_called": 0,
+          "directly_courted_referenced": 0,
+          "implemented": 0,
+          "indirectly_courted": 0,
+          "non_observable": 0,
+          "unmatched": 0
+        },
+        "directly_courted": [],
+        "indirectly_courted": [],
+        "non_observable": [],
+        "phase": 14,
+        "staged_candidate_probes": 1
       }
     ],
     "totals": {
@@ -44728,7 +44747,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "69872bb9ff11d10c0f00c0b0c3affbc5326bffcf2a7e49cabcb5e7f67f6dcb67"
+      "sha256": "62c0b7027f7ebe1ea311b6c74ab7e20797466dc042aba9b2d5ecae4b191cbec7"
     },
     {
       "name": "symbol-ownership",
@@ -44738,7 +44757,7 @@
     {
       "name": "coverage-rows",
       "path": "forensics/atlas/court-coverage-rows.json",
-      "sha256": "c8184a493d6a14536af711c09aa95e0e2d6b6da83ea9bf66c293400348f3d331"
+      "sha256": "0371a6ec17dde060bb555f728d6f0760bfa5579f35620d669e2bcab5f392c6c0"
     },
     {
       "name": "phase3-obligations",
@@ -44783,17 +44802,17 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "c9896658c22c9c01824ef013000061ca84cd66ae9cd20af4d951b47d31a4033b"
+      "sha256": "f84d60fb5352157adab1068431c802bb394f0785445cbd1a2ee8eabb7612edc4"
     },
     {
       "name": "phase7-courts",
       "path": "artifacts/phase7/COURTS.json",
-      "sha256": "86941d4a43187a027081902888f0a4e8bd559c821a8b60b07b5d01b25ef85d0e"
+      "sha256": "f6188cb8157fb7a3b23fee824b10588f91ca164317011e59109206918a92b041"
     },
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "2a396e993ab5ea3a6e5170796c285263fed5e04fad4f2cf600422c63e1262a79"
+      "sha256": "644d693b164c2c7db433eb9207c84c495b6f2af82f42adb6d73f225a4d8faa25"
     },
     {
       "name": "phase8-courts",
@@ -44803,7 +44822,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "60f7d8844410b234dbac902bafcf2888a50e30b1e6034f72f8d56b8c467e4fbf"
+      "sha256": "06370a7d9739d57c06d318a9d83f0a3c235c70d4a412957af8215e1291d6cd8e"
     },
     {
       "name": "phase9-courts",
@@ -44813,7 +44832,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "ea0b8337374458da33351f91eebb38b274c27abade9bf1136df661efe275056e"
+      "sha256": "34b9f6910460e005be5f500d0b6df908e71a6be6dd07ddbbeef3e5034f101ce7"
     },
     {
       "name": "phase10-courts",
@@ -44823,7 +44842,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "3b2642a647943e4005ee3642c82f6878219554a0fafc631f62fc431979ef4c4c"
+      "sha256": "2b784714a894196a250bb5e774fb8893d2a0863c22dbbf7f34d32bf55acedf85"
     },
     {
       "name": "phase11-courts",
@@ -44833,7 +44852,7 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "3fa9dc2da2e30939c6dd8c4654b54f2bfe06747529de908d5b158f707a5c900b"
+      "sha256": "b689b5104b4f188e8a4998f8aaa3385e3c64abb9dc012b58cf773aecbecac12a"
     },
     {
       "name": "phase12-courts",
@@ -44843,12 +44862,22 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "d4788e15bb194feacb60e6f6580257379bddb2c30a6bb515171adebf56a668ce"
+      "sha256": "b1ef0d6fdc0a0f6c5c93f6c97ea0e6a7d8ee486509ef4a27360b1d450740cdb8"
     },
     {
       "name": "phase13-courts",
       "path": "artifacts/phase13/COURTS.json",
-      "sha256": "28bafdfec05c7cbcadfd1f0eba7d8ccc95f7bdbfcb0b7a96a7b2b57bb5232c17"
+      "sha256": "75bc6444480528f9a373efe3b24656b633147d6660d6279571c25485c45fe706"
+    },
+    {
+      "name": "phase14-obligations",
+      "path": "forensics/phase14-obligations.json",
+      "sha256": "7a11ec1be60b449a6681b3b8edc2aef74bbcaf3565589bf33105ab55aed10647"
+    },
+    {
+      "name": "phase14-courts",
+      "path": "artifacts/phase14/COURTS.json",
+      "sha256": "22ae06be94fbb4bbf0f50f9b8a61effd5e035d83fbac261afba442d688150a79"
     }
   ],
   "kind": "court-coverage",

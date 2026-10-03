@@ -967,6 +967,34 @@ PHASE13_MODULES = [
     "forensics/tools/phase13_obligations.py",
 ]
 
+# Phase 14's evidence: the TLS/DTLS stratum -- the whole of `libssl`: the `SSL_CTX`/`SSL` object
+# model, the `TLS_*`/`DTLS_*` method and version tables, the record layer, the handshake state
+# machine, the BIO pair, the session and certificate plumbing and the DTLS and QUIC bridges. Its
+# plan is `docs/PHASE-14-SUBPHASES.md`, which 14.0 lands with the ledger. The modules are added by
+# the subphase that lands them, in the same commit, so that this list is a statement about the tree
+# rather than about the plan -- which is why it names no `src/ssl/` module: the stratum has landed
+# none of its own.
+#
+# **This stratum's working set is exactly its atlas-owned universe, and it inherits nothing.**
+# The atlas assigns it 600 `ssl.h`/`tls1.h`/`srtp.h`/`sslerr_legacy.h` exports, no earlier stratum's
+# ledger records an `owning_phase == 14` hand-off, and `forensics/phase14-obligations.json` reports
+# `received_by_handoff: 0`. **Unlike every earlier activation, not one of the 600 is implemented at
+# activation**: libssl is the candidate distribution's second namespace, its exports are present
+# only as the Phase 2 ABI scaffold, and `forensics/atlas/implemented-surface.json` records
+# `implemented: 0` for libssl, so `phase-state.json` reports the stratum `in-progress` with an
+# `open` count equal to its whole working set, not because it has a plan alone. **That split moves
+# as the stratum lands its own units**, so the note below does not restate its counts: the ledger's
+# `counts` is the live record and `forensics/atlas/implemented-surface.json` is the authority behind
+# it. It owns **no provider registration row**: libssl is not a provider and this stratum activates
+# none. `docs/PHASE-14-SUBPHASES.md` section 4 records the activation measurement and the
+# precondition it places on the runner.
+PHASE14_COURTS = "artifacts/phase14/COURTS.json"
+PHASE14_OBLIGATIONS = "forensics/phase14-obligations.json"
+PHASE14_MODULES = [
+    "docs/PHASE-14-SUBPHASES.md",
+    "forensics/tools/phase14_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1064,6 +1092,23 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "candidate ships as a scaffold `ossl-modules/legacy.so`, handed to the "
                             "distribution stratum (Phase 16) because this stratum's subphases do "
                             "not activate it (docs/PHASE-13-SUBPHASES.md sections 1 and 4)"
+                        )),
+    14: StratumEvidence(PHASE14_MODULES, PHASE14_OBLIGATIONS, PHASE14_COURTS,
+                        ledger_note=(
+                            "All six hundred of the exports it owns are its own four headers' "
+                            "(`ssl.h` 582, `tls1.h` 13, `srtp.h` 4, `sslerr_legacy.h` 1) and no "
+                            "earlier stratum's ledger records a hand-off to it, so its working "
+                            "set is exactly the atlas projection -- the first stratum that "
+                            "inherits nothing. **Unlike every earlier activation, not one of the "
+                            "six hundred is implemented at activation**: libssl is the candidate "
+                            "distribution's second namespace and its exports are present only "
+                            "as the Phase 2 ABI scaffold, so its `open` count is its whole "
+                            "working set. That split moves as this stratum lands its own units, "
+                            "so this note does not restate its counts; the ledger's `counts` and "
+                            "`forensics/atlas/implemented-surface.json` are the live record. The "
+                            "stratum owns no provider registration row: libssl is not a provider "
+                            "and this stratum activates none (docs/PHASE-14-SUBPHASES.md "
+                            "sections 1 and 4)"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no
