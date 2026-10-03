@@ -523,7 +523,7 @@
         "stratum": "CMS / OCSP / CMP / CT / TS and remaining libcrypto families"
       },
       {
-        "blocking": "94 open obligation(s) of this stratum recorded in forensics/phase13-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One hundred and eighty-nine of the exports it owns are its own three headers' (`engine.h`, `ui.h`, `txt_db.h`) and the one hundred and eighty-eight remainder arrive as recorded hand-offs from phases 3, 7 and 12 -- the deprecated METHOD-era EVP statics and PEM readers, the ASYNC framework, and the three Phase 12 rows `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`. The ledger does not start with that whole working set open: 123 atlas-owned exports and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` spellings are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns 39 provider registration rows, all unimplemented (docs/PHASE-13-SUBPHASES.md sections 1 and 4)",
+        "blocking": "42 open obligation(s) of this stratum recorded in forensics/phase13-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. One hundred and eighty-nine of the exports it owns are its own three headers' (`engine.h`, `ui.h`, `txt_db.h`) and the one hundred and eighty-eight remainder arrive as recorded hand-offs from phases 3, 7 and 12 -- the deprecated METHOD-era EVP statics and PEM readers, the ASYNC framework, and the three Phase 12 rows `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`. The ledger does not start with that whole working set open: 123 atlas-owned exports and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` spellings are reported as `implemented` at activation, so its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns 39 provider registration rows, all unimplemented (docs/PHASE-13-SUBPHASES.md sections 1 and 4)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -667,7 +667,7 @@
       "not_started": 8
     }
   },
-  "body_hash": "da79b6e4d374983b922968ff4339bbe0ebeff158b23b4273d77167c566318a04",
+  "body_hash": "4d95e90154ff3a310171c3bfb715c5db23b51c06a0b7d544e7f76a9687ba67bd",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

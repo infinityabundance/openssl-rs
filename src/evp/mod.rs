@@ -58,6 +58,20 @@ pub mod e_camellia;
 // Phase 13.6a's two AES-CBC-HMAC stitched statics, whose callbacks reuse the provider construction.
 pub mod e_aes_cbc_hmac_sha1;
 pub mod e_aes_cbc_hmac_sha256;
+// Phase 13.6c's `crypto/evp/e_*.c`: the remaining deprecated `EVP_CIPHER` statics (DES, 3DES,
+// DESX, Blowfish, CAST5, IDEA, SEED, RC2, RC4, RC4-HMAC-MD5, SM4, ChaCha20 and ChaCha20-Poly1305).
+pub mod e_bf;
+pub mod e_cast;
+pub mod e_chacha20_poly1305;
+pub mod e_des;
+pub mod e_des3;
+pub mod e_idea;
+pub mod e_rc2;
+pub mod e_rc4;
+pub mod e_rc4_hmac_md5;
+pub mod e_seed;
+pub mod e_sm4;
+pub mod e_xcbc_d;
 pub mod encode;
 // Phase 7.4's `crypto/evp/evp_cnf.c` -- the `alg_section` configuration module, landed once
 // `X509V3_get_value_bool` (10.14.3) closed its only blocker. See the module doc.
