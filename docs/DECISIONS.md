@@ -35085,3 +35085,40 @@ null value instead.
 Verified (container): `RT-CMS-REMAINDER` 71 observations, 0 residuals, `all_pass` over 11 courts;
 `cargo clippy --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean;
 `cargo build --release` clean; `build_phase2.sh` all-ABI pass.
+
+## D523 -- the Phase-12 seal, and the FRF/Gemel chain closes it
+
+12.10 writes `docs/PHASE-12-PROTOCOL-FAMILIES-SEAL.md` (registered in `atlas_common.py`'s
+`SEAL_DOCS` at `12`) and adds the stratum to the FRF chain. The seal follows
+`docs/RELEASE_GATES.md` section 2's ten items, records the eleven courts and their observation
+counts from `artifacts/phase12/COURTS.json`, and is explicit about the non-claims: no parity, no
+security assurance, `libssl` still `0/603` scaffolded, the three rows handed to Phase 13, every
+`pending.` divergence the courts name, and the reference-only versus called coverage.
+
+**The executable constitution now binds the seal.** `phase12-obligations.json` reads `owned 1033`,
+`implemented 1030`, `deferred 3`, `open 0`. The ten Phase-12 courts are declared in
+`gen_frf_courts.py` (105 runtime courts, 210 files), which engages `phase_state.py`'s
+`frf_gemel_blocking_reason` for this stratum: with the declarations present and no receipts it
+derived Phase 12 `in-progress` with the exact missing-chain reason, and only returned `complete`
+once the chain existed -- the Phase-11 defect (a `complete` that outran its evidence) cannot recur
+here.
+
+**The chain entry.** Ten court runs, ten receipts, twenty adjudicated challenge records (both
+operators `stdout-first-line` and `exit-class`, every one `saw_defect` and `specificity_clean`),
+and the `sensitivity-backed` claim
+`574379772186cc3c71a2f174a9478f7e6e721fa18e0c1fa59a4723e8b3d726df` binding `openssl-rt-3.6.4-r2`
+to `openssl-rs 0.0.16` with zero blockers and all ten premises carrying `stdout` and `exit`. The
+Gemel change `C98`
+(`change.af2e7ed0eb05b4de2a6bf471ddc611d07ff6475dd1434a967a071319aa6bdb83`) and checkpoint `K51`
+(`checkpoint.c9ca28bdb0077b7a338901381580cc06fb0b27e442843e518395323d22ea4abc`) name Phase 12 and
+the FRF chain; the chain was run **into the committed store** (`run_courts.sh`'s leading `rm -rf`
+is never used, D476), and `render_gemel_trajectory.sh` re-rendered the projection.
+
+Verified (court container): all 21 gate steps pass -- `phase12_courts.py` `all_pass` over 11
+courts; `cargo fmt` and `cargo test --lib` (1131 passed); the authority-tier atlas byte-identical
+on a second run; every phase ledger regenerated; `court_coverage`, `provider_court_coverage`,
+`ownership_audit`, `prototype_court`, `dispatch_court`, `plan_reconciliation`, `prerequisite_gate`,
+`phase_state` (Phase 12 `complete`), `render_seal_census`, `render_status`, `docs_consistency`,
+`evidence_determinism` (32 artefacts), `gen_frf_courts.py --check` (210 files / 105 courts),
+`check_evidence_portability`, `regression_guard --require-current` (145 courts, 50600 observations)
+and `probe_hygiene` all green.

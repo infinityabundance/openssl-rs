@@ -518,7 +518,7 @@
         "name": "protocol-families",
         "phase": 12,
         "provider_rows": null,
-        "seal_sha256": null,
+        "seal_sha256": "f035a0271c145bc5a8679c0837b339e0fdece5ac933174cacd0ea50f083b3745",
         "state": "complete",
         "stratum": "CMS / OCSP / CMP / CT / TS and remaining libcrypto families"
       },
@@ -659,7 +659,7 @@
       "not_started": 9
     }
   },
-  "body_hash": "d39c7d4324461038e58340ccb95d1575f87131544c01fd600ab84b9e58cade55",
+  "body_hash": "9a582c306d3b51293604f72c325cd1cee0f2792e3f9fd9867c20a21a8ce6ebd1",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
