@@ -76,6 +76,80 @@
 //! `src/ssl/methods.rs` and records it as a measured correction to the plan's ordering. The rest of
 //! 14.2 stays open.
 //!
+//! ## Slice 2: the verify, transparency, ALPN and connection-accessor surface
+//!
+//! Slice 2 lands the second, larger block of the unit: the remaining exports that can be stated
+//! faithfully without a handshake, a cipher table or a session object. 126 symbols moved from the
+//! ledger's `open` set to its `implemented` set; the ledger's own counts are the live record, and
+//! the 52 `ssl_lib.c` rows left open are named with their blocking stratum below.
+//!
+//! **Landed, Slice 2:**
+//!
+//! * *The verify-parameter and hostname surface* — `SSL_[CTX_]set_purpose`, `SSL_[CTX_]set_trust`,
+//!   `SSL_set1_host`, `SSL_add1_host`, `SSL_set_hostflags`, `SSL_get0_peername`; the store loaders
+//!   `SSL_CTX_load_verify_file`/`_dir`/`_store`/`_locations` and `SSL_CTX_set_default_verify_paths`.
+//! * *Certificate and private-key readers* — `SSL_[CTX_]check_private_key`, `SSL_certs_clear`,
+//!   `SSL_get0_peer_certificate`, `SSL_get1_peer_certificate`, `SSL_get_peer_cert_chain`.
+//! * *Certificate transparency* — `SSL_[CTX_]enable_ct`, `SSL_[CTX_]ct_is_enabled`,
+//!   `SSL_[CTX_]set_ct_validation_callback`, `SSL_CTX_set_ctlog_list_file`,
+//!   `SSL_CTX_set_default_ctlog_list_file`, `SSL_CTX_get0_ctlog_store`,
+//!   `SSL_CTX_set0_ctlog_store`, `SSL_get0_peer_scts`. The SCT log store is now allocated by
+//!   `SSL_CTX_new_ex` (`ssl_lib.c:4067`), as the authority allocates it.
+//! * *ALPN, NPN and SNI* — `SSL_[CTX_]set_alpn_protos`, `SSL_get0_alpn_selected`,
+//!   `SSL_CTX_set_next_proto_select_cb`, `SSL_CTX_set_next_protos_advertised_cb`,
+//!   `SSL_get0_next_proto_negotiated`, `SSL_select_next_proto`, `SSL_get_servername`,
+//!   `SSL_get_servername_type`.
+//! * *The certificate-type lists* — `SSL_[CTX_]set1_{client,server}_cert_type`,
+//!   `SSL_[CTX_]get0_{client,server}_cert_type`, `SSL_get_negotiated_{client,server}_cert_type`.
+//! * *Configuration* — `SSL_CTX_set_domain_flags`, `SSL_CTX_get_domain_flags`,
+//!   `SSL_get_domain_flags`, the four block-padding setters, `SSL_[CTX_]set_post_handshake_auth`.
+//! * *The async, buffer, poll-descriptor and remaining state readers* — `SSL_waiting_for_async`,
+//!   `SSL_get_async_status`, `SSL_get_all_async_fds`, `SSL_get_changed_async_fds`,
+//!   `SSL_alloc_buffers`, `SSL_free_buffers`, `SSL_get_value_uint`, `SSL_set_value_uint`,
+//!   `SSL_set_debug`, `SSL_get_blocking_mode`, `SSL_set_blocking_mode`, `SSL_handle_events`,
+//!   `SSL_get_event_timeout`, `SSL_get_rpoll_descriptor`, `SSL_get_wpoll_descriptor`,
+//!   `SSL_net_read_desired`, `SSL_net_write_desired`, `SSL_get_key_update_type`,
+//!   `SSL_renegotiate_pending`, `SSL_get_early_data_status`, `SSL_get_handshake_rtt`,
+//!   `SSL_get_client_random`, `SSL_get_server_random`.
+//! * *The QUIC-dispatch arms that answer for a non-QUIC object* — `SSL_new_listener[_from]`,
+//!   `SSL_new_from_listener`, `SSL_new_domain`, `SSL_accept_connection`, `SSL_listen`,
+//!   `SSL_get_accept_connection_queue_len`, `SSL_new_stream`, `SSL_accept_stream`,
+//!   `SSL_stream_conclude`, `SSL_stream_reset`, `SSL_get_stream_type`/`_id`/`_read_state`/
+//!   `_write_state`/`_read_error_code`/`_write_error_code`, `SSL_is_stream_local`,
+//!   `SSL_set_default_stream_mode`, `SSL_set_incoming_stream_policy`, `SSL_get0_connection`/
+//!   `_listener`/`_domain`, `SSL_is_connection`/`_listener`/`_domain`, `SSL_shutdown_ex`,
+//!   `SSL_set1_initial_peer_addr`, `SSL_get_conn_close_info`.
+//! * *PSK identity and the session master key* — `SSL_[CTX_]use_psk_identity_hint`,
+//!   `SSL_get_psk_identity`, `SSL_get_psk_identity_hint`, `SSL_SESSION_get_master_key`,
+//!   `SSL_SESSION_set1_master_key`.
+//! * *The ClientHello readers* — `SSL_client_hello_isv2`, `SSL_client_hello_get0_legacy_version`,
+//!   `_get0_random`, `_get0_session_id`, `_get0_ciphers`, `_get0_compression_methods`,
+//!   `_get1_extensions_present`, `_get_extension_order`, `_get0_ext`.
+//!
+//! **Withheld from Slice 2, with the later-stratum dependency that blocks each group:**
+//!
+//! * the cipher surface (`SSL_[CTX_]set_cipher_list`, `SSL_CTX_get_ciphers`, `SSL_get_ciphers`,
+//!   `SSL_get_cipher_list`, `SSL_get_shared_ciphers`, `SSL_get1_supported_ciphers`,
+//!   `SSL_get_client_ciphers`, `SSL_get_current_cipher`, `SSL_get_pending_cipher`,
+//!   `SSL_get_current_compression`, `SSL_get_current_expansion`, `SSL_bytes_to_cipher_list`,
+//!   `SSL_CTX_set_ssl_version`) — the cipher tables and parser, 14.3 (`ssl_ciph.c`).
+//! * the handshake entry points (`SSL_accept`, `SSL_connect`, `SSL_set_accept_state`,
+//!   `SSL_set_connect_state`, `SSL_key_update`, `SSL_renegotiate`, `SSL_renegotiate_abbreviated`,
+//!   `SSL_new_session_ticket`, `SSL_stateless`, `SSL_read_early_data`, `SSL_write_early_data`,
+//!   `SSL_export_keying_material`, `SSL_export_keying_material_early`,
+//!   `SSL_verify_client_post_handshake`, `SSL_sendfile`) — the state machine and record layer,
+//!   14.4/14.5 (`statem.c`, `rec_layer_s3.c`).
+//! * the DANE record surface (`SSL_CTX_dane_enable`, `SSL_CTX_dane_mtype_set`,
+//!   `SSL_CTX_dane_set_flags`, `SSL_CTX_dane_clear_flags`, `SSL_dane_enable`,
+//!   `SSL_dane_set_flags`, `SSL_dane_clear_flags`, `SSL_dane_tlsa_add`, `SSL_get0_dane`,
+//!   `SSL_get0_dane_authority`, `SSL_get0_dane_tlsa`, `SSL_add_expected_rpk`) and
+//!   `SSL_get0_peer_rpk` — the DANE container and the certificate path, 14.7.
+//! * `SSL_CTX_sessions`, `SSL_has_matching_session_id`, `SSL_copy_session_id`, `SSL_dup`,
+//!   `SSL_set_SSL_CTX`, `SSL_set0_tmp_dh_pkey`, `SSL_CTX_set0_tmp_dh_pkey` — the session and
+//!   certificate plumbing (and its `ssl_security` check), 14.7.
+//! * `SSL_CTX_set_default_verify_file`/`_dir`/`_store` — the `X509_LOOKUP`-level default loaders,
+//!   withheld with the DANE/default-path work rather than approximated.
+//!
 //! ## Measured divergences, recorded rather than hidden
 //!
 //! * **`SSL_CTX_new_ex` allocates less than the authority.** The authority's `SSL_CTX_new_ex`
@@ -111,6 +185,46 @@
 //!   still the authority's coordinates and are kept; the divergence is the link, and it is recorded
 //!   here (the WIP link is preserved in `d181e440` and the manifest's own comment says so) rather
 //!   than hidden. The `RT-SSL-OBJECT` court therefore does not compare an error-observing arm.
+//!
+//! **Slice 2's measured divergences, recorded rather than hidden.**
+//!
+//! * **`SSL_certs_clear` clears only the active leaf.** The authority calls `ssl_cert_clear_certs`,
+//!   which also frees the extra key slots and the `custext` list (`ssl_cert.c`, 14.7); only the one
+//!   leaf pair exists in this slice, so the function clears `cert->key.x509`/`privatekey` and nothing
+//!   else. A consumer that had installed extra certificates would see a difference; none can be
+//!   installed here.
+//! * **`SSL_get0_peer_scts` reports the parsed list it has and marks it parsed.** The authority's
+//!   extraction reads the TLS extension (14.5), the OCSP response and the certificate's `X509v3`
+//!   extensions (14.7); with no peer those sources are empty, so the NULL answer is the authority's
+//!   for the states this slice can reach.
+//! * **The CT callback installers omit the custom-extension and OCSP-status preconditions.**
+//!   `SSL_[CTX_]set_ct_validation_callback` in the authority refuses when a custom handler for the
+//!   SCT extension is registered (`SSL_CTX_has_client_custom_ext`, 14.9) and, for a connection,
+//!   requests the OCSP status type (`SSL_set_tlsext_status_type`, 14.9). This slice installs no
+//!   custom extensions, so the refusal is unreachable; the OCSP request is deferred with the
+//!   extension code. `ct_strict` likewise cannot see a parsed SCT stack and answers the authority's
+//!   own `SSL_R_NO_VALID_SCTS` refusal for an empty list.
+//! * **`SSL_alloc_buffers`/`SSL_free_buffers` answer 1 without touching a record layer.** The
+//!   authority calls the read/write record methods' `alloc_buffers`/`free_buffers`; the record layer
+//!   is 14.4's. A fresh connection holds no buffers and the authority's methods free nothing, so 1
+//!   is its answer for the states the court drives.
+//! * **`SSL_handle_events` answers 1 without the DTLS timeout path.** The authority's DTLS arm calls
+//!   `DTLSv1_handle_timeout` (14.8); for the TLS methods this slice builds the authority also
+//!   answers 1.
+//! * **The domain-flag setters/getters take the non-QUIC arm.** `SSL_CTX_set_domain_flags`,
+//!   `SSL_CTX_get_domain_flags` and `SSL_get_domain_flags` are `IS_QUIC`/`IS_QUIC_CTX` properties;
+//!   for the TLS objects this crate builds the authority raises `ERR_R_UNSUPPORTED` (the two
+//!   `SSL_CTX` forms) and answers 0 (the connection form), which this slice reproduces.
+//! * **`SSL_get_servername` is reduced to the pre-handshake client arm.** With `handshake_func`
+//!   never installed (14.5) the authority's `server` test is always the client path and
+//!   `SSL_in_before` is always true, so the server, hit and post-handshake branches its doc comment
+//!   describes are unreachable here.
+//! * **`SSL_set0_tmp_dh_pkey`/`SSL_CTX_set0_tmp_dh_pkey` are withheld, not approximated.** Both run
+//!   `ssl_security(..., SSL_SECOP_TMP_DH, ...)` before storing (`ssl_lib.c:7595`, `:7607`); the
+//!   security check is 14.7's, so storing without it would not be the authority's answer.
+//! * **`SSL_set1_client_cert_type`'s helpers are this file's own.** `validate_cert_type` and
+//!   `set_cert_type` are file-static in the authority; they are private functions here with the same
+//!   body.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 

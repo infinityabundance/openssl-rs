@@ -11,15 +11,25 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
-use core::ffi::{c_char, c_int, c_long, c_uint, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
 use core::ptr;
 use core::sync::atomic::{AtomicI32, Ordering};
 
+use crate::asn1::string::ASN1_STRING_free;
+use crate::crypto_async::async_wait::{
+    ASYNC_WAIT_CTX_get_all_fds, ASYNC_WAIT_CTX_get_changed_fds, ASYNC_WAIT_CTX_get_status,
+    AsyncWaitCtx, OsslAsyncFd,
+};
+use crate::ct::ct_log::{
+    CTLOG_STORE_free, CTLOG_STORE_load_default_file, CTLOG_STORE_load_file, CTLOG_STORE_new_ex,
+    CtlogStore,
+};
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::bss_sock::BIO_s_socket;
+use crate::runtime::bio::iolib::{BIO_get_rpoll_descriptor, BIO_get_wpoll_descriptor};
 use crate::runtime::bio::{
     BIO_ctrl, BIO_find_type, BIO_free_all, BIO_int_ctrl, BIO_method_type, BIO_new, BIO_next,
-    BIO_pop, BIO_push, BIO_up_ref, Bio, BIO_C_GET_FD, BIO_C_SET_FD, BIO_NOCLOSE,
+    BIO_pop, BIO_push, BIO_up_ref, Bio, BioPollDescriptor, BIO_C_GET_FD, BIO_C_SET_FD, BIO_NOCLOSE,
     BIO_TYPE_DESCRIPTOR,
 };
 use crate::runtime::err::{raise_with, ERR_peek_error};
@@ -27,14 +37,25 @@ use crate::runtime::ex_data::{
     CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data, CryptoExData,
     CRYPTO_EX_INDEX_SSL, CRYPTO_EX_INDEX_SSL_CTX,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
-use crate::x509::x509_lu::{X509Store, X509_STORE_free, X509_STORE_new, X509_STORE_up_ref};
-use crate::x509::x509_vpm::{
-    X509VerifyParam, X509_VERIFY_PARAM_free, X509_VERIFY_PARAM_get_depth,
-    X509_VERIFY_PARAM_inherit, X509_VERIFY_PARAM_new, X509_VERIFY_PARAM_set1,
-    X509_VERIFY_PARAM_set_depth,
+use crate::x509::v3_utl::a2i_IPADDRESS;
+use crate::x509::x509_cmp::X509_check_private_key;
+use crate::x509::x509_d2::{
+    X509_STORE_load_file_ex, X509_STORE_load_path, X509_STORE_load_store_ex,
+    X509_STORE_set_default_paths_ex,
 };
+use crate::x509::x509_lu::{X509Store, X509_STORE_free, X509_STORE_new, X509_STORE_up_ref};
+use crate::x509::x509_set::X509_up_ref;
+use crate::x509::x509_vpm::{
+    X509VerifyParam, X509_VERIFY_PARAM_add1_host, X509_VERIFY_PARAM_free,
+    X509_VERIFY_PARAM_get0_peername, X509_VERIFY_PARAM_get1_ip_asc, X509_VERIFY_PARAM_get_depth,
+    X509_VERIFY_PARAM_inherit, X509_VERIFY_PARAM_new, X509_VERIFY_PARAM_set1,
+    X509_VERIFY_PARAM_set1_host, X509_VERIFY_PARAM_set1_ip, X509_VERIFY_PARAM_set1_ip_asc,
+    X509_VERIFY_PARAM_set_depth, X509_VERIFY_PARAM_set_hostflags, X509_VERIFY_PARAM_set_purpose,
+    X509_VERIFY_PARAM_set_trust,
+};
+use crate::x509::x_x509::X509;
 
 /// `OPENSSL_FILE` of this translation unit, used on allocation and `ERR_raise` sites.
 const FILE: *const c_char = c"ssl/ssl_lib.c".as_ptr();
@@ -55,8 +76,24 @@ const SSL_R_BAD_LENGTH: c_int = 271;
 const SSL_R_UNINITIALIZED: c_int = 276;
 /// `SSL_R_CONNECTION_TYPE_NOT_SET` — `sslerr.h:84`.
 const SSL_R_CONNECTION_TYPE_NOT_SET: c_int = 144;
-/// `SSL_R_NO_METHOD_SPECIFIED` — `sslerr.h:202`.
+/// `SSL_R_NO_METHOD_SPECIFIED` — `sslerr.h:188`.
 const SSL_R_NO_METHOD_SPECIFIED: c_int = 188;
+/// `SSL_R_NO_CERTIFICATE_ASSIGNED` — `sslerr.h:177`.
+const SSL_R_NO_CERTIFICATE_ASSIGNED: c_int = 177;
+/// `SSL_R_NO_PRIVATE_KEY_ASSIGNED` — `sslerr.h:190`.
+const SSL_R_NO_PRIVATE_KEY_ASSIGNED: c_int = 190;
+/// `SSL_R_DATA_LENGTH_TOO_LONG` — `sslerr.h:146`.
+const SSL_R_DATA_LENGTH_TOO_LONG: c_int = 146;
+/// `SSL_R_INVALID_CT_VALIDATION_TYPE` — `sslerr.h:212`.
+const SSL_R_INVALID_CT_VALIDATION_TYPE: c_int = 212;
+/// `SSL_R_NO_VALID_SCTS` — `sslerr.h:216`.
+const SSL_R_NO_VALID_SCTS: c_int = 216;
+/// `SSL_R_UNSUPPORTED_PROTOCOL` — `sslerr.h:258`.
+const SSL_R_UNSUPPORTED_PROTOCOL: c_int = 258;
+/// `ERR_R_UNSUPPORTED` — `err.h.in:366` (`268 | ERR_RFLAG_COMMON`, `ERR_RFLAG_COMMON = 2 << 18`).
+const ERR_R_UNSUPPORTED: c_int = 268 | (2 << 18);
+/// `ERR_R_PASSED_INVALID_ARGUMENT` — `err.h.in:360` (`262 | ERR_RFLAG_COMMON`).
+const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 262 | (2 << 18);
 
 /// `ssl_security_default_callback` — the level check the certificate's `sec_cb` is initialised
 /// to (`ssl_cert.c:83`).
@@ -185,6 +222,35 @@ const SSL_TYPE_QUIC_XSO: c_int = 2;
 /// `X509_V_OK` — `include/openssl/x509_vfy.h`.
 const X509_V_OK: c_long = 0;
 
+/// `OPENSSL_NPN_NEGOTIATED` — `ssl.h:814`.
+const OPENSSL_NPN_NEGOTIATED: c_int = 1;
+/// `OPENSSL_NPN_NO_OVERLAP` — `ssl.h:815`.
+const OPENSSL_NPN_NO_OVERLAP: c_int = 2;
+/// `SSL_STREAM_TYPE_BIDI` — `ssl.h:2351`.
+const SSL_STREAM_TYPE_BIDI: c_int = 3;
+/// `SSL_STREAM_STATE_NONE` — `ssl.h:2409`.
+const SSL_STREAM_STATE_NONE: c_int = 0;
+/// `SSL_CT_VALIDATION_PERMISSIVE` — `ssl.h`.
+const SSL_CT_VALIDATION_PERMISSIVE: c_int = 0;
+/// `SSL_CT_VALIDATION_STRICT` — `ssl.h`.
+const SSL_CT_VALIDATION_STRICT: c_int = 1;
+/// `TLSEXT_NAMETYPE_host_name` — `tls1.h:171`.
+const TLSEXT_NAMETYPE_HOST_NAME: c_int = 0;
+/// `TLSEXT_cert_type_x509` — `tls1.h:240`.
+const TLSEXT_CERT_TYPE_X509: u8 = 0;
+/// `TLSEXT_cert_type_rpk` — `tls1.h:242`.
+const TLSEXT_CERT_TYPE_RPK: u8 = 2;
+/// `PSK_MAX_IDENTITY_LEN` — `ssl.h:838`.
+const PSK_MAX_IDENTITY_LEN: usize = 256;
+/// `SSL3_RANDOM_SIZE` — `ssl3.h:137`.
+const SSL3_RANDOM_SIZE: usize = 32;
+/// `SSL_KEY_UPDATE_NONE` — `ssl.h:1001`.
+const SSL_KEY_UPDATE_NONE: c_int = -1;
+/// `SSL_ERROR_WANT_READ` — `ssl.h` (`SSL_want_read` is `SSL_want(s) == SSL_READING`).
+const SSL_WANT_READING: c_int = SSL_READING;
+/// `SSL_WANT_WRITING`.
+const SSL_WANT_WRITING: c_int = SSL_WRITING;
+
 // -------------------------------------------------------------------------------------------
 // Method table (pulled forward from 14.2 for the one constructor the court needs)
 // -------------------------------------------------------------------------------------------
@@ -244,6 +310,8 @@ pub struct Cert {
     /// The certificate callback's argument.
     #[allow(dead_code)] // as `cert_cb`
     pub cert_cb_arg: *mut c_void,
+    /// `char *psk_identity_hint` — the PSK identity hint (`SSL_[CTX_]use_psk_identity_hint`).
+    pub psk_identity_hint: *mut c_char,
 }
 
 /// A context's or a connection's certificate container, freshly allocated and empty.
@@ -270,8 +338,12 @@ unsafe fn cert_new() -> *mut Cert {
 /// `c` must be NULL or a live `Cert` previously returned by [`cert_new`].
 unsafe fn cert_free(c: *mut Cert) {
     if !c.is_null() {
-        // SAFETY: `c` is a live `Cert` per the caller's contract.
-        unsafe { CRYPTO_free(c.cast(), FILE, 0) };
+        // SAFETY: `c` is a live `Cert` per the caller's contract; a NULL `psk_identity_hint` is
+        // `CRYPTO_free`'s own no-op.
+        unsafe {
+            CRYPTO_free((*c).psk_identity_hint.cast(), FILE, 0);
+            CRYPTO_free(c.cast(), FILE, 0);
+        }
     }
 }
 
@@ -437,6 +509,42 @@ pub struct SslCtx {
     /// `GEN_SESSION_CB generate_session_id`.
     #[allow(dead_code)] // stored for the setter's contract; read by the session path (14.7)
     pub generate_session_id: Option<GenerateSessionIdCb>,
+    /// `unsigned long dane.flags` — the DANE flag word `SSL_CTX_dane_[set|clear]_flags` touches.
+    pub dane_flags: c_ulong,
+    /// `ssl_ct_validation_cb ct_validation_callback`.
+    pub ct_validation_callback: Option<CtValidationCb>,
+    /// `void *ct_validation_callback_arg`.
+    pub ct_validation_callback_arg: *mut c_void,
+    /// `CTLOG_STORE *ctlog_store` — allocated by `SSL_CTX_new_ex` (`ssl_lib.c:4067`).
+    pub ctlog_store: *mut CtlogStore,
+    /// `unsigned char *client_cert_type` (the `SSL_set1_client_cert_type` list).
+    pub client_cert_type: *mut u8,
+    /// `size_t client_cert_type_len`.
+    pub client_cert_type_len: usize,
+    /// `unsigned char *server_cert_type`.
+    pub server_cert_type: *mut u8,
+    /// `size_t server_cert_type_len`.
+    pub server_cert_type_len: usize,
+    /// `size_t block_padding` (`SSL_CTX_set_block_padding_ex`).
+    pub block_padding: usize,
+    /// `size_t hs_padding`.
+    pub hs_padding: usize,
+    /// `unsigned char *ext.alpn` — the client ALPN offer list, owned.
+    pub ext_alpn: *mut u8,
+    /// `unsigned int ext.alpn_len`.
+    pub ext_alpn_len: c_uint,
+    /// `SSL_CTX_npn_select_cb_func ext.npn_select_cb`.
+    pub npn_select_cb: Option<NpnSelectCb>,
+    /// `void *ext.npn_select_cb_arg`.
+    pub npn_select_cb_arg: *mut c_void,
+    /// `SSL_CTX_npn_advertised_cb_func ext.npn_advertised_cb`.
+    pub npn_advertised_cb: Option<NpnAdvertisedCb>,
+    /// `void *ext.npn_advertised_cb_arg`.
+    pub npn_advertised_cb_arg: *mut c_void,
+    /// `uint64_t domain_flags`.
+    pub domain_flags: u64,
+    /// `int pha_enabled` (`SSL_CTX_set_post_handshake_auth`).
+    pub pha_enabled: c_int,
 }
 
 /// `struct ssl_st` — `ssl_local.h`, carrying the `SSL_CONNECTION` fields Slice 1 reads.
@@ -568,6 +676,74 @@ pub struct Ssl {
     pub client_random: [u8; 32],
     /// `unsigned char server_random[32]` — the record layer's; zero here.
     pub server_random: [u8; 32],
+    /// `SSL_SESSION *session` — 14.7's; NULL throughout this slice.
+    pub session: *mut SslSession,
+    /// `SSL_CTX *session_ctx` — the session-cache context (14.7).
+    pub session_ctx: *mut SslCtx,
+    /// `STACK_OF(X509) *verified_chain` — 14.7's; NULL here.
+    pub verified_chain: *mut c_void,
+    /// `ASYNC_WAIT_CTX *waitctx` — allocated by the async path (14.5).
+    pub waitctx: *mut AsyncWaitCtx,
+    /// `ASYNC_JOB *job` — NULL unless an async job is paused (14.5).
+    pub job: *mut c_void,
+    /// `size_t asyncrw` — the async job's transferred byte count.
+    pub asyncrw: usize,
+    /// `int early_data_state` — `SSL_EARLY_DATA_*`.
+    pub early_data_state: c_int,
+    /// `int ext.early_data` — `SSL_EARLY_DATA_NONE` before a handshake.
+    pub ext_early_data: c_int,
+    /// `int key_update` — `SSL_KEY_UPDATE_*`.
+    pub key_update: c_int,
+    /// `int renegotiate`.
+    pub renegotiate: c_int,
+    /// `int new_session`.
+    pub new_session: c_int,
+    /// `OSSL_TIME ts_msg_write` — nanoseconds; 0 means "not available".
+    pub ts_msg_write: u64,
+    /// `OSSL_TIME ts_msg_read` — nanoseconds; 0 means "not available".
+    pub ts_msg_read: u64,
+    /// `unsigned char *ext.alpn` — this connection's ALPN offer, owned.
+    pub ext_alpn: *mut u8,
+    /// `unsigned int ext.alpn_len`.
+    pub ext_alpn_len: c_uint,
+    /// `unsigned char *ext.npn` — the negotiated NPN protocol, owned.
+    pub ext_npn: *mut u8,
+    /// `size_t ext.npn_len`.
+    pub ext_npn_len: usize,
+    /// `char *ext.hostname` — the SNI name, owned (set by 14.5's `SSL_set_tlsext_host_name`).
+    pub ext_hostname: *mut c_char,
+    /// `unsigned char *s3.alpn_selected` — the negotiated ALPN protocol, owned (14.5).
+    pub s3_alpn_selected: *mut u8,
+    /// `size_t s3.alpn_selected_len`.
+    pub s3_alpn_selected_len: usize,
+    /// `unsigned char *client_cert_type`.
+    pub client_cert_type: *mut u8,
+    /// `size_t client_cert_type_len`.
+    pub client_cert_type_len: usize,
+    /// `unsigned char *server_cert_type`.
+    pub server_cert_type: *mut u8,
+    /// `size_t server_cert_type_len`.
+    pub server_cert_type_len: usize,
+    /// `uint8_t ext.client_cert_type` — the negotiated client cert type (14.5).
+    pub ext_client_cert_type: u8,
+    /// `uint8_t ext.server_cert_type` — the negotiated server cert type (14.5).
+    pub ext_server_cert_type: u8,
+    /// `ssl_ct_validation_cb ct_validation_callback`.
+    pub ct_validation_callback: Option<CtValidationCb>,
+    /// `void *ct_validation_callback_arg`.
+    pub ct_validation_callback_arg: *mut c_void,
+    /// `size_t rlayer.block_padding`.
+    pub block_padding: usize,
+    /// `size_t rlayer.hs_padding`.
+    pub hs_padding: usize,
+    /// `STACK_OF(SCT) *scts` — parsed SCTs (14.9's).
+    pub scts: *mut c_void,
+    /// `int scts_parsed`.
+    pub scts_parsed: c_int,
+    /// `CLIENTHELLO_MSG *clienthello` — set only while a ClientHello callback runs (14.5).
+    pub clienthello: *mut c_void,
+    /// `int pha_enabled`.
+    pub pha_enabled: c_int,
 }
 
 // -------------------------------------------------------------------------------------------
@@ -637,6 +813,57 @@ pub type PskUseSessionCb = unsafe extern "C" fn(*mut Ssl, *const c_void, *mut *m
 pub type GenerateSessionIdCb = unsafe extern "C" fn(*mut Ssl, *mut u8, *mut c_uint) -> c_int;
 /// `int (*)(SSL *)` — a handshake entry, the shape `SSL_CONNECTION.handshake_func` stores.
 pub type HandshakeFn = unsafe extern "C" fn(*mut Ssl) -> c_int;
+/// `ssl_ct_validation_cb` — `ssl.h` (`int (*)(const CT_POLICY_EVAL_CTX *, const STACK_OF(SCT) *,
+/// void *)`). Both `CT_POLICY_EVAL_CTX` and `STACK_OF(SCT)` are opaque here (14.9's).
+pub type CtValidationCb = unsafe extern "C" fn(*const c_void, *const c_void, *mut c_void) -> c_int;
+/// `SSL_CTX_npn_select_cb_func` — `ssl.h`.
+pub type NpnSelectCb =
+    unsafe extern "C" fn(*mut Ssl, *mut *mut u8, *mut u8, *const u8, c_uint, *mut c_void) -> c_int;
+/// `SSL_CTX_npn_advertised_cb_func` — `ssl.h`.
+pub type NpnAdvertisedCb =
+    unsafe extern "C" fn(*mut Ssl, *mut *const u8, *mut c_uint, *mut c_void) -> c_int;
+
+/// `struct SSL_SESSION` — `ssl_local.h`, reduced to the fields `ssl_lib.c` reads or writes.
+///
+/// Sessions are 14.7's (`ssl_sess.c`), so no session object is allocated in this slice and the
+/// `session` pointer is NULL throughout; the two master-key accessors below are stated so their
+/// shape is fixed, and the field order here is this crate's own because the struct is opaque.
+#[repr(C)]
+pub struct SslSession {
+    /// `int ssl_version`.
+    pub ssl_version: c_int,
+    /// `unsigned int session_id_length`.
+    pub session_id_length: c_uint,
+    /// `unsigned char session_id[SSL_MAX_SSL_SESSION_ID_LENGTH]`.
+    pub session_id: [u8; SSL_MAX_SID_CTX_LENGTH],
+    /// `unsigned char master_key[SSL_MAX_MASTER_KEY_LENGTH]`.
+    pub master_key: [u8; 48],
+    /// `unsigned int master_key_length`.
+    pub master_key_length: usize,
+    /// `X509 *peer`.
+    pub peer: *mut X509,
+    /// `STACK_OF(X509) *peer_chain`.
+    pub peer_chain: *mut c_void,
+    /// `EVP_PKEY *peer_rpk`.
+    pub peer_rpk: *mut c_void,
+    /// `char *psk_identity`.
+    pub psk_identity: *mut c_char,
+    /// `char *psk_identity_hint`.
+    pub psk_identity_hint: *mut c_char,
+    /// `char *ext.hostname`.
+    pub ext_hostname: *mut c_char,
+    /// `uint32_t ext.max_early_data`.
+    pub ext_max_early_data: u32,
+}
+
+/// `struct timeval` — the two-`long` layout `SSL_get_event_timeout` writes on this platform.
+#[repr(C)]
+pub struct Timeval {
+    /// `time_t tv_sec`.
+    pub tv_sec: c_long,
+    /// `suseconds_t tv_usec`.
+    pub tv_usec: c_long,
+}
 
 // -------------------------------------------------------------------------------------------
 // Small helpers
@@ -776,6 +1003,12 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
                 SSL_CTX_free(ret);
                 return ptr::null_mut();
             }
+            // `ssl_lib.c:4067` allocates the CT log store for every context.
+            (*ret).ctlog_store = CTLOG_STORE_new_ex(libctx, propq);
+            if (*ret).ctlog_store.is_null() {
+                SSL_CTX_free(ret);
+                return ptr::null_mut();
+            }
             if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ret.cast(), &mut (*ret).ex_data) == 0 {
                 SSL_CTX_free(ret);
                 return ptr::null_mut();
@@ -831,6 +1064,10 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
             X509_STORE_free((*ctx).cert_store);
             cert_free((*ctx).cert);
+            CTLOG_STORE_free((*ctx).ctlog_store);
+            CRYPTO_free((*ctx).client_cert_type.cast(), FILE, 0);
+            CRYPTO_free((*ctx).server_cert_type.cast(), FILE, 0);
+            CRYPTO_free((*ctx).ext_alpn.cast(), FILE, 0);
             CRYPTO_THREAD_lock_free((*ctx).lock);
             CRYPTO_free((*ctx).propq.cast(), FILE, 4458);
             CRYPTO_free(ctx.cast(), FILE, 4467);
@@ -888,6 +1125,8 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             (*s).client_version = (*method).version;
             (*s).server = c_int::from((*method).default_server);
             (*s).rwstate = SSL_NOTHING;
+            // `ossl_ssl_connection_new_int` (`ssl_lib.c:907`) seeds the key-update state.
+            (*s).key_update = SSL_KEY_UPDATE_NONE;
 
             if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data) == 0 {
                 SSL_CTX_free(ctx);
@@ -943,6 +1182,56 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
                 return ptr::null_mut();
             }
             cert_copy_security((*s).cert, (*ctx).cert);
+
+            // `ssl_lib.c:763-956` copies the remaining connection configuration from the context.
+            (*s).session_ctx = ctx;
+            (*s).pha_enabled = (*ctx).pha_enabled;
+            (*s).ct_validation_callback = (*ctx).ct_validation_callback;
+            (*s).ct_validation_callback_arg = (*ctx).ct_validation_callback_arg;
+            (*s).block_padding = (*ctx).block_padding;
+            (*s).hs_padding = (*ctx).hs_padding;
+            if !(*ctx).client_cert_type.is_null() {
+                (*s).client_cert_type = CRYPTO_memdup(
+                    (*ctx).client_cert_type.cast(),
+                    (*ctx).client_cert_type_len,
+                    FILE,
+                    938,
+                )
+                .cast::<u8>();
+                if (*s).client_cert_type.is_null() {
+                    SSL_free(s);
+                    return ptr::null_mut();
+                }
+                (*s).client_cert_type_len = (*ctx).client_cert_type_len;
+            }
+            if !(*ctx).server_cert_type.is_null() {
+                (*s).server_cert_type = CRYPTO_memdup(
+                    (*ctx).server_cert_type.cast(),
+                    (*ctx).server_cert_type_len,
+                    FILE,
+                    945,
+                )
+                .cast::<u8>();
+                if (*s).server_cert_type.is_null() {
+                    SSL_free(s);
+                    return ptr::null_mut();
+                }
+                (*s).server_cert_type_len = (*ctx).server_cert_type_len;
+            }
+            if !(*ctx).ext_alpn.is_null() {
+                (*s).ext_alpn = CRYPTO_memdup(
+                    (*ctx).ext_alpn.cast(),
+                    (*ctx).ext_alpn_len as usize,
+                    FILE,
+                    892,
+                )
+                .cast::<u8>();
+                if (*s).ext_alpn.is_null() {
+                    SSL_free(s);
+                    return ptr::null_mut();
+                }
+                (*s).ext_alpn_len = (*ctx).ext_alpn_len;
+            }
         }
         s
     })
@@ -986,6 +1275,12 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             BIO_free_all((*s).rbio);
             X509_VERIFY_PARAM_free((*s).param);
             cert_free((*s).cert);
+            CRYPTO_free((*s).client_cert_type.cast(), FILE, 0);
+            CRYPTO_free((*s).server_cert_type.cast(), FILE, 0);
+            CRYPTO_free((*s).ext_alpn.cast(), FILE, 0);
+            CRYPTO_free((*s).ext_npn.cast(), FILE, 0);
+            CRYPTO_free((*s).ext_hostname.cast(), FILE, 0);
+            CRYPTO_free((*s).s3_alpn_selected.cast(), FILE, 0);
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data);
             SSL_CTX_free((*s).ctx);
             CRYPTO_THREAD_lock_free((*s).lock);
@@ -3918,5 +4213,2520 @@ pub unsafe extern "C" fn SSL_CTX_set1_cert_store(ctx: *mut SslCtx, store: *mut X
         }
         // SAFETY: `ctx` is live; `store` is per the caller's contract.
         unsafe { SSL_CTX_set_cert_store(ctx, store) };
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// Slice 2 — the verify-parameter, host, DANE/CT, cipher-type and connection-accessor surface
+// -------------------------------------------------------------------------------------------
+
+/// `int SSL_CTX_set_purpose(SSL_CTX *s, int purpose)` — `ssl/ssl_lib.c:1108-1111`.
+///
+/// # Safety
+/// `s` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_purpose(s: *mut SslCtx, purpose: c_int) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the caller guarantees `s` is live.
+        unsafe { X509_VERIFY_PARAM_set_purpose((*s).param, purpose) }
+    })
+}
+
+/// `int SSL_set_purpose(SSL *s, int purpose)` — `ssl/ssl_lib.c:1113-1121`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_purpose(s: *mut Ssl, purpose: c_int) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the caller guarantees `s` is live.
+        unsafe { X509_VERIFY_PARAM_set_purpose((*s).param, purpose) }
+    })
+}
+
+/// `int SSL_CTX_set_trust(SSL_CTX *s, int trust)` — `ssl/ssl_lib.c:1123-1126`.
+///
+/// # Safety
+/// `s` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_trust(s: *mut SslCtx, trust: c_int) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the caller guarantees `s` is live.
+        unsafe { X509_VERIFY_PARAM_set_trust((*s).param, trust) }
+    })
+}
+
+/// `int SSL_set_trust(SSL *s, int trust)` — `ssl/ssl_lib.c:1128-1136`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_trust(s: *mut Ssl, trust: c_int) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the caller guarantees `s` is live.
+        unsafe { X509_VERIFY_PARAM_set_trust((*s).param, trust) }
+    })
+}
+
+/// `int SSL_set1_host(SSL *s, const char *host)` — `ssl/ssl_lib.c:1138-1154`.
+///
+/// # Safety
+/// `s` must point to a live connection; `host` must be NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set1_host(s: *mut Ssl, host: *const c_char) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        let param = unsafe { (*s).param };
+        // Clear hostname(s) and any IP in every case, exactly as the authority does.
+        // SAFETY: `param` is live; the NULL arguments are the authority's clear
+        // (`X509_VERIFY_PARAM_set1_host(param, NULL, 0)`).
+        unsafe {
+            X509_VERIFY_PARAM_set1_host(param, ptr::null(), 0);
+            X509_VERIFY_PARAM_set1_ip(param, ptr::null(), 0);
+        }
+        if host.is_null() {
+            return 1;
+        }
+        // SAFETY: `param` and `host` are per the caller's contract.
+        unsafe {
+            let as_ip = X509_VERIFY_PARAM_set1_ip_asc(param, host);
+            let as_host = X509_VERIFY_PARAM_set1_host(param, host, 0);
+            c_int::from(as_ip != 0 || as_host != 0)
+        }
+    })
+}
+
+/// `int SSL_add1_host(SSL *s, const char *host)` — `ssl/ssl_lib.c:1156-1187`.
+///
+/// # Safety
+/// `s` must point to a live connection; `host` must be NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_add1_host(s: *mut Ssl, host: *const c_char) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        let param = unsafe { (*s).param };
+        if !host.is_null() {
+            // SAFETY: `host` is NUL-terminated per the caller's contract.
+            let ip = unsafe { a2i_IPADDRESS(host) };
+            if !ip.is_null() {
+                // We did not want the address; it was only an IP test.
+                // SAFETY: `ip` is the live `ASN1_OCTET_STRING` just returned.
+                unsafe { ASN1_STRING_free(ip) };
+                // SAFETY: `param` is live.
+                let old_ip = unsafe { X509_VERIFY_PARAM_get1_ip_asc(param) };
+                if !old_ip.is_null() {
+                    // SAFETY: `old_ip` is the allocation `get1_ip_asc` returned.
+                    unsafe { CRYPTO_free(old_ip.cast(), FILE, 1175) };
+                    // SAFETY: a constant site.
+                    unsafe { raise_ssl(ERR_R_PASSED_INVALID_ARGUMENT, 1177) };
+                    return 0;
+                }
+                // SAFETY: `param` and `host` are per the caller's contract.
+                return unsafe { X509_VERIFY_PARAM_set1_ip_asc(param, host) };
+            }
+        }
+        // SAFETY: `param` is live; `host` is per the caller's contract.
+        unsafe { X509_VERIFY_PARAM_add1_host(param, host, 0) }
+    })
+}
+
+/// `void SSL_set_hostflags(SSL *s, unsigned int flags)` — `ssl/ssl_lib.c:1189-1197`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_hostflags(s: *mut Ssl, flags: c_uint) {
+    guard_ffi((), || {
+        // SAFETY: the caller guarantees `s` is live.
+        unsafe { X509_VERIFY_PARAM_set_hostflags((*s).param, flags) };
+    })
+}
+
+/// `const char *SSL_get0_peername(SSL *s)` — `ssl/ssl_lib.c:1199-1207`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_peername(s: *mut Ssl) -> *const c_char {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: the caller guarantees `s` is live.
+        unsafe { X509_VERIFY_PARAM_get0_peername((*s).param) }
+    })
+}
+
+/// `int SSL_CTX_load_verify_locations(SSL_CTX *ctx, const char *CAfile, const char *CApath)` —
+/// `ssl/ssl_lib.c:5623-5633`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `CAfile`/`CApath` must be NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_load_verify_locations(
+    ctx: *mut SslCtx,
+    cafile: *const c_char,
+    capath: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        if cafile.is_null() && capath.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is live per the caller's contract.
+        if !cafile.is_null() && unsafe { SSL_CTX_load_verify_file(ctx, cafile) } == 0 {
+            return 0;
+        }
+        // SAFETY: `ctx` is live per the caller's contract.
+        if !capath.is_null() && unsafe { SSL_CTX_load_verify_dir(ctx, capath) } == 0 {
+            return 0;
+        }
+        1
+    })
+}
+
+/// `int SSL_CTX_load_verify_file(SSL_CTX *ctx, const char *CAfile)` — `ssl/ssl_lib.c:5606-5610`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `CAfile` must be NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_load_verify_file(
+    ctx: *mut SslCtx,
+    cafile: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live per the caller's contract; its store, libctx and propq are its own.
+        unsafe { X509_STORE_load_file_ex((*ctx).cert_store, cafile, (*ctx).libctx, (*ctx).propq) }
+    })
+}
+
+/// `int SSL_CTX_load_verify_dir(SSL_CTX *ctx, const char *CApath)` — `ssl/ssl_lib.c:5612-5615`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `CApath` must be NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_load_verify_dir(ctx: *mut SslCtx, capath: *const c_char) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe { X509_STORE_load_path((*ctx).cert_store, capath) }
+    })
+}
+
+/// `int SSL_CTX_load_verify_store(SSL_CTX *ctx, const char *CAstore)` — `ssl/ssl_lib.c:5617-5621`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `CAstore` must be NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_load_verify_store(
+    ctx: *mut SslCtx,
+    castore: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live per the caller's contract; its store, libctx and propq are its own.
+        unsafe { X509_STORE_load_store_ex((*ctx).cert_store, castore, (*ctx).libctx, (*ctx).propq) }
+    })
+}
+
+/// `int SSL_CTX_set_default_verify_paths(SSL_CTX *ctx)` — `ssl/ssl_lib.c:5545-5549`.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_default_verify_paths(ctx: *mut SslCtx) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live per the caller's contract; its store, libctx and propq are its own.
+        unsafe { X509_STORE_set_default_paths_ex((*ctx).cert_store, (*ctx).libctx, (*ctx).propq) }
+    })
+}
+
+/// `int SSL_CTX_check_private_key(const SSL_CTX *ctx)` — `ssl/ssl_lib.c:2065-2076`.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_check_private_key(ctx: *const SslCtx) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if ctx.is_null() || unsafe { (*(*ctx).cert).key.x509 }.is_null() {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_NO_CERTIFICATE_ASSIGNED, 2068) };
+            return 0;
+        }
+        // SAFETY: `ctx` is non-NULL and live.
+        if unsafe { (*(*ctx).cert).key.privatekey }.is_null() {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_NO_PRIVATE_KEY_ASSIGNED, 2072) };
+            return 0;
+        }
+        // SAFETY: both pointers are the live leaf pair per the checks above.
+        unsafe {
+            X509_check_private_key(
+                (*(*ctx).cert).key.x509.cast::<X509>(),
+                (*(*ctx).cert)
+                    .key
+                    .privatekey
+                    .cast::<crate::evp::pkey::EvpPkey>(),
+            )
+        }
+    })
+}
+
+/// `int SSL_check_private_key(const SSL *ssl)` — `ssl/ssl_lib.c:2079-2097`.
+///
+/// # Safety
+/// `ssl` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_check_private_key(ssl: *const Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
+        if ssl.is_null() {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(ERR_R_PASSED_INVALID_ARGUMENT, 2084) };
+            return 0;
+        }
+        // SAFETY: `ssl` is non-NULL and live.
+        if unsafe { (*(*ssl).cert).key.x509 }.is_null() {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_NO_CERTIFICATE_ASSIGNED, 2088) };
+            return 0;
+        }
+        // SAFETY: `ssl` is non-NULL and live.
+        if unsafe { (*(*ssl).cert).key.privatekey }.is_null() {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_NO_PRIVATE_KEY_ASSIGNED, 2092) };
+            return 0;
+        }
+        // SAFETY: both pointers are the live leaf pair per the checks above.
+        unsafe {
+            X509_check_private_key(
+                (*(*ssl).cert).key.x509.cast::<X509>(),
+                (*(*ssl).cert)
+                    .key
+                    .privatekey
+                    .cast::<crate::evp::pkey::EvpPkey>(),
+            )
+        }
+    })
+}
+
+/// `void SSL_certs_clear(SSL *s)` — `ssl/ssl_lib.c:1412-1420`.
+///
+/// The authority calls `ssl_cert_clear_certs`, which walks every `cert_pkey` and frees the extra
+/// certificate chain and custom extensions. Only the single active leaf pair exists in this slice
+/// (14.7's chains and the `custext` list are unlanded), so this clears the leaf pointers; the
+/// divergence is recorded in `src/ssl/mod.rs`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_certs_clear(s: *mut Ssl) {
+    guard_ffi((), || {
+        // SAFETY: `s` is live per the caller's contract.
+        let c = unsafe { (*s).cert };
+        if !c.is_null() {
+            // SAFETY: `c` is the live certificate container.
+            unsafe {
+                (*c).key.x509 = ptr::null_mut();
+                (*c).key.privatekey = ptr::null_mut();
+            }
+        }
+    })
+}
+
+/// `X509 *SSL_get0_peer_certificate(const SSL *s)` — `ssl/ssl_lib.c:1991-2002`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_peer_certificate(s: *const Ssl) -> *mut X509 {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: the caller guarantees `s` is live; its session is NULL in this slice.
+        let session = unsafe { (*s).session };
+        if session.is_null() {
+            ptr::null_mut()
+        } else {
+            // SAFETY: `session` is the live session per the check above.
+            unsafe { (*session).peer }
+        }
+    })
+}
+
+/// `X509 *SSL_get1_peer_certificate(const SSL *s)` — `ssl/ssl_lib.c:1981-1989`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get1_peer_certificate(s: *const Ssl) -> *mut X509 {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: `s` is live per the caller's contract.
+        let r = unsafe { SSL_get0_peer_certificate(s) };
+        if !r.is_null() {
+            // SAFETY: `r` is the live certificate just returned.
+            if unsafe { X509_up_ref(r.cast()) } == 0 {
+                return ptr::null_mut();
+            }
+        }
+        r
+    })
+}
+
+/// `STACK_OF(X509) *SSL_get_peer_cert_chain(const SSL *s)` — `ssl/ssl_lib.c:2004-2023`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_peer_cert_chain(s: *const Ssl) -> *mut c_void {
+    guard_ffi(ptr::null_mut(), || {
+        // SAFETY: the caller guarantees `s` is live; its session is NULL in this slice.
+        let session = unsafe { (*s).session };
+        if session.is_null() {
+            ptr::null_mut()
+        } else {
+            // SAFETY: `session` is the live session per the check above.
+            unsafe { (*session).peer_chain }
+        }
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// The certificate-transparency surface (the store and the validation callback)
+// -------------------------------------------------------------------------------------------
+
+/// `int SSL_CTX_set_ct_validation_callback(SSL_CTX *ctx, ssl_ct_validation_cb callback, void
+/// *arg)` — `ssl/ssl_lib.c:6583-6598`.
+///
+/// The authority first refuses when a custom extension handler for the SCT extension is already
+/// registered; that check (`SSL_CTX_has_client_custom_ext`, 14.9) is unreachable here because this
+/// slice installs no custom extensions, so it is omitted and recorded in `src/ssl/mod.rs`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `callback` is stored verbatim and `arg` is its argument.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_ct_validation_callback(
+    ctx: *mut SslCtx,
+    callback: Option<CtValidationCb>,
+    arg: *mut c_void,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe {
+            (*ctx).ct_validation_callback = callback;
+            (*ctx).ct_validation_callback_arg = arg;
+        }
+        1
+    })
+}
+
+/// `int SSL_set_ct_validation_callback(SSL *s, ssl_ct_validation_cb callback, void *arg)` —
+/// `ssl/ssl_lib.c:6552-6581`.
+///
+/// As the `SSL_CTX` form, the authority's custom-extension refusal and its OCSP status-set
+/// (`SSL_set_tlsext_status_type`, 14.9) are omitted here; both are recorded in `src/ssl/mod.rs`.
+///
+/// # Safety
+/// `s` must point to a live connection; `callback` is stored verbatim and `arg` its argument.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_ct_validation_callback(
+    s: *mut Ssl,
+    callback: Option<CtValidationCb>,
+    arg: *mut c_void,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe {
+            (*s).ct_validation_callback = callback;
+            (*s).ct_validation_callback_arg = arg;
+        }
+        1
+    })
+}
+
+/// `ct_permissive` — `ssl/ssl_lib.c:6529-6533`: the information-gathering callback, always 1.
+unsafe extern "C" fn ct_permissive(
+    _ctx: *const c_void,
+    _scts: *const c_void,
+    _arg: *mut c_void,
+) -> c_int {
+    1
+}
+
+/// `ct_strict` — `ssl/ssl_lib.c:6535-6550`: 1 only when an SCT validates. Parsed SCT stacks are
+/// 14.9's, so no SCT list ever reaches this slice and the authority's `SSL_R_NO_VALID_SCTS` refusal
+/// is the answer.
+unsafe extern "C" fn ct_strict(
+    _ctx: *const c_void,
+    scts: *const c_void,
+    _arg: *mut c_void,
+) -> c_int {
+    // An empty (or absent) SCT list drops straight to the authority's refusal path.
+    let _ = scts;
+    // SAFETY: a constant site.
+    unsafe { raise_ssl(SSL_R_NO_VALID_SCTS, 6548) };
+    0
+}
+
+/// `int SSL_CTX_enable_ct(SSL_CTX *ctx, int validation_mode)` — `ssl/ssl_lib.c:6714-6725`.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_enable_ct(ctx: *mut SslCtx, validation_mode: c_int) -> c_int {
+    guard_ffi(0, || match validation_mode {
+        SSL_CT_VALIDATION_PERMISSIVE => {
+            // SAFETY: `ctx` is live per the caller's contract.
+            unsafe { SSL_CTX_set_ct_validation_callback(ctx, Some(ct_permissive), ptr::null_mut()) }
+        }
+        SSL_CT_VALIDATION_STRICT => {
+            // SAFETY: `ctx` is live per the caller's contract.
+            unsafe { SSL_CTX_set_ct_validation_callback(ctx, Some(ct_strict), ptr::null_mut()) }
+        }
+        _ => {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_INVALID_CT_VALIDATION_TYPE, 6718) };
+            0
+        }
+    })
+}
+
+/// `int SSL_enable_ct(SSL *s, int validation_mode)` — `ssl/ssl_lib.c:6727-6738`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_enable_ct(s: *mut Ssl, validation_mode: c_int) -> c_int {
+    guard_ffi(0, || match validation_mode {
+        SSL_CT_VALIDATION_PERMISSIVE => {
+            // SAFETY: `s` is live per the caller's contract.
+            unsafe { SSL_set_ct_validation_callback(s, Some(ct_permissive), ptr::null_mut()) }
+        }
+        SSL_CT_VALIDATION_STRICT => {
+            // SAFETY: `s` is live per the caller's contract.
+            unsafe { SSL_set_ct_validation_callback(s, Some(ct_strict), ptr::null_mut()) }
+        }
+        _ => {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_INVALID_CT_VALIDATION_TYPE, 6731) };
+            0
+        }
+    })
+}
+
+/// `int SSL_ct_is_enabled(const SSL *s)` — `ssl/ssl_lib.c:6600-6608`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_ct_is_enabled(s: *const Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the caller guarantees `s` is live.
+        c_int::from(unsafe { (*s).ct_validation_callback }.is_some())
+    })
+}
+
+/// `int SSL_CTX_ct_is_enabled(const SSL_CTX *ctx)` — `ssl/ssl_lib.c:6610-6613`.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_ct_is_enabled(ctx: *const SslCtx) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: the caller guarantees `ctx` is live.
+        c_int::from(unsafe { (*ctx).ct_validation_callback }.is_some())
+    })
+}
+
+/// `int SSL_CTX_set_ctlog_list_file(SSL_CTX *ctx, const char *path)` — `ssl/ssl_lib.c:6745-6748`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `path` must be NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_ctlog_list_file(
+    ctx: *mut SslCtx,
+    path: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live; its `ctlog_store` was allocated by `SSL_CTX_new_ex`.
+        unsafe { CTLOG_STORE_load_file((*ctx).ctlog_store, path) }
+    })
+}
+
+/// `int SSL_CTX_set_default_ctlog_list_file(SSL_CTX *ctx)` — `ssl/ssl_lib.c:6740-6743`.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_default_ctlog_list_file(ctx: *mut SslCtx) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live; its `ctlog_store` was allocated by `SSL_CTX_new_ex`.
+        unsafe { CTLOG_STORE_load_default_file((*ctx).ctlog_store) }
+    })
+}
+
+/// `void SSL_CTX_set0_ctlog_store(SSL_CTX *ctx, CTLOG_STORE *logs)` — `ssl/ssl_lib.c:6750-6754`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `logs` must be NULL or a live store whose reference is
+/// transferred.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set0_ctlog_store(ctx: *mut SslCtx, logs: *mut CtlogStore) {
+    guard_ffi((), || {
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe {
+            CTLOG_STORE_free((*ctx).ctlog_store);
+            (*ctx).ctlog_store = logs;
+        }
+    })
+}
+
+/// `const CTLOG_STORE *SSL_CTX_get0_ctlog_store(const SSL_CTX *ctx)` — `ssl/ssl_lib.c:6756-6759`.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_get0_ctlog_store(ctx: *const SslCtx) -> *const CtlogStore {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: the caller guarantees `ctx` is live.
+        unsafe { (*ctx).ctlog_store }
+    })
+}
+
+/// `const STACK_OF(SCT) *SSL_get0_peer_scts(SSL *s)` — `ssl/ssl_lib.c:6511-6527`.
+///
+/// The authority extracts SCTs from the TLS extension, the OCSP response and the certificate's
+/// `X509v3` extensions; those sources are the handshake (14.5) and the certificate path (14.7), so
+/// this slice reports the parsed list it has (NULL) and marks it parsed, matching the authority for
+/// a connection with no peer. Recorded in `src/ssl/mod.rs`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_peer_scts(s: *mut Ssl) -> *const c_void {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe { (*s).scts_parsed = 1 };
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe { (*s).scts }
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// ALPN, NPN and the SNI reader
+// -------------------------------------------------------------------------------------------
+
+/// `alpn_value_ok` — `ssl/ssl_lib.c:3702-3714`: the wire-format validity test for an ALPN list.
+///
+/// # Safety
+/// `protos` must be NULL or readable for `protos_len` bytes.
+unsafe fn alpn_value_ok(protos: *const u8, protos_len: c_uint) -> bool {
+    if protos_len < 2 || protos.is_null() {
+        return false;
+    }
+    let mut idx: c_uint = 0;
+    while idx < protos_len {
+        // SAFETY: `idx < protos_len` and `protos` is readable for `protos_len` bytes.
+        let step = unsafe { *protos.add(idx as usize) } as c_uint;
+        if step == 0 {
+            return false;
+        }
+        idx += step + 1;
+    }
+    idx == protos_len
+}
+
+/// `int SSL_CTX_set_alpn_protos(SSL_CTX *ctx, const unsigned char *protos, unsigned int
+/// protos_len)` — `ssl/ssl_lib.c:3720-3743`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `protos` must be NULL or readable for `protos_len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_alpn_protos(
+    ctx: *mut SslCtx,
+    protos: *const u8,
+    protos_len: c_uint,
+) -> c_int {
+    guard_ffi(1, || {
+        if protos_len == 0 || protos.is_null() {
+            // SAFETY: `ctx` is live; a NULL `ext_alpn` is `CRYPTO_free`'s own no-op.
+            unsafe {
+                CRYPTO_free((*ctx).ext_alpn.cast(), FILE, 3726);
+                (*ctx).ext_alpn = ptr::null_mut();
+                (*ctx).ext_alpn_len = 0;
+            }
+            return 0;
+        }
+        // SAFETY: `protos` is readable for `protos_len` bytes per the contract.
+        if !unsafe { alpn_value_ok(protos, protos_len) } {
+            return 1;
+        }
+        // SAFETY: `protos` is readable for `protos_len` bytes per the contract.
+        let alpn =
+            unsafe { CRYPTO_memdup(protos.cast(), protos_len as usize, FILE, 3735).cast::<u8>() };
+        if alpn.is_null() {
+            return 1;
+        }
+        // SAFETY: `ctx` is live.
+        unsafe {
+            CRYPTO_free((*ctx).ext_alpn.cast(), FILE, 3738);
+            (*ctx).ext_alpn = alpn;
+            (*ctx).ext_alpn_len = protos_len;
+        }
+        0
+    })
+}
+
+/// `int SSL_set_alpn_protos(SSL *ssl, const unsigned char *protos, unsigned int protos_len)` —
+/// `ssl/ssl_lib.c:3750-3777`.
+///
+/// # Safety
+/// `ssl` must point to a live connection; `protos` must be NULL or readable for `protos_len`
+/// bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_alpn_protos(
+    ssl: *mut Ssl,
+    protos: *const u8,
+    protos_len: c_uint,
+) -> c_int {
+    guard_ffi(1, || {
+        if protos_len == 0 || protos.is_null() {
+            // SAFETY: `ssl` is live; a NULL `ext_alpn` is `CRYPTO_free`'s own no-op.
+            unsafe {
+                CRYPTO_free((*ssl).ext_alpn.cast(), FILE, 3760);
+                (*ssl).ext_alpn = ptr::null_mut();
+                (*ssl).ext_alpn_len = 0;
+            }
+            return 0;
+        }
+        // SAFETY: `protos` is readable for `protos_len` bytes per the contract.
+        if !unsafe { alpn_value_ok(protos, protos_len) } {
+            return 1;
+        }
+        // SAFETY: `protos` is readable for `protos_len` bytes per the contract.
+        let alpn =
+            unsafe { CRYPTO_memdup(protos.cast(), protos_len as usize, FILE, 3769).cast::<u8>() };
+        if alpn.is_null() {
+            return 1;
+        }
+        // SAFETY: `ssl` is live.
+        unsafe {
+            CRYPTO_free((*ssl).ext_alpn.cast(), FILE, 3772);
+            (*ssl).ext_alpn = alpn;
+            (*ssl).ext_alpn_len = protos_len;
+        }
+        0
+    })
+}
+
+/// `void SSL_get0_alpn_selected(const SSL *ssl, const unsigned char **data, unsigned int *len)` —
+/// `ssl/ssl_lib.c:3798-3815`.
+///
+/// # Safety
+/// `ssl` must point to a live connection; `data` and `len` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_alpn_selected(
+    ssl: *const Ssl,
+    data: *mut *const u8,
+    len: *mut c_uint,
+) {
+    guard_ffi((), || {
+        // SAFETY: `ssl`, `data` and `len` are per the caller's contract.
+        let (selected, selected_len) =
+            unsafe { ((*ssl).s3_alpn_selected, (*ssl).s3_alpn_selected_len) };
+        // SAFETY: `data` is writable per the contract.
+        unsafe { *data = selected };
+        // SAFETY: `len` is writable per the contract.
+        unsafe {
+            *len = if selected.is_null() {
+                0
+            } else {
+                selected_len as c_uint
+            }
+        };
+    })
+}
+
+/// `void SSL_CTX_set_next_proto_select_cb(SSL_CTX *s, SSL_CTX_npn_select_cb_func cb, void *arg)` —
+/// `ssl/ssl_lib.c:3689-3699` (the authority spells it `SSL_CTX_set_npn_select_cb`).
+///
+/// # Safety
+/// `s` must point to a live context; `cb` is stored verbatim and `arg` its argument.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_next_proto_select_cb(
+    s: *mut SslCtx,
+    cb: Option<NpnSelectCb>,
+    arg: *mut c_void,
+) {
+    guard_ffi((), || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe {
+            (*s).npn_select_cb = cb;
+            (*s).npn_select_cb_arg = arg;
+        }
+    })
+}
+
+/// `void SSL_CTX_set_next_protos_advertised_cb(SSL_CTX *s, SSL_CTX_npn_advertised_cb_func cb, void
+/// *arg)` — `ssl/ssl_lib.c:3667-3677` (the authority spells it
+/// `SSL_CTX_set_npn_advertised_cb`).
+///
+/// # Safety
+/// `s` must point to a live context; `cb` is stored verbatim and `arg` its argument.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_next_protos_advertised_cb(
+    s: *mut SslCtx,
+    cb: Option<NpnAdvertisedCb>,
+    arg: *mut c_void,
+) {
+    guard_ffi((), || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe {
+            (*s).npn_advertised_cb = cb;
+            (*s).npn_advertised_cb_arg = arg;
+        }
+    })
+}
+
+/// `void SSL_get0_next_proto_negotiated(const SSL *s, const unsigned char **data, unsigned *len)` —
+/// `ssl/ssl_lib.c:3637-3655`.
+///
+/// # Safety
+/// `s` must point to a live connection; `data` and `len` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_next_proto_negotiated(
+    s: *const Ssl,
+    data: *mut *const u8,
+    len: *mut c_uint,
+) {
+    guard_ffi((), || {
+        // SAFETY: `s` is live per the caller's contract.
+        let (npn, npn_len) = unsafe { ((*s).ext_npn, (*s).ext_npn_len) };
+        // SAFETY: `data` is writable per the contract.
+        unsafe { *data = npn };
+        // SAFETY: `len` is writable per the contract.
+        unsafe {
+            *len = if npn.is_null() { 0 } else { npn_len as c_uint };
+        };
+    })
+}
+
+/// `int SSL_select_next_proto(unsigned char **out, unsigned char *outlen, const unsigned char
+/// *server, unsigned int server_len, const unsigned char *client, unsigned int client_len)` —
+/// `ssl/ssl_lib.c:3573-3626`.
+///
+/// # Safety
+/// `out`/`outlen` must be writable; `server`/`client` must be readable for their lengths.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_select_next_proto(
+    out: *mut *mut u8,
+    outlen: *mut u8,
+    server: *const u8,
+    server_len: c_uint,
+    client: *const u8,
+    client_len: c_uint,
+) -> c_int {
+    guard_ffi(OPENSSL_NPN_NO_OVERLAP, || {
+        // Read the first length-prefixed entry of the client list; if there is none, there is no
+        // overlap. The pointer arithmetic mirrors `PACKET_get_length_prefixed_1`.
+        let c_first = if client.is_null() || client_len < 1 {
+            None
+        } else {
+            // SAFETY: `client_len >= 1` and `client` is readable for `client_len` bytes.
+            let n = unsafe { *client } as c_uint;
+            if n == 0 || n + 1 > client_len {
+                None
+            } else {
+                // SAFETY: `super::SSL_select_next_proto`'s caller makes `client` readable for
+                // `client_len > n` bytes.
+                Some(unsafe { client.add(1) })
+            }
+        };
+        let Some(c_first_ptr) = c_first else {
+            // SAFETY: `out`/`outlen` are writable per the contract.
+            unsafe {
+                *out = ptr::null_mut();
+                *outlen = 0;
+            }
+            return OPENSSL_NPN_NO_OVERLAP;
+        };
+        // SAFETY: `client_len >= 1`; the entry length byte is `*client`.
+        let c_first_len = unsafe { *client };
+        // Set the default opportunistic protocol; overwritten if a match is found.
+        // SAFETY: `out`/`outlen` are writable per the contract.
+        unsafe {
+            *out = c_first_ptr.cast_mut();
+            *outlen = c_first_len;
+        }
+
+        // Walk the server preference list, looking for any client entry equal to a server entry.
+        let mut soff: c_uint = 0;
+        while !server.is_null() && soff < server_len {
+            // SAFETY: `soff < server_len` and `server` is readable for `server_len` bytes.
+            let slen = unsafe { *server.add(soff as usize) } as c_uint;
+            soff += 1;
+            if slen == 0 || soff + slen > server_len {
+                break;
+            }
+            // SAFETY: `soff + slen <= server_len` and `server` is readable for `server_len`
+            // bytes, so the entry start is in bounds.
+            let s_ent = unsafe { server.add(soff as usize) };
+            let mut coff: c_uint = 0;
+            while coff < client_len {
+                // SAFETY: `coff < client_len` and `client` is readable for `client_len` bytes.
+                let clen = unsafe { *client.add(coff as usize) } as c_uint;
+                coff += 1;
+                if clen == 0 || coff + clen > client_len {
+                    break;
+                }
+                // SAFETY: `s_ent`/`server.add(coff...)` are within their buffers per the bounds
+                // checks above.
+                let equal = unsafe {
+                    let c_ent = client.add(coff as usize);
+                    slen == clen
+                        && core::slice::from_raw_parts(s_ent, slen as usize)
+                            == core::slice::from_raw_parts(c_ent, clen as usize)
+                };
+                if equal {
+                    // SAFETY: `out`/`outlen` are writable per the contract.
+                    unsafe {
+                        *out = s_ent.cast_mut();
+                        *outlen = slen as u8;
+                    }
+                    return OPENSSL_NPN_NEGOTIATED;
+                }
+                coff += clen;
+            }
+            soff += slen;
+        }
+        OPENSSL_NPN_NO_OVERLAP
+    })
+}
+
+/// `const char *SSL_get_servername(const SSL *s, const int type)` — `ssl/ssl_lib.c:3472-3544`,
+/// reduced to the state this slice can hold.
+///
+/// `handshake_func` is never installed here (14.5 does that), so the authority's `server` test is
+/// always the client path and `SSL_in_before` is always true; the server and resumption branches
+/// are therefore unreachable and are recorded in `src/ssl/mod.rs`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_servername(s: *const Ssl, type_: c_int) -> *const c_char {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: `s` is live per the caller's contract.
+        let sc = unsafe { &*s };
+        if type_ != TLSEXT_NAMETYPE_HOST_NAME {
+            return ptr::null();
+        }
+        // Client side, before the handshake: a set SNI name wins; otherwise a TLSv1.2 session's
+        // hostname would win, but no session exists in this slice.
+        if sc.ext_hostname.is_null() && !sc.session.is_null() {
+            // SAFETY: `session` is live per the non-NULL check; its version is readable.
+            let session = unsafe { &*sc.session };
+            if session.ssl_version != TLS1_3_VERSION {
+                return session.ext_hostname;
+            }
+        }
+        sc.ext_hostname
+    })
+}
+
+/// `int SSL_get_servername_type(const SSL *s)` — `ssl/ssl_lib.c:3546-3551`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_servername_type(s: *const Ssl) -> c_int {
+    guard_ffi(-1, || {
+        // SAFETY: `s` is live per the caller's contract.
+        if unsafe { SSL_get_servername(s, TLSEXT_NAMETYPE_HOST_NAME) }.is_null() {
+            -1
+        } else {
+            TLSEXT_NAMETYPE_HOST_NAME
+        }
+    })
+}
+
+/// `int SSL_set0_tmp_dh_pkey` and `SSL_CTX_set0_tmp_dh_pkey` are withheld from this slice: both
+/// run `ssl_security(..., SSL_SECOP_TMP_DH, ...)` first (`ssl_lib.c:7595`, `:7607`), and the
+/// security check lives in `ssl_cert.c` (14.7). Recorded in `src/ssl/mod.rs`.
+///
+/// `int SSL_CTX_set_block_padding_ex(SSL_CTX *ctx, size_t app_block_size, size_t hs_block_size)` —
+/// `ssl/ssl_lib.c:5959-5981`.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_block_padding_ex(
+    ctx: *mut SslCtx,
+    app_block_size: usize,
+    hs_block_size: usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe {
+            if app_block_size == 1 {
+                (*ctx).block_padding = 0;
+            } else if app_block_size <= SSL3_RT_MAX_PLAIN_LENGTH as usize {
+                (*ctx).block_padding = app_block_size;
+            } else {
+                return 0;
+            }
+            if hs_block_size == 1 {
+                (*ctx).hs_padding = 0;
+            } else if hs_block_size <= SSL3_RT_MAX_PLAIN_LENGTH as usize {
+                (*ctx).hs_padding = hs_block_size;
+            } else {
+                return 0;
+            }
+        }
+        1
+    })
+}
+
+/// `int SSL_CTX_set_block_padding(SSL_CTX *ctx, size_t block_size)` — `ssl/ssl_lib.c:5983-5986`.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_block_padding(ctx: *mut SslCtx, block_size: usize) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe { SSL_CTX_set_block_padding_ex(ctx, block_size, block_size) }
+    })
+}
+
+/// `int SSL_set_block_padding_ex(SSL *ssl, size_t app_block_size, size_t hs_block_size)` —
+/// `ssl/ssl_lib.c:6026-6052`.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_block_padding_ex(
+    ssl: *mut Ssl,
+    app_block_size: usize,
+    hs_block_size: usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ssl` is live per the caller's contract.
+        unsafe {
+            if app_block_size == 1 {
+                (*ssl).block_padding = 0;
+            } else if app_block_size <= SSL3_RT_MAX_PLAIN_LENGTH as usize {
+                (*ssl).block_padding = app_block_size;
+            } else {
+                return 0;
+            }
+            if hs_block_size == 1 {
+                (*ssl).hs_padding = 0;
+            } else if hs_block_size <= SSL3_RT_MAX_PLAIN_LENGTH as usize {
+                (*ssl).hs_padding = hs_block_size;
+            } else {
+                return 0;
+            }
+        }
+        1
+    })
+}
+
+/// `int SSL_set_block_padding(SSL *ssl, size_t block_size)` — `ssl/ssl_lib.c:6054-6057`.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_block_padding(ssl: *mut Ssl, block_size: usize) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ssl` is live per the caller's contract.
+        unsafe { SSL_set_block_padding_ex(ssl, block_size, block_size) }
+    })
+}
+
+/// `void SSL_CTX_set_post_handshake_auth(SSL_CTX *ctx, int val)` — `ssl/ssl_lib.c:7377-7380`.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_post_handshake_auth(ctx: *mut SslCtx, val: c_int) {
+    guard_ffi((), || {
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe { (*ctx).pha_enabled = val };
+    })
+}
+
+/// `void SSL_set_post_handshake_auth(SSL *ssl, int val)` — `ssl/ssl_lib.c:7382-7390`.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_post_handshake_auth(ssl: *mut Ssl, val: c_int) {
+    guard_ffi((), || {
+        // SAFETY: `ssl` is live per the caller's contract.
+        unsafe { (*ssl).pha_enabled = val };
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// The negotiated/expected certificate-type list and the domain flags
+// -------------------------------------------------------------------------------------------
+
+/// `validate_cert_type` — `ssl/ssl_lib.c:8239-8270`: only a list of distinct `x509`/`rpk` bytes is
+/// accepted; every ``pgp``/`1609dot2` byte and every repeat is refused.
+///
+/// # Safety
+/// `val` must be NULL or readable for `len` bytes.
+unsafe fn validate_cert_type(val: *const u8, len: usize) -> bool {
+    if val.is_null() && len == 0 {
+        return true;
+    }
+    if val.is_null() || len == 0 {
+        return false;
+    }
+    let mut saw_rpk = false;
+    let mut saw_x509 = false;
+    for i in 0..len {
+        // SAFETY: `i < len` and `val` is readable for `len` bytes.
+        match unsafe { *val.add(i) } {
+            TLSEXT_CERT_TYPE_RPK => {
+                if saw_rpk {
+                    return false;
+                }
+                saw_rpk = true;
+            }
+            TLSEXT_CERT_TYPE_X509 => {
+                if saw_x509 {
+                    return false;
+                }
+                saw_x509 = true;
+            }
+            _ => return false,
+        }
+    }
+    true
+}
+
+/// `set_cert_type` — `ssl/ssl_lib.c:8272-8289`: validate, replace, and take a copy.
+///
+/// # Safety
+/// `cert_type`/`cert_type_len` must be the live fields of one object; `val` NULL or readable for
+/// `len` bytes.
+unsafe fn set_cert_type(
+    cert_type: *mut *mut u8,
+    cert_type_len: *mut usize,
+    val: *const u8,
+    len: usize,
+) -> c_int {
+    // SAFETY: per the caller's contract.
+    if !unsafe { validate_cert_type(val, len) } {
+        return 0;
+    }
+    let mut tmp: *mut u8 = ptr::null_mut();
+    if !val.is_null() {
+        // SAFETY: `val` is readable for `len` bytes.
+        tmp = unsafe { CRYPTO_memdup(val.cast(), len, FILE, 8282).cast::<u8>() };
+        if tmp.is_null() {
+            return 0;
+        }
+    }
+    // SAFETY: `cert_type`/`cert_type_len` are live per the caller's contract.
+    unsafe {
+        CRYPTO_free((*cert_type).cast(), FILE, 8285);
+        *cert_type = tmp;
+        *cert_type_len = len;
+    }
+    1
+}
+
+/// `int SSL_set1_client_cert_type(SSL *s, const unsigned char *val, size_t len)` —
+/// `ssl/ssl_lib.c:8291-8300`.
+///
+/// # Safety
+/// `s` must point to a live connection; `val` NULL or readable for `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set1_client_cert_type(
+    s: *mut Ssl,
+    val: *const u8,
+    len: usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe {
+            set_cert_type(
+                ptr::addr_of_mut!((*s).client_cert_type),
+                ptr::addr_of_mut!((*s).client_cert_type_len),
+                val,
+                len,
+            )
+        }
+    })
+}
+
+/// `int SSL_set1_server_cert_type(SSL *s, const unsigned char *val, size_t len)` —
+/// `ssl/ssl_lib.c:8302-8311`.
+///
+/// # Safety
+/// `s` must point to a live connection; `val` NULL or readable for `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set1_server_cert_type(
+    s: *mut Ssl,
+    val: *const u8,
+    len: usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe {
+            set_cert_type(
+                ptr::addr_of_mut!((*s).server_cert_type),
+                ptr::addr_of_mut!((*s).server_cert_type_len),
+                val,
+                len,
+            )
+        }
+    })
+}
+
+/// `int SSL_CTX_set1_client_cert_type(SSL_CTX *ctx, const unsigned char *val, size_t len)` —
+/// `ssl/ssl_lib.c:8313-8317`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `val` NULL or readable for `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set1_client_cert_type(
+    ctx: *mut SslCtx,
+    val: *const u8,
+    len: usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe {
+            set_cert_type(
+                ptr::addr_of_mut!((*ctx).client_cert_type),
+                ptr::addr_of_mut!((*ctx).client_cert_type_len),
+                val,
+                len,
+            )
+        }
+    })
+}
+
+/// `int SSL_CTX_set1_server_cert_type(SSL_CTX *ctx, const unsigned char *val, size_t len)` —
+/// `ssl/ssl_lib.c:8319-8323`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `val` NULL or readable for `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set1_server_cert_type(
+    ctx: *mut SslCtx,
+    val: *const u8,
+    len: usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe {
+            set_cert_type(
+                ptr::addr_of_mut!((*ctx).server_cert_type),
+                ptr::addr_of_mut!((*ctx).server_cert_type_len),
+                val,
+                len,
+            )
+        }
+    })
+}
+
+/// `int SSL_get0_client_cert_type(const SSL *s, unsigned char **t, size_t *len)` —
+/// `ssl/ssl_lib.c:8325-8335`.
+///
+/// # Safety
+/// `s` must point to a live connection; `t`/`len` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_client_cert_type(
+    s: *const Ssl,
+    t: *mut *mut u8,
+    len: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        if t.is_null() || len.is_null() {
+            return 0;
+        }
+        // SAFETY: `s`, `t` and `len` are per the caller's contract.
+        unsafe {
+            *t = (*s).client_cert_type;
+            *len = (*s).client_cert_type_len;
+        }
+        1
+    })
+}
+
+/// `int SSL_get0_server_cert_type(const SSL *s, unsigned char **t, size_t *len)` —
+/// `ssl/ssl_lib.c:8337-8347`.
+///
+/// # Safety
+/// `s` must point to a live connection; `t`/`len` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_server_cert_type(
+    s: *const Ssl,
+    t: *mut *mut u8,
+    len: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        if t.is_null() || len.is_null() {
+            return 0;
+        }
+        // SAFETY: `s`, `t` and `len` are per the caller's contract.
+        unsafe {
+            *t = (*s).server_cert_type;
+            *len = (*s).server_cert_type_len;
+        }
+        1
+    })
+}
+
+/// `int SSL_CTX_get0_client_cert_type(const SSL_CTX *ctx, unsigned char **t, size_t *len)` —
+/// `ssl/ssl_lib.c:8349-8357`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `t`/`len` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_get0_client_cert_type(
+    ctx: *const SslCtx,
+    t: *mut *mut u8,
+    len: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        if t.is_null() || len.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx`, `t` and `len` are per the caller's contract.
+        unsafe {
+            *t = (*ctx).client_cert_type;
+            *len = (*ctx).client_cert_type_len;
+        }
+        1
+    })
+}
+
+/// `int SSL_CTX_get0_server_cert_type(const SSL_CTX *ctx, unsigned char **t, size_t *len)` —
+/// `ssl/ssl_lib.c:8359-8367`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `t`/`len` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_get0_server_cert_type(
+    ctx: *const SslCtx,
+    t: *mut *mut u8,
+    len: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        if t.is_null() || len.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx`, `t` and `len` are per the caller's contract.
+        unsafe {
+            *t = (*ctx).server_cert_type;
+            *len = (*ctx).server_cert_type_len;
+        }
+        1
+    })
+}
+
+/// `int SSL_get_negotiated_client_cert_type(const SSL *s)` — `ssl/ssl_lib.c:8219-8227`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_negotiated_client_cert_type(s: *const Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe { (*s).ext_client_cert_type as c_int }
+    })
+}
+
+/// `int SSL_get_negotiated_server_cert_type(const SSL *s)` — `ssl/ssl_lib.c:8229-8237`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_negotiated_server_cert_type(s: *const Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe { (*s).ext_server_cert_type as c_int }
+    })
+}
+
+/// `int SSL_CTX_set_domain_flags(SSL_CTX *ctx, uint64_t domain_flags)` — `ssl/ssl_lib.c:8147-8162`.
+///
+/// The flags are a QUIC-only (`IS_QUIC_CTX`) property; for the TLS contexts this crate builds the
+/// authority raises `ERR_R_UNSUPPORTED` and answers 0, which this slice reproduces. Recorded in
+/// `src/ssl/mod.rs` (QUIC is 14.10's).
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_domain_flags(ctx: *mut SslCtx, domain_flags: u64) -> c_int {
+    guard_ffi(0, || {
+        let _ = (ctx, domain_flags);
+        // SAFETY: a constant site.
+        unsafe { raise_ssl(ERR_R_UNSUPPORTED, 8159) };
+        0
+    })
+}
+
+/// `int SSL_CTX_get_domain_flags(const SSL_CTX *ctx, uint64_t *domain_flags)` —
+/// `ssl/ssl_lib.c:8164-8178`. As [`SSL_CTX_set_domain_flags`], a non-QUIC context is unsupported.
+///
+/// # Safety
+/// `ctx` must point to a live context; `domain_flags` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_get_domain_flags(
+    ctx: *const SslCtx,
+    domain_flags: *mut u64,
+) -> c_int {
+    guard_ffi(0, || {
+        let _ = (ctx, domain_flags);
+        // SAFETY: a constant site.
+        unsafe { raise_ssl(ERR_R_UNSUPPORTED, 8175) };
+        0
+    })
+}
+
+/// `int SSL_get_domain_flags(const SSL *ssl, uint64_t *domain_flags)` — `ssl/ssl_lib.c:8180-8188`.
+///
+/// # Safety
+/// `ssl` must point to a live connection; `domain_flags` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_domain_flags(ssl: *const Ssl, domain_flags: *mut u64) -> c_int {
+    guard_ffi(0, || {
+        let _ = (ssl, domain_flags);
+        // `IS_QUIC(ssl)` is false for every object this crate builds, so the authority's
+        // falling-through 0 is its answer (no `ERR` is raised on this path).
+        0
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// The async wait-context accessors (the job itself is 14.5's)
+// -------------------------------------------------------------------------------------------
+
+/// `int SSL_waiting_for_async(SSL *s)` — `ssl/ssl_lib.c:2099-2110`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_waiting_for_async(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract; its `job` is NULL in this slice.
+        c_int::from(!unsafe { (*s).job }.is_null())
+    })
+}
+
+/// `int SSL_get_async_status(SSL *s, int *status)` — `ssl/ssl_lib.c:2174-2186`.
+///
+/// # Safety
+/// `s` must point to a live connection; `status` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_async_status(s: *mut Ssl, status: *mut c_int) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract; `waitctx` is NULL in this slice.
+        let ctx = unsafe { (*s).waitctx };
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is a live `ASYNC_WAIT_CTX` and `status` is writable per the contract.
+        unsafe { *status = ASYNC_WAIT_CTX_get_status(ctx) };
+        1
+    })
+}
+
+/// `int SSL_get_all_async_fds(SSL *s, OSSL_ASYNC_FD *fds, size_t *numfds)` —
+/// `ssl/ssl_lib.c:2112-2123`.
+///
+/// # Safety
+/// `s` must point to a live connection; `numfds` writable; `fds` NULL or a sufficient buffer.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_all_async_fds(
+    s: *mut Ssl,
+    fds: *mut OsslAsyncFd,
+    numfds: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        let ctx = unsafe { (*s).waitctx };
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is live; `fds`/`numfds` are per the contract.
+        unsafe { ASYNC_WAIT_CTX_get_all_fds(ctx, fds, numfds) }
+    })
+}
+
+/// `int SSL_get_changed_async_fds(SSL *s, OSSL_ASYNC_FD *addfd, size_t *numaddfds, OSSL_ASYNC_FD
+/// *delfd, size_t *numdelfds)` — `ssl/ssl_lib.c:2125-2138`.
+///
+/// # Safety
+/// `s` must point to a live connection; the counts writable; the fd buffers NULL or sufficient.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_changed_async_fds(
+    s: *mut Ssl,
+    addfd: *mut OsslAsyncFd,
+    numaddfds: *mut usize,
+    delfd: *mut OsslAsyncFd,
+    numdelfds: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        let ctx = unsafe { (*s).waitctx };
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is live; the buffers and counts are per the contract.
+        unsafe { ASYNC_WAIT_CTX_get_changed_fds(ctx, addfd, numaddfds, delfd, numdelfds) }
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// The remaining state readers, buffer hooks and the QUIC-dispatch non-QUIC arms
+// -------------------------------------------------------------------------------------------
+
+/// `int SSL_get_key_update_type(const SSL *s)` — `ssl/ssl_lib.c:2847-2860`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_key_update_type(s: *const Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe { (*s).key_update }
+    })
+}
+
+/// `int SSL_renegotiate_pending(const SSL *s)` — `ssl/ssl_lib.c:2911-2923`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_renegotiate_pending(s: *const Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        c_int::from(unsafe { (*s).renegotiate } != 0)
+    })
+}
+
+/// `int SSL_get_early_data_status(const SSL *s)` — `ssl/ssl_lib.c:2450-2459`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_early_data_status(s: *const Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe { (*s).ext_early_data }
+    })
+}
+
+/// `int SSL_get_handshake_rtt(const SSL *s, uint64_t *rtt)` — `ssl/ssl_lib.c:5086-5099`.
+///
+/// # Safety
+/// `s` must point to a live connection; `rtt` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_handshake_rtt(s: *const Ssl, rtt: *mut u64) -> c_int {
+    guard_ffi(-1, || {
+        // SAFETY: `s` is live per the caller's contract.
+        let (write, read) = unsafe { ((*s).ts_msg_write, (*s).ts_msg_read) };
+        if write == 0 || read == 0 {
+            return 0; // data not (yet) available
+        }
+        if read < write {
+            return -1;
+        }
+        // SAFETY: `rtt` is writable per the contract; `ossl_time2us` divides nanoseconds by 1000.
+        unsafe { *rtt = (read - write) / 1000 };
+        1
+    })
+}
+
+/// `size_t SSL_get_client_random(const SSL *ssl, unsigned char *out, size_t outlen)` —
+/// `ssl/ssl_lib.c:5682-5695`.
+///
+/// # Safety
+/// `ssl` must point to a live connection; `out` must hold `outlen` writable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_client_random(
+    ssl: *const Ssl,
+    out: *mut u8,
+    outlen: usize,
+) -> usize {
+    guard_ffi(0, || {
+        // SAFETY: `ssl` is live per the caller's contract.
+        let rand = unsafe { (*ssl).client_random };
+        if outlen == 0 {
+            return SSL3_RANDOM_SIZE;
+        }
+        let n = if outlen > SSL3_RANDOM_SIZE {
+            SSL3_RANDOM_SIZE
+        } else {
+            outlen
+        };
+        // SAFETY: `out` holds `outlen >= n` writable bytes per the contract.
+        unsafe { ptr::copy_nonoverlapping(rand.as_ptr(), out, n) };
+        n
+    })
+}
+
+/// `size_t SSL_get_server_random(const SSL *ssl, unsigned char *out, size_t outlen)` —
+/// `ssl/ssl_lib.c:5697-5710`.
+///
+/// # Safety
+/// `ssl` must point to a live connection; `out` must hold `outlen` writable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_server_random(
+    ssl: *const Ssl,
+    out: *mut u8,
+    outlen: usize,
+) -> usize {
+    guard_ffi(0, || {
+        // SAFETY: `ssl` is live per the caller's contract.
+        let rand = unsafe { (*ssl).server_random };
+        if outlen == 0 {
+            return SSL3_RANDOM_SIZE;
+        }
+        let n = if outlen > SSL3_RANDOM_SIZE {
+            SSL3_RANDOM_SIZE
+        } else {
+            outlen
+        };
+        // SAFETY: `out` holds `outlen >= n` writable bytes per the contract.
+        unsafe { ptr::copy_nonoverlapping(rand.as_ptr(), out, n) };
+        n
+    })
+}
+
+/// `int SSL_alloc_buffers(SSL *ssl)` — `ssl/ssl_lib.c:6974-6990`.
+///
+/// The authority calls the record layer's `alloc_buffers` method. The record layer is 14.4's;
+/// a fresh connection holds no buffers and the authority's TLS methods allocate none eagerly, so
+/// this slice answers 1 and the divergence is recorded in `src/ssl/mod.rs`.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_alloc_buffers(ssl: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        let _ = ssl;
+        1
+    })
+}
+
+/// `int SSL_free_buffers(SSL *ssl)` — `ssl/ssl_lib.c:6960-6972`.
+///
+/// As [`SSL_alloc_buffers`], the record layer is 14.4's; the authority's methods free nothing for a
+/// fresh connection and answer 1, which this slice reproduces (recorded in `src/ssl/mod.rs`).
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_free_buffers(ssl: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        let _ = ssl;
+        1
+    })
+}
+
+/// `int SSL_get_value_uint(SSL *s, uint32_t class_, uint32_t id, uint64_t *value)` —
+/// `ssl/ssl_lib.c:8002-8012`.
+///
+/// # Safety
+/// `s` must point to a live connection; `value` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_value_uint(
+    s: *mut Ssl,
+    class_: u32,
+    id: u32,
+    value: *mut u64,
+) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, class_, id, value);
+        // SAFETY: a constant site.
+        unsafe { raise_ssl(SSL_R_UNSUPPORTED_PROTOCOL, 8010) };
+        0
+    })
+}
+
+/// `int SSL_set_value_uint(SSL *s, uint32_t class_, uint32_t id, uint64_t value)` —
+/// `ssl/ssl_lib.c:8014-8024`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_value_uint(
+    s: *mut Ssl,
+    class_: u32,
+    id: u32,
+    value: u64,
+) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, class_, id, value);
+        // SAFETY: a constant site.
+        unsafe { raise_ssl(SSL_R_UNSUPPORTED_PROTOCOL, 8022) };
+        0
+    })
+}
+
+/// `void SSL_set_debug(SSL *s, int debug)` — `ssl/ssl_lib.c:6149-6154`: the authority's body is
+/// empty ("Old function was do-nothing anyway").
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_debug(s: *mut Ssl, debug: c_int) {
+    guard_ffi((), || {
+        let _ = (s, debug);
+    })
+}
+
+/// `int SSL_get_blocking_mode(SSL *s)` — `ssl/ssl_lib.c:7730-7740`: `-1` for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_blocking_mode(s: *mut Ssl) -> c_int {
+    guard_ffi(-1, || {
+        let _ = s;
+        -1
+    })
+}
+
+/// `int SSL_set_blocking_mode(SSL *s, int blocking)` — `ssl/ssl_lib.c:7718-7728`: `0` for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_blocking_mode(s: *mut Ssl, blocking: c_int) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, blocking);
+        0
+    })
+}
+
+/// `int SSL_handle_events(SSL *s)` — `ssl/ssl_lib.c:7618-7640`.
+///
+/// The authority's DTLS arm (`DTLSv1_handle_timeout`) is 14.8's; the transport here is TLS, for
+/// which the authority answers 1. Recorded in `src/ssl/mod.rs`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_handle_events(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // `is_dtls(s)` is false for every method this slice builds.
+        let _ = s;
+        1
+    })
+}
+
+/// `int SSL_get_event_timeout(SSL *s, struct timeval *tv, int *is_infinite)` —
+/// `ssl/ssl_lib.c:7642-7662`.
+///
+/// # Safety
+/// `s` must point to a live connection; `tv` and `is_infinite` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_event_timeout(
+    s: *mut Ssl,
+    tv: *mut Timeval,
+    is_infinite: *mut c_int,
+) -> c_int {
+    guard_ffi(0, || {
+        // `is_dtls(s)` is false for every method this slice builds, so the authority's infinite
+        // default is its answer (its DTLS `DTLSv1_get_timeout` arm is 14.8's).
+        let _ = s;
+        // SAFETY: `tv` and `is_infinite` are writable per the contract.
+        unsafe {
+            (*tv).tv_sec = 1000000;
+            (*tv).tv_usec = 0;
+            *is_infinite = 1;
+        }
+        1
+    })
+}
+
+/// `int SSL_get_rpoll_descriptor(SSL *s, BIO_POLL_DESCRIPTOR *desc)` — `ssl/ssl_lib.c:7664-7677`.
+///
+/// # Safety
+/// `s` must point to a live connection; `desc` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_rpoll_descriptor(
+    s: *mut Ssl,
+    desc: *mut BioPollDescriptor,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        let rbio = unsafe { (*s).rbio };
+        if rbio.is_null() {
+            return 0;
+        }
+        // SAFETY: `rbio` is live and `desc` is writable per the contract.
+        unsafe { BIO_get_rpoll_descriptor(rbio, desc) }
+    })
+}
+
+/// `int SSL_get_wpoll_descriptor(SSL *s, BIO_POLL_DESCRIPTOR *desc)` — `ssl/ssl_lib.c:7679-7692`.
+///
+/// # Safety
+/// `s` must point to a live connection; `desc` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_wpoll_descriptor(
+    s: *mut Ssl,
+    desc: *mut BioPollDescriptor,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        let wbio = unsafe { (*s).wbio };
+        if wbio.is_null() {
+            return 0;
+        }
+        // SAFETY: `wbio` is live and `desc` is writable per the contract.
+        unsafe { BIO_get_wpoll_descriptor(wbio, desc) }
+    })
+}
+
+/// `int SSL_net_read_desired(SSL *s)` — `ssl/ssl_lib.c:7694-7704`: `SSL_want_read(s)` for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_net_read_desired(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        c_int::from(unsafe { (*s).rwstate } == SSL_WANT_READING)
+    })
+}
+
+/// `int SSL_net_write_desired(SSL *s)` — `ssl/ssl_lib.c:7706-7716`: `SSL_want_write(s)` for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_net_write_desired(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        c_int::from(unsafe { (*s).rwstate } == SSL_WANT_WRITING)
+    })
+}
+
+/// `int SSL_shutdown_ex(SSL *ssl, uint64_t flags, const SSL_SHUTDOWN_EX_ARGS *args, size_t
+/// args_len)` — `ssl/ssl_lib.c:7754-7766`: a non-QUIC object delegates to [`SSL_shutdown`].
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_shutdown_ex(
+    ssl: *mut Ssl,
+    flags: u64,
+    args: *const c_void,
+    args_len: usize,
+) -> c_int {
+    guard_ffi(-1, || {
+        let _ = (flags, args, args_len);
+        // SAFETY: `ssl` is live per the caller's contract.
+        unsafe { SSL_shutdown(ssl) }
+    })
+}
+
+/// `int SSL_set1_initial_peer_addr(SSL *s, const BIO_ADDR *peer_addr)` — `ssl/ssl_lib.c:7742-7752`:
+/// `0` for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection; `peer_addr` is not read on this path.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set1_initial_peer_addr(
+    s: *mut Ssl,
+    peer_addr: *const c_void,
+) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, peer_addr);
+        0
+    })
+}
+
+/// `SSL *SSL_new_stream(SSL *s, uint64_t flags)` — `ssl/ssl_lib.c:7780-7790`: NULL for a non-QUIC
+/// object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_new_stream(s: *mut Ssl, flags: u64) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = (s, flags);
+        ptr::null_mut()
+    })
+}
+
+/// `SSL *SSL_accept_stream(SSL *s, uint64_t flags)` — `ssl/ssl_lib.c:7903-7913`: NULL for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_accept_stream(s: *mut Ssl, flags: u64) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = (s, flags);
+        ptr::null_mut()
+    })
+}
+
+/// `size_t SSL_get_accept_stream_queue_len(SSL *s)` — `ssl/ssl_lib.c:7915-7925`: 0 for a non-QUIC
+/// object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_accept_stream_queue_len(s: *mut Ssl) -> usize {
+    guard_ffi(0, || {
+        let _ = s;
+        0
+    })
+}
+
+/// `int SSL_stream_conclude(SSL *ssl, uint64_t flags)` — `ssl/ssl_lib.c:7768-7778`: 0 for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_stream_conclude(ssl: *mut Ssl, flags: u64) -> c_int {
+    guard_ffi(0, || {
+        let _ = (ssl, flags);
+        0
+    })
+}
+
+/// `int SSL_stream_reset(SSL *s, const SSL_STREAM_RESET_ARGS *args, size_t args_len)` —
+/// `ssl/ssl_lib.c:7927-7939`: 0 for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_stream_reset(
+    s: *mut Ssl,
+    args: *const c_void,
+    args_len: usize,
+) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, args, args_len);
+        0
+    })
+}
+
+/// `int SSL_get_stream_type(SSL *s)` — `ssl/ssl_lib.c:7843-7853`: `SSL_STREAM_TYPE_BIDI` for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_stream_type(s: *mut Ssl) -> c_int {
+    guard_ffi(SSL_STREAM_TYPE_BIDI, || {
+        let _ = s;
+        SSL_STREAM_TYPE_BIDI
+    })
+}
+
+/// `uint64_t SSL_get_stream_id(SSL *s)` — `ssl/ssl_lib.c:7855-7865`: `UINT64_MAX` for a non-QUIC
+/// object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_stream_id(s: *mut Ssl) -> u64 {
+    guard_ffi(u64::MAX, || {
+        let _ = s;
+        u64::MAX
+    })
+}
+
+/// `int SSL_is_stream_local(SSL *s)` — `ssl/ssl_lib.c:7867-7877`: `-1` for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_is_stream_local(s: *mut Ssl) -> c_int {
+    guard_ffi(-1, || {
+        let _ = s;
+        -1
+    })
+}
+
+/// `int SSL_get_stream_read_state(SSL *s)` — `ssl/ssl_lib.c:7941-7951`:
+/// `SSL_STREAM_STATE_NONE` for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_stream_read_state(s: *mut Ssl) -> c_int {
+    guard_ffi(SSL_STREAM_STATE_NONE, || {
+        let _ = s;
+        SSL_STREAM_STATE_NONE
+    })
+}
+
+/// `int SSL_get_stream_write_state(SSL *s)` — `ssl/ssl_lib.c:7953-7963`:
+/// `SSL_STREAM_STATE_NONE` for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_stream_write_state(s: *mut Ssl) -> c_int {
+    guard_ffi(SSL_STREAM_STATE_NONE, || {
+        let _ = s;
+        SSL_STREAM_STATE_NONE
+    })
+}
+
+/// `int SSL_get_stream_read_error_code(SSL *s, uint64_t *app_error_code)` —
+/// `ssl/ssl_lib.c:7965-7975`: `-1` for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_stream_read_error_code(
+    s: *mut Ssl,
+    app_error_code: *mut u64,
+) -> c_int {
+    guard_ffi(-1, || {
+        let _ = (s, app_error_code);
+        -1
+    })
+}
+
+/// `int SSL_get_stream_write_error_code(SSL *s, uint64_t *app_error_code)` —
+/// `ssl/ssl_lib.c:7977-7987`: `-1` for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_stream_write_error_code(
+    s: *mut Ssl,
+    app_error_code: *mut u64,
+) -> c_int {
+    guard_ffi(-1, || {
+        let _ = (s, app_error_code);
+        -1
+    })
+}
+
+/// `int SSL_set_default_stream_mode(SSL *s, uint32_t mode)` — `ssl/ssl_lib.c:7879-7889`: 0 for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_default_stream_mode(s: *mut Ssl, mode: u32) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, mode);
+        0
+    })
+}
+
+/// `int SSL_set_incoming_stream_policy(SSL *s, int policy, uint64_t aec)` —
+/// `ssl/ssl_lib.c:7891-7901`: 0 for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_incoming_stream_policy(
+    s: *mut Ssl,
+    policy: c_int,
+    aec: u64,
+) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, policy, aec);
+        0
+    })
+}
+
+/// `SSL *SSL_get0_connection(SSL *s)` — `ssl/ssl_lib.c:7792-7802`: `s` for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_connection(s: *mut Ssl) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || s)
+}
+
+/// `SSL *SSL_get0_listener(SSL *s)` — `ssl/ssl_lib.c:7809-7819`: NULL for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_listener(s: *mut Ssl) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = s;
+        ptr::null_mut()
+    })
+}
+
+/// `SSL *SSL_get0_domain(SSL *s)` — `ssl/ssl_lib.c:7821-7831`: NULL for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_domain(s: *mut Ssl) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = s;
+        ptr::null_mut()
+    })
+}
+
+/// `int SSL_is_connection(SSL *s)` — `ssl/ssl_lib.c:7804-7807`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_is_connection(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        c_int::from(unsafe { SSL_get0_connection(s) } == s)
+    })
+}
+
+/// `int SSL_is_listener(SSL *s)` — `ssl/ssl_lib.c:7833-7836`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_is_listener(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        c_int::from(unsafe { SSL_get0_listener(s) } == s)
+    })
+}
+
+/// `int SSL_is_domain(SSL *s)` — `ssl/ssl_lib.c:7838-7841`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_is_domain(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract.
+        c_int::from(unsafe { SSL_get0_domain(s) } == s)
+    })
+}
+
+/// `SSL *SSL_new_listener(SSL_CTX *ctx, uint64_t flags)` — `ssl/ssl_lib.c:8026-8036`: NULL for a
+/// non-QUIC context.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_new_listener(ctx: *mut SslCtx, flags: u64) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = (ctx, flags);
+        ptr::null_mut()
+    })
+}
+
+/// `SSL *SSL_new_listener_from(SSL *ssl, uint64_t flags)` — `ssl/ssl_lib.c:8038-8048`: NULL for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_new_listener_from(ssl: *mut Ssl, flags: u64) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = (ssl, flags);
+        ptr::null_mut()
+    })
+}
+
+/// `SSL *SSL_new_from_listener(SSL *ssl, uint64_t flags)` — `ssl/ssl_lib.c:8050-8060`: NULL for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_new_from_listener(ssl: *mut Ssl, flags: u64) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = (ssl, flags);
+        ptr::null_mut()
+    })
+}
+
+/// `SSL *SSL_accept_connection(SSL *ssl, uint64_t flags)` — `ssl/ssl_lib.c:8062-8072`: NULL for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_accept_connection(ssl: *mut Ssl, flags: u64) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = (ssl, flags);
+        ptr::null_mut()
+    })
+}
+
+/// `size_t SSL_get_accept_connection_queue_len(SSL *ssl)` — `ssl/ssl_lib.c:8074-8084`: 0 for a
+/// non-QUIC object.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_accept_connection_queue_len(ssl: *mut Ssl) -> usize {
+    guard_ffi(0, || {
+        let _ = ssl;
+        0
+    })
+}
+
+/// `int SSL_listen(SSL *ssl)` — `ssl/ssl_lib.c:8086-8096`: 0 for a non-QUIC object.
+///
+/// # Safety
+/// `ssl` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_listen(ssl: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        let _ = ssl;
+        0
+    })
+}
+
+/// `SSL *SSL_new_domain(SSL_CTX *ctx, uint64_t flags)` — `ssl/ssl_lib.c:8098-8108`: NULL for a
+/// non-QUIC context.
+///
+/// # Safety
+/// `ctx` must point to a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_new_domain(ctx: *mut SslCtx, flags: u64) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        let _ = (ctx, flags);
+        ptr::null_mut()
+    })
+}
+
+/// `int SSL_get_conn_close_info(SSL *s, SSL_CONN_CLOSE_INFO *info, size_t info_len)` —
+/// `ssl/ssl_lib.c:7989-8000`: `-1` for a non-QUIC object.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_conn_close_info(
+    s: *mut Ssl,
+    info: *mut c_void,
+    info_len: usize,
+) -> c_int {
+    guard_ffi(-1, || {
+        let _ = (s, info, info_len);
+        -1
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// PSK identity, the session master key and the ClientHello readers
+// -------------------------------------------------------------------------------------------
+
+/// `strlen` over a NUL-terminated C string.
+///
+/// # Safety
+/// `p` must be NUL-terminated.
+unsafe fn c_strlen(p: *const c_char) -> usize {
+    let mut n: usize = 0;
+    // SAFETY: `p` is NUL-terminated per the caller's contract.
+    while unsafe { *p.add(n) } != 0 {
+        n += 1;
+    }
+    n
+}
+
+/// `int SSL_CTX_use_psk_identity_hint(SSL_CTX *ctx, const char *identity_hint)` —
+/// `ssl/ssl_lib.c:5789-5803`.
+///
+/// # Safety
+/// `ctx` must point to a live context; `identity_hint` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_use_psk_identity_hint(
+    ctx: *mut SslCtx,
+    identity_hint: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        if !identity_hint.is_null() {
+            // SAFETY: `identity_hint` is NUL-terminated per the contract.
+            if unsafe { c_strlen(identity_hint) } > PSK_MAX_IDENTITY_LEN {
+                // SAFETY: a constant site.
+                unsafe { raise_ssl(SSL_R_DATA_LENGTH_TOO_LONG, 5792) };
+                return 0;
+            }
+        }
+        // SAFETY: `ctx` and its `cert` are live.
+        unsafe {
+            let cert = (*ctx).cert;
+            CRYPTO_free((*cert).psk_identity_hint.cast(), FILE, 5795);
+            if identity_hint.is_null() {
+                (*cert).psk_identity_hint = ptr::null_mut();
+            } else {
+                (*cert).psk_identity_hint = CRYPTO_strdup(identity_hint, FILE, 5797);
+                if (*cert).psk_identity_hint.is_null() {
+                    return 0;
+                }
+            }
+        }
+        1
+    })
+}
+
+/// `int SSL_use_psk_identity_hint(SSL *s, const char *identity_hint)` — `ssl/ssl_lib.c:5805-5824`.
+///
+/// # Safety
+/// `s` must point to a live connection; `identity_hint` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_use_psk_identity_hint(
+    s: *mut Ssl,
+    identity_hint: *const c_char,
+) -> c_int {
+    guard_ffi(0, || {
+        if !identity_hint.is_null() {
+            // SAFETY: `identity_hint` is NUL-terminated per the contract.
+            if unsafe { c_strlen(identity_hint) } > PSK_MAX_IDENTITY_LEN {
+                // SAFETY: a constant site.
+                unsafe { raise_ssl(SSL_R_DATA_LENGTH_TOO_LONG, 5813) };
+                return 0;
+            }
+        }
+        // SAFETY: `s` and its `cert` are live.
+        unsafe {
+            let cert = (*s).cert;
+            CRYPTO_free((*cert).psk_identity_hint.cast(), FILE, 5816);
+            if identity_hint.is_null() {
+                (*cert).psk_identity_hint = ptr::null_mut();
+            } else {
+                (*cert).psk_identity_hint = CRYPTO_strdup(identity_hint, FILE, 5818);
+                if (*cert).psk_identity_hint.is_null() {
+                    return 0;
+                }
+            }
+        }
+        1
+    })
+}
+
+/// `const char *SSL_get_psk_identity_hint(const SSL *s)` — `ssl/ssl_lib.c:5826-5834`. The hint is
+/// read from the session, which is 14.7's and NULL throughout this slice.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_psk_identity_hint(s: *const Ssl) -> *const c_char {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: `s` is live per the caller's contract; its session is NULL in this slice.
+        let session = unsafe { (*s).session };
+        if session.is_null() {
+            ptr::null()
+        } else {
+            // SAFETY: `session` is live per the check above.
+            unsafe { (*session).psk_identity_hint }
+        }
+    })
+}
+
+/// `const char *SSL_get_psk_identity(const SSL *s)` — `ssl/ssl_lib.c:5836-5844`. As
+/// [`SSL_get_psk_identity_hint`], the session is 14.7's and NULL here.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_psk_identity(s: *const Ssl) -> *const c_char {
+    guard_ffi(ptr::null(), || {
+        // SAFETY: `s` is live per the caller's contract; its session is NULL in this slice.
+        let session = unsafe { (*s).session };
+        if session.is_null() {
+            ptr::null()
+        } else {
+            // SAFETY: `session` is live per the check above.
+            unsafe { (*session).psk_identity }
+        }
+    })
+}
+
+/// `size_t SSL_SESSION_get_master_key(const SSL_SESSION *session, unsigned char *out, size_t
+/// outlen)` — `ssl/ssl_lib.c:5712-5721`.
+///
+/// # Safety
+/// `session` must point to a live session; `out` must hold `outlen` writable bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_SESSION_get_master_key(
+    session: *const SslSession,
+    out: *mut u8,
+    outlen: usize,
+) -> usize {
+    guard_ffi(0, || {
+        // SAFETY: `session` is live per the caller's contract.
+        let len = unsafe { (*session).master_key_length };
+        if outlen == 0 {
+            return len;
+        }
+        let n = if outlen > len { len } else { outlen };
+        // SAFETY: `out` holds `outlen >= n` writable bytes per the contract; the master key is
+        // `len >= n` readable bytes.
+        unsafe { ptr::copy_nonoverlapping((*session).master_key.as_ptr(), out, n) };
+        n
+    })
+}
+
+/// `int SSL_SESSION_set1_master_key(SSL_SESSION *sess, const unsigned char *in, size_t len)` —
+/// `ssl/ssl_lib.c:5723-5732`.
+///
+/// # Safety
+/// `sess` must point to a live session; `in` must be readable for `len` bytes.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_SESSION_set1_master_key(
+    sess: *mut SslSession,
+    input: *const u8,
+    len: usize,
+) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `sess` is live per the caller's contract.
+        if len > unsafe { (*sess).master_key.len() } {
+            return 0;
+        }
+        // SAFETY: `in` is readable for `len` bytes; the destination is `len` writable bytes.
+        unsafe {
+            ptr::copy_nonoverlapping(input, (*sess).master_key.as_mut_ptr(), len);
+            (*sess).master_key_length = len;
+        }
+        1
+    })
+}
+
+/// `int SSL_client_hello_isv2(SSL *s)` — `ssl/ssl_lib.c:6777-6787`. The ClientHello message is
+/// only non-NULL inside a ClientHello callback (14.5), so this slice takes the NULL arm.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_client_hello_isv2(s: *mut Ssl) -> c_int {
+    guard_ffi(0, || {
+        // SAFETY: `s` is live per the caller's contract; `clienthello` is NULL in this slice.
+        if unsafe { (*s).clienthello }.is_null() {
+            0
+        } else {
+            // A live `CLIENTHELLO_MSG` is 14.5's; unreachable here.
+            0
+        }
+    })
+}
+
+/// `unsigned int SSL_client_hello_get0_legacy_version(SSL *s)` — `ssl/ssl_lib.c:6789-6799`.
+///
+/// # Safety
+/// `s` must point to a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_client_hello_get0_legacy_version(s: *mut Ssl) -> c_uint {
+    guard_ffi(0, || {
+        let _ = s;
+        0
+    })
+}
+
+/// `size_t SSL_client_hello_get0_random(SSL *s, const unsigned char **out)` —
+/// `ssl/ssl_lib.c:6801-6813`.
+///
+/// # Safety
+/// `s` must point to a live connection; `out` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_client_hello_get0_random(s: *mut Ssl, out: *mut *const u8) -> usize {
+    guard_ffi(0, || {
+        let _ = (s, out);
+        0
+    })
+}
+
+/// `size_t SSL_client_hello_get0_session_id(SSL *s, const unsigned char **out)` —
+/// `ssl/ssl_lib.c:6815-6827`.
+///
+/// # Safety
+/// `s` must point to a live connection; `out` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_client_hello_get0_session_id(
+    s: *mut Ssl,
+    out: *mut *const u8,
+) -> usize {
+    guard_ffi(0, || {
+        let _ = (s, out);
+        0
+    })
+}
+
+/// `size_t SSL_client_hello_get0_ciphers(SSL *s, const unsigned char **out)` —
+/// `ssl/ssl_lib.c:6829-6841`.
+///
+/// # Safety
+/// `s` must point to a live connection; `out` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_client_hello_get0_ciphers(s: *mut Ssl, out: *mut *const u8) -> usize {
+    guard_ffi(0, || {
+        let _ = (s, out);
+        0
+    })
+}
+
+/// `size_t SSL_client_hello_get0_compression_methods(SSL *s, const unsigned char **out)` —
+/// `ssl/ssl_lib.c:6843-6855`.
+///
+/// # Safety
+/// `s` must point to a live connection; `out` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_client_hello_get0_compression_methods(
+    s: *mut Ssl,
+    out: *mut *const u8,
+) -> usize {
+    guard_ffi(0, || {
+        let _ = (s, out);
+        0
+    })
+}
+
+/// `int SSL_client_hello_get1_extensions_present(SSL *s, int **out, size_t *outlen)` —
+/// `ssl/ssl_lib.c:6857-6895`.
+///
+/// # Safety
+/// `s` must point to a live connection; `out`/`outlen` must be writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_client_hello_get1_extensions_present(
+    s: *mut Ssl,
+    out: *mut *mut c_int,
+    outlen: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, out, outlen);
+        0
+    })
+}
+
+/// `int SSL_client_hello_get_extension_order(SSL *s, uint16_t *exts, size_t *num_exts)` —
+/// `ssl/ssl_lib.c:6897-6933`.
+///
+/// # Safety
+/// `s` must point to a live connection; `exts`/`num_exts` per the caller's contract.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_client_hello_get_extension_order(
+    s: *mut Ssl,
+    exts: *mut u16,
+    num_exts: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, exts, num_exts);
+        0
+    })
+}
+
+/// `int SSL_client_hello_get0_ext(SSL *s, unsigned int type, const unsigned char **out, size_t
+/// *outlen)` — `ssl/ssl_lib.c:6935-6958`.
+///
+/// # Safety
+/// `s` must point to a live connection; `out`/`outlen` NULL or writable.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_client_hello_get0_ext(
+    s: *mut Ssl,
+    type_: c_uint,
+    out: *mut *const u8,
+    outlen: *mut usize,
+) -> c_int {
+    guard_ffi(0, || {
+        let _ = (s, type_, out, outlen);
+        0
     })
 }

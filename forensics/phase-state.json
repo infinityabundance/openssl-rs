@@ -543,7 +543,7 @@
         "stratum": "Legacy / deprecated compatibility"
       },
       {
-        "blocking": "435 open obligation(s) of this stratum recorded in forensics/phase14-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. All six hundred of the exports it owns are its own four headers' (`ssl.h` 582, `tls1.h` 13, `srtp.h` 4, `sslerr_legacy.h` 1) and no earlier stratum's ledger records a hand-off to it, so its working set is exactly the atlas projection -- the first stratum that inherits nothing. **Unlike every earlier activation, not one of the six hundred is implemented at activation**: libssl is the candidate distribution's second namespace and its exports are present only as the Phase 2 ABI scaffold, so its `open` count is its whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row: libssl is not a provider and this stratum activates none (docs/PHASE-14-SUBPHASES.md sections 1 and 4)",
+        "blocking": "309 open obligation(s) of this stratum recorded in forensics/phase14-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. All six hundred of the exports it owns are its own four headers' (`ssl.h` 582, `tls1.h` 13, `srtp.h` 4, `sslerr_legacy.h` 1) and no earlier stratum's ledger records a hand-off to it, so its working set is exactly the atlas projection -- the first stratum that inherits nothing. **Unlike every earlier activation, not one of the six hundred is implemented at activation**: libssl is the candidate distribution's second namespace and its exports are present only as the Phase 2 ABI scaffold, so its `open` count is its whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row: libssl is not a provider and this stratum activates none (docs/PHASE-14-SUBPHASES.md sections 1 and 4)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -675,7 +675,7 @@
       "not_started": 7
     }
   },
-  "body_hash": "303d8b66f98787a5f194eab0d7e17dfd632b83bfbf6ae8e37cb03705e3a3c4f3",
+  "body_hash": "03af95e94a491ce2f85b725ac1a61b2637b83945950b8ba623de9f39884ba928",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

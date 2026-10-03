@@ -24,9 +24,9 @@
       },
       {
         "authority_exit_code": 0,
-        "authority_observations": 133,
+        "authority_observations": 258,
         "candidate_exit_code": 0,
-        "candidate_observations": 133,
+        "candidate_observations": 258,
         "candidate_stderr_tail": [],
         "court": "RT-SSL-OBJECT",
         "crashed": false,
@@ -73,7 +73,7 @@
     {
       "name": "probe",
       "path": "courts/phase14/rt_ssl_object_probe.c",
-      "sha256": "d7e3e8ee3bd90ad73f2bb1f22b456ed623579e4fbd8c86c27c09d23446be3845"
+      "sha256": "7b80d1bd456cbb9ec9b8bbb1cc81fd22c721bb2a66f44ade09e5ccd49376d423"
     }
   ],
   "kind": "phase14-courts",

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 600,
       "deferred_to_later_phase": 0,
-      "implemented": 165,
-      "open_in_this_stratum": 435,
+      "implemented": 291,
+      "open_in_this_stratum": 309,
       "owned": 600,
       "received_by_handoff": 0
     },
@@ -16,16 +16,23 @@
     "handoffs_discharged_with_reasons": {},
     "implemented": [
       "SSL_CTX_callback_ctrl",
+      "SSL_CTX_check_private_key",
       "SSL_CTX_clear_options",
+      "SSL_CTX_ct_is_enabled",
       "SSL_CTX_ctrl",
+      "SSL_CTX_enable_ct",
       "SSL_CTX_free",
       "SSL_CTX_get0_certificate",
+      "SSL_CTX_get0_client_cert_type",
+      "SSL_CTX_get0_ctlog_store",
       "SSL_CTX_get0_param",
       "SSL_CTX_get0_privatekey",
       "SSL_CTX_get0_security_ex_data",
+      "SSL_CTX_get0_server_cert_type",
       "SSL_CTX_get_cert_store",
       "SSL_CTX_get_default_passwd_cb",
       "SSL_CTX_get_default_passwd_cb_userdata",
+      "SSL_CTX_get_domain_flags",
       "SSL_CTX_get_ex_data",
       "SSL_CTX_get_keylog_callback",
       "SSL_CTX_get_max_early_data",
@@ -40,34 +47,53 @@
       "SSL_CTX_get_verify_callback",
       "SSL_CTX_get_verify_depth",
       "SSL_CTX_get_verify_mode",
+      "SSL_CTX_load_verify_dir",
+      "SSL_CTX_load_verify_file",
+      "SSL_CTX_load_verify_locations",
+      "SSL_CTX_load_verify_store",
       "SSL_CTX_new",
       "SSL_CTX_new_ex",
+      "SSL_CTX_set0_ctlog_store",
       "SSL_CTX_set0_security_ex_data",
       "SSL_CTX_set1_cert_store",
+      "SSL_CTX_set1_client_cert_type",
       "SSL_CTX_set1_param",
+      "SSL_CTX_set1_server_cert_type",
       "SSL_CTX_set_allow_early_data_cb",
+      "SSL_CTX_set_alpn_protos",
       "SSL_CTX_set_alpn_select_cb",
       "SSL_CTX_set_async_callback",
       "SSL_CTX_set_async_callback_arg",
+      "SSL_CTX_set_block_padding",
+      "SSL_CTX_set_block_padding_ex",
       "SSL_CTX_set_cert_cb",
       "SSL_CTX_set_cert_store",
       "SSL_CTX_set_cert_verify_callback",
       "SSL_CTX_set_client_hello_cb",
+      "SSL_CTX_set_ct_validation_callback",
+      "SSL_CTX_set_ctlog_list_file",
+      "SSL_CTX_set_default_ctlog_list_file",
       "SSL_CTX_set_default_passwd_cb",
       "SSL_CTX_set_default_passwd_cb_userdata",
+      "SSL_CTX_set_default_verify_paths",
+      "SSL_CTX_set_domain_flags",
       "SSL_CTX_set_ex_data",
       "SSL_CTX_set_generate_session_id",
       "SSL_CTX_set_keylog_callback",
       "SSL_CTX_set_max_early_data",
       "SSL_CTX_set_msg_callback",
       "SSL_CTX_set_new_pending_conn_cb",
+      "SSL_CTX_set_next_proto_select_cb",
+      "SSL_CTX_set_next_protos_advertised_cb",
       "SSL_CTX_set_not_resumable_session_callback",
       "SSL_CTX_set_num_tickets",
       "SSL_CTX_set_options",
+      "SSL_CTX_set_post_handshake_auth",
       "SSL_CTX_set_psk_client_callback",
       "SSL_CTX_set_psk_find_session_callback",
       "SSL_CTX_set_psk_server_callback",
       "SSL_CTX_set_psk_use_session_callback",
+      "SSL_CTX_set_purpose",
       "SSL_CTX_set_quiet_shutdown",
       "SSL_CTX_set_record_padding_callback",
       "SSL_CTX_set_record_padding_callback_arg",
@@ -76,44 +102,106 @@
       "SSL_CTX_set_security_level",
       "SSL_CTX_set_session_id_context",
       "SSL_CTX_set_session_ticket_cb",
+      "SSL_CTX_set_trust",
       "SSL_CTX_set_verify",
       "SSL_CTX_set_verify_depth",
       "SSL_CTX_up_ref",
+      "SSL_CTX_use_psk_identity_hint",
+      "SSL_SESSION_get_master_key",
+      "SSL_SESSION_set1_master_key",
+      "SSL_accept_connection",
+      "SSL_accept_stream",
+      "SSL_add1_host",
+      "SSL_alloc_buffers",
       "SSL_callback_ctrl",
+      "SSL_certs_clear",
+      "SSL_check_private_key",
       "SSL_clear",
       "SSL_clear_options",
+      "SSL_client_hello_get0_ciphers",
+      "SSL_client_hello_get0_compression_methods",
+      "SSL_client_hello_get0_ext",
+      "SSL_client_hello_get0_legacy_version",
+      "SSL_client_hello_get0_random",
+      "SSL_client_hello_get0_session_id",
+      "SSL_client_hello_get1_extensions_present",
+      "SSL_client_hello_get_extension_order",
+      "SSL_client_hello_isv2",
       "SSL_client_version",
+      "SSL_ct_is_enabled",
       "SSL_ctrl",
       "SSL_do_handshake",
+      "SSL_enable_ct",
       "SSL_free",
+      "SSL_free_buffers",
+      "SSL_get0_alpn_selected",
+      "SSL_get0_client_cert_type",
+      "SSL_get0_connection",
+      "SSL_get0_domain",
+      "SSL_get0_listener",
+      "SSL_get0_next_proto_negotiated",
       "SSL_get0_param",
+      "SSL_get0_peer_certificate",
+      "SSL_get0_peer_scts",
+      "SSL_get0_peername",
       "SSL_get0_security_ex_data",
+      "SSL_get0_server_cert_type",
       "SSL_get0_verified_chain",
+      "SSL_get1_peer_certificate",
       "SSL_get_SSL_CTX",
+      "SSL_get_accept_connection_queue_len",
+      "SSL_get_accept_stream_queue_len",
+      "SSL_get_all_async_fds",
+      "SSL_get_async_status",
+      "SSL_get_blocking_mode",
       "SSL_get_certificate",
+      "SSL_get_changed_async_fds",
+      "SSL_get_client_random",
+      "SSL_get_conn_close_info",
       "SSL_get_default_passwd_cb",
       "SSL_get_default_passwd_cb_userdata",
       "SSL_get_default_timeout",
+      "SSL_get_domain_flags",
+      "SSL_get_early_data_status",
       "SSL_get_error",
+      "SSL_get_event_timeout",
       "SSL_get_ex_data",
       "SSL_get_fd",
       "SSL_get_finished",
+      "SSL_get_handshake_rtt",
       "SSL_get_info_callback",
+      "SSL_get_key_update_type",
       "SSL_get_max_early_data",
+      "SSL_get_negotiated_client_cert_type",
+      "SSL_get_negotiated_server_cert_type",
       "SSL_get_num_tickets",
       "SSL_get_options",
+      "SSL_get_peer_cert_chain",
       "SSL_get_peer_finished",
       "SSL_get_privatekey",
+      "SSL_get_psk_identity",
+      "SSL_get_psk_identity_hint",
       "SSL_get_quiet_shutdown",
       "SSL_get_rbio",
       "SSL_get_read_ahead",
       "SSL_get_record_padding_callback_arg",
       "SSL_get_recv_max_early_data",
       "SSL_get_rfd",
+      "SSL_get_rpoll_descriptor",
       "SSL_get_security_callback",
       "SSL_get_security_level",
+      "SSL_get_server_random",
+      "SSL_get_servername",
+      "SSL_get_servername_type",
       "SSL_get_shutdown",
       "SSL_get_ssl_method",
+      "SSL_get_stream_id",
+      "SSL_get_stream_read_error_code",
+      "SSL_get_stream_read_state",
+      "SSL_get_stream_type",
+      "SSL_get_stream_write_error_code",
+      "SSL_get_stream_write_state",
+      "SSL_get_value_uint",
       "SSL_get_verify_callback",
       "SSL_get_verify_depth",
       "SSL_get_verify_mode",
@@ -121,42 +209,73 @@
       "SSL_get_version",
       "SSL_get_wbio",
       "SSL_get_wfd",
+      "SSL_get_wpoll_descriptor",
+      "SSL_handle_events",
       "SSL_has_pending",
+      "SSL_is_connection",
+      "SSL_is_domain",
       "SSL_is_dtls",
+      "SSL_is_listener",
       "SSL_is_quic",
       "SSL_is_server",
+      "SSL_is_stream_local",
       "SSL_is_tls",
+      "SSL_listen",
+      "SSL_net_read_desired",
+      "SSL_net_write_desired",
       "SSL_new",
+      "SSL_new_domain",
+      "SSL_new_from_listener",
+      "SSL_new_listener",
+      "SSL_new_listener_from",
+      "SSL_new_stream",
       "SSL_peek",
       "SSL_peek_ex",
       "SSL_pending",
       "SSL_read",
       "SSL_read_ex",
+      "SSL_renegotiate_pending",
+      "SSL_select_next_proto",
       "SSL_session_reused",
       "SSL_set0_rbio",
       "SSL_set0_security_ex_data",
       "SSL_set0_wbio",
+      "SSL_set1_client_cert_type",
+      "SSL_set1_host",
+      "SSL_set1_initial_peer_addr",
       "SSL_set1_param",
+      "SSL_set1_server_cert_type",
       "SSL_set_allow_early_data_cb",
+      "SSL_set_alpn_protos",
       "SSL_set_async_callback",
       "SSL_set_async_callback_arg",
       "SSL_set_bio",
+      "SSL_set_block_padding",
+      "SSL_set_block_padding_ex",
+      "SSL_set_blocking_mode",
       "SSL_set_cert_cb",
+      "SSL_set_ct_validation_callback",
+      "SSL_set_debug",
       "SSL_set_default_passwd_cb",
       "SSL_set_default_passwd_cb_userdata",
+      "SSL_set_default_stream_mode",
       "SSL_set_ex_data",
       "SSL_set_fd",
       "SSL_set_generate_session_id",
+      "SSL_set_hostflags",
+      "SSL_set_incoming_stream_policy",
       "SSL_set_info_callback",
       "SSL_set_max_early_data",
       "SSL_set_msg_callback",
       "SSL_set_not_resumable_session_callback",
       "SSL_set_num_tickets",
       "SSL_set_options",
+      "SSL_set_post_handshake_auth",
       "SSL_set_psk_client_callback",
       "SSL_set_psk_find_session_callback",
       "SSL_set_psk_server_callback",
       "SSL_set_psk_use_session_callback",
+      "SSL_set_purpose",
       "SSL_set_quiet_shutdown",
       "SSL_set_read_ahead",
       "SSL_set_record_padding_callback",
@@ -168,13 +287,20 @@
       "SSL_set_session_id_context",
       "SSL_set_shutdown",
       "SSL_set_ssl_method",
+      "SSL_set_trust",
+      "SSL_set_value_uint",
       "SSL_set_verify",
       "SSL_set_verify_depth",
       "SSL_set_verify_result",
       "SSL_set_wfd",
       "SSL_shutdown",
+      "SSL_shutdown_ex",
+      "SSL_stream_conclude",
+      "SSL_stream_reset",
       "SSL_up_ref",
+      "SSL_use_psk_identity_hint",
       "SSL_version",
+      "SSL_waiting_for_async",
       "SSL_want",
       "SSL_write",
       "SSL_write_ex",
@@ -589,12 +715,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_check_private_key"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_cert_comp.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_compress_certs"
@@ -604,12 +724,6 @@
         "module": "src/ssl/ssl_mcnf.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_config"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_ct_is_enabled"
       },
       {
         "declaring_header": "ssl.h",
@@ -637,12 +751,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_enable_ct"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_flush_sessions"
@@ -658,24 +766,6 @@
         "module": "src/ssl/ssl_cert.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_get0_CA_list"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_get0_client_cert_type"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_get0_ctlog_store"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_get0_server_cert_type"
       },
       {
         "declaring_header": "ssl.h",
@@ -703,12 +793,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_get_domain_flags"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_get_info_callback"
@@ -724,30 +808,6 @@
         "module": "src/ssl/statem/extensions_cust.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_has_client_custom_ext"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_load_verify_dir"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_load_verify_file"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_load_verify_locations"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_load_verify_store"
       },
       {
         "declaring_header": "ssl.h",
@@ -807,12 +867,6 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_CTX_set0_ctlog_store"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_CTX_set0_tmp_dh_pkey"
       },
       {
@@ -823,39 +877,9 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set1_client_cert_type"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_cert_comp.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_set1_compressed_cert"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set1_server_cert_type"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_alpn_protos"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_block_padding"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_block_padding_ex"
       },
       {
         "declaring_header": "ssl.h",
@@ -901,24 +925,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_ct_validation_callback"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_ctlog_list_file"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_default_ctlog_list_file"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/record/rec_layer_s3.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_set_default_read_buffer_len"
@@ -939,49 +945,13 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_CTX_set_default_verify_paths"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_CTX_set_default_verify_store"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_domain_flags"
       },
       {
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_set_info_callback"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_next_proto_select_cb"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_next_protos_advertised_cb"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_post_handshake_auth"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_purpose"
       },
       {
         "declaring_header": "ssl.h",
@@ -1075,12 +1045,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_trust"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_rsa.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_use_PrivateKey"
@@ -1144,12 +1108,6 @@
         "module": "src/ssl/ssl_rsa.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_use_certificate_file"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_use_psk_identity_hint"
       },
       {
         "declaring_header": "ssl.h",
@@ -1246,12 +1204,6 @@
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_SESSION_get_id"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_SESSION_get_master_key"
       },
       {
         "declaring_header": "ssl.h",
@@ -1357,12 +1309,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_SESSION_set1_master_key"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_SESSION_set1_ticket_appdata"
@@ -1435,24 +1381,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_accept_connection"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_accept_stream"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_add1_host"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_cert.rs",
         "received_from_phase": null,
         "symbol": "SSL_add1_to_CA_list"
@@ -1521,85 +1449,13 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_alloc_buffers"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_bytes_to_cipher_list"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_certs_clear"
       },
       {
         "declaring_header": "tls1.h",
         "module": "src/ssl/t1_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_check_chain"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_check_private_key"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_client_hello_get0_ciphers"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_client_hello_get0_compression_methods"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_client_hello_get0_ext"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_client_hello_get0_legacy_version"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_client_hello_get0_random"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_client_hello_get0_session_id"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_client_hello_get1_extensions_present"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_client_hello_get_extension_order"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_client_hello_isv2"
       },
       {
         "declaring_header": "ssl.h",
@@ -1624,12 +1480,6 @@
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_copy_session_id"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_ct_is_enabled"
       },
       {
         "declaring_header": "ssl.h",
@@ -1668,12 +1518,6 @@
         "symbol": "SSL_dup_CA_list"
       },
       {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_enable_ct"
-      },
-      {
         "declaring_header": "tls1.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
@@ -1693,33 +1537,9 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_free_buffers"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_cert.rs",
         "received_from_phase": null,
         "symbol": "SSL_get0_CA_list"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_alpn_selected"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_client_cert_type"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_connection"
       },
       {
         "declaring_header": "ssl.h",
@@ -1741,27 +1561,9 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_domain"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/s3_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_get0_group_name"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_listener"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_next_proto_negotiated"
       },
       {
         "declaring_header": "ssl.h",
@@ -1773,31 +1575,7 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_get0_peer_certificate"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_get0_peer_rpk"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_peer_scts"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_peername"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_server_cert_type"
       },
       {
         "declaring_header": "tls1.h",
@@ -1813,12 +1591,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get1_peer_certificate"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_get1_session"
@@ -1828,42 +1600,6 @@
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_get1_supported_ciphers"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_accept_connection_queue_len"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_accept_stream_queue_len"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_all_async_fds"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_async_status"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_blocking_mode"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_changed_async_fds"
       },
       {
         "declaring_header": "ssl.h",
@@ -1893,18 +1629,6 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_get_client_random"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_conn_close_info"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_get_current_cipher"
       },
       {
@@ -1921,57 +1645,9 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_domain_flags"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_early_data_status"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_event_timeout"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_cert.rs",
         "received_from_phase": null,
         "symbol": "SSL_get_ex_data_X509_STORE_CTX_idx"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_handshake_rtt"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_key_update_type"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_negotiated_client_cert_type"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_negotiated_server_cert_type"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_peer_cert_chain"
       },
       {
         "declaring_header": "tls1.h",
@@ -1986,46 +1662,10 @@
         "symbol": "SSL_get_pending_cipher"
       },
       {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_psk_identity"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_psk_identity_hint"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_rpoll_descriptor"
-      },
-      {
         "declaring_header": "srtp.h",
         "module": "src/ssl/d1_srtp.rs",
         "received_from_phase": null,
         "symbol": "SSL_get_selected_srtp_profile"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_server_random"
-      },
-      {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_servername"
-      },
-      {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_servername_type"
       },
       {
         "declaring_header": "ssl.h",
@@ -2095,63 +1735,9 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_stream_id"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_stream_read_error_code"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_stream_read_state"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_stream_type"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_stream_write_error_code"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_stream_write_state"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_value_uint"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_wpoll_descriptor"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/s3_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_group_to_name"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_handle_events"
       },
       {
         "declaring_header": "ssl.h",
@@ -2179,18 +1765,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_is_connection"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_is_domain"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/statem/statem.rs",
         "received_from_phase": null,
         "symbol": "SSL_is_init_finished"
@@ -2199,25 +1773,7 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_is_listener"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_is_stream_local"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_key_update"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_listen"
       },
       {
         "declaring_header": "ssl.h",
@@ -2235,49 +1791,7 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_net_read_desired"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_net_write_desired"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_new_domain"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_new_from_listener"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_new_listener"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_new_listener_from"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_new_session_ticket"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_new_stream"
       },
       {
         "declaring_header": "ssl.h",
@@ -2305,12 +1819,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_renegotiate_pending"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/record/rec_layer_s3.rs",
         "received_from_phase": null,
         "symbol": "SSL_rstate_string"
@@ -2320,12 +1828,6 @@
         "module": "src/ssl/record/rec_layer_s3.rs",
         "received_from_phase": null,
         "symbol": "SSL_rstate_string_long"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_select_next_proto"
       },
       {
         "declaring_header": "ssl.h",
@@ -2353,33 +1855,9 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set1_client_cert_type"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_cert_comp.rs",
         "received_from_phase": null,
         "symbol": "SSL_set1_compressed_cert"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set1_host"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set1_initial_peer_addr"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set1_server_cert_type"
       },
       {
         "declaring_header": "ssl.h",
@@ -2392,30 +1870,6 @@
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_set_accept_state"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_alpn_protos"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_block_padding"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_block_padding_ex"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_blocking_mode"
       },
       {
         "declaring_header": "ssl.h",
@@ -2443,51 +1897,9 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_ct_validation_callback"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_debug"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/record/rec_layer_s3.rs",
         "received_from_phase": null,
         "symbol": "SSL_set_default_read_buffer_len"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_default_stream_mode"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_hostflags"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_incoming_stream_policy"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_post_handshake_auth"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_purpose"
       },
       {
         "declaring_header": "ssl.h",
@@ -2563,24 +1975,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_trust"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_value_uint"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_shutdown_ex"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/tls_srp.rs",
         "received_from_phase": null,
         "symbol": "SSL_srp_server_param_with_username"
@@ -2602,18 +1996,6 @@
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_stateless"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_stream_conclude"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_stream_reset"
       },
       {
         "declaring_header": "ssl.h",
@@ -2691,19 +2073,7 @@
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
-        "symbol": "SSL_use_psk_identity_hint"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
         "symbol": "SSL_verify_client_post_handshake"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_waiting_for_async"
       },
       {
         "declaring_header": "ssl.h",
@@ -2866,7 +2236,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "a3323716a43ea251e67f05a60421e1d5c5d98e077a41eabb822ad95096cb781a"
+      "sha256": "96c4a0bd87fdef055b27f98f2fabd15a32be9590db0368960e63a1fdf5cae9e1"
     }
   ],
   "kind": "phase14-obligations",
