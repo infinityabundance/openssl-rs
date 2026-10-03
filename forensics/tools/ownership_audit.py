@@ -96,12 +96,12 @@ GENERATOR = "forensics/tools/ownership_audit.py"
 ATLAS_OWNERSHIP = "forensics/atlas/symbol-ownership.json"
 
 LIBS = ("libcrypto", "libssl")
-# Every ledger that exists so far is a libcrypto one: libssl's own strata begin at
-# Phase 14. Counting the eight libssl symbols that happen to look like libcrypto ones
-# (`BIO_ssl_shutdown`, `ERR_load_SSL_strings`, `OPENSSL_init_ssl`, ...) would report an
-# ownership no ledger acts on, so the reconciliation is scoped to libcrypto and libssl
-# is reported as out-of-scope with that fact stated.
-CLAIM_LIBS = ("libcrypto",)
+# Every ledger that existed before Phase 14 was a libcrypto one, so the reconciliation was
+# scoped to libcrypto and libssl was reported as out-of-scope. **Phase 14 lands the first
+# `libssl` ledger**, and its whole working set is `libssl`, so the scope now covers both
+# namespaces. The two export sets are disjoint (measured: 5,896 `libcrypto` and 603 `libssl`
+# symbols with no shared name), so the per-symbol lookup below is unambiguous.
+CLAIM_LIBS = ("libcrypto", "libssl")
 
 
 def ledger_paths() -> dict[int, str]:
@@ -306,7 +306,7 @@ def main(argv: list[str]) -> int:
         only_atlas = sorted(atlas_symbols - ledger_symbols)
         if only_atlas:
             problems.append(
-                f"phase {phase} is assigned {len(atlas_symbols)} libcrypto exports by "
+                f"phase {phase} is assigned {len(atlas_symbols)} exports by "
                 f"{ATLAS_OWNERSHIP} and its ledger ({paths[phase]}) has a row for none "
                 f"of these {len(only_atlas)}: an export no ledger mentions cannot be "
                 "shown to be implemented, open or handed on, so the stratum's "
@@ -318,7 +318,12 @@ def main(argv: list[str]) -> int:
         only_ledger = sorted(ledger_symbols - atlas_symbols)
         unjustified: list[str] = []
         for sym in only_ledger:
-            owner_phase = atlas_owner.get((CLAIM_LIBS[0], sym))
+            # A symbol name is unique across the two namespaces (measured), so the first
+            # `CLAIM_LIBS` that has a row for it is its owner.
+            owner_phase = next(
+                (atlas_owner[(lib, sym)] for lib in CLAIM_LIBS if (lib, sym) in atlas_owner),
+                None,
+            )
             if owner_phase is None:
                 problems.append(
                     f"phase {phase}'s ledger lists {sym}, which the ownership atlas "

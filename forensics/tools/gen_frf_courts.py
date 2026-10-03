@@ -581,6 +581,42 @@ COURTS: list[tuple[str, int, str, str]] = [
      "the PEM private-key readers and the ASYNC job-and-wait framework, driven"),
     ("rt-handoff", 13, "rt_handoff_probe",
      "the received TS_CONF and SRP_VBASE_init hand-offs over fixed CONF and verifier files"),
+    #
+    # Phase 14 -- the TLS/DTLS (`libssl`) stratum. Ten courts, each a differential probe compiled
+    # against both sides. `RT-PHASE14-REF` is this stratum's reference basis: its probe takes the
+    # address of each of the stratum's 600 atlas-owned exports and prints whether it is non-NULL,
+    # so the court-coverage atlas records those names at basis `referenced`, never `called`
+    # (D199), and it is not declarable here. The ten below all diff a real transcript and stage an
+    # `artifacts/phase14/probes/<probe>.{authority,candidate}` pair.
+    #
+    ("rt-ssl-object", 14, "rt_ssl_object_probe",
+     "the SSL_CTX/SSL object model: the lifecycle and refcounts, the accessor/control/callback "
+     "surface, the DANE setters and the read/write entry guards, driven"),
+    ("rt-ssl-methods", 14, "rt_ssl_methods_probe",
+     "the 21 TLS_*/DTLS_*/TLSv1_* constructor table and the protocol-version accessors it "
+     "installs, driven"),
+    ("rt-ssl-ciph", 14, "rt_ssl_ciph_probe",
+     "the cipher and ciphersuite tables, the SSL_CIPHER_* readers and the SSL_CONF_CTX command "
+     "parser, driven"),
+    ("rt-record", 14, "rt_record_probe",
+     "the record-layer default read-buffer length setters, the record-state string readers and "
+     "SSL_poll, driven"),
+    ("rt-statem", 14, "rt_statem_probe",
+     "the handshake state readers, the custom-extension registration surface and the "
+     "signature-algorithm and max-fragment-length accessors, driven"),
+    ("rt-ssl-bio", 14, "rt_ssl_bio_probe",
+     "the BIO_f_ssl method and the BIO pair's session-copy and shutdown controls, driven"),
+    ("rt-dtls", 14, "rt_dtls_probe",
+     "DTLSv1_listen's refusal arms, the DTLS data-MTU and timer callbacks and the DTLS-SRTP "
+     "profile surface, driven"),
+    ("rt-ssl-init", 14, "rt_ssl_init_probe",
+     "OPENSSL_init_ssl, the legacy ERR_load_SSL_strings and the QUIC TLS accessors, driven"),
+    ("rt-session-cert", 14, "rt_session_cert_probe",
+     "the session object and its DER/PEM codec, the CA-list and certificate/private-key loaders "
+     "and the session printers, driven"),
+    ("rt-ssl-ext", 14, "rt_ssl_ext_probe",
+     "the SRP credential and callback surface, the alert and state string readers, the config "
+     "glue and SSL_trace, driven"),
 ]
 
 

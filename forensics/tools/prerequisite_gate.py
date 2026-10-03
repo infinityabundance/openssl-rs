@@ -116,7 +116,11 @@ SRC = REPO_ROOT / "src"
 _RUST_DEFS = re.compile(
     r"^[ \t]*(?:pub(?:\([^)]*\))?[ \t]+)?(?:unsafe[ \t]+)?"
     r'(?:extern[ \t]+"[^"]*"[ \t]+)?'
-    r"(?:(?:fn|const|static|type|struct|enum|union|trait|mod)[ \t]+"
+    # `const fn NAME` must be matched before the bare `const` arm, or the name captured is
+    # `fn`: the crate models an authority macro as a `const fn` under the same name
+    # (`dtls_ver_ordinal`, `ssl_local.h:57`), which the bare arm read as a definition of `fn`.
+    r"(?:const[ \t]+(?:unsafe[ \t]+)?fn[ \t]+"
+    r"|(?:fn|const|static|type|struct|enum|union|trait|mod)[ \t]+"
     r"|static[ \t]+mut[ \t]+|macro_rules![ \t]+)"
     r"([A-Za-z_][A-Za-z0-9_]*)",
     re.M,

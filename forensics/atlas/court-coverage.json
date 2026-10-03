@@ -14,7 +14,8 @@
       10,
       11,
       12,
-      13
+      13,
+      14
     ],
     "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
     "in_progress": [],
@@ -266,7 +267,10 @@
               "RT-PKCS7",
               "RT-PUBKEY",
               "RT-RSA",
+              "RT-SESSION-CERT",
               "RT-SRP",
+              "RT-SSL-OBJECT",
+              "RT-STATEM",
               "RT-STORE",
               "RT-TS",
               "RT-TXTDB",
@@ -306,6 +310,7 @@
               "RT-BIO",
               "RT-EXDATA",
               "RT-RSA",
+              "RT-SSL-OBJECT",
               "RT-UI"
             ],
             "symbol": "CRYPTO_get_ex_new_index"
@@ -502,6 +507,7 @@
             "courts": [
               "RT-MEM",
               "RT-MEM-DEFAULT",
+              "RT-SSL-EXT",
               "RT-STORE",
               "RT-X509-STORE"
             ],
@@ -632,6 +638,7 @@
               "RT-RUNTIME-EXT",
               "RT-SELFTEST",
               "RT-SIGNATURE",
+              "RT-SSL-OBJECT",
               "RT-STORE",
               "RT-THREADDATA",
               "RT-TS",
@@ -1827,6 +1834,7 @@
               "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
+              "RT-SSL-OBJECT",
               "RT-STACK",
               "RT-STORE",
               "RT-TS",
@@ -1870,6 +1878,7 @@
               "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
+              "RT-SESSION-CERT",
               "RT-STACK",
               "RT-STORE",
               "RT-TS",
@@ -1897,10 +1906,13 @@
               "RT-CMP",
               "RT-CMS",
               "RT-CONF",
+              "RT-DTLS",
               "RT-ESS",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-SRP",
+              "RT-SSL-CIPH",
+              "RT-SSL-OBJECT",
               "RT-STACK",
               "RT-STORE",
               "RT-TXTDB",
@@ -1930,6 +1942,7 @@
               "RT-ESS",
               "RT-PKCS12",
               "RT-PKCS7",
+              "RT-SESSION-CERT",
               "RT-STACK",
               "RT-STORE",
               "RT-X509-PEM",
@@ -2019,8 +2032,11 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMS",
               "RT-CONF",
+              "RT-DTLS",
               "RT-PKCS12",
               "RT-PKCS7",
+              "RT-SSL-CIPH",
+              "RT-SSL-OBJECT",
               "RT-STACK",
               "RT-STORE",
               "RT-TXTDB",
@@ -2518,6 +2534,8 @@
               "RT-PKCS7",
               "RT-PUBKEY",
               "RT-RAND-USERS",
+              "RT-SESSION-CERT",
+              "RT-SSL-BIO",
               "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
@@ -2773,6 +2791,10 @@
               "RT-PUBKEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
+              "RT-SESSION-CERT",
+              "RT-SSL-BIO",
+              "RT-SSL-EXT",
+              "RT-SSL-OBJECT",
               "RT-STORE",
               "RT-TS",
               "RT-TXTDB",
@@ -2792,7 +2814,8 @@
               "RT-BIO-ASN1",
               "RT-CMS",
               "RT-EVP-BIO",
-              "RT-PKCS7"
+              "RT-PKCS7",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_free_all"
           },
@@ -2829,7 +2852,8 @@
             "courts": [
               "RT-BIO",
               "RT-BIO-ASN1",
-              "RT-BIO-CORE"
+              "RT-BIO-CORE",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_get_data"
           },
@@ -2857,7 +2881,8 @@
               "RT-BIO-FILE",
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
-              "RT-RAND-USERS"
+              "RT-RAND-USERS",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_get_init"
           },
@@ -2907,7 +2932,8 @@
             "basis": "called",
             "courts": [
               "RT-BIO",
-              "RT-BIO-FILE"
+              "RT-BIO-FILE",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_get_shutdown"
           },
@@ -3182,7 +3208,8 @@
               "RT-BIO-DGRAM-PAIR",
               "RT-BIO-FILE",
               "RT-BIO-FILTER",
-              "RT-BIO-PAIR"
+              "RT-BIO-PAIR",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_method_name"
           },
@@ -3199,7 +3226,8 @@
               "RT-BIO-FILE",
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
-              "RT-EVP-BIO"
+              "RT-EVP-BIO",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_method_type"
           },
@@ -3229,6 +3257,7 @@
               "RT-CMS-REMAINDER",
               "RT-CONF",
               "RT-DH",
+              "RT-DTLS",
               "RT-EC",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
@@ -3245,6 +3274,11 @@
               "RT-PUBKEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
+              "RT-SESSION-CERT",
+              "RT-SSL-BIO",
+              "RT-SSL-EXT",
+              "RT-SSL-OBJECT",
+              "RT-STATEM",
               "RT-STORE",
               "RT-TS",
               "RT-TXTDB",
@@ -3337,6 +3371,8 @@
               "RT-PEM-KEY",
               "RT-PKCS7",
               "RT-PUBKEY",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT",
               "RT-STORE",
               "RT-TS",
               "RT-TXTDB",
@@ -3359,7 +3395,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-MIME",
-              "RT-BIO"
+              "RT-BIO",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_next"
           },
@@ -3486,6 +3523,7 @@
               "RT-HTTP",
               "RT-LHASH",
               "RT-RUNTIME-EXT",
+              "RT-SSL-EXT",
               "RT-STORE",
               "RT-TXTDB"
             ],
@@ -3589,6 +3627,7 @@
               "RT-CMS-REMAINDER",
               "RT-CONF",
               "RT-DH",
+              "RT-DTLS",
               "RT-EC",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
@@ -3604,6 +3643,11 @@
               "RT-PKCS7",
               "RT-PUBKEY",
               "RT-RUNTIME-EXT",
+              "RT-SESSION-CERT",
+              "RT-SSL-BIO",
+              "RT-SSL-EXT",
+              "RT-SSL-OBJECT",
+              "RT-STATEM",
               "RT-STORE",
               "RT-TS",
               "RT-TXTDB",
@@ -3869,6 +3913,7 @@
               "RT-BIO-PAIR",
               "RT-CMP",
               "RT-CMS",
+              "RT-DTLS",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
@@ -6292,7 +6337,8 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-SSL-EXT"
             ],
             "symbol": "BN_CTX_free"
           },
@@ -6311,7 +6357,8 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-SSL-EXT"
             ],
             "symbol": "BN_CTX_new"
           },
@@ -6777,7 +6824,8 @@
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA",
-              "RT-SRP"
+              "RT-SRP",
+              "RT-SSL-EXT"
             ],
             "symbol": "BN_free"
           },
@@ -7224,7 +7272,8 @@
               "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-SSL-EXT"
             ],
             "symbol": "BN_new"
           },
@@ -7286,7 +7335,8 @@
               "RT-DSA",
               "RT-EC",
               "RT-HANDOFF",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-SSL-EXT"
             ],
             "symbol": "BN_num_bits"
           },
@@ -7398,7 +7448,8 @@
               "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-SSL-EXT"
             ],
             "symbol": "BN_set_word"
           },
@@ -8238,7 +8289,8 @@
             "basis": "called",
             "courts": [
               "RT-CONF-MOD",
-              "RT-LIBCTX"
+              "RT-LIBCTX",
+              "RT-SSL-EXT"
             ],
             "symbol": "CONF_modules_load_file"
           },
@@ -13133,6 +13185,7 @@
               "RT-OCSP",
               "RT-PKCS12",
               "RT-PUBKEY",
+              "RT-SESSION-CERT",
               "RT-SIGNATURE",
               "RT-STORE",
               "RT-TS",
@@ -14968,6 +15021,7 @@
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-SIGNATURE",
+              "RT-SSL-OBJECT",
               "RT-STORE",
               "RT-TS",
               "RT-X509-ACERT",
@@ -19056,6 +19110,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-SESSION-CERT",
               "RT-X509-PEM"
             ],
             "symbol": "EVP_PKEY_get1_RSA"
@@ -19782,6 +19837,7 @@
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA",
+              "RT-SESSION-CERT",
               "RT-STORE",
               "RT-X509-PEM"
             ],
@@ -20914,7 +20970,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-RSA"
+              "RT-RSA",
+              "RT-SESSION-CERT"
             ],
             "symbol": "i2d_RSAPrivateKey"
           },
@@ -26042,6 +26099,8 @@
             "basis": "called",
             "courts": [
               "RT-CMS",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT",
               "RT-X509-PEM"
             ],
             "symbol": "PEM_read_bio_X509"
@@ -28715,6 +28774,7 @@
             "basis": "called",
             "courts": [
               "RT-OCSP",
+              "RT-SESSION-CERT",
               "RT-STORE",
               "RT-X509-ACERT",
               "RT-X509-REF",
@@ -31147,6 +31207,8 @@
               "RT-OCSP",
               "RT-PKCS12",
               "RT-PKCS7",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT",
               "RT-STORE",
               "RT-TS",
               "RT-X509-PEM",
@@ -31210,6 +31272,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-SSL-OBJECT",
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-REF",
@@ -34108,6 +34171,7 @@
             "courts": [
               "RT-ECX",
               "RT-PUBKEY",
+              "RT-SSL-OBJECT",
               "RT-X509-REF"
             ],
             "symbol": "i2d_PUBKEY"
@@ -34233,6 +34297,8 @@
             "courts": [
               "RT-CMS-REMAINDER",
               "RT-PKCS12",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT",
               "RT-STORE",
               "RT-X509-PEM",
               "RT-X509-REF"
@@ -44067,6 +44133,7 @@
               "RT-LEGACY-REMAINDER",
               "RT-PHASE13-REF",
               "RT-PUBKEY",
+              "RT-SESSION-CERT",
               "RT-X509",
               "RT-X509-REQ"
             ],
@@ -44711,13 +44778,4809 @@
         "non_observable": [],
         "phase": 13,
         "staged_candidate_probes": 9
+      },
+      {
+        "completed": true,
+        "counts": {
+          "directly_courted": 600,
+          "directly_courted_called": 500,
+          "directly_courted_referenced": 100,
+          "implemented": 600,
+          "indirectly_courted": 0,
+          "non_observable": 0,
+          "unmatched": 0
+        },
+        "directly_courted": [
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_f_ssl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_new_buffer_ssl_connect"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_new_ssl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_new_ssl_connect"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_ssl_copy_session_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_ssl_shutdown"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLS_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "DTLS_get_data_mtu"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLS_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLS_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "DTLS_set_timer_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_2_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_2_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_2_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "DTLSv1_listen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "ERR_load_SSL_strings"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "OPENSSL_cipher_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "OPENSSL_init_ssl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "OSSL_default_cipher_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "OSSL_default_ciphersuites"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "PEM_read_SSL_SESSION"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "PEM_read_bio_SSL_SESSION"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "PEM_write_SSL_SESSION"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "PEM_write_bio_SSL_SESSION"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SRP_Calc_A_param"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_description"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_find"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_get_auth_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_get_bits"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_get_cipher_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_get_digest_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_get_handshake_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_get_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_get_kx_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CIPHER_get_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_get_protocol_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_get_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_is_aead"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CIPHER_standard_name"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_COMP_add_compression_method"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_COMP_get0_name"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_COMP_get_compression_methods"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_COMP_get_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_COMP_get_name"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_COMP_set0_compression_methods"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_CTX_clear_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_CTX_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_CTX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_CTX_set1_prefix"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_CTX_set_flags"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CONF_CTX_set_ssl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_CTX_set_ssl_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_cmd"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_cmd_argv"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CONF_cmd_value_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_SRP_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_SRP_CTX_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_add1_to_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_add_client_CA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_add_client_custom_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_add_custom_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_add_server_custom_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_add_session"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_callback_ctrl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_check_private_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_clear_options"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_compress_certs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_config"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_ct_is_enabled"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_ctrl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_dane_clear_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_dane_enable"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_dane_mtype_set"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_dane_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_enable_ct"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_flush_sessions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_flush_sessions_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF",
+              "RT-RECORD",
+              "RT-SESSION-CERT",
+              "RT-SSL-BIO",
+              "RT-SSL-CIPH",
+              "RT-SSL-EXT",
+              "RT-SSL-INIT",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_get0_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get0_certificate"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_get0_client_cert_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get0_ctlog_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get0_param"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get0_privatekey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get0_security_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_get0_server_cert_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_get1_compressed_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_cert_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CTX_get_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_get_client_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_get_client_cert_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_default_passwd_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_default_passwd_cb_userdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_domain_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_get_info_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_keylog_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_max_early_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_num_tickets"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_options"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_quiet_shutdown"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_record_padding_callback_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_recv_max_early_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_security_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_security_level"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_ssl_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_get_timeout"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_verify_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_verify_depth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_get_verify_mode"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_has_client_custom_ext"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_load_verify_dir"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_load_verify_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_load_verify_locations"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_load_verify_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF",
+              "RT-RECORD",
+              "RT-SESSION-CERT",
+              "RT-SSL-BIO",
+              "RT-SSL-CIPH",
+              "RT-SSL-EXT",
+              "RT-SSL-INIT",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_new_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_remove_session"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_sess_get_get_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_sess_get_new_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_sess_get_remove_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_sess_set_get_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_sess_set_new_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_sess_set_remove_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_sessions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set0_CA_list"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set0_ctlog_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set0_security_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set0_tmp_dh_pkey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set1_cert_comp_preference"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set1_cert_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set1_client_cert_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set1_compressed_cert"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set1_param"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set1_server_cert_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_allow_early_data_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_alpn_protos"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_alpn_select_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_async_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_async_callback_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_block_padding"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_block_padding_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_cert_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_cert_store"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_cert_verify_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_cipher_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_CTX_set_ciphersuites"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set_client_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set_client_cert_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_client_cert_engine"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_client_hello_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set_cookie_generate_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set_cookie_verify_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_ct_validation_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_ctlog_list_file"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_default_ctlog_list_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_default_passwd_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_default_passwd_cb_userdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_CTX_set_default_read_buffer_len"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_default_verify_dir"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_default_verify_file"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_default_verify_paths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_default_verify_store"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_domain_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_generate_session_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set_info_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_keylog_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_max_early_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_msg_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_new_pending_conn_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_next_proto_select_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_next_protos_advertised_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_not_resumable_session_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_num_tickets"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_options"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_post_handshake_auth"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_psk_client_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_psk_find_session_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_psk_server_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_psk_use_session_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_purpose"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_quiet_shutdown"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_record_padding_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_record_padding_callback_arg"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_recv_max_early_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_security_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_security_level"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_session_id_context"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_session_ticket_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_set_srp_cb_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_set_srp_client_pwd_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_set_srp_password"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_set_srp_strength"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_set_srp_username"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_set_srp_username_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_set_srp_verify_param_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_ssl_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set_stateless_cookie_generate_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set_stateless_cookie_verify_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_set_timeout"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_CTX_set_tlsext_max_fragment_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "SSL_CTX_set_tlsext_ticket_key_evp_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_tlsext_use_srtp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_CTX_set_tmp_dh_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_trust"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_set_verify_depth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_up_ref"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_PrivateKey_ASN1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_PrivateKey_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_RSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_RSAPrivateKey_ASN1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_RSAPrivateKey_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_cert_and_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_certificate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_certificate_ASN1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_certificate_chain_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_certificate_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_CTX_use_psk_identity_hint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_serverinfo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_serverinfo_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_CTX_use_serverinfo_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get0_alpn_selected"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get0_cipher"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get0_hostname"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get0_id_context"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get0_peer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get0_peer_rpk"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get0_ticket"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get0_ticket_appdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_compress_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_master_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_max_early_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_SESSION_get_max_fragment_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_protocol_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_ticket_lifetime_hint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_time_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_get_timeout"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_has_ticket"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_is_resumable"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_print"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_print_fp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_print_keylog"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set1_alpn_selected"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set1_hostname"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set1_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set1_id_context"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set1_master_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set1_ticket_appdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set_cipher"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set_max_early_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set_protocol_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set_time"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set_time_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_set_timeout"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_SESSION_up_ref"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_SRP_CTX_free"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_SRP_CTX_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_accept"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_accept_connection"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_accept_stream"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_add1_host"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_add1_to_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_add_client_CA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_add_dir_cert_subjects_to_stack"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_add_expected_rpk"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_add_file_cert_subjects_to_stack"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_add_ssl_module"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_add_store_cert_subjects_to_stack"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_alert_desc_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_alert_desc_string_long"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_alert_type_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_alert_type_string_long"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_alloc_buffers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_bytes_to_cipher_list"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_callback_ctrl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_certs_clear"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_check_chain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_check_private_key"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_clear"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_clear_options"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_hello_get0_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_hello_get0_compression_methods"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_hello_get0_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_hello_get0_legacy_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_hello_get0_random"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_hello_get0_session_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_hello_get1_extensions_present"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_hello_get_extension_order"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_hello_isv2"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_client_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_compress_certs"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_config"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_connect"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_copy_session_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_ct_is_enabled"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_ctrl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_dane_clear_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_dane_enable"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_dane_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_dane_tlsa_add"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_do_handshake"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_dup"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_dup_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_enable_ct"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_export_keying_material"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_export_keying_material_early"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_extension_supported"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF",
+              "RT-RECORD",
+              "RT-SESSION-CERT",
+              "RT-SSL-CIPH",
+              "RT-SSL-EXT",
+              "RT-SSL-INIT",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_free_buffers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_get0_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_alpn_selected"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_client_cert_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_connection"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_dane"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_dane_authority"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_dane_tlsa"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_domain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "SSL_get0_group_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_listener"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_next_proto_negotiated"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get0_param"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_get0_peer_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_peer_certificate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_peer_rpk"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_peer_scts"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_peername"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get0_security_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get0_server_cert_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get0_verified_chain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get1_builtin_sigalgs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_get1_compressed_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get1_peer_certificate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_get1_session"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get1_supported_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_SSL_CTX"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_accept_connection_queue_len"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_accept_stream_queue_len"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_all_async_fds"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_async_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_blocking_mode"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT",
+              "RT-SSL-BIO",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_certificate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_changed_async_fds"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_get_cipher_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_get_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_get_client_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_client_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_client_random"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_conn_close_info"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_current_cipher"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_current_compression"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_current_expansion"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_default_passwd_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_default_passwd_cb_userdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_default_timeout"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_domain_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_early_data_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_error"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_event_timeout"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_get_ex_data_X509_STORE_CTX_idx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_fd"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_finished"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_handshake_rtt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_info_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_key_update_type"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_max_early_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_negotiated_client_cert_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_negotiated_server_cert_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_num_tickets"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_options"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_peer_cert_chain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_peer_finished"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_peer_signature_type_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_pending_cipher"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_privatekey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_psk_identity"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_psk_identity_hint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_quiet_shutdown"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_rbio"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_read_ahead"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_record_padding_callback_arg"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_recv_max_early_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_rfd"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_rpoll_descriptor"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_security_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_security_level"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_selected_srtp_profile"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_server_random"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_servername"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_servername_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_get_session"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_shared_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_shared_sigalgs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_shutdown"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_sigalgs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_signature_type_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_get_srp_N"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_get_srp_g"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_get_srp_userinfo"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_get_srp_username"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_srtp_profiles"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_ssl_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_get_state"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_stream_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_stream_read_error_code"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_stream_read_state"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_stream_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_stream_write_error_code"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_stream_write_state"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_value_uint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_verify_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_verify_depth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_verify_mode"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_verify_result"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_get_wbio"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_wfd"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_wpoll_descriptor"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "SSL_group_to_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_handle_events"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_has_matching_session_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_has_pending"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_in_before"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_in_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "SSL_inject_net_dgram"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_is_connection"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_is_domain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_is_dtls"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_is_init_finished"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_is_listener"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_is_quic"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_is_server"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_is_stream_local"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_is_tls"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_key_update"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_listen"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_load_client_CA_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_load_client_CA_file_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_net_read_desired"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_net_write_desired"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF",
+              "RT-RECORD",
+              "RT-SESSION-CERT",
+              "RT-SSL-CIPH",
+              "RT-SSL-EXT",
+              "RT-SSL-INIT",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_new_domain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_new_from_listener"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_new_listener"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_new_listener_from"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_new_session_ticket"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_new_stream"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_peek"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_peek_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_pending"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_poll"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_read"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_read_early_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_read_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_renegotiate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_renegotiate_abbreviated"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_renegotiate_pending"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_rstate_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_rstate_string_long"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_select_next_proto"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_sendfile"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_session_reused"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set0_CA_list"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set0_rbio"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set0_security_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set0_tmp_dh_pkey"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set0_wbio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_set1_cert_comp_preference"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set1_client_cert_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_set1_compressed_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set1_host"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set1_initial_peer_addr"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set1_param"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set1_server_cert_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_SSL_CTX"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_accept_state"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_allow_early_data_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_alpn_protos"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_async_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_async_callback_arg"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_set_bio"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_block_padding"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_block_padding_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_blocking_mode"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_cert_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_set_cipher_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH"
+            ],
+            "symbol": "SSL_set_ciphersuites"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_set_client_CA_list"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_connect_state"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_ct_validation_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_debug"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_default_passwd_cb"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_default_passwd_cb_userdata"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-RECORD"
+            ],
+            "symbol": "SSL_set_default_read_buffer_len"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_default_stream_mode"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_fd"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_generate_session_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_hostflags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_incoming_stream_policy"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_info_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_max_early_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_msg_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_not_resumable_session_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_num_tickets"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_options"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_post_handshake_auth"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_psk_client_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_psk_find_session_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_psk_server_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_psk_use_session_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_purpose"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "SSL_set_quic_tls_cbs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "SSL_set_quic_tls_early_data_enabled"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "SSL_set_quic_tls_transport_params"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_quiet_shutdown"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_read_ahead"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_record_padding_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_record_padding_callback_arg"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_recv_max_early_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_rfd"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_security_callback"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_security_level"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_set_session"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_session_id_context"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_set_session_secret_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_set_session_ticket_ext"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_set_session_ticket_ext_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_shutdown"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_set_srp_server_param"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_set_srp_server_param_pw"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_ssl_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_set_tlsext_max_fragment_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_tlsext_use_srtp"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_set_tmp_dh_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_trust"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_value_uint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_verify"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_set_verify_depth"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_verify_result"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_wfd"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_shutdown"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_shutdown_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_srp_server_param_with_username"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_state_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_state_string_long"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_stateless"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_stream_conclude"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_stream_reset"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-EXT"
+            ],
+            "symbol": "SSL_trace"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_up_ref"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_PrivateKey"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_use_PrivateKey_ASN1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_PrivateKey_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_RSAPrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_RSAPrivateKey_ASN1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_RSAPrivateKey_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_cert_and_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_certificate"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_certificate_ASN1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_certificate_chain_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "SSL_use_certificate_file"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_use_psk_identity_hint"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_verify_client_post_handshake"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_version"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_waiting_for_async"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "symbol": "SSL_want"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_write"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_write_early_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "SSL_write_ex"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_write_ex2"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-CIPH",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLS_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF",
+              "RT-RECORD",
+              "RT-SESSION-CERT",
+              "RT-SSL-BIO",
+              "RT-SSL-CIPH",
+              "RT-SSL-EXT",
+              "RT-SSL-INIT",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT",
+              "RT-STATEM"
+            ],
+            "symbol": "TLS_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLS_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_1_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_1_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_1_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_2_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
+              "RT-SSL-OBJECT"
+            ],
+            "symbol": "TLSv1_2_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_2_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "d2i_SSL_SESSION"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "d2i_SSL_SESSION_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SESSION-CERT"
+            ],
+            "symbol": "i2d_SSL_SESSION"
+          }
+        ],
+        "indirectly_courted": [],
+        "non_observable": [],
+        "phase": 14,
+        "staged_candidate_probes": 11
       }
     ],
     "totals": {
-      "directly_courted": 5888,
-      "directly_courted_called": 4880,
-      "directly_courted_referenced": 1008,
-      "implemented": 5896,
+      "directly_courted": 6488,
+      "directly_courted_called": 5380,
+      "directly_courted_referenced": 1108,
+      "implemented": 6496,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -44728,7 +49591,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "69872bb9ff11d10c0f00c0b0c3affbc5326bffcf2a7e49cabcb5e7f67f6dcb67"
+      "sha256": "4eec22d2e8141da5999d3cc012b05dd0ad36394f21c90f5e5b254753d2d4b8f5"
     },
     {
       "name": "symbol-ownership",
@@ -44738,12 +49601,12 @@
     {
       "name": "coverage-rows",
       "path": "forensics/atlas/court-coverage-rows.json",
-      "sha256": "c8184a493d6a14536af711c09aa95e0e2d6b6da83ea9bf66c293400348f3d331"
+      "sha256": "0371a6ec17dde060bb555f728d6f0760bfa5579f35620d669e2bcab5f392c6c0"
     },
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "5c2389ade1ac7e7548fe115b86a4ef87ffba4ff966fcd51d185184a3eeb224c7"
+      "sha256": "df82cf413679869b3291b2e26ed13a86aeb9f728cee4a8e205d834980a057cd9"
     },
     {
       "name": "phase3-courts",
@@ -44753,7 +49616,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "15e8e8de14ea94454592ae17d604bc4c57eb9363c0dc2cadf0c7fc7ce311e177"
+      "sha256": "67750d9b4ce02e8c873e3581dade02f24dbffe68088df7945305742f6eb1b314"
     },
     {
       "name": "phase4-courts",
@@ -44763,7 +49626,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "d94e301222e6a8e014767c2984c6d857e2529339c77b03b7bd6ea1ed29163f17"
+      "sha256": "87d293679de3e1b16c6d8584f1792efa306a36d4e16f425914423022fe40fb83"
     },
     {
       "name": "phase5-courts",
@@ -44773,7 +49636,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "175fb650fd0a8ee4dac9cf01cbc9196f7f0ebe77c1d4974024077c7aed245c74"
+      "sha256": "01b46351b5d540b25601ad5e5afcf4dd3d5df174f17e0747f3aec407adaf8149"
     },
     {
       "name": "phase6-courts",
@@ -44783,7 +49646,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "c9896658c22c9c01824ef013000061ca84cd66ae9cd20af4d951b47d31a4033b"
+      "sha256": "e96f4dd4cac76c4d9ca3cd71ed59c49c0f8fbf9fee276dea62a29876ff6ec3ab"
     },
     {
       "name": "phase7-courts",
@@ -44793,7 +49656,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "2a396e993ab5ea3a6e5170796c285263fed5e04fad4f2cf600422c63e1262a79"
+      "sha256": "cade5f53ecc91081f4bc7825c4119b14ced6d9f2ff7e37eea8114dfa8550a2be"
     },
     {
       "name": "phase8-courts",
@@ -44803,7 +49666,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "60f7d8844410b234dbac902bafcf2888a50e30b1e6034f72f8d56b8c467e4fbf"
+      "sha256": "f0b1b95d6c27612636805fafb054ccfa4570e0731f4f0c98a1c459ef9df1e907"
     },
     {
       "name": "phase9-courts",
@@ -44813,7 +49676,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "ea0b8337374458da33351f91eebb38b274c27abade9bf1136df661efe275056e"
+      "sha256": "5ce8f5ecb4784493bb262d4856afc5f59157bf55a5294b81f1074ce704838bf1"
     },
     {
       "name": "phase10-courts",
@@ -44823,7 +49686,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "3b2642a647943e4005ee3642c82f6878219554a0fafc631f62fc431979ef4c4c"
+      "sha256": "b9a22cec216d77cb56ed0723a9e8e9a6fe2721783b7a4cb5c20242421783aa35"
     },
     {
       "name": "phase11-courts",
@@ -44833,7 +49696,7 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "3fa9dc2da2e30939c6dd8c4654b54f2bfe06747529de908d5b158f707a5c900b"
+      "sha256": "a237aebd2652eccfd5d7fe3e90b21c9bff269ee34e1cd50f997f3ad55197c2b6"
     },
     {
       "name": "phase12-courts",
@@ -44843,12 +49706,22 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "d4788e15bb194feacb60e6f6580257379bddb2c30a6bb515171adebf56a668ce"
+      "sha256": "1b4752c610d1574310b74a62bb1a095c38f0a77ce2f4ac6397239997e8e0c61c"
     },
     {
       "name": "phase13-courts",
       "path": "artifacts/phase13/COURTS.json",
       "sha256": "28bafdfec05c7cbcadfd1f0eba7d8ccc95f7bdbfcb0b7a96a7b2b57bb5232c17"
+    },
+    {
+      "name": "phase14-obligations",
+      "path": "forensics/phase14-obligations.json",
+      "sha256": "c24a1b9e6eef658ec67ab3b8ea3a535c60cdbfa1102bae6b56b94ebc9aeb568f"
+    },
+    {
+      "name": "phase14-courts",
+      "path": "artifacts/phase14/COURTS.json",
+      "sha256": "be5b6c61bdddb58d3df9220c0b3217b0b5915e463a72b9b57d4c34e9028ad76e"
     }
   ],
   "kind": "court-coverage",

@@ -180,6 +180,20 @@
     ],
     "units": [
       {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-14-SUBPHASES.md row 14.5b and section 5; src/ssl/mod.rs (the unlanded-message-layer note); docs/PHASE-14-TLS-SEAL.md section 5; docs/DECISIONS.md D529",
+        "owner_phase": 15,
+        "reason": "Phase 14.5b's plan row names this unit to say the client half of the TLS message layer remains unlanded: the state machine's control surface and a fresh-connection driver (`statem.c`) landed, but the client message construction and parsing (`statem_clnt.c`) did not, so no flight is built or parsed on the client side and no court reads one. Phase 14 is complete with that reduction recorded in `src/ssl/mod.rs`, and the unit is deferred to Phase 15 (QUIC/ECH), whose engine drives the TLS handshake through the message layer and is the first later stratum in `phase_state.py`'s `REQUIRES` DAG to consume it. The owner is named rather than left implicit, the disposition D132 established.",
+        "unit": "ssl/statem/statem_clnt.c"
+      },
+      {
+        "class": "deferred_to_later_stratum",
+        "evidence": "docs/PHASE-14-SUBPHASES.md row 14.5b and section 5; src/ssl/mod.rs (the unlanded-message-layer note); docs/PHASE-14-TLS-SEAL.md section 5; docs/DECISIONS.md D529",
+        "owner_phase": 15,
+        "reason": "Phase 14.5b's plan row names this unit to say the server half of the TLS message layer remains unlanded: the state machine's control surface and a fresh-connection driver (`statem.c`) landed, but the server message construction and parsing (`statem_srvr.c`) did not, so no flight is built or parsed on the server side and no court reads one. Phase 14 is complete with that reduction recorded in `src/ssl/mod.rs`, and the unit is deferred to Phase 15 (QUIC/ECH), whose engine drives the TLS handshake through the message layer and is the first later stratum in `phase_state.py`'s `REQUIRES` DAG to consume it. The owner is named rather than left implicit, the disposition D132 established.",
+        "unit": "ssl/statem/statem_srvr.c"
+      },
+      {
         "class": "reached_by_a_named_construct",
         "crate_module": "src/evp/e_aes.rs",
         "evidence": "forensics/phase13-obligations.json (the implemented rows the 13.5-13.7 slices landed); src/evp/e_aes.rs",

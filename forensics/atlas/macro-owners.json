@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 2993,
-      "owned": 9634,
+      "owned": 9663,
       "records": 19839,
-      "unowned": 10205
+      "unowned": 10176
     },
     "definition": "every macro and enum member the authority's installed and internal headers define, with the header that defines it and that header's owning stratum",
     "installed_headers": [
@@ -13539,7 +13539,7 @@
         ],
         "kind": "enumerator",
         "name": "CON_FUNC_DONT_SEND",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -13547,7 +13547,7 @@
         ],
         "kind": "enumerator",
         "name": "CON_FUNC_ERROR",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -13555,7 +13555,7 @@
         ],
         "kind": "enumerator",
         "name": "CON_FUNC_SUCCESS",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -39597,7 +39597,7 @@
         ],
         "kind": "enumerator",
         "name": "MSG_FLOW_ERROR",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -39605,7 +39605,7 @@
         ],
         "kind": "enumerator",
         "name": "MSG_FLOW_FINISHED",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -39613,7 +39613,7 @@
         ],
         "kind": "enumerator",
         "name": "MSG_FLOW_READING",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -39621,7 +39621,7 @@
         ],
         "kind": "enumerator",
         "name": "MSG_FLOW_UNINITED",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -39629,7 +39629,7 @@
         ],
         "kind": "enumerator",
         "name": "MSG_FLOW_WRITING",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -73701,7 +73701,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_INTERNAL_STATEM_H",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -90818,7 +90818,7 @@
         ],
         "kind": "enumerator",
         "name": "READ_STATE_BODY",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -90826,7 +90826,7 @@
         ],
         "kind": "enumerator",
         "name": "READ_STATE_HEADER",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -90834,7 +90834,7 @@
         ],
         "kind": "enumerator",
         "name": "READ_STATE_POST_PROCESS",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -122095,7 +122095,7 @@
         ],
         "kind": "macro",
         "name": "SSLfatal",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -122103,7 +122103,7 @@
         ],
         "kind": "macro",
         "name": "SSLfatal_alert",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -122111,7 +122111,7 @@
         ],
         "kind": "macro",
         "name": "SSLfatal_data",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -133184,7 +133184,7 @@
         ],
         "kind": "enumerator",
         "name": "WORK_ERROR",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -133192,7 +133192,7 @@
         ],
         "kind": "enumerator",
         "name": "WORK_FINISHED_CONTINUE",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -133200,7 +133200,7 @@
         ],
         "kind": "enumerator",
         "name": "WORK_FINISHED_STOP",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -133208,7 +133208,7 @@
         ],
         "kind": "enumerator",
         "name": "WORK_FINISHED_SWAP",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -133216,7 +133216,7 @@
         ],
         "kind": "enumerator",
         "name": "WORK_MORE_A",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -133224,7 +133224,7 @@
         ],
         "kind": "enumerator",
         "name": "WORK_MORE_B",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -133232,7 +133232,7 @@
         ],
         "kind": "enumerator",
         "name": "WORK_MORE_C",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -134080,7 +134080,7 @@
         ],
         "kind": "enumerator",
         "name": "WRITE_STATE_POST_WORK",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -134088,7 +134088,7 @@
         ],
         "kind": "enumerator",
         "name": "WRITE_STATE_PRE_WORK",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -134096,7 +134096,7 @@
         ],
         "kind": "enumerator",
         "name": "WRITE_STATE_SEND",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -134104,7 +134104,7 @@
         ],
         "kind": "enumerator",
         "name": "WRITE_STATE_TRANSITION",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -134112,7 +134112,7 @@
         ],
         "kind": "enumerator",
         "name": "WRITE_TRAN_CONTINUE",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -134120,7 +134120,7 @@
         ],
         "kind": "enumerator",
         "name": "WRITE_TRAN_ERROR",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -134128,7 +134128,7 @@
         ],
         "kind": "enumerator",
         "name": "WRITE_TRAN_FINISHED",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [

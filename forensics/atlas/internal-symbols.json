@@ -332,6 +332,7 @@
       "src/runtime/getenv.rs",
       "src/runtime/obj_table.rs",
       "src/srp/mod.rs",
+      "src/ssl/quic/mod.rs",
       "src/status.rs",
       "src/store/store_result.rs",
       "src/test_support.rs",
