@@ -10,26 +10,27 @@
 //!
 //! ## What this subphase lands, and in how many slices
 //!
-//! This module lands **slice 1**: the loadable-module contract itself
-//! (`legacy_gettable_params`, `legacy_get_params`, `legacy_query`, `legacy_teardown` and the
-//! `legacy_dispatch_table`, transcribed from `legacyprov.c:63-205`), the `legacy_digests` table
-//! (`legacyprov.c:87-104`, all four rows) and the `legacy_skeymgmt` table (`legacyprov.c:170-173`,
-//! its one row). Five of the authority's 39 rows are therefore published and the census reads them
-//! `implemented`; the remaining 34 stay `unimplemented` and the cipher and KDF arms return `NULL`,
-//! exactly as an unlanded table does.
+//! This module lands the loadable-module contract itself (`legacy_gettable_params`,
+//! `legacy_get_params`, `legacy_query`, `legacy_teardown` and the `legacy_dispatch_table`,
+//! transcribed from `legacyprov.c:63-205`) together with all four operations' rows and the
+//! module's exported `OSSL_provider_init`:
 //!
-//! **The remaining slices are ordered and named, not silently dropped.** Slice 2 is the 32
-//! `legacy_ciphers` rows (`legacyprov.c:106-162`): their provider engines are
-//! `providers/implementations/ciphers/cipher_cast5.c`, `cipher_blowfish.c`, `cipher_idea.c`,
-//! `cipher_seed.c`, `cipher_rc2.c`, `cipher_rc4.c`, `cipher_rc4_hmac_md5.c`, `cipher_des.c` and
-//! `cipher_desx.c`, each a thin instantiation of the crate's already-landed generic cipher engine
-//! (`src/provider/cipher.rs`) whose per-algorithm `*_hw.c` key-schedule hook is not yet
-//! transcribed. Slice 3 is the two `legacy_kdfs` rows (`legacyprov.c:164-168`):
-//! `providers/implementations/kdfs/pbkdf1.c.in` and `pvkkdf.c.in`, which drive `PROV_DIGEST` and
-//! so are bounded by the same `ossl_prov_digest_*` surface `src/provider/kdf.rs` already uses.
-//! Both slices are absent here rather than stubbed: a stub table would make a fetch answer
-//! non-`NULL` for an algorithm nothing implements, which is worse than the `NULL` the authority
-//! answers when a row is not compiled in.
+//! * **slice 1** — `legacy_digests` (`legacyprov.c:87-104`, the four rows) and
+//!   `legacy_skeymgmt` (`:170-173`, its one row), each reusing the crate's primitives well
+//!   enough that slice 1 wrote them here;
+//! * **slice 2** — `legacy_ciphers` (`:106-162`, 32 rows). Each row is a thin instantiation
+//!   of the crate's generic cipher engine (`src/provider/cipher.rs`), whose `legacy`
+//!   submodule transcribes the authority `providers/implementations/ciphers/*` key-schedule
+//!   hooks and mode bodies (`cipher_cast5.c`, `cipher_blowfish.c`, `cipher_idea.c`,
+//!   `cipher_seed.c`, `cipher_rc2.c`, `cipher_rc4.c`, `cipher_rc4_hmac_md5.c`, `cipher_des.c`
+//!   and `cipher_desx.c`);
+//! * **slice 3** — `legacy_kdfs` (`:164-168`, the two rows `PBKDF1` and `PVKKDF`), which
+//!   drive `PROV_DIGEST` and so are bounded by the same `ossl_prov_digest_*` surface
+//!   `src/provider/kdf.rs` already uses; both are implemented in that module.
+//!
+//! All 39 rows are therefore published and the census reads them `implemented`;
+//! `forensics/phase16-obligations.json` records `provider_rows_open` 0 and this stratum's
+//! `filesystem` contract unit closes.
 //!
 //! ## The primitives, and which of them are present
 //!
@@ -87,6 +88,7 @@ use crate::params::{
     OSSL_PARAM_get_uint, OSSL_PARAM_locate, OSSL_PARAM_locate_const, OsslParam, END,
 };
 use crate::provider::activate::OsslAlgorithm;
+use crate::provider::cipher::legacy::*;
 use crate::provider::cipher::{param_integer_defn, param_uint, param_utf8_ptr};
 use crate::provider::digest::{
     ossl_digest_default_get_params, ossl_digest_default_gettable_params,
@@ -95,6 +97,7 @@ use crate::provider::init::{
     FUNC_PROVIDER_GETTABLE_PARAMS, FUNC_PROVIDER_GET_PARAMS, FUNC_PROVIDER_QUERY_OPERATION,
     FUNC_PROVIDER_TEARDOWN,
 };
+use crate::provider::kdf::{PBKDF1_FUNCTIONS, PVKKDF_FUNCTIONS};
 use crate::provider::skeymgmt::GENERIC_SKEYMGMT_FUNCTIONS;
 use crate::runtime::init::VERSION_STRING;
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_malloc, CRYPTO_zalloc};
@@ -554,6 +557,43 @@ alias!(
     "RIPEMD-160:RIPEMD160:RIPEMD:RMD160:1.3.36.3.2.1"
 );
 alias!(N_GENERIC_SECRET, "GENERIC-SECRET");
+alias!(N_PBKDF1, "PBKDF1");
+alias!(N_PVKKDF, "PVKKDF");
+alias!(N_CAST5_ECB, "CAST5-ECB");
+alias!(
+    N_CAST5_CBC,
+    "CAST5-CBC:CAST-CBC:CAST:1.2.840.113533.7.66.10"
+);
+alias!(N_CAST5_OFB, "CAST5-OFB");
+alias!(N_CAST5_CFB, "CAST5-CFB");
+alias!(N_BF_ECB, "BF-ECB");
+alias!(N_BF_CBC, "BF-CBC:BF:BLOWFISH:1.3.6.1.4.1.3029.1.2");
+alias!(N_BF_OFB, "BF-OFB");
+alias!(N_BF_CFB, "BF-CFB");
+alias!(N_IDEA_ECB, "IDEA-ECB");
+alias!(N_IDEA_CBC, "IDEA-CBC:IDEA:1.3.6.1.4.1.188.7.1.1.2");
+alias!(N_IDEA_OFB, "IDEA-OFB:IDEA-OFB64");
+alias!(N_IDEA_CFB, "IDEA-CFB:IDEA-CFB64");
+alias!(N_SEED_ECB, "SEED-ECB:1.2.410.200004.1.3");
+alias!(N_SEED_CBC, "SEED-CBC:SEED:1.2.410.200004.1.4");
+alias!(N_SEED_OFB, "SEED-OFB:SEED-OFB128:1.2.410.200004.1.6");
+alias!(N_SEED_CFB, "SEED-CFB:SEED-CFB128:1.2.410.200004.1.5");
+alias!(N_RC2_ECB, "RC2-ECB");
+alias!(N_RC2_CBC, "RC2-CBC:RC2:RC2-128:1.2.840.113549.3.2");
+alias!(N_RC2_40_CBC, "RC2-40-CBC:RC2-40");
+alias!(N_RC2_64_CBC, "RC2-64-CBC:RC2-64");
+alias!(N_RC2_CFB, "RC2-CFB");
+alias!(N_RC2_OFB, "RC2-OFB");
+alias!(N_RC4, "RC4:1.2.840.113549.3.4");
+alias!(N_RC4_40, "RC4-40");
+alias!(N_RC4_HMAC_MD5, "RC4-HMAC-MD5");
+alias!(N_DESX_CBC, "DESX-CBC:DESX");
+alias!(N_DES_ECB, "DES-ECB:1.3.14.3.2.6");
+alias!(N_DES_CBC, "DES-CBC:DES:1.3.14.3.2.7");
+alias!(N_DES_OFB, "DES-OFB:1.3.14.3.2.8");
+alias!(N_DES_CFB, "DES-CFB:1.3.14.3.2.9");
+alias!(N_DES_CFB1, "DES-CFB1");
+alias!(N_DES_CFB8, "DES-CFB8");
 
 /// A `legacy_digests[]`/`legacy_skeymgmt[]` row — `ALG(NAMES, FUNC)`, `legacyprov.c:30`.
 const fn row(names: *const c_char, implementation: *const c_void) -> OsslAlgorithm {
@@ -580,6 +620,65 @@ static LEGACY_DIGESTS: [OsslAlgorithm; 5] = [
     },
 ];
 
+/// `static const OSSL_ALGORITHM legacy_ciphers[]` — `legacyprov.c:106-162`, in the authority's
+/// order, with the four `OPENSSL_NO_RC5` rows absent because this profile compiles them out. Each
+/// row's engine is `src/provider/cipher.rs`'s `legacy` submodule.
+static LEGACY_CIPHERS: [OsslAlgorithm; 33] = [
+    row(N_CAST5_ECB, CAST5_ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_CAST5_CBC, CAST5_CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_CAST5_OFB, CAST5_OFB_FUNCTIONS.as_ptr().cast()),
+    row(N_CAST5_CFB, CAST5_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_BF_ECB, BF_ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_BF_CBC, BF_CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_BF_OFB, BF_OFB_FUNCTIONS.as_ptr().cast()),
+    row(N_BF_CFB, BF_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_IDEA_ECB, IDEA_ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_IDEA_CBC, IDEA_CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_IDEA_OFB, IDEA_OFB_FUNCTIONS.as_ptr().cast()),
+    row(N_IDEA_CFB, IDEA_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_SEED_ECB, SEED_ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_SEED_CBC, SEED_CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_SEED_OFB, SEED_OFB_FUNCTIONS.as_ptr().cast()),
+    row(N_SEED_CFB, SEED_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_RC2_ECB, RC2_ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_RC2_CBC, RC2_CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_RC2_40_CBC, RC2_40CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_RC2_64_CBC, RC2_64CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_RC2_CFB, RC2_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_RC2_OFB, RC2_OFB_FUNCTIONS.as_ptr().cast()),
+    row(N_RC4, RC4_128_FUNCTIONS.as_ptr().cast()),
+    row(N_RC4_40, RC4_40_FUNCTIONS.as_ptr().cast()),
+    row(N_RC4_HMAC_MD5, RC4_HMAC_MD5_FUNCTIONS.as_ptr().cast()),
+    row(N_DESX_CBC, TDES_DESX_CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_DES_ECB, DES_ECB_FUNCTIONS.as_ptr().cast()),
+    row(N_DES_CBC, DES_CBC_FUNCTIONS.as_ptr().cast()),
+    row(N_DES_OFB, DES_OFB_FUNCTIONS.as_ptr().cast()),
+    row(N_DES_CFB, DES_CFB_FUNCTIONS.as_ptr().cast()),
+    row(N_DES_CFB1, DES_CFB1_FUNCTIONS.as_ptr().cast()),
+    row(N_DES_CFB8, DES_CFB8_FUNCTIONS.as_ptr().cast()),
+    OsslAlgorithm {
+        algorithm_names: ptr::null(),
+        property_definition: ptr::null(),
+        implementation: ptr::null(),
+        algorithm_description: ptr::null(),
+    },
+];
+
+/// `static const OSSL_ALGORITHM legacy_kdfs[]` — `legacyprov.c:164-168`. The two rows are the
+/// legacy provider's; their engines are `src/provider/kdf.rs`'s `PBKDF1` and `PVKKDF`
+/// implementations, which drive the same `ossl_prov_digest_*` surface the default provider's KDF
+/// rows do.
+static LEGACY_KDFS: [OsslAlgorithm; 3] = [
+    row(N_PBKDF1, PBKDF1_FUNCTIONS.as_ptr().cast()),
+    row(N_PVKKDF, PVKKDF_FUNCTIONS.as_ptr().cast()),
+    OsslAlgorithm {
+        algorithm_names: ptr::null(),
+        property_definition: ptr::null(),
+        implementation: ptr::null(),
+        algorithm_description: ptr::null(),
+    },
+];
+
 /// `static const OSSL_ALGORITHM legacy_skeymgmt[]` — `legacyprov.c:170-173`. The row's engine is
 /// the same `providers/implementations/skeymgmt/generic.c` unit the default provider publishes
 /// (`src/provider/skeymgmt.rs`), so there is exactly one transcription of it.
@@ -596,11 +695,8 @@ static LEGACY_SKEYMGMT: [OsslAlgorithm; 2] = [
 /// `static const OSSL_ALGORITHM *legacy_query(void *provctx, int operation_id, int *no_cache)` —
 /// `legacyprov.c:175-190`.
 ///
-/// The `OSSL_OP_DIGEST` and `OSSL_OP_SKEYMGMT` arms return the two tables slice 1 publishes. The
-/// `OSSL_OP_CIPHER` and `OSSL_OP_KDF` arms are the authority's other two **and return `NULL`
-/// because their rows are not landed yet** (module header, slices 2 and 3); the census reads a
-/// `NULL` arm as "publishes nothing", so those rows stay `unimplemented` rather than being
-/// silently counted.
+/// The four arms return the four tables this module publishes: `legacy_digests`,
+/// `legacy_ciphers`, `legacy_kdfs` and `legacy_skeymgmt`.
 ///
 /// # Safety
 /// `no_cache` must be writable; `provctx` is ignored.
@@ -615,10 +711,10 @@ unsafe extern "C" fn legacy_query(
         return LEGACY_DIGESTS.as_ptr();
     }
     if operation_id == OSSL_OP_CIPHER {
-        return ptr::null();
+        return LEGACY_CIPHERS.as_ptr();
     }
     if operation_id == OSSL_OP_KDF {
-        return ptr::null();
+        return LEGACY_KDFS.as_ptr();
     }
     if operation_id == OSSL_OP_SKEYMGMT {
         return LEGACY_SKEYMGMT.as_ptr();

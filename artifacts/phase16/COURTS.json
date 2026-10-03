@@ -3,13 +3,13 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-LEGACY-MODULE` is 16.1's behavioural court: it **loads** the `legacy` provider module through `OSSL_PROVIDER_load` with `OPENSSL_MODULES` pointed at each side's own module directory, **reads** the provider name through `OSSL_PROVIDER_get_params`, **queries** the module's `OSSL_PROVIDER_query_operation` for the two operations slice 1 publishes (`OSSL_OP_DIGEST`, `OSSL_OP_SKEYMGMT`) and compares each table's row count and first row's alias sequence, **fetches** the four `legacy_digests` rows by name and by OID through the `provider=legacy` property and compares a fixed `\"abc\"` digest for each, and exercises the refusal arms (an unknown digest name and a legacy name asked of the `default` provider) -- not the error queue, and not `OSSL_OP_CIPHER`/`OSSL_OP_KDF`, whose 32 and 2 rows are 16.1 slices 2 and 3 and whose absence `forensics/atlas/provider-algorithms.json` records as the live `provider_rows_open`. The other five courts the plan names -- `RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in `pending_courts` with the subphase that lands each. docs/PHASE-16-SUBPHASES.md sections 3 and 4 record what each court compares.",
+    "claim": "`RT-LEGACY-MODULE` is 16.1's behavioural court: it **loads** the `legacy` provider module through `OSSL_PROVIDER_load` with `OPENSSL_MODULES` pointed at each side's own module directory, **reads** the provider name through `OSSL_PROVIDER_get_params`, **queries** the module's `OSSL_PROVIDER_query_operation` for all four operations 16.1 publishes (`OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_KDF`, `OSSL_OP_SKEYMGMT`) and compares each table's row count and first row's alias sequence, **fetches** the four `legacy_digests` rows by name and by OID through the `provider=legacy` property and compares a fixed `\"abc\"` digest for each, **fetches and drives** each of the 32 `legacy_ciphers` rows with a fixed key/IV encrypt-and-decrypt and each of the two `legacy_kdfs` rows with a fixed password/salt/iteration derive, and exercises the refusal arms (an unknown digest/cipher/KDF name, a legacy name asked of the `default` provider, and two `PBKDF1` derives the row must refuse) -- not the error queue. The 39-row table is fully published, so `forensics/atlas/provider-algorithms.json` records `provider_rows_open` 0. The other five courts the plan names -- `RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in `pending_courts` with the subphase that lands each. docs/PHASE-16-SUBPHASES.md sections 3 and 4 record what each court compares.",
     "courts": [
       {
         "authority_exit_code": 0,
-        "authority_observations": 39,
+        "authority_observations": 344,
         "candidate_exit_code": 0,
-        "candidate_observations": 39,
+        "candidate_observations": 344,
         "candidate_stderr_tail": [],
         "court": "RT-LEGACY-MODULE",
         "crashed": false,
@@ -41,17 +41,17 @@
     {
       "name": "phase-16-plan",
       "path": "docs/PHASE-16-SUBPHASES.md",
-      "sha256": "c252a6f3f140a98013548a81441b6534393eb0a7aad35591cd3fc3d870d61d6b"
+      "sha256": "2c4f8de6d3c82c2ff77a64031fa0f691fce258f0fa34a84eb5426fb404f1c7a9"
     },
     {
       "name": "phase16-obligations",
       "path": "forensics/phase16-obligations.json",
-      "sha256": "076366a219f5767486753e48ace14e002578f5152fe14d000b7afc49e65d60ae"
+      "sha256": "8571649c8fdb45d9fe584c0b5b78a219cae9f31def03f7a09143923276181d6b"
     },
     {
       "name": "probe",
       "path": "courts/phase16/rt_legacy_module_probe.c",
-      "sha256": "a79e11744757788aacd6d560877078549fd43c77563804d5a47b1eef081ee85e"
+      "sha256": "ee9c31c72cae60ce6f117b4f4960314eccb353ed645bfc7be0ade69cb45dcad1"
     }
   ],
   "kind": "phase16-courts",

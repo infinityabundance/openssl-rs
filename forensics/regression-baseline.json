@@ -391,7 +391,7 @@
       "verdict": "pass"
     },
     "RT-LEGACY-MODULE": {
-      "observations": 39,
+      "observations": 344,
       "verdict": "pass"
     },
     "RT-LEGACY-REMAINDER": {
@@ -719,7 +719,7 @@
     "phase13": 0,
     "phase14": 0,
     "phase15": 0,
-    "phase16": 43,
+    "phase16": 8,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -1736,27 +1736,61 @@
     "default/OSSL_OP_SKEYMGMT/AES",
     "default/OSSL_OP_SKEYMGMT/GENERIC-SECRET",
     "default/OSSL_OP_STORE/file",
+    "legacy/OSSL_OP_CIPHER/BF-CBC",
+    "legacy/OSSL_OP_CIPHER/BF-CFB",
+    "legacy/OSSL_OP_CIPHER/BF-ECB",
+    "legacy/OSSL_OP_CIPHER/BF-OFB",
+    "legacy/OSSL_OP_CIPHER/CAST5-CBC",
+    "legacy/OSSL_OP_CIPHER/CAST5-CFB",
+    "legacy/OSSL_OP_CIPHER/CAST5-ECB",
+    "legacy/OSSL_OP_CIPHER/CAST5-OFB",
+    "legacy/OSSL_OP_CIPHER/DES-CBC",
+    "legacy/OSSL_OP_CIPHER/DES-CFB",
+    "legacy/OSSL_OP_CIPHER/DES-CFB1",
+    "legacy/OSSL_OP_CIPHER/DES-CFB8",
+    "legacy/OSSL_OP_CIPHER/DES-ECB",
+    "legacy/OSSL_OP_CIPHER/DES-OFB",
+    "legacy/OSSL_OP_CIPHER/DESX-CBC",
+    "legacy/OSSL_OP_CIPHER/IDEA-CBC",
+    "legacy/OSSL_OP_CIPHER/IDEA-CFB",
+    "legacy/OSSL_OP_CIPHER/IDEA-ECB",
+    "legacy/OSSL_OP_CIPHER/IDEA-OFB",
+    "legacy/OSSL_OP_CIPHER/RC2-40-CBC",
+    "legacy/OSSL_OP_CIPHER/RC2-64-CBC",
+    "legacy/OSSL_OP_CIPHER/RC2-CBC",
+    "legacy/OSSL_OP_CIPHER/RC2-CFB",
+    "legacy/OSSL_OP_CIPHER/RC2-ECB",
+    "legacy/OSSL_OP_CIPHER/RC2-OFB",
+    "legacy/OSSL_OP_CIPHER/RC4",
+    "legacy/OSSL_OP_CIPHER/RC4-40",
+    "legacy/OSSL_OP_CIPHER/RC4-HMAC-MD5",
+    "legacy/OSSL_OP_CIPHER/SEED-CBC",
+    "legacy/OSSL_OP_CIPHER/SEED-CFB",
+    "legacy/OSSL_OP_CIPHER/SEED-ECB",
+    "legacy/OSSL_OP_CIPHER/SEED-OFB",
     "legacy/OSSL_OP_DIGEST/MD4",
     "legacy/OSSL_OP_DIGEST/MDC2",
     "legacy/OSSL_OP_DIGEST/RIPEMD-160",
     "legacy/OSSL_OP_DIGEST/WHIRLPOOL",
+    "legacy/OSSL_OP_KDF/PBKDF1",
+    "legacy/OSSL_OP_KDF/PVKKDF",
     "legacy/OSSL_OP_SKEYMGMT/GENERIC-SECRET"
   ],
   "provider_rows": {
     "handed_on_by_phase": {
-      "10": 34,
+      "10": 0,
       "16": 0,
-      "8": 34,
-      "9": 34
+      "8": 0,
+      "9": 0
     },
-    "implemented": 962,
+    "implemented": 996,
     "open_by_phase": {
       "10": 0,
-      "16": 34,
+      "16": 0,
       "8": 0,
       "9": 0
     },
     "total": 996,
-    "unimplemented": 34
+    "unimplemented": 0
   }
 }
