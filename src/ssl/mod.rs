@@ -250,8 +250,49 @@
 //! court drives only the unknown-NID arms and names the known-NID arm `pending`. See
 //! `src/ssl/s3_lib.rs` for the full divergence record.
 //!
+//! ## 14.3: the cipher and configuration surface
+//!
+//! 14.3 lands `ssl_ciph.c` and `ssl_conf.c`, plus the five `ssl_lib.c` cipher-list accessors the
+//! plan already names 14.3's. **`ssl_ciph.c`** is `src/ssl/ssl_ciph.rs`: the three built-in
+//! ciphersuite tables (`tls13_ciphers`, `ssl3_ciphers`, `ssl3_scsvs`, emitted by
+//! `forensics/tools/gen_phase14_cipher_tables.py` into the generated `src/ssl/ssl_ciph_table.rs`
+//! with the four mask-to-NID tables, the alias table and the named masks), the `SSL_CIPHER_*`
+//! readers, `OPENSSL_cipher_name`, the `OSSL_default_*` lists, `SSL_CIPHER_find`,
+//! `SSL_CTX_set_ciphersuites`/`SSL_set_ciphersuites`, the `SSL_COMP_*` surface and the rule engine
+//! (`ssl_load_ciphers`, `ssl_create_cipher_list`, `ssl_cipher_process_rulestr`). **`ssl_conf.c`**
+//! is `src/ssl/ssl_conf.rs`: the `SSL_CONF_CTX_*` lifecycle and flag accessors, the full command
+//! table, and `SSL_CONF_cmd`/`SSL_CONF_cmd_value_type`/`SSL_CONF_cmd_argv`.
+//!
+//! **The five pulled-forward accessors, and why.** `SSL_CTX_set_cipher_list`, `SSL_set_cipher_list`,
+//! `SSL_CTX_get_ciphers`, `SSL_get_ciphers` and `SSL_get_cipher_list` are defined by `ssl_lib.c`
+//! (14.1's unit) but the plan names them 14.3's ("the cipher tables and parser, 14.3") and the
+//! court drives them, so they are landed in `src/ssl/ssl_lib.rs` and recorded here as a measured
+//! correction, as 14.1's `TLS_method` was.
+//!
+//! **The tables carry the post-`ssl_sort_cipher_list` order.** The authority qsorts the three
+//! static tables by `id` at init (`s3_lib.c:3729-3736`); `ssl3_get_cipher(u)` reverses the *sorted*
+//! table, so the generator emits the sorted arrays the readers and the parser actually see. Sorting
+//! at emission rather than at first call keeps the candidate free of one-time init state.
+//!
+//! **Measured divergences, recorded rather than hidden.**
+//!
+//! * **`ssl_load_ciphers` records the disabled masks, not the fetched method pointers.** The
+//!   authority keeps the fetched `EVP_CIPHER`/`EVP_MD` in `ctx->ssl_cipher_methods[]`/
+//!   `ssl_digest_methods[]` for the record layer; those arrays are 14.4's, so this slice performs
+//!   the same fetches to compute the four masks and frees the objects. The default preference list
+//!   the parser builds is nevertheless the authority's, which `RT-SSL-CIPH` compares.
+//! * **`SSL_CONF`'s certificate-, key-, signature-algorithm- and group-loading commands are not
+//!   wired.** Their table rows are present (so recognition and `SSL_CONF_cmd_value_type` are the
+//!   authority's) but their handlers return the authority's failure value, because their named
+//!   units are 14.5/14.7's. See `src/ssl/ssl_conf.rs`.
+//! * **`ssl_set_version_bound` is pulled forward from 14.5.** `min_protocol`/`max_protocol` call it
+//!   (`ssl/statem/statem_lib.c:2107-2156`); it is transcribed in `src/ssl/ssl_conf.rs`.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod methods;
 pub mod s3_lib;
+pub mod ssl_ciph;
+pub mod ssl_ciph_table;
+pub mod ssl_conf;
 pub mod ssl_lib;

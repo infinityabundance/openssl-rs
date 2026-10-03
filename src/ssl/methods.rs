@@ -56,14 +56,26 @@ const SSL_OP_NO_DTLSV1_2: u64 = 1 << 27;
 /// `tls1_default_timeout` (`t1_lib.c:96-103`) — `ossl_seconds2time(60 * 60 * 2)`, reduced to seconds.
 const TIMEOUT_SECS: u64 = 60 * 60 * 2;
 
+/// `ssl3_enc->enc_flags` — `SSL_ENC_FLAG_TLS1_2_CIPHERS` (`ssl_local.h:2195`).
+const SSL_ENC_FLAG_TLS1_2_CIPHERS: c_uint = 0x10;
+/// `ssl3_enc->enc_flags` — `SSL_ENC_FLAG_DTLS` (`ssl_local.h:2190`).
+const SSL_ENC_FLAG_DTLS: c_uint = 0x8;
+
 /// Build a TLS table row: `timeout_secs` is `tls1_default_timeout`, `dtls` is false.
 const fn tls(version: c_int, flags: c_uint, mask: u64, default_server: bool) -> SslMethod {
+    // `TLSv1_2_enc_data` carries `SSL_ENC_FLAG_TLS1_2_CIPHERS`; the older enc tables do not.
+    let enc_flags = if version == TLS_ANY_VERSION || version == TLS1_2_VERSION {
+        SSL_ENC_FLAG_TLS1_2_CIPHERS
+    } else {
+        0
+    };
     SslMethod {
         version,
         flags,
         mask,
         timeout_secs: TIMEOUT_SECS,
         dtls: false,
+        enc_flags,
         default_server,
     }
 }
@@ -71,12 +83,20 @@ const fn tls(version: c_int, flags: c_uint, mask: u64, default_server: bool) -> 
 /// Build a DTLS table row: `timeout_secs` is `dtls1_default_timeout` (`d1_lib.c:56-63`), also two
 /// hours, and `dtls` is true (the `DTLSv1_enc_data`/`DTLSv1_2_enc_data` `SSL_ENC_FLAG_DTLS` bit).
 const fn dtls(version: c_int, flags: c_uint, mask: u64, default_server: bool) -> SslMethod {
+    // `DTLSv1_2_enc_data` adds `SSL_ENC_FLAG_TLS1_2_CIPHERS`; `DTLSv1_enc_data` does not.
+    let enc_flags = SSL_ENC_FLAG_DTLS
+        | if version == DTLS_ANY_VERSION || version == DTLS1_2_VERSION {
+            SSL_ENC_FLAG_TLS1_2_CIPHERS
+        } else {
+            0
+        };
     SslMethod {
         version,
         flags,
         mask,
         timeout_secs: TIMEOUT_SECS,
         dtls: true,
+        enc_flags,
         default_server,
     }
 }

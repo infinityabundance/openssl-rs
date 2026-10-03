@@ -38,6 +38,7 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_SSL, CRYPTO_EX_INDEX_SSL_CTX,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::stack::{OPENSSL_sk_free, OpenSslStack};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
 use crate::x509::v3_utl::a2i_IPADDRESS;
 use crate::x509::x509_cmp::X509_check_private_key;
@@ -279,6 +280,8 @@ pub struct SslMethod {
     pub timeout_secs: u64,
     /// `ssl3_enc->enc_flags & SSL_ENC_FLAG_DTLS` — the method's datagram family (14.2's table).
     pub dtls: bool,
+    /// `ssl3_enc->enc_flags` — the `SSL_ENC_FLAG_*` bits the cipher parser reads (14.3).
+    pub enc_flags: c_uint,
     /// `method->ssl_accept != ssl_undefined_function` — the default role `SSL_new` installs
     /// (`ssl_lib.c:917`).
     pub default_server: bool,
@@ -555,6 +558,20 @@ pub struct SslCtx {
     pub domain_flags: u64,
     /// `int pha_enabled` (`SSL_CTX_set_post_handshake_auth`).
     pub pha_enabled: c_int,
+    /// `STACK_OF(SSL_CIPHER) *cipher_list` — the preference-ordered list (14.3).
+    pub cipher_list: *mut OpenSslStack,
+    /// `STACK_OF(SSL_CIPHER) *cipher_list_by_id` — the id-ordered duplicate (14.3).
+    pub cipher_list_by_id: *mut OpenSslStack,
+    /// `STACK_OF(SSL_CIPHER) *tls13_ciphersuites` — the TLSv1.3 suite list (14.3).
+    pub tls13_ciphersuites: *mut OpenSslStack,
+    /// `uint32_t disabled_mkey_mask` — `ssl_load_ciphers`'s key-exchange word (14.3).
+    pub disabled_mkey_mask: u32,
+    /// `uint32_t disabled_auth_mask`.
+    pub disabled_auth_mask: u32,
+    /// `uint32_t disabled_enc_mask`.
+    pub disabled_enc_mask: u32,
+    /// `uint32_t disabled_mac_mask`.
+    pub disabled_mac_mask: u32,
 }
 
 /// `struct ssl_st` — `ssl_local.h`, carrying the `SSL_CONNECTION` fields Slice 1 reads.
@@ -570,6 +587,12 @@ pub struct Ssl {
     pub method: *const SslMethod,
     /// `const SSL_METHOD *defltmeth`.
     pub defltmeth: *const SslMethod,
+    /// `STACK_OF(SSL_CIPHER) *cipher_list` — the connection's own list, if it overrode one (14.3).
+    pub cipher_list: *mut OpenSslStack,
+    /// `STACK_OF(SSL_CIPHER) *cipher_list_by_id` (14.3).
+    pub cipher_list_by_id: *mut OpenSslStack,
+    /// `STACK_OF(SSL_CIPHER) *tls13_ciphersuites` (14.3).
+    pub tls13_ciphersuites: *mut OpenSslStack,
     /// `int type` — `SSL_TYPE_*`.
     pub type_: c_int,
     /// `int version` — the negotiated/installed protocol version.
@@ -1036,6 +1059,30 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
             (*ret).max_early_data = 0;
             (*ret).recv_max_early_data = SSL3_RT_MAX_PLAIN_LENGTH as u32;
             (*ret).num_tickets = 2;
+
+            // `ssl_lib.c:4075-4111`: load the cipher tables, install the default TLSv1.3
+            // ciphersuites and build the default TLSv1.2-and-earlier preference list.
+            crate::ssl::ssl_ciph::ssl_load_ciphers(ret);
+            if crate::ssl::ssl_ciph::SSL_CTX_set_ciphersuites(
+                ret,
+                crate::ssl::ssl_ciph::OSSL_default_ciphersuites(),
+            ) == 0
+            {
+                SSL_CTX_free(ret);
+                return ptr::null_mut();
+            }
+            let sk = crate::ssl::ssl_ciph::ssl_create_cipher_list(
+                ret,
+                (*ret).tls13_ciphersuites,
+                &mut (*ret).cipher_list,
+                &mut (*ret).cipher_list_by_id,
+                crate::ssl::ssl_ciph::OSSL_default_cipher_list(),
+                (*ret).cert,
+            );
+            if sk.is_null() || crate::runtime::stack::OPENSSL_sk_num(sk) <= 0 {
+                SSL_CTX_free(ret);
+                return ptr::null_mut();
+            }
         }
         ret
     })
@@ -1075,6 +1122,9 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
         }
         // SAFETY: the count reached zero, so this is the last reference and `ctx` is owned here.
         unsafe {
+            OPENSSL_sk_free((*ctx).cipher_list);
+            OPENSSL_sk_free((*ctx).cipher_list_by_id);
+            OPENSSL_sk_free((*ctx).tls13_ciphersuites);
             X509_VERIFY_PARAM_free((*ctx).param);
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
             X509_STORE_free((*ctx).cert_store);
@@ -1288,6 +1338,9 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
         }
         // SAFETY: the count reached zero, so this is the last reference and `s` is owned here.
         unsafe {
+            OPENSSL_sk_free((*s).cipher_list);
+            OPENSSL_sk_free((*s).cipher_list_by_id);
+            OPENSSL_sk_free((*s).tls13_ciphersuites);
             BIO_free_all((*s).wbio);
             BIO_free_all((*s).rbio);
             X509_VERIFY_PARAM_free((*s).param);
@@ -6745,5 +6798,164 @@ pub unsafe extern "C" fn SSL_client_hello_get0_ext(
     guard_ffi(0, || {
         let _ = (s, type_, out, outlen);
         0
+    })
+}
+// ---------------------------------------------------------------------------------------------
+// The cipher-list accessors (Phase 14.3; `ssl/ssl_lib.c:3253-3412`)
+//
+// `docs/PHASE-14-SUBPHASES.md` names these "the cipher tables and parser, 14.3 (`ssl_ciph.c`)"
+// even though `ssl_lib.c` defines them, and the ledger's module label is that defining unit; the
+// parser and tables they drive are `src/ssl/ssl_ciph.rs`.
+// ---------------------------------------------------------------------------------------------
+
+/// `STACK_OF(SSL_CIPHER) *SSL_get_ciphers(const SSL *s)` — `ssl/ssl_lib.c:3253-3265`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_ciphers(s: *const Ssl) -> *mut OpenSslStack {
+    guard_ffi(ptr::null_mut(), || {
+        if s.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe {
+            if !(*s).cipher_list.is_null() {
+                return (*s).cipher_list;
+            }
+            if !(*s).ctx.is_null() && !(*(*s).ctx).cipher_list.is_null() {
+                return (*(*s).ctx).cipher_list;
+            }
+        }
+        ptr::null_mut()
+    })
+}
+
+/** The old interface to get the same thing as `SSL_get_ciphers()`. */
+/// `const char *SSL_get_cipher_list(const SSL *s, int n)` — `ssl/ssl_lib.c:3321-3335`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get_cipher_list(s: *const Ssl, n: c_int) -> *const c_char {
+    guard_ffi(ptr::null(), || {
+        if s.is_null() {
+            return ptr::null();
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        let sk = unsafe { SSL_get_ciphers(s) };
+        // SAFETY: `sk` is NULL or a live stack from `SSL_get_ciphers`.
+        let num = if sk.is_null() {
+            0
+        } else {
+            // SAFETY: `sk` is non-NULL, so it is a live stack from `SSL_get_ciphers`.
+            unsafe { crate::runtime::stack::OPENSSL_sk_num(sk) }
+        };
+        if num <= n {
+            return ptr::null();
+        }
+        // SAFETY: `n` is in range for the stack.
+        let c = unsafe {
+            crate::runtime::stack::OPENSSL_sk_value(sk, n)
+                as *const crate::ssl::ssl_ciph_table::SslCipher
+        };
+        if c.is_null() {
+            return ptr::null();
+        }
+        // SAFETY: `c` is a process-lifetime table row.
+        unsafe { (*c).name.as_ptr().cast::<c_char>() }
+    })
+}
+
+/// `STACK_OF(SSL_CIPHER) *SSL_CTX_get_ciphers(const SSL_CTX *ctx)` — `ssl/ssl_lib.c:3339-3344`.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_get_ciphers(ctx: *const SslCtx) -> *mut OpenSslStack {
+    guard_ffi(ptr::null_mut(), || {
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `ctx` is live per the caller's contract.
+        unsafe { (*ctx).cipher_list }
+    })
+}
+
+/** specify the ciphers to be used by default by the SSL_CTX */
+/// `int SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str)` — `ssl/ssl_lib.c:3367-3388`.
+///
+/// # Safety
+/// `ctx` must be NULL or live; `str` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_set_cipher_list(ctx: *mut SslCtx, str_: *const c_char) -> c_int {
+    guard_ffi(0, || {
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is live per the caller's contract.
+        let (method, cert) = unsafe { ((*ctx).method, (*ctx).cert) };
+        if method.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` and its method/cert are live; the stack slots belong to `ctx`.
+        let sk = unsafe {
+            crate::ssl::ssl_ciph::ssl_create_cipher_list(
+                ctx,
+                (*ctx).tls13_ciphersuites,
+                &mut (*ctx).cipher_list,
+                &mut (*ctx).cipher_list_by_id,
+                str_,
+                cert,
+            )
+        };
+        if sk.is_null() {
+            return 0;
+        }
+        // `ctx->method->num_ciphers()` is `ssl3_num_ciphers()` (167) for every method here.
+        // SAFETY: `sk` is a live stack.
+        if unsafe { crate::ssl::ssl_ciph::cipher_list_tls12_num(sk) } == 0 {
+            // SSL_R_NO_CIPHER_MATCH
+            return 0;
+        }
+        1
+    })
+}
+
+/** specify the ciphers to be used by the SSL */
+/// `int SSL_set_cipher_list(SSL *s, const char *str)` — `ssl/ssl_lib.c:3391-3412`.
+///
+/// # Safety
+/// `s` must be NULL or live; `str` NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_cipher_list(s: *mut Ssl, str_: *const c_char) -> c_int {
+    guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        let (ctx, cert) = unsafe { ((*s).ctx, (*s).cert) };
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` and `cert` are live; the stack slots belong to `s`.
+        let sk = unsafe {
+            crate::ssl::ssl_ciph::ssl_create_cipher_list(
+                ctx,
+                (*s).tls13_ciphersuites,
+                &mut (*s).cipher_list,
+                &mut (*s).cipher_list_by_id,
+                str_,
+                cert,
+            )
+        };
+        if sk.is_null() {
+            return 0;
+        }
+        // SAFETY: `sk` is a live stack.
+        if unsafe { crate::ssl::ssl_ciph::cipher_list_tls12_num(sk) } == 0 {
+            return 0;
+        }
+        1
     })
 }
