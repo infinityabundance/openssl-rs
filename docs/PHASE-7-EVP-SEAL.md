@@ -352,7 +352,7 @@ against a generated artefact rather than asserted.
 | the stratum's own structure is reconciled against its ledger | `forensics/atlas/ownership-audit.json`: `problems` 0, `implemented_by_two_strata` 0 |
 | the courts are re-derived on every push, not trusted from a committed file | the `courts` job in `.github/workflows/ci.yml` runs `court/pipeline.sh` |
 | a commit may not undo an earlier commit's evidence | `forensics/tools/regression_guard.py` against the branch's previous head and against `origin/main` |
-| the FRF receipts and the compiled claim | §8: nineteen Phase-7 receipts and the `sensitivity-backed` claim `a52127d3a2628c152fbe8484a734b929ef61df8245c37757116dc898a18f19b3`, read from `.frf/` |
+| the FRF receipts and the compiled claim | §8: nineteen Phase-7 receipts and the `sensitivity-backed` claim `4a20943822a3663b5e7274d65756881d13e9a54884121e5fc880a86211290d5b`, read from `.frf/` |
 | the Gemel checkpoint | §8: the change and checkpoint the store answered |
 
 ## 8. FRF and Gemel
@@ -410,21 +410,21 @@ receipt-run-openssl-rs-rt-evp-pkey-ops-eaa7ce42cdf2d17b15cd650107f4b8f5ba457fc15
 policy `run_courts.sh` uses for the Phase 3–6 runtime receipts:
 
 ```
-a52127d3a2628c152fbe8484a734b929ef61df8245c37757116dc898a18f19b3
+4a20943822a3663b5e7274d65756881d13e9a54884121e5fc880a86211290d5b
 ```
 
-It binds authority `openssl-rt-3.6.4-r2` and candidate `openssl-rs 0.0.18 (e4f60d8b)`, asserts
+It binds authority `openssl-rt-3.6.4-r2` and candidate `openssl-rs 0.0.19 (e4f60d8b)`, asserts
 `eq(stdout-first-line), eq(exit-code)` per fixture family, and — like every runtime claim — is
 explicit that it "does not establish byte-identical stderr, full CLI compatibility, or a drop-in
 replacement claim". That narrowness is deliberate and the Phase 3 note above is why it is not the
 whole transcript by accident: the harness's first stdout line is a digest of every following line,
 so the claimed axis covers the transcript, and the claim's own wording does not say so.
 
-**The identity moved with the 0.0.18 release.** The store was recreated from clean at candidate
-0.0.18 — FRF run identities are content-addressed on the declaration, which carries the candidate
+**The identity moved with the 0.0.19 release.** The store was recreated from clean at candidate
+0.0.19 — FRF run identities are content-addressed on the declaration, which carries the candidate
 version, so every claim identity moves with a release — and the id quoted here supersedes the
-previous generation's `96750dc6…`. The `docs_consistency.py` exemption that once protected this
-section is retired with it: the seal now records the current claim, not the `0.0.10` one.
+previous generation's `a52127d3…`, the 0.0.18 claim. The `docs_consistency.py` exemption that once
+protected this section is retired with it: the seal now records the current claim, not the `0.0.10` one.
 
 **The sensitivity evidence.** D13 requires a court whose arguments reference the fixture to be
 challengeable, and FRF's `court challenge` runs it against a mutant candidate that alters exactly
