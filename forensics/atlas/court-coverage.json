@@ -1902,6 +1902,7 @@
               "RT-CMP",
               "RT-CMS",
               "RT-CONF",
+              "RT-DTLS",
               "RT-ESS",
               "RT-PKCS12",
               "RT-PKCS7",
@@ -2025,6 +2026,7 @@
               "RT-ASN1-TEMPLATE",
               "RT-CMS",
               "RT-CONF",
+              "RT-DTLS",
               "RT-PKCS12",
               "RT-PKCS7",
               "RT-SSL-CIPH",
@@ -2525,6 +2527,7 @@
               "RT-PKCS7",
               "RT-PUBKEY",
               "RT-RAND-USERS",
+              "RT-SSL-BIO",
               "RT-TS",
               "RT-X509",
               "RT-X509-ACERT",
@@ -2780,6 +2783,7 @@
               "RT-PUBKEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
+              "RT-SSL-BIO",
               "RT-STORE",
               "RT-TS",
               "RT-TXTDB",
@@ -2799,7 +2803,8 @@
               "RT-BIO-ASN1",
               "RT-CMS",
               "RT-EVP-BIO",
-              "RT-PKCS7"
+              "RT-PKCS7",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_free_all"
           },
@@ -2836,7 +2841,8 @@
             "courts": [
               "RT-BIO",
               "RT-BIO-ASN1",
-              "RT-BIO-CORE"
+              "RT-BIO-CORE",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_get_data"
           },
@@ -2864,7 +2870,8 @@
               "RT-BIO-FILE",
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
-              "RT-RAND-USERS"
+              "RT-RAND-USERS",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_get_init"
           },
@@ -2914,7 +2921,8 @@
             "basis": "called",
             "courts": [
               "RT-BIO",
-              "RT-BIO-FILE"
+              "RT-BIO-FILE",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_get_shutdown"
           },
@@ -3189,7 +3197,8 @@
               "RT-BIO-DGRAM-PAIR",
               "RT-BIO-FILE",
               "RT-BIO-FILTER",
-              "RT-BIO-PAIR"
+              "RT-BIO-PAIR",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_method_name"
           },
@@ -3206,7 +3215,8 @@
               "RT-BIO-FILE",
               "RT-BIO-FILTER",
               "RT-BIO-PAIR",
-              "RT-EVP-BIO"
+              "RT-EVP-BIO",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_method_type"
           },
@@ -3236,6 +3246,7 @@
               "RT-CMS-REMAINDER",
               "RT-CONF",
               "RT-DH",
+              "RT-DTLS",
               "RT-EC",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
@@ -3252,6 +3263,7 @@
               "RT-PUBKEY",
               "RT-RAND-USERS",
               "RT-RUNTIME-EXT",
+              "RT-SSL-BIO",
               "RT-SSL-OBJECT",
               "RT-STORE",
               "RT-TS",
@@ -3367,7 +3379,8 @@
             "basis": "called",
             "courts": [
               "RT-ASN1-MIME",
-              "RT-BIO"
+              "RT-BIO",
+              "RT-SSL-BIO"
             ],
             "symbol": "BIO_next"
           },
@@ -3597,6 +3610,7 @@
               "RT-CMS-REMAINDER",
               "RT-CONF",
               "RT-DH",
+              "RT-DTLS",
               "RT-EC",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
@@ -3612,6 +3626,7 @@
               "RT-PKCS7",
               "RT-PUBKEY",
               "RT-RUNTIME-EXT",
+              "RT-SSL-BIO",
               "RT-SSL-OBJECT",
               "RT-STORE",
               "RT-TS",
@@ -3878,6 +3893,7 @@
               "RT-BIO-PAIR",
               "RT-CMP",
               "RT-CMS",
+              "RT-DTLS",
               "RT-ERR-BIO",
               "RT-EVP-BIO",
               "RT-EVP-PEM",
@@ -44724,15 +44740,63 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 378,
-          "directly_courted_called": 283,
+          "directly_courted": 397,
+          "directly_courted_called": 302,
           "directly_courted_referenced": 95,
-          "implemented": 378,
+          "implemented": 397,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
         },
         "directly_courted": [
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_f_ssl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_new_buffer_ssl_connect"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_new_ssl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_new_ssl_connect"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_ssl_copy_session_id"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-BIO"
+            ],
+            "symbol": "BIO_ssl_shutdown"
+          },
           {
             "basis": "called",
             "courts": [
@@ -44744,7 +44808,17 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "DTLS_get_data_mtu"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
               "RT-PHASE14-REF",
+              "RT-SSL-INIT",
               "RT-SSL-METHODS"
             ],
             "symbol": "DTLS_method"
@@ -44756,6 +44830,14 @@
               "RT-SSL-METHODS"
             ],
             "symbol": "DTLS_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "DTLS_set_timer_cb"
           },
           {
             "basis": "called",
@@ -44792,6 +44874,14 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "DTLSv1_listen"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PHASE14-REF",
               "RT-SSL-METHODS"
             ],
@@ -44809,9 +44899,25 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "ERR_load_SSL_strings"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-CIPH"
             ],
             "symbol": "OPENSSL_cipher_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "OPENSSL_init_ssl"
           },
           {
             "basis": "called",
@@ -45146,9 +45252,12 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
               "RT-PHASE14-REF",
               "RT-RECORD",
+              "RT-SSL-BIO",
               "RT-SSL-CIPH",
+              "RT-SSL-INIT",
               "RT-SSL-METHODS",
               "RT-SSL-OBJECT",
               "RT-STATEM"
@@ -45406,9 +45515,12 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
               "RT-PHASE14-REF",
               "RT-RECORD",
+              "RT-SSL-BIO",
               "RT-SSL-CIPH",
+              "RT-SSL-INIT",
               "RT-SSL-METHODS",
               "RT-SSL-OBJECT",
               "RT-STATEM"
@@ -45828,6 +45940,14 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_CTX_set_tlsext_use_srtp"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
@@ -46089,9 +46209,11 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
               "RT-PHASE14-REF",
               "RT-RECORD",
               "RT-SSL-CIPH",
+              "RT-SSL-INIT",
               "RT-SSL-METHODS",
               "RT-SSL-OBJECT",
               "RT-STATEM"
@@ -46283,6 +46405,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-BIO",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_get_certificate"
@@ -46587,6 +46710,14 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_selected_srtp_profile"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
@@ -46620,6 +46751,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-BIO",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_get_shutdown"
@@ -46639,6 +46771,14 @@
               "RT-STATEM"
             ],
             "symbol": "SSL_get_signature_type_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_get_srtp_profiles"
           },
           {
             "basis": "called",
@@ -46819,6 +46959,14 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "SSL_inject_net_dgram"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_is_connection"
@@ -46868,6 +47016,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-BIO",
               "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
@@ -46916,9 +47065,11 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
               "RT-PHASE14-REF",
               "RT-RECORD",
               "RT-SSL-CIPH",
+              "RT-SSL-INIT",
               "RT-SSL-METHODS",
               "RT-SSL-OBJECT",
               "RT-STATEM"
@@ -47145,6 +47296,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
               "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
@@ -47370,6 +47522,30 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "SSL_set_quic_tls_cbs"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "SSL_set_quic_tls_early_data_enabled"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-INIT"
+            ],
+            "symbol": "SSL_set_quic_tls_transport_params"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_set_quiet_shutdown"
@@ -47452,6 +47628,14 @@
               "RT-STATEM"
             ],
             "symbol": "SSL_set_tlsext_max_fragment_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-DTLS",
+              "RT-PHASE14-REF"
+            ],
+            "symbol": "SSL_set_tlsext_use_srtp"
           },
           {
             "basis": "called",
@@ -47607,9 +47791,12 @@
           {
             "basis": "called",
             "courts": [
+              "RT-DTLS",
               "RT-PHASE14-REF",
               "RT-RECORD",
+              "RT-SSL-BIO",
               "RT-SSL-CIPH",
+              "RT-SSL-INIT",
               "RT-SSL-METHODS",
               "RT-SSL-OBJECT",
               "RT-STATEM"
@@ -47700,14 +47887,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 14,
-        "staged_candidate_probes": 6
+        "staged_candidate_probes": 9
       }
     ],
     "totals": {
-      "directly_courted": 6266,
-      "directly_courted_called": 5163,
+      "directly_courted": 6285,
+      "directly_courted_called": 5182,
       "directly_courted_referenced": 1103,
-      "implemented": 6274,
+      "implemented": 6293,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -47718,7 +47905,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "a7534c1c34aa10adb0da3a7c1a29eb7a8a689bc20d51904c5975e65b7dcd764a"
+      "sha256": "6d9be98cf0ca37e865230f92c57c4a68e15e2a992b9847b21e81d6845bbf0d2d"
     },
     {
       "name": "symbol-ownership",
@@ -47843,12 +48030,12 @@
     {
       "name": "phase14-obligations",
       "path": "forensics/phase14-obligations.json",
-      "sha256": "55a9addd2291774ef84bfec3e215c50cff3ea5cf2c44625a3896bc5bc9a7e258"
+      "sha256": "beff75ea07a6f43a09856fbb8432eee14b800b2deca3a06e1c73135e09f03111"
     },
     {
       "name": "phase14-courts",
       "path": "artifacts/phase14/COURTS.json",
-      "sha256": "48be261c4a5d7ffd85a43cdad1f31d65a2a6dd0d90f20b390d101afd281a5242"
+      "sha256": "5718ceaddcf35f19f63794883b79b5d64cf43fae8e2b2f07c87f8182c712098c"
     }
   ],
   "kind": "court-coverage",

@@ -29,11 +29,11 @@
       {
         "artifact": "artifacts/phase2/shell/libssl.shell.rs",
         "authority_exports": 603,
-        "implemented_excluded": 378,
+        "implemented_excluded": 397,
         "role": "scaffolded-symbols",
         "runtime": "no_std",
-        "scaffolded": 225,
-        "sha256": "47ed61b96176fe03e73847b022b78a42c1107273038ef43b13c0e4cc8f11862b"
+        "scaffolded": 206,
+        "sha256": "ae5d4b98ee990057a3a37d2a95b16dc5a9a60b39f84e0468d8e29474dc282494"
       },
       {
         "artifact": "artifacts/phase2/pkgconfig/libssl.pc",
@@ -76,7 +76,7 @@
     "authority_version": "3.6.4",
     "implemented_excluded": {
       "libcrypto": 5896,
-      "libssl": 378
+      "libssl": 397
     },
     "scaffold_policy": "every generated symbol definition is SCAFFOLDED; it cannot count as parity, and it aborts rather than returning a plausible value (docs/CUSTODIAN_CONTRACT.md §5)",
     "scaffold_set_derivation": "the scaffold set is the authority's measured DSO exports minus the symbols the built crate archive defines (forensics/atlas/implemented-surface.json, derived by forensics/tools/implemented_surface.py). No list is maintained here.",
@@ -85,7 +85,7 @@
       "libssl": "libssl.so.3"
     }
   },
-  "body_hash": "0cb87a3dca69b820947117f9ad9fed84f524f7b19cb2efb7ee1896e27fd6e157",
+  "body_hash": "4130e0f38ab5900b65dd71a41b6afb95d4a108a75c114903d39c7fa7fbf2b82f",
   "generator": "forensics/tools/phase2_shell.py",
   "inputs": [],
   "kind": "phase2-shell",

@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 600,
       "deferred_to_later_phase": 0,
-      "implemented": 378,
-      "open_in_this_stratum": 222,
+      "implemented": 397,
+      "open_in_this_stratum": 203,
       "owned": 600,
       "received_by_handoff": 0
     },
@@ -15,16 +15,27 @@
     "handoffs_discharged": {},
     "handoffs_discharged_with_reasons": {},
     "implemented": [
+      "BIO_f_ssl",
+      "BIO_new_buffer_ssl_connect",
+      "BIO_new_ssl",
+      "BIO_new_ssl_connect",
+      "BIO_ssl_copy_session_id",
+      "BIO_ssl_shutdown",
       "DTLS_client_method",
+      "DTLS_get_data_mtu",
       "DTLS_method",
       "DTLS_server_method",
+      "DTLS_set_timer_cb",
       "DTLSv1_2_client_method",
       "DTLSv1_2_method",
       "DTLSv1_2_server_method",
       "DTLSv1_client_method",
+      "DTLSv1_listen",
       "DTLSv1_method",
       "DTLSv1_server_method",
+      "ERR_load_SSL_strings",
       "OPENSSL_cipher_name",
+      "OPENSSL_init_ssl",
       "OSSL_default_cipher_list",
       "OSSL_default_ciphersuites",
       "SSL_CIPHER_description",
@@ -155,6 +166,7 @@
       "SSL_CTX_set_session_ticket_cb",
       "SSL_CTX_set_tlsext_max_fragment_length",
       "SSL_CTX_set_tlsext_ticket_key_evp_cb",
+      "SSL_CTX_set_tlsext_use_srtp",
       "SSL_CTX_set_trust",
       "SSL_CTX_set_verify",
       "SSL_CTX_set_verify_depth",
@@ -251,6 +263,7 @@
       "SSL_get_rpoll_descriptor",
       "SSL_get_security_callback",
       "SSL_get_security_level",
+      "SSL_get_selected_srtp_profile",
       "SSL_get_server_random",
       "SSL_get_servername",
       "SSL_get_servername_type",
@@ -258,6 +271,7 @@
       "SSL_get_shutdown",
       "SSL_get_sigalgs",
       "SSL_get_signature_type_nid",
+      "SSL_get_srtp_profiles",
       "SSL_get_ssl_method",
       "SSL_get_state",
       "SSL_get_stream_id",
@@ -280,6 +294,7 @@
       "SSL_has_pending",
       "SSL_in_before",
       "SSL_in_init",
+      "SSL_inject_net_dgram",
       "SSL_is_connection",
       "SSL_is_domain",
       "SSL_is_dtls",
@@ -351,6 +366,9 @@
       "SSL_set_psk_server_callback",
       "SSL_set_psk_use_session_callback",
       "SSL_set_purpose",
+      "SSL_set_quic_tls_cbs",
+      "SSL_set_quic_tls_early_data_enabled",
+      "SSL_set_quic_tls_transport_params",
       "SSL_set_quiet_shutdown",
       "SSL_set_read_ahead",
       "SSL_set_record_padding_callback",
@@ -363,6 +381,7 @@
       "SSL_set_shutdown",
       "SSL_set_ssl_method",
       "SSL_set_tlsext_max_fragment_length",
+      "SSL_set_tlsext_use_srtp",
       "SSL_set_trust",
       "SSL_set_value_uint",
       "SSL_set_verify",
@@ -398,72 +417,6 @@
     "module_overrides": [],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Phase 14's working set is exactly its atlas-owned universe -- 600 `libssl` exports over `ssl.h` (582), `tls1.h` (13), `srtp.h` (4) and `sslerr_legacy.h` (1) -- and no earlier stratum defers a symbol to it, so `received_by_handoff` is 0. **Unlike every earlier activation, not one symbol is implemented at activation**: libssl is the candidate distribution's second namespace, its exports are present only as the Phase 2 ABI scaffold, and `forensics/atlas/implemented-surface.json` records `implemented: 0` for libssl, so the ledger's `implemented` count is 0 and its `open` count is the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum ships no provider registration row: libssl is not a provider and this stratum activates none. Nothing here is a parity claim: a symbol in `implemented` would be at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-14-SUBPHASES.md section 4 decides when the stratum may be called complete.",
     "open": [
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/bio_ssl.rs",
-        "received_from_phase": null,
-        "symbol": "BIO_f_ssl"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/bio_ssl.rs",
-        "received_from_phase": null,
-        "symbol": "BIO_new_buffer_ssl_connect"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/bio_ssl.rs",
-        "received_from_phase": null,
-        "symbol": "BIO_new_ssl"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/bio_ssl.rs",
-        "received_from_phase": null,
-        "symbol": "BIO_new_ssl_connect"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/bio_ssl.rs",
-        "received_from_phase": null,
-        "symbol": "BIO_ssl_copy_session_id"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/bio_ssl.rs",
-        "received_from_phase": null,
-        "symbol": "BIO_ssl_shutdown"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/d1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "DTLS_get_data_mtu"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/d1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "DTLS_set_timer_cb"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/d1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "DTLSv1_listen"
-      },
-      {
-        "declaring_header": "sslerr_legacy.h",
-        "module": "src/ssl/ssl_err_legacy.rs",
-        "received_from_phase": null,
-        "symbol": "ERR_load_SSL_strings"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_init.rs",
-        "received_from_phase": null,
-        "symbol": "OPENSSL_init_ssl"
-      },
       {
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_sess.rs",
@@ -799,12 +752,6 @@
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_set_timeout"
-      },
-      {
-        "declaring_header": "srtp.h",
-        "module": "src/ssl/d1_srtp.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_tlsext_use_srtp"
       },
       {
         "declaring_header": "ssl.h",
@@ -1383,12 +1330,6 @@
         "symbol": "SSL_get_pending_cipher"
       },
       {
-        "declaring_header": "srtp.h",
-        "module": "src/ssl/d1_srtp.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_selected_srtp_profile"
-      },
-      {
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
@@ -1425,22 +1366,10 @@
         "symbol": "SSL_get_srp_username"
       },
       {
-        "declaring_header": "srtp.h",
-        "module": "src/ssl/d1_srtp.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_srtp_profiles"
-      },
-      {
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_has_matching_session_id"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/quic/quic_impl.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_inject_net_dgram"
       },
       {
         "declaring_header": "ssl.h",
@@ -1540,24 +1469,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/quic/quic_tls_api.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_quic_tls_cbs"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/quic/quic_tls_api.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_quic_tls_early_data_enabled"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/quic/quic_tls_api.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_quic_tls_transport_params"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_set_session"
@@ -1591,12 +1502,6 @@
         "module": "src/ssl/tls_srp.rs",
         "received_from_phase": null,
         "symbol": "SSL_set_srp_server_param_pw"
-      },
-      {
-        "declaring_header": "srtp.h",
-        "module": "src/ssl/d1_srtp.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_tlsext_use_srtp"
       },
       {
         "declaring_header": "ssl.h",
@@ -1801,7 +1706,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "7e152883ce9ba427b4eacac89a24465aa89dad1038c8a54b2784bbeea5341b5e"
+      "sha256": "f17710b44a816db9fcb6fbeb5911099e55f146b1624c75f38ab25a78bb6d4ad6"
     }
   ],
   "kind": "phase14-obligations",
