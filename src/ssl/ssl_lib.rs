@@ -117,11 +117,18 @@ unsafe extern "C" fn ssl_security_default_callback(
 pub const TLS_ANY_VERSION: c_int = 0x10000;
 /// `TLS1_3_VERSION` — `include/openssl/tls1.h`.
 pub const TLS1_3_VERSION: c_int = 0x0304;
-/// `TLS_MAX_VERSION_INTERNAL` — `ssl_local.h`: `tls1_clear` installs it for an any-version method.
+/// `TLS_MAX_VERSION_INTERNAL` — `ssl_local.h:50`: `tls1_clear` installs it for an any-version method.
 const TLS_MAX_VERSION_INTERNAL: c_int = TLS1_3_VERSION;
 /// `DTLS1_VERSION_MAJOR` — `include/openssl/dtls1.h`.
 #[allow(dead_code)] // retained for the version-family readers a later slice adds
 const DTLS1_VERSION_MAJOR: c_int = 0xFE;
+/// `DTLS1_2_VERSION` — `include/openssl/prov_ssl.h:29`; the max a DTLS method negotiates.
+const DTLS1_2_VERSION: c_int = 0xFEFD;
+/// `DTLS_ANY_VERSION` — `include/openssl/dtls1.h:35`; the version `DTLS_method` carries.
+pub const DTLS_ANY_VERSION: c_int = 0x1_FFFF;
+/// `DTLS_MAX_VERSION_INTERNAL` — `ssl_local.h:51`: `dtls1_clear` installs it for an
+/// any-version method (`d1_lib.c:217`).
+const DTLS_MAX_VERSION_INTERNAL: c_int = DTLS1_2_VERSION;
 
 /// `SSL_MAX_SID_CTX_LENGTH` — `ssl.h:64`.
 const SSL_MAX_SID_CTX_LENGTH: usize = 32;
@@ -456,6 +463,9 @@ pub struct SslCtx {
     pub client_hello_cb_arg: *mut c_void,
     /// `SSL_CTX_keylog_cb_func keylog_callback`.
     pub keylog_callback: Option<KeylogCb>,
+    /// `int (*ext.ticket_key_evp_cb)(...)` — the callback `SSL_CTX_set_tlsext_ticket_key_evp_cb`
+    /// installs (`s3_lib.c:4711`).
+    pub ticket_key_evp_cb: Option<TicketKeyEvpCb>,
     /// `SSL_async_callback_fn async_cb`.
     #[allow(dead_code)] // stored for the setter's contract; read by the async path (14.5)
     pub async_cb: Option<AsyncCb>,
@@ -765,6 +775,11 @@ pub type MsgCb =
 pub type ClientHelloCb = unsafe extern "C" fn(*mut Ssl, *mut c_int, *mut c_void) -> c_int;
 /// `int (*)(SSL *, void *)` — the certificate callback.
 pub type CertCb = unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int;
+/// `int (*)(SSL *, unsigned char *, unsigned char *, EVP_CIPHER_CTX *, EVP_MAC_CTX *, int)` — the
+/// session-ticket key callback `SSL_CTX_set_tlsext_ticket_key_evp_cb` installs (`tls1.h:372`).
+/// The two EVP context parameters are opaque here (14.7's crypto path is the only caller).
+pub type TicketKeyEvpCb =
+    unsafe extern "C" fn(*mut Ssl, *mut u8, *mut u8, *mut c_void, *mut c_void, c_int) -> c_int;
 /// `SSL_CTX_keylog_cb_func` — `ssl.h:960`.
 pub type KeylogCb = unsafe extern "C" fn(*const Ssl, *const c_char);
 /// `SSL_async_callback_fn` — `ssl.h:348`.
@@ -1113,14 +1128,16 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             (*s).method = method;
             (*s).defltmeth = method;
             (*s).type_ = SSL_TYPE_SSL_CONNECTION;
-            // `tls1_clear` (`t1_lib.c:137-140`) installs `TLS_MAX_VERSION_INTERNAL` for an
-            // any-version method, and `ossl_ssl_connection_reset` (`ssl_lib.c:607-608`) sets the
-            // client version to the method's own version; the fresh connection therefore reports
-            // `SSL_version == TLS1_3_VERSION` and `SSL_client_version == TLS_ANY_VERSION`.
-            (*s).version = if (*method).version == TLS_ANY_VERSION {
-                TLS_MAX_VERSION_INTERNAL
-            } else {
-                (*method).version
+            // `tls1_clear` (`t1_lib.c:136-139`) installs `TLS_MAX_VERSION_INTERNAL` for a TLS
+            // any-version method and `dtls1_clear` (`d1_lib.c:217-218`) installs
+            // `DTLS_MAX_VERSION_INTERNAL` for a DTLS one; `ossl_ssl_connection_reset`
+            // (`ssl_lib.c:607-608`) sets the client version to the method's own version. The fresh
+            // connection therefore reports the max of the method's family while `SSL_client_version`
+            // reports the method's raw version (`TLS_ANY_VERSION`, `DTLS_ANY_VERSION` or a pinned one).
+            (*s).version = match (*method).version {
+                TLS_ANY_VERSION => TLS_MAX_VERSION_INTERNAL,
+                DTLS_ANY_VERSION => DTLS_MAX_VERSION_INTERNAL,
+                v => v,
             };
             (*s).client_version = (*method).version;
             (*s).server = c_int::from((*method).default_server);

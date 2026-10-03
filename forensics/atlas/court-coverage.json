@@ -44721,15 +44721,87 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 291,
-          "directly_courted_called": 203,
+          "directly_courted": 314,
+          "directly_courted_called": 226,
           "directly_courted_referenced": 88,
-          "implemented": 291,
+          "implemented": 314,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
         },
         "directly_courted": [
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLS_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLS_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLS_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_2_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_2_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_2_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "DTLSv1_server_method"
+          },
           {
             "basis": "referenced",
             "courts": [
@@ -44765,6 +44837,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_CTX_ctrl"
@@ -44781,6 +44854,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_CTX_free"
@@ -44955,6 +45029,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_CTX_get_ssl_method"
@@ -45017,6 +45092,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_CTX_new"
@@ -45395,6 +45471,14 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "SSL_CTX_set_tlsext_ticket_key_evp_cb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_CTX_set_trust"
@@ -45590,6 +45674,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_client_version"
@@ -45606,6 +45691,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_ctrl"
@@ -45630,6 +45716,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_free"
@@ -45673,6 +45760,14 @@
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_get0_domain"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "SSL_get0_group_name"
           },
           {
             "basis": "called",
@@ -45849,6 +45944,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_get_default_timeout"
@@ -46211,6 +46307,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_get_version"
@@ -46236,6 +46333,14 @@
               "RT-PHASE14-REF"
             ],
             "symbol": "SSL_get_wpoll_descriptor"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "SSL_group_to_name"
           },
           {
             "basis": "called",
@@ -46273,6 +46378,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_is_dtls"
@@ -46297,6 +46403,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_is_server"
@@ -46345,6 +46452,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_new"
@@ -46919,6 +47027,7 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "SSL_version"
@@ -46966,22 +47075,111 @@
             "basis": "called",
             "courts": [
               "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLS_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS",
               "RT-SSL-OBJECT"
             ],
             "symbol": "TLS_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLS_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_1_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_1_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_1_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_2_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_2_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_2_server_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_client_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE14-REF",
+              "RT-SSL-METHODS"
+            ],
+            "symbol": "TLSv1_server_method"
           }
         ],
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 14,
-        "staged_candidate_probes": 2
+        "staged_candidate_probes": 3
       }
     ],
     "totals": {
-      "directly_courted": 6179,
-      "directly_courted_called": 5083,
+      "directly_courted": 6202,
+      "directly_courted_called": 5106,
       "directly_courted_referenced": 1096,
-      "implemented": 6187,
+      "implemented": 6210,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -46992,7 +47190,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "df7221ab7a51bc2de5e914166133f8dfc8cd67bd9fcaa8fa2cfb514bae2c19ea"
+      "sha256": "4681f683b98f884334da1246c9bcdbcdeb501e4992808a86b1de8e6b65955ccc"
     },
     {
       "name": "symbol-ownership",
@@ -47117,12 +47315,12 @@
     {
       "name": "phase14-obligations",
       "path": "forensics/phase14-obligations.json",
-      "sha256": "4087fab3d72d6111429445a95f625bfc7489609e6ca9b4f6fc9e8b5952ec8168"
+      "sha256": "4dfa17c0612115412ce25fad83cf435ef8aca090507689e3e6604eab97a73c3e"
     },
     {
       "name": "phase14-courts",
       "path": "artifacts/phase14/COURTS.json",
-      "sha256": "52003eb97dd4c32628d60bf19db69323d9e0669b809b5c970c983b9e6d5a3903"
+      "sha256": "c0c62d4c89c1e1f0cc570047b18cacce05fd62b4cc41c8dc4990e9876c7128cb"
     }
   ],
   "kind": "court-coverage",

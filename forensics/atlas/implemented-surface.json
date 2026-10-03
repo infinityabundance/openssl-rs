@@ -508,7 +508,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 16719,
+      "compiler_emitted_count": 16556,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -6419,8 +6419,17 @@
       },
       "libssl": {
         "authority_exports": 603,
-        "implemented": 291,
+        "implemented": 314,
         "implemented_symbols": [
+          "DTLS_client_method",
+          "DTLS_method",
+          "DTLS_server_method",
+          "DTLSv1_2_client_method",
+          "DTLSv1_2_method",
+          "DTLSv1_2_server_method",
+          "DTLSv1_client_method",
+          "DTLSv1_method",
+          "DTLSv1_server_method",
           "SSL_CTX_callback_ctrl",
           "SSL_CTX_check_private_key",
           "SSL_CTX_clear_options",
@@ -6508,6 +6517,7 @@
           "SSL_CTX_set_security_level",
           "SSL_CTX_set_session_id_context",
           "SSL_CTX_set_session_ticket_cb",
+          "SSL_CTX_set_tlsext_ticket_key_evp_cb",
           "SSL_CTX_set_trust",
           "SSL_CTX_set_verify",
           "SSL_CTX_set_verify_depth",
@@ -6544,6 +6554,7 @@
           "SSL_get0_client_cert_type",
           "SSL_get0_connection",
           "SSL_get0_domain",
+          "SSL_get0_group_name",
           "SSL_get0_listener",
           "SSL_get0_next_proto_negotiated",
           "SSL_get0_param",
@@ -6616,6 +6627,7 @@
           "SSL_get_wbio",
           "SSL_get_wfd",
           "SSL_get_wpoll_descriptor",
+          "SSL_group_to_name",
           "SSL_handle_events",
           "SSL_has_pending",
           "SSL_is_connection",
@@ -6711,25 +6723,36 @@
           "SSL_write",
           "SSL_write_ex",
           "SSL_write_ex2",
-          "TLS_method"
+          "TLS_client_method",
+          "TLS_method",
+          "TLS_server_method",
+          "TLSv1_1_client_method",
+          "TLSv1_1_method",
+          "TLSv1_1_server_method",
+          "TLSv1_2_client_method",
+          "TLSv1_2_method",
+          "TLSv1_2_server_method",
+          "TLSv1_client_method",
+          "TLSv1_method",
+          "TLSv1_server_method"
         ],
-        "scaffolded": 312
+        "scaffolded": 289
       }
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 6187,
-      "scaffolded": 312
+      "implemented": 6210,
+      "scaffolded": 289
     }
   },
-  "body_hash": "96c4a0bd87fdef055b27f98f2fabd15a32be9590db0368960e63a1fdf5cae9e1",
+  "body_hash": "146751cf5e6584e5a3a6baed06ea75aeb4fb4c17413d0070b013dec892dc5983",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "fc390613d9f935d50414124038bd67477ff0e8c7d8f6e82f845099e0b0cdd08e"
+      "sha256": "15a93014eee25bad1b315a3a329971be30ddf592ddf4ad8b1f28b9463213a073"
     },
     {
       "name": "authority-exports",

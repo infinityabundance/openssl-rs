@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-PHASE14-REF` is the activation **reference basis**: its probe takes the address of each of the stratum's 600 atlas-owned `ssl.h`/`tls1.h`/`srtp.h`/`sslerr_legacy.h` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-SSL-OBJECT` (14.1) is the stratum's first **behavioural** court: `courts/phase14/rt_ssl_object_probe.c` drives the `SSL_CTX`/`SSL` object model -- allocation, refcount, ex-data, the accessor and control surface, the callback setters, `SSL_set_bio` over memory BIOs and the NULL/uninitialised arms -- against a fixed `TLS_method()`, and the two transcripts are compared line by line. It is not a parity claim about a completed handshake, which no arm of it drives. Every other behavioural court the plan names is named in `pending_courts` with the subphase that brings it -- `RT-SSL-METHODS`, `RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural courts compare.",
+    "claim": "`RT-PHASE14-REF` is the activation **reference basis**: its probe takes the address of each of the stratum's 600 atlas-owned `ssl.h`/`tls1.h`/`srtp.h`/`sslerr_legacy.h` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-SSL-OBJECT` (14.1) is the stratum's first **behavioural** court: `courts/phase14/rt_ssl_object_probe.c` drives the `SSL_CTX`/`SSL` object model -- allocation, refcount, ex-data, the accessor and control surface, the callback setters, `SSL_set_bio` over memory BIOs and the NULL/uninitialised arms -- against a fixed `TLS_method()`, and the two transcripts are compared line by line. `RT-SSL-METHODS` (14.2) is the second: `courts/phase14/rt_ssl_methods_probe.c` drives the 21 `TLS_*`/`DTLS_*`/`TLSv1_*` constructors and the version surface each installs (`SSL_version`, `SSL_client_version`, `SSL_get_version`, `SSL_is_dtls`, `SSL_is_server`, the `min`/`max` protocol getters and the default timeout), `SSL_group_to_name`'s unknown-NID arms, `SSL_get0_group_name`'s NULL-connection arm and the ticket-key callback setter, and the two refusal arms. Neither is a parity claim about a completed handshake, which no arm of either drives. `SSL_get0_group_name` on a live connection and `SSL_group_to_name`'s known-NID arm are recorded in their modules as reduced rather than driven. Every other behavioural court the plan names is named in `pending_courts` with the subphase that brings it -- `RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural courts compare.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -38,6 +38,23 @@
           "candidate": "artifacts/phase14/probes/rt_ssl_object_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 304,
+        "candidate_exit_code": 0,
+        "candidate_observations": 304,
+        "candidate_stderr_tail": [],
+        "court": "RT-SSL-METHODS",
+        "crashed": false,
+        "probe": "courts/phase14/rt_ssl_methods_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_ssl_methods_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_ssl_methods_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
@@ -49,13 +66,12 @@
       "RT-SSL-CIPH": "14.3 (the cipher and configuration surface)",
       "RT-SSL-EXT": "14.9 (the TLS extension and SRP surface)",
       "RT-SSL-INIT": "14.10 (the init, error and QUIC bridge)",
-      "RT-SSL-METHODS": "14.2 (the method and version tables)",
       "RT-STATEM": "14.5 (the handshake state machine)"
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "generator": "forensics/tools/phase14_courts.py",
@@ -74,6 +90,11 @@
       "name": "probe",
       "path": "courts/phase14/rt_ssl_object_probe.c",
       "sha256": "7b80d1bd456cbb9ec9b8bbb1cc81fd22c721bb2a66f44ade09e5ccd49376d423"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_ssl_methods_probe.c",
+      "sha256": "0ce27a777e12dbe66d9ca313193756b324c84189b38594b2a52e8adcd66f5a1b"
     }
   ],
   "kind": "phase14-courts",
