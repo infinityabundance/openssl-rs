@@ -1443,7 +1443,8 @@
             "basis": "called",
             "courts": [
               "RT-CONF-MOD",
-              "RT-EC"
+              "RT-EC",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "OBJ_nid2sn"
           },
@@ -9792,7 +9793,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_CTX_ctrl"
           },
@@ -9810,6 +9812,7 @@
               "RT-CIPHER",
               "RT-CIPHER-MEM",
               "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY",
               "RT-EVP-PBE",
               "RT-EVP-PKEY",
               "RT-PKCS12",
@@ -9959,6 +9962,7 @@
               "RT-CIPHER",
               "RT-CIPHER-MEM",
               "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY",
               "RT-EVP-PBE",
               "RT-EVP-PKEY",
               "RT-PKCS12",
@@ -10006,7 +10010,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_CTX_set_flags"
           },
@@ -10160,7 +10165,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_block_size"
           },
@@ -10168,7 +10174,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_flags"
           },
@@ -10176,7 +10183,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_iv_length"
           },
@@ -10184,7 +10192,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_key_length"
           },
@@ -10199,7 +10208,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_nid"
           },
@@ -10548,7 +10558,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_DecryptFinal_ex"
           },
@@ -10563,7 +10574,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_DecryptInit_ex"
           },
@@ -10579,7 +10591,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_DecryptUpdate"
           },
@@ -10810,7 +10823,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_EncryptFinal_ex"
           },
@@ -10826,6 +10840,7 @@
             "courts": [
               "RT-CIPHER",
               "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY",
               "RT-EVP-PKEY",
               "RT-RAND-USERS"
             ],
@@ -10843,7 +10858,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_EncryptUpdate"
           },
@@ -14809,6 +14825,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EVP-LEGACY",
               "RT-EVP-NAMES",
               "RT-EVP-PEM"
             ],
@@ -41848,10 +41865,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 193,
-          "directly_courted_called": 164,
+          "directly_courted": 235,
+          "directly_courted_called": 206,
           "directly_courted_referenced": 29,
-          "implemented": 193,
+          "implemented": 235,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -42783,6 +42800,300 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cbc_hmac_sha1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cbc_hmac_sha256"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ocb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_wrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_wrap_pad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_xts"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ocb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_wrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_wrap_pad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cbc_hmac_sha1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cbc_hmac_sha256"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ocb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_wrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_wrap_pad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_xts"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-CMP",
               "RT-CRMF",
               "RT-OCSP",
@@ -43363,14 +43674,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 13,
-        "staged_candidate_probes": 6
+        "staged_candidate_probes": 7
       }
     ],
     "totals": {
-      "directly_courted": 5704,
-      "directly_courted_called": 4696,
+      "directly_courted": 5746,
+      "directly_courted_called": 4738,
       "directly_courted_referenced": 1008,
-      "implemented": 5712,
+      "implemented": 5754,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -43381,7 +43692,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5aa040f6645a54d65f9facc4027402217ad1ce2e7936e69a6ccc1412cfb28713"
+      "sha256": "b20decc24183486015f43d65db576099fb884c506242d1c036537a122d7dea23"
     },
     {
       "name": "symbol-ownership",
@@ -43496,12 +43807,12 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "716439072afe0e99e626b50976afc7c226715ad6f38865d9cb6f4c81e60f2d0d"
+      "sha256": "f9345bcb6e6b1fa2aa8d5571e9f58e2a9b4a12e394c9a9cb1725f374be9dafa7"
     },
     {
       "name": "phase13-courts",
       "path": "artifacts/phase13/COURTS.json",
-      "sha256": "9d5c57a5328b297f4bfd40a88d2b155d61a60e4e3164ee13498f6e2b3f89fa35"
+      "sha256": "15170fde8caa9d3150343b6ad3b133bc0aa250dd082af023235ae04dd2c1b10f"
     }
   ],
   "kind": "court-coverage",

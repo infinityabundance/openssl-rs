@@ -101,14 +101,29 @@ dereferences it (`UI_set_ex_data`, `UI_get_ex_data`, `UI_get_method`, `UI_set_me
 `UI_create_method(NULL)`, and never reads the error queue, so the `UI_R_*` raises on the refusals
 cannot leak into a comparison. See docs/PHASE-13-SUBPHASES.md section 3.4.
 
+`RT-EVP-LEGACY`, and what it compares
+-------------------------------------
+13.6a's court, `courts/phase13/rt_evp_legacy_probe.c`, drives the forty-two deprecated
+`EVP_CIPHER` statics the slice lands -- the thirty-eight `EVP_aes_*` accessors of
+`crypto/evp/e_aes.c` and the four `EVP_aes_*_cbc_hmac_sha*` of `e_aes_cbc_hmac_sha1.c` and
+`e_aes_cbc_hmac_sha256.c`. For each it prints the accessor's answer, the object's `nid`-derived
+short name, its block size, key length, IV length and `flags`, `EVP_get_cipherbyname(name)`'s
+non-NULL answer, and a fixed-key/fixed-IV encrypt-then-decrypt round trip as the ciphertext bytes
+and a round-trip flag. The statics are handed to `EVP_EncryptInit_ex`, which replaces a legacy
+method with its provider counterpart by short name, so the bytes are the Phase-8 provider row's on
+both sides -- the observable `docs/PHASE-13-SUBPHASES.md` section 3.6 names. AEAD (GCM/CCM/OCB),
+wrap/wrap-pad and the stitched CBC-HMAC statics are driven with their own sequences. It does
+**not** print an address (so the fetched-identity divergence the CPS/CMS/TS and OCSP courts name
+cannot leak into a comparison), never reads the error queue, and never drives the CBC-HMAC statics'
+TLS-record AAD arms, which `RT-CIPHER`'s `rt_cbchmac_records` arm already covers.
+
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" -- the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` are the
-remaining subphases' own courts: 13.6's legacy EVP method statics, 13.7's PEM readers and ASYNC
-framework, and 13.8's received TS_CONF and SRP hand-offs.
+later activation established. `RT-LEGACY-REMAINDER` and `RT-HANDOFF` are the remaining subphases'
+own courts: 13.7's PEM readers and ASYNC framework, and 13.8's received TS_CONF and SRP hand-offs.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -162,6 +177,7 @@ COURTS: list[tuple[str, str]] = [
     ("RT-ENGINE-CTRL", "rt_engine_ctrl_probe.c"),
     ("RT-UI", "rt_ui_probe.c"),
     ("RT-TXTDB", "rt_txtdb_probe.c"),
+    ("RT-EVP-LEGACY", "rt_evp_legacy_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -169,7 +185,6 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-13-SUBPHASES.md` section 2's, one per work
 # subphase.
 PENDING_COURTS: dict[str, str] = {
-    "RT-EVP-LEGACY": "13.6 (the legacy EVP method statics)",
     "RT-LEGACY-REMAINDER": "13.7 (the PEM private-key readers and the ASYNC framework)",
     "RT-HANDOFF": "13.8 (the received TS_CONF and SRP hand-offs)",
 }
@@ -374,9 +389,18 @@ def main(argv: list[str]) -> int:
             "`DB_ERROR_*`, `TXT_DB_insert`'s accept and duplicate-key clash (`arg1` and the "
             "identity of `arg_row`), the two wrong-field-count read failures, and "
             "`TXT_DB_free` -- not a negative index or field (the authority indexes out of "
-            "bounds there) and not the error queue. Every other behavioural court the "
-            "plan names is named in `pending_courts` with the subphase that brings it -- "
-            "`RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
+            "bounds there) and not the error queue. `RT-EVP-LEGACY` is 13.6a's behavioural "
+            "court: it **calls** the forty-two deprecated `EVP_CIPHER` statics 13.6a lands -- "
+            "the thirty-eight `EVP_aes_*` accessors and the four `EVP_aes_*_cbc_hmac_sha*` -- "
+            "and compares each object's block size, key length, IV length and `flags`, "
+            "`EVP_get_cipherbyname(name)`'s non-NULL answer, and a fixed-key/fixed-IV "
+            "encrypt-then-decrypt round trip (the ciphertext bytes and a round-trip flag), with "
+            "AEAD (GCM/CCM/OCB), wrap/wrap-pad and the stitched CBC-HMAC statics driven by their "
+            "own sequences -- not an address (so the fetched-identity divergence cannot leak "
+            "into a comparison), not the error queue, and not the CBC-HMAC TLS-record AAD arms, "
+            "which `RT-CIPHER` already covers. The other two behavioural courts the "
+            "plan names are named in `pending_courts` with the subphases that bring them -- "
+            "`RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
             "none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
             "is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md "
             "section 3 records what the behavioural courts compare."

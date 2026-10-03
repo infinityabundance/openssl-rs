@@ -501,7 +501,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 16262,
+      "compiler_emitted_count": 16096,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -509,7 +509,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 5712,
+        "implemented": 5754,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -2893,6 +2893,48 @@
           "EVP_add_alg_module",
           "EVP_add_cipher",
           "EVP_add_digest",
+          "EVP_aes_128_cbc",
+          "EVP_aes_128_cbc_hmac_sha1",
+          "EVP_aes_128_cbc_hmac_sha256",
+          "EVP_aes_128_ccm",
+          "EVP_aes_128_cfb1",
+          "EVP_aes_128_cfb128",
+          "EVP_aes_128_cfb8",
+          "EVP_aes_128_ctr",
+          "EVP_aes_128_ecb",
+          "EVP_aes_128_gcm",
+          "EVP_aes_128_ocb",
+          "EVP_aes_128_ofb",
+          "EVP_aes_128_wrap",
+          "EVP_aes_128_wrap_pad",
+          "EVP_aes_128_xts",
+          "EVP_aes_192_cbc",
+          "EVP_aes_192_ccm",
+          "EVP_aes_192_cfb1",
+          "EVP_aes_192_cfb128",
+          "EVP_aes_192_cfb8",
+          "EVP_aes_192_ctr",
+          "EVP_aes_192_ecb",
+          "EVP_aes_192_gcm",
+          "EVP_aes_192_ocb",
+          "EVP_aes_192_ofb",
+          "EVP_aes_192_wrap",
+          "EVP_aes_192_wrap_pad",
+          "EVP_aes_256_cbc",
+          "EVP_aes_256_cbc_hmac_sha1",
+          "EVP_aes_256_cbc_hmac_sha256",
+          "EVP_aes_256_ccm",
+          "EVP_aes_256_cfb1",
+          "EVP_aes_256_cfb128",
+          "EVP_aes_256_cfb8",
+          "EVP_aes_256_ctr",
+          "EVP_aes_256_ecb",
+          "EVP_aes_256_gcm",
+          "EVP_aes_256_ocb",
+          "EVP_aes_256_ofb",
+          "EVP_aes_256_wrap",
+          "EVP_aes_256_wrap_pad",
+          "EVP_aes_256_xts",
           "EVP_blake2b512",
           "EVP_blake2s256",
           "EVP_default_properties_enable_fips",
@@ -6224,7 +6266,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 184
+        "scaffolded": 142
       },
       "libssl": {
         "authority_exports": 603,
@@ -6235,18 +6277,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 5712,
-      "scaffolded": 787
+      "implemented": 5754,
+      "scaffolded": 745
     }
   },
-  "body_hash": "93ff66093f5599956fe3d14465cc575600b3ac2f5e72a383951a4d1cfb1a5bbd",
+  "body_hash": "8125de028914c3be40ec915a136c1cfbb9424da666cca9e7c62bde90e4a53a7e",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "1d66d15996ee2ceab1fc6896fca69b93e1d85b3a31f3ee060ca33b92bd946938"
+      "sha256": "f34f71ff21f1035673b19fcfab23596d34d24fec690ed03253e4adb8f0c68298"
     },
     {
       "name": "authority-exports",
