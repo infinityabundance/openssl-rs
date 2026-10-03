@@ -501,7 +501,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 16096,
+      "compiler_emitted_count": 16374,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -509,7 +509,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 5754,
+        "implemented": 5802,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -2935,8 +2935,56 @@
           "EVP_aes_256_wrap",
           "EVP_aes_256_wrap_pad",
           "EVP_aes_256_xts",
+          "EVP_aria_128_cbc",
+          "EVP_aria_128_ccm",
+          "EVP_aria_128_cfb1",
+          "EVP_aria_128_cfb128",
+          "EVP_aria_128_cfb8",
+          "EVP_aria_128_ctr",
+          "EVP_aria_128_ecb",
+          "EVP_aria_128_gcm",
+          "EVP_aria_128_ofb",
+          "EVP_aria_192_cbc",
+          "EVP_aria_192_ccm",
+          "EVP_aria_192_cfb1",
+          "EVP_aria_192_cfb128",
+          "EVP_aria_192_cfb8",
+          "EVP_aria_192_ctr",
+          "EVP_aria_192_ecb",
+          "EVP_aria_192_gcm",
+          "EVP_aria_192_ofb",
+          "EVP_aria_256_cbc",
+          "EVP_aria_256_ccm",
+          "EVP_aria_256_cfb1",
+          "EVP_aria_256_cfb128",
+          "EVP_aria_256_cfb8",
+          "EVP_aria_256_ctr",
+          "EVP_aria_256_ecb",
+          "EVP_aria_256_gcm",
+          "EVP_aria_256_ofb",
           "EVP_blake2b512",
           "EVP_blake2s256",
+          "EVP_camellia_128_cbc",
+          "EVP_camellia_128_cfb1",
+          "EVP_camellia_128_cfb128",
+          "EVP_camellia_128_cfb8",
+          "EVP_camellia_128_ctr",
+          "EVP_camellia_128_ecb",
+          "EVP_camellia_128_ofb",
+          "EVP_camellia_192_cbc",
+          "EVP_camellia_192_cfb1",
+          "EVP_camellia_192_cfb128",
+          "EVP_camellia_192_cfb8",
+          "EVP_camellia_192_ctr",
+          "EVP_camellia_192_ecb",
+          "EVP_camellia_192_ofb",
+          "EVP_camellia_256_cbc",
+          "EVP_camellia_256_cfb1",
+          "EVP_camellia_256_cfb128",
+          "EVP_camellia_256_cfb8",
+          "EVP_camellia_256_ctr",
+          "EVP_camellia_256_ecb",
+          "EVP_camellia_256_ofb",
           "EVP_default_properties_enable_fips",
           "EVP_default_properties_is_fips_enabled",
           "EVP_enc_null",
@@ -6266,7 +6314,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 142
+        "scaffolded": 94
       },
       "libssl": {
         "authority_exports": 603,
@@ -6277,18 +6325,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 5754,
-      "scaffolded": 745
+      "implemented": 5802,
+      "scaffolded": 697
     }
   },
-  "body_hash": "8125de028914c3be40ec915a136c1cfbb9424da666cca9e7c62bde90e4a53a7e",
+  "body_hash": "0feefb55168b128eb2cfdd5db8f6af166732247e5dd7c3b2f0f5ddd1a14d8ba6",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "f34f71ff21f1035673b19fcfab23596d34d24fec690ed03253e4adb8f0c68298"
+      "sha256": "f1875798b3646a085f4c0b83dc10fbc356ab4de1fab41d34da0e82c5f7615019"
     },
     {
       "name": "authority-exports",

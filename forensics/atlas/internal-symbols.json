@@ -191,6 +191,8 @@
       "src/evp/e_aes.rs: declared Phase 13, defines exports owned by phase 7",
       "src/evp/e_aes_cbc_hmac_sha1.rs: declared Phase 13, defines exports owned by phase 7",
       "src/evp/e_aes_cbc_hmac_sha256.rs: declared Phase 13, defines exports owned by phase 7",
+      "src/evp/e_aria.rs: declared Phase 13, defines exports owned by phase 7",
+      "src/evp/e_camellia.rs: declared Phase 13, defines exports owned by phase 7",
       "src/evp/evp_lib.rs: declared Phase 11, defines exports owned by phase 7",
       "src/evp/pem_bridge.rs: declared Phase 7, defines exports owned by phase 5",
       "src/pem/pem_oth.rs: declared Phase 9, defines exports owned by phase 5",

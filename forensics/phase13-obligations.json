@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 189,
       "deferred_to_later_phase": 0,
-      "implemented": 235,
-      "open_in_this_stratum": 142,
+      "implemented": 283,
+      "open_in_this_stratum": 94,
       "owned": 377,
       "received_by_handoff": 188
     },
@@ -1878,6 +1878,54 @@
       "EVP_aes_256_wrap",
       "EVP_aes_256_wrap_pad",
       "EVP_aes_256_xts",
+      "EVP_aria_128_cbc",
+      "EVP_aria_128_ccm",
+      "EVP_aria_128_cfb1",
+      "EVP_aria_128_cfb128",
+      "EVP_aria_128_cfb8",
+      "EVP_aria_128_ctr",
+      "EVP_aria_128_ecb",
+      "EVP_aria_128_gcm",
+      "EVP_aria_128_ofb",
+      "EVP_aria_192_cbc",
+      "EVP_aria_192_ccm",
+      "EVP_aria_192_cfb1",
+      "EVP_aria_192_cfb128",
+      "EVP_aria_192_cfb8",
+      "EVP_aria_192_ctr",
+      "EVP_aria_192_ecb",
+      "EVP_aria_192_gcm",
+      "EVP_aria_192_ofb",
+      "EVP_aria_256_cbc",
+      "EVP_aria_256_ccm",
+      "EVP_aria_256_cfb1",
+      "EVP_aria_256_cfb128",
+      "EVP_aria_256_cfb8",
+      "EVP_aria_256_ctr",
+      "EVP_aria_256_ecb",
+      "EVP_aria_256_gcm",
+      "EVP_aria_256_ofb",
+      "EVP_camellia_128_cbc",
+      "EVP_camellia_128_cfb1",
+      "EVP_camellia_128_cfb128",
+      "EVP_camellia_128_cfb8",
+      "EVP_camellia_128_ctr",
+      "EVP_camellia_128_ecb",
+      "EVP_camellia_128_ofb",
+      "EVP_camellia_192_cbc",
+      "EVP_camellia_192_cfb1",
+      "EVP_camellia_192_cfb128",
+      "EVP_camellia_192_cfb8",
+      "EVP_camellia_192_ctr",
+      "EVP_camellia_192_ecb",
+      "EVP_camellia_192_ofb",
+      "EVP_camellia_256_cbc",
+      "EVP_camellia_256_cfb1",
+      "EVP_camellia_256_cfb128",
+      "EVP_camellia_256_cfb8",
+      "EVP_camellia_256_ctr",
+      "EVP_camellia_256_ecb",
+      "EVP_camellia_256_ofb",
       "PEM_read_PrivateKey",
       "PEM_read_PrivateKey_ex",
       "PEM_read_bio_PrivateKey",
@@ -2101,168 +2149,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_128_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_128_ccm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_128_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_128_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_128_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_128_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_128_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_128_gcm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_128_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_192_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_192_ccm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_192_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_192_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_192_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_192_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_192_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_192_gcm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_192_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_256_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_256_ccm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_256_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_256_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_256_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_256_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_256_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_256_gcm"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_aria.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_aria_256_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/e_bf.rs",
         "received_from_phase": 7,
         "symbol": "EVP_bf_cbc"
@@ -2284,132 +2170,6 @@
         "module": "src/evp/e_bf.rs",
         "received_from_phase": 7,
         "symbol": "EVP_bf_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_128_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_128_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_128_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_128_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_128_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_128_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_128_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_192_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_192_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_192_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_192_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_192_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_192_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_192_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_256_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_256_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_256_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_256_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_256_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_256_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_camellia.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_camellia_256_ofb"
       },
       {
         "declaring_header": "evp.h",
@@ -2905,7 +2665,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "8125de028914c3be40ec915a136c1cfbb9424da666cca9e7c62bde90e4a53a7e"
+      "sha256": "0feefb55168b128eb2cfdd5db8f6af166732247e5dd7c3b2f0f5ddd1a14d8ba6"
     },
     {
       "name": "phase3-obligations",

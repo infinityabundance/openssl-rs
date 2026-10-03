@@ -1,5 +1,5 @@
 /*
- * rt_evp_legacy_probe.c -- RT-EVP-LEGACY: the Phase-13.6a legacy EVP AES method statics, driven.
+ * rt_evp_legacy_probe.c -- RT-EVP-LEGACY: the Phase-13.6 legacy EVP method statics, driven.
  *
  * One C program, compiled once against the admitted authority and once against the candidate
  * distribution shell; the two transcripts are diffed line by line, keyed on `key=value`. Every
@@ -8,9 +8,10 @@
  *
  * ## What this probe drives
  *
- * The forty-two `EVP_CIPHER` statics 13.6a lands -- the thirty-eight `EVP_aes_*` accessors of
+ * The ninety `EVP_CIPHER` statics 13.6 lands -- the thirty-eight `EVP_aes_*` accessors of
  * `crypto/evp/e_aes.c` and the four `EVP_aes_*_cbc_hmac_sha*` of `crypto/evp/e_aes_cbc_hmac_sha1.c`
- * and `_sha256.c`. For each:
+ * and `_sha256.c` (13.6a), and the twenty-seven `EVP_aria_*` of `crypto/evp/e_aria.c` and the
+ * twenty-one `EVP_camellia_*` of `crypto/evp/e_camellia.c` (13.6b). For each:
  *
  *   * the accessor's answer (`acc=`), and the object's `nid` derived short name (`name=`); the
  *     block size, key length, IV length and `flags` the object publishes (`bs=`, `kl=`, `ivl=`,
@@ -91,6 +92,37 @@ static const struct ent ENTRIES[] = {
     { EVP_aes_256_wrap_pad, WRAP },
     { EVP_aes_128_cbc_hmac_sha1, PLAIN }, { EVP_aes_256_cbc_hmac_sha1, PLAIN },
     { EVP_aes_128_cbc_hmac_sha256, PLAIN }, { EVP_aes_256_cbc_hmac_sha256, PLAIN },
+    /* 13.6b: the ARIA statics of crypto/evp/e_aria.c -- the generic pack per key length, then GCM
+     * and CCM. The AEAD statics are driven through the set-IV-length/tag sequence like AES's. */
+    { EVP_aria_128_cbc, PLAIN }, { EVP_aria_128_ecb, PLAIN },
+    { EVP_aria_128_ofb, PLAIN }, { EVP_aria_128_cfb128, PLAIN },
+    { EVP_aria_128_cfb1, PLAIN }, { EVP_aria_128_cfb8, PLAIN },
+    { EVP_aria_128_ctr, PLAIN }, { EVP_aria_128_gcm, GCM },
+    { EVP_aria_128_ccm, CCM },
+    { EVP_aria_192_cbc, PLAIN }, { EVP_aria_192_ecb, PLAIN },
+    { EVP_aria_192_ofb, PLAIN }, { EVP_aria_192_cfb128, PLAIN },
+    { EVP_aria_192_cfb1, PLAIN }, { EVP_aria_192_cfb8, PLAIN },
+    { EVP_aria_192_ctr, PLAIN }, { EVP_aria_192_gcm, GCM },
+    { EVP_aria_192_ccm, CCM },
+    { EVP_aria_256_cbc, PLAIN }, { EVP_aria_256_ecb, PLAIN },
+    { EVP_aria_256_ofb, PLAIN }, { EVP_aria_256_cfb128, PLAIN },
+    { EVP_aria_256_cfb1, PLAIN }, { EVP_aria_256_cfb8, PLAIN },
+    { EVP_aria_256_ctr, PLAIN }, { EVP_aria_256_gcm, GCM },
+    { EVP_aria_256_ccm, CCM },
+    /* 13.6b: the Camellia statics of crypto/evp/e_camellia.c -- the seven generic modes per key
+     * length, all plain. */
+    { EVP_camellia_128_cbc, PLAIN }, { EVP_camellia_128_ecb, PLAIN },
+    { EVP_camellia_128_ofb, PLAIN }, { EVP_camellia_128_cfb128, PLAIN },
+    { EVP_camellia_128_cfb1, PLAIN }, { EVP_camellia_128_cfb8, PLAIN },
+    { EVP_camellia_128_ctr, PLAIN },
+    { EVP_camellia_192_cbc, PLAIN }, { EVP_camellia_192_ecb, PLAIN },
+    { EVP_camellia_192_ofb, PLAIN }, { EVP_camellia_192_cfb128, PLAIN },
+    { EVP_camellia_192_cfb1, PLAIN }, { EVP_camellia_192_cfb8, PLAIN },
+    { EVP_camellia_192_ctr, PLAIN },
+    { EVP_camellia_256_cbc, PLAIN }, { EVP_camellia_256_ecb, PLAIN },
+    { EVP_camellia_256_ofb, PLAIN }, { EVP_camellia_256_cfb128, PLAIN },
+    { EVP_camellia_256_cfb1, PLAIN }, { EVP_camellia_256_cfb8, PLAIN },
+    { EVP_camellia_256_ctr, PLAIN },
 };
 
 #define PT_LEN 32
