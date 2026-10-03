@@ -1,14 +1,14 @@
 //! `crypto/srp/srp_vfy.c` — the SRP verifier store and creators. Phase 12.8.
 //!
-//! The fourteen exports this file lands — the `SRP_user_pwd` object (`SRP_user_pwd_new`,
+//! The fifteen exports this file lands — the `SRP_user_pwd` object (`SRP_user_pwd_new`,
 //! `_free`, `_set_gN`, `_set1_ids`, `_set0_sv`), the `SRP_VBASE` database (`SRP_VBASE_new`,
-//! `_free`, `_add0_user`, `_get_by_user`, `_get1_by_user`) and the verifier creators
+//! `_free`, `_init`, `_add0_user`, `_get_by_user`, `_get1_by_user`) and the verifier creators
 //! (`SRP_create_verifier[_BN][_ex]`) — plus the SRP-variant base64 codec `t_fromb64`/
 //! `t_tob64` and the statics `SRP_user_pwd_set_sv`, `srp_user_pwd_dup`, `SRP_gN_new_init`,
-//! `SRP_gN_free`, `SRP_get_gN_by_id`, `SRP_gN_place_bn` and `find_user`. The seventh
-//! export, `SRP_VBASE_init`, is **withheld** on Phase 13's `TXT_DB_read`/`TXT_DB_free`; the
-//! private helpers that only it reaches are transcribed but marked `#[allow(dead_code)]`
-//! with that caller named at each site, so nothing here is dead for an unrecorded reason.
+//! `SRP_gN_free`, `SRP_get_gN_by_id`, `SRP_gN_place_bn` and `find_user`. The seventh export,
+//! `SRP_VBASE_init` (`:394-510`), was **withheld** by 12.8 on Phase 13's `TXT_DB_read`/
+//! `TXT_DB_free`; 13.5 landed those two and 13.8 transcribes the body, so the private helpers
+//! that only it reaches are no longer dead.
 //!
 //! ## The SRP base64 variant
 //!
@@ -30,7 +30,7 @@
 // does.
 #![allow(unused_assignments)]
 
-use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void, CStr};
+use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void, CStr};
 use core::mem::size_of;
 use core::ptr;
 
@@ -50,11 +50,17 @@ use crate::evp::encode::{
 };
 use crate::rand::rand_lib::{RAND_bytes_ex, RAND_priv_bytes};
 use crate::runtime::bio::sys::{memmove, strcmp, strlen};
+use crate::runtime::bio::{
+    BIO_ctrl, BIO_free_all, BIO_new, BIO_s_file, BIO_CLOSE, BIO_C_SET_FILENAME, BIO_FP_READ,
+};
+use crate::runtime::err::err_sites::ErrSite;
+use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc, CRYPTO_strdup};
 use crate::runtime::stack::{
     OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
 };
+use crate::txt_db::{TXT_DB_free, TXT_DB_read, TxtDb};
 
 use super::srp_lib::{SRP_Calc_x_ex, SRP_get_default_gN};
 use super::{SrpGN, SrpGNCache, SrpUserPwd, SrpVbase};
@@ -68,6 +74,50 @@ const SHA_DIGEST_LENGTH: c_int = 20;
 const SRP_RANDOM_SALT_LEN: c_int = 20;
 /// `MAX_LEN` — `crypto/srp/srp_vfy.c:29`.
 const MAX_LEN: usize = 2500;
+
+/// `DB_srptype` — `include/openssl/srp.h.in:147`.
+const DB_SRPTYPE: c_int = 0;
+/// `DB_srpverifier` — `include/openssl/srp.h.in:148`.
+const DB_SRPVERIFIER: c_int = 1;
+/// `DB_srpsalt` — `include/openssl/srp.h.in:149`.
+const DB_SRPSALT: c_int = 2;
+/// `DB_srpid` — `include/openssl/srp.h.in:150`.
+const DB_SRPID: c_int = 3;
+/// `DB_srpgN` — `include/openssl/srp.h.in:151`.
+const DB_SRPGN: c_int = 4;
+/// `DB_srpinfo` — `include/openssl/srp.h.in:152`.
+const DB_SRPINFO: c_int = 5;
+/// `DB_NUMBER` — `include/openssl/srp.h.in:154`.
+const DB_NUMBER: c_int = 6;
+/// `DB_SRP_INDEX` — `include/openssl/srp.h.in:156`.
+const DB_SRP_INDEX: c_char = b'I' as c_char;
+/// `DB_SRP_VALID` — `include/openssl/srp.h.in:157`.
+const DB_SRP_VALID: c_char = b'V' as c_char;
+/// `SRP_NO_ERROR` — `include/openssl/srp.h.in:141`.
+const SRP_NO_ERROR: c_int = 0;
+/// `SRP_ERR_VBASE_INCOMPLETE_FILE` — `include/openssl/srp.h.in:142`.
+const SRP_ERR_VBASE_INCOMPLETE_FILE: c_int = 1;
+/// `SRP_ERR_VBASE_BN_LIB` — `include/openssl/srp.h.in:143`.
+const SRP_ERR_VBASE_BN_LIB: c_int = 2;
+/// `SRP_ERR_OPEN_FILE` — `include/openssl/srp.h.in:144`.
+const SRP_ERR_OPEN_FILE: c_int = 3;
+/// `SRP_ERR_MEMORY` — `include/openssl/srp.h.in:145`.
+const SRP_ERR_MEMORY: c_int = 4;
+
+/// `ERR_LIB_X509` — `include/openssl/err.h.in:85`, `11`.
+const ERR_LIB_X509: c_int = 11;
+/// `ERR_R_PASSED_NULL_PARAMETER` — `err.h.in:356`, `258 | ERR_R_FATAL`.
+const ERR_R_PASSED_NULL_PARAMETER: c_int = 786690;
+
+/// `SRP_VBASE_init`'s NULL-`verifier_file` raise — `crypto/srp/srp_vfy.c:414`.
+const SRP_VFY_414: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/srp/srp_vfy.c",
+    line: 414,
+    func: c"SRP_VBASE_init",
+    lib: ERR_LIB_X509,
+    reason: ERR_R_PASSED_NULL_PARAMETER,
+    dynamic_reason: false,
+};
 
 /// `EVP_ENCODE_CTX_NO_NEWLINES` — `include/crypto/evp.h:897`.
 const EVP_ENCODE_CTX_NO_NEWLINES: c_uint = 1;
@@ -358,12 +408,9 @@ pub unsafe extern "C" fn SRP_user_pwd_set1_ids(
 /// `int SRP_user_pwd_set_sv(SRP_user_pwd *vinfo, const char *s, const char *v)` —
 /// `crypto/srp/srp_vfy.c:223-248`.
 ///
-/// Waits for `SRP_VBASE_init` (withheld on Phase 13's `TXT_DB_read`), its only caller.
-///
 /// # Safety
 ///
 /// `vinfo` must be live; `s` and `v` must be NULL or NUL-terminated.
-#[allow(dead_code)] // waits for SRP_VBASE_init, withheld on Phase 13's TXT_DB_read
 unsafe fn SRP_user_pwd_set_sv(vinfo: *mut SrpUserPwd, s: *const c_char, v: *const c_char) -> c_int {
     let mut tmp = [0u8; MAX_LEN];
 
@@ -519,14 +566,216 @@ pub unsafe extern "C" fn SRP_VBASE_free(vb: *mut SrpVbase) {
     }
 }
 
-/// `static SRP_gN_cache *SRP_gN_new_init(const char *ch)` — `crypto/srp/srp_vfy.c:311-334`.
+/// `int SRP_VBASE_init(SRP_VBASE *vb, char *verifier_file)` — `crypto/srp/srp_vfy.c:394-510`.
 ///
-/// Waits for `SRP_VBASE_init` (withheld on Phase 13's `TXT_DB_read`), its only caller.
+/// Parses the verifier file `verifier_file` into `vb`. An `I` record adds a group to a local
+/// table — its `N`/`g` base64 fields decoded and cached on `vb->gN_cache`, its id duplicated —
+/// and a `V` record adds a user whose borrowed group the `I` records name. When `vb->seed_key`
+/// is set the last `I` id (or the default `"8192"`) becomes `default_g`/`default_N`. The return
+/// is one of the `SRP_ERR_*` codes, or `SRP_NO_ERROR`.
+///
+/// # Safety
+///
+/// `vb` must be a live [`SrpVbase`]; `verifier_file` must be NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SRP_VBASE_init(vb: *mut SrpVbase, verifier_file: *mut c_char) -> c_int {
+    let mut error_code: c_int = SRP_ERR_MEMORY;
+    // `sk_SRP_gN_new_null` is the safe constructor and answers NULL on failure.
+    let srp_gn_tab = OPENSSL_sk_new_null();
+    let mut last_index: *mut c_char = ptr::null_mut();
+    let mut gn: *mut SrpGN = ptr::null_mut();
+    let mut user_pwd: *mut SrpUserPwd = ptr::null_mut();
+    let mut tmpdb: *mut TxtDb = ptr::null_mut();
+    // SAFETY: `BIO_s_file` answers a static method table.
+    let bio = unsafe { BIO_new(BIO_s_file()) };
+
+    'err: {
+        if srp_gn_tab.is_null() {
+            break 'err;
+        }
+
+        error_code = SRP_ERR_OPEN_FILE;
+
+        if verifier_file.is_null() {
+            // SAFETY: a compile-time coordinate.
+            unsafe { raise_site(&SRP_VFY_414) };
+            break 'err;
+        }
+
+        // `BIO_read_filename(in, verifier_file)` is the macro `BIO_ctrl(in,
+        // BIO_C_SET_FILENAME, BIO_CLOSE | BIO_FP_READ, (char *)verifier_file)`.
+        if bio.is_null()
+            // SAFETY: the left arm short-circuits on NULL, so `bio` is a fresh file BIO here
+            // and `verifier_file` is NUL-terminated per the contract.
+            || unsafe {
+                BIO_ctrl(
+                    bio,
+                    BIO_C_SET_FILENAME,
+                    c_long::from(BIO_CLOSE | BIO_FP_READ),
+                    verifier_file.cast::<c_void>(),
+                )
+            } <= 0
+        {
+            break 'err;
+        }
+
+        error_code = SRP_ERR_VBASE_INCOMPLETE_FILE;
+
+        // SAFETY: `bio` is live and a file BIO reads the named file.
+        tmpdb = unsafe { TXT_DB_read(bio, DB_NUMBER) };
+        if tmpdb.is_null() {
+            break 'err;
+        }
+
+        error_code = SRP_ERR_MEMORY;
+
+        // SAFETY: `vb` is live per the contract; `SRP_get_default_gN(NULL)` answers the
+        // built-in table's first entry.
+        if !unsafe { (*vb).seed_key }.is_null() {
+            // SAFETY: the default table is process-lifetime and non-NULL for a NULL id.
+            last_index = unsafe { (*SRP_get_default_gN(ptr::null())).id };
+        }
+
+        // SAFETY: `tmpdb` is live; its `data` stack holds the parsed rows.
+        let num = unsafe { OPENSSL_sk_num((*tmpdb).data) };
+        let mut i: c_int = 0;
+        while i < num {
+            // SAFETY: `i` is in range and a parsed row is `DB_NUMBER` NUL-terminated fields.
+            let pp = unsafe { OPENSSL_sk_value((*tmpdb).data, i) }.cast::<*mut c_char>();
+            // SAFETY: `pp` is a live row and `DB_SRPTYPE` indexes it in range.
+            if unsafe { **pp.add(DB_SRPTYPE as usize) } == DB_SRP_INDEX {
+                // The allocation is one `SRP_gN`, the authority's `OPENSSL_malloc`.
+                gn = CRYPTO_malloc(size_of::<SrpGN>(), FILE.as_ptr(), 438).cast::<SrpGN>();
+                if gn.is_null() {
+                    break 'err;
+                }
+                // SAFETY: `gn` is live; `pp[DB_SRPID]` is NUL-terminated.
+                unsafe {
+                    (*gn).id = CRYPTO_strdup(*pp.add(DB_SRPID as usize), FILE.as_ptr(), 441);
+                }
+                // SAFETY: `gn` is live; `id` was just written.
+                if unsafe { (*gn).id }.is_null() {
+                    break 'err;
+                }
+                // SAFETY: `gn` is live; `vb->gN_cache` is live; the field is NUL-terminated.
+                unsafe {
+                    (*gn).N = SRP_gN_place_bn((*vb).gN_cache, *pp.add(DB_SRPVERIFIER as usize));
+                }
+                // SAFETY: `gn` is live; `N` was just written.
+                if unsafe { (*gn).N }.is_null() {
+                    break 'err;
+                }
+                // SAFETY: as above, for the salt field.
+                unsafe {
+                    (*gn).g = SRP_gN_place_bn((*vb).gN_cache, *pp.add(DB_SRPSALT as usize));
+                }
+                // SAFETY: `gn` is live; `g` was just written.
+                if unsafe { (*gn).g }.is_null() {
+                    break 'err;
+                }
+                // SAFETY: `srp_gn_tab` is live and `gn`'s ownership passes on success.
+                if unsafe { OPENSSL_sk_insert(srp_gn_tab, gn.cast(), 0) } == 0 {
+                    break 'err;
+                }
+                gn = ptr::null_mut();
+
+                // SAFETY: `vb` is live; `pp[DB_SRPID]` is a live row field.
+                if !unsafe { (*vb).seed_key }.is_null() {
+                    // SAFETY: `pp[DB_SRPID]` is a live row field.
+                    last_index = unsafe { *pp.add(DB_SRPID as usize) };
+                }
+            // SAFETY: `pp` is a live row and `DB_SRPTYPE` indexes it in range.
+            } else if unsafe { **pp.add(DB_SRPTYPE as usize) } == DB_SRP_VALID {
+                // SAFETY: `pp[DB_SRPGN]` is NULL or NUL-terminated; `srp_gn_tab` is live.
+                let lgn = unsafe { SRP_get_gN_by_id(*pp.add(DB_SRPGN as usize), srp_gn_tab) };
+                if !lgn.is_null() {
+                    error_code = SRP_ERR_MEMORY;
+                    // SAFETY: no arguments.
+                    user_pwd = unsafe { SRP_user_pwd_new() };
+                    if user_pwd.is_null() {
+                        break 'err;
+                    }
+
+                    // SAFETY: `user_pwd` is live; `lgn`'s `g`/`N` outlive it.
+                    unsafe { SRP_user_pwd_set_gN(user_pwd, (*lgn).g, (*lgn).N) };
+                    // SAFETY: `user_pwd` is live; the id and info fields are NUL-terminated.
+                    if unsafe {
+                        SRP_user_pwd_set1_ids(
+                            user_pwd,
+                            *pp.add(DB_SRPID as usize),
+                            *pp.add(DB_SRPINFO as usize),
+                        )
+                    } == 0
+                    {
+                        break 'err;
+                    }
+
+                    error_code = SRP_ERR_VBASE_BN_LIB;
+                    // SAFETY: `user_pwd` is live; the salt and verifier fields are
+                    // NUL-terminated.
+                    if unsafe {
+                        SRP_user_pwd_set_sv(
+                            user_pwd,
+                            *pp.add(DB_SRPSALT as usize),
+                            *pp.add(DB_SRPVERIFIER as usize),
+                        )
+                    } == 0
+                    {
+                        break 'err;
+                    }
+
+                    // SAFETY: `vb->users_pwd` is live and `user_pwd`'s ownership passes on
+                    // success.
+                    if unsafe { OPENSSL_sk_insert((*vb).users_pwd, user_pwd.cast(), 0) } == 0 {
+                        break 'err;
+                    }
+                    user_pwd = ptr::null_mut();
+                }
+            }
+            i += 1;
+        }
+
+        if !last_index.is_null() {
+            // SAFETY: `last_index` is a live row field and `srp_gn_tab` is live.
+            gn = unsafe { SRP_get_gN_by_id(last_index, srp_gn_tab) };
+            if gn.is_null() {
+                error_code = SRP_ERR_VBASE_BN_LIB;
+                break 'err;
+            }
+            // SAFETY: `vb` is live and `gn`'s `g`/`N` are borrowed from `vb->gN_cache`.
+            unsafe {
+                (*vb).default_g = (*gn).g;
+                (*vb).default_N = (*gn).N;
+            }
+            gn = ptr::null_mut();
+        }
+        error_code = SRP_NO_ERROR;
+    }
+
+    if !gn.is_null() {
+        // SAFETY: `gn` is a live object this call allocated and never handed on.
+        unsafe {
+            CRYPTO_free((*gn).id.cast(), FILE.as_ptr(), 498);
+            CRYPTO_free(gn.cast(), FILE.as_ptr(), 499);
+        }
+    }
+    // SAFETY: `user_pwd` is NULL or a live object that was never inserted.
+    unsafe { SRP_user_pwd_free(user_pwd) };
+    // SAFETY: `tmpdb` is NULL or a live object from `TXT_DB_read`.
+    unsafe { TXT_DB_free(tmpdb) };
+    // SAFETY: `bio` is NULL or a live BIO from `BIO_new`.
+    unsafe { BIO_free_all(bio) };
+    // SAFETY: `srp_gn_tab` is NULL or a live stack; its members leak, as the authority's do.
+    unsafe { OPENSSL_sk_free(srp_gn_tab) };
+
+    error_code
+}
+
+/// `static SRP_gN_cache *SRP_gN_new_init(const char *ch)` — `crypto/srp/srp_vfy.c:311-334`.
 ///
 /// # Safety
 ///
 /// `ch` must be NULL or NUL-terminated.
-#[allow(dead_code)] // waits for SRP_VBASE_init, withheld on Phase 13's TXT_DB_read
 unsafe fn SRP_gN_new_init(ch: *const c_char) -> *mut SrpGNCache {
     let mut tmp = [0u8; MAX_LEN];
     // The allocation is one `SRP_gN_cache`, the authority's `OPENSSL_malloc`.
@@ -572,12 +821,9 @@ unsafe fn SRP_gN_new_init(ch: *const c_char) -> *mut SrpGNCache {
 
 /// `static void SRP_gN_free(SRP_gN_cache *gN_cache)` — `crypto/srp/srp_vfy.c:336-343`.
 ///
-/// Waits for `SRP_VBASE_init` (withheld on Phase 13's `TXT_DB_read`), its only caller.
-///
 /// # Safety
 ///
 /// `gN_cache` must be NULL or a live object this module allocated.
-#[allow(dead_code)] // waits for SRP_VBASE_init, withheld on Phase 13's TXT_DB_read
 unsafe fn SRP_gN_free(gN_cache: *mut SrpGNCache) {
     if gN_cache.is_null() {
         return;
@@ -593,12 +839,9 @@ unsafe fn SRP_gN_free(gN_cache: *mut SrpGNCache) {
 /// `static SRP_gN *SRP_get_gN_by_id(const char *id, STACK_OF(SRP_gN) *gN_tab)` —
 /// `crypto/srp/srp_vfy.c:345-359`.
 ///
-/// Waits for `SRP_VBASE_init` (withheld on Phase 13's `TXT_DB_read`), its only caller.
-///
 /// # Safety
 ///
 /// `id` must be NULL or NUL-terminated; `gN_tab` NULL or a live stack of [`SrpGN`].
-#[allow(dead_code)] // waits for SRP_VBASE_init, withheld on Phase 13's TXT_DB_read
 unsafe fn SRP_get_gN_by_id(id: *const c_char, gN_tab: *mut OpenSslStack) -> *mut SrpGN {
     if !gN_tab.is_null() {
         // SAFETY: `gN_tab` is a live stack per the contract.
@@ -623,12 +866,9 @@ unsafe fn SRP_get_gN_by_id(id: *const c_char, gN_tab: *mut OpenSslStack) -> *mut
 /// `static BIGNUM *SRP_gN_place_bn(STACK_OF(SRP_gN_cache) *gN_cache, char *ch)` —
 /// `crypto/srp/srp_vfy.c:361-382`.
 ///
-/// Waits for `SRP_VBASE_init` (withheld on Phase 13's `TXT_DB_read`), its only caller.
-///
 /// # Safety
 ///
 /// `gN_cache` must be NULL or a live stack of [`SrpGNCache`]; `ch` NULL or NUL-terminated.
-#[allow(dead_code)] // waits for SRP_VBASE_init, withheld on Phase 13's TXT_DB_read
 unsafe fn SRP_gN_place_bn(gN_cache: *mut OpenSslStack, ch: *const c_char) -> *mut BigNum {
     if gN_cache.is_null() {
         return ptr::null_mut();

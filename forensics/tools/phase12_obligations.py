@@ -96,7 +96,7 @@ MODULE_OVERRIDES: list[tuple[str, tuple[str, ...]]] = []
 
 
 # ---------------------------------------------------------------------------------------------
-# The blocked hand-offs. **One pair from 12.5b, and one entry from 12.8.**
+# The blocked hand-offs. **Empty as of 13.8**, which landed the last blocker the two rows named.
 #
 # The rule is Phase 8's through Phase 11's: a symbol whose declaring header is this stratum's
 # but whose *body* needs a name no module of this crate defines is recorded here with the reason
@@ -104,12 +104,39 @@ MODULE_OVERRIDES: list[tuple[str, tuple[str, ...]]] = []
 # callee. Phase 12 is the *last* export stratum before the CLI and TLS strata, and almost every
 # callee its units reach is either already in the crate or owned by this same stratum -- a
 # same-stratum blocker is recorded as `open` (a stratum cannot hand a symbol to itself). The two
-# hand-offs that are not are `TS_CONF_set_crypto_device`/`TS_CONF_set_default_engine`, whose only
+# hand-offs that were not are `TS_CONF_set_crypto_device`/`TS_CONF_set_default_engine`, whose only
 # callees are Phase 13's `ENGINE_by_id`/`ENGINE_set_default`, and 12.8's `SRP_VBASE_init`, whose
-# only missing callee is Phase 13's `TXT_DB_read`.
+# only missing callee is Phase 13's `TXT_DB_read`. Phase 13's 13.1/13.2 landed the engine pair and
+# 13.5 the `TXT_DB` codec, so neither is a blocker any longer and both rows move to
+# `UNBLOCKED_HANDOFFS` below rather than being retired -- the exports are still Phase 13's to
+# write, and only the authority blockers have landed. The mechanism is kept true rather than
+# deleted: a future deferral with a file:line claim belongs here.
 # ---------------------------------------------------------------------------------------------
 
 BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
+]
+
+# ---------------------------------------------------------------------------------------------
+# The third deferral mechanism, Phase 7's `UNBLOCKED_HANDOFFS` retargeted for Phase 12: a hand-off
+# whose blocker has since landed.
+#
+# `BLOCKED_HANDOFFS` above makes a *structured claim* -- "this export is withheld because file:line
+# calls `X`, and `X` is not in the crate" -- and its fail-closed rule fires the moment `X` lands,
+# because a table that can keep covering a landed blocker can hide the next real gap behind it. The
+# prescription is "retire the row", but **retiring these two rows would be a false statement about
+# this stratum, not a correction of one.** The exports are Phase 13's to write in the ledger's
+# arithmetic -- this table is what `phase13_obligations.py` reads to put them in Phase 13's working
+# set -- so removing it would move built exports into *this* sealed stratum's `implemented` list on
+# the strength of work this stratum did not do, and drop them from Phase 13's
+# `received_by_handoff`. The honest difference is that the *blocker* is gone, not that the hand-off
+# is. So each row is **retargeted** from a blocked claim to an unconditional one -- D173's
+# precedent, "a deferral that had to move", the same move 13.2 made for `ENGINE_get_pkey_meth` in
+# `phase7_obligations.py` -- and the reason records what landed rather than repeating a claim that
+# no longer holds. The rows carry no `blocked_by`, so nothing is left to go stale: an unconditional
+# hand-off is falsified by the owner's ledger, which already counts it, rather than by a file:line.
+# ---------------------------------------------------------------------------------------------
+
+UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
     (
         ("TS_CONF_set_crypto_device", "TS_CONF_set_default_engine"),
         13,
@@ -118,10 +145,14 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "`ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, "
         "ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it "
         "(`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase "
-        "13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13), and `src/engine/"
-        "eng_list.rs` records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. Pulling "
-        "the ENGINE registry forward to satisfy two `CONF` readers is disproportionate, so the "
-        "rows are handed to Phase 13 rather than stubbed",
+        "13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13). **13.1 landed "
+        "`ENGINE_by_id` and 13.2 landed `ENGINE_set_default`, and 13.8 transcribed both readers "
+        "in `src/ts/ts_conf.rs`**, so every blocker this row named has landed and the row moves "
+        "here from `BLOCKED_HANDOFFS` rather than retiring: the pair is still Phase 13's to "
+        "write in the ledger's arithmetic -- this row is what puts the two names in "
+        "`forensics/phase13-obligations.json`'s working set -- and retiring it would move two "
+        "built exports into this sealed stratum's `implemented` list on the strength of work "
+        "this stratum did not do.",
     ),
     (
         ("SRP_VBASE_init",),
@@ -129,10 +160,14 @@ BLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
         "its body reads and releases a verifier file through `TXT_DB_read` "
         "(`crypto/srp/srp_vfy.c:423`) and `TXT_DB_free` (`:504`), and both are declared in "
         "`include/openssl/txt_db.h`, which is Phase 13's (`forensics/atlas/symbol-ownership.json`, "
-        "owner_phase 13). The rest of `crypto/srp/srp_vfy.c` lands in 12.8, including the private "
-        "helpers that only `SRP_VBASE_init` reaches; pulling the `TXT_DB` reader forward to "
-        "satisfy one deprecated entry point is disproportionate, so the row is handed to Phase 13 "
-        "rather than stubbed",
+        "owner_phase 13). The rest of `crypto/srp/srp_vfy.c` landed in 12.8, including the private "
+        "helpers that only `SRP_VBASE_init` reaches. **13.5 landed `TXT_DB_read`/`TXT_DB_free` and "
+        "13.8 transcribed the body in `src/srp/srp_vfy.rs`**, so the blocker this row named has "
+        "landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the export "
+        "is still Phase 13's to write in the ledger's arithmetic -- this row is what puts the "
+        "name in `forensics/phase13-obligations.json`'s working set -- and retiring it would "
+        "move a built export into this sealed stratum's `implemented` list on the strength of "
+        "work this stratum did not do.",
     ),
 ]
 
@@ -277,8 +312,8 @@ def main(argv: list[str]) -> int:
     # The fail-closed deferral mechanism, unchanged from Phases 8 through 11: a symbol in
     # `BLOCKED_HANDOFFS` that the crate now defines is a stale row rather than a harmless one,
     # because a table that can keep covering a landed symbol can hide the next real gap behind it.
-    # This stratum's table is one pair (12.5b's ENGINE setter pair) plus 12.8's `SRP_VBASE_init`,
-    # so the loop is the mechanism kept true rather than a claim of emptiness.
+    # This stratum's table is **empty** as of 13.8, which landed the last blocker the two rows
+    # named, so the loop is the mechanism kept true rather than a claim of emptiness.
     blocked: dict[str, dict] = {}
     for symbols, phase, reason in BLOCKED_HANDOFFS:
         for sym in symbols:
@@ -298,8 +333,44 @@ def main(argv: list[str]) -> int:
                 "declaring_header": owned[sym]["declaring_header"],
                 "reason": reason,
             }
-    deferred_names = set(blocked)
-    deferred: list[dict] = sorted(blocked.values(), key=lambda r: r["symbol"])
+
+    # The third mechanism (see `UNBLOCKED_HANDOFFS`): a hand-off whose blocker has landed. Same
+    # fail-closed rule as `BLOCKED_HANDOFFS` for a symbol outside the working set, and **not** the
+    # same rule for a symbol the crate now defines -- deliberately, and the asymmetry is the whole
+    # point of keeping the two tables apart:
+    #
+    #   * a `BLOCKED_HANDOFFS` row is falsified by its blocker landing, because its claim IS
+    #     "file:line calls X and X is absent";
+    #   * an `UNBLOCKED_HANDOFFS` row makes no such claim, so it is not falsified by *itself* being
+    #     built. The row is the hand-off **edge**: it is what puts the symbol in the receiving
+    #     stratum's working set, and it is what `phase13_obligations.py` reads to count the symbol
+    #     as that stratum's. Retiring it the moment the owner lands the symbol would move the
+    #     symbol into *this* sealed stratum's `implemented` list on the strength of work this
+    #     stratum did not do, and take it off the owner's books at the same time.
+    unblocked: dict[str, dict] = {}
+    for symbols, owning_phase, reason in UNBLOCKED_HANDOFFS:
+        for sym in symbols:
+            if sym not in owned:
+                raise SystemExit(
+                    f"phase12-obligations: UNBLOCKED_HANDOFFS names {sym}, which is not in this "
+                    f"stratum's working set (or is not an authority export at all)"
+                )
+            if sym in blocked:
+                raise SystemExit(
+                    f"phase12-obligations: {sym} is handed on by both BLOCKED_HANDOFFS and "
+                    f"UNBLOCKED_HANDOFFS; one cause per symbol, or the reasons will disagree"
+                )
+            unblocked[sym] = {
+                "symbol": sym,
+                "owning_phase": owning_phase,
+                "declaring_header": owned[sym]["declaring_header"],
+                "reason": reason,
+            }
+
+    deferred_names = set(blocked) | set(unblocked)
+    deferred: list[dict] = sorted(
+        list(blocked.values()) + list(unblocked.values()), key=lambda r: r["symbol"]
+    )
 
     implemented_here = sorted(s for s in owned if s in done and s not in deferred_names)
     open_rows = [
@@ -371,6 +442,13 @@ def main(argv: list[str]) -> int:
         "deferred_by_phase": dict(
             sorted(Counter(r["owning_phase"] for r in deferred).items())
         ),
+        # The third mechanism, Phase 7's, retargeted: each row is an unconditional hand-off whose
+        # blocker has landed. Emitted so the mechanism is visible in the ledger rather than only
+        # in the source comments.
+        "unblocked_handoffs": [
+            {"symbols": list(symbols), "owning_phase": phase, "reason": reason}
+            for symbols, phase, reason in UNBLOCKED_HANDOFFS
+        ],
         # The provider-row census's phase-12 slice. Zero, measured. See the module doc.
         "provider_rows_owned": len(provider_owned),
         "complete": not open_rows,

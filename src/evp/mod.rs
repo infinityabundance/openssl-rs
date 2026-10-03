@@ -49,6 +49,29 @@ pub mod bio_ok;
 pub mod cipher;
 pub mod cipher_ctx;
 pub mod digest;
+// Phase 13.6a's `crypto/evp/e_aes.c`: the deprecated `EVP_CIPHER` statics the AES modes return.
+pub mod e_aes;
+// Phase 13.6b's `crypto/evp/e_aria.c` and `crypto/evp/e_camellia.c`: the deprecated `EVP_CIPHER`
+// statics the ARIA and Camellia modes return.
+pub mod e_aria;
+pub mod e_camellia;
+// Phase 13.6a's two AES-CBC-HMAC stitched statics, whose callbacks reuse the provider construction.
+pub mod e_aes_cbc_hmac_sha1;
+pub mod e_aes_cbc_hmac_sha256;
+// Phase 13.6c's `crypto/evp/e_*.c`: the remaining deprecated `EVP_CIPHER` statics (DES, 3DES,
+// DESX, Blowfish, CAST5, IDEA, SEED, RC2, RC4, RC4-HMAC-MD5, SM4, ChaCha20 and ChaCha20-Poly1305).
+pub mod e_bf;
+pub mod e_cast;
+pub mod e_chacha20_poly1305;
+pub mod e_des;
+pub mod e_des3;
+pub mod e_idea;
+pub mod e_rc2;
+pub mod e_rc4;
+pub mod e_rc4_hmac_md5;
+pub mod e_seed;
+pub mod e_sm4;
+pub mod e_xcbc_d;
 pub mod encode;
 // Phase 7.4's `crypto/evp/evp_cnf.c` -- the `alg_section` configuration module, landed once
 // `X509V3_get_value_bool` (10.14.3) closed its only blocker. See the module doc.
@@ -70,10 +93,13 @@ pub mod keymgmt;
 pub mod keymgmt_lib;
 pub mod legacy_blake2;
 pub mod legacy_evp;
+pub mod legacy_md4;
 pub mod legacy_md5;
+pub mod legacy_mdc2;
 pub mod legacy_ripemd;
 pub mod legacy_sha;
 pub mod legacy_sha3;
+pub mod legacy_wp;
 pub mod mac;
 pub mod method_store;
 pub mod p5_crpt;
@@ -83,6 +109,7 @@ pub mod p_dec;
 pub mod p_enc;
 pub mod p_legacy;
 pub mod p_legacy_assign;
+pub mod p_lib;
 pub mod pbe;
 pub mod pem_bridge;
 pub mod pkey;

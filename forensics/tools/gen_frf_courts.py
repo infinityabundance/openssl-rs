@@ -555,6 +555,32 @@ COURTS: list[tuple[str, int, str, str]] = [
     ("rt-cms-remainder", 12, "rt_cms_remainder_probe",
      "the 12.9 remainder: the ASN.1 item table, the CT default file, the shared x_all.c "
      "dispatch and the S/MIME reader and writer, driven"),
+    #
+    # Phase 13 -- the legacy/deprecated-compatibility stratum. Eight courts, each a differential
+    # probe compiled against both sides. `RT-PHASE13-REF` is this stratum's reference basis: its
+    # probe takes the address of each inherited `implemented` export and prints whether it is
+    # non-NULL, so the court-coverage atlas records those names at basis `referenced`, never
+    # `called` (D199), and it is not declarable here. The eight below all diff a real transcript
+    # and stage an `artifacts/phase13/probes/<probe>.{authority,candidate}` pair.
+    #
+    ("rt-engine", 13, "rt_engine_probe",
+     "the ENGINE object, registry and dynamic-loading surface: ENGINE_by_id, the built-in "
+     "loader and the conf module, driven"),
+    ("rt-engine-table", 13, "rt_engine_table_probe",
+     "the ENGINE per-algorithm method tables and the register/select/unregister binding "
+     "surface, driven over a synthetic ENGINE"),
+    ("rt-engine-ctrl", 13, "rt_engine_ctrl_probe",
+     "the ENGINE control-command dispatcher and the eng_fat.c fat helpers, driven"),
+    ("rt-ui", 13, "rt_ui_probe",
+     "the whole 62-name ui.h framework, driven over a deterministic in-process UI_METHOD"),
+    ("rt-txtdb", 13, "rt_txtdb_probe",
+     "the TXT_DB text database codec: read, write, insert, the two indexed accessors and free"),
+    ("rt-evp-legacy", 13, "rt_evp_legacy_probe",
+     "the deprecated METHOD-era EVP_CIPHER/EVP_MD statics and their fixed-key round trips"),
+    ("rt-legacy-remainder", 13, "rt_legacy_remainder_probe",
+     "the PEM private-key readers and the ASYNC job-and-wait framework, driven"),
+    ("rt-handoff", 13, "rt_handoff_probe",
+     "the received TS_CONF and SRP_VBASE_init hand-offs over fixed CONF and verifier files"),
 ]
 
 

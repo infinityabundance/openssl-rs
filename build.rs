@@ -171,6 +171,25 @@ fn run() -> Result<(), String> {
     println!("cargo:rustc-env=OPENSSL_RS_OPENSSLDIR={openssldir}");
     println!("cargo:rerun-if-env-changed=OPENSSL_RS_OPENSSLDIR");
 
+    // The compiled-in engines directory (`ENGINESDIR`), the last half of `crypto/defaults.c` the
+    // registry reads: `ENGINE_by_id` falls back to it when `OPENSSL_ENGINES` is unset and the id
+    // is not found in the list, and hands it to the dynamic engine's `DIR_ADD`. Like MODULESDIR
+    // and OPENSSLDIR it is a *distribution* fact rather than an authority one -- the authority
+    // bakes its own configure-time `ENGINESDIR` in, a substitute installs its engines elsewhere --
+    // so no court compares the two strings. An unset variable emits the empty string, which
+    // `crate::runtime::defaults` reads as "no compiled-in directory" and answers NULL for, exactly
+    // as `ossl_get_modulesdir` degrades. A fabricated path would point `dlopen` at a directory the
+    // distribution never intended.
+    // A NUL would make the value unrepresentable as a C string, and `clippy::panic` is denied in
+    // this crate including its build script -- so the refusal is reported the way the others are.
+    let enginesdir = std::env::var("OPENSSL_RS_ENGINESDIR").unwrap_or_default();
+    if enginesdir.contains('\0') {
+        eprintln!("error: OPENSSL_RS_ENGINESDIR must not contain a NUL byte");
+        std::process::exit(1);
+    }
+    println!("cargo:rustc-env=OPENSSL_RS_ENGINESDIR={enginesdir}");
+    println!("cargo:rerun-if-env-changed=OPENSSL_RS_ENGINESDIR");
+
     build_c_adapters(&manifest_dir)?;
 
     Ok(())
@@ -219,6 +238,16 @@ fn build_c_adapters(manifest_dir: &Path) -> Result<(), String> {
         // the C side of the ABI so that no field offset is assumed. See the
         // file's own header.
         ("src/runtime/dir_posix.c", "openssl_rs_dir_posix"),
+        // Not a variadic adapter either: `ucontext_t`'s layout and the stack
+        // fields inside it are the platform's business, so the ASYNC fibre's
+        // `getcontext`/`makecontext`/`swapcontext` calls are made on the C side
+        // of the ABI. Every behavioural decision -- the stack size, the
+        // substitutable allocators, the failure policy -- is in
+        // `src/async/arch/async_posix.rs`. See the file's own header.
+        (
+            "src/async/arch/async_ucontext.c",
+            "openssl_rs_async_ucontext",
+        ),
     ];
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").map_err(|_| "OUT_DIR is not set")?);

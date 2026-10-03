@@ -208,19 +208,19 @@
       "name": "phase-8-obligations",
       "note": "the Phase 8 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "22d3070345f20d4f7ff97442e0727f6f16b12203472606b4bdd8ff3164abf901"
+      "sha256": "a4b4ce3a7fd806ae0c72267a8144952263cf9b0d9e83c9198a0e3ab1c9199c2f"
     },
     {
       "name": "phase-9-obligations",
       "note": "the Phase 9 ledger, whose open_in_this_stratum is what a freeing row would move",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "097a9aba4529b38b4c44c405c0c7aa9da21447461f5a6795e9bc25a4c8c6ebc6"
+      "sha256": "e7b431a439153952432f3bc3368704e669f5fc552f96019aa392acee16130c41"
     },
     {
       "name": "provider-algorithms",
       "note": "the census the decoder predicate reads: its OSSL_OP_DECODER rows and their implementation_state",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "d7b2138ccf175e9d3ffa58b738729344f315b6a52e1b3c81427e593d6659bba5"
+      "sha256": "49798d9f9eb936aee03e1b62046a8979823756112021cf10e4ad1ac94d8e2aa7"
     }
   ],
   "kind": "divergence-obligations",

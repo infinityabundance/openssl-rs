@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 407,
-      "owned": 768,
+      "owned": 769,
       "records": 1573,
-      "unowned": 805
+      "unowned": 804
     },
     "definition": "every typedef name the authority's installed and internal headers introduce, with the header that introduces it and that header's owning stratum",
     "installed_headers": [
@@ -9756,7 +9756,7 @@
         ],
         "kind": "typedef",
         "name": "async_fibre",
-        "owner_phase": null
+        "owner_phase": 13
       },
       {
         "defined_in": [

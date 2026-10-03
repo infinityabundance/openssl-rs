@@ -21,7 +21,7 @@ enforced here:
 | 10 | Key formats + PKCS + STORE | `complete` |  |
 | 11 | X.509 + verification | `complete` |  |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` |  |
-| 13 | Legacy / deprecated compatibility | `not-started` | not started |
+| 13 | Legacy / deprecated compatibility | `complete` |  |
 | 14 | TLS / DTLS (libssl) | `not-started` | not started |
 | 15 | QUIC / ECH and modern SSL surface | `not-started` | not started |
 | 16 | CLI / config / filesystem contract | `not-started` | not started |

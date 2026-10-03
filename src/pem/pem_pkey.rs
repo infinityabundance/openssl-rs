@@ -1,30 +1,24 @@
-//! `crypto/pem/pem_pkey.c`'s **read half** — `pem_read_bio_key` and the ten `PEM_read_*`
-//! exports it serves. Phase 8.9 (D369).
+//! `crypto/pem/pem_pkey.c` — the `pem.h` `EVP_PKEY` reader and writer spellings Phase 8.9's read
+//! half began (D369) and Phase 13.7 completes.
 //!
-//! ## The unit, and the half that lands
+//! ## The unit, and the two halves
 //!
 //! `crypto/pem/pem_pkey.c` is 452 lines and **16 exports**. The read half is the
 //! `EVP_PKEY` reader: [`pem_read_bio_key`] tries a decoder first and the legacy
 //! decoders second, and the four `PEM_read_bio_*`/four `PEM_read_*` spellings plus the
 //! two `PEM_read_bio_Parameters*` ones are that body with a selection. D367 measured the
-//! legacy leg's closure and named its last missing callee — `ossl_d2i_PUBKEY_legacy`,
-//! which `pem_read_bio_key_legacy` calls on the public-key-only arm
+//! legacy leg's closure and named its last missing callee — `ossl_d2i_PUBKEY_legacy`
 //! (`crypto/pem/pem_pkey.c:186`) — and D368 landed every other leg
 //! (`ossl_d2i_PrivateKey_legacy`, `evp_pkcs82pkey_legacy`, `PKCS8_decrypt`). D369 lands
-//! that internal, so **the read half is whole** and is transcribed here.
+//! that internal, so the read half is whole.
 //!
-//! ## The write half is withheld, as one block with its coordinate
-//!
-//! The unit's other six exports — `PEM_write_bio_PrivateKey[_ex]`, `PEM_write_PrivateKey[_ex]`,
-//! `PEM_write_bio_PrivateKey_traditional` and `PEM_write_bio_Parameters` — are the
-//! `PEM_write_cb_ex_fnsig`/`PEM_write_fnsig` expansions whose bodies are
-//! `crypto/pem/pem_local.h`'s `IMPLEMENT_PEM_provided_write_body_*` macros. The `legacy:`
-//! label those macros fall through to is `PEM_write_bio_PKCS8PrivateKey`
-//! (`crypto/pem/pem_pk8.c`) and `PEM_write_bio_PrivateKey_traditional`, and the first of
-//! those is **not landed and not this stratum's**: `pem_pk8.c`'s `do_pk8pkey` builds an
-//! `OSSL_ENCODER_CTX` and calls `PEM_def_callback`, and the whole `pem_pk8.c` unit is
-//! Phase 13's in the plan. A writer that omitted the fall-through would answer 0 where the
-//! authority encodes, so the six are withheld with this coordinate rather than stubbed.
+//! The write half is five spellings whose bodies are `crypto/pem/pem_local.h`'s
+//! `IMPLEMENT_PEM_provided_write_body_*` macro expansions — `PEM_write_bio_PrivateKey[_ex]`,
+//! `PEM_write_PrivateKey[_ex]` and `PEM_write_bio_Parameters`, `crypto/pem/pem_pkey.c:318-451`.
+//! Their `legacy:` label falls through to `PEM_write_bio_PKCS8PrivateKey` (`crypto/pem/pem_pk8.c`)
+//! and [`PEM_write_bio_PrivateKey_traditional`]. Phase 13.7 lands all five: the two dependencies
+//! name — `pem_pk8.c`'s four writers in `src/pem/pem_pk8.rs`, and the traditional writer above —
+//! are both in the crate, so nothing in the fall-through is missing.
 //!
 //! ## The decoder-first leg, and what this crate's empty decoder registry means
 //!
@@ -38,17 +32,29 @@
 //! That is `docs/SECURITY_DIVERGENCE_POLICY.md`'s **D-DECODER-ABSENT-1**: a
 //! decoder-dependent reader answers the legacy leg's answer, not the provider decoder's.
 //!
+//! **A measured consequence for `PEM_read_bio_Parameters[_ex]`.** Those two select
+//! `EVP_PKEY_KEY_PARAMETERS`, and on this authority's revision the *only* arm that can answer
+//! is the decoder leg: the legacy parameters arm is guarded by
+//! `(selection & EVP_PKEY_KEYPAIR) == 0` (`:471`), and `EVP_PKEY_KEYPAIR` is
+//! `EVP_PKEY_PUBLIC_KEY | SELECT_PRIVATE_KEY`, which contains every parameter bit — so the
+//! guard is false for every parameter selection. Measured: on a written
+//! `-----BEGIN DH PARAMETERS-----` block the authority answers a key (`EVP_PKEY_get_id` 28,
+//! `EVP_PKEY_get0_DH` non-NULL) and this crate answers NULL. The two names are landed rather
+//! than withheld because their body is whole and the difference is the documented
+//! decoder-absence, not a stub; the arm is left to the decoder-dependent divergence record.
+//!
 //! ## The raise sites
 //!
 //! `crypto/pem/pem_pkey.c` is already in `gen_err_raise_sites.py`'s covered set (stem
 //! `PEM_PKEY`): the read half raises `PEM_R_UNSUPPORTED_KEY_COMPONENTS` (`:87`),
-//! `PEM_R_BAD_PASSWORD_READ` (`:161`) and `ERR_R_ASN1_LIB` (`:209`), and the two stdio
-//! `PEM_read_*_ex` spellings raise `ERR_R_BUF_LIB` (`:288`, `:418`). The three write-half
-//! sites (`:360`, `:439`, and `PEM_write_bio_PrivateKey_traditional`'s) are covered by the
-//! same entry and are not reached here.
+//! `PEM_R_BAD_PASSWORD_READ` (`:161`) and `ERR_R_ASN1_LIB` (`:209`), the two stdio
+//! `PEM_read_*_ex` spellings raise `ERR_R_BUF_LIB` (`:288`, `:418`), and the write half raises
+//! `ERR_R_BUF_LIB` (`:439`), `PEM_R_UNSUPPORTED_PUBLIC_KEY_TYPE` (`:360`) and the traditional
+//! writer's. No site is added by 13.7.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use core::cell::Cell;
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_ulong, c_void};
 use core::ptr;
 
@@ -60,6 +66,13 @@ use crate::asn1::x_sig::{d2i_X509_SIG, X509_SIG_free};
 use crate::decoder_lib::OSSL_DECODER_from_bio;
 use crate::decoder_meth::OSSL_DECODER_CTX_free;
 use crate::decoder_pkey::{OSSL_DECODER_CTX_new_for_pkey, OSSL_DECODER_CTX_set_pem_password_cb};
+use crate::encoder_lib::{OSSL_ENCODER_CTX_get_num_encoders, OSSL_ENCODER_to_bio};
+use crate::encoder_meth::OSSL_ENCODER_CTX_free;
+use crate::encoder_pkey::{
+    OSSL_ENCODER_CTX_new_for_pkey, OSSL_ENCODER_CTX_set_cipher, OSSL_ENCODER_CTX_set_passphrase,
+    OSSL_ENCODER_CTX_set_pem_password_cb,
+};
+use crate::evp::cipher::{EVP_CIPHER_get0_name, EvpCipher};
 use crate::evp::evp_pkey::evp_pkcs82pkey_legacy;
 use crate::evp::keymgmt_lib::evp_keymgmt_util_has;
 use crate::evp::pem_bridge::{ossl_pem_check_suffix, PemPasswordCb};
@@ -77,12 +90,13 @@ use crate::pem::pem_lib::{
     PEM_BUFSIZE, PEM_STRING_EVP_PKEY, PEM_STRING_PARAMETERS, PEM_STRING_PKCS8, PEM_STRING_PKCS8INF,
     PEM_STRING_PUBLIC,
 };
+use crate::pem::pem_pk8::PEM_write_bio_PKCS8PrivateKey;
 use crate::pkcs12::p12_p8d::PKCS8_decrypt;
 use crate::runtime::bio::bf_readbuff::BIO_f_readbuffer;
 use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::print::BIO_snprintf;
 use crate::runtime::bio::{
-    BIO_ctrl, BIO_free, BIO_new, BIO_pop, BIO_push, Bio, BIO_CTRL_EOF, BIO_C_FILE_SEEK,
+    BIO_ctrl, BIO_free, BIO_new, BIO_new_fp, BIO_pop, BIO_push, Bio, BIO_CTRL_EOF, BIO_C_FILE_SEEK,
     BIO_C_FILE_TELL, BIO_C_SET_FILE_PTR, BIO_NOCLOSE,
 };
 use crate::runtime::err::{
@@ -95,6 +109,9 @@ use crate::x509::x_pubkey::ossl_d2i_PUBKEY_legacy;
 unsafe extern "C" {
     /// The C library's `strcmp`, which the authority's two name tests are.
     fn strcmp(a: *const c_char, b: *const c_char) -> c_int;
+    /// The C library's `strlen`, which the provided-write pass-phrase fallback calls when `u`
+    /// stands in for a password string.
+    fn strlen(s: *const c_char) -> usize;
 }
 
 /// The `OPENSSL_FILE` string for this unit's `OPENSSL_secure_free`/`_secure_clear_free` macro
@@ -672,7 +689,6 @@ unsafe fn pem_read_bio_key(
 /// # Safety
 ///
 /// The authority's `pem_password_cb` signature; this arm reads nothing.
-#[allow(dead_code)] // the two `PEM_read_bio_Parameters*` spellings it served are withheld (see below)
 unsafe extern "C" fn no_password_cb(
     _buf: *mut c_char,
     _num: c_int,
@@ -856,6 +872,371 @@ pub unsafe extern "C" fn PEM_read_PrivateKey(
     unsafe { PEM_read_PrivateKey_ex(fp, x, cb, u, ptr::null_mut(), ptr::null()) }
 }
 
+// The `i2d`-shaped adapter `PEM_write_bio_Parameters`'s `legacy:` arm needs.
+//
+// The authority casts `x->ameth->param_encode` — a runtime function pointer whose parameter is
+// the typed `EVP_PKEY *` — to `i2d_of_void *` and hands it to `PEM_ASN1_write_bio`. A C cast of
+// that shape has no Rust counterpart for a `fn` pointer of a different parameter list, so the
+// pointer is parked here for the duration of the one synchronous call and this adapter reads it
+// back. The parking is thread-local because the writer is re-entrant-safe and callable from any
+// thread.
+thread_local! {
+    static PARAM_ENCODE: Cell<
+        Option<unsafe extern "C" fn(*const EvpPkey, *mut *mut c_uchar) -> c_int>,
+    > = const { Cell::new(None) };
+}
+
+/// `PEM_ASN1_write_bio`'s `i2d_of_void` view of the parked `param_encode`.
+///
+/// # Safety
+/// `x` and `out` must be the parked encoder's own arguments.
+unsafe extern "C" fn param_encode_void(x: *const c_void, out: *mut *mut c_uchar) -> c_int {
+    PARAM_ENCODE.with(|slot| match slot.get() {
+        // SAFETY: `x` and `out` are the parked encoder's own arguments per the contract.
+        Some(f) => unsafe { f(x.cast::<EvpPkey>(), out) },
+        None => 0,
+    })
+}
+
+/// The `legacy:` label `PEM_write_cb_ex_fnsig(PrivateKey, …)` falls through to —
+/// `crypto/pem/pem_pkey.c:325-329`.
+///
+/// A key whose method has a `priv_encode` (or has no method at all) is written through
+/// [`PEM_write_bio_PKCS8PrivateKey`] (`crypto/pem/pem_pk8.c`); every other key through
+/// [`PEM_write_bio_PrivateKey_traditional`]. The same label serves `PEM_write_PrivateKey*`
+/// because the `FILE *` spellings wrap the BIO ones.
+///
+/// # Safety
+/// As [`PEM_write_bio_PKCS8PrivateKey`] and [`PEM_write_bio_PrivateKey_traditional`]; `x` is NULL
+/// or a live key and the trailing arguments are the caller's.
+unsafe fn pem_write_private_key_legacy(
+    out: *mut Bio,
+    x: *const EvpPkey,
+    enc: *const EvpCipher,
+    kstr: *const c_uchar,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    if !x.is_null() {
+        // SAFETY: `x` is live per the contract.
+        let ameth = unsafe { (*x).ameth };
+        let priv_encode = if ameth.is_null() {
+            None
+        } else {
+            // SAFETY: `ameth` is `x`'s own method table.
+            unsafe { (*ameth).priv_encode }
+        };
+        if ameth.is_null() || priv_encode.is_some() {
+            // SAFETY: every argument is the caller's; the cast restates the typed key argument.
+            return unsafe {
+                PEM_write_bio_PKCS8PrivateKey(out, x, enc, kstr.cast::<c_char>(), klen, cb, u)
+            };
+        }
+    }
+    // SAFETY: every argument is the caller's.
+    unsafe { PEM_write_bio_PrivateKey_traditional(out, x, enc.cast::<c_void>(), kstr, klen, cb, u) }
+}
+
+/// `int PEM_write_bio_PrivateKey_ex(BIO *out, const EVP_PKEY *x, const EVP_CIPHER *enc, const
+/// unsigned char *kstr, int klen, pem_password_cb *cb, void *u, OSSL_LIB_CTX *libctx, const char
+/// *propq)` — the `PEM_write_cb_ex_fnsig(PrivateKey, EVP_PKEY, BIO, write_bio)` expansion,
+/// `crypto/pem/pem_pkey.c:318-330`.
+///
+/// The provided-encoder arm is transcribed whole from `pem_local.h`'s
+/// `IMPLEMENT_PEM_provided_write_body_{vars,pass,main}`; because this crate publishes no encoder
+/// instances for a legacy key (`encode_key2any.c` is blocked), that arm reaches the `legacy:`
+/// label exactly as the authority's does, which is what makes the bytes comparable.
+///
+/// # Safety
+/// `out` a live BIO; `x` NULL or a live `EVP_PKEY`; `enc` NULL or a live cipher; `kstr`/`klen`
+/// the pass phrase or `u`; `libctx` unread (the macro's parameter is unused by this body) and
+/// `propq` NULL or NUL-terminated.
+#[no_mangle]
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub unsafe extern "C" fn PEM_write_bio_PrivateKey_ex(
+    out: *mut Bio,
+    x: *const EvpPkey,
+    enc: *const EvpCipher,
+    kstr: *const c_uchar,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> c_int {
+    // The authority's `IMPLEMENT_PEM_provided_write_body_vars` passes only the property string:
+    // the `libctx` parameter of the `_ex` spelling is not read by this body.
+    let _ = libctx;
+    // SAFETY: `x` is NULL or live and the four strings are NULL or literals.
+    let ctx = unsafe {
+        OSSL_ENCODER_CTX_new_for_pkey(
+            x,
+            EVP_PKEY_KEYPAIR,
+            c"PEM".as_ptr(),
+            c"PrivateKeyInfo".as_ptr(),
+            propq,
+        )
+    };
+    // SAFETY: `ctx` is NULL or live; `get_num_encoders(NULL)` answers 0, which is the authority's
+    // own NULL path.
+    if unsafe { OSSL_ENCODER_CTX_get_num_encoders(ctx) } == 0 {
+        // SAFETY: `ctx` is NULL or this call's own.
+        unsafe { OSSL_ENCODER_CTX_free(ctx) };
+        // SAFETY: every argument is the caller's.
+        return unsafe { pem_write_private_key_legacy(out, x, enc, kstr, klen, cb, u) };
+    }
+
+    // `IMPLEMENT_PEM_provided_write_body_pass`.
+    let mut kstr = kstr;
+    let mut klen = klen;
+    let mut cb = cb;
+    let mut ret = 1;
+    if kstr.is_null() && cb.is_none() {
+        if !u.is_null() {
+            kstr = u.cast::<c_uchar>();
+            // SAFETY: `u` is a NUL-terminated string per this arm's contract.
+            klen = unsafe { strlen(u.cast::<c_char>()) } as c_int;
+        } else {
+            cb = Some(PEM_def_callback);
+        }
+    }
+    if !enc.is_null() {
+        ret = 0;
+        // SAFETY: `ctx` and `enc` are live; the property string is NULL.
+        if unsafe { OSSL_ENCODER_CTX_set_cipher(ctx, EVP_CIPHER_get0_name(enc), ptr::null()) } != 0
+        {
+            ret = 1;
+            // The authority's `if … else if` is over the whole conjuncts, so a non-NULL `kstr`
+            // whose `set_passphrase` succeeds still reaches the callback arm.
+            if !kstr.is_null()
+                // SAFETY: `ctx` is live and `kstr` is the caller's or `u`.
+                && unsafe { OSSL_ENCODER_CTX_set_passphrase(ctx, kstr, klen as usize) } == 0
+            {
+                ret = 0;
+            } else if let Some(f) = cb {
+                // SAFETY: `ctx` is live and `f`/`u` are the caller's.
+                if unsafe { OSSL_ENCODER_CTX_set_pem_password_cb(ctx, Some(f), u) } == 0 {
+                    ret = 0;
+                }
+            }
+        }
+    }
+    if ret == 0 {
+        // SAFETY: `ctx` is this call's own.
+        unsafe { OSSL_ENCODER_CTX_free(ctx) };
+        return 0;
+    }
+    // `IMPLEMENT_PEM_provided_write_body_main`.
+    // SAFETY: `ctx` is live and `out` is the caller's.
+    let ret = unsafe { OSSL_ENCODER_to_bio(ctx, out) };
+    // SAFETY: `ctx` is this call's own.
+    unsafe { OSSL_ENCODER_CTX_free(ctx) };
+    ret
+}
+
+/// `int PEM_write_bio_PrivateKey(BIO *out, const EVP_PKEY *x, const EVP_CIPHER *enc, const
+/// unsigned char *kstr, int klen, pem_password_cb *cb, void *u)` — the
+/// `PEM_write_cb_fnsig(PrivateKey, EVP_PKEY, BIO, write_bio)` expansion,
+/// `crypto/pem/pem_pkey.c:332-336`.
+///
+/// # Safety
+/// As [`PEM_write_bio_PrivateKey_ex`] with a NULL context and property string.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_PrivateKey(
+    out: *mut Bio,
+    x: *const EvpPkey,
+    enc: *const EvpCipher,
+    kstr: *const c_uchar,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: every argument is the caller's.
+    unsafe {
+        PEM_write_bio_PrivateKey_ex(out, x, enc, kstr, klen, cb, u, ptr::null_mut(), ptr::null())
+    }
+}
+
+/// `int PEM_write_PrivateKey_ex(FILE *out, const EVP_PKEY *x, const EVP_CIPHER *enc, const
+/// unsigned char *kstr, int klen, pem_password_cb *cb, void *u, OSSL_LIB_CTX *libctx, const char
+/// *propq)` — the `PEM_write_cb_ex_fnsig(PrivateKey, EVP_PKEY, FILE, write)` expansion,
+/// `crypto/pem/pem_pkey.c:433-446`.
+///
+/// # Safety
+/// `out` the caller's open `FILE *`; the rest as [`PEM_write_bio_PrivateKey_ex`].
+#[no_mangle]
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+pub unsafe extern "C" fn PEM_write_PrivateKey_ex(
+    out: *mut c_void,
+    x: *const EvpPkey,
+    enc: *const EvpCipher,
+    kstr: *const c_uchar,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> c_int {
+    // SAFETY: `out` is the caller's stream and `BIO_NOCLOSE` leaves it open.
+    let b = unsafe { BIO_new_fp(out, BIO_NOCLOSE) };
+    if b.is_null() {
+        // SAFETY: a compile-time-constant site.
+        unsafe { raise_site(&err_sites::PEM_PKEY_439) };
+        return 0;
+    }
+    // SAFETY: `b` is live; every other argument is the caller's.
+    let ret = unsafe { PEM_write_bio_PrivateKey_ex(b, x, enc, kstr, klen, cb, u, libctx, propq) };
+    // SAFETY: `b` is this call's own live BIO.
+    unsafe { BIO_free(b) };
+    ret
+}
+
+/// `int PEM_write_PrivateKey(FILE *out, const EVP_PKEY *x, const EVP_CIPHER *enc, const unsigned
+/// char *kstr, int klen, pem_password_cb *cb, void *u)` — the
+/// `PEM_write_cb_fnsig(PrivateKey, EVP_PKEY, FILE, write)` expansion,
+/// `crypto/pem/pem_pkey.c:448-451`.
+///
+/// # Safety
+/// `out` the caller's open `FILE *`; the rest as [`PEM_write_PrivateKey_ex`].
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_PrivateKey(
+    out: *mut c_void,
+    x: *const EvpPkey,
+    enc: *const EvpCipher,
+    kstr: *const c_uchar,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: every argument is the caller's.
+    unsafe { PEM_write_PrivateKey_ex(out, x, enc, kstr, klen, cb, u, ptr::null_mut(), ptr::null()) }
+}
+
+/// `int PEM_write_bio_Parameters(BIO *out, const EVP_PKEY *x)` — the
+/// `PEM_write_fnsig(Parameters, EVP_PKEY, BIO, write_bio)` expansion,
+/// `crypto/pem/pem_pkey.c:393-407`.
+///
+/// The provided-encoder arm is `IMPLEMENT_PEM_provided_write_body_{vars,main}`; the `legacy:`
+/// label writes through the key method's own `param_encode` under the method's
+/// `"<pem_str> PARAMETERS"` name.
+///
+/// # Safety
+/// `out` a live BIO; `x` a live `EVP_PKEY` (the authority's `legacy:` arm dereferences it without
+/// a NULL test).
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_Parameters(out: *mut Bio, x: *const EvpPkey) -> c_int {
+    let mut pem_str = [0 as c_char; 80];
+    // SAFETY: `x` is live per the contract and the two strings are NULL or literals.
+    let ctx = unsafe {
+        OSSL_ENCODER_CTX_new_for_pkey(
+            x,
+            EVP_PKEY_KEY_PARAMETERS,
+            c"PEM".as_ptr(),
+            c"type-specific".as_ptr(),
+            ptr::null(),
+        )
+    };
+    // SAFETY: `ctx` is NULL or live; `get_num_encoders(NULL)` answers 0.
+    if unsafe { OSSL_ENCODER_CTX_get_num_encoders(ctx) } != 0 {
+        // SAFETY: `ctx` is live and `out` is the caller's.
+        let ret = unsafe { OSSL_ENCODER_to_bio(ctx, out) };
+        // SAFETY: `ctx` is this call's own.
+        unsafe { OSSL_ENCODER_CTX_free(ctx) };
+        return ret;
+    }
+    // SAFETY: `ctx` is NULL or this call's own.
+    unsafe { OSSL_ENCODER_CTX_free(ctx) };
+
+    // The authority's `legacy:` label.
+    // SAFETY: `x` is live per the contract.
+    let ameth = unsafe { (*x).ameth };
+    let param_encode = if ameth.is_null() {
+        None
+    } else {
+        // SAFETY: `ameth` is `x`'s own method table.
+        unsafe { (*ameth).param_encode }
+    };
+    let Some(param_encode) = param_encode else {
+        return 0;
+    };
+    // SAFETY: `ameth` is non-NULL because `param_encode` was read from it; `pem_str` is 80 bytes.
+    unsafe {
+        BIO_snprintf(
+            pem_str.as_mut_ptr(),
+            pem_str.len(),
+            c"%s PARAMETERS".as_ptr(),
+            (*ameth).pem_str,
+        )
+    };
+    PARAM_ENCODE.with(|slot| slot.set(Some(param_encode)));
+    let i2d: I2dOfVoid = param_encode_void;
+    // SAFETY: every argument is live; the two NULLs are the authority's no-cipher arms.
+    let ret = unsafe {
+        PEM_ASN1_write_bio(
+            Some(i2d),
+            pem_str.as_ptr(),
+            out,
+            x.cast::<c_void>(),
+            ptr::null(),
+            ptr::null(),
+            0,
+            None,
+            ptr::null_mut(),
+        )
+    };
+    PARAM_ENCODE.with(|slot| slot.set(None));
+    ret
+}
+
+/// `EVP_PKEY *PEM_read_bio_Parameters_ex(BIO *bp, EVP_PKEY **x, OSSL_LIB_CTX *libctx, const char
+/// *propq)` — `crypto/pem/pem_pkey.c:377-386`.
+///
+/// **A measured divergence (`D-DECODER-ABSENT-1`).** The reader is one call to
+/// [`pem_read_bio_key`] with `EVP_PKEY_KEY_PARAMETERS`, and on this crate that selection can only
+/// be answered by the provider-decoder leg — which publishes no instance here (see the module
+/// header). The authority answers a key for a written `-----BEGIN DH PARAMETERS-----` block; this
+/// crate answers NULL by the same path its other decoder-first readers take. The name is landed
+/// because `pem_read_bio_key` is whole and the divergence is the documented one, not a stub.
+///
+/// # Safety
+/// `bp` a live BIO; `x` NULL or a writable key slot; `libctx` NULL or live and `propq` NULL or
+/// NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_bio_Parameters_ex(
+    bp: *mut Bio,
+    x: *mut *mut EvpPkey,
+    libctx: *mut c_void,
+    propq: *const c_char,
+) -> *mut EvpPkey {
+    // SAFETY: the caller's contract; `no_password_cb` never reads its arguments.
+    unsafe {
+        pem_read_bio_key(
+            bp,
+            x,
+            Some(no_password_cb),
+            ptr::null_mut(),
+            libctx,
+            propq,
+            EVP_PKEY_KEY_PARAMETERS,
+        )
+    }
+}
+
+/// `EVP_PKEY *PEM_read_bio_Parameters(BIO *bp, EVP_PKEY **x)` —
+/// `crypto/pem/pem_pkey.c:388-391`.
+///
+/// # Safety
+/// `bp` a live BIO; `x` NULL or a writable key slot.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_read_bio_Parameters(
+    bp: *mut Bio,
+    x: *mut *mut EvpPkey,
+) -> *mut EvpPkey {
+    // SAFETY: the caller's contract.
+    unsafe { PEM_read_bio_Parameters_ex(bp, x, ptr::null_mut(), ptr::null()) }
+}
+
 /// `int PEM_write_bio_PrivateKey_traditional(BIO *bp, const EVP_PKEY *x, const EVP_CIPHER *enc,
 /// const unsigned char *kstr, int klen, pem_password_cb *cb, void *u)` —
 /// `crypto/pem/pem_pkey.c:342-370`.
@@ -951,35 +1332,17 @@ pub unsafe extern "C" fn PEM_write_bio_PrivateKey_traditional(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Withheld: the write half — `pem_pkey.c:318-370`, `:393-407`, `:433-451` — and the two
-// `PEM_read_bio_Parameters*` spellings, `:377-391`
+// All sixteen exports of `crypto/pem/pem_pkey.c` are above: the read half (Phase 8.9) plus the
+// five write spellings and the two `PEM_read_bio_Parameters*` ones (Phase 13.7).
 // ---------------------------------------------------------------------------------------------
 //
-// `PEM_write_bio_PrivateKey_ex`/`_PrivateKey`, `PEM_write_PrivateKey_ex`/`_PrivateKey` and
-// `PEM_write_bio_Parameters` are the `PEM_write_cb_ex_fnsig`/`PEM_write_fnsig` expansions whose
-// bodies are `crypto/pem/pem_local.h`'s `IMPLEMENT_PEM_provided_write_body_*`. Their `legacy:`
-// fall-through is `PEM_write_bio_PKCS8PrivateKey` (`crypto/pem/pem_pk8.c`) and
-// `PEM_write_bio_PrivateKey_traditional`, and the `pass` body reaches
-// `OSSL_ENCODER_CTX_set_cipher`/`_set_passphrase`/`_set_pem_password_cb`. A writer that omitted
-// the fall-through would answer 0 where the authority encodes, so the five are withheld as one
-// block with this coordinate rather than stubbed. `PEM_write_bio_PrivateKey_traditional` itself
-// **has landed** (10.6) and is above: the fall-through leg the other five name now exists, so a
-// later phase that lands them has one of its two dependencies ready.
-//
-// **`PEM_read_bio_Parameters` and `PEM_read_bio_Parameters_ex` are withheld for a different,
-// measured reason, and it is not the same block.** They call `pem_read_bio_key` with
-// `EVP_PKEY_KEY_PARAMETERS`, and on this authority's revision the *only* arm that can answer is
-// the decoder leg: the legacy parameters arm is guarded by `(selection & EVP_PKEY_KEYPAIR) == 0`,
-// and `EVP_PKEY_KEYPAIR` is `EVP_PKEY_PUBLIC_KEY | SELECT_PRIVATE_KEY` — which contains every
-// parameter bit — so the guard is false for every parameter selection. Measured: on a written
-// `-----BEGIN DH PARAMETERS-----` block the authority answers a key (`EVP_PKEY_get_id` 28,
-// `EVP_PKEY_get0_DH` non-NULL) and this crate answers NULL, because it publishes no provider
-// decoder (`D-DECODER-ABSENT-1`). Landing them would put a name in the crate that answers NULL
-// where the authority answers a key, which is the class D349 refused; they are withheld here
-// instead, and the two are the only read-half names not landed. `no_password_cb` is kept because
-// transcribing it is free and it names the authority's intent at this coordinate.
-//
-// (`no_password_cb` is defined above; it has no caller until the two are landed.)
+// With 13.7 there is nothing withheld from this unit. The five writers' `legacy:` fall-through
+// reaches `PEM_write_bio_PKCS8PrivateKey` (`src/pem/pem_pk8.rs`, landed here) and
+// [`PEM_write_bio_PrivateKey_traditional`] (10.6), and the provided-encoder `pass` body reaches
+// the landed `OSSL_ENCODER_CTX_set_cipher`/`_set_passphrase`/`_set_pem_password_cb`. The two
+// `PEM_read_bio_Parameters*` spellings are landed with the decoder-absence divergence the module
+// header records: their body is whole, so the difference is the documented one. `no_password_cb`
+// is now called by both of them.
 
 /// `#define evp_pkey_is_assigned(pk)` — `include/crypto/evp.h:643`, `(pk)->pkey.ptr != NULL ||
 /// (pk)->keydata != NULL`.

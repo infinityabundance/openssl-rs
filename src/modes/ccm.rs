@@ -62,6 +62,12 @@ impl CcmCtx {
     pub(crate) fn repoint_key(&mut self, key: *mut c_void) {
         self.key = key;
     }
+
+    /// `ctx->key` — the caller's key schedule; the reader is the legacy `aes_ccm_ctrl`'s
+    /// `EVP_CTRL_COPY` (`src/evp/e_aes.rs`), for the reason [`CcmCtx::repoint_key`] gives.
+    pub(crate) fn key(&self) -> *mut c_void {
+        self.key
+    }
 }
 
 /// `static void ctr64_inc(unsigned char *counter)` — `crypto/modes/ccm128.c:121-135`: increment

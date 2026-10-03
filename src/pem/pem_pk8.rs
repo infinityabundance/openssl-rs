@@ -1,4 +1,11 @@
-//! `crypto/pem/pem_pk8.c` — the PKCS#8 private-key readers and writers. Phase 10.6.
+//! `crypto/pem/pem_pk8.c` — the PKCS#8 private-key readers and writers. Phase 10.6 landed the
+//! six `i2d_`/`d2i_` spellings; Phase 13.7 lands the four `PEM_write[_bio]_PKCS8PrivateKey[_nid]`
+//! wrappers over the same [`do_pk8pkey`].
+//!
+//! The four writers are the surface `crypto/pem/pem_pkey.c`'s `PEM_write_cb_*` `legacy:`
+//! fall-through reaches, so they are the dependency 13.7 owed `pem_pkey.rs`; they land here with
+//! it. Each is one call to `do_pk8pkey`/`do_pk8pkey_fp` with `isder = 0` and either `nid = -1` or
+//! the PBE `nid`, exactly as the authority's `pem_pk8.c:41-53`, `:221-233`.
 //!
 //! All six of the unit's exports land here: `i2d_PKCS8PrivateKey_bio`/`_fp` (the DER writers),
 //! `d2i_PKCS8PrivateKey_bio`/`_fp` (the readers) and the two `_nid_` writers,
@@ -323,6 +330,51 @@ unsafe fn i2d_pkcs8_bio(bp: *mut Bio, p8: *const crate::asn1::x_sig::X509Sig) ->
     unsafe { ASN1_i2d_bio(i2d, bp, p8.cast::<c_void>()) }
 }
 
+/// `int PEM_write_bio_PKCS8PrivateKey_nid(BIO *bp, const EVP_PKEY *x, int nid, const char *kstr,
+/// int klen, pem_password_cb *cb, void *u)` — `pem_pk8.c:41-46`.
+///
+/// The PKCS#5 v1.5 spelling: a PBE `nid` forces `do_pk8pkey`'s legacy `PKCS8_encrypt` arm,
+/// because the comment above the authority's `do_pk8pkey` says a `nid` is a PBE algorithm that
+/// cannot be fetched.
+///
+/// # Safety
+/// As [`do_pk8pkey`] with `isder = 0` and the PBE `nid`; `enc` is NULL.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_PKCS8PrivateKey_nid(
+    bp: *mut Bio,
+    x: *const crate::evp::pkey::EvpPkey,
+    nid: c_int,
+    kstr: *const c_char,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: every argument is the caller's.
+    unsafe { do_pk8pkey(bp, x, 0, nid, ptr::null(), kstr, klen, cb, u, ptr::null()) }
+}
+
+/// `int PEM_write_bio_PKCS8PrivateKey(BIO *bp, const EVP_PKEY *x, const EVP_CIPHER *enc, const
+/// char *kstr, int klen, pem_password_cb *cb, void *u)` — `pem_pk8.c:48-53`.
+///
+/// The PKCS#5 v2.0 spelling the `PEM_write_cb_*_PrivateKey` writers' `legacy:` fall-through
+/// reaches; it is one of the two dependencies this unit owes `crypto/pem/pem_pkey.c`.
+///
+/// # Safety
+/// As [`do_pk8pkey`] with `isder = 0`, `nid = -1`.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_bio_PKCS8PrivateKey(
+    bp: *mut Bio,
+    x: *const crate::evp::pkey::EvpPkey,
+    enc: *const EvpCipher,
+    kstr: *const c_char,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: every argument is the caller's.
+    unsafe { do_pk8pkey(bp, x, 0, -1, enc, kstr, klen, cb, u, ptr::null()) }
+}
+
 /// `int i2d_PKCS8PrivateKey_bio(BIO *bp, const EVP_PKEY *x, const EVP_CIPHER *enc, const char
 /// *kstr, int klen, pem_password_cb *cb, void *u)` — `pem_pk8.c:55-60`.
 ///
@@ -488,6 +540,44 @@ pub unsafe extern "C" fn i2d_PKCS8PrivateKey_nid_fp(
 ) -> c_int {
     // SAFETY: every argument is the caller's.
     unsafe { do_pk8pkey_fp(fp, x, 1, nid, ptr::null(), kstr, klen, cb, u, ptr::null()) }
+}
+
+/// `int PEM_write_PKCS8PrivateKey_nid(FILE *fp, const EVP_PKEY *x, int nid, const char *kstr,
+/// int klen, pem_password_cb *cb, void *u)` — `pem_pk8.c:221-226`.
+///
+/// # Safety
+/// `fp` a live `FILE *`; the rest as [`do_pk8pkey_fp`] with `isder = 0` and the PBE `nid`.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_PKCS8PrivateKey_nid(
+    fp: *mut c_void,
+    x: *const crate::evp::pkey::EvpPkey,
+    nid: c_int,
+    kstr: *const c_char,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: every argument is the caller's.
+    unsafe { do_pk8pkey_fp(fp, x, 0, nid, ptr::null(), kstr, klen, cb, u, ptr::null()) }
+}
+
+/// `int PEM_write_PKCS8PrivateKey(FILE *fp, const EVP_PKEY *x, const EVP_CIPHER *enc, const char
+/// *kstr, int klen, pem_password_cb *cb, void *u)` — `pem_pk8.c:228-233`.
+///
+/// # Safety
+/// `fp` a live `FILE *`; the rest as [`do_pk8pkey_fp`] with `isder = 0`, `nid = -1`.
+#[no_mangle]
+pub unsafe extern "C" fn PEM_write_PKCS8PrivateKey(
+    fp: *mut c_void,
+    x: *const crate::evp::pkey::EvpPkey,
+    enc: *const EvpCipher,
+    kstr: *const c_char,
+    klen: c_int,
+    cb: Option<PemPasswordCb>,
+    u: *mut c_void,
+) -> c_int {
+    // SAFETY: every argument is the caller's.
+    unsafe { do_pk8pkey_fp(fp, x, 0, -1, enc, kstr, klen, cb, u, ptr::null()) }
 }
 
 /// `EVP_PKEY *d2i_PKCS8PrivateKey_fp(FILE *fp, EVP_PKEY **x, pem_password_cb *cb, void *u)` —

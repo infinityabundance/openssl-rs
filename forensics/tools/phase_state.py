@@ -938,6 +938,35 @@ PHASE12_MODULES = [
     "forensics/tools/phase12_obligations.py",
 ]
 
+# Phase 13's evidence: the legacy/deprecated-compatibility stratum -- the `ENGINE` framework, the
+# `UI` dialog framework, the `TXT_DB` text database the `ca` app reads, and the deprecated
+# METHOD-era surface the earlier strata hand it rather than transcribe. Its plan is
+# `docs/PHASE-13-SUBPHASES.md`, which 13.0 lands with the ledger. The modules are added by the
+# subphase that lands them, in the same commit, so that this list is a statement about the tree
+# rather than about the plan -- which is why it names no `src/engine/` module: the stratum has
+# landed none of its own.
+#
+# **This stratum's working set is more than its atlas-owned universe.** The atlas assigns it 189
+# `engine.h`/`ui.h`/`txt_db.h` exports, and it receives 188 more as recorded hand-offs from
+# phases 3, 7 and 12; `forensics/phase13-obligations.json` reports a working set of 377 and an
+# `open` count smaller than it, because 123 atlas-owned exports and the four Phase 7 -> 13
+# `PEM_read[_bio]_PrivateKey` hand-offs are already implemented, so `phase-state.json` reports the
+# stratum `in-progress` because its ledger has an open count, not because it has a plan alone.
+# **That split moves as the stratum lands its own units**, so the note below does not restate its
+# counts: the ledger's `counts` is the live record and `forensics/atlas/implemented-surface.json`
+# is the authority behind it. It owns **no provider registration row**: the 39 legacy digest and
+# cipher rows `forensics/atlas/provider-algorithms.json` records for `providers/legacyprov.c` are
+# the loadable module the candidate ships as a scaffold `ossl-modules/legacy.so`, which this
+# stratum's subphases deliberately do not activate, so `provider-algorithm-plans.json` hands them
+# to the distribution stratum (Phase 16). `docs/PHASE-13-SUBPHASES.md` section 4 records the
+# activation measurement and the precondition it places on the coverage join.
+PHASE13_COURTS = "artifacts/phase13/COURTS.json"
+PHASE13_OBLIGATIONS = "forensics/phase13-obligations.json"
+PHASE13_MODULES = [
+    "docs/PHASE-13-SUBPHASES.md",
+    "forensics/tools/phase13_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1014,6 +1043,27 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "ledger's `counts` and `forensics/atlas/implemented-surface.json` "
                             "are the live record. The stratum owns no provider registration "
                             "row (docs/PHASE-12-SUBPHASES.md sections 1 and 4)"
+                        )),
+    13: StratumEvidence(PHASE13_MODULES, PHASE13_OBLIGATIONS, PHASE13_COURTS,
+                        ledger_note=(
+                            "One hundred and eighty-nine of the exports it owns are its own "
+                            "three headers' (`engine.h`, `ui.h`, `txt_db.h`) and the one "
+                            "hundred and eighty-eight remainder arrive as recorded hand-offs "
+                            "from phases 3, 7 and 12 -- the deprecated METHOD-era EVP statics "
+                            "and PEM readers, the ASYNC framework, and the three Phase 12 rows "
+                            "`TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and "
+                            "`SRP_VBASE_init`. The ledger does not start with that whole working "
+                            "set open: 123 atlas-owned exports and the four Phase 7 -> 13 "
+                            "`PEM_read[_bio]_PrivateKey` spellings are reported as `implemented` "
+                            "at activation, so its `open` count is not the whole working set. "
+                            "That split moves as this stratum lands its own units, so this note "
+                            "does not restate its counts; the ledger's `counts` and "
+                            "`forensics/atlas/implemented-surface.json` are the live record. The "
+                            "stratum owns no provider registration row: the 39 legacy digest and "
+                            "cipher rows of `providers/legacyprov.c` are the loadable module the "
+                            "candidate ships as a scaffold `ossl-modules/legacy.so`, handed to the "
+                            "distribution stratum (Phase 16) because this stratum's subphases do "
+                            "not activate it (docs/PHASE-13-SUBPHASES.md sections 1 and 4)"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no
