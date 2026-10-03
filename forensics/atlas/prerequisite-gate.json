@@ -8,8 +8,8 @@
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with `ossl_get_openssldir` rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 86,
-      "language_surface_not_modelled_by_name": 8873,
+      "covered_by_a_divergence": 87,
+      "language_surface_not_modelled_by_name": 9056,
       "planned_prerequisites": 4
     },
     "census_by_unit": {
@@ -38,7 +38,7 @@
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
         "ossl_lib_ctx_default_deinit": 1,
-        "ossl_lib_ctx_get_concrete": 6,
+        "ossl_lib_ctx_get_concrete": 7,
         "ossl_lib_ctx_get_data": 18,
         "ossl_lib_ctx_get_descriptor": 5,
         "ossl_lib_ctx_get_ex_data_global": 2,
@@ -113,6 +113,9 @@
         "crypto/asn1/x_spki.c": 10,
         "crypto/asn1/x_val.c": 5,
         "crypto/asn1_dsa.c": 3,
+        "crypto/async/arch/async_posix.c": 9,
+        "crypto/async/async.c": 12,
+        "crypto/async/async_wait.c": 6,
         "crypto/bf/bf_enc.c": 4,
         "crypto/bio/bf_buff.c": 11,
         "crypto/bio/bf_lbuf.c": 9,
@@ -307,6 +310,23 @@
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/dh_ctrl.c": 7,
         "crypto/evp/dsa_ctrl.c": 5,
+        "crypto/evp/e_aes.c": 24,
+        "crypto/evp/e_aes_cbc_hmac_sha1.c": 12,
+        "crypto/evp/e_aes_cbc_hmac_sha256.c": 14,
+        "crypto/evp/e_aria.c": 16,
+        "crypto/evp/e_bf.c": 2,
+        "crypto/evp/e_camellia.c": 10,
+        "crypto/evp/e_cast.c": 2,
+        "crypto/evp/e_chacha20_poly1305.c": 11,
+        "crypto/evp/e_des.c": 7,
+        "crypto/evp/e_des3.c": 11,
+        "crypto/evp/e_idea.c": 4,
+        "crypto/evp/e_rc2.c": 8,
+        "crypto/evp/e_rc4.c": 5,
+        "crypto/evp/e_rc4_hmac_md5.c": 6,
+        "crypto/evp/e_seed.c": 2,
+        "crypto/evp/e_sm4.c": 10,
+        "crypto/evp/e_xcbc_d.c": 6,
         "crypto/evp/ec_ctrl.c": 7,
         "crypto/evp/ec_support.c": 1,
         "crypto/evp/encode.c": 6,
@@ -324,9 +344,12 @@
         "crypto/evp/keymgmt_lib.c": 8,
         "crypto/evp/keymgmt_meth.c": 13,
         "crypto/evp/legacy_blake2.c": 8,
+        "crypto/evp/legacy_md4.c": 4,
         "crypto/evp/legacy_md5.c": 4,
+        "crypto/evp/legacy_mdc2.c": 4,
         "crypto/evp/legacy_ripemd.c": 4,
         "crypto/evp/legacy_sha.c": 6,
+        "crypto/evp/legacy_wp.c": 4,
         "crypto/evp/mac_lib.c": 11,
         "crypto/evp/names.c": 8,
         "crypto/evp/p5_crpt.c": 14,
@@ -334,7 +357,7 @@
         "crypto/evp/p_dec.c": 4,
         "crypto/evp/p_enc.c": 4,
         "crypto/evp/p_legacy.c": 7,
-        "crypto/evp/p_lib.c": 44,
+        "crypto/evp/p_lib.c": 42,
         "crypto/evp/pbe_scrypt.c": 6,
         "crypto/evp/pmeth_check.c": 6,
         "crypto/evp/pmeth_gn.c": 12,
@@ -401,8 +424,8 @@
         "crypto/pem/pem_info.c": 17,
         "crypto/pem/pem_lib.c": 25,
         "crypto/pem/pem_oth.c": 5,
-        "crypto/pem/pem_pk8.c": 14,
-        "crypto/pem/pem_pkey.c": 29,
+        "crypto/pem/pem_pk8.c": 10,
+        "crypto/pem/pem_pkey.c": 24,
         "crypto/pem/pem_x509.c": 1,
         "crypto/pem/pem_xaux.c": 1,
         "crypto/pem/pvkfmt.c": 21,
@@ -479,11 +502,12 @@
         "crypto/sm2/sm2_crypt.c": 18,
         "crypto/sm2/sm2_key.c": 5,
         "crypto/sm2/sm2_sign.c": 15,
+        "crypto/sm3/legacy_sm3.c": 4,
         "crypto/sm3/sm3.c": 16,
         "crypto/sm4/sm4.c": 4,
         "crypto/sparse_array.c": 6,
         "crypto/srp/srp_lib.c": 11,
-        "crypto/srp/srp_vfy.c": 57,
+        "crypto/srp/srp_vfy.c": 46,
         "crypto/stack/stack.c": 16,
         "crypto/store/store_lib.c": 30,
         "crypto/store/store_meth.c": 15,
@@ -496,7 +520,7 @@
         "crypto/threads_pthread.c": 24,
         "crypto/trace.c": 24,
         "crypto/ts/ts_asn1.c": 40,
-        "crypto/ts/ts_conf.c": 25,
+        "crypto/ts/ts_conf.c": 22,
         "crypto/ts/ts_lib.c": 9,
         "crypto/ts/ts_req_print.c": 3,
         "crypto/ts/ts_req_utils.c": 10,
@@ -505,6 +529,7 @@
         "crypto/ts/ts_rsp_utils.c": 17,
         "crypto/ts/ts_rsp_verify.c": 40,
         "crypto/ts/ts_verify_ctx.c": 14,
+        "crypto/txt_db/txt_db.c": 15,
         "crypto/ui/ui_lib.c": 17,
         "crypto/ui/ui_null.c": 2,
         "crypto/ui/ui_openssl.c": 9,
@@ -638,7 +663,7 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
-        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
@@ -694,8 +719,8 @@
       ]
     },
     "checked": {
-      "authority_units": 534,
-      "crate_modules": 720,
+      "authority_units": 559,
+      "crate_modules": 747,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 4,
       "divergence_names_covered": 47,
@@ -806,28 +831,28 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "141b5bfc21a7b0b5c9f1b3e14a569edb444125edbb2eb1ff448893549ca28141",
+  "body_hash": "bb52fb06371d299499c980fc814bc84eda7a40c4ccb00a44e34c0cad51c2925a",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "a45c07007b5a9b554b869015d272d9c6f806442ba4071c119faf188cc5a08134"
+      "sha256": "307eeabd191cbd65ebbbc6df8ebb545fa7816344d2c0237a46f96d7d64f39e2f"
     },
     {
       "name": "macro-owners",
       "path": "forensics/atlas/macro-owners.json",
-      "sha256": "7a124f1930399432bd14de253a2962cb973e36043479107d691230a08706988d"
+      "sha256": "14b21a64dd0b1cb1bcd1372cee87a1a4e3404d10f32db32374f437d858ac885c"
     },
     {
       "name": "typedef-owners",
       "path": "forensics/atlas/typedef-owners.json",
-      "sha256": "7d08aeb2d40f9d94b547fddf6920218b7fa1d17669313fa490d26c6c3ca9d06a"
+      "sha256": "5a7a65cf44f7e9ebb59ddd8dcc36ef8f6ce85f0babbda25ede76de357fd8754e"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "80a8d5b6f54ef9fdb61f472d71c05ee42178fbfd8d6297e7d5ea860094dbb05e"
+      "sha256": "836fa7826143d0c7378cc24fce49446b85429f97cdcfa2e3dc2898b23889cb47"
     },
     {
       "name": "symbol-ownership",
@@ -842,12 +867,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "f21d56f9b221d55216ee68a9d2417ed9e283262068fca150bc27394795c9b8f6"
+      "sha256": "5595fed5da67642789f14faad274b02ea886596d818c0d46815b0448c679f9dd"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "7f8ca26dc2174adc478bf36a6c07a51112f6e6412e7f60b3f8c23f11eeb57c9d"
+      "sha256": "33ef6cd1cc0675ef9e8a2fd7519f2b55c5317bd55555eb2cb9f6ad1ac08e4eb3"
     },
     {
       "name": "prerequisites",

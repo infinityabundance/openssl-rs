@@ -24,17 +24,14 @@
 //! because `srp.h` is the surface and a drop-in replacement must still resolve the symbols;
 //! it is not a recommendation to use SRP.
 //!
-//! ## What is withheld, and why
+//! ## `SRP_VBASE_init`, withheld by 12.8 and landed by 13.8
 //!
-//! One `crypto/srp/srp_vfy.c` entry point is **not** landed:
-//!
-//! * `SRP_VBASE_init` (`crypto/srp/srp_vfy.c:394-510`) reads a verifier file through
-//!   `TXT_DB_read` (`:423`) and releases it through `TXT_DB_free` (`:504`), and both are
-//!   `txt_db.h`'s — Phase **13**'s, per `forensics/atlas/symbol-ownership.json`. Its private
-//!   helpers that only it reaches (`SRP_gN_new_init`, `SRP_gN_free`, `SRP_gN_place_bn`,
-//!   `SRP_get_gN_by_id`, `SRP_user_pwd_set_sv`) are transcribed in [`srp_vfy`] but carry an
-//!   item-level `#[allow(dead_code)]` naming that withheld caller, because pulling the
-//!   `TXT_DB` reader forward to satisfy one deprecated entry point is disproportionate.
+//! `SRP_VBASE_init` (`crypto/srp/srp_vfy.c:394-510`) was **withheld** by 12.8 because its body
+//! reads a verifier file through `TXT_DB_read` (`:423`) and releases it through `TXT_DB_free`
+//! (`:504`), and both are `txt_db.h`'s — Phase **13**'s. 13.5 landed the `TXT_DB` codec and 13.8
+//! transcribes the body in [`srp_vfy`], so the private helpers that only it reaches
+//! (`SRP_gN_new_init`, `SRP_gN_free`, `SRP_gN_place_bn`, `SRP_get_gN_by_id`,
+//! `SRP_user_pwd_set_sv`) are no longer dead.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 

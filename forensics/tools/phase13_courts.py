@@ -136,12 +136,29 @@ coordinate, D-DECODER-ABSENT-1), does not drive `PEM_read_bio_Parameters[_ex]` o
 `PEM_write_bio_Parameters` only over an RSA key (whose method has no `param_encode`), so no
 divergent arm is compared. See docs/PHASE-13-SUBPHASES.md section 3.7.
 
+`RT-HANDOFF`, and what it compares
+----------------------------------
+13.8's court, `courts/phase13/rt_handoff_probe.c`, drives the three exports 12.5/12.8 withheld --
+`TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` (`ts_conf.c`) and `SRP_VBASE_init`
+(`srp_vfy.c`). Over a fixed in-memory `CONF` it compares the TS answers: a NULL `device` with no
+section entry (succeeds), a NULL `device` with `crypto_device = builtin` (reads and delegates),
+an explicit `"builtin"` (accepted before the registry), and an unknown id (refused) -- plus
+`TS_CONF_set_default_engine`'s own `"builtin"` and unknown arms. It does **not** use `dynamic` or
+`rdrand`, whose answers diverge (the authority registers built-ins this crate does not). Over a
+fixed verifier file written to `/tmp` it compares `SRP_VBASE_init`'s `I`/`V` handling (the `8192`
+group decoded and cached, user `alice` added with its borrowed group, a `V` naming an absent group
+skipped, a miss), the seed-key path's `default_g`/`default_N`, and the NULL-file, absent-file,
+wrong-field-count and undecodable-base64 refusals by their `SRP_ERR_*` return codes. It never
+reads the error queue, and it hands no NULL to a function whose first `strcmp` would dereference
+it. See docs/PHASE-13-SUBPHASES.md section 3.8.
+
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
-A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
-`PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
-run yet" cannot be read as "passed" -- the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-HANDOFF` is the remaining subphase's own court: 13.8's received
+Every court `docs/PHASE-13-SUBPHASES.md` section 2 names is registered below and runs; there is
+no `PENDING_COURTS` row left. The contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every later
+activation established is kept as an empty table rather than deleted, so a later stratum that
+defers a court here still has the mechanism to name it -- and "not run yet" stays impossible to
+read as "passed".
 TS_CONF and SRP hand-offs.
 
 What the behavioural courts will compare, and what they will not
@@ -199,14 +216,14 @@ COURTS: list[tuple[str, str]] = [
     ("RT-TXTDB", "rt_txtdb_probe.c"),
     ("RT-EVP-LEGACY", "rt_evp_legacy_probe.c"),
     ("RT-LEGACY-REMAINDER", "rt_legacy_remainder_probe.c"),
+    ("RT-HANDOFF", "rt_handoff_probe.c"),
 ]
 
-# A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
-# pass, and each is printed with the subphase that brings it so that "not run yet" cannot be read
-# as "passed". The court names are `docs/PHASE-13-SUBPHASES.md` section 2's, one per work
-# subphase.
+# A court the plan names and this stratum cannot run yet. **Empty as of 13.8**, which registered
+# the last court the plan names; the mechanism is kept so a later stratum that defers a court here
+# can name it, and each row is printed with the subphase that brings it so that "not run yet"
+# cannot be read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "RT-HANDOFF": "13.8 (the received TS_CONF and SRP hand-offs)",
 }
 
 
@@ -428,9 +445,15 @@ def main(argv: list[str]) -> int:
             "`ASYNC_get_current_job`/`ASYNC_get_wait_ctx`, the whole `ASYNC_WAIT_CTX_*` surface "
             "and the pool-size refusal -- comparing the transition sequence and the state each "
             "leaves, not the error queue; the decoder-absent `DH PARAMETERS` arm is left "
-            "undriven rather than compared. The one remaining behavioural court the plan names "
-            "is named in `pending_courts` with its subphase -- `RT-HANDOFF` -- and is not "
-            "registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
+            "undriven rather than compared. `RT-HANDOFF` is 13.8's behavioural court: it **calls** "
+            "the three received hand-offs -- `TS_CONF_set_crypto_device`/"
+            "`TS_CONF_set_default_engine` over a fixed `CONF` (NULL device with and without a "
+            "section entry, `builtin`, and an unknown id's refusal) and `SRP_VBASE_init` over a "
+            "fixed verifier file (its `I`/`V` records, the added user's borrowed group, the "
+            "seed-key `default_g`/`default_N`, and the NULL/absent/wrong-field-count/"
+            "undecodable-base64 `SRP_ERR_*` refusals) -- not the built-in engine ids `dynamic`/"
+            "`rdrand`, whose answers diverge, and not the error queue. Every court the plan names "
+            "is registered below and runs; `pending_courts` is empty. Nothing here "
             "is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md "
             "section 3 records what the behavioural courts compare."
         ),
