@@ -62,8 +62,8 @@ this stratum — the mirror of Phases 12, 13 and 14.
 | # | Subphase | Owns | Depends on | Courts |
 |---|---|---|---|---|
 | 15.0 | **The plan and the census** | `docs/PHASE-15-SUBPHASES.md` and the measurement in §1. The ledger (`forensics/phase15-obligations.json`) and its generator land with it. **The runner and the reference-basis probe land with it too, and §4.2 is why they cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and `RT-PHASE15-REF` is the stratum's only court until 15.1 lands a unit. | 14 | — |
-| 15.1 | **The three QUIC method constructors** | `ssl/quic/quic_method.c` (3). `OSSL_QUIC_client_method`, `OSSL_QUIC_client_thread_method` and `OSSL_QUIC_server_method`, each the `IMPLEMENT_quic_meth_func` expansion — a process-lifetime `static const SSL_METHOD` carrying `OSSL_QUIC_ANY_VERSION`, no flags, no mask, `tls1_default_timeout`, the `ssl3_undef_enc_method` enc table and the `q_accept`/`q_connect` role pair. **Landed (checked against the ledger): all three rows, in `src/ssl/quic/quic_method.rs`.** | 15.0 | `RT-QUIC` |
-| 15.2 | **The seal** | nothing in the crate — evidence: `docs/PHASE-15-QUIC-ECH-SEAL.md` (at the seal) | 15.0–15.1 | — |
+| 15.1 | **The three QUIC method constructors** | `ssl/quic/quic_method.c` (3). `OSSL_QUIC_client_method`, `OSSL_QUIC_client_thread_method` and `OSSL_QUIC_server_method`, each the `IMPLEMENT_quic_meth_func` expansion — a process-lifetime `static const SSL_METHOD` carrying `OSSL_QUIC_ANY_VERSION`, no flags, no mask, the TLS default timeout (reduced to seconds), the undefined enc-method table and the `q_accept`/`q_connect` role pair. **Landed (checked against the ledger): all three rows, in `src/ssl/quic/quic_method.rs`.** | 15.0 | `RT-QUIC` |
+| 15.2 | **The seal** | nothing in the crate — evidence: `docs/PHASE-15-QUIC-SEAL.md` (at the seal) | 15.0–15.1 | — |
 
 The two rows above the seal and 15.1 partition the three exports exactly, by defining unit: 3 = 3,
 and the one open unit appears in exactly one row. The partition is derived from

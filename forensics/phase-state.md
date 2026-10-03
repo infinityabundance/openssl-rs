@@ -23,7 +23,7 @@ enforced here:
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` |  |
 | 13 | Legacy / deprecated compatibility | `complete` |  |
 | 14 | TLS / DTLS (libssl) | `complete` |  |
-| 15 | QUIC / ECH and modern SSL surface | `in-progress` | Phase 15's FRF chain entry is incomplete: 1 court(s) that artifacts/phase15/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-quic; 1 of 1 required court(s) have no FRF declaration staging their artifacts/phase15/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-quic; 1 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-quic; 1 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-quic; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 1 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 15 and the FRF chain |
+| 15 | QUIC / ECH and modern SSL surface | `complete` |  |
 | 16 | CLI / config / filesystem contract | `not-started` | not started |
 | 17 | Downstream replacement court | `not-started` | not started |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | not started |
