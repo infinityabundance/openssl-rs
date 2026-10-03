@@ -343,6 +343,13 @@ THREAD_ARCH_INT = ("not a provider dispatch: declared in `include/internal/threa
 ENGINE_LOCAL_TYPEDEF = ("not a provider dispatch: a callback typedef declared in "
                         "`crypto/engine/eng_local.h`, which is internal, so the atlas records "
                         "no typedef for it")
+# `crypto/cmp/cmp_local.h:996` -- `ossl_cmp_allow_unprotected_cb_t`, the allow-unprotected
+# callback the CMP verifier takes. A callback typedef in an **internal** header, so the atlas --
+# whose universe is the installed public surface -- records no typedef for it, and the convention
+# rule has no authority name for the crate's alias to join on. Landed with the CMP engine (12.4b).
+CMP_LOCAL_TYPEDEF = ("not a provider dispatch: a callback typedef declared in "
+                     "`crypto/cmp/cmp_local.h:996`, which is internal, so the atlas records "
+                     "no typedef for it")
 
 
 def _inline(fn: str, spelling: str) -> str:
@@ -399,6 +406,8 @@ LINKS: dict[str, tuple[str, ...]] = {
 # naming an alias the crate does not declare is a failure.
 # ---------------------------------------------------------------------------------------------
 NOT_A_DISPATCH: dict[str, str] = {
+    # --- `crypto/cmp/cmp_local.h` (12.4b) ---------------------------------------------------
+    "OsslCmpAllowUnprotectedCb": CMP_LOCAL_TYPEDEF,
     # --- `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h`) -------------------------
     "AlgorithmFn": MCM,
     "AlgorithmPreFn": MCM,

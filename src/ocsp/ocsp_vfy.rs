@@ -1,6 +1,7 @@
-//! `crypto/ocsp/ocsp_vfy.c` — the OCSP response verifier's signer/id helpers. Phase 11.2b's fourth
-//! OCSP-function unit, landed as an **internal** transcription: every name is `pub(crate)` and none
-//! carries `#[no_mangle]`, because the `OCSP_*` exports are Phase 12's.
+//! `crypto/ocsp/ocsp_vfy.c` — the OCSP response and request verifier. Phase 11.2b landed the
+//! signer/id helpers and `OCSP_basic_verify` as an **internal** transcription for the engine's OCSP
+//! arm; Phase 12.6 (this subphase) promotes those three exports and adds `OCSP_resp_get0_signer`
+//! and `OCSP_request_verify` with their static `ocsp_req_find_signer`.
 //!
 //! `crypto/ocsp/ocsp_vfy.c` is 438 lines. The requested set is `OCSP_basic_verify` (`:98`) and the
 //! statics it reaches; all nine are transcribed:
@@ -19,6 +20,9 @@
 //! * [`ocsp_match_issuerid`] (`:302-367`) — hash the candidate certificate's subject and public key
 //!   with the `CertID`'s own algorithm and compare.
 //! * [`ocsp_check_delegated`] (`:369-376`) — the responder certificate's `OCSP Signing` usage.
+//! * [`OCSP_resp_get0_signer`] (`:162-166`) — the response's signer, or 0 when none was found.
+//! * [`OCSP_request_verify`] (`:383-417`) — the request verifier, with its static
+//!   [`ocsp_req_find_signer`] (`:419-437`).
 //!
 //! `ocsp_verify_signer` and `OCSP_basic_verify` land here once `crate::x509::x509_vfy` supplies
 //! [`X509_STORE_CTX_init`] and [`X509_verify_cert`] (11.2c); they are the OCSP arm's own callers of
@@ -57,6 +61,7 @@ use crate::runtime::stack::{
     OPENSSL_sk_dup, OPENSSL_sk_free, OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack,
 };
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
+use crate::x509::v3_genn::GEN_DIRNAME;
 use crate::x509::v3_purp::{X509_get_extended_key_usage, X509_get_extension_flags};
 use crate::x509::x509_cmp::{
     X509_add_certs, X509_find_by_subject, X509_get0_pubkey, X509_get_subject_name,
@@ -72,6 +77,7 @@ use crate::x509::x509_vfy::{
 };
 use crate::x509::x509_vpm::{X509_VERIFY_PARAM_clear_flags, X509_VERIFY_PARAM_set_flags};
 use crate::x509::x_all::{X509_NAME_digest, X509_pubkey_digest};
+use crate::x509::x_name::X509Name;
 use crate::x509::x_x509::X509;
 
 /// `ERR_LIB_OCSP` — `include/openssl/err.h.in:104`.
@@ -98,6 +104,10 @@ const OCSP_R_CERTIFICATE_VERIFY_ERROR: c_int = 101;
 const OCSP_R_ROOT_CA_NOT_TRUSTED: c_int = 112;
 /// `OCSP_R_SIGNER_CERTIFICATE_NOT_FOUND` — `include/openssl/ocsperr.h:42`.
 const OCSP_R_SIGNER_CERTIFICATE_NOT_FOUND: c_int = 118;
+/// `OCSP_R_REQUEST_NOT_SIGNED` — `include/openssl/ocsperr.h:38`.
+const OCSP_R_REQUEST_NOT_SIGNED: c_int = 128;
+/// `OCSP_R_UNSUPPORTED_REQUESTORNAME_TYPE` — `include/openssl/ocsperr.h:48`.
+const OCSP_R_UNSUPPORTED_REQUESTORNAME_TYPE: c_int = 129;
 /// `ERR_R_X509_LIB` — `include/openssl/err.h.in:327`.
 const ERR_R_X509_LIB: c_int = 11 | (0x2 << 18);
 
@@ -199,6 +209,20 @@ const OCSP_VFY_107: ErrSite = ocsp_vfy_site(
 );
 /// `OCSP_basic_verify`'s untrusted-root arm at `ocsp_vfy.c:149`.
 const OCSP_VFY_149: ErrSite = ocsp_vfy_site(149, c"OCSP_basic_verify", OCSP_R_ROOT_CA_NOT_TRUSTED);
+/// `OCSP_request_verify`'s unsigned-request arm at `ocsp_vfy.c:392`.
+const OCSP_VFY_392: ErrSite = ocsp_vfy_site(392, c"OCSP_request_verify", OCSP_R_REQUEST_NOT_SIGNED);
+/// `OCSP_request_verify`'s unsupported-requestor-name arm at `ocsp_vfy.c:397`.
+const OCSP_VFY_397: ErrSite = ocsp_vfy_site(
+    397,
+    c"OCSP_request_verify",
+    OCSP_R_UNSUPPORTED_REQUESTORNAME_TYPE,
+);
+/// `OCSP_request_verify`'s missing-signer arm at `ocsp_vfy.c:403`.
+const OCSP_VFY_403: ErrSite = ocsp_vfy_site(
+    403,
+    c"OCSP_request_verify",
+    OCSP_R_SIGNER_CERTIFICATE_NOT_FOUND,
+);
 
 /// `memcmp` — `<string.h>`; answers the difference of the first differing octets, or 0.
 ///
@@ -679,7 +703,8 @@ pub(crate) unsafe extern "C" fn ocsp_verify_signer(
 /// # Safety
 /// `bs` must be a live `OCSP_BASICRESP`; `certs` must be NULL or a live stack of `X509`; `st` must
 /// be NULL or a live store.
-pub(crate) unsafe extern "C" fn OCSP_basic_verify(
+#[no_mangle]
+pub unsafe extern "C" fn OCSP_basic_verify(
     bs: *mut OcspBasicResp,
     certs: *mut OpenSslStack,
     st: *mut X509Store,
@@ -756,4 +781,116 @@ pub(crate) unsafe extern "C" fn OCSP_basic_verify(
         OPENSSL_sk_free(untrusted);
     }
     ret
+}
+
+/// `int OCSP_resp_get0_signer(OCSP_BASICRESP *bs, X509 **signer, STACK_OF(X509) *extra_certs)` —
+/// `crypto/ocsp/ocsp_vfy.c:162-166`.
+///
+/// Finds the response's signer, preferring `extra_certs`, and answers whether one was found.
+///
+/// # Safety
+/// `bs` must be a live `OCSP_BASICRESP`; `signer` must be writable; `extra_certs` must be NULL or a
+/// live stack of live `X509`s.
+#[no_mangle]
+pub unsafe extern "C" fn OCSP_resp_get0_signer(
+    bs: *mut OcspBasicResp,
+    signer: *mut *mut X509,
+    extra_certs: *mut OpenSslStack,
+) -> c_int {
+    // SAFETY: the pointers are live per the contract; the helper obeys its own contract.
+    unsafe { c_int::from(ocsp_find_signer(signer, bs, extra_certs, 0) > 0) }
+}
+
+/// `static int ocsp_req_find_signer(X509 **psigner, OCSP_REQUEST *req, const X509_NAME *nm,
+/// STACK_OF(X509) *certs, unsigned long flags)` — `crypto/ocsp/ocsp_vfy.c:419-437`.
+///
+/// Answers 1 when the signer is among the request's own certificates (unless `OCSP_NOINTERN`),
+/// 2 when it is among the caller's `certs`, and 0 otherwise. The found certificate is stored in
+/// `*psigner`.
+///
+/// # Safety
+/// `psigner` must be writable; `req` must be a live `OCSP_REQUEST` whose optional signature is
+/// present; `nm` must be a live `X509_NAME`; `certs` must be NULL or a live stack of live `X509`s.
+unsafe fn ocsp_req_find_signer(
+    psigner: *mut *mut X509,
+    req: *mut OcspRequest,
+    nm: *const X509Name,
+    certs: *mut OpenSslStack,
+    flags: c_ulong,
+) -> c_int {
+    // SAFETY: the pointers are live per the contract; `X509_find_by_subject` obeys its own.
+    unsafe {
+        if (flags & OCSP_NOINTERN) == 0 {
+            let signer = X509_find_by_subject((*(*req).optionalSignature).certs, nm);
+            if !signer.is_null() {
+                *psigner = signer;
+                return 1;
+            }
+        }
+
+        let signer = X509_find_by_subject(certs, nm);
+        if !signer.is_null() {
+            *psigner = signer;
+            return 2;
+        }
+        0
+    }
+}
+
+/// `int OCSP_request_verify(OCSP_REQUEST *req, STACK_OF(X509) *certs, X509_STORE *store, unsigned
+/// long flags)` — `crypto/ocsp/ocsp_vfy.c:383-417`.
+///
+/// An unsigned request raises `OCSP_R_REQUEST_NOT_SIGNED`; a requestor name that is not a directory
+/// name raises `OCSP_R_UNSUPPORTED_REQUESTORNAME_TYPE`; a signer that cannot be found raises
+/// `OCSP_R_SIGNER_CERTIFICATE_NOT_FOUND`; and the request signature is checked through
+/// [`ocsp_verify`]. Unless `OCSP_NOVERIFY`, the signer's chain is verified through
+/// [`ocsp_verify_signer`], whose answer is compared `> 0` for backward compatibility. Answers 1 on
+/// success and 0 on failure (never -1).
+///
+/// # Safety
+/// `req` must be a live `OCSP_REQUEST`; `certs` NULL or a live stack of live `X509`s; `store` NULL
+/// or a live store.
+#[no_mangle]
+pub unsafe extern "C" fn OCSP_request_verify(
+    req: *mut OcspRequest,
+    certs: *mut OpenSslStack,
+    store: *mut X509Store,
+    mut flags: c_ulong,
+) -> c_int {
+    // SAFETY: the pointers are live or NULL per the contract; every callee obeys its own contract.
+    unsafe {
+        if (*req).optionalSignature.is_null() {
+            raise_site(&OCSP_VFY_392);
+            return 0;
+        }
+        let gen = (*req).tbsRequest.requestorName;
+        if gen.is_null() || (*gen).type_ != GEN_DIRNAME {
+            raise_site(&OCSP_VFY_397);
+            return 0; // not returning -1 here for backward compatibility.
+        }
+        let nm = (*gen).d.directoryName;
+        let mut signer: *mut X509 = ptr::null_mut();
+        let mut ret = ocsp_req_find_signer(&mut signer, req, nm, certs, flags);
+        if ret <= 0 {
+            raise_site(&OCSP_VFY_403);
+            return 0; // not returning -1 here for backward compatibility.
+        }
+        if ret == 2 && (flags & OCSP_TRUSTOTHER) != 0 {
+            flags |= OCSP_NOVERIFY;
+        }
+
+        ret = ocsp_verify(req, ptr::null_mut(), signer, flags);
+        if ret <= 0 {
+            return 0; // not returning 'ret' here for backward compatibility.
+        }
+        if (flags & OCSP_NOVERIFY) != 0 {
+            return 1;
+        }
+        let untrusted = if (flags & OCSP_NOCHAIN) != 0 {
+            ptr::null_mut()
+        } else {
+            (*(*req).optionalSignature).certs
+        };
+        c_int::from(ocsp_verify_signer(signer, 0, store, flags, untrusted, ptr::null_mut()) > 0)
+    }
 }

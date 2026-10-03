@@ -8,7 +8,8 @@
     "RT-PROVIDER-REF",
     "RT-EVP-REF",
     "RT-KEYFORMAT-REF",
-    "RT-X509-REF"
+    "RT-X509-REF",
+    "RT-PHASE12-REF"
   ],
   "indirect": [
     {

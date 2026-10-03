@@ -35,6 +35,10 @@
 pub mod arith;
 pub mod bignum;
 pub mod blinding;
+// Phase 12.8's `crypto/bn/bn_srp.c`: the ten SRP (RFC 5054) `ossl_bn_*` constants that
+// `crypto/srp/srp_lib.c`'s `knowngN[]` table reads. Every name is crate-internal; none is
+// an export, so no ledger row moves when it lands.
+pub(crate) mod bn_srp;
 pub mod ctx;
 // Phase 8.5's `crypto/bn/bn_dh.c`: the thirty-two `ossl_bignum_*` constants behind
 // `crypto/ffc/ffc_dh.c`'s `dh_named_groups[]`. `dh` is the object model and its tests;

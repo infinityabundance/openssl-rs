@@ -939,14 +939,21 @@ pub unsafe extern "C" fn EVP_MD_is_a(md: *const EvpMd, name: *const c_char) -> c
         return 0;
     }
     // SAFETY: `md` is live per the contract.
-    let (prov, name_id, type_name) = unsafe { ((*md).prov, (*md).name_id, (*md).type_name) };
+    let (prov, name_id) = unsafe { ((*md).prov, (*md).name_id) };
     if !prov.is_null() {
-        // SAFETY: `prov` is live, `name` is NUL-terminated, and the other two arguments are the
-        // method's own identity.
+        // SAFETY: `prov` is live, `name` is NUL-terminated, and `name_id` is the method's own.
         return unsafe { evp_is_a(prov, name_id, ptr::null(), name) };
     }
-    // SAFETY: `name` is NUL-terminated; `type_name` is this method's own string.
-    unsafe { evp_is_a(ptr::null_mut(), 0, type_name, name) }
+    // The authority's legacy branch resolves `EVP_MD_get0_name(md)` -- not the raw `type_name`,
+    // which is NULL for a built-in method -- through the namemap. Resolving `type_name` instead
+    // answers 0 for every name once the namemap is populated (a legacy method's own short name is
+    // not the method's `type_name`), which `EVP_MD_is_a(EVP_sha256(), "SHA256")` is the regression
+    // that exposed it.
+    // SAFETY: `md` is live; `EVP_MD_get0_name` answers this method's own NUL-terminated name or
+    // NULL; `name` is NUL-terminated.
+    let own_name = unsafe { EVP_MD_get0_name(md) };
+    // SAFETY: `own_name` and `name` are NULL or NUL-terminated per `EVP_MD_get0_name`'s contract.
+    unsafe { evp_is_a(ptr::null_mut(), 0, own_name, name) }
 }
 
 /// `int evp_md_get_number(const EVP_MD *md)`.

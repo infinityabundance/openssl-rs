@@ -1,6 +1,7 @@
-//! `crypto/ocsp/ocsp_lib.c` — the `OCSP_CERTID` builder and the two id comparators. Phase 11.2b's
-//! first OCSP-function unit, landed as an **internal** transcription: every name here is
-//! `pub(crate)` and none carries `#[no_mangle]`, because the `OCSP_*` exports are Phase 12's.
+//! `crypto/ocsp/ocsp_lib.c` — the `OCSP_CERTID` builder and the two id comparators. Phase 11.2b
+//! landed the bodies as an **internal** transcription for the engine's OCSP arm; Phase 12.6 (this
+//! subphase) promotes all five names to the exported surface (`#[no_mangle] pub unsafe extern "C"
+//! fn`), reusing those bodies verbatim.
 //!
 //! `crypto/ocsp/ocsp_lib.c` is 113 lines. The five requested names, in source order:
 //!
@@ -14,8 +15,7 @@
 //! * `OCSP_CERTID_dup` (`:113`, `IMPLEMENT_ASN1_DUP_FUNCTION(OCSP_CERTID)`) — the ASN.1 duplicate.
 //!
 //! The sibling `OCSP_cert_to_id`/`OCSP_cert_id_new` are reached by the Phase-11 verification
-//! engine's OCSP arm (`X509_vfy.c`'s `check_cert_ocsp_resp`). `OCSP_CERTID_dup` awaits Phase 12's
-//! exports and carries its own item-level allow.
+//! engine's OCSP arm (`X509_vfy.c`'s `check_cert_ocsp_resp`); Phase 12.6 exports all five.
 //!
 //! ## The raise sites
 //!
@@ -93,7 +93,8 @@ const OCSP_LIB_86: ErrSite = ocsp_lib_site(86, c"OCSP_cert_id_new", OCSP_R_DIGES
 /// # Safety
 /// `subject` and `issuer` must be NULL or live `X509`s; `issuer` must be live so its public-key
 /// bit string can be read, and `dgst` must be NULL or a live `EVP_MD`.
-pub(crate) unsafe extern "C" fn OCSP_cert_to_id(
+#[no_mangle]
+pub unsafe extern "C" fn OCSP_cert_to_id(
     dgst: *const EvpMd,
     subject: *const X509,
     issuer: *const X509,
@@ -125,7 +126,8 @@ pub(crate) unsafe extern "C" fn OCSP_cert_to_id(
 /// # Safety
 /// `dgst` must be a live `EVP_MD`; `issuerName`, `issuerKey` and `serialNumber` must be live where
 /// non-NULL, and `issuerKey`'s content octets must be readable for its length.
-pub(crate) unsafe extern "C" fn OCSP_cert_id_new(
+#[no_mangle]
+pub unsafe extern "C" fn OCSP_cert_id_new(
     dgst: *const EvpMd,
     issuerName: *const X509Name,
     issuerKey: *const Asn1String,
@@ -216,10 +218,8 @@ pub(crate) unsafe extern "C" fn OCSP_cert_id_new(
 ///
 /// # Safety
 /// `a` and `b` must be live `OCSP_CERTID`s.
-pub(crate) unsafe extern "C" fn OCSP_id_issuer_cmp(
-    a: *const OcspCertId,
-    b: *const OcspCertId,
-) -> c_int {
+#[no_mangle]
+pub unsafe extern "C" fn OCSP_id_issuer_cmp(a: *const OcspCertId, b: *const OcspCertId) -> c_int {
     // SAFETY: `a` and `b` are live per the contract; the comparators accept live operands.
     unsafe {
         let mut ret = OBJ_cmp((*a).hashAlgorithm.algorithm, (*b).hashAlgorithm.algorithm);
@@ -240,7 +240,8 @@ pub(crate) unsafe extern "C" fn OCSP_id_issuer_cmp(
 ///
 /// # Safety
 /// `a` and `b` must be live `OCSP_CERTID`s.
-pub(crate) unsafe extern "C" fn OCSP_id_cmp(a: *const OcspCertId, b: *const OcspCertId) -> c_int {
+#[no_mangle]
+pub unsafe extern "C" fn OCSP_id_cmp(a: *const OcspCertId, b: *const OcspCertId) -> c_int {
     // SAFETY: `a` and `b` are live per the contract; the comparators accept live operands.
     unsafe {
         let ret = OCSP_id_issuer_cmp(a, b);
@@ -257,8 +258,8 @@ pub(crate) unsafe extern "C" fn OCSP_id_cmp(a: *const OcspCertId, b: *const Ocsp
 ///
 /// # Safety
 /// `x` must be NULL or a live `OCSP_CERTID`.
-#[allow(dead_code)] // the engine's OCSP arm reads `OCSP_id_cmp`; the dup awaits Phase 12's exports
-pub(crate) unsafe extern "C" fn OCSP_CERTID_dup(x: *const OcspCertId) -> *mut OcspCertId {
+#[no_mangle]
+pub unsafe extern "C" fn OCSP_CERTID_dup(x: *const OcspCertId) -> *mut OcspCertId {
     // SAFETY: `x` is NULL-or-live per the contract; `OCSP_CERTID_it()` is this crate's static item.
     unsafe { ASN1_item_dup(OCSP_CERTID_it(), x.cast()).cast::<OcspCertId>() }
 }

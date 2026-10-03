@@ -2978,7 +2978,7 @@ fn evp_cipher_asn1_tail(
 ///
 /// # Safety
 /// `c` must be NULL or a live `EvpCipherCtx`; `type_` NULL or live; `asn1_params` NULL or live.
-unsafe fn evp_cipher_param_to_asn1_ex(
+pub(crate) unsafe fn evp_cipher_param_to_asn1_ex(
     c: *mut EvpCipherCtx,
     type_: *mut Asn1Type,
     asn1_params: *mut EvpCipherAeadAsn1Params,
@@ -3044,7 +3044,7 @@ unsafe fn evp_cipher_param_to_asn1_ex(
 ///
 /// # Safety
 /// As `evp_cipher_param_to_asn1_ex`.
-unsafe fn evp_cipher_asn1_to_param_ex(
+pub(crate) unsafe fn evp_cipher_asn1_to_param_ex(
     c: *mut EvpCipherCtx,
     type_: *mut Asn1Type,
     asn1_params: *mut EvpCipherAeadAsn1Params,

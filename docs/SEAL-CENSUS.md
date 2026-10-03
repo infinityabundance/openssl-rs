@@ -17,9 +17,9 @@ name is defined; `open` means the stratum owns it and has not built it;
 
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
-| libcrypto | 5896 | 4765 | 1131 |
+| libcrypto | 5896 | 5646 | 250 |
 | libssl | 603 | 0 | 603 |
-| **total** | **6499** | **4765** | **1734** |
+| **total** | **6499** | **5646** | **853** |
 
 ## Ownership atlas, by stratum
 
@@ -37,7 +37,7 @@ declared owner; this is that assignment.
 | 9 | RAND / DRBG + entropy | `complete` | 25 | 69 | 69 | 0 | 0 |
 | 10 | Key formats + PKCS + STORE | `complete` | 272 | 298 | 298 | 0 | 0 |
 | 11 | X.509 + verification | `complete` | 1455 | 1467 | 1465 | 2 | 0 |
-| 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `not-started` | 1024 | — | — | — | — |
+| 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` | 1024 | 1033 | 1030 | 3 | 0 |
 | 13 | Legacy / deprecated compatibility | `not-started` | 189 | — | — | — | — |
 | 14 | TLS / DTLS (libssl) | `not-started` | 600 | — | — | — | — |
 | 15 | QUIC / ECH and modern SSL surface | `not-started` | 3 | — | — | — | — |
@@ -395,6 +395,43 @@ Courts: `all pass`, 9 court(s), **2638** authority observation(s) over 9 transcr
 | RT-X509-REQ | `pass` | 76 |
 | RT-X509 | `pass` | 52 |
 
+## Phase 12 — CMS / OCSP / CMP / CT / TS and remaining libcrypto families
+
+* state: `complete`
+* seal: `docs/PHASE-12-PROTOCOL-FAMILIES-SEAL.md`
+* ledger: `forensics/phase12-obligations.json`
+* atlas-owned: 1024
+* owned working set: 1033
+* implemented: 1030
+* deferred to a later stratum with a stated reason: 3
+* **open in this stratum: 0**
+
+Deferred out, by receiving stratum:
+
+* to phase 13: 3 symbol(s)
+  `SRP_VBASE_init`, `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine`
+
+Hand-offs received and discharged:
+
+* from phase 11: 2 symbol(s) — `X509_CRL_load_http`, `X509_load_http`
+* from phase 5: 7 symbol(s) — `ASN1_ITEM_get`, `ASN1_ITEM_lookup`, `SMIME_read_ASN1`, `SMIME_read_ASN1_ex`, `SMIME_text`, `SMIME_write_ASN1`, `SMIME_write_ASN1_ex`
+
+Courts: `all pass`, 11 court(s), **1845** authority observation(s) over 11 transcript court(s).
+
+| court | verdict | observations |
+|---|---|---|
+| RT-PHASE12-REF | `pass` | 149 |
+| RT-HTTP | `pass` | 128 |
+| RT-PKCS7 | `pass` | 126 |
+| RT-CMS | `pass` | 176 |
+| RT-CMP | `pass` | 320 |
+| RT-TS | `pass` | 275 |
+| RT-OCSP | `pass` | 266 |
+| RT-CRMF | `pass` | 138 |
+| RT-ESS | `pass` | 47 |
+| RT-SRP | `pass` | 149 |
+| RT-CMS-REMAINDER | `pass` | 71 |
+
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
 * state: `complete`
@@ -450,8 +487,9 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 8 | 786 | 778 | 778 | 0 | 8 | 0 | 0 |
 | 9 | 69 | 69 | 69 | 0 | 0 | 0 | 0 |
 | 10 | 298 | 298 | 237 | 61 | 0 | 0 | 0 |
-| 11 | 1465 | 1465 | 937 | 528 | 0 | 0 | 0 |
-| **total** | **4489** | **4481** | **3628** | **853** | **8** | **0** | **0** |
+| 11 | 1465 | 1465 | 939 | 526 | 0 | 0 | 0 |
+| 12 | 1030 | 1030 | 902 | 128 | 0 | 0 | 0 |
+| **total** | **5519** | **5511** | **4532** | **979** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 
@@ -470,5 +508,6 @@ row for another stratum's export is a hand-off that stratum recorded.
 | 9 | 25 | 69 | 0 | 44 |
 | 10 | 272 | 298 | 0 | 26 |
 | 11 | 1455 | 1467 | 0 | 12 |
+| 12 | 1024 | 1033 | 0 | 9 |
 
 Problems recorded by the audit: 0.

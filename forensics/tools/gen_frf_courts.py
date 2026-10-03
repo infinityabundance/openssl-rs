@@ -522,6 +522,35 @@ COURTS: list[tuple[str, int, str, str]] = [
      "the Phase 11.4 request/CRL/mutator remainder, driven"),
     ("rt-x509", 11, "rt_x509_misc_probe",
      "the Phase 11.7 shared remainder, driven"),
+    #
+    # Phase 12 -- the protocol families. Ten courts, each a differential probe compiled
+    # against both sides. `RT-PHASE12-REF` is this stratum's reference basis: its probe takes
+    # the address of each inherited `implemented` export and prints whether it is non-NULL, so
+    # the court-coverage atlas records those names at basis `referenced`, never `called`
+    # (D199), and it is not declarable here. The ten below all diff a real transcript and
+    # stage a `artifacts/phase12/probes/<probe>.{authority,candidate}` pair.
+    #
+    ("rt-http", 12, "rt_http_probe",
+     "the HTTP client and the high-level OSSL_HTTP_* engine, driven over memory BIOs"),
+    ("rt-pkcs7", 12, "rt_pkcs7_probe",
+     "the PKCS#7 container surface, driven from fixed DER fixtures"),
+    ("rt-cms", 12, "rt_cms_probe",
+     "the CMS container, signer, recipient and receipt surface, driven from fixed DER fixtures"),
+    ("rt-cmp", 12, "rt_cmp_probe",
+     "the CMP context, message, engine and server-transaction surface, driven"),
+    ("rt-ts", 12, "rt_ts_probe",
+     "the RFC 3161 timestamping surface and its response engine, driven"),
+    ("rt-ocsp", 12, "rt_ocsp_probe",
+     "the OCSP request, responder, verifier and printer surface, driven"),
+    ("rt-crmf", 12, "rt_crmf_probe",
+     "the CRMF object graph, controls and ProofOfPossession surface, driven"),
+    ("rt-ess", 12, "rt_ess_probe",
+     "the ESS signed-attribute item groups, driven"),
+    ("rt-srp", 12, "rt_srp_probe",
+     "the SRP calculation surface and verifier database, driven"),
+    ("rt-cms-remainder", 12, "rt_cms_remainder_probe",
+     "the 12.9 remainder: the ASN.1 item table, the CT default file, the shared x_all.c "
+     "dispatch and the S/MIME reader and writer, driven"),
 ]
 
 

@@ -907,6 +907,32 @@ PHASE11_MODULES = [
     "forensics/tools/phase11_obligations.py",
 ]
 
+# Phase 12's evidence: the CMS/OCSP/CMP/CT/TS stratum -- the signed and encrypted container
+# formats and the certificate-status and protocol machinery built over Phase 11's X.509 objects
+# (`CMS`, `PKCS7`, `OCSP`, `CMP` with `CRMF`, `TS`, `CT`, the S/MIME bridge) and the remaining
+# `libcrypto` families the earlier strata left (`SRP`, `ESS`, the HTTP client). Its plan is
+# `docs/PHASE-12-SUBPHASES.md`, which 12.0 lands with the ledger. The modules are added by the
+# subphase that lands them, in the same commit, so that this list is a statement about the tree
+# rather than about the plan -- which is why it names no `src/cms/` module: the stratum has landed
+# none of its own.
+#
+# **Like Phases 10 and 11, this stratum does not start with a whole working set open.**
+# `forensics/phase12-obligations.json` reports a working set of 1,033 exports and an `open` count
+# smaller than it, because the whole `ocsp_asn.c` item group, the CT `ct_*` units, `pk7_asn1.c`
+# with `pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` landed before activation as substrate the
+# earlier strata needed, so `phase-state.json` reports the stratum `in-progress` because its ledger
+# has an open count, not because it has a plan alone. **That split moves as the stratum lands its
+# own units**, so the note below does not restate its counts: the ledger's `counts` is the live
+# record and `forensics/atlas/implemented-surface.json` is the authority behind it. It owns **no
+# provider registration row**. `docs/PHASE-12-SUBPHASES.md` section 4 records the activation
+# measurement and the precondition it places on the coverage join.
+PHASE12_COURTS = "artifacts/phase12/COURTS.json"
+PHASE12_OBLIGATIONS = "forensics/phase12-obligations.json"
+PHASE12_MODULES = [
+    "docs/PHASE-12-SUBPHASES.md",
+    "forensics/tools/phase12_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -967,6 +993,22 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "implemented-surface.json` are the live record. The stratum owns "
                             "no provider registration row (docs/PHASE-11-SUBPHASES.md "
                             "sections 1 and 4)"
+                        )),
+    12: StratumEvidence(PHASE12_MODULES, PHASE12_OBLIGATIONS, PHASE12_COURTS,
+                        ledger_note=(
+                            "One thousand and twenty-four of the exports it owns are its own "
+                            "twelve headers' (`ts.h`, `ocsp.h`, `cmp.h`, `cms.h`, `pkcs7.h`, "
+                            "`crmf.h`, `ct.h`, `ess.h`, `srp.h`, `http.h`, `cmp_util.h`, "
+                            "`pem.h`) and the nine remainder arrive as recorded hand-offs from "
+                            "phases 5 and 11. The ledger does not start with that whole working "
+                            "set open: the `ocsp_asn.c` item group, the CT `ct_*` units, "
+                            "`pk7_asn1.c`/`pk7_lib.c` and `http_lib.c`'s `OSSL_parse_url` are "
+                            "reported as `implemented` at activation, so its `open` count is "
+                            "not the whole working set. That split moves as this stratum lands "
+                            "its own units, so this note does not restate its counts; the "
+                            "ledger's `counts` and `forensics/atlas/implemented-surface.json` "
+                            "are the live record. The stratum owns no provider registration "
+                            "row (docs/PHASE-12-SUBPHASES.md sections 1 and 4)"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no

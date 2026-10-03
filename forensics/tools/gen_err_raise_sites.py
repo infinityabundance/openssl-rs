@@ -1298,7 +1298,16 @@ COVERED_FILES = [
     # `PKCS7_R_UNSUPPORTED_CONTENT_TYPE` at `:179` under `ERR_LIB_PKCS7`, so the coordinate is
     # generated from the unit rather than transcribed. `pk7_asn1.c` raises nothing and is
     # deliberately not listed.
+    #
+    # Phase 12.2 lands the rest of `crypto/pkcs7/`, so the units that raise are added here:
+    # `pk7_lib.c` and `pk7_doit.c` (the `PKCS7_R_*` content, digest, cipher, recipient and
+    # signer refusals), `pk7_attr.c` (`ERR_R_ASN1_LIB` on its three allocations) and
+    # `pk7_smime.c` (the add-signer, private-key, verify, decrypt and text errors).
+    # `pk7_asn1.c`, `pk7_mime.c` and `bio_pk7.c` raise nothing and are deliberately absent.
     ("crypto/pkcs7/pk7_lib.c", "PKCS7_LIB"),
+    ("crypto/pkcs7/pk7_doit.c", "PKCS7_DOIT"),
+    ("crypto/pkcs7/pk7_attr.c", "PKCS7_ATTR"),
+    ("crypto/pkcs7/pk7_smime.c", "PKCS7_SMIME"),
     # Phase 11 staging: `crypto/x509/x509_att.c`, the `X509at_add1_attr*` family
     # `PKCS8_pkey_add1_attr*` is one call each to (D368). Its twenty-six sites are
     # `ERR_LIB_X509`, mostly `ERR_R_PASSED_NULL_PARAMETER`, `ERR_R_CRYPTO_LIB` and
