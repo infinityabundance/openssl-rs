@@ -1431,14 +1431,21 @@ COVERED_FILES = [
     # cannot collide with another unit's, and the whole file is listed rather than the
     # landed subset: an unused coordinate is harmless, a missing one is not. `eng_all.c`
     # is deliberately **not** listed -- it raises nothing (its one function is the
-    # `OPENSSL_init_crypto` call).
+    # `OPENSSL_init_crypto` call). Phase 13.2 added the key-loader binding surface
+    # (`eng_pkey.c`), whose NULL / uninitialised / no-loader / loader-failed refusals are
+    # `ERR_R_*` and `ENGINE_R_*`, and the cipher table (`tb_cipher.c`), whose
+    # `ENGINE_get_cipher` raises `ENGINE_R_UNIMPLEMENTED_CIPHER`. The five legacy method
+    # tables (`tb_rsa`/`tb_dsa`/`tb_dh`/`tb_eckey`/`tb_rand`) raise nothing and are not
+    # listed, for the `eng_all.c` reason.
     ("crypto/engine/eng_ctrl.c", "ENG_CTRL"),
     ("crypto/engine/eng_cnf.c", "ENG_CNF"),
     ("crypto/engine/eng_init.c", "ENG_INIT"),
     ("crypto/engine/eng_lib.c", "ENG_LIB"),
     ("crypto/engine/eng_list.c", "ENG_LIST"),
+    ("crypto/engine/eng_pkey.c", "ENG_PKEY"),
     ("crypto/engine/eng_table.c", "ENG_TABLE"),
     ("crypto/engine/tb_asnmth.c", "TB_ASNMTH"),
+    ("crypto/engine/tb_cipher.c", "TB_CIPHER"),
     ("crypto/engine/tb_digest.c", "TB_DIGEST"),
     ("crypto/engine/tb_pkmeth.c", "TB_PKMETH"),
     # Phase 10.16's `providers/implementations/storemgmt/file_store.c` -- the `file:` STORE LOADER

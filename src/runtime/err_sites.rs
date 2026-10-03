@@ -46132,6 +46132,116 @@ pub(crate) const ENG_LIST_479: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `ENGINE_load_private_key` at `crypto/engine/eng_pkey.c:62` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_PKEY_62: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 62,
+    func: c"ENGINE_load_private_key",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_private_key` at `crypto/engine/eng_pkey.c:69` (ENGINE_R_NOT_INITIALISED).
+pub(crate) const ENG_PKEY_69: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 69,
+    func: c"ENGINE_load_private_key",
+    lib: 38,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_private_key` at `crypto/engine/eng_pkey.c:74` (ENGINE_R_NO_LOAD_FUNCTION).
+pub(crate) const ENG_PKEY_74: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 74,
+    func: c"ENGINE_load_private_key",
+    lib: 38,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_private_key` at `crypto/engine/eng_pkey.c:79` (ENGINE_R_FAILED_LOADING_PRIVATE_KEY).
+pub(crate) const ENG_PKEY_79: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 79,
+    func: c"ENGINE_load_private_key",
+    lib: 38,
+    reason: 128,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_public_key` at `crypto/engine/eng_pkey.c:91` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_PKEY_91: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 91,
+    func: c"ENGINE_load_public_key",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_public_key` at `crypto/engine/eng_pkey.c:98` (ENGINE_R_NOT_INITIALISED).
+pub(crate) const ENG_PKEY_98: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 98,
+    func: c"ENGINE_load_public_key",
+    lib: 38,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_public_key` at `crypto/engine/eng_pkey.c:103` (ENGINE_R_NO_LOAD_FUNCTION).
+pub(crate) const ENG_PKEY_103: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 103,
+    func: c"ENGINE_load_public_key",
+    lib: 38,
+    reason: 125,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_public_key` at `crypto/engine/eng_pkey.c:108` (ENGINE_R_FAILED_LOADING_PUBLIC_KEY).
+pub(crate) const ENG_PKEY_108: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 108,
+    func: c"ENGINE_load_public_key",
+    lib: 38,
+    reason: 129,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_ssl_client_cert` at `crypto/engine/eng_pkey.c:121` (ERR_R_PASSED_NULL_PARAMETER).
+pub(crate) const ENG_PKEY_121: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 121,
+    func: c"ENGINE_load_ssl_client_cert",
+    lib: 38,
+    reason: 786690,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_ssl_client_cert` at `crypto/engine/eng_pkey.c:128` (ENGINE_R_NOT_INITIALISED).
+pub(crate) const ENG_PKEY_128: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 128,
+    func: c"ENGINE_load_ssl_client_cert",
+    lib: 38,
+    reason: 117,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_load_ssl_client_cert` at `crypto/engine/eng_pkey.c:133` (ENGINE_R_NO_LOAD_FUNCTION).
+pub(crate) const ENG_PKEY_133: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+    line: 133,
+    func: c"ENGINE_load_ssl_client_cert",
+    lib: 38,
+    reason: 125,
+    dynamic_reason: false,
+};
+
 /// `engine_table_register` at `crypto/engine/eng_table.c:135` (ENGINE_R_INIT_FAILED).
 pub(crate) const ENG_TABLE_135: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/engine/eng_table.c",
@@ -46169,6 +46279,16 @@ pub(crate) const TB_ASNMTH_213: ErrSite = ErrSite {
     func: c"ENGINE_pkey_asn1_find_str",
     lib: 38,
     reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ENGINE_get_cipher` at `crypto/engine/tb_cipher.c:78` (ENGINE_R_UNIMPLEMENTED_CIPHER).
+pub(crate) const TB_CIPHER_78: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/tb_cipher.c",
+    line: 78,
+    func: c"ENGINE_get_cipher",
+    lib: 38,
+    reason: 146,
     dynamic_reason: false,
 };
 
@@ -51063,10 +51183,22 @@ pub(crate) static ALL: &[ErrSite] = &[
     ENG_LIST_448,
     ENG_LIST_470,
     ENG_LIST_479,
+    ENG_PKEY_62,
+    ENG_PKEY_69,
+    ENG_PKEY_74,
+    ENG_PKEY_79,
+    ENG_PKEY_91,
+    ENG_PKEY_98,
+    ENG_PKEY_103,
+    ENG_PKEY_108,
+    ENG_PKEY_121,
+    ENG_PKEY_128,
+    ENG_PKEY_133,
     ENG_TABLE_135,
     TB_ASNMTH_92,
     TB_ASNMTH_200,
     TB_ASNMTH_213,
+    TB_CIPHER_78,
     TB_DIGEST_78,
     TB_PKMETH_79,
     PROV_FILE_STORE_162,

@@ -9,7 +9,7 @@
     ],
     "census": {
       "covered_by_a_divergence": 86,
-      "language_surface_not_modelled_by_name": 8828,
+      "language_surface_not_modelled_by_name": 8870,
       "planned_prerequisites": 4
     },
     "census_by_unit": {
@@ -226,7 +226,7 @@
         "crypto/dh/dh_group_params.c": 6,
         "crypto/dh/dh_kdf.c": 7,
         "crypto/dh/dh_key.c": 10,
-        "crypto/dh/dh_lib.c": 16,
+        "crypto/dh/dh_lib.c": 14,
         "crypto/dh/dh_meth.c": 11,
         "crypto/dh/dh_pmeth.c": 17,
         "crypto/dh/dh_prn.c": 4,
@@ -237,7 +237,7 @@
         "crypto/dsa/dsa_depr.c": 3,
         "crypto/dsa/dsa_gen.c": 3,
         "crypto/dsa/dsa_key.c": 10,
-        "crypto/dsa/dsa_lib.c": 18,
+        "crypto/dsa/dsa_lib.c": 16,
         "crypto/dsa/dsa_meth.c": 12,
         "crypto/dsa/dsa_ossl.c": 12,
         "crypto/dsa/dsa_pmeth.c": 13,
@@ -256,7 +256,7 @@
         "crypto/ec/ec_cvt.c": 4,
         "crypto/ec/ec_deprecated.c": 9,
         "crypto/ec/ec_key.c": 18,
-        "crypto/ec/ec_kmeth.c": 20,
+        "crypto/ec/ec_kmeth.c": 18,
         "crypto/ec/ec_lib.c": 36,
         "crypto/ec/ec_mult.c": 18,
         "crypto/ec/ec_oct.c": 9,
@@ -284,10 +284,17 @@
         "crypto/engine/eng_init.c": 7,
         "crypto/engine/eng_lib.c": 19,
         "crypto/engine/eng_list.c": 9,
+        "crypto/engine/eng_pkey.c": 12,
         "crypto/engine/eng_table.c": 14,
         "crypto/engine/tb_asnmth.c": 13,
+        "crypto/engine/tb_cipher.c": 10,
+        "crypto/engine/tb_dh.c": 7,
         "crypto/engine/tb_digest.c": 10,
-        "crypto/engine/tb_pkmeth.c": 10,
+        "crypto/engine/tb_dsa.c": 7,
+        "crypto/engine/tb_eckey.c": 7,
+        "crypto/engine/tb_pkmeth.c": 9,
+        "crypto/engine/tb_rand.c": 7,
+        "crypto/engine/tb_rsa.c": 7,
         "crypto/err/err.c": 60,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
@@ -303,7 +310,7 @@
         "crypto/evp/ec_support.c": 1,
         "crypto/evp/encode.c": 6,
         "crypto/evp/evp_cnf.c": 11,
-        "crypto/evp/evp_enc.c": 28,
+        "crypto/evp/evp_enc.c": 26,
         "crypto/evp/evp_fetch.c": 17,
         "crypto/evp/evp_key.c": 7,
         "crypto/evp/evp_lib.c": 21,
@@ -326,11 +333,11 @@
         "crypto/evp/p_dec.c": 4,
         "crypto/evp/p_enc.c": 4,
         "crypto/evp/p_legacy.c": 7,
-        "crypto/evp/p_lib.c": 45,
+        "crypto/evp/p_lib.c": 44,
         "crypto/evp/pbe_scrypt.c": 6,
         "crypto/evp/pmeth_check.c": 6,
         "crypto/evp/pmeth_gn.c": 12,
-        "crypto/evp/pmeth_lib.c": 24,
+        "crypto/evp/pmeth_lib.c": 23,
         "crypto/evp/signature.c": 17,
         "crypto/evp/skeymgmt_meth.c": 11,
         "crypto/ex_data.c": 20,
@@ -432,7 +439,7 @@
         "crypto/punycode.c": 3,
         "crypto/quic_vlint.c": 1,
         "crypto/rand/prov_seed.c": 10,
-        "crypto/rand/rand_lib.c": 33,
+        "crypto/rand/rand_lib.c": 31,
         "crypto/rand/rand_pool.c": 8,
         "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
@@ -441,7 +448,7 @@
         "crypto/rsa/rsa_asn1.c": 21,
         "crypto/rsa/rsa_backend.c": 22,
         "crypto/rsa/rsa_gen.c": 16,
-        "crypto/rsa/rsa_lib.c": 24,
+        "crypto/rsa/rsa_lib.c": 22,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
         "crypto/rsa/rsa_ossl.c": 18,
@@ -686,8 +693,8 @@
       ]
     },
     "checked": {
-      "authority_units": 526,
-      "crate_modules": 712,
+      "authority_units": 533,
+      "crate_modules": 719,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 4,
       "divergence_names_covered": 47,
@@ -798,7 +805,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "3f6231112fe6b3d9b05ab945e6987813951e69bec95b5e51dea78a753fac56dd",
+  "body_hash": "8b7ea0419e9ef81b8a66acd55fb4b31836338985229ab0797a575f75001a75e0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -819,7 +826,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "5ca2928efb00d9b9505f4651b5f5a77bb4883921d6b29af3cebc0deb803e92e0"
+      "sha256": "890e359ad83e4ab18640b06a3721485fd289d767e318725b49fa802908de731f"
     },
     {
       "name": "symbol-ownership",
@@ -834,12 +841,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "c795695a7fd016a7f5fc777a5b86c594daf9743532479bab99d5d8a8572f7c95"
+      "sha256": "8f23605ea8dd028cf13baf7dac90f05287e5980e7c47d302f21e171fe102bbd5"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "24d26696377e1bad3f7c1692474743a9b50c05f7ca17bdd96a4f6255d54ee90b"
+      "sha256": "0cb45e8a146b6697deebe4de182fbecd7a0eb023030667c3a0176c91549d583e"
     },
     {
       "name": "prerequisites",

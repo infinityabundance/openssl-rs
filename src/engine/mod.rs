@@ -38,8 +38,10 @@
 //! * `crypto/engine/eng_list.c` — `eng_list.rs`. The list core 10.9 landed, plus 13.1's
 //!   `ENGINE_by_id` and the `ENGINE_FLAGS_BY_ID_COPY` helpers it reaches.
 //! * `crypto/engine/eng_lib.c`'s object and registry core — `eng_lib.rs`.
-//! * `crypto/engine/tb_digest.c`, `tb_pkmeth.c`, `tb_asnmth.c` — the three algorithm
-//!   tables `engine_free_util` and the digest path name.
+//! * `crypto/engine/tb_digest.c`, `tb_pkmeth.c`, `tb_asnmth.c`, `tb_cipher.c`, `tb_rsa.c`,
+//!   `tb_dsa.c`, `tb_dh.c`, `tb_eckey.c`, `tb_rand.c` and `eng_pkey.c` — the algorithm tables
+//!   `engine_free_util` and the digest path name and, from 13.2, the cipher/RSA/DSA/DH/EC/RAND
+//!   tables and the key-loader binding surface the whole `ENGINE_*` set publishes.
 //!
 //! **Phase 13.1 lands three more exports, closing the plan's three open rows:**
 //!
@@ -63,15 +65,16 @@
 //!
 //! * `engine_cleanup_int` (`eng_lib.c:175-184`) — its closure is landed, but the crate's
 //!   landed `OPENSSL_cleanup` does not yet name it. See `eng_lib.rs`.
-//! * `ENGINE_get_pkey_meth` (`tb_pkmeth.c:74-83`) — its only caller is Phase 7's deferred
-//!   `EVP_PKEY_set1_engine`. See `tb_pkmeth.rs`.
+//! * `ENGINE_get_pkey_meth` (`tb_pkmeth.c:74-83`) — landed by 13.2, which owns the name; its
+//!   10.9-withheld status and the Phase-7 deferral it unblocked are recorded in `tb_pkmeth.rs`.
+//! * `crypto/engine/eng_fat.c` and `eng_err.c`/`eng_openssl.c`/`eng_rdrand.c` — later 13.x
+//!   subphases' units; the control fat helpers and the built-in `openssl`/`rdrand` engines are
+//!   therefore not transcribed. 13.2 lands `eng_pkey.c` and the six `tb_*` method tables
+//!   (`tb_cipher`/`tb_rsa`/`tb_dsa`/`tb_dh`/`tb_eckey`/`tb_rand`) and lifts
+//!   `ENGINE_get_pkey_meth`'s withholding.
 //! * `crypto/engine/eng_dyn.c` — the dynamic engine `ENGINE_by_id`'s miss path would drive.
 //!   No subphase owns it yet, so no dynamic engine is registered and the recursion answers
 //!   NULL; `ENGINE_by_id` transcribes the authority's own `goto notfound` for that arm.
-//! * `crypto/engine/eng_fat.c`, `eng_err.c`, `eng_pkey.c`, `eng_openssl.c`, `eng_rdrand.c`
-//!   and `tb_cipher.c`/`tb_rsa.c`/`tb_dsa.c`/`tb_dh.c`/`tb_eckey.c`/`tb_rand.c` — later
-//!   13.x subphases' units; the five legacy method tables, the key loaders and the built-in
-//!   `openssl`/`rdrand` engines are therefore not transcribed.
 //!
 //! ## Ownership is unchanged
 //!
@@ -88,7 +91,14 @@ pub mod eng_ctrl;
 pub mod eng_init;
 pub mod eng_lib;
 pub mod eng_list;
+pub mod eng_pkey;
 pub mod eng_table;
 pub mod tb_asnmth;
+pub mod tb_cipher;
+pub mod tb_dh;
 pub mod tb_digest;
+pub mod tb_dsa;
+pub mod tb_eckey;
 pub mod tb_pkmeth;
+pub mod tb_rand;
+pub mod tb_rsa;

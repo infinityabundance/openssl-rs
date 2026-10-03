@@ -24,6 +24,8 @@ use crate::engine::eng_table::{
     engine_table_cleanup, engine_table_register, engine_table_unregister, ossl_engine_table_select,
 };
 use crate::evp::pkey_ctx::{EVP_PKEY_meth_free, EvpPkeyMethod};
+use crate::runtime::err::err_sites::TB_PKMETH_79;
+use crate::runtime::err::raise_site;
 use crate::runtime::lhash::OpenSslLhash;
 
 /// `OPENSSL_FILE` for this unit, for the `ossl_engine_table_select` coordinate.
@@ -140,15 +142,34 @@ pub extern "C" fn ENGINE_get_pkey_meth_engine(nid: c_int) -> *mut Engine {
     unsafe { ossl_engine_table_select(pkey_meth_table_slot(), nid, FILE, LINE_SELECT) }
 }
 
-// `const EVP_PKEY_METHOD *ENGINE_get_pkey_meth(ENGINE *e, int nid)` (`tb_pkmeth.c:74-83`) is
-// **withheld by name**. Its closure is landed -- the callback call and the
-// `ENGINE_R_UNIMPLEMENTED_PUBLIC_KEY_METHOD` raise are exactly what `ENGINE_get_pkey_meths` and
-// the generated `TB_PKMETH_79` coordinate carry -- but **no landed caller reaches it**. Its only
-// authority caller is `EVP_PKEY_set1_engine` (`crypto/evp/p_lib.c:739`), which Phase 7 defers to
-// Phase 13 and which this subphase does not land. Landing it here would retire the last absent
-// blocker of that deferral's structured claim (`phase7_obligations.py`'s `BLOCKED_HANDOFFS`,
-// `EVP_PKEY_get0_engine`/`EVP_PKEY_set1_engine`) while the pair itself stayed unlanded, so the
-// deferral is left with the one blocker that is honestly still absent.
+/// `const EVP_PKEY_METHOD *ENGINE_get_pkey_meth(ENGINE *e, int nid)` — `crypto/engine/tb_pkmeth.c:74-83`.
+///
+/// 13.2 lands this name. 10.9 withheld it because its only authority caller,
+/// `EVP_PKEY_set1_engine` (`crypto/evp/p_lib.c:739`), was Phase 7's deferred pair; landing it
+/// then would have retired the last absent blocker of that deferral's structured claim while the
+/// pair stayed unlanded. 13.2 is the subphase that owns the name, so it lands, and the Phase-7
+/// row it unblocked is retargeted from a blocked claim to an unconditional hand-off (see
+/// `phase7_obligations.py`'s `UNBLOCKED_HANDOFFS`) rather than retired.
+///
+/// # Safety
+/// `e` must be NULL or point to a live [`Engine`].
+#[no_mangle]
+pub unsafe extern "C" fn ENGINE_get_pkey_meth(e: *mut Engine, nid: c_int) -> *const EvpPkeyMethod {
+    let mut ret: *mut c_void = ptr::null_mut();
+    // SAFETY: `e` is the caller's engine.
+    let f = unsafe { ENGINE_get_pkey_meths(e) };
+    let ok = match f {
+        // SAFETY: `f` is the caller's callback; `ret` is a writable slot.
+        Some(f) => unsafe { f(e, ptr::addr_of_mut!(ret), ptr::null_mut(), nid) },
+        None => 0,
+    };
+    if ok == 0 {
+        // SAFETY: `TB_PKMETH_79` is a generated constant whose strings are static.
+        unsafe { raise_site(&TB_PKMETH_79) };
+        return ptr::null();
+    }
+    ret.cast::<EvpPkeyMethod>()
+}
 
 /// `ENGINE_PKEY_METHS_PTR ENGINE_get_pkey_meths(const ENGINE *e)` — `:86-89`.
 ///
