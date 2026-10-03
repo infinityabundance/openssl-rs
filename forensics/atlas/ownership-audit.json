@@ -1025,7 +1025,7 @@
     "implemented_by_two_strata": [],
     "implemented_exports": {
       "libcrypto": 5896,
-      "libssl": 0
+      "libssl": 165
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json; every export the atlas gives a stratum appears in that stratum's ledger; every row a stratum's ledger carries for another stratum's export is a hand-off that stratum recorded",
     "ledger_agreement": [
@@ -1267,13 +1267,13 @@
       {
         "atlas": 600,
         "deferred": 0,
-        "implemented": 0,
+        "implemented": 165,
         "ledger": 600,
         "only_in_atlas": 0,
         "only_in_atlas_examples": [],
         "only_in_ledger": 0,
         "only_in_ledger_examples": [],
-        "open": 600,
+        "open": 435,
         "phase": 14
       }
     ],
@@ -1360,7 +1360,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "69872bb9ff11d10c0f00c0b0c3affbc5326bffcf2a7e49cabcb5e7f67f6dcb67"
+      "sha256": "fe887222cd9d6c0f69b78a4df159079d73e716fe8b6c326d105c8a113763e6f1"
     },
     {
       "name": "authority-symbols",
@@ -1430,7 +1430,7 @@
     {
       "name": "ledger-14",
       "path": "forensics/phase14-obligations.json",
-      "sha256": "7a11ec1be60b449a6681b3b8edc2aef74bbcaf3565589bf33105ab55aed10647"
+      "sha256": "c150a4c6bc55cea33d40bac14fa668861f9c07cf2684ef0bde3e91e7a0c1603e"
     }
   ],
   "kind": "ownership-audit",

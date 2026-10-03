@@ -86,7 +86,7 @@ against this stratum -- the mirror of Phases 12 and 13.
 | # | Subphase | Owns | Depends on | Courts |
 |---|---|---|---|---|
 | 14.0 | **The plan and the census** | `docs/PHASE-14-SUBPHASES.md` and the measurement in §1. The ledger (`forensics/phase14-obligations.json`) and its generator land with it. **The runner and the reference-basis probe land with it too, and §4.3 is why they cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and `RT-PHASE14-REF` is the stratum's only court until 14.1 lands a unit, so a later subphase cannot satisfy the runner without leaving the pipeline red in between. | 13 | — |
-| 14.1 | **The `SSL_CTX`/`SSL` object model** | `ssl_lib.c` (342 open). The `SSL_CTX` and `SSL` allocation, reference counts, ex-data, the accessor and control surface (`SSL_CTX_ctrl`/`SSL_ctrl` and the option/flag/mode/verify accessors), the callback setters, the BIO/`SSL_set_bio` plumbing and the error/read/write entry points. **342 open rows over 1 unit.** | 14.0 | `RT-SSL-OBJECT` |
+| 14.1 | **The `SSL_CTX`/`SSL` object model** | `ssl_lib.c` (342 open). The `SSL_CTX` and `SSL` allocation, reference counts, ex-data, the accessor and control surface (`SSL_CTX_ctrl`/`SSL_ctrl` and the option/flag/mode/verify accessors), the callback setters, the BIO/`SSL_set_bio` plumbing and the error/read/write entry points. **342 open rows over 1 unit.** **Slice 1 landed (checked against the ledger): 164 of the 342 `ssl_lib.c` rows — the object model and its accessor/control/callback/BIO surface — plus `TLS_method` pulled forward from 14.2 as the one constructor 14.1's court needs; 178 `ssl_lib.c` rows and 20 `methods.c` rows remain open.** | 14.0 | `RT-SSL-OBJECT` |
 | 14.2 | **The method and version tables** | `methods.c` (21), `s3_lib.c` (3). The `TLS_*`/`DTLS_*`/`TLSv1_*` constructor table and the protocol-version accessors it installs (`SSL_CTX_get0_group_name`, `SSL_group_to_name`, the ticket-key callback). **24 open rows over 2 units.** | 14.1 | `RT-SSL-METHODS` |
 | 14.3 | **The cipher and configuration surface** | `ssl_ciph.c` (25), `ssl_conf.c` (11). The cipher and ciphersuite tables and their `SSL_CIPHER_*` readers, the `OSSL_default_*` lists, and the `SSL_CONF_CTX_*`/`SSL_CONF_cmd*` command parser the `openssl` config reader drives. **36 open rows over 2 units.** | 14.1 | `RT-SSL-CIPH` |
 | 14.4 | **The record layer** | `rec_layer_s3.c` (4), `poll_immediate.c` (1). The default read-buffer length accessors, the record-state string readers and the non-blocking `SSL_poll`. **5 open rows over 2 units.** | 14.1 | `RT-RECORD` |
@@ -253,20 +253,26 @@ forcing the row.
 
 **Landed exports (checked against the ledger):**
 
-No export of this stratum has landed yet. libssl is the candidate distribution's second namespace,
-every one of its 600 atlas-owned exports is present only as the Phase 2 ABI scaffold, and the
-ledger's implemented list is empty, so subphase 14.1 lands this stratum's first slice.
+Subphase 14.1 landed the stratum's first slice: 165 of the 600 atlas-owned exports are now
+implemented and 435 remain open. The slice is `ssl_lib.c`'s object model — the context and
+connection allocation, reference counts and ex-data, the option/flag/mode/verify accessors and the
+`SSL_CTX_ctrl`/`SSL_ctrl` dispatch, the callback setters, the `SSL_set_bio` plumbing, the version
+and state readers and the read/write/handshake entry guards (164 rows) — plus `TLS_method`, the one
+`methods.c` constructor 14.1's court builds its context with. The pulled forward constructor is a
+measured correction to section 2's ordering and is recorded in `src/ssl/mod.rs`, which also records
+the slice symbol by symbol and the divergences the slice carries: the context constructor
+allocates without the cipher/group/sigalg loaders, the connection constructor does not run the
+method's init and reset hooks, the control surface's fall-through is not the method's own control
+dispatcher, and the candidate DSO duplicates the crate's error state. Its court is
+`RT-SSL-OBJECT` (`courts/phase14/rt_ssl_object_probe.c`), registered in
+`forensics/tools/phase14_courts.py`.
 
 **Open exports (checked against the ledger):**
 
-The open set is the whole stratum: the object model, the method and version tables, the cipher and
-configuration parsers, the record layer, the handshake state machine, the BIO pair, the session and
-certificate plumbing, the DTLS layer, the extension, SRP and init glue, and the QUIC bridge.
-Representative names are `SSL_CTX_new`, `SSL_CTX_free`, `SSL_new`, `SSL_free`, `SSL_read`,
-`SSL_write`, `SSL_do_handshake`, `SSL_get_state`, `TLS_method`, `TLS_client_method`, `DTLS_method`,
-`DTLSv1_listen`, `SSL_CTX_set_cipher_list`, `SSL_CTX_set_ciphersuites`, `SSL_CONF_cmd`,
-`BIO_new_ssl`, `SSL_CTX_use_certificate`, `SSL_CTX_use_PrivateKey`, `SSL_CTX_add_session`,
-`SSL_SESSION_new`, `SSL_CTX_set_tlsext_use_srtp`, `SSL_get_selected_srtp_profile`,
-`SSL_CTX_add_custom_ext`, `SSL_CTX_config`, `OPENSSL_init_ssl`, `ERR_load_SSL_strings` and
-`SSL_trace`. Every one is open rather than implemented, and each is assigned to a subphase by §2's
-partition.
+The remaining 435 exports are the object model's deeper surface and the strata that depend on it:
+178 of them 14.1's own (the cipher-list parser and readers, the session and certificate plumbing,
+DANE, the CT surface, the client-hello readers and the QUIC stream accessors, which reach 14.2
+through 14.7), and the rest distributed across subphases 14.2 to 14.10 as section 2 partitions
+them. Representative names are `SSL_CTX_set_cipher_list`, `TLS_client_method`, `SSL_get_state`,
+`BIO_new_ssl`, `PEM_read_SSL_SESSION`, `SSL_CTX_use_certificate`, `DTLSv1_listen`,
+`SSL_CTX_add_custom_ext`, `OPENSSL_init_ssl` and `SSL_trace`.
