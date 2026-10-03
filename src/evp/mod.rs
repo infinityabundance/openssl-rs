@@ -49,6 +49,11 @@ pub mod bio_ok;
 pub mod cipher;
 pub mod cipher_ctx;
 pub mod digest;
+// Phase 13.6a's `crypto/evp/e_aes.c`: the deprecated `EVP_CIPHER` statics the AES modes return.
+pub mod e_aes;
+// Phase 13.6a's two AES-CBC-HMAC stitched statics, whose callbacks reuse the provider construction.
+pub mod e_aes_cbc_hmac_sha1;
+pub mod e_aes_cbc_hmac_sha256;
 pub mod encode;
 // Phase 7.4's `crypto/evp/evp_cnf.c` -- the `alg_section` configuration module, landed once
 // `X509V3_get_value_bool` (10.14.3) closed its only blocker. See the module doc.
