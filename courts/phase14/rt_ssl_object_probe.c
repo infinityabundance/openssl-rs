@@ -352,6 +352,223 @@ int main(void)
     out_int("ssl.wbio.noop", SSL_get_wbio(ssl) == m3);
 
     /* ----------------------------------------------------------------------------------------
+     * M. Slice 2: the verify-parameter, CT, ALPN/SNI, certificate-type and accessor surface.
+     *
+     * Every arm is a fixed input and a small-integer / fixed-string / pointer-identity answer;
+     * none moves a handshake, a socket or the clock. `X509_PURPOSE_SSL_SERVER` (1) and
+     * `X509_TRUST_SSL_SERVER` (1) are the only purpose/trust literals used.
+     * -------------------------------------------------------------------------------------- */
+    /* purpose / trust / hostname (the X509_VERIFY_PARAM surface) */
+    out_int("purpose.ctx", SSL_CTX_set_purpose(ctx, 1));
+    out_int("purpose.ssl", SSL_set_purpose(ssl, 1));
+    out_int("trust.ctx", SSL_CTX_set_trust(ctx, 1));
+    out_int("trust.ssl", SSL_set_trust(ssl, 1));
+    out_int("host.set1", SSL_set1_host(ssl, "example.com"));
+    out_int("host.peername.null", SSL_get0_peername(ssl) == NULL);
+    out_int("host.add1", SSL_add1_host(ssl, "www.example.com"));
+    SSL_set_hostflags(ssl, 0);
+    out_int("host.flags.noop", 1);
+
+    /* the verify store loaders: a missing file and a NULL/NULL pair */
+    out_int("verify.locations.null", SSL_CTX_load_verify_locations(ctx, NULL, NULL));
+    out_int("verify.file.missing",
+            SSL_CTX_load_verify_file(ctx, "/nonexistent/ca.pem"));
+
+    /* the certificate/private-key readers with no certificate assigned */
+    out_int("check_privkey.ctx.nocert", SSL_CTX_check_private_key(ctx));
+    out_int("check_privkey.ssl.nocert", SSL_check_private_key(ssl));
+    out_int("peer_cert0.null", SSL_get0_peer_certificate(ssl) == NULL);
+    out_int("peer_cert1.null", SSL_get1_peer_certificate(ssl) == NULL);
+    out_int("peer_chain.null", SSL_get_peer_cert_chain(ssl) == NULL);
+    SSL_certs_clear(ssl);
+    out_int("certs_clear.noop", SSL_get_certificate(ssl) == NULL);
+
+    /* certificate transparency: the store, the flag and the enable dispatch */
+    out_int("ct.ctx.disabled", SSL_CTX_ct_is_enabled(ctx));
+    out_int("ct.ssl.disabled", SSL_ct_is_enabled(ssl));
+    out_int("ct.ctx.store.nonnull", SSL_CTX_get0_ctlog_store(ctx) != NULL);
+    out_int("ct.ctx.enable_strict", SSL_CTX_enable_ct(ctx, SSL_CT_VALIDATION_STRICT));
+    out_int("ct.ctx.enabled", SSL_CTX_ct_is_enabled(ctx));
+    out_int("ct.ssl.enable_perm", SSL_enable_ct(ssl, SSL_CT_VALIDATION_PERMISSIVE));
+    out_int("ct.ssl.enabled", SSL_ct_is_enabled(ssl));
+    out_int("ct.scts.null", SSL_get0_peer_scts(ssl) == NULL);
+
+    /* ALPN and NPN: the offer lists, the negotiated readers and the selector */
+    {
+        unsigned char alpn_good[] = {2, 'h', '2'};
+        unsigned char alpn_bad[] = {0};
+        const unsigned char *ad = NULL;
+        unsigned int al = 99;
+        out_int("alpn.ctx.set_good", SSL_CTX_set_alpn_protos(ctx, alpn_good, 3));
+        out_int("alpn.ctx.set_bad", SSL_CTX_set_alpn_protos(ctx, alpn_bad, 1));
+        out_int("alpn.ssl.set_good", SSL_set_alpn_protos(ssl, alpn_good, 3));
+        SSL_get0_alpn_selected(ssl, &ad, &al);
+        out_int("alpn.selected.null", ad == NULL);
+        out_int("alpn.selected.len", al);
+        SSL_get0_next_proto_negotiated(ssl, &ad, &al);
+        out_int("npn.selected.null", ad == NULL);
+        out_int("npn.selected.len", al);
+    }
+    {
+        unsigned char *np_out = NULL;
+        unsigned char np_len = 0;
+        unsigned char sp_srv[] = {2, 'h', '2'};
+        unsigned char sp_match[] = {2, 'h', '2'};
+        unsigned char sp_other[] = {2, 'x', 'x'};
+        out_int("nextproto.match",
+                SSL_select_next_proto(&np_out, &np_len, sp_srv, 3, sp_match, 3));
+        out_int("nextproto.match.len", np_len);
+        out_int("nextproto.nomatch",
+                SSL_select_next_proto(&np_out, &np_len, sp_srv, 3, sp_other, 3));
+        out_int("nextproto.nomatch.len", np_len);
+        out_int("nextproto.empty",
+                SSL_select_next_proto(&np_out, &np_len, sp_srv, 3, sp_match, 0));
+        out_int("nextproto.empty.len", np_len);
+    }
+
+    /* SNI readers with no hostname set */
+    out_int("sni.get.null", SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name) == NULL);
+    out_int("sni.type", SSL_get_servername_type(ssl));
+
+    /* the expected/negotiated certificate-type lists */
+    {
+        unsigned char ct_x509 = 0;
+        unsigned char ct_bad = 1;
+        unsigned char *t = (unsigned char *)0xbeef;
+        size_t tl = 99;
+        out_int("certtype.client.set", SSL_set1_client_cert_type(ssl, &ct_x509, 1));
+        out_int("certtype.client.bad", SSL_set1_client_cert_type(ssl, &ct_bad, 1));
+        out_int("certtype.client.get", SSL_get0_client_cert_type(ssl, &t, &tl));
+        out_int("certtype.client.len", (long)tl);
+        out_int("certtype.client.nonnull", t != NULL);
+        out_int("certtype.server.set", SSL_set1_server_cert_type(ssl, &ct_x509, 1));
+        out_int("certtype.ctx.client.set", SSL_CTX_set1_client_cert_type(ctx, &ct_x509, 1));
+        out_int("certtype.ctx.server.set", SSL_CTX_set1_server_cert_type(ctx, &ct_x509, 1));
+        out_int("certtype.neg.client", SSL_get_negotiated_client_cert_type(ssl));
+        out_int("certtype.neg.server", SSL_get_negotiated_server_cert_type(ssl));
+    }
+
+    /* the domain-flag surface is unsupported on a non-QUIC object */
+    {
+        uint64_t df = 7;
+        out_int("domain.ctx.set", SSL_CTX_set_domain_flags(ctx, 1));
+        out_int("domain.ctx.get", SSL_CTX_get_domain_flags(ctx, &df));
+        out_int("domain.ssl.get", SSL_get_domain_flags(ssl, &df));
+    }
+
+    /* block padding: the boundary and the too-large refusal */
+    out_int("blockpad.ctx.ok", SSL_CTX_set_block_padding(ctx, 8));
+    out_int("blockpad.ctx.ex", SSL_CTX_set_block_padding_ex(ctx, 4096, 8));
+    out_int("blockpad.ctx.big", SSL_CTX_set_block_padding_ex(ctx, 100000, 8));
+    out_int("blockpad.ssl.ok", SSL_set_block_padding(ssl, 8));
+    out_int("blockpad.ssl.big", SSL_set_block_padding(ssl, 100000));
+
+    /* the async wait-context readers with no job and no context */
+    out_int("async.waiting", SSL_waiting_for_async(ssl));
+    {
+        int st = 99;
+        out_int("async.status", SSL_get_async_status(ssl, &st));
+        out_int("async.all_fds", SSL_get_all_async_fds(ssl, NULL, NULL));
+        out_int("async.changed_fds", SSL_get_changed_async_fds(ssl, NULL, NULL, NULL, NULL));
+    }
+
+    /* the remaining state readers and buffer hooks */
+    out_int("key_update.type", SSL_get_key_update_type(ssl));
+    out_int("reneg.pending", SSL_renegotiate_pending(ssl));
+    out_int("early_data.status", SSL_get_early_data_status(ssl));
+    {
+        uint64_t rtt = 99;
+        out_int("handshake.rtt", SSL_get_handshake_rtt(ssl, &rtt));
+    }
+    out_int("client_random.size", (long)SSL_get_client_random(ssl, buf, 0));
+    out_int("client_random.len", (long)SSL_get_client_random(ssl, (unsigned char *)buf, 8));
+    out_int("server_random.size", (long)SSL_get_server_random(ssl, buf, 0));
+    out_int("alloc_buffers", SSL_alloc_buffers(ssl));
+    out_int("free_buffers", SSL_free_buffers(ssl));
+    {
+        uint64_t v = 99;
+        out_int("value_uint.get", SSL_get_value_uint(ssl, 0, 0, &v));
+        out_int("value_uint.set", SSL_set_value_uint(ssl, 0, 0, 0));
+    }
+    SSL_set_debug(ssl, 1);
+    out_int("set_debug.noop", 1);
+    out_int("blocking.get", SSL_get_blocking_mode(ssl));
+    out_int("blocking.set", SSL_set_blocking_mode(ssl, 1));
+    out_int("handle_events", SSL_handle_events(ssl));
+    {
+        struct timeval tv;
+        int inf = 0;
+        out_int("event_timeout.ret", SSL_get_event_timeout(ssl, &tv, &inf));
+        out_int("event_timeout.sec", (long)tv.tv_sec);
+        out_int("event_timeout.infinite", inf);
+    }
+    out_int("net_read_desired", SSL_net_read_desired(ssl));
+    out_int("net_write_desired", SSL_net_write_desired(ssl));
+
+    /* the QUIC-dispatch arms: every one is the non-QUIC fall-through */
+    out_int("quic.new_stream.null", SSL_new_stream(ssl, 0) == NULL);
+    out_int("quic.accept_stream.null", SSL_accept_stream(ssl, 0) == NULL);
+    out_int("quic.accept_stream_qlen", (long)SSL_get_accept_stream_queue_len(ssl));
+    out_int("quic.stream_conclude", SSL_stream_conclude(ssl, 0));
+    out_int("quic.stream_reset", SSL_stream_reset(ssl, NULL, 0));
+    out_int("quic.stream_type", SSL_get_stream_type(ssl));
+    out_int("quic.stream_id", (long)SSL_get_stream_id(ssl));
+    out_int("quic.is_stream_local", SSL_is_stream_local(ssl));
+    out_int("quic.read_state", SSL_get_stream_read_state(ssl));
+    out_int("quic.write_state", SSL_get_stream_write_state(ssl));
+    out_int("quic.read_error", SSL_get_stream_read_error_code(ssl, NULL));
+    out_int("quic.write_error", SSL_get_stream_write_error_code(ssl, NULL));
+    out_int("quic.default_stream_mode", SSL_set_default_stream_mode(ssl, 0));
+    out_int("quic.incoming_policy", SSL_set_incoming_stream_policy(ssl, 0, 0));
+    out_int("quic.get0_connection", SSL_get0_connection(ssl) == ssl);
+    out_int("quic.get0_listener.null", SSL_get0_listener(ssl) == NULL);
+    out_int("quic.get0_domain.null", SSL_get0_domain(ssl) == NULL);
+    out_int("quic.is_connection", SSL_is_connection(ssl));
+    out_int("quic.is_listener", SSL_is_listener(ssl));
+    out_int("quic.is_domain", SSL_is_domain(ssl));
+    out_int("quic.new_listener.null", SSL_new_listener(ctx, 0) == NULL);
+    out_int("quic.new_listener_from.null", SSL_new_listener_from(ssl, 0) == NULL);
+    out_int("quic.new_from_listener.null", SSL_new_from_listener(ssl, 0) == NULL);
+    out_int("quic.accept_connection.null", SSL_accept_connection(ssl, 0) == NULL);
+    out_int("quic.accept_conn_qlen", (long)SSL_get_accept_connection_queue_len(ssl));
+    out_int("quic.listen", SSL_listen(ssl));
+    out_int("quic.new_domain.null", SSL_new_domain(ctx, 0) == NULL);
+    out_int("quic.conn_close_info", SSL_get_conn_close_info(ssl, NULL, 0));
+    out_int("quic.initial_peer_addr", SSL_set1_initial_peer_addr(ssl, NULL));
+    out_int("quic.shutdown_ex", SSL_shutdown_ex(ssl, 0, NULL, 0));
+
+    /* PSK identity: store/read, and the over-long hint refusal */
+    out_int("psk.ctx.hint", SSL_CTX_use_psk_identity_hint(ctx, "hint"));
+    {
+        char big[300];
+        memset(big, 'a', sizeof(big));
+        big[299] = '\0';
+        out_int("psk.ctx.hint_long", SSL_CTX_use_psk_identity_hint(ctx, big));
+    }
+    out_int("psk.ssl.hint", SSL_use_psk_identity_hint(ssl, "hint"));
+    out_int("psk.get_hint.null", SSL_get_psk_identity_hint(ssl) == NULL);
+    out_int("psk.get.null", SSL_get_psk_identity(ssl) == NULL);
+
+    /* the ClientHello readers with no ClientHello message (outside a callback) */
+    {
+        const unsigned char *p = NULL;
+        size_t cl_len = 99;
+        int *ipresent = NULL;
+        out_int("clienthello.isv2", SSL_client_hello_isv2(ssl));
+        out_int("clienthello.legacy", SSL_client_hello_get0_legacy_version(ssl));
+        out_int("clienthello.random", (long)SSL_client_hello_get0_random(ssl, &p));
+        out_int("clienthello.session_id", (long)SSL_client_hello_get0_session_id(ssl, &p));
+        out_int("clienthello.ciphers", (long)SSL_client_hello_get0_ciphers(ssl, &p));
+        out_int("clienthello.compressions",
+                (long)SSL_client_hello_get0_compression_methods(ssl, &p));
+        out_int("clienthello.exts_present",
+                SSL_client_hello_get1_extensions_present(ssl, &ipresent, &cl_len));
+        out_int("clienthello.ext_order",
+                SSL_client_hello_get_extension_order(ssl, NULL, &cl_len));
+        out_int("clienthello.ext", SSL_client_hello_get0_ext(ssl, 0, NULL, NULL));
+    }
+
+    /* ----------------------------------------------------------------------------------------
      * L. The refcount effect on free.
      * -------------------------------------------------------------------------------------- */
     out_int("ssl.up_ref", SSL_up_ref(ssl));
