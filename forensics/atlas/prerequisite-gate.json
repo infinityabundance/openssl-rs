@@ -2,16 +2,14 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "blocking_dependencies": [
-      "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
       "cli_option_list_parse -> phase 16 (Transferred to 22.9 and repaired there; what remains deferred to Phase 16 is regenerating the Phase-1 capture with the fixed parser. parse_option_list() (forensics/tools/atlas_runtime.py) matched the authority's `openssl list -options <cmd>` rows against a help-text shape (`-in val        Input file`) that the output never produces, and the real rows are `name type` pairs (`help -`, `in <`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count was 0 and all 2,008 raw rows stayed unstructured. 22.9 rewrote the parser to the authority's actual grammar and re-enumerated the whole namespace from the authority's own built binary (forensics/authorities/build/openssl-3.6.4-production/apps/openssl): forensics/atlas/phase22/cli-surface.json now carries 120 commands with 4,314 structured options, 0 refused rows and 0 commands_with_zero_options, and RT-PHASE22-CLI proves the repaired parser reads a real row and refuses a malformed one (and turns to fail when the parser is broken in memory). The Phase-16-owned Phase-1 capture forensics/atlas/openssl-3.6.4-production/cli-commands.json still carries option_count 0 on all 55 commands: it is Phase 16 (cli-config) that owns the CLI stratum and would regenerate production and historical in lockstep, since regenerating only the production authority would leave a spurious option-set differential against the historical one. Closure: parse_option_list() reads the authority's actual option shape and the structured surface (22.9's cli-surface.json now, and the Phase-16 capture once regenerated) has a non-zero structured option_count for every command.)",
-      "ossl_get_enginesdir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads)",
-      "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; so is its sibling)",
-      "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with its two siblings rather than special-cased)"
+      "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; `ossl_get_enginesdir`, its sibling, moved to Phase 13.1 with `ENGINE_by_id`)",
+      "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with `ossl_get_openssldir` rather than special-cased)"
     ],
     "census": {
-      "covered_by_a_divergence": 86,
-      "language_surface_not_modelled_by_name": 8818,
-      "planned_prerequisites": 7
+      "covered_by_a_divergence": 87,
+      "language_surface_not_modelled_by_name": 9056,
+      "planned_prerequisites": 4
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -39,7 +37,7 @@
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
         "ossl_lib_ctx_default_deinit": 1,
-        "ossl_lib_ctx_get_concrete": 6,
+        "ossl_lib_ctx_get_concrete": 7,
         "ossl_lib_ctx_get_data": 18,
         "ossl_lib_ctx_get_descriptor": 5,
         "ossl_lib_ctx_get_ex_data_global": 2,
@@ -114,6 +112,9 @@
         "crypto/asn1/x_spki.c": 10,
         "crypto/asn1/x_val.c": 5,
         "crypto/asn1_dsa.c": 3,
+        "crypto/async/arch/async_posix.c": 9,
+        "crypto/async/async.c": 12,
+        "crypto/async/async_wait.c": 6,
         "crypto/bf/bf_enc.c": 4,
         "crypto/bio/bf_buff.c": 11,
         "crypto/bio/bf_lbuf.c": 9,
@@ -195,7 +196,7 @@
         "crypto/conf/conf_api.c": 22,
         "crypto/conf/conf_def.c": 38,
         "crypto/conf/conf_lib.c": 19,
-        "crypto/conf/conf_mod.c": 32,
+        "crypto/conf/conf_mod.c": 31,
         "crypto/conf/conf_sap.c": 3,
         "crypto/conf/conf_ssl.c": 13,
         "crypto/context.c": 22,
@@ -227,7 +228,7 @@
         "crypto/dh/dh_group_params.c": 6,
         "crypto/dh/dh_kdf.c": 7,
         "crypto/dh/dh_key.c": 10,
-        "crypto/dh/dh_lib.c": 16,
+        "crypto/dh/dh_lib.c": 14,
         "crypto/dh/dh_meth.c": 11,
         "crypto/dh/dh_pmeth.c": 17,
         "crypto/dh/dh_prn.c": 4,
@@ -238,7 +239,7 @@
         "crypto/dsa/dsa_depr.c": 3,
         "crypto/dsa/dsa_gen.c": 3,
         "crypto/dsa/dsa_key.c": 10,
-        "crypto/dsa/dsa_lib.c": 18,
+        "crypto/dsa/dsa_lib.c": 16,
         "crypto/dsa/dsa_meth.c": 12,
         "crypto/dsa/dsa_ossl.c": 12,
         "crypto/dsa/dsa_pmeth.c": 13,
@@ -257,7 +258,7 @@
         "crypto/ec/ec_cvt.c": 4,
         "crypto/ec/ec_deprecated.c": 9,
         "crypto/ec/ec_key.c": 18,
-        "crypto/ec/ec_kmeth.c": 20,
+        "crypto/ec/ec_kmeth.c": 18,
         "crypto/ec/ec_lib.c": 36,
         "crypto/ec/ec_mult.c": 18,
         "crypto/ec/ec_oct.c": 9,
@@ -279,14 +280,24 @@
         "crypto/encode_decode/encoder_lib.c": 30,
         "crypto/encode_decode/encoder_meth.c": 20,
         "crypto/encode_decode/encoder_pkey.c": 30,
+        "crypto/engine/eng_all.c": 1,
+        "crypto/engine/eng_cnf.c": 14,
         "crypto/engine/eng_ctrl.c": 6,
+        "crypto/engine/eng_fat.c": 5,
         "crypto/engine/eng_init.c": 7,
         "crypto/engine/eng_lib.c": 19,
-        "crypto/engine/eng_list.c": 12,
+        "crypto/engine/eng_list.c": 9,
+        "crypto/engine/eng_pkey.c": 12,
         "crypto/engine/eng_table.c": 14,
         "crypto/engine/tb_asnmth.c": 13,
+        "crypto/engine/tb_cipher.c": 10,
+        "crypto/engine/tb_dh.c": 7,
         "crypto/engine/tb_digest.c": 10,
-        "crypto/engine/tb_pkmeth.c": 10,
+        "crypto/engine/tb_dsa.c": 7,
+        "crypto/engine/tb_eckey.c": 7,
+        "crypto/engine/tb_pkmeth.c": 9,
+        "crypto/engine/tb_rand.c": 7,
+        "crypto/engine/tb_rsa.c": 7,
         "crypto/err/err.c": 60,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
@@ -298,11 +309,28 @@
         "crypto/evp/cmeth_lib.c": 6,
         "crypto/evp/dh_ctrl.c": 7,
         "crypto/evp/dsa_ctrl.c": 5,
+        "crypto/evp/e_aes.c": 24,
+        "crypto/evp/e_aes_cbc_hmac_sha1.c": 12,
+        "crypto/evp/e_aes_cbc_hmac_sha256.c": 14,
+        "crypto/evp/e_aria.c": 16,
+        "crypto/evp/e_bf.c": 2,
+        "crypto/evp/e_camellia.c": 10,
+        "crypto/evp/e_cast.c": 2,
+        "crypto/evp/e_chacha20_poly1305.c": 11,
+        "crypto/evp/e_des.c": 7,
+        "crypto/evp/e_des3.c": 11,
+        "crypto/evp/e_idea.c": 4,
+        "crypto/evp/e_rc2.c": 8,
+        "crypto/evp/e_rc4.c": 5,
+        "crypto/evp/e_rc4_hmac_md5.c": 6,
+        "crypto/evp/e_seed.c": 2,
+        "crypto/evp/e_sm4.c": 10,
+        "crypto/evp/e_xcbc_d.c": 6,
         "crypto/evp/ec_ctrl.c": 7,
         "crypto/evp/ec_support.c": 1,
         "crypto/evp/encode.c": 6,
         "crypto/evp/evp_cnf.c": 11,
-        "crypto/evp/evp_enc.c": 28,
+        "crypto/evp/evp_enc.c": 26,
         "crypto/evp/evp_fetch.c": 17,
         "crypto/evp/evp_key.c": 7,
         "crypto/evp/evp_lib.c": 21,
@@ -315,9 +343,12 @@
         "crypto/evp/keymgmt_lib.c": 8,
         "crypto/evp/keymgmt_meth.c": 13,
         "crypto/evp/legacy_blake2.c": 8,
+        "crypto/evp/legacy_md4.c": 4,
         "crypto/evp/legacy_md5.c": 4,
+        "crypto/evp/legacy_mdc2.c": 4,
         "crypto/evp/legacy_ripemd.c": 4,
         "crypto/evp/legacy_sha.c": 6,
+        "crypto/evp/legacy_wp.c": 4,
         "crypto/evp/mac_lib.c": 11,
         "crypto/evp/names.c": 8,
         "crypto/evp/p5_crpt.c": 14,
@@ -325,11 +356,11 @@
         "crypto/evp/p_dec.c": 4,
         "crypto/evp/p_enc.c": 4,
         "crypto/evp/p_legacy.c": 7,
-        "crypto/evp/p_lib.c": 45,
+        "crypto/evp/p_lib.c": 42,
         "crypto/evp/pbe_scrypt.c": 6,
         "crypto/evp/pmeth_check.c": 6,
         "crypto/evp/pmeth_gn.c": 12,
-        "crypto/evp/pmeth_lib.c": 24,
+        "crypto/evp/pmeth_lib.c": 23,
         "crypto/evp/signature.c": 17,
         "crypto/evp/skeymgmt_meth.c": 11,
         "crypto/ex_data.c": 20,
@@ -392,8 +423,8 @@
         "crypto/pem/pem_info.c": 17,
         "crypto/pem/pem_lib.c": 25,
         "crypto/pem/pem_oth.c": 5,
-        "crypto/pem/pem_pk8.c": 14,
-        "crypto/pem/pem_pkey.c": 29,
+        "crypto/pem/pem_pk8.c": 10,
+        "crypto/pem/pem_pkey.c": 24,
         "crypto/pem/pem_x509.c": 1,
         "crypto/pem/pem_xaux.c": 1,
         "crypto/pem/pvkfmt.c": 21,
@@ -431,7 +462,7 @@
         "crypto/punycode.c": 3,
         "crypto/quic_vlint.c": 1,
         "crypto/rand/prov_seed.c": 10,
-        "crypto/rand/rand_lib.c": 33,
+        "crypto/rand/rand_lib.c": 31,
         "crypto/rand/rand_pool.c": 8,
         "crypto/rand/rand_uniform.c": 3,
         "crypto/rc2/rc2_cbc.c": 3,
@@ -440,7 +471,7 @@
         "crypto/rsa/rsa_asn1.c": 21,
         "crypto/rsa/rsa_backend.c": 22,
         "crypto/rsa/rsa_gen.c": 16,
-        "crypto/rsa/rsa_lib.c": 24,
+        "crypto/rsa/rsa_lib.c": 22,
         "crypto/rsa/rsa_meth.c": 11,
         "crypto/rsa/rsa_mp.c": 7,
         "crypto/rsa/rsa_ossl.c": 18,
@@ -470,11 +501,12 @@
         "crypto/sm2/sm2_crypt.c": 18,
         "crypto/sm2/sm2_key.c": 5,
         "crypto/sm2/sm2_sign.c": 15,
+        "crypto/sm3/legacy_sm3.c": 4,
         "crypto/sm3/sm3.c": 16,
         "crypto/sm4/sm4.c": 4,
         "crypto/sparse_array.c": 6,
         "crypto/srp/srp_lib.c": 11,
-        "crypto/srp/srp_vfy.c": 57,
+        "crypto/srp/srp_vfy.c": 46,
         "crypto/stack/stack.c": 16,
         "crypto/store/store_lib.c": 30,
         "crypto/store/store_meth.c": 15,
@@ -487,7 +519,7 @@
         "crypto/threads_pthread.c": 24,
         "crypto/trace.c": 24,
         "crypto/ts/ts_asn1.c": 40,
-        "crypto/ts/ts_conf.c": 28,
+        "crypto/ts/ts_conf.c": 22,
         "crypto/ts/ts_lib.c": 9,
         "crypto/ts/ts_req_print.c": 3,
         "crypto/ts/ts_req_utils.c": 10,
@@ -496,6 +528,7 @@
         "crypto/ts/ts_rsp_utils.c": 17,
         "crypto/ts/ts_rsp_verify.c": 40,
         "crypto/ts/ts_verify_ctx.c": 14,
+        "crypto/txt_db/txt_db.c": 15,
         "crypto/ui/ui_lib.c": 17,
         "crypto/ui/ui_null.c": 2,
         "crypto/ui/ui_openssl.c": 9,
@@ -587,7 +620,6 @@
         "providers/baseprov.c": 25
       },
       "planned_prerequisites": {
-        "ossl_get_enginesdir": 3,
         "ossl_get_openssldir": 3,
         "ossl_get_wininstallcontext": 1
       }
@@ -630,7 +662,7 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
-        "ossl_lib_ctx_get_data",
+        "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
@@ -679,9 +711,6 @@
         "crypto/asn1/a_i2d_fp.c:ASN1_ITEM"
       ],
       "planned_prerequisites": [
-        "ossl_get_enginesdir",
-        "ossl_get_enginesdir",
-        "ossl_get_enginesdir",
         "ossl_get_openssldir",
         "ossl_get_openssldir",
         "ossl_get_openssldir",
@@ -689,10 +718,10 @@
       ]
     },
     "checked": {
-      "authority_units": 524,
-      "crate_modules": 711,
+      "authority_units": 559,
+      "crate_modules": 747,
       "deferral_blocker_rows": 0,
-      "deferrals_recorded": 5,
+      "deferrals_recorded": 4,
       "divergence_names_covered": 47,
       "divergence_rows": 11,
       "names_referenced_and_not_built": 19
@@ -801,28 +830,28 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "f51923e492898a3f47891397d6f5911344cbc6d2aef95db6c351c0eb9dcc2a67",
+  "body_hash": "03c432aa94ecfb3e1ee1e288792589cf040c66cd20247a7e00ac6188794a8216",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "a45c07007b5a9b554b869015d272d9c6f806442ba4071c119faf188cc5a08134"
+      "sha256": "307eeabd191cbd65ebbbc6df8ebb545fa7816344d2c0237a46f96d7d64f39e2f"
     },
     {
       "name": "macro-owners",
       "path": "forensics/atlas/macro-owners.json",
-      "sha256": "7a124f1930399432bd14de253a2962cb973e36043479107d691230a08706988d"
+      "sha256": "14b21a64dd0b1cb1bcd1372cee87a1a4e3404d10f32db32374f437d858ac885c"
     },
     {
       "name": "typedef-owners",
       "path": "forensics/atlas/typedef-owners.json",
-      "sha256": "7d08aeb2d40f9d94b547fddf6920218b7fa1d17669313fa490d26c6c3ca9d06a"
+      "sha256": "5a7a65cf44f7e9ebb59ddd8dcc36ef8f6ce85f0babbda25ede76de357fd8754e"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "cd4e197e8a5e2e58aff6886105764b4cbd2ec0d123ce91efcdc5cc4205195633"
+      "sha256": "836fa7826143d0c7378cc24fce49446b85429f97cdcfa2e3dc2898b23889cb47"
     },
     {
       "name": "symbol-ownership",
@@ -837,17 +866,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "decad8cffc4290b4cbb71933173ea6d511b67fe5c604fb339d00e2d99239ea54"
+      "sha256": "5b75f0a9c1b926a20cecd40da5a30c91bb674d02d7303b669633615e0bc1f740"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "c6629f41c26748b2d696d2e78ddd5e872e5c382e7f955dc6ae85c4699d466338"
+      "sha256": "a0cbd212606075a0a95178fd07fa3dbc01ac1ae1c56a30a76d26bc64d8d20e19"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "1e202ddb05d3e7606b8201e9207bf86606c794c0595f80da95e3238837bab2b3"
+      "sha256": "5245b767d6239352b2e130bbbcdad5db7b2486b463e2c54bb4bad367c742ebf2"
     },
     {
       "name": "crate-source-tree",

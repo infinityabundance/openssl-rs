@@ -1,18 +1,22 @@
 //! `crypto/ts/ts_conf.c` — the `tsa` configuration readers. Phase 12.5.
 //!
-//! The certificate/key loaders and the fourteen `TS_CONF_set_*` readers that build a `TS_RESP_CTX`
-//! from a `CONF` section. Two exports are withheld: `TS_CONF_set_crypto_device` and
-//! `TS_CONF_set_default_engine` reach `ENGINE_by_id`/`ENGINE_set_default`, which `src/engine/`
-//! records as Phase 13's (withheld on `crypto/engine/eng_dyn.c`), and the engine is not ts-local.
+//! The certificate/key loaders and the sixteen `TS_CONF_set_*` readers that build a `TS_RESP_CTX`
+//! from a `CONF` section. `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` are the
+//! `#ifndef OPENSSL_NO_ENGINE` pair 12.5 withheld and 13.8 transcribes: their body is the
+//! `ENGINE_by_id`/`ENGINE_set_default` lookup and installation, landed by 13.1 and 13.2.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 #![allow(non_snake_case)]
 
-use core::ffi::{c_char, c_int, c_long, c_void};
+use core::ffi::{c_char, c_int, c_long, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::prim::ASN1_OBJECT_free;
 use crate::asn1::x_info::{X509Info, X509_INFO_free};
+use crate::engine::eng_ctrl::ENGINE_ctrl;
+use crate::engine::eng_fat::ENGINE_set_default;
+use crate::engine::eng_lib::{ENGINE_free, Engine};
+use crate::engine::eng_list::ENGINE_by_id;
 use crate::evp::digest::EvpMd;
 use crate::evp::legacy_evp::EVP_get_digestbyname;
 use crate::pem::pem_info::PEM_X509_INFO_read_bio;
@@ -33,13 +37,13 @@ use crate::x509::v3_utl::{X509V3_conf_free, X509V3_parse_list};
 use crate::x509::x509_cmp::X509_add_cert;
 use crate::x509::x_x509::X509;
 
-use super::raise_ts;
 use super::ts_rsp_sign::{
     TS_RESP_CTX_add_flags, TS_RESP_CTX_add_md, TS_RESP_CTX_add_policy, TS_RESP_CTX_set_accuracy,
     TS_RESP_CTX_set_certs, TS_RESP_CTX_set_clock_precision_digits, TS_RESP_CTX_set_def_policy,
     TS_RESP_CTX_set_ess_cert_id_digest, TS_RESP_CTX_set_serial_cb, TS_RESP_CTX_set_signer_cert,
     TS_RESP_CTX_set_signer_digest, TS_RESP_CTX_set_signer_key, TsRespCtx, TsSerialCb,
 };
+use super::{raise_ts, raise_ts_data};
 
 /// The authority translation unit for this module.
 pub(crate) const FILE: &core::ffi::CStr = c"crypto/ts/ts_conf.c";
@@ -50,6 +54,8 @@ const BASE_SECTION: &core::ffi::CStr = c"tsa";
 const ENV_DEFAULT_TSA: &core::ffi::CStr = c"default_tsa";
 /// `ENV_SERIAL` — `ts_conf.c:25`.
 const ENV_SERIAL: &core::ffi::CStr = c"serial";
+/// `ENV_CRYPTO_DEVICE` — `ts_conf.c:26`.
+const ENV_CRYPTO_DEVICE: &core::ffi::CStr = c"crypto_device";
 /// `ENV_SIGNER_CERT` — `ts_conf.c:27`.
 const ENV_SIGNER_CERT: &core::ffi::CStr = c"signer_cert";
 /// `ENV_CERTS` — `ts_conf.c:28`.
@@ -96,6 +102,11 @@ const TS_ESS_CERT_ID_CHAIN: c_int = 0x04;
 /// `TS_MAX_CLOCK_PRECISION_DIGITS` — `include/openssl/ts.h:312`.
 const TS_MAX_CLOCK_PRECISION_DIGITS: c_long = 6;
 
+/// `ENGINE_METHOD_ALL` — `include/openssl/engine.h:55`, `(unsigned int)0xFFFF`.
+const ENGINE_METHOD_ALL: c_uint = 0xFFFF;
+/// `ENGINE_CTRL_CHIL_SET_FORKCHECK` — `include/openssl/engine.h:235`, `100`.
+const ENGINE_CTRL_CHIL_SET_FORKCHECK: c_int = 100;
+
 /// `TS_R_CANNOT_LOAD_CERT` — `include/openssl/tserr.h`.
 const TS_R_CANNOT_LOAD_CERT: c_int = 137;
 /// `TS_R_CANNOT_LOAD_KEY` — `include/openssl/tserr.h`.
@@ -104,6 +115,8 @@ const TS_R_CANNOT_LOAD_KEY: c_int = 138;
 const TS_R_VAR_BAD_VALUE: c_int = 135;
 /// `TS_R_VAR_LOOKUP_FAILURE` — `include/openssl/tserr.h`.
 const TS_R_VAR_LOOKUP_FAILURE: c_int = 136;
+/// `TS_R_COULD_NOT_SET_ENGINE` — `include/openssl/tserr.h`.
+const TS_R_COULD_NOT_SET_ENGINE: c_int = 127;
 
 /// `ts_CONF_lookup_fail(name, tag)` — `ts_conf.c:125-128`.
 ///
@@ -303,6 +316,91 @@ pub(crate) unsafe extern "C" fn TS_CONF_set_serial(
     // SAFETY: `ctx` is live; the CONF string is the callback's data.
     unsafe { TS_RESP_CTX_set_serial_cb(ctx, cb, serial.cast()) };
     1
+}
+
+/// `int TS_CONF_set_crypto_device(CONF *conf, const char *section, const char *device)` —
+/// `ts_conf.c:163-178`.
+///
+/// A NULL `device` is read from the section's `crypto_device` entry; when neither is present no
+/// engine is installed and the call succeeds. A non-NULL device is handed to
+/// [`TS_CONF_set_default_engine`], and a refusal there raises `TS_R_VAR_BAD_VALUE`.
+///
+/// # Safety
+/// `conf` is live; `section` is NUL-terminated; `device` is NULL or NUL-terminated.
+#[no_mangle]
+pub(crate) unsafe extern "C" fn TS_CONF_set_crypto_device(
+    conf: *mut Conf,
+    section: *const c_char,
+    device: *const c_char,
+) -> c_int {
+    let mut device = device;
+
+    if device.is_null() {
+        // SAFETY: `conf` and `section` are live.
+        device = unsafe { NCONF_get_string(conf, section, ENV_CRYPTO_DEVICE.as_ptr()) };
+    }
+
+    if !device.is_null()
+        // SAFETY: `device` is NUL-terminated.
+        && unsafe { TS_CONF_set_default_engine(device) } == 0
+    {
+        // SAFETY: a compile-time coordinate.
+        unsafe { ts_conf_invalid() };
+        return 0;
+    }
+    1
+}
+
+/// `int TS_CONF_set_default_engine(const char *name)` — `ts_conf.c:180-202`.
+///
+/// `"builtin"` is accepted without touching the registry. Any other name is looked up with
+/// `ENGINE_by_id`; a miss, or an `ENGINE_set_default(e, ENGINE_METHOD_ALL)` refusal, raises
+/// `TS_R_COULD_NOT_SET_ENGINE` and answers 0. The `"chil"` arm sets the fork-check control
+/// before installing the engine.
+///
+/// # Safety
+/// `name` is NUL-terminated.
+#[no_mangle]
+pub(crate) unsafe extern "C" fn TS_CONF_set_default_engine(name: *const c_char) -> c_int {
+    // SAFETY: `name` is NUL-terminated.
+    if unsafe { strcmp(name, c"builtin".as_ptr()) } == 0 {
+        return 1;
+    }
+
+    let mut ret = 0;
+    // SAFETY: `name` is NUL-terminated.
+    let e: *mut Engine = unsafe { ENGINE_by_id(name) };
+    if !e.is_null() {
+        // SAFETY: `name` is NUL-terminated.
+        if unsafe { strcmp(name, c"chil".as_ptr()) } == 0 {
+            // SAFETY: `e` is live; the control takes a scalar and no pointer argument.
+            unsafe { ENGINE_ctrl(e, ENGINE_CTRL_CHIL_SET_FORKCHECK, 1, ptr::null_mut(), None) };
+        }
+        // SAFETY: `e` is live.
+        if unsafe { ENGINE_set_default(e, ENGINE_METHOD_ALL) } != 0 {
+            ret = 1;
+        }
+    }
+
+    if ret == 0 {
+        let mut msg: Vec<u8> = b"engine:".to_vec();
+        // SAFETY: `name` is NUL-terminated, as the `strcmp`s above established.
+        msg.extend_from_slice(unsafe { core::ffi::CStr::from_ptr(name) }.to_bytes());
+        msg.push(0);
+        // SAFETY: the coordinate is a compile-time constant and `msg` is NUL-terminated.
+        unsafe {
+            raise_ts_data(
+                FILE,
+                198,
+                c"TS_CONF_set_default_engine",
+                TS_R_COULD_NOT_SET_ENGINE,
+                msg.as_ptr().cast(),
+            )
+        };
+    }
+    // SAFETY: `e` is NULL or live.
+    unsafe { ENGINE_free(e) };
+    ret
 }
 
 /// `int TS_CONF_set_signer_cert(CONF *conf, const char *section, const char *cert,

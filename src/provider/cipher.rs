@@ -10557,7 +10557,7 @@ const AES_BLOCK_MASK: usize = !(AES_BLOCK_SIZE - 1);
 /// drop all four rows where the crate still publishes them. That is a recorded divergence
 /// (`docs/SECURITY_DIVERGENCE_POLICY.md` §4) rather than an oversight, and it is the same class as
 /// the declines D213 (RC4_options) and D222 (the Camellia table) already carry.
-fn ia32cap_aesni() -> bool {
+pub(crate) fn ia32cap_aesni() -> bool {
     let leaf1 = core::arch::x86_64::__cpuid(1);
     leaf1.ecx & (1 << 25) != 0
 }
@@ -10795,7 +10795,7 @@ unsafe fn copy_state<T>(dst: *mut T, src: *const T) {
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW::init` contract.
-unsafe extern "C" fn aesni_cbc_hmac_sha1_init_key(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_init_key(
     vctx: *mut ProvCipherCtx,
     key: *const c_uchar,
     keylen: usize,
@@ -10827,7 +10827,7 @@ unsafe extern "C" fn aesni_cbc_hmac_sha1_init_key(
 ///
 /// # Safety
 /// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `mac` is readable for `len` bytes.
-unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
     vctx: *mut c_void,
     mac: *const c_uchar,
     len: usize,
@@ -10879,7 +10879,7 @@ unsafe extern "C" fn aesni_cbc_hmac_sha1_set_mac_key(
 ///
 /// # Safety
 /// `vctx` is a `PROV_AES_HMAC_SHA1_CTX`; `aad_rec` is writable for `aad_len` bytes.
-unsafe extern "C" fn aesni_cbc_hmac_sha1_set_tls1_aad(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_set_tls1_aad(
     vctx: *mut c_void,
     aad_rec: *mut c_uchar,
     aad_len: c_int,
@@ -10947,7 +10947,7 @@ unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_max_bufsize(vctx: *mut 
 /// # Safety
 /// `vctx` is a `PROV_AES_HMAC_SHA_CTX`; `param` is a live parameter block whose `inp` is readable
 /// for at least thirteen bytes.
-unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_aad(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_aad(
     vctx: *mut c_void,
     param: *mut EvpCtrlTls11MultiblockParam,
 ) -> c_int {
@@ -11169,7 +11169,7 @@ unsafe fn tls1_multi_block_encrypt_sha1(
 ///
 /// # Safety
 /// As `aesni_cbc_hmac_sha1_tls1_multiblock_aad`.
-unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_encrypt(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_encrypt(
     vctx: *mut c_void,
     param: *mut EvpCtrlTls11MultiblockParam,
 ) -> c_int {
@@ -11200,7 +11200,7 @@ unsafe extern "C" fn aesni_cbc_hmac_sha1_tls1_multiblock_encrypt(
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW::cipher` contract.
-unsafe extern "C" fn aesni_cbc_hmac_sha1_cipher(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha1_cipher(
     vctx: *mut ProvCipherCtx,
     out: *mut c_uchar,
     in_: *const c_uchar,
@@ -11435,7 +11435,7 @@ unsafe fn ossl_prov_cipher_hw_aes_cbc_hmac_sha1() -> *const ProvCipherHwAesHmacS
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW::init` contract.
-unsafe extern "C" fn aesni_cbc_hmac_sha256_init_key(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_init_key(
     vctx: *mut ProvCipherCtx,
     key: *const c_uchar,
     keylen: usize,
@@ -11467,7 +11467,7 @@ unsafe extern "C" fn aesni_cbc_hmac_sha256_init_key(
 ///
 /// # Safety
 /// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `mackey` is readable for `len` bytes.
-unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
     vctx: *mut c_void,
     mackey: *const c_uchar,
     len: usize,
@@ -11514,7 +11514,7 @@ unsafe extern "C" fn aesni_cbc_hmac_sha256_set_mac_key(
 ///
 /// # Safety
 /// `vctx` is a `PROV_AES_HMAC_SHA256_CTX`; `aad_rec` is writable for `aad_len` bytes.
-unsafe extern "C" fn aesni_cbc_hmac_sha256_set_tls1_aad(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_set_tls1_aad(
     vctx: *mut c_void,
     aad_rec: *mut c_uchar,
     aad_len: c_int,
@@ -11577,7 +11577,7 @@ unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_max_bufsize(vctx: *mu
 ///
 /// # Safety
 /// As `aesni_cbc_hmac_sha1_tls1_multiblock_aad`.
-unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_aad(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_aad(
     vctx: *mut c_void,
     param: *mut EvpCtrlTls11MultiblockParam,
 ) -> c_int {
@@ -11772,7 +11772,7 @@ unsafe fn tls1_multi_block_encrypt_sha256(
 ///
 /// # Safety
 /// As `aesni_cbc_hmac_sha1_tls1_multiblock_encrypt`.
-unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_encrypt(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_encrypt(
     vctx: *mut c_void,
     param: *mut EvpCtrlTls11MultiblockParam,
 ) -> c_int {
@@ -11804,7 +11804,7 @@ unsafe extern "C" fn aesni_cbc_hmac_sha256_tls1_multiblock_encrypt(
 ///
 /// # Safety
 /// The `PROV_CIPHER_HW::cipher` contract.
-unsafe extern "C" fn aesni_cbc_hmac_sha256_cipher(
+pub(crate) unsafe extern "C" fn aesni_cbc_hmac_sha256_cipher(
     vctx: *mut ProvCipherCtx,
     out: *mut c_uchar,
     in_: *const c_uchar,

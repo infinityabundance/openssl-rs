@@ -1132,6 +1132,16 @@ COVERED_FILES = [
     # table) and `ui_null.c` raises nothing, so neither is covered.
     ("crypto/ui/ui_lib.c", "UI_LIB"),
     ("crypto/ui/ui_openssl.c", "UI_OPENSSL"),
+    # Phase 13.7: `crypto/async/async.c`, the job framework's raises. Every one is a
+    # coordinate the crate now transcribes: `async_release_job`'s `ERR_R_INTERNAL_ERROR`
+    # (`:144`), `async_start_func`'s (`:158`), the four
+    # `ASYNC_R_FAILED_TO_SWAP_CONTEXT` sites (`:174`, `:234`, `:276`, `:313`), the two
+    # remaining `ERR_R_INTERNAL_ERROR` ones (`:227`, `:247`),
+    # `ASYNC_init_thread`'s `ASYNC_R_INVALID_POOL_SIZE` (`:351`) and `ERR_R_CRYPTO_LIB`
+    # (`:367`), and `ASYNC_R_FAILED_TO_SET_POOL` (`:393`). `async_wait.c` and
+    # `arch/async_posix.c` raise nothing, so neither is covered -- a raise nobody makes is
+    # not a coordinate.
+    ("crypto/async/async.c", "ASYNC"),
     # Phase 8.9's `crypto/pem/pem_all.c`. The `IMPLEMENT_PEM_*` expansions raise nothing --
     # they are one call to a `PEM_ASN1_*` -- so the two sites are the two hand-written readers'
     # (`PEM_read_bio_DHparams` at `:201`, `PEM_read_DHparams` at `:214`).
@@ -1425,17 +1435,30 @@ COVERED_FILES = [
     # (`eng_lib.c`), the linked list (`eng_list.c`), the implementation table
     # (`eng_table.c`), the init/finish pair (`eng_init.c`), the control-command surface
     # (`eng_ctrl.c`) and the three algorithm tables this slice carries (`tb_digest.c`,
-    # `tb_pkmeth.c`, `tb_asnmth.c`). Each stem is the unit's own name so a line number
+    # `tb_pkmeth.c`, `tb_asnmth.c`). Phase 13.1 added the `engines` configuration module
+    # (`eng_cnf.c`), whose section/init/default-algorithms refusals are `ENGINE_R_*`.
+    # Each stem is the unit's own name so a line number
     # cannot collide with another unit's, and the whole file is listed rather than the
     # landed subset: an unused coordinate is harmless, a missing one is not. `eng_all.c`
     # is deliberately **not** listed -- it raises nothing (its one function is the
-    # `OPENSSL_init_crypto` call).
+    # `OPENSSL_init_crypto` call). Phase 13.2 added the key-loader binding surface
+    # (`eng_pkey.c`), whose NULL / uninitialised / no-loader / loader-failed refusals are
+    # `ERR_R_*` and `ENGINE_R_*`, and the cipher table (`tb_cipher.c`), whose
+    # `ENGINE_get_cipher` raises `ENGINE_R_UNIMPLEMENTED_CIPHER`. The five legacy method
+    # tables (`tb_rsa`/`tb_dsa`/`tb_dh`/`tb_eckey`/`tb_rand`) raise nothing and are not
+    # listed, for the `eng_all.c` reason. Phase 13.3 added the control fat helpers
+    # (`eng_fat.c`), whose one site is `ENGINE_set_default_string`'s
+    # `ENGINE_R_INVALID_STRING` refusal (`str=%s`) -- the dispatch itself raises nothing.
     ("crypto/engine/eng_ctrl.c", "ENG_CTRL"),
+    ("crypto/engine/eng_cnf.c", "ENG_CNF"),
+    ("crypto/engine/eng_fat.c", "ENG_FAT"),
     ("crypto/engine/eng_init.c", "ENG_INIT"),
     ("crypto/engine/eng_lib.c", "ENG_LIB"),
     ("crypto/engine/eng_list.c", "ENG_LIST"),
+    ("crypto/engine/eng_pkey.c", "ENG_PKEY"),
     ("crypto/engine/eng_table.c", "ENG_TABLE"),
     ("crypto/engine/tb_asnmth.c", "TB_ASNMTH"),
+    ("crypto/engine/tb_cipher.c", "TB_CIPHER"),
     ("crypto/engine/tb_digest.c", "TB_DIGEST"),
     ("crypto/engine/tb_pkmeth.c", "TB_PKMETH"),
     # Phase 10.16's `providers/implementations/storemgmt/file_store.c` -- the `file:` STORE LOADER
@@ -2024,6 +2047,9 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         # `engineerr.h` is an installed header (it ships beside `engine.h`), so this is
         # `ecerr.h`'s fallthrough-free case again.
         "#include <openssl/engineerr.h>",
+        # Phase 13.7: `ASYNC_R_*` for `crypto/async/async.c`'s pool and switch failures.
+        # `asyncerr.h` is an installed header, so this is `engineerr.h`'s case again.
+        "#include <openssl/asyncerr.h>",
         "#include <stdio.h>",
         "",
     ]

@@ -116,6 +116,23 @@ impl GcmCtx {
     fn set_xi(&mut self, v: u128) {
         self.xi = [(v >> 64) as u64, v as u64];
     }
+
+    /// `ctx->key` — the caller's key schedule.
+    ///
+    /// The one reader outside this module is the legacy `aes_gcm_ctrl`'s `EVP_CTRL_COPY`
+    /// (`src/evp/e_aes.rs`), which must verify that a copied context's `gcm.key` still points at
+    /// its own `ks` before repointing it. The field stays private so that repair is the only way
+    /// in.
+    #[inline]
+    pub(crate) fn key(&self) -> *mut c_void {
+        self.key
+    }
+
+    /// Re-point `key` at a caller's schedule; see [`GcmCtx::key`].
+    #[inline]
+    pub(crate) fn repoint_key(&mut self, key: *mut c_void) {
+        self.key = key;
+    }
 }
 
 /// SP 800-38D Algorithm 1: multiply two field elements, both in the big-endian convention.

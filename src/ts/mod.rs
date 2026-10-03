@@ -21,14 +21,13 @@
 //! * [`ts_verify_ctx`] — `TS_VERIFY_CTX_new`/`init`/`free`/`cleanup`, the setter family and
 //!   `TS_REQ_to_TS_VERIFY_CTX`.
 //!
-//! ## What is withheld, and why
+//! ## The ENGINE pair 12.5 withheld
 //!
-//! One pair of `crypto/ts/`'s entry points is **not** landed here, and it is not ts-local:
-//!
-//! * `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` (`ts_conf.c`) reach
-//!   `ENGINE_by_id`/`ENGINE_set_default`, which are Phase **13**'s; `src/engine/eng_list.rs`
-//!   records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. The non-engine
-//!   `TS_CONF_*` readers land as [`ts_conf`].
+//! `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` (`ts_conf.c`) reach
+//! `ENGINE_by_id`/`ENGINE_set_default`, which are Phase **13**'s; `src/engine/eng_list.rs`
+//! records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. 12.5 withheld the pair by
+//! name and 13.8 transcribes them in [`ts_conf`] now that 13.1 and 13.2 have landed the registry
+//! and the method binding; every non-engine `TS_CONF_*` reader landed with 12.5.
 //!
 //! `ts_rsp_sign.c`'s response builder and `ts_rsp_verify.c` waited on 12.7's ESS item group and
 //! its `OSSL_ESS_*` helpers (`crypto/ess/ess_asn1.c`, `crypto/ess/ess_lib.c`), and 12.5b lands

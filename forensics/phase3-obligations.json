@@ -12,7 +12,7 @@
     "deferred": [
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -20,7 +20,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -28,7 +28,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -36,7 +36,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -44,7 +44,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -52,7 +52,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -60,7 +60,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -68,7 +68,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -76,7 +76,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -84,7 +84,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -92,7 +92,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -100,7 +100,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -108,7 +108,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -116,7 +116,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -124,7 +124,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -132,7 +132,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -140,7 +140,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -148,7 +148,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -156,7 +156,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -164,7 +164,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -172,7 +172,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -180,7 +180,7 @@
       },
       {
         "declaring_header": "async.h",
-        "implemented_by_owner": false,
+        "implemented_by_owner": true,
         "module": "src/runtime/async/",
         "owning_phase": 13,
         "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -769,7 +769,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "577168e52e5605593d048da5d1979f7ab821c0b1913384a60a96bb340375e8a9"
+      "sha256": "2b08fb3154c2c61bb05c9b4bc9335f35d444f566a967eefe007bc4573dca0016"
     }
   ],
   "kind": "phase3-obligations",

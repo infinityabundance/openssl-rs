@@ -1,19 +1,22 @@
-//! Phase 10.9 — `crypto/engine/eng_list.c`: the linked list of registered engines.
+//! Phase 10.9 / 13.1 — `crypto/engine/eng_list.c`: the linked list of registered engines.
 //!
 //! This is the registry's **fetch** surface: the list a caller walks with
-//! `ENGINE_get_first`/`ENGINE_get_next` and the publish/retract pair `ENGINE_add`/
-//! `ENGINE_remove`. 10.9 lands the list core and the dynamic-id list `engine_free_util`
-//! unlinks from; it withholds one function by name.
+//! `ENGINE_get_first`/`ENGINE_get_next`, the publish/retract pair `ENGINE_add`/
+//! `ENGINE_remove`, and the by-id lookup `ENGINE_by_id`. 10.9 landed the list core and the
+//! dynamic-id list `engine_free_util` unlinks from, and withheld `ENGINE_by_id` by name;
+//! 13.1 lands it and the helpers its `ENGINE_FLAGS_BY_ID_COPY` arm reaches.
 //!
-//! **Withheld: `ENGINE_by_id` (`eng_list.c:408-473`), blocker `crypto/engine/eng_dyn.c`.**
-//! Its closure names `ENGINE_load_builtin_engines` (withheld here — the crate's
-//! `OPENSSL_init_crypto` refuses the `ENGINE_*` bits, so its own text would diverge; see
-//! `eng_all.rs`) and, on a miss, recurses into `ENGINE_by_id("dynamic")` and drives a
-//! dynamic engine with `ENGINE_ctrl_cmd_string`. No dynamic engine exists in this crate
-//! because `eng_dyn.c` is not this stratum's unit, so the arm that would load one is
-//! unlanded. The `<id`-in-list half is transcribed nowhere: withholding the whole
-//! function is what keeps the miss path honest rather than silently answering NULL where
-//! the authority might answer an engine.
+//! ## `ENGINE_by_id` and the dynamic fallback
+//!
+//! `ENGINE_by_id` (`:408-473`) loads the built-ins, walks the list for the id, and — on a
+//! miss that is not the id `"dynamic"` itself — recurses into `ENGINE_by_id("dynamic")` and
+//! drives the dynamic engine with `ENGINE_ctrl_cmd_string` to load a shared object from
+//! `OPENSSL_ENGINES` (or the compiled-in engines directory). In this crate no dynamic engine
+//! is registered (`engine_load_dynamic_int` is `crypto/engine/eng_dyn.c`'s, a unit no
+//! subphase owns yet), so the recursion answers NULL and the miss path takes the authority's
+//! own `goto notfound`. The `<id>`-in-list half is transcribed whole, so a caller that
+//! registered an engine with `ENGINE_add` finds it exactly as the authority would; the
+//! fallback's failure coordinate (`ENGINE_R_NO_SUCH_ENGINE`, `id=%s`) is the authority's too.
 //!
 //! ## The list owns one structural reference per member
 //!
@@ -35,12 +38,15 @@ use crate::engine::eng_lib::{
     Engine,
 };
 use crate::ffi::guard_ffi;
+use crate::runtime::defaults::ossl_get_enginesdir;
 use crate::runtime::err::err_sites::{
     ENG_LIST_106, ENG_LIST_124, ENG_LIST_132, ENG_LIST_235, ENG_LIST_262, ENG_LIST_288,
     ENG_LIST_315, ENG_LIST_343, ENG_LIST_347, ENG_LIST_353, ENG_LIST_365, ENG_LIST_371,
-    ENG_LIST_479, ENG_LIST_64, ENG_LIST_73, ENG_LIST_89, ENG_LIST_97,
+    ENG_LIST_413, ENG_LIST_420, ENG_LIST_470, ENG_LIST_479, ENG_LIST_64, ENG_LIST_73, ENG_LIST_89,
+    ENG_LIST_97,
 };
-use crate::runtime::err::raise_site;
+use crate::runtime::err::{raise_site, raise_site_data};
+use crate::runtime::getenv::ossl_safe_getenv;
 use crate::runtime::thread::{CRYPTO_THREAD_unlock, CRYPTO_THREAD_write_lock};
 
 extern "C" {
@@ -56,6 +62,12 @@ static ENGINE_LIST_TAIL: AtomicPtr<Engine> = AtomicPtr::new(ptr::null_mut());
 static ENGINE_DYN_LIST_HEAD: AtomicPtr<Engine> = AtomicPtr::new(ptr::null_mut());
 /// `static ENGINE *engine_dyn_list_tail = NULL` (`:34`).
 static ENGINE_DYN_LIST_TAIL: AtomicPtr<Engine> = AtomicPtr::new(ptr::null_mut());
+
+/// `ENGINE_FLAGS_BY_ID_COPY` — `include/openssl/engine.h:88`, `(int)0x0004`.
+///
+/// Set on an `ENGINE` whose `ENGINE_by_id` answer must be a *copy* rather than the registered
+/// object itself; the `ENGINE_FLAGS_BY_ID_COPY` arm of [`ENGINE_by_id`] reaches [`engine_cpy`].
+const ENGINE_FLAGS_BY_ID_COPY: c_int = 0x0004;
 
 /// A write-lock acquisition that reports success, used at the authority's call sites.
 fn lock() -> bool {
@@ -211,15 +223,13 @@ unsafe fn engine_list_remove(e: *mut Engine) -> c_int {
 /// `int engine_add_dynamic_id(ENGINE *e, ENGINE_DYNAMIC_ID dynamic_id, int not_locked)` —
 /// `:150-200`.
 ///
-/// Unreachable until `ENGINE_by_id`/`eng_dyn.c` land: its only caller is [`engine_cpy`],
-/// which is itself reachable only from the withheld `ENGINE_by_id`. The dynamic-id *unlink*
-/// half, [`engine_remove_dynamic_id`], is live (`engine_free_util` calls it), so only this
-/// registration half is dark.
+/// Reached through [`engine_cpy`], which the `ENGINE_FLAGS_BY_ID_COPY` arm of [`ENGINE_by_id`]
+/// calls. The dynamic-id *unlink* half, [`engine_remove_dynamic_id`], is live
+/// (`engine_free_util` calls it).
 ///
 /// # Safety
 /// `e` must be NULL or a live `ENGINE`. When `not_locked` is zero the caller holds the
 /// engine lock; when non-zero this function takes and releases it.
-#[allow(dead_code)] // reached only through `ENGINE_by_id`, withheld on `crypto/engine/eng_dyn.c`
 #[allow(unpredictable_function_pointer_comparisons)] // the authority compares the ids it was given
 pub(crate) unsafe fn engine_add_dynamic_id(
     e: *mut Engine,
@@ -287,7 +297,6 @@ pub(crate) unsafe fn engine_add_dynamic_id(
 }
 
 /// The shared `err:` tail of [`engine_add_dynamic_id`], which returns without a value.
-#[allow(dead_code)] // as its caller, dark until `ENGINE_by_id`/`eng_dyn.c` land
 fn dyn_err(not_locked: c_int) -> c_int {
     if not_locked != 0 {
         unlock();
@@ -502,12 +511,10 @@ pub unsafe extern "C" fn ENGINE_remove(e: *mut Engine) -> c_int {
 
 /// `static void engine_cpy(ENGINE *dest, const ENGINE *src)` — `:378-406`.
 ///
-/// Unreachable until `ENGINE_by_id` lands: it is called only from the `ENGINE_FLAGS_BY_ID_COPY`
-/// arm, which is withheld with that function on `crypto/engine/eng_dyn.c`.
+/// Called only from the `ENGINE_FLAGS_BY_ID_COPY` arm of [`ENGINE_by_id`].
 ///
 /// # Safety
 /// Both pointers must be live `ENGINE`s.
-#[allow(dead_code)] // reached only through `ENGINE_by_id`, withheld on `crypto/engine/eng_dyn.c`
 unsafe fn engine_cpy(dest: *mut Engine, src: *const Engine) {
     // SAFETY: both are live per the caller's contract.
     unsafe {
@@ -554,7 +561,143 @@ pub unsafe extern "C" fn ENGINE_up_ref(e: *mut Engine) -> c_int {
     })
 }
 
-// `ENGINE *ENGINE_by_id(const char *id)` (`crypto/engine/eng_list.c:408-473`) is withheld.
-// See the module header: the dynamic-engine arm and `ENGINE_load_builtin_engines` are
-// unlanded, so the miss path could not answer honestly. A placeholder body is forbidden, so
-// there is no function here to call.
+/// `ENGINE *ENGINE_by_id(const char *id)` — `crypto/engine/eng_list.c:408-473`.
+///
+/// Loads the built-ins, then walks the registry for `id`. A hit returns a structural
+/// reference — a fresh copy through [`engine_cpy`] when the engine carries
+/// [`ENGINE_FLAGS_BY_ID_COPY`], otherwise an increment of the registered object. A miss that
+/// is not `"dynamic"` recurses into the dynamic engine; with no dynamic engine registered
+/// that recursion answers NULL and this takes the authority's own `goto notfound`
+/// (`ENGINE_R_NO_SUCH_ENGINE`, `id=%s`). See the module header for why the fallback cannot
+/// load a shared object in this crate.
+///
+/// # Safety
+/// `id` must be NULL or NUL-terminated.
+#[no_mangle]
+#[allow(unpredictable_function_pointer_comparisons)] // the recursion compares the ids it is given
+pub unsafe extern "C" fn ENGINE_by_id(id: *const c_char) -> *mut Engine {
+    guard_ffi(ptr::null_mut(), || {
+        if id.is_null() {
+            // SAFETY: `ENG_LIST_413` is a generated constant whose strings are static.
+            unsafe { raise_site(&ENG_LIST_413) };
+            return ptr::null_mut();
+        }
+        // The authority's first act, on every call: load the built-in engines.
+        // SAFETY: the loader's contract is the caller's.
+        unsafe { crate::engine::eng_all::ENGINE_load_builtin_engines() };
+
+        // SAFETY: the once storage and init are `eng_lib.rs`'s.
+        if !unsafe { run_engine_lock_init() } {
+            // SAFETY: `ENG_LIST_420` is a generated constant whose strings are static.
+            unsafe { raise_site(&ENG_LIST_420) };
+            return ptr::null_mut();
+        }
+        if !lock() {
+            return ptr::null_mut();
+        }
+        let mut iterator = ENGINE_LIST_HEAD.load(Ordering::Acquire);
+        // SAFETY: `id` is NUL-terminated per the contract and `iterator` is a live list member.
+        while !iterator.is_null() && unsafe { strcmp(id, (*iterator).id) != 0 } {
+            // SAFETY: `iterator` is a live list member.
+            iterator = unsafe { (*iterator).next };
+        }
+        if !iterator.is_null() {
+            // A structural reference is what must be returned. An `ENGINE` that returns copies
+            // gets a duplicate; every other one has its refcount incremented.
+            // SAFETY: `iterator` is a live list member.
+            if unsafe { (*iterator).flags } & ENGINE_FLAGS_BY_ID_COPY != 0 {
+                let cp = crate::engine::eng_lib::ENGINE_new();
+                if cp.is_null() {
+                    iterator = ptr::null_mut();
+                } else {
+                    // SAFETY: `cp` is the fresh ENGINE and `iterator` a live registered one.
+                    unsafe { engine_cpy(cp, iterator) };
+                    iterator = cp;
+                }
+            } else {
+                let mut r: c_int = 0;
+                // SAFETY: `iterator` is a live list member and `struct_ref` its refcount.
+                unsafe { up_ref(ptr::addr_of_mut!((*iterator).struct_ref), &mut r) };
+            }
+        }
+        unlock();
+        if !iterator.is_null() {
+            return iterator;
+        }
+        // Prevent infinite recursion if the id being looked up *is* the dynamic engine.
+        // SAFETY: the literal is NUL-terminated and `id` is NUL-terminated per the contract.
+        if unsafe { strcmp(id, c"dynamic".as_ptr()) } != 0 {
+            // SAFETY: the literal is NUL-terminated.
+            let mut load_dir: *const c_char =
+                unsafe { ossl_safe_getenv(c"OPENSSL_ENGINES".as_ptr()) };
+            if load_dir.is_null() {
+                load_dir = ossl_get_enginesdir();
+            }
+            // SAFETY: the literal is NUL-terminated.
+            let dyn_engine = unsafe { ENGINE_by_id(c"dynamic".as_ptr()) };
+            let mut loaded = !dyn_engine.is_null();
+            if loaded {
+                // SAFETY: `dyn_engine` is live; the command names are static literals and the
+                // argument strings are NUL-terminated (or NULL for `LOAD`, the authority's
+                // `NO_INPUT` convention).
+                unsafe {
+                    loaded = crate::engine::eng_ctrl::ENGINE_ctrl_cmd_string(
+                        dyn_engine,
+                        c"ID".as_ptr(),
+                        id,
+                        0,
+                    ) != 0
+                        && crate::engine::eng_ctrl::ENGINE_ctrl_cmd_string(
+                            dyn_engine,
+                            c"DIR_LOAD".as_ptr(),
+                            c"2".as_ptr(),
+                            0,
+                        ) != 0
+                        && crate::engine::eng_ctrl::ENGINE_ctrl_cmd_string(
+                            dyn_engine,
+                            c"DIR_ADD".as_ptr(),
+                            load_dir,
+                            0,
+                        ) != 0
+                        && crate::engine::eng_ctrl::ENGINE_ctrl_cmd_string(
+                            dyn_engine,
+                            c"LIST_ADD".as_ptr(),
+                            c"1".as_ptr(),
+                            0,
+                        ) != 0
+                        && crate::engine::eng_ctrl::ENGINE_ctrl_cmd_string(
+                            dyn_engine,
+                            c"LOAD".as_ptr(),
+                            ptr::null::<c_char>(),
+                            0,
+                        ) != 0;
+                }
+            }
+            if loaded {
+                return dyn_engine;
+            }
+            // notfound: release the dynamic engine (NULL safe) and raise the id.
+            // SAFETY: `dyn_engine` is NULL or a live structural reference this call owns.
+            unsafe { crate::engine::eng_lib::ENGINE_free(dyn_engine) };
+            let mut msg: Vec<u8> = b"id=".to_vec();
+            // SAFETY: `id` is non-NULL and NUL-terminated per the contract.
+            msg.extend_from_slice(unsafe { core::ffi::CStr::from_ptr(id) }.to_bytes());
+            msg.push(0);
+            // SAFETY: `ENG_LIST_470` is a generated constant whose strings are static, and
+            // `msg` is NUL-terminated.
+            unsafe { raise_site_data(&ENG_LIST_470, msg.as_ptr().cast::<c_char>()) };
+            return ptr::null_mut();
+        }
+        // notfound from the non-`dynamic` arm's own recursion (`iterator` is NULL here).
+        // SAFETY: `ENGINE_free` accepts NULL.
+        unsafe { crate::engine::eng_lib::ENGINE_free(iterator) };
+        let mut msg: Vec<u8> = b"id=".to_vec();
+        // SAFETY: `id` is non-NULL and NUL-terminated per the contract.
+        msg.extend_from_slice(unsafe { core::ffi::CStr::from_ptr(id) }.to_bytes());
+        msg.push(0);
+        // SAFETY: `ENG_LIST_470` is a generated constant whose strings are static, and `msg`
+        // is NUL-terminated.
+        unsafe { raise_site_data(&ENG_LIST_470, msg.as_ptr().cast::<c_char>()) };
+        ptr::null_mut()
+    })
+}

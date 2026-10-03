@@ -1,0 +1,224 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-PHASE13-REF` is the activation **reference basis**: its probe takes the address of each of this stratum's inherited `implemented` exports -- the 61 `ENGINE_*` object, accessor and table names, the 62 `UI_*` names and the four `PEM_read[_bio]_PrivateKey` spellings -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-ENGINE` is 13.1's behavioural court: it **calls** `ENGINE_by_id`, `ENGINE_load_builtin_engines` and `ENGINE_add_conf_module` and compares the registry's observed `id`/`name`, object identity, the NULL/absent refusals, the refcount effect and the built-in loader's shared registry arm -- not the built-in registry itself, whose `rdrand`/`dynamic` divergence src/engine/eng_all.rs records, and not the error queue. `RT-ENGINE-TABLE` is 13.2's behavioural court: it **calls** the `tb_cipher`/`tb_rsa`/`tb_dsa`/`tb_dh`/`tb_eckey`/`tb_rand` table surface, `ENGINE_get_pkey_meth` and the `eng_pkey.c` key-loader entry points over a synthetic ENGINE and compares the bound method identities, the register/select/unregister cycle, the `ENGINE_register_all_*` walk, the `dummy_nid` default select and the NULL/uninitialised/no-loader refusals -- not a NULL engine handed to a method getter, and not the error queue. `RT-ENGINE-CTRL` is 13.3's behavioural court: it **calls** the four control fat helpers `eng_fat.c` lands and compares the `ENGINE_METHOD_*` mask dispatch, every `int_def_cb` string spelling, the nine-arm `ENGINE_register_complete` and the `ENGINE_register_all_complete` walk and its `ENGINE_register_all_complete` walk and its `ENGINE_FLAGS_NO_REGISTER_ALL` skip, and the unknown/partial/NULL/empty refusals -- not a NULL engine, and not the error queue. `RT-UI` is 13.4's behavioural court: it **calls** all 62 `ui.h` names -- the object lifecycle, the `UI_METHOD` setter/getter surface and its NULL arms, the string-add and `UI_dup_*` surface and refusals, `UI_process` over a deterministic in-process method with the writer observing every `UI_STRING` and the reader supplying fixed answers, the result and prompt-construction accessors, the ex-data accessors, `UI_UTIL_read_pw`/`_read_pw_string` and the PEM wrapper, and the null method's cancel -- so those names are `called` and not merely `referenced`; it passes no NULL that an accessor would dereference, does not call `UI_create_method(NULL)`, and never reads the error queue. `RT-TXTDB` is 13.5's behavioural court: it **calls** all six `txt_db.h` names over a fixed in-memory database and compares the parsed rows field by field (the `#` comment record skipped, an escaped tab a literal tab), the `TXT_DB_write` bytes and their re-read, `TXT_DB_create_index` and `TXT_DB_get_by_index`'s hit/miss/out-of-range/no-index arms by return and `DB_ERROR_*`, `TXT_DB_insert`'s accept and duplicate-key clash (`arg1` and the identity of `arg_row`), the two wrong-field-count read failures, and `TXT_DB_free` -- not a negative index or field (the authority indexes out of bounds there) and not the error queue. `RT-EVP-LEGACY` is 13.6a's behavioural court: it **calls** the forty-two deprecated `EVP_CIPHER` statics 13.6a lands -- the thirty-eight `EVP_aes_*` accessors and the four `EVP_aes_*_cbc_hmac_sha*` -- and compares each object's block size, key length, IV length and `flags`, `EVP_get_cipherbyname(name)`'s non-NULL answer, and a fixed-key/fixed-IV encrypt-then-decrypt round trip (the ciphertext bytes and a round-trip flag), with AEAD (GCM/CCM/OCB), wrap/wrap-pad and the stitched CBC-HMAC statics driven by their own sequences -- not an address (so the fetched-identity divergence cannot leak into a comparison), not the error queue, and not the CBC-HMAC TLS-record AAD arms, which `RT-CIPHER` already covers. `RT-LEGACY-REMAINDER` is 13.7's behavioural court: it **calls** the PEM private-key writers and readers over a fixed in-process RSA key written to and re-read from a memory BIO and its `_ex`/`FILE` spellings, comparing the decoded key's `id` and bit count, the fixed PEM banner, the encrypted round trip and the wrong-passphrase refusal (never a key, DER or ciphertext byte), and it **calls** the `ASYNC_*` framework -- `ASYNC_init_thread`, `ASYNC_start_job`, a job that block-pauses, pauses once and resumes, `ASYNC_get_current_job`/`ASYNC_get_wait_ctx`, the whole `ASYNC_WAIT_CTX_*` surface and the pool-size refusal -- comparing the transition sequence and the state each leaves, not the error queue; the decoder-absent `DH PARAMETERS` arm is left undriven rather than compared. `RT-HANDOFF` is 13.8's behavioural court: it **calls** the three received hand-offs -- `TS_CONF_set_crypto_device`/`TS_CONF_set_default_engine` over a fixed `CONF` (NULL device with and without a section entry, `builtin`, and an unknown id's refusal) and `SRP_VBASE_init` over a fixed verifier file (its `I`/`V` records, the added user's borrowed group, the seed-key `default_g`/`default_N`, and the NULL/absent/wrong-field-count/undecodable-base64 `SRP_ERR_*` refusals) -- not the built-in engine ids `dynamic`/`rdrand`, whose answers diverge, and not the error queue. Every court the plan names is registered below and runs; `pending_courts` is empty. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md section 3 records what the behavioural courts compare.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 127,
+        "candidate_exit_code": 0,
+        "candidate_observations": 127,
+        "candidate_stderr_tail": [],
+        "court": "RT-PHASE13-REF",
+        "crashed": false,
+        "probe": "courts/phase13/rt_coverage_ref_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 30,
+        "candidate_exit_code": 0,
+        "candidate_observations": 30,
+        "candidate_stderr_tail": [],
+        "court": "RT-ENGINE",
+        "crashed": false,
+        "probe": "courts/phase13/rt_engine_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_engine_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_engine_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 76,
+        "candidate_exit_code": 0,
+        "candidate_observations": 76,
+        "candidate_stderr_tail": [],
+        "court": "RT-ENGINE-TABLE",
+        "crashed": false,
+        "probe": "courts/phase13/rt_engine_table_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_engine_table_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_engine_table_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 73,
+        "candidate_exit_code": 0,
+        "candidate_observations": 73,
+        "candidate_stderr_tail": [],
+        "court": "RT-ENGINE-CTRL",
+        "crashed": false,
+        "probe": "courts/phase13/rt_engine_ctrl_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_engine_ctrl_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_engine_ctrl_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 278,
+        "candidate_exit_code": 0,
+        "candidate_observations": 278,
+        "candidate_stderr_tail": [],
+        "court": "RT-UI",
+        "crashed": false,
+        "probe": "courts/phase13/rt_ui_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_ui_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_ui_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 57,
+        "candidate_exit_code": 0,
+        "candidate_observations": 57,
+        "candidate_stderr_tail": [],
+        "court": "RT-TXTDB",
+        "crashed": false,
+        "probe": "courts/phase13/rt_txtdb_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_txtdb_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_txtdb_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 1167,
+        "candidate_exit_code": 0,
+        "candidate_observations": 1167,
+        "candidate_stderr_tail": [],
+        "court": "RT-EVP-LEGACY",
+        "crashed": false,
+        "probe": "courts/phase13/rt_evp_legacy_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_evp_legacy_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_evp_legacy_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 78,
+        "candidate_exit_code": 0,
+        "candidate_observations": 78,
+        "candidate_stderr_tail": [],
+        "court": "RT-LEGACY-REMAINDER",
+        "crashed": false,
+        "probe": "courts/phase13/rt_legacy_remainder_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_legacy_remainder_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_legacy_remainder_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 30,
+        "candidate_exit_code": 0,
+        "candidate_observations": 30,
+        "candidate_stderr_tail": [],
+        "court": "RT-HANDOFF",
+        "crashed": false,
+        "probe": "courts/phase13/rt_handoff_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_handoff_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_handoff_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {},
+    "summary": {
+      "fail": 0,
+      "pass": 9,
+      "total": 9
+    }
+  },
+  "generator": "forensics/tools/phase13_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_coverage_ref_probe.c",
+      "sha256": "8e55fbec579f2306cfa2623c3d375ad940beeb69b4c2a19238bf1ab726bc81fe"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_engine_probe.c",
+      "sha256": "0cae0dab6a1dd19473e6a235b7d4f15bfbc1191ad9ace912846f5c40134426bc"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_engine_table_probe.c",
+      "sha256": "ee45db20fbfae04bd9dfcce6afea507300ac73d4fdcd1baf9e8eb9af44b3e527"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_engine_ctrl_probe.c",
+      "sha256": "beb0442d10df53a220bb79716ef5b10406172a30abafb792986e0903736177c4"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_ui_probe.c",
+      "sha256": "b074c59803e599a34fabf6fcc3ce2de4f705921405ee3a5d13a1295b6235c624"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_txtdb_probe.c",
+      "sha256": "72c56b9ad4775df4bd2f9834ccefa200ae2e30655c288c8a076c0d60af74ad34"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_evp_legacy_probe.c",
+      "sha256": "8f03033589b7bbe5c363c2c7d700b66e1c99c8958cecb89cc9672f7516ae03e6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_legacy_remainder_probe.c",
+      "sha256": "aac61915234253bd7b93fb37bc718e48f4debbaab079071a4d4c244360a899c4"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_handoff_probe.c",
+      "sha256": "05ac9efadf28ce624c33ae60de923f8d0e4746a88f5aced0299f1d3323f37bde"
+    }
+  ],
+  "kind": "phase13-courts",
+  "schema": "openssl-rs/atlas/phase13-courts/v1"
+}

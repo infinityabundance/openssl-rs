@@ -13,647 +13,12 @@
       9,
       10,
       11,
-      12
+      12,
+      13
     ],
     "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
     "in_progress": [],
-    "not_yet_begun": [
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_add"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_cmd_is_executable"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_ctrl"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_ctrl_cmd"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_ctrl_cmd_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_finish"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_free"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_cmd_defns"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_ctrl_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_destroy_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_digest"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_digest_engine"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_finish_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_first"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_id"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_init_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_last"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_name"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_next"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_asn1_meth"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_asn1_meth_engine"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_asn1_meth_str"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_meth_engine"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_prev"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_static_state"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_get_table_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_init"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_new"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_pkey_asn1_find_str"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_all_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_all_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_all_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_register_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_remove"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_cmd_defns"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_ctrl_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_default_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_default_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_default_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_destroy_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_finish_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_id"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_init_function"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_name"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_set_table_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_unregister_digests"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_unregister_pkey_asn1_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_unregister_pkey_meths"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "ENGINE_up_ref"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 7,
-        "symbol": "PEM_read_PrivateKey"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 7,
-        "symbol": "PEM_read_PrivateKey_ex"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 7,
-        "symbol": "PEM_read_bio_PrivateKey"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 7,
-        "symbol": "PEM_read_bio_PrivateKey_ex"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_OpenSSL"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_UTIL_read_pw"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_UTIL_read_pw_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_UTIL_wrap_read_pem_callback"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_error_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_info_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_input_boolean"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_input_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_user_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_add_verify_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_construct_prompt"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_create_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_ctrl"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_destroy_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_error_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_info_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_input_boolean"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_input_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_user_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_dup_verify_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_free"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_action_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_output_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_result"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_result_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_test_string"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get0_user_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_default_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_input_flags"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_result_length"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_result_maxsize"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_result_minsize"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_result_string_length"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_get_string_type"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_closer"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_data_destructor"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_data_duplicator"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_flusher"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_opener"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_prompt_constructor"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_reader"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_get_writer"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_closer"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_data_duplicator"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_flusher"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_opener"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_prompt_constructor"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_reader"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_method_set_writer"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_new"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_new_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_null"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_process"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_default_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_ex_data"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_method"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_result"
-      },
-      {
-        "owing_phase": 13,
-        "owner_phase": 13,
-        "symbol": "UI_set_result_ex"
-      }
-    ],
+    "not_yet_begun": [],
     "strata": [
       {
         "completed": true,
@@ -904,6 +269,8 @@
               "RT-SRP",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
+              "RT-UI",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -938,7 +305,8 @@
             "courts": [
               "RT-BIO",
               "RT-EXDATA",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-UI"
             ],
             "symbol": "CRYPTO_get_ex_new_index"
           },
@@ -966,6 +334,7 @@
               "RT-PUBKEY",
               "RT-SECURE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-STORE"
@@ -1239,11 +608,13 @@
               "RT-EVP-SKEY",
               "RT-EXDATA",
               "RT-FETCH",
+              "RT-HANDOFF",
               "RT-HMAC",
               "RT-HPKE",
               "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
+              "RT-LEGACY-REMAINDER",
               "RT-LIBCTX",
               "RT-MEM",
               "RT-MEM-DEFAULT",
@@ -2073,7 +1444,8 @@
             "basis": "called",
             "courts": [
               "RT-CONF-MOD",
-              "RT-EC"
+              "RT-EC",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "OBJ_nid2sn"
           },
@@ -2531,6 +1903,7 @@
               "RT-SRP",
               "RT-STACK",
               "RT-STORE",
+              "RT-TXTDB",
               "RT-X509-ACERT",
               "RT-X509-PEM",
               "RT-X509-REQ",
@@ -2650,6 +2023,7 @@
               "RT-PKCS7",
               "RT-STACK",
               "RT-STORE",
+              "RT-TXTDB",
               "RT-X509-PEM",
               "RT-X509-STORE",
               "RT-X509-V3",
@@ -3136,6 +2510,7 @@
               "RT-EVP-PEM",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-OCSP",
               "RT-PARAM",
               "RT-PEM-KEY",
@@ -3384,8 +2759,10 @@
               "RT-EC",
               "RT-ERR-BIO",
               "RT-EVP-PEM",
+              "RT-HANDOFF",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-LHASH",
               "RT-OBJ-STREAM",
               "RT-OCSP",
@@ -3398,6 +2775,7 @@
               "RT-RUNTIME-EXT",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -3857,6 +3235,7 @@
               "RT-EVP-PEM",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-LHASH",
               "RT-OCSP",
               "RT-PARAM",
@@ -3868,6 +3247,7 @@
               "RT-RUNTIME-EXT",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -3949,14 +3329,17 @@
               "RT-CMS",
               "RT-CMS-REMAINDER",
               "RT-CONF",
+              "RT-HANDOFF",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-OBJ-STREAM",
               "RT-PEM-KEY",
               "RT-PKCS7",
               "RT-PUBKEY",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -4103,7 +3486,8 @@
               "RT-HTTP",
               "RT-LHASH",
               "RT-RUNTIME-EXT",
-              "RT-STORE"
+              "RT-STORE",
+              "RT-TXTDB"
             ],
             "symbol": "BIO_read"
           },
@@ -4211,6 +3595,7 @@
               "RT-EVP-PEM",
               "RT-HTTP",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-LHASH",
               "RT-OCSP",
               "RT-PARAM",
@@ -4221,6 +3606,7 @@
               "RT-RUNTIME-EXT",
               "RT-STORE",
               "RT-TS",
+              "RT-TXTDB",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -4789,6 +4175,7 @@
             "courts": [
               "RT-CONF",
               "RT-CONF-MOD",
+              "RT-HANDOFF",
               "RT-STORE",
               "RT-TS",
               "RT-X509",
@@ -4851,6 +4238,7 @@
             "basis": "called",
             "courts": [
               "RT-CONF",
+              "RT-HANDOFF",
               "RT-STORE",
               "RT-TS",
               "RT-X509",
@@ -4871,6 +4259,7 @@
             "courts": [
               "RT-CONF",
               "RT-CONF-MOD",
+              "RT-HANDOFF",
               "RT-STORE",
               "RT-TS",
               "RT-X509",
@@ -7383,6 +6772,7 @@
               "RT-DSA",
               "RT-EC",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-PARAM",
               "RT-PEM-KEY",
               "RT-PUBKEY",
@@ -7831,6 +7221,7 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
+              "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA"
@@ -7894,6 +7285,7 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
+              "RT-HANDOFF",
               "RT-RSA"
             ],
             "symbol": "BN_num_bits"
@@ -8003,6 +7395,7 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
+              "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA"
@@ -10415,7 +9808,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_CTX_ctrl"
           },
@@ -10433,6 +9827,7 @@
               "RT-CIPHER",
               "RT-CIPHER-MEM",
               "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY",
               "RT-EVP-PBE",
               "RT-EVP-PKEY",
               "RT-PKCS12",
@@ -10582,6 +9977,7 @@
               "RT-CIPHER",
               "RT-CIPHER-MEM",
               "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY",
               "RT-EVP-PBE",
               "RT-EVP-PKEY",
               "RT-PKCS12",
@@ -10629,7 +10025,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_CTX_set_flags"
           },
@@ -10783,7 +10180,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_block_size"
           },
@@ -10791,7 +10189,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_flags"
           },
@@ -10799,7 +10198,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_iv_length"
           },
@@ -10807,7 +10207,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_key_length"
           },
@@ -10822,7 +10223,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_CIPHER_get_nid"
           },
@@ -11171,7 +10573,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_DecryptFinal_ex"
           },
@@ -11186,7 +10589,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_DecryptInit_ex"
           },
@@ -11202,7 +10606,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_DecryptUpdate"
           },
@@ -11236,6 +10641,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-FETCH"
             ],
@@ -11254,6 +10660,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH"
@@ -11321,6 +10728,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH"
@@ -11433,7 +10841,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_EncryptFinal_ex"
           },
@@ -11449,6 +10858,7 @@
             "courts": [
               "RT-CIPHER",
               "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY",
               "RT-EVP-PKEY",
               "RT-RAND-USERS"
             ],
@@ -11466,7 +10876,8 @@
             "basis": "called",
             "courts": [
               "RT-CIPHER",
-              "RT-EVP-CIPHER"
+              "RT-EVP-CIPHER",
+              "RT-EVP-LEGACY"
             ],
             "symbol": "EVP_EncryptUpdate"
           },
@@ -12193,6 +11604,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
@@ -12269,6 +11681,7 @@
               "RT-DIGEST",
               "RT-EVP-BIO",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-FETCH",
@@ -12431,6 +11844,7 @@
             "courts": [
               "RT-DIGEST",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_block_size"
@@ -12439,6 +11853,7 @@
             "basis": "called",
             "courts": [
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_flags"
@@ -12462,6 +11877,7 @@
             "courts": [
               "RT-DIGEST",
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-FETCH",
               "RT-RSA"
             ],
@@ -12471,6 +11887,7 @@
             "basis": "called",
             "courts": [
               "RT-EVP-INTROSPECT",
+              "RT-EVP-LEGACY",
               "RT-FETCH"
             ],
             "symbol": "EVP_MD_get_type"
@@ -13705,12 +13122,14 @@
               "RT-CODEC",
               "RT-CRMF",
               "RT-ECX",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-EVP-PKEY-OPS",
               "RT-HPKE",
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
+              "RT-LEGACY-REMAINDER",
               "RT-OCSP",
               "RT-PKCS12",
               "RT-PUBKEY",
@@ -13832,6 +13251,7 @@
               "RT-EVP-PKEY",
               "RT-KEYFORMAT",
               "RT-KEYMGMT",
+              "RT-LEGACY-REMAINDER",
               "RT-PKCS12"
             ],
             "symbol": "EVP_PKEY_get_bits"
@@ -13881,6 +13301,7 @@
               "RT-ECX",
               "RT-EVP-PKEY",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-PKCS12",
               "RT-PUBKEY",
               "RT-STORE"
@@ -14390,9 +13811,11 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-EVP-LEGACY",
               "RT-EVP-PEM",
               "RT-EVP-PKEY",
               "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER",
               "RT-PUBKEY",
               "RT-STORE"
             ],
@@ -15432,6 +14855,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-EVP-LEGACY",
               "RT-EVP-NAMES",
               "RT-EVP-PEM"
             ],
@@ -19538,6 +18962,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-LEGACY-REMAINDER",
               "RT-PUBKEY"
             ],
             "symbol": "EVP_PKEY_assign"
@@ -20372,6 +19797,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA"
@@ -20760,6 +20186,7 @@
             "basis": "called",
             "courts": [
               "RT-AMETH",
+              "RT-LEGACY-REMAINDER",
               "RT-PEM-KEY",
               "RT-PUBKEY",
               "RT-RSA"
@@ -24175,7 +23602,8 @@
           {
             "basis": "called",
             "courts": [
-              "RT-KEYFORMAT"
+              "RT-KEYFORMAT",
+              "RT-LEGACY-REMAINDER"
             ],
             "symbol": "i2d_PKCS8PrivateKey_bio"
           },
@@ -40306,6 +39734,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-HANDOFF",
               "RT-SRP"
             ],
             "symbol": "SRP_VBASE_free"
@@ -40320,6 +39749,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-HANDOFF",
               "RT-SRP"
             ],
             "symbol": "SRP_VBASE_get_by_user"
@@ -40327,6 +39757,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-HANDOFF",
               "RT-SRP"
             ],
             "symbol": "SRP_VBASE_new"
@@ -42467,13 +41898,2826 @@
         "non_observable": [],
         "phase": 12,
         "staged_candidate_probes": 11
+      },
+      {
+        "completed": true,
+        "counts": {
+          "directly_courted": 377,
+          "directly_courted_called": 348,
+          "directly_courted_referenced": 29,
+          "implemented": 377,
+          "indirectly_courted": 0,
+          "non_observable": 0,
+          "unmatched": 0
+        },
+        "directly_courted": [
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_clear_fd"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_all_fds"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_changed_fds"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_fd"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_get_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_set_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_set_status"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_WAIT_CTX_set_wait_fd"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_block_pause"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_cleanup_thread"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_get_current_job"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_get_mem_functions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_get_wait_ctx"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_init_thread"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_is_capable"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_pause_job"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_set_mem_functions"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_start_job"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "ASYNC_unblock_pause"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE",
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_add"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE"
+            ],
+            "symbol": "ENGINE_add_conf_module"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE"
+            ],
+            "symbol": "ENGINE_by_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_cmd_is_executable"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_ctrl"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_ctrl_cmd"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_ctrl_cmd_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_finish"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE",
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_cipher"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_cipher_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_ciphers"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_cmd_defns"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_ctrl_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_RSA"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_destroy_function"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_digest"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_digest_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_digests"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_finish_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_first"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_init_function"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_last"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_load_privkey_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_load_pubkey_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_next"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_asn1_meth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_asn1_meth_engine"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_asn1_meth_str"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_asn1_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_pkey_meth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_meth_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_pkey_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_get_prev"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_ssl_client_cert_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_static_state"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_get_table_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE"
+            ],
+            "symbol": "ENGINE_load_builtin_engines"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_load_private_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_load_public_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_load_ssl_client_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE",
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_new"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_pkey_asn1_find_str"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL"
+            ],
+            "symbol": "ENGINE_register_all_complete"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_all_digests"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_all_pkey_asn1_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_all_pkey_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL"
+            ],
+            "symbol": "ENGINE_register_complete"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_register_digests"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_pkey_asn1_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_register_pkey_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_remove"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_ciphers"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_cmd_defns"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_ctrl_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL"
+            ],
+            "symbol": "ENGINE_set_default"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_ciphers"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_default_digests"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_default_pkey_asn1_meths"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_default_pkey_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL"
+            ],
+            "symbol": "ENGINE_set_default_string"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_destroy_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_digests"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_ex_data"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_finish_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE",
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_id"
+          },
+          {
+            "basis": "referenced",
+            "courts": [
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_init_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_load_privkey_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_load_pubkey_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_load_ssl_client_cert_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE",
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_name"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_pkey_asn1_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_set_pkey_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_set_table_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_ciphers"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-PHASE13-REF",
+              "RT-STORE"
+            ],
+            "symbol": "ENGINE_unregister_digests"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_unregister_pkey_asn1_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-CTRL",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_unregister_pkey_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE",
+              "RT-PHASE13-REF"
+            ],
+            "symbol": "ENGINE_up_ref"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_PKEY_get0_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_PKEY_set1_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY",
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "EVP_aes_128_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cbc_hmac_sha1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cbc_hmac_sha256"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ocb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_wrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_wrap_pad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_128_xts"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ocb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_wrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_192_wrap_pad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cbc_hmac_sha1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cbc_hmac_sha256"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ocb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_wrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_wrap_pad"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aes_256_xts"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_128_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_192_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_ccm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_gcm"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_aria_256_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_bf_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_bf_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_bf_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_bf_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_128_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_192_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_camellia_256_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_cast5_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_cast5_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_cast5_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_cast5_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_chacha20"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_chacha20_poly1305"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_cfb1"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_cfb8"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede3_wrap"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ede_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_des_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_desx_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_idea_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_idea_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_idea_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_idea_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_md4"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_mdc2"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_40_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_64_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_cfb64"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc2_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc4"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc4_40"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_rc4_hmac_md5"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_seed_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_seed_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_seed_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_seed_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm3"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_cbc"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_cfb128"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_ctr"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_ecb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_sm4_ofb"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-EVP-LEGACY"
+            ],
+            "symbol": "EVP_whirlpool"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMP",
+              "RT-CRMF",
+              "RT-LEGACY-REMAINDER",
+              "RT-OCSP",
+              "RT-PHASE13-REF",
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER",
+              "RT-PHASE13-REF",
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_PrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_read_bio_Parameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_read_bio_Parameters_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-CMS",
+              "RT-LEGACY-REMAINDER",
+              "RT-PHASE13-REF",
+              "RT-PUBKEY",
+              "RT-X509",
+              "RT-X509-REQ"
+            ],
+            "symbol": "PEM_read_bio_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER",
+              "RT-PHASE13-REF",
+              "RT-PUBKEY"
+            ],
+            "symbol": "PEM_read_bio_PrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_PKCS8PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_PKCS8PrivateKey_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_PrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_PKCS8PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_Parameters"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_PrivateKey"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-LEGACY-REMAINDER"
+            ],
+            "symbol": "PEM_write_bio_PrivateKey_ex"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HANDOFF"
+            ],
+            "symbol": "SRP_VBASE_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HANDOFF"
+            ],
+            "symbol": "TS_CONF_set_crypto_device"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HANDOFF"
+            ],
+            "symbol": "TS_CONF_set_default_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_create_index"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_get_by_index"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_insert"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_read"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-TXTDB"
+            ],
+            "symbol": "TXT_DB_write"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_OpenSSL"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_UTIL_read_pw"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_UTIL_read_pw_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_UTIL_wrap_read_pem_callback"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_add_error_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_add_info_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_add_input_boolean"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_add_input_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_add_user_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_add_verify_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_construct_prompt"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_create_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_ctrl"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_destroy_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_dup_error_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_dup_info_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_dup_input_boolean"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_dup_input_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_dup_user_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_dup_verify_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get0_action_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get0_output_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get0_result"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get0_result_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get0_test_string"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get0_user_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY",
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get_default_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get_input_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get_result_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get_result_maxsize"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get_result_minsize"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get_result_string_length"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_get_string_type"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_get_closer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_get_data_destructor"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_get_data_duplicator"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_get_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_get_flusher"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_get_opener"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_get_prompt_constructor"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_get_reader"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_get_writer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_set_closer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_set_data_duplicator"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_set_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_set_flusher"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_set_opener"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_set_prompt_constructor"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_set_reader"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_method_set_writer"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_new"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_new_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY",
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_null"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_process"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PEM-KEY",
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_set_default_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_set_ex_data"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_set_method"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_set_result"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-PHASE13-REF",
+              "RT-UI"
+            ],
+            "symbol": "UI_set_result_ex"
+          }
+        ],
+        "indirectly_courted": [],
+        "non_observable": [],
+        "phase": 13,
+        "staged_candidate_probes": 9
       }
     ],
     "totals": {
-      "directly_courted": 5511,
-      "directly_courted_called": 4532,
-      "directly_courted_referenced": 979,
-      "implemented": 5519,
+      "directly_courted": 5888,
+      "directly_courted_called": 4880,
+      "directly_courted_referenced": 1008,
+      "implemented": 5896,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -42484,7 +44728,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "decad8cffc4290b4cbb71933173ea6d511b67fe5c604fb339d00e2d99239ea54"
+      "sha256": "5b75f0a9c1b926a20cecd40da5a30c91bb674d02d7303b669633615e0bc1f740"
     },
     {
       "name": "symbol-ownership",
@@ -42494,12 +44738,12 @@
     {
       "name": "coverage-rows",
       "path": "forensics/atlas/court-coverage-rows.json",
-      "sha256": "0f0a7a77777a6c5aa6e8ffce57703d0965311c5860fda2bae83e58e01e4f7d0c"
+      "sha256": "c8184a493d6a14536af711c09aa95e0e2d6b6da83ea9bf66c293400348f3d331"
     },
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "1ab151efd06efcd8781d230fff45c785b5cfca289423bd8bf9d3ce95dd537329"
+      "sha256": "5c2389ade1ac7e7548fe115b86a4ef87ffba4ff966fcd51d185184a3eeb224c7"
     },
     {
       "name": "phase3-courts",
@@ -42509,7 +44753,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "83a54a69709bd808abdab02b93bf79b4fd3d57a4fa2e1eb68dd961cd215118f2"
+      "sha256": "15e8e8de14ea94454592ae17d604bc4c57eb9363c0dc2cadf0c7fc7ce311e177"
     },
     {
       "name": "phase4-courts",
@@ -42519,7 +44763,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "aa156db59af11e1dfd6d23749d65844fdd1e9e18292d442681f3b89a8ebdb486"
+      "sha256": "d94e301222e6a8e014767c2984c6d857e2529339c77b03b7bd6ea1ed29163f17"
     },
     {
       "name": "phase5-courts",
@@ -42529,7 +44773,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "324f5720b922cd13bbfa2b877ba076250db2039b097494ebda45af75dae5d73e"
+      "sha256": "175fb650fd0a8ee4dac9cf01cbc9196f7f0ebe77c1d4974024077c7aed245c74"
     },
     {
       "name": "phase6-courts",
@@ -42539,7 +44783,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "2295f13789b8f905fbd65afc7ea3b449d8d14f3a1cc71ec24a26ba4a3ec8cdd2"
+      "sha256": "0baf0d3162bc545954fc3ee891615f5fcd86c23d9c0dd8a59b6f2829746423ef"
     },
     {
       "name": "phase7-courts",
@@ -42549,7 +44793,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "22d3070345f20d4f7ff97442e0727f6f16b12203472606b4bdd8ff3164abf901"
+      "sha256": "a4b4ce3a7fd806ae0c72267a8144952263cf9b0d9e83c9198a0e3ab1c9199c2f"
     },
     {
       "name": "phase8-courts",
@@ -42559,7 +44803,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "097a9aba4529b38b4c44c405c0c7aa9da21447461f5a6795e9bc25a4c8c6ebc6"
+      "sha256": "e7b431a439153952432f3bc3368704e669f5fc552f96019aa392acee16130c41"
     },
     {
       "name": "phase9-courts",
@@ -42569,7 +44813,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "c9d1098192387d604ad3fd7c6c1a51e589ce7eacf19d1961b2dc040457710019"
+      "sha256": "38883473a23deb18bdb5c72c82571dc0e0829eb34a7e6597aa8cc8ffdce1423c"
     },
     {
       "name": "phase10-courts",
@@ -42579,7 +44823,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "8fbcd310de64b281dfa2cfc2017fc7f77f6a0f0eb95842c5ca4fa8b29ade4580"
+      "sha256": "076d1fff78c4d4ec2d47c66ed3b585c8869b33c4ad5236ffce94cb638a4f6fff"
     },
     {
       "name": "phase11-courts",
@@ -42589,12 +44833,22 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "1985b2b088600380db782e89ac00ed04cc0aa0e187f20931e23f4542d7581166"
+      "sha256": "93f44ba116810f43edd6f0bd6cbecdbf1031b9af3e1d3af17e5dcf898a38ac1b"
     },
     {
       "name": "phase12-courts",
       "path": "artifacts/phase12/COURTS.json",
       "sha256": "4800f6238d923a989cb6898369cf8d1c94a7a5953da831d78ed76d49b5b1c621"
+    },
+    {
+      "name": "phase13-obligations",
+      "path": "forensics/phase13-obligations.json",
+      "sha256": "7c829824b8c0afd27bed83196b7993b073a669a2f774693418e94a7f4d3053a8"
+    },
+    {
+      "name": "phase13-courts",
+      "path": "artifacts/phase13/COURTS.json",
+      "sha256": "75bc6444480528f9a373efe3b24656b633147d6660d6279571c25485c45fe706"
     }
   ],
   "kind": "court-coverage",

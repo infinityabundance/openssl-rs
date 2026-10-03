@@ -85,6 +85,11 @@ pub mod cms;
 // (the plan orders 12.4 before 12.7). See `src/cmp/mod.rs`.
 pub mod cmp;
 pub mod context;
+// Phase 13.7 — `crypto/async/`: the ASYNC job-and-wait framework. The directory is named for
+// the authority's `crypto/async/`, and its files follow that layout; the module is reachable as
+// `crypto_async` because `async` is a Rust keyword. See `src/async/mod.rs`.
+#[path = "async/mod.rs"]
+pub mod crypto_async;
 // Phase 12.7 — `crypto/crmf/`: the Certificate Request Message Format (RFC 4211). The item groups
 // landed crate-internally in 12.4; this stratum publishes the CRMF surface. See `src/crmf/mod.rs`.
 pub mod crmf;
@@ -219,6 +224,21 @@ pub mod store;
 // verify entry points wait on the Phase 12.7 ESS item group and the two engine-reading `CONF`
 // setters wait on Phase 13's `ENGINE_by_id`. See `src/ts/mod.rs`.
 pub mod ts;
+// Phase 13.5 — `crypto/txt_db/`: the `TXT_DB` two-dimensional text database the `ca` app
+// reads. The directory is new here; the module lands the whole of `include/openssl/txt_db.h`
+// (six exports) and records that `SRP_VBASE_init`'s blocker is now removable. The module's
+// file is named for its authority unit (`crypto/txt_db/txt_db.c` -> `src/txt_db/txt_db.rs`),
+// so it is declared here rather than through a `mod.rs` that would trigger
+// `clippy::module_inception`.
+#[path = "txt_db/txt_db.rs"]
+pub mod txt_db;
+// Phase 13.6d -- `crypto/sm3/legacy_sm3.c`: the deprecated `EVP_MD` static `EVP_sm3()` returns.
+// The SM3 primitive itself is `crypto/sm3/sm3.c` and already lives at `src/digest/sm3.rs`, but
+// the legacy translation unit is its own unit and the module layout follows the authority, so the
+// file is named for it (`crypto/sm3/legacy_sm3.c` -> `src/sm3/legacy_sm3.rs`) and declared here
+// rather than through a `mod.rs` that would trigger `clippy::module_inception`.
+#[path = "sm3/legacy_sm3.rs"]
+pub mod legacy_sm3;
 // Test-only: the one process-wide lock that serialises tests touching the crate's
 // process-global state (init/cleanup, the default `OSSL_LIB_CTX`, the memory
 // functions, the error registry, the object database, the property/method stores,
