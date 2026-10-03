@@ -270,6 +270,7 @@
               "RT-SRP",
               "RT-STORE",
               "RT-TS",
+              "RT-UI",
               "RT-X509",
               "RT-X509-ACERT",
               "RT-X509-PEM",
@@ -304,7 +305,8 @@
             "courts": [
               "RT-BIO",
               "RT-EXDATA",
-              "RT-RSA"
+              "RT-RSA",
+              "RT-UI"
             ],
             "symbol": "CRYPTO_get_ex_new_index"
           },
@@ -41838,8 +41840,8 @@
         "completed": false,
         "counts": {
           "directly_courted": 187,
-          "directly_courted_called": 99,
-          "directly_courted_referenced": 88,
+          "directly_courted_called": 158,
+          "directly_courted_referenced": 29,
           "implemented": 187,
           "indirectly_courted": 0,
           "non_observable": 0,
@@ -42808,191 +42810,218 @@
             "symbol": "PEM_read_bio_PrivateKey_ex"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_OpenSSL"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_UTIL_read_pw"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_UTIL_read_pw_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_UTIL_wrap_read_pem_callback"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_add_error_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_add_info_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_add_input_boolean"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_add_input_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_add_user_data"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_add_verify_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_construct_prompt"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_create_method"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_ctrl"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_destroy_method"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_dup_error_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_dup_info_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_dup_input_boolean"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_dup_input_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_dup_user_data"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_dup_verify_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_free"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get0_action_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get0_output_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get0_result"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get0_result_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get0_test_string"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get0_user_data"
           },
@@ -43000,196 +43029,224 @@
             "basis": "called",
             "courts": [
               "RT-PEM-KEY",
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get_default_method"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get_ex_data"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get_input_flags"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get_method"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get_result_length"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get_result_maxsize"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get_result_minsize"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get_result_string_length"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_get_string_type"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_get_closer"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_get_data_destructor"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_get_data_duplicator"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_get_ex_data"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_get_flusher"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_get_opener"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_get_prompt_constructor"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_get_reader"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_get_writer"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_set_closer"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_set_data_duplicator"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_set_ex_data"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_set_flusher"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_set_opener"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_set_prompt_constructor"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_set_reader"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_method_set_writer"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_new"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_new_method"
           },
@@ -43197,14 +43254,16 @@
             "basis": "called",
             "courts": [
               "RT-PEM-KEY",
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_null"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_process"
           },
@@ -43212,35 +43271,40 @@
             "basis": "called",
             "courts": [
               "RT-PEM-KEY",
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_set_default_method"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_set_ex_data"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_set_method"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_set_result"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
-              "RT-PHASE13-REF"
+              "RT-PHASE13-REF",
+              "RT-UI"
             ],
             "symbol": "UI_set_result_ex"
           }
@@ -43248,13 +43312,13 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 13,
-        "staged_candidate_probes": 4
+        "staged_candidate_probes": 5
       }
     ],
     "totals": {
       "directly_courted": 5698,
-      "directly_courted_called": 4631,
-      "directly_courted_referenced": 1067,
+      "directly_courted_called": 4690,
+      "directly_courted_referenced": 1008,
       "implemented": 5706,
       "indirectly_courted": 8,
       "non_observable": 0
@@ -43381,12 +43445,12 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "a73e539079ada740f767104f5b807a1fd2bc93b71be29de14c377132f0a82250"
+      "sha256": "7c890295d4410381b832bf318c1039ec67b78667fb03e1e7a8746171b99f12ff"
     },
     {
       "name": "phase13-courts",
       "path": "artifacts/phase13/COURTS.json",
-      "sha256": "2b399602dbcc58d6c3bdd0d2705d1629ed062988328db229f97e5dae91db8e8d"
+      "sha256": "8ed130ea4f5418863b9ffa14dedf3628bc1e5c5c88d6ec2ed737e20ddbfe3ce6"
     }
   ],
   "kind": "court-coverage",

@@ -67,13 +67,33 @@ absence of a partial default. It does **not** pass a NULL engine (both bodies de
 never reads the error queue. See docs/PHASE-13-SUBPHASES.md section 3.3 for what the court is
 required to compare.
 
+`RT-UI`, and what it compares
+-----------------------------
+13.4's court, `courts/phase13/rt_ui_probe.c`, drives the whole 62-name `ui.h` framework the earlier
+strata landed as substrate -- it *calls* every name rather than taking its address, which is what
+moves its court-coverage basis from `referenced` to `called`. It builds a deterministic in-process
+`UI_METHOD` (so `UI_process` never opens the console) and compares: the object lifecycle and method
+identity; the `UI_METHOD` setter/getter pairs and their NULL arms; the string-add and `UI_dup_*`
+surface and its refusal arms (a NULL prompt, a NULL result buffer, a NULL `ok_chars`/`cancel_chars`,
+and the overlapping `ok`/`cancel` arm, which raises but still allocates); `UI_process`'s five phases
+over every string type, with the writer observing each `UI_STRING`'s type, flags,
+output/action/test strings and bounds and the reader supplying fixed answers through
+`UI_set_result`/`UI_set_result_ex`; the result accessors and their negative and past-the-end
+refusals; `UI_construct_prompt` default and method-supplied; the ex-data accessors;
+`UI_UTIL_read_pw`/`_read_pw_string` over the in-process method and the PEM wrapper; and the null
+method's `-2` cancel and empty-queue `0`. It does **not** pass a NULL `UI` to an accessor that
+dereferences it (`UI_set_ex_data`, `UI_get_ex_data`, `UI_get_method`, `UI_set_method`,
+`UI_get0_user_data`, `UI_process`, `UI_method_set_ex_data`, `UI_method_get_ex_data`), does not call
+`UI_create_method(NULL)`, and never reads the error queue, so the `UI_R_*` raises on the refusals
+cannot leak into a comparison. See docs/PHASE-13-SUBPHASES.md section 3.4.
+
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" -- the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and
-`RT-HANDOFF` are the remaining subphases' own courts: 13.4's UI framework, 13.5's TXT_DB database,
+later activation established. `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and
+`RT-HANDOFF` are the remaining subphases' own courts: 13.5's TXT_DB database,
 13.6's legacy EVP method statics, 13.7's PEM readers and ASYNC framework, and 13.8's received
 TS_CONF and SRP hand-offs.
 
@@ -127,6 +147,7 @@ COURTS: list[tuple[str, str]] = [
     ("RT-ENGINE", "rt_engine_probe.c"),
     ("RT-ENGINE-TABLE", "rt_engine_table_probe.c"),
     ("RT-ENGINE-CTRL", "rt_engine_ctrl_probe.c"),
+    ("RT-UI", "rt_ui_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -134,7 +155,6 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-13-SUBPHASES.md` section 2's, one per work
 # subphase.
 PENDING_COURTS: dict[str, str] = {
-    "RT-UI": "13.4 (the UI framework)",
     "RT-TXTDB": "13.5 (the TXT_DB text database)",
     "RT-EVP-LEGACY": "13.6 (the legacy EVP method statics)",
     "RT-LEGACY-REMAINDER": "13.7 (the PEM private-key readers and the ASYNC framework)",
@@ -322,10 +342,20 @@ def main(argv: list[str]) -> int:
             "**calls** the four control fat helpers `eng_fat.c` lands and compares the "
             "`ENGINE_METHOD_*` mask dispatch, every `int_def_cb` string spelling, the nine-arm "
             "`ENGINE_register_complete` and the `ENGINE_register_all_complete` walk and its "
+            "`ENGINE_register_all_complete` walk and its "
             "`ENGINE_FLAGS_NO_REGISTER_ALL` skip, and the unknown/partial/NULL/empty refusals "
-            "-- not a NULL engine, and not the error queue. Every other behavioural court the "
+            "-- not a NULL engine, and not the error queue. `RT-UI` is 13.4's behavioural "
+            "court: it **calls** all 62 `ui.h` names -- the object lifecycle, the `UI_METHOD` "
+            "setter/getter surface and its NULL arms, the string-add and `UI_dup_*` surface and "
+            "refusals, `UI_process` over a deterministic in-process method with the writer "
+            "observing every `UI_STRING` and the reader supplying fixed answers, the result and "
+            "prompt-construction accessors, the ex-data accessors, `UI_UTIL_read_pw`/"
+            "`_read_pw_string` and the PEM wrapper, and the null method's cancel -- so those "
+            "names are `called` and not merely `referenced`; it passes no NULL that an accessor "
+            "would dereference, does not call `UI_create_method(NULL)`, and never reads the "
+            "error queue. Every other behavioural court the "
             "plan names is named in `pending_courts` with the subphase that brings it -- "
-            "`RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
+            "`RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
             "none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
             "is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md "
             "section 3 records what the behavioural courts compare."
