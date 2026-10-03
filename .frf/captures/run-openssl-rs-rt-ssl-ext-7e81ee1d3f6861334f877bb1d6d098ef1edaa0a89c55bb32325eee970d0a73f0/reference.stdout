@@ -1,0 +1,91 @@
+transcript.sha256=e4aa5093025231d86d4ac83dbfe7904bad5338625a74d27bbf7aabbe10af1c1a
+conf.load=1
+ssl_add_module=1
+ctx.new=1
+srp.ctx_init=1
+srp.set_username=1
+srp.set_password=1
+srp.set_strength=1
+srp.set_cb_arg=1
+srp.set_username_cb=1
+srp.set_verify_cb=1
+srp.set_pwd_cb=1
+ssl.new=1
+srp.get_username=user
+srp.set_param=1
+srp.get_N_bits=25
+srp.get_g_bits=2
+srp.get_userinfo=info-string
+srp.set_param_pw=1
+srp.get_N_bits2=1024
+srp.server_param=0
+srp.server_param.ad=80
+srp.username_cb_calls=1
+srp.calc_a=1
+alert.type_long.warn=warning
+alert.type_long.fatal=fatal
+alert.type_long.unknown=unknown
+alert.type.warn=W
+alert.type.fatal=F
+alert.desc.cn=CN
+alert.desc.hf=HF
+alert.desc.ip=IP
+alert.desc.ie=IE
+alert.desc.unknown=UK
+alert.desc_long.cn=close notify
+alert.desc_long.hf=handshake failure
+alert.desc_long.nap=no application protocol
+state.short=PINIT
+state.long=before SSL initialization
+state.short.null=SSLERR
+state.long.null=error
+config.ctx.missing=0
+config.ctx.null=0
+config.ctx.null_ctx=0
+dh_cb.ctx_set=1
+dh_cb.ssl_set=1
+trace.record=begin
+Received TLS Record
+Header:
+  Version = TLS 1.2 (0x303)
+  Content Type = Handshake (22)
+  Length = 16
+trace.record=end
+trace.alert=begin
+    Level=fatal(2), description=handshake failure(40)
+
+trace.alert=end
+trace.ccs=begin
+    change_cipher_spec (1)
+
+trace.ccs=end
+trace.inner=begin
+  Inner Content Type = Handshake (22)
+trace.inner=end
+trace.finished=begin
+    Finished, Length=12
+      verify_data (len=12): ABABABABABABABABABABABAB
+
+trace.finished=end
+trace.keyupdate=begin
+    KeyUpdate, Length=1
+      update_not_requested (0)
+
+trace.keyupdate=end
+trace.clienthello=begin
+    ClientHello, Length=48
+      client_version=0x303 (TLS 1.2)
+      Random:
+        gmt_unix_time=0x00010203
+        random_bytes (len=28): 0405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F
+      session_id (len=0): 
+      cipher_suites (len=2)
+        {0x13, 0x01} TLS_AES_128_GCM_SHA256
+      compression_methods (len=1)
+        No Compression (0x00)
+      No extensions
+
+trace.clienthello=end
+srp.verify_cb_calls=0
+srp.ctx_free=1
+srp.ssl_free=1

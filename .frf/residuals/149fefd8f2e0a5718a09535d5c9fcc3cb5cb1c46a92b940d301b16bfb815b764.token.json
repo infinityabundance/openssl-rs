@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-ssl-ciph exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"149fefd8f2e0a5718a09535d5c9fcc3cb5cb1c46a92b940d301b16bfb815b764","schema_version":"frf-token-v1","scope":"rt-ssl-ciph","surface":"exit-class","token":"exit/exit-class/class-change/open"}

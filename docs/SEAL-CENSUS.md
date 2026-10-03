@@ -18,8 +18,8 @@ name is defined; `open` means the stratum owns it and has not built it;
 | library | authority exports | implemented | scaffolded |
 |---|---|---|---|
 | libcrypto | 5896 | 5896 | 0 |
-| libssl | 603 | 0 | 603 |
-| **total** | **6499** | **5896** | **603** |
+| libssl | 603 | 600 | 3 |
+| **total** | **6499** | **6496** | **3** |
 
 ## Ownership atlas, by stratum
 
@@ -39,7 +39,7 @@ declared owner; this is that assignment.
 | 11 | X.509 + verification | `complete` | 1455 | 1467 | 1465 | 2 | 0 |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` | 1024 | 1033 | 1030 | 3 | 0 |
 | 13 | Legacy / deprecated compatibility | `complete` | 189 | 377 | 377 | 0 | 0 |
-| 14 | TLS / DTLS (libssl) | `in-progress` | 600 | 600 | 0 | 0 | 600 |
+| 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
 | 15 | QUIC / ECH and modern SSL surface | `not-started` | 3 | — | — | — | — |
 | 16 | CLI / config / filesystem contract | `not-started` | 0 | — | — | — | — |
 | 17 | Downstream replacement court | `not-started` | 0 | — | — | — | — |
@@ -465,21 +465,30 @@ Courts: `all pass`, 9 court(s), **1916** authority observation(s) over 9 transcr
 
 ## Phase 14 — TLS / DTLS (libssl)
 
-* state: `in-progress`
-* blocking: 600 open obligation(s) of this stratum recorded in forensics/phase14-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. All six hundred of the exports it owns are its own four headers' (`ssl.h` 582, `tls1.h` 13, `srtp.h` 4, `sslerr_legacy.h` 1) and no earlier stratum's ledger records a hand-off to it, so its working set is exactly the atlas projection -- the first stratum that inherits nothing. **Unlike every earlier activation, not one of the six hundred is implemented at activation**: libssl is the candidate distribution's second namespace and its exports are present only as the Phase 2 ABI scaffold, so its `open` count is its whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row: libssl is not a provider and this stratum activates none (docs/PHASE-14-SUBPHASES.md sections 1 and 4)
-* seal: none written yet (`unnamed`)
+* state: `complete`
+* seal: `docs/PHASE-14-TLS-SEAL.md`
 * ledger: `forensics/phase14-obligations.json`
 * atlas-owned: 600
 * owned working set: 600
-* implemented: 0
+* implemented: 600
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 600**
+* **open in this stratum: 0**
 
-Courts: `all pass`, 1 court(s), **600** authority observation(s) over 1 transcript court(s).
+Courts: `all pass`, 11 court(s), **1931** authority observation(s) over 11 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-PHASE14-REF | `pass` | 600 |
+| RT-SSL-OBJECT | `pass` | 362 |
+| RT-SSL-METHODS | `pass` | 304 |
+| RT-SSL-CIPH | `pass` | 156 |
+| RT-RECORD | `pass` | 38 |
+| RT-STATEM | `pass` | 68 |
+| RT-SSL-BIO | `pass` | 50 |
+| RT-DTLS | `pass` | 42 |
+| RT-SSL-INIT | `pass` | 26 |
+| RT-SESSION-CERT | `pass` | 208 |
+| RT-SSL-EXT | `pass` | 77 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
@@ -539,8 +548,8 @@ are proofs of reference only. See `docs/DECISIONS.md` D199 and D236.
 | 11 | 1465 | 1465 | 939 | 526 | 0 | 0 | 0 |
 | 12 | 1030 | 1030 | 902 | 128 | 0 | 0 | 0 |
 | 13 | 377 | 377 | 348 | 29 | 0 | 0 | 0 |
-| 14 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| **total** | **5896** | **5888** | **4880** | **1008** | **8** | **0** | **0** |
+| 14 | 600 | 600 | 500 | 100 | 0 | 0 | 0 |
+| **total** | **6496** | **6488** | **5380** | **1108** | **8** | **0** | **0** |
 
 ## Atlas/ledger reconciliation
 

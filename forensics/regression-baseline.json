@@ -252,6 +252,10 @@
       "observations": 145,
       "verdict": "pass"
     },
+    "RT-DTLS": {
+      "observations": 42,
+      "verdict": "pass"
+    },
     "RT-EC": {
       "observations": 2419,
       "verdict": "pass"
@@ -540,6 +544,10 @@
       "observations": 111,
       "verdict": "pass"
     },
+    "RT-RECORD": {
+      "observations": 38,
+      "verdict": "pass"
+    },
     "RT-RSA": {
       "observations": 1021,
       "verdict": "pass"
@@ -560,6 +568,10 @@
       "observations": 71,
       "verdict": "pass"
     },
+    "RT-SESSION-CERT": {
+      "observations": 208,
+      "verdict": "pass"
+    },
     "RT-SIGNATURE": {
       "observations": 472,
       "verdict": "pass"
@@ -568,8 +580,36 @@
       "observations": 149,
       "verdict": "pass"
     },
+    "RT-SSL-BIO": {
+      "observations": 50,
+      "verdict": "pass"
+    },
+    "RT-SSL-CIPH": {
+      "observations": 156,
+      "verdict": "pass"
+    },
+    "RT-SSL-EXT": {
+      "observations": 77,
+      "verdict": "pass"
+    },
+    "RT-SSL-INIT": {
+      "observations": 26,
+      "verdict": "pass"
+    },
+    "RT-SSL-METHODS": {
+      "observations": 304,
+      "verdict": "pass"
+    },
+    "RT-SSL-OBJECT": {
+      "observations": 362,
+      "verdict": "pass"
+    },
     "RT-STACK": {
       "observations": 159,
+      "verdict": "pass"
+    },
+    "RT-STATEM": {
+      "observations": 68,
       "verdict": "pass"
     },
     "RT-STORE": {
@@ -654,14 +694,14 @@
   },
   "implemented": {
     "libcrypto": 5896,
-    "libssl": 0
+    "libssl": 600
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
     "phase12": 0,
     "phase13": 0,
-    "phase14": 600,
+    "phase14": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -693,7 +733,7 @@
     "11": "complete",
     "12": "complete",
     "13": "complete",
-    "14": "in-progress",
+    "14": "complete",
     "15": "not-started",
     "16": "not-started",
     "17": "not-started",
@@ -715,8 +755,8 @@
     "blocking_dependencies": 4,
     "divergence_names_covered": 47,
     "findings": 0,
-    "language_census": 9102,
-    "sealed_census": 50
+    "language_census": 11461,
+    "sealed_census": 404
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",

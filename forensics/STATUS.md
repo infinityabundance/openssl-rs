@@ -34,7 +34,7 @@ renderer does not know any phase status.
 | 11 | X.509 + verification | `complete` |  |
 | 12 | CMS / OCSP / CMP / CT / TS and remaining libcrypto families | `complete` |  |
 | 13 | Legacy / deprecated compatibility | `complete` |  |
-| 14 | TLS / DTLS (libssl) | `in-progress` | 600 open obligation(s) of this stratum recorded in forensics/phase14-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. All six hundred of the exports it owns are its own four headers' (`ssl.h` 582, `tls1.h` 13, `srtp.h` 4, `sslerr_legacy.h` 1) and no earlier stratum's ledger records a hand-off to it, so its working set is exactly the atlas projection -- the first stratum that inherits nothing. **Unlike every earlier activation, not one of the six hundred is implemented at activation**: libssl is the candidate distribution's second namespace and its exports are present only as the Phase 2 ABI scaffold, so its `open` count is its whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row: libssl is not a provider and this stratum activates none (docs/PHASE-14-SUBPHASES.md sections 1 and 4) |
+| 14 | TLS / DTLS (libssl) | `complete` |  |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 15-21 (7 total).
@@ -127,8 +127,8 @@ that name is defined, nothing more.
 | library | exports | implemented | scaffolded |
 |---|---|---|---|
 | libcrypto | 5896 | 5896 | 0 |
-| libssl | 603 | 0 | 603 |
-| **total** | **6499** | **5896** | **603** |
+| libssl | 603 | 600 | 3 |
+| **total** | **6499** | **6496** | **3** |
 
 ### Phase 10 obligation ledger
 
@@ -208,9 +208,9 @@ handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
 * authority exports in the Phase 14 working set: 600
-* implemented: 0
+* implemented: 600
 * deferred to a later phase with a stated reason: 0
-* open in this stratum: 600
+* open in this stratum: 0
 
 ### Phase 22 obligation ledger
 
