@@ -680,6 +680,11 @@ def read_crate_table(path: Path, ident: str) -> list[tuple[str, str, str | None]
 CRATE_QUERY_READERS: list[tuple[str, Path, str]] = [
     ("default", REPO_ROOT / "src" / "provider" / "digest.rs", 'unsafe extern "C" fn deflt_query('),
     ("base", REPO_ROOT / "src" / "provider" / "base.rs", 'unsafe extern "C" fn base_query('),
+    # Phase 16.1's loadable legacy provider module. The reader is anchored on `legacy_query`'s own
+    # arms, so the census sees the rows of each operation slice as they land; the cipher and KDF
+    # arms answer `NULL` until their slices do, which the reader records as "publishes nothing"
+    # rather than as a missing operation.
+    ("legacy", REPO_ROOT / "src" / "provider" / "legacyprov.rs", 'unsafe extern "C" fn legacy_query('),
 ]
 # An arm may return a table's `.as_ptr()` or call a function that answers the address. The second
 # form exists because one arm answers a **filtered copy** rather than the source table. A `//`

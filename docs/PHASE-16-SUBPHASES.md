@@ -39,11 +39,14 @@ non-export unit.
 
 **It receives 39 provider registration rows.** Reading
 `forensics/atlas/provider-algorithms.json` for `owning_phase == 16` gives 39 rows of the `legacy`
-provider, all `unimplemented` at activation: 4 `OSSL_OP_DIGEST` (MD4, MDC2, WHIRLPOOL,
-RIPEMD-160), 32 `OSSL_OP_CIPHER` (CAST5, BF, IDEA, SEED, RC2, RC4, DESX, DES), 2 `OSSL_OP_KDF`
-(PBKDF1, PVKKDF) and 1 `OSSL_OP_SKEYMGMT` (GENERIC-SECRET). `provider-algorithm-plans.json`
-assigns them to Phase 16; the census's `projection` therefore reads `open[16] = 39`, and it is
-the census, not this document, that the provider-row rule in `phase_state.py` reads.
+provider: 4 `OSSL_OP_DIGEST` (MD4, MDC2, WHIRLPOOL, RIPEMD-160), 32 `OSSL_OP_CIPHER` (CAST5, BF,
+IDEA, SEED, RC2, RC4, DESX, DES), 2 `OSSL_OP_KDF` (PBKDF1, PVKKDF) and 1 `OSSL_OP_SKEYMGMT`
+(GENERIC-SECRET). `provider-algorithm-plans.json` assigns them to Phase 16, and **16.1 lands them
+in ordered slices**: slice 1 (this subphase's first landing) publishes the loadable module and the
+4 digest rows plus the 1 `GENERIC-SECRET` row, so `implementation_state: implemented` reads 5/39 and
+the census's `projection` reads `open[16] = 34`; slices 2 (the 32 cipher rows) and 3 (the 2 KDF
+rows) are named in `src/provider/legacyprov.rs`'s module header and located by the same census.
+The census, not this document, is the arbiter the provider-row rule in `phase_state.py` reads.
 
 **It receives four symbol deferrals and two unit deferrals.** Reading
 `forensics/prerequisites.json` for `owner_phase == 16`: the symbol deferrals
@@ -77,7 +80,7 @@ subphases below land. **That split moves as the stratum lands its own units: the
 | # | Subphase | Owns | Depends on | Courts |
 |---|---|---|---|---|
 | 16.0 | **The plan and the ledger** | `docs/PHASE-16-SUBPHASES.md` and the measurement in §1. The ledger (`forensics/phase16-obligations.json`) and its generator land with it, together with the runner `forensics/tools/phase16_courts.py` and the empty registry it writes. **The runner cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and this stratum's obligations are not exports, so its first runnable court is a later subphase's. | 15 | — |
-| 16.1 | **The legacy provider module** | `providers/legacyprov.c` (39 registration rows). The `ossl-modules/legacy.so` loadable-module contract, whose dispatch tables the census records; the rows are published only when the module activates, so the table and the module land together. | 16.0 | `RT-LEGACY-MODULE` (pending) |
+| 16.1 | **The legacy provider module** | `providers/legacyprov.c` (39 registration rows). The `ossl-modules/legacy.so` loadable-module contract, whose dispatch tables the census records; the rows are published only when the module activates, so the table and the module land together. **Slice 1 lands the module and the 5 digest/skeymgmt rows; slices 2 and 3 (the 32 cipher and 2 KDF rows) are open and recorded in the module header.** | 16.0 | `RT-LEGACY-MODULE` |
 | 16.2 | **The dynamic ENGINE loader** | `crypto/engine/eng_dyn.c` (`engine_load_dynamic_int`). The dynamic loader `ENGINE_by_id`'s miss path reaches, and the `dynamic`/`rdrand` built-ins it registers; `DSO_load` and `OPENSSL_ENGINES` handling are its dependency. | 16.1 | `RT-ENGINE-DYN` (pending) |
 | 16.3 | **The directory and install-context plane** | `src/runtime/defaults.rs` (`ossl_get_openssldir`, `ossl_get_wininstallcontext`). The `OPENSSLDIR` directory plane and the install context, the distribution facts the x509 default paths and `CONF_get1_default_config_file` stand on. | 16.2 | `RT-DEFAULTS` (pending) |
 | 16.4 | **The `openssl` CLI and config loading** | `apps/openssl.c` (the CLI) and the config-loading surface. The command dispatch over `libcrypto`/`libssl`, and the regenerated Phase-1 CLI capture (`cli_option_list_parse`) in lockstep with the historical authority. | 16.3 | `RT-CLI`, `RT-CONFIG` (pending) |
@@ -115,6 +118,21 @@ publishes the registration, not that every arm of the algorithm matches; a lande
 command exists, not that its output is the authority's. A name that cannot be driven is named
 `pending` rather than counted as passing.
 
+**3.5 A 39-row table lands in ordered slices, and each slice names the next.** 16.1 slice 1 lands
+the loadable-module contract (`src/provider/legacyprov.rs`: `legacy_gettable_params`,
+`legacy_get_params`, `legacy_query`, `legacy_teardown`, `legacy_dispatch_table` and the module's
+exported `OSSL_provider_init`), the four `legacy_digests` rows and the one `legacy_skeymgmt` row,
+so the census reads five rows `implemented` and `provider_rows_open` reads 34. Binary slice
+boundaries are recorded in the module header, not hidden: the cipher arm and the KDF arm answer
+`NULL` until slices 2 and 3 land, exactly as an unlanded table does, and `RT-LEGACY-MODULE` drives
+only the operations slice 1 publishes. **The module's compile is the one recorded divergence.**
+The authority's `legacy.so` is self-contained -- it carries its own legacy primitives and reaches
+libcrypto only through the core dispatch -- but this crate is monolithic (`Cargo.toml`: one
+implementation crate), so `forensics/tools/build_phase2.sh` builds `legacy.so` from the crate's own
+archive plus a generated entry object, and the module's ABI stays the authority's single
+exported `OSSL_provider_init`. The loadable contract (`NEEDED libcrypto.so.3`, one exported symbol)
+is unchanged; the divergence is the object set behind it.
+
 ## 4. Measured corrections, and the precondition
 
 **4.1 The working set is not an export projection, and the ledger says so by its unit.** The
@@ -130,10 +148,11 @@ refuses a stratum that is not `not-started` and has no runner. This stratum land
 so no differential probe over a symbol set is its evidence, and its first behavioural courts
 (`RT-LEGACY-MODULE`, `RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`,
 `RT-STATEM-REMAINDER`) are named in `PENDING_COURTS` and land with the subphases that build the
-things they drive. **No court is registered in `gen_frf_courts.py`**: that registry is the
-stratum's seal. So the activation order is: the ledger, the plan, the runner and its empty
-registry land **together**, or `run_courts.py` fails and the tree carries an activation whose
-runner is refused.
+things they drive. **16.1 registers the first of them** (`RT-LEGACY-MODULE`), and
+`PENDING_COURTS` names the remaining five. **No court is registered in `gen_frf_courts.py`**: that
+registry is the stratum's seal. So the activation order is: the ledger, the plan, the runner and
+its empty registry land **together**, or `run_courts.py` fails and the tree carries an activation
+whose runner is refused.
 
 **4.3 "CLI / config / filesystem contract" here is the contract, not the whole of Phase 22's
 whole-program atlas.** Phase 22 measures the authority's CLI, configuration and installed

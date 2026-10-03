@@ -3,20 +3,37 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "This stratum owns no exported symbol, so it registers no coverage-reference probe: there is no symbol set to take addresses from, and the coverage atlas records nothing for it. Its obligations are 39 legacy provider registration rows and six prerequisite deferrals, which are not exports a differential probe over a symbol set can observe. Every behavioural court the plan names -- `RT-LEGACY-MODULE`, `RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- is named in `pending_courts` with the subphase that lands it, so this registry is empty by measurement and not by omission. docs/PHASE-16-SUBPHASES.md sections 3 and 4 record what each court will compare and the precondition this runner satisfies.",
-    "courts": [],
+    "claim": "`RT-LEGACY-MODULE` is 16.1's behavioural court: it **loads** the `legacy` provider module through `OSSL_PROVIDER_load` with `OPENSSL_MODULES` pointed at each side's own module directory, **reads** the provider name through `OSSL_PROVIDER_get_params`, **queries** the module's `OSSL_PROVIDER_query_operation` for the two operations slice 1 publishes (`OSSL_OP_DIGEST`, `OSSL_OP_SKEYMGMT`) and compares each table's row count and first row's alias sequence, **fetches** the four `legacy_digests` rows by name and by OID through the `provider=legacy` property and compares a fixed `\"abc\"` digest for each, and exercises the refusal arms (an unknown digest name and a legacy name asked of the `default` provider) -- not the error queue, and not `OSSL_OP_CIPHER`/`OSSL_OP_KDF`, whose 32 and 2 rows are 16.1 slices 2 and 3 and whose absence `forensics/atlas/provider-algorithms.json` records as the live `provider_rows_open`. The other five courts the plan names -- `RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in `pending_courts` with the subphase that lands each. docs/PHASE-16-SUBPHASES.md sections 3 and 4 record what each court compares.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 39,
+        "candidate_exit_code": 0,
+        "candidate_observations": 39,
+        "candidate_stderr_tail": [],
+        "court": "RT-LEGACY-MODULE",
+        "crashed": false,
+        "probe": "courts/phase16/rt_legacy_module_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase16/probes/rt_legacy_module_probe.authority",
+          "candidate": "artifacts/phase16/probes/rt_legacy_module_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
     "pending_courts": {
       "RT-CLI": "16.4: the openssl CLI command dispatch and its option grammar",
       "RT-CONFIG": "16.4: config loading and the regenerated Phase-1 CLI capture",
       "RT-DEFAULTS": "16.3: the OPENSSLDIR directory plane and the install context",
       "RT-ENGINE-DYN": "16.2: engine_load_dynamic_int and the dynamic/rdrand built-ins, through DSO_load and OPENSSL_ENGINES",
-      "RT-LEGACY-MODULE": "16.1: the 39 providers/legacyprov.c registration rows and the ossl-modules/legacy.so loadable-module contract",
       "RT-STATEM-REMAINDER": "16.5: the ssl/statem/statem_clnt.c and statem_srvr.c message layer"
     },
     "summary": {
       "fail": 0,
-      "pass": 0,
-      "total": 0
+      "pass": 1,
+      "total": 1
     }
   },
   "generator": "forensics/tools/phase16_courts.py",
@@ -24,12 +41,17 @@
     {
       "name": "phase-16-plan",
       "path": "docs/PHASE-16-SUBPHASES.md",
-      "sha256": "2d32a91872b770e4d15430cbf46c3237141d6de86a79397184fae6fdae2827ae"
+      "sha256": "c252a6f3f140a98013548a81441b6534393eb0a7aad35591cd3fc3d870d61d6b"
     },
     {
       "name": "phase16-obligations",
       "path": "forensics/phase16-obligations.json",
-      "sha256": "c5075062b9886ca01ca307ed5d5522983263fbac2898850f0b5ca10e96ba6b49"
+      "sha256": "076366a219f5767486753e48ace14e002578f5152fe14d000b7afc49e65d60ae"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase16/rt_legacy_module_probe.c",
+      "sha256": "a79e11744757788aacd6d560877078549fd43c77563804d5a47b1eef081ee85e"
     }
   ],
   "kind": "phase16-courts",

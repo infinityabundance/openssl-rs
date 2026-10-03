@@ -2798,6 +2798,13 @@
         "translation_unit": "providers/implementations/keymgmt/libdefault-lib-kdf_legacy_kmgmt.c"
       },
       {
+        "module": "src/provider/legacyprov.rs",
+        "phase": 16,
+        "phase_source": "module-declaration",
+        "share": "1/1",
+        "translation_unit": "providers/prov_running.c"
+      },
+      {
         "module": "src/provider/mac.rs",
         "phase": 8,
         "phase_source": "module-declaration",
@@ -89775,6 +89782,26 @@
           "src/provider/base.rs"
         ],
         "tu": "providers/baseprov.c"
+      },
+      {
+        "identifiers": [
+          "char",
+          "const",
+          "e_os2",
+          "h",
+          "include",
+          "int",
+          "openssl",
+          "ossl_prov_is_running",
+          "ossl_set_error_state",
+          "return",
+          "type",
+          "void"
+        ],
+        "modules": [
+          "src/provider/legacyprov.rs"
+        ],
+        "tu": "providers/prov_running.c"
       },
       {
         "identifiers": [

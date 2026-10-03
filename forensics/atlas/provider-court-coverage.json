@@ -6,6 +6,10 @@
         "implemented": 636,
         "unmatched": 0
       },
+      "16": {
+        "implemented": 5,
+        "unmatched": 0
+      },
       "8": {
         "implemented": 306,
         "unmatched": 0
@@ -74,10 +78,17 @@
         "probes": [
           "courts/phase10/rt_store_probe.c"
         ]
+      },
+      {
+        "court": "RT-LEGACY-MODULE",
+        "phase": 16,
+        "probes": [
+          "courts/phase16/rt_legacy_module_probe.c"
+        ]
       }
     ],
-    "directly_courted": 957,
-    "implemented_rows": 957,
+    "directly_courted": 962,
+    "implemented_rows": 962,
     "rows": [
       {
         "algorithm_names": "DER",
@@ -8075,7 +8086,8 @@
           "1.3.36.3.2.1"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_DIGEST",
@@ -14255,7 +14267,8 @@
           "GENERIC-SECRET"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SKEYMGMT",
@@ -14274,6 +14287,82 @@
         "operation": "OSSL_OP_STORE",
         "owning_phase": 10,
         "provider": "default"
+      },
+      {
+        "algorithm_names": "MD4",
+        "aliases": [
+          "MD4",
+          "1.2.840.113549.2.4"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DIGEST",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "MDC2",
+        "aliases": [
+          "MDC2",
+          "2.5.8.3.101"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DIGEST",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RIPEMD-160",
+        "aliases": [
+          "RIPEMD-160",
+          "RIPEMD160",
+          "RIPEMD",
+          "RMD160",
+          "1.3.36.3.2.1"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DIGEST",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "WHIRLPOOL",
+        "aliases": [
+          "WHIRLPOOL",
+          "1.0.10118.3.0.55"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DIGEST",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "GENERIC-SECRET",
+        "aliases": [
+          "GENERIC-SECRET"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SKEYMGMT",
+        "owning_phase": 16,
+        "provider": "legacy"
       }
     ],
     "unmatched": 0
@@ -14283,7 +14372,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "49798d9f9eb936aee03e1b62046a8979823756112021cf10e4ad1ac94d8e2aa7"
+      "sha256": "50bc1af925412d0ae0d013227684315987462d8fa78e50f14ad1a72dd52f0951"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -14334,6 +14423,11 @@
       "name": "court:RT-STORE:rt_store_probe.c",
       "path": "courts/phase10/rt_store_probe.c",
       "sha256": "c8ccc7b9438428bd5326d076e8295367242995d20adc8c41c63b8075fe1c4db7"
+    },
+    {
+      "name": "court:RT-LEGACY-MODULE:rt_legacy_module_probe.c",
+      "path": "courts/phase16/rt_legacy_module_probe.c",
+      "sha256": "a79e11744757788aacd6d560877078549fd43c77563804d5a47b1eef081ee85e"
     }
   ],
   "kind": "provider-court-coverage",

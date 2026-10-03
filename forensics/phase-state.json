@@ -417,7 +417,7 @@
         "name": "algorithms",
         "phase": 8,
         "provider_rows": {
-          "handed_on": 39,
+          "handed_on": 34,
           "implemented": 306,
           "owned": 306
         },
@@ -449,7 +449,7 @@
         "name": "rand-drbg",
         "phase": 9,
         "provider_rows": {
-          "handed_on": 39,
+          "handed_on": 34,
           "implemented": 15,
           "owned": 15
         },
@@ -474,7 +474,7 @@
         "name": "key-formats",
         "phase": 10,
         "provider_rows": {
-          "handed_on": 39,
+          "handed_on": 34,
           "implemented": 636,
           "owned": 636
         },
@@ -583,7 +583,7 @@
         "stratum": "QUIC / ECH and modern SSL surface"
       },
       {
-        "blocking": "48 open obligation(s) of this stratum recorded in forensics/phase16-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase16-obligations.json` publishes `unit: cli-config contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts 39 legacy provider registration rows, six prerequisite deferrals and three CLI/config/filesystem contract units. The provider-row rule below independently holds it open on the 39 `unimplemented` `providers/legacyprov.c` rows. Its `artifacts/phase16/COURTS.json` registers no court at activation because it owns no symbol for a differential probe to observe; every behavioural court is `pending` with the subphase that lands it. `docs/PHASE-16-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D485, D525, D528)",
+        "blocking": "43 open obligation(s) of this stratum recorded in forensics/phase16-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase16-obligations.json` publishes `unit: cli-config contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the 39 legacy provider registration rows it owns, six prerequisite deferrals and three CLI/config/filesystem contract units. The provider-row rule below independently holds it open on the `unimplemented` `providers/legacyprov.c` rows -- 34 of the 39 after 16.1 slice 1 published the module and its five digest/skeymgmt rows. Its `artifacts/phase16/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; 16.1 registered the first behavioural court (`RT-LEGACY-MODULE`), and the remaining five are `pending` with the subphases that land them. `docs/PHASE-16-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D485, D525, D528)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -599,8 +599,9 @@
         "phase": 16,
         "provider_rows": {
           "handed_on": 0,
+          "implemented": 5,
           "owned": 39,
-          "unimplemented": 39
+          "unimplemented": 34
         },
         "seal_sha256": null,
         "state": "in-progress",
@@ -691,7 +692,7 @@
       "not_started": 5
     }
   },
-  "body_hash": "8f3ce62e9b43f144c3864ab8bf3b561aa6b8cd1fc229f2a6cbc02f5c6604285b",
+  "body_hash": "c1007c177276353d41291852bbdcb07170e2cdd8221fb7d323fea57d811129db",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

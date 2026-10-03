@@ -257,17 +257,27 @@ class CmdResult:
         return self.returncode == 0
 
 
-def run(argv: list[str], *, cwd: Optional[Path] = None) -> CmdResult:
+def run(
+    argv: list[str],
+    *,
+    cwd: Optional[Path] = None,
+    env: Optional[dict[str, str]] = None,
+) -> CmdResult:
     proc = subprocess.run(
-        argv, cwd=str(cwd) if cwd else None,
+        argv, cwd=str(cwd) if cwd else None, env=env,
         capture_output=True, text=True, check=False,
     )
     return CmdResult(argv=argv, returncode=proc.returncode,
                      stdout=proc.stdout, stderr=proc.stderr)
 
 
-def must_run(argv: list[str], *, cwd: Optional[Path] = None) -> CmdResult:
-    res = run(argv, cwd=cwd)
+def must_run(
+    argv: list[str],
+    *,
+    cwd: Optional[Path] = None,
+    env: Optional[dict[str, str]] = None,
+) -> CmdResult:
+    res = run(argv, cwd=cwd, env=env)
     if not res.ok:
         raise AtlasError(
             f"command failed ({res.returncode}): {' '.join(argv)}\n{res.stderr.strip()}"

@@ -42,8 +42,8 @@
       },
       {
         "artifact": "artifacts/phase2/shell/legacy.shell.rs",
-        "role": "scaffold-source",
-        "sha256": "b193de7e169a14831e96bff987d3d64bbf5091a66cb92352cc3a535b9a56a81a"
+        "role": "provider-module-entry",
+        "sha256": "b07eea7ffa0c989c7d6c6af2b9859c5a79c326f62071d58c136041b309879035"
       },
       {
         "artifact": "artifacts/phase2/shell/openssl.shell.rs",
@@ -85,7 +85,7 @@
       "libssl": "libssl.so.3"
     }
   },
-  "body_hash": "d212f8feae859ddad08770253f57d97e344fac3e027bda1e35909cf526da82d1",
+  "body_hash": "48f0b6f1a83ca153703dc45c9d312c71ed2458eb7512ac9e5839bdc52fec1104",
   "generator": "forensics/tools/phase2_shell.py",
   "inputs": [],
   "kind": "phase2-shell",

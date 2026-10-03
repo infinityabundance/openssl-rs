@@ -20,7 +20,7 @@
       },
       {
         "closure": "every provider registration row this stratum owns is published",
-        "observation": "0/39 provider row(s) implemented",
+        "observation": "5/39 provider row(s) implemented",
         "state": "open",
         "surface": "forensics/atlas/provider-algorithms.json",
         "unit": "filesystem",
@@ -32,10 +32,10 @@
       "contract_units": 3,
       "deferrals_received": 4,
       "deferred_to_later_phase": 0,
-      "implemented": 0,
-      "open_in_this_stratum": 48,
+      "implemented": 5,
+      "open_in_this_stratum": 43,
       "owned": 48,
-      "provider_rows_open": 39,
+      "provider_rows_open": 34,
       "provider_rows_owned": 39,
       "unit_deferrals_received": 2
     },
@@ -76,36 +76,36 @@
     "provider_rows": [
       {
         "algorithm_names": "MD4",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_DIGEST",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_digests"
       },
       {
         "algorithm_names": "MDC2",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_DIGEST",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_digests"
       },
       {
         "algorithm_names": "WHIRLPOOL",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_DIGEST",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_digests"
       },
       {
         "algorithm_names": "RIPEMD-160",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_DIGEST",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_digests"
@@ -418,9 +418,9 @@
       },
       {
         "algorithm_names": "GENERIC-SECRET",
-        "implementation_state": "unimplemented",
+        "implementation_state": "implemented",
         "operation": "OSSL_OP_SKEYMGMT",
-        "planned_by": "operation-default",
+        "planned_by": "crate-table",
         "provider": "legacy",
         "source": "providers/legacyprov.c",
         "table_symbol": "legacy_skeymgmt"
@@ -457,7 +457,7 @@
     {
       "name": "provider-algorithms",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "49798d9f9eb936aee03e1b62046a8979823756112021cf10e4ad1ac94d8e2aa7"
+      "sha256": "50bc1af925412d0ae0d013227684315987462d8fa78e50f14ad1a72dd52f0951"
     },
     {
       "name": "provider-algorithm-plans",
@@ -477,7 +477,7 @@
     {
       "name": "phase-16-plan",
       "path": "docs/PHASE-16-SUBPHASES.md",
-      "sha256": "2d32a91872b770e4d15430cbf46c3237141d6de86a79397184fae6fdae2827ae"
+      "sha256": "c252a6f3f140a98013548a81441b6534393eb0a7aad35591cd3fc3d870d61d6b"
     }
   ],
   "kind": "phase16-obligations",
