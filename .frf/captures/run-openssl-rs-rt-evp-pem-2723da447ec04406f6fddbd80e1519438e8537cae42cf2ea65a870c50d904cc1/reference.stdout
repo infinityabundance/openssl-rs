@@ -1,0 +1,81 @@
+transcript.sha256=09b229398a335638be073e3ef38746f06ca94e9d073e200360958953b22d6bef
+provider.loaded=1 err=0
+write.block.nonnull=1 err=0
+write.block.len=71 matches=1 err=<empty>
+read.eay.rv=1 name=TEST ITEM header_len=11 header_ok=1 len=5 body=1 err=<empty>
+read.plain.rv=1 name=TEST ITEM len=5 body=1 err=<empty>
+read.no_header.rv=1 name=NO HEADER header_len=0 len=5 body=1 err=<empty>
+read.flag_pair=0 chain=passed invalid argument[data]@PEM_read_bio_ex/959
+read.flag_pair.len=0 err=0
+read.flag_pair.name_null=1 err=0
+read.name_mismatch=0 chain=bad end line[data]@get_header_and_data/901
+read.truncated=0 chain=bad end line[data]@get_header_and_data/858
+read.bad_base64=0 chain=bad base64 decode[data]@PEM_read_bio_ex/1000
+read.empty_body=0 name_null=1 data_null=1 len=0 chain=<empty>
+read.double_blank=0 chain=bad end line[data]@get_header_and_data/887
+read.bom.rv=1 name=TEST ITEM len=4 body=1 err=<empty>
+read.secure.rv=1 len=5 body=1 err=<empty>
+read.line_64.rv=1 name_null=0 len=48 chain=<empty>
+read.line_65.rv=0 name_null=1 len=0 chain=<empty>
+read.sanitize.eay_space.rv=1 len=4 bytes=61626364 err=<empty>
+read.sanitize.onlyb64_space.rv=1 len=3 bytes=616263 err=<empty>
+read.sanitize.eay_ctrl.rv=0 len=0 bytes=- err=bad base64 decode[data]@PEM_read_bio_ex/1000
+read.sanitize.default_ctrl.rv=1 len=4 bytes=61626364 err=<empty>
+cipher_info.provider_fetched=1 err=0
+cipher_info.provider_by_name.null=1 err=<empty>
+cipher_info.empty.rv=1 cipher_null=1 iv_zero=1 err=<empty>
+cipher_info.null_header=1 chain=<empty>
+cipher_info.not_proc_type=0 chain=not proc type[data]@PEM_get_EVP_CIPHER_INFO/533
+cipher_info.bad_version=0 chain=<empty>
+cipher_info.not_encrypted=0 chain=not encrypted[data]@PEM_get_EVP_CIPHER_INFO/544
+cipher_info.short_header=0 chain=not encrypted[data]@PEM_get_EVP_CIPHER_INFO/544
+cipher_info.not_dek_info=0 chain=not dek info[data]@PEM_get_EVP_CIPHER_INFO/558
+cipher_info.unknown_algo=0 chain=unsupported encryption[data]@PEM_get_EVP_CIPHER_INFO/576
+cipher_info.legacy_cipher.registered=1 err=0
+cipher_info.by_name.same=1 err=0
+cipher_info.ok.rv=1 cipher_same=1 iv=00010203040506070000000000000000 err=<empty>
+cipher_info.lower_hex.rv=1 all_ff=1 err=<empty>
+cipher_info.missing_iv=0 chain=missing dek iv[data]@PEM_get_EVP_CIPHER_INFO/581
+cipher_info.truncated_iv=0 chain=bad iv chars[data]@load_iv/606
+cipher_info.non_hex_iv=0 chain=bad iv chars[data]@load_iv/606
+cipher_info.zero_iv_cipher.registered=1 err=0
+cipher_info.zero_iv.by_name.same=1 err=0
+cipher_info.unexpected_iv=0 chain=unexpected dek iv[data]@PEM_get_EVP_CIPHER_INFO/584
+cipher_info.name_takes_newline=0 chain=unsupported encryption[data]@PEM_get_EVP_CIPHER_INFO/576
+cipher_info.zero_iv_ok.rv=1 cipher_same=1 iv_zero=1 err=<empty>
+cipher_info.legacy_name=NOT_MEASURED_LEGACY_OBJ_NAME_TABLE_IS_PHASE_13_pem_lib_c_571
+sign.init=1 err=0
+sign.update.first=1 err=0
+sign.update.second=1 err=0
+sign.final_ex=1 err=0
+sign.wrappers.agree=1 own=32 got=32 ref_init=1111 err=<empty>
+sign.final.nosig.rv=0 siglen=0 untouched=1 err=unknown max size[data]@EVP_PKEY_get_size/1866
+asn1_stream.rv=1 derlen=4 err=<empty>
+asn1_stream.produced.len=57 matches=1 wanted=57 blen=8 err=<empty>
+asn1_stream.read.rv=1 name=TEST INT len=4 der_matches=1 err=<empty>
+file.rv.write=9 read=1 name=TEST ITEM header_len=11 header_ok=1 len=5 body=1 err=<empty>
+PEM_do_header=NOT_MEASURED_EVP_md5_IS_PHASE_13_legacy_md5_c_36_pem_lib_c_479
+PEM_bytes_read_bio=NOT_MEASURED_PEM_do_header_pem_lib_c_266
+PEM_bytes_read_bio_secmem=NOT_MEASURED_PEM_do_header_pem_lib_c_266
+PEM_ASN1_read_bio=NOT_MEASURED_PEM_bytes_read_bio_pem_oth_c_28
+PEM_ASN1_read=NOT_MEASURED_PEM_ASN1_read_bio_pem_lib_c_122
+PEM_ASN1_write_bio=NOT_MEASURED_EVP_md5_IS_PHASE_13_legacy_md5_c_36_pem_lib_c_392
+PEM_ASN1_write_bio_ctx=NOT_MEASURED_EVP_md5_IS_PHASE_13_legacy_md5_c_36_pem_lib_c_392
+PEM_ASN1_write=NOT_MEASURED_PEM_ASN1_write_bio_pem_lib_c_316
+PEM_def_callback=NOT_MEASURED_EVP_read_pw_string_min_IS_PHASE_13_UI_pem_lib_c_62
+PEM_read_bio_PrivateKey_ex=NOT_MEASURED_OSSL_DECODER_CTX_new_for_pkey_PHASE_10_pem_pkey_c_49
+PEM_read_bio_PrivateKey=NOT_MEASURED_OSSL_DECODER_CTX_new_for_pkey_PHASE_10_pem_pkey_c_49
+PEM_read_PrivateKey_ex=NOT_MEASURED_OSSL_DECODER_CTX_new_for_pkey_PHASE_10_pem_pkey_c_49
+PEM_read_PrivateKey=NOT_MEASURED_OSSL_DECODER_CTX_new_for_pkey_PHASE_10_pem_pkey_c_49
+PEM_read_bio_Parameters_ex=NOT_MEASURED_OSSL_DECODER_CTX_new_for_pkey_PHASE_10_pem_pkey_c_49
+PEM_read_bio_Parameters=NOT_MEASURED_OSSL_DECODER_CTX_new_for_pkey_PHASE_10_pem_pkey_c_49
+PEM_write_bio_PrivateKey_ex=NOT_MEASURED_OSSL_ENCODER_CTX_new_for_pkey_PHASE_10_pem_local_h_44
+PEM_write_bio_PrivateKey=NOT_MEASURED_OSSL_ENCODER_CTX_new_for_pkey_PHASE_10_pem_local_h_44
+PEM_write_PrivateKey_ex=NOT_MEASURED_OSSL_ENCODER_CTX_new_for_pkey_PHASE_10_pem_local_h_44
+PEM_write_PrivateKey=NOT_MEASURED_OSSL_ENCODER_CTX_new_for_pkey_PHASE_10_pem_local_h_44
+PEM_write_bio_Parameters=NOT_MEASURED_OSSL_ENCODER_CTX_new_for_pkey_PHASE_10_pem_local_h_44
+PEM_write_bio_PrivateKey_traditional=NOT_MEASURED_evp_pkey_copy_downgraded_IS_PHASE_8_pem_pkey_c_356
+PEM_write_bio_PKCS8PrivateKey=NOT_MEASURED_OSSL_ENCODER_CTX_new_for_pkey_PHASE_10_pem_pk8_c_75
+PEM_write_PKCS8PrivateKey=NOT_MEASURED_OSSL_ENCODER_CTX_new_for_pkey_PHASE_10_pem_pk8_c_75
+PEM_write_bio_PKCS8PrivateKey_nid=NOT_MEASURED_OSSL_ENCODER_CTX_new_for_pkey_PHASE_10_pem_pk8_c_75
+PEM_write_PKCS8PrivateKey_nid=NOT_MEASURED_OSSL_ENCODER_CTX_new_for_pkey_PHASE_10_pem_pk8_c_75

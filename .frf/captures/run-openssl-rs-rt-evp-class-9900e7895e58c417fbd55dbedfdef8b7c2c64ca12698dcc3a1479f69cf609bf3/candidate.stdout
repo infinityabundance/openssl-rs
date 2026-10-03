@@ -1,0 +1,23 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=0138de28d1fd9c6bba94ce02afd0b295c9a94540546b56b2d713b83922f990ca
+provider.add_builtin=1 err=0
+provider.load=1 err=0
+asym.fetch=0 err=50331841
+asym.do_all_provided.ours=0 err=0
+kem.fetch=1 err=0
+kem.name=court-kem err=0
+kem.description=court kem err=0
+kem.provider_is_ours=1 err=0
+kem.is_a.name=1 err=0
+kem.is_a.other=0 err=0
+kem.gettable_ctx=1 err=0
+kem.settable_ctx=1 err=0
+kem.gettable_ctx.located=1 err=0
+kem.names_do_all=1 err=0
+kem.names.count=1 err=0
+kem.up_ref=1 err=0
+kem.do_all_provided.ours=1 err=0
+exch.fetch=0 err=50331841
+exch.do_all_provided.ours=0 err=0
+sig.fetch=0 err=50331841
+sig.do_all_provided.ours=0 err=0
+asym.fetch.missing=1 err=50856204

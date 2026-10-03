@@ -1,0 +1,16 @@
+transcript.sha256=3202766e9e4c34bcabd82e1f8a2947b929ec7d14959103a696cc07b9fc8aea78
+get.initial.malloc_mine=0 malloc_default=1 realloc_mine=0 realloc_default=1 free_mine=0 free_default=1
+set.none=1
+get.after_none.malloc_mine=0 malloc_default=1 realloc_mine=0 realloc_default=1 free_mine=0 free_default=1
+set.malloc_only=1
+get.after_malloc_only.malloc_mine=1 malloc_default=0 realloc_mine=0 realloc_default=1 free_mine=0 free_default=1
+set.realloc_only=1
+get.after_realloc_only.malloc_mine=1 malloc_default=0 realloc_mine=1 realloc_default=0 free_mine=0 free_default=1
+set.free_only=1
+get.after_free_only.malloc_mine=1 malloc_default=0 realloc_mine=1 realloc_default=0 free_mine=1 free_default=0
+set.all=1
+set.all_again=1
+installed.malloc.0=nonnull shim_calls=1 err=0
+set.default_back=1
+get.after_default_back.malloc_mine=0 malloc_default=1 realloc_mine=0 realloc_default=1 free_mine=0 free_default=1
+done=1

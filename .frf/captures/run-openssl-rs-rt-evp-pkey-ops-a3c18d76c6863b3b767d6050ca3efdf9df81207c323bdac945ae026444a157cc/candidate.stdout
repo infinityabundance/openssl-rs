@@ -1,0 +1,101 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=7de8e8f2c0f410f63c678d293d62ca501b86516472d0cedba91a7b6b9ea6a646
+provider.add_builtin=1 err=0
+provider.load=1 err=0
+ctx.new_from_name=1 err=0
+pkey.keygen_init=1 err=0
+pkey.keygen=1 err=0
+pkey.generated=1 err=0
+ctx.get0_libctx=0 err=0
+ctx.get0_pkey.is_generated=0 err=0
+ctx.get0_peerkey.null=1 err=0
+ctx.get_operation=4 err=0
+ctx.is_a.name=1 err=0
+ctx.is_a.other=0 err=0
+ctx.gettable_params=0 err=0
+ctx.settable_params=0 err=0
+ctx.get0_provider=1 err=0
+ctx.get_params=1 err=0
+ctx.set_params=1 err=0
+ctx.get0_propq.null=1 err=0
+ctx.get0_propq.empty=0 err=0
+ctx.set_app_data.get_data=1 err=0
+ctx.set_data.get_data=1 err=0
+ctx.get_cb.null=1 err=0
+ctx.ctrl=-2 err=50331795
+ctx.ctrl_str=-2 err=50331795
+ctx.ctrl_uint64=-2 err=50331795
+ctx.str2ctrl.boundary=AUTHORITY_FAULTS
+ctx.hex2ctrl.boundary=AUTHORITY_FAULTS
+ctx.md.boundary=KEYLESS_CTX_DIVERGES
+ctx.dup.nonnull=0 err=0
+ctx.dup.is_a=0 err=0
+ctx.set1_id=-2 err=0
+ctx.get1_id_len.nonneg=1 err=0
+ctx.get1_id.buffer=0 err=0
+ctx.set0_keygen_info=1 err=0
+ctx.get_keygen_info=0 err=0
+ctx.set_signature_md=-2 err=50331795
+ctx.get_signature_md=0 err=50331795
+ctx.set1_hkdf_key=-2 err=50331795
+ctx.set1_hkdf_salt=-2 err=50331795
+ctx.add1_hkdf_info=-2 err=50331795
+ctx.set_hkdf_md=-2 err=50331795
+ctx.set_hkdf_mode=-2 err=50331795
+ctx.set1_tls1_prf_secret=-2 err=50331795
+ctx.add1_tls1_prf_seed=-2 err=50331795
+ctx.set_tls1_prf_md=-2 err=50331795
+ctx.set1_pbe_pass=-2 err=50331795
+ctx.set1_scrypt_salt=-2 err=50331795
+ctx.set_scrypt_N=-2 err=50331795
+ctx.set_scrypt_r=-2 err=50331795
+ctx.set_scrypt_p=-2 err=50331795
+ctx.set_scrypt_maxmem_bytes=-2 err=50331795
+ctx.set_kem_op=-2 err=50331795
+ctx.set_mac_key=1 err=0
+pkey.up_ref=1 err=0
+pkey.get0_provider=1 err=0
+pkey.is_a.name=1 err=0
+pkey.is_a.other=0 err=0
+pkey.get0_type_name.nonnull=1 err=0
+pkey.get0_description=1 err=0
+pkey.gettable_params=0 err=0
+pkey.settable_params=0 err=0
+pkey.get_params=1 err=0
+pkey.get_bn_param=0 err=0
+pkey.get_int_param=0 err=0
+pkey.get_size_t_param=0 err=0
+pkey.get_utf8_string_param=0 err=0
+pkey.set_bn_param=0 err=0
+pkey.set_int_param=1 err=0
+pkey.set_size_t_param=1 err=0
+pkey.set_utf8_string_param=1 err=0
+pkey.set_octet_string_param=1 err=0
+pkey.set_params=1 err=0
+pkey.set_ex_data=1 err=0
+pkey.get_ex_data=1 err=0
+pkey.save_parameters=0 err=0
+pkey.get0_asn1.null=1 err=0
+pkey.todata=1 err=0
+pkey.export=0 err=0
+pkey.type_names_do_all=1 err=0
+pkey.dup=0 err=0
+pkey.eq=0 err=0
+pkey.cmp=0 err=0
+pkey.cmp_parameters.boundary=AUTHORITY_FAULTS
+pkey.parameters_eq.boundary=AUTHORITY_FAULTS
+pkey.fromdata_settable=0 err=0
+op.check=0 err=50331802
+op.param_check=0 err=50331802
+op.param_check_quick=0 err=50331802
+op.public_check=0 err=50331802
+op.public_check_quick=0 err=50331802
+op.private_check=0 err=50331802
+op.pairwise_check=0 err=50331802
+op.paramgen_init=1 err=0
+op.paramgen=-1 err=0
+op.generate=-1 err=0
+op.encrypt_init.boundary=AUTHORITY_FAULTS
+op.decrypt_init.boundary=AUTHORITY_FAULTS_AFTER_ENCRYPT_INIT
+op.derive_init.boundary=AUTHORITY_FAULTS_AFTER_ENCRYPT_INIT
+op.encapsulate_init.boundary=AUTHORITY_FAULTS_AFTER_ENCRYPT_INIT
+op.decapsulate_init.boundary=AUTHORITY_FAULTS_AFTER_ENCRYPT_INIT

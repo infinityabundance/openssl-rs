@@ -1,0 +1,69 @@
+transcript.sha256=314f8eec5aeeed4e1cd63ed931e17d8968045ca9a1574c23f1c38b126236e1d0
+add_builtin=1 err=0
+load=1
+kdf.activity.pristine=0,0,0,0,0,0,0 err=0
+fetch.plain=nonnull err=50331841
+fetch.with_dupctx=nonnull err=0
+fetch.no_derive=NULL err=0
+fetch.no_derive.err=0
+fetch.no_freectx=NULL err=0
+fetch.no_freectx.err=0
+fetch.unknown=NULL err=50856204
+fetch.unknown.err=0
+fetch.rejected=NULL err=50856204
+fetch.rejected.err=0
+fetch.alias_same_object=1
+kdf.name_matches=1
+kdf.description_matches=1
+kdf.provider=nonnull err=0
+kdf.is_a.identity=1 err=0
+kdf.is_a.alias=1 err=0
+kdf.is_a.other=0 err=0
+kdf.is_a.null_method=0 err=0
+kdf.gettable_params=nonnull err=0
+kdf.gettable_ctx_params=nonnull err=0
+kdf.settable_ctx_params=nonnull err=0
+kdf.get_params.ret=1 err=0
+kdf.get_params.size=16 err=0
+kdf.names_do_all.ret=1 err=0
+kdf.names.count=2 err=0
+kdf.names.saw_identity=1 err=0
+kdf.names.saw_alias=1 err=0
+ctx.new=nonnull err=0
+ctx.new.kdf_is_method=1
+ctx.new.kdf_size=16 err=0
+ctx.gettable_params=nonnull err=0
+ctx.settable_params=nonnull err=0
+kdf.activity.after_new=1,0,0,0,0,0,1 err=0
+ctx.set_params=1 err=0
+ctx.derive.return=1 err=0
+ctx.derive.byte0=228 err=0
+ctx.derive.byte1=239 err=0
+ctx.derive.byte15=137 err=0
+ctx.derive.beyond_untouched=1 err=0
+kdf.activity.after_derive=1,0,0,0,1,1,1 err=0
+kdf.activity.after_reset=1,0,0,1,1,1,1 err=0
+ctx.derive.after_reset=1 err=0
+ctx.derive.after_reset.byte0=202 err=0
+ctx.after_reset.kdf_is_method=1
+ctx.get_params.ret=1 err=0
+ctx.get_params.size=16 err=0
+ctx.set_params.null=1 err=0
+kdf.activity.after_params=1,0,0,1,2,2,2 err=0
+kdf.activity.after_ctx_free=1,1,0,1,2,2,2 err=0
+dup.without_dupctx=NULL err=0
+dup.with_dupctx=nonnull err=0
+dup.distinct=1
+dup.kdf_is_source_method=1
+dup.kdf_size=16 err=0
+dup.derive=1 err=0
+dup.derive.byte0=16 err=0
+kdf.activity.after_dup=3,4,1,1,3,2,3 err=0
+do_all.count=2 err=0
+do_all.saw_court_kdf=1 err=0
+do_all.saw_a_refused_one=0 err=0
+do_all.null_visitor=NOT_MEASURED_AUTHORITY_FAULTS
+set_SKEY=NOT_MEASURED_CANDIDATE_SCAFFOLD
+derive_SKEY=NOT_MEASURED_CANDIDATE_SCAFFOLD
+kdf.activity.after_all_free=3,4,1,1,3,2,3 err=0
+unload=1 err=0

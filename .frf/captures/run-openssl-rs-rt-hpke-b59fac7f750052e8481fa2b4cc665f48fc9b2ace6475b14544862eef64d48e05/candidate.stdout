@@ -1,0 +1,66 @@
+transcript.sha256=6fb6fafd0fb0c7427b8f35a607f17f9f64caedf025a62c805481e4f736830edb
+provider.loaded=1 err=0
+suite.default=1 err=0
+suite.bad_aead=0 chain=invalid aead@ossl_HPKE_AEAD_INFO_find_id/232
+suite.reserved_kem=0 chain=invalid curve@ossl_HPKE_KEM_INFO_find_id/181
+exp.default=32/16/32
+exp.p521=133/116/66
+exp.export_only=32/7/32
+exp.bad=0 chain=invalid aead@ossl_HPKE_AEAD_INFO_find_id/232,passed invalid argument@hpke_expansion/407
+str2suite.names=1 0020/0001/0001
+str2suite.numbers=1 0010/0002/0002
+str2suite.exporter=1 0012/0003/ffff
+str2suite.trailing=0 err=0
+str2suite.one_delim=0 err=0
+str2suite.unknown=0 err=0
+str2suite.empty=0 chain=passed a null parameter@ossl_hpke_str2suite/459
+str2suite.null=0 chain=passed a null parameter@ossl_hpke_str2suite/459
+ctx.bad_mode=1 chain=passed invalid argument@OSSL_HPKE_CTX_new/820
+ctx.bad_role=1 chain=passed invalid argument@OSSL_HPKE_CTX_new/828
+ctx.bad_suite=1 chain=invalid curve@ossl_HPKE_KEM_INFO_find_id/181,passed invalid argument@OSSL_HPKE_CTX_new/824
+ctx.psk_mode=1 err=<empty>
+seq.get=1 v=0
+seq.set_sender=0 chain=passed invalid argument@OSSL_HPKE_CTX_set_seq/1062
+ikme.ok=1 chain=<empty>
+ikme.empty=0 chain=passed invalid argument@OSSL_HPKE_CTX_set1_ikme/936
+ikme.too_long=0 chain=passed invalid argument@OSSL_HPKE_CTX_set1_ikme/936
+ikme.null=0 chain=passed a null parameter@OSSL_HPKE_CTX_set1_ikme/932
+psk.null_id=0 chain=passed invalid argument@OSSL_HPKE_CTX_set1_psk/887
+psk.too_short=0 chain=passed invalid argument@OSSL_HPKE_CTX_set1_psk/895
+psk.ok=1 chain=<empty>
+psk.empty_id=0 chain=passed invalid argument@OSSL_HPKE_CTX_set1_psk/903
+psk.null_data=0 chain=passed invalid argument@OSSL_HPKE_CTX_set1_psk/887
+ctx.auth_receiver=1 err=<empty>
+seq.set_receiver=1 chain=<empty>
+seq.round_trip.get=1 v=5
+psk.wrong_mode=0 chain=passed invalid argument@OSSL_HPKE_CTX_set1_psk/908
+ikme.receiver=0 chain=passed invalid argument@OSSL_HPKE_CTX_set1_ikme/940
+authpriv.key=1 err=<empty>
+authpriv.receiver=0 chain=passed invalid argument@OSSL_HPKE_CTX_set1_authpriv/963
+authpub.garbage=0 chain=key setup failed@new_raw_key_int/471,passed invalid argument@OSSL_HPKE_CTX_set1_authpub/1011
+authpub.ok=1 chain=<empty>
+authpub.null=0 chain=passed a null parameter@OSSL_HPKE_CTX_set1_authpub/983
+ctx.base_sender=1 err=<empty>
+encap.short_buffer=0 chain=passed invalid argument@OSSL_HPKE_encap/1096
+encap.info_too_long=0 chain=passed invalid argument@OSSL_HPKE_encap/1087
+seal.no_key=0 chain=passed invalid argument@OSSL_HPKE_seal/1188
+ctx.after_free=1
+seq.keygen=1 publen=32 err=<empty>
+seq.keygen.pub_readback=1 chain=<empty>
+seq.keygen.pub_matches=1 publen=32
+seq.sender_ctx=1 err=<empty>
+seq.encap=1 enclen=32 err=<empty>
+seq.seal=1 ctlen=27 err=<empty>
+seq.export_sender=1 chain=<empty>
+seq.encap_twice=0 chain=called a function you should not call@OSSL_HPKE_encap/1101
+seq.receiver_ctx=1 err=<empty>
+seq.decap=1 err=<empty>
+seq.open=1 rtlen=11 pt=1 err=<empty>
+seq.export_receiver=1 chain=<empty>
+seq.exports_agree=1
+seq.seq_after=1 v=1
+seq.open_bad_tag=0 chain=internal error@hpke_aead_dec/195,internal error@OSSL_HPKE_open/1239
+seq.decap_null_priv=0 chain=passed invalid argument@OSSL_HPKE_decap/1126
+OSSL_HPKE_get_grease_value=NOT_MEASURED_RAND_bytes_ex_IS_PHASE_9_hpke_c_1433
+hpke_expansion=NOT_MEASURED_NULL_OUT_PARAM_hpke_c_403
+ossl_hpke_labeled_extract=NOT_MEASURED_WPACKET_FAILURE_hpke_util_c_329
