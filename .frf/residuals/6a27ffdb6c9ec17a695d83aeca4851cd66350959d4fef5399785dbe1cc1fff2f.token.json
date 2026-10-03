@@ -1,0 +1,1 @@
+{"authority":"openssl-rt-3.6.4-r2","blocks_claims":["rt-provider exit parity"],"disposition":"open","kind":"exit","magnitude":"class-change","next_court":"cli-exit-minimize","residual_id":"6a27ffdb6c9ec17a695d83aeca4851cd66350959d4fef5399785dbe1cc1fff2f","schema_version":"frf-token-v1","scope":"rt-provider","surface":"exit-class","token":"exit/exit-class/class-change/open"}

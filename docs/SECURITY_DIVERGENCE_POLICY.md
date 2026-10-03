@@ -1301,7 +1301,15 @@ between the authority and the candidate at this site.**
   rows take the two function addresses and this entry is removed with them; `RT-EVP-PBE`'s
   `pbe.find.04`…`pbe.find.09` arms would gain the two presence answers, which is the measurement.
 
-### D-EVP-CIPHER-LEGACY-NID-1 — a fetched provider cipher's legacy NID is `NID_undef`, because the legacy table is Phase 13's
+### D-EVP-CIPHER-LEGACY-NID-1 — a fetched provider cipher's legacy NID is `NID_undef`, because the legacy table is Phase 13's — **CLOSED**
+
+> **Closed by Phase 13's `OBJ_NAME` registration.** The legacy wrappers and their registration are
+> now built (`src/evp/c_allc.rs`/`c_alld.rs`, wired by `src/runtime/init.rs`'s
+> `add_all_legacy_methods`), and `src/context/namemap.rs`'s `ossl_namemap_stored` runs the
+> authority's first-use pre-population, so the table `set_legacy_nid` consults is filled on the
+> fetch path too. `EVP_CIPHER_get_nid` on a fetched `DES-CBC` now answers `NID_des_cbc`. Nothing
+> below is erased: the paragraphs are the entry as it stood while the divergence was real, and the
+> `- **Closed:**` paragraph at its end records what changed. `docs/DECISIONS.md` D526 records it.
 
 - **Obligation:** `EVP_CIPHER_get_nid` on a method returned by `EVP_CIPHER_fetch` whose name is a
   legacy name, and every caller that reads the result — measured here through `EVP_PBE_alg_add`,
@@ -1324,6 +1332,16 @@ between the authority and the candidate at this site.**
 - **Trigger:** Phase 13's first legacy cipher wrapper. `RT-EVP-PBE`'s
   `pbe.cipher_nid.legacy` marker is where the difference would be measured, and
   `pbe.alg_add.methods_nids` is the arm it holds back.
+- **Closed:** Phase 13 landed the legacy cipher wrappers, and the registration they need is now
+  built: `src/evp/c_allc.rs`/`c_alld.rs` transcribe `crypto/evp/c_allc.c`/`c_alld.c`,
+  `src/runtime/init.rs`'s `add_all_legacy_methods` calls them for the two `OPENSSL_INIT_ADD_ALL_*`
+  bits, and `src/context/namemap.rs`'s `ossl_namemap_stored` runs the authority's own first-use
+  pre-population, whose `OPENSSL_init_crypto(ADD_ALL_CIPHERS|ADD_ALL_DIGESTS)` call fills the
+  `OBJ_NAME` table before `set_legacy_nid` runs on the fetch path. `EVP_CIPHER_get_nid` on a
+  fetched `DES-CBC` answers `NID_des_cbc` (**31**) here as it does on the authority, and
+  `EVP_get_cipherbyname`/`EVP_get_digestbyname` resolve. `RT-EVP-LEGACY`'s per-static
+  `<name>.byname` arms and `RT-EVP-PBE`'s `pbe.alg_add.methods_nids` arm compare the values rather
+  than printing a marker.
 
 ### D-CBCHMAC-MULTIBLOCK-ENC-1 — the multiblock *encrypt* parameter is refused, because its IVs come from the random layer — **CLOSED**
 

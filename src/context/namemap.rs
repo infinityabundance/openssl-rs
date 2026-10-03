@@ -86,10 +86,24 @@ use core::ptr;
 use std::collections::HashMap;
 
 use crate::context::{lib_ctx_get_data, OSSL_LIB_CTX_NAMEMAP_INDEX};
+use crate::evp::cipher::{EVP_CIPHER_get_nid, EvpCipher, OBJ_NAME_TYPE_CIPHER_METH};
+use crate::evp::digest::{EVP_MD_get_type, EvpMd, OBJ_NAME_TYPE_MD_METH};
+use crate::evp::pkey_asn1::{
+    EVP_PKEY_asn1_get0, EVP_PKEY_asn1_get0_info, EVP_PKEY_asn1_get_count, EvpPkeyAsn1Method,
+    ASN1_PKEY_ALIAS,
+};
+use crate::evp::pkey_ctx::{EVP_PKEY_DHX, EVP_PKEY_SM2};
 use crate::runtime::err::err_reasons;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{raise_site, raise_site_data, raise_site_dynamic};
+use crate::runtime::init::{
+    OPENSSL_init_crypto, OPENSSL_INIT_ADD_ALL_CIPHERS, OPENSSL_INIT_ADD_ALL_DIGESTS,
+};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::obj::{
+    NID_undef, OBJ_NAME_do_all, OBJ_NAME_get, OBJ_nid2ln, OBJ_nid2obj, OBJ_nid2sn, OBJ_obj2txt,
+    ObjName,
+};
 use crate::runtime::stack::{
     OPENSSL_sk_dup, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
     OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
@@ -188,11 +202,175 @@ unsafe fn key(name: *const c_char, len: usize) -> Vec<u8> {
 /// `OSSL_NAMEMAP *ossl_namemap_stored(OSSL_LIB_CTX *libctx)`
 ///
 /// The namemap owned by a library context, or NULL when the context has none.
-/// The authority pre-populates an empty stored map on first use; that is deferred
-/// — see the module documentation for why it is deferred *whole*.
-#[allow(dead_code)] // unreachable until the stratum that calls it lands
+///
+/// **The stored map is pre-populated on first use**, exactly as `crypto/core_namemap.c`'s
+/// `ossl_namemap_stored` does: the first call on an empty map runs
+/// `OPENSSL_init_crypto(ADD_ALL_CIPHERS | ADD_ALL_DIGESTS)` — which fills the legacy `OBJ_NAME`
+/// table through `openssl_add_all_ciphers_int`/`_digests_int` — then pilfers that table's cipher
+/// and digest names and the `EVP_PKEY_ASN1_METHOD` short/long/PEM names into the map, and adds the
+/// four RSA-PSS aliases. Every one of those names takes a number, so the numbering of everything
+/// registered later depends on them; that is why D109 deferred the block **whole** until the
+/// legacy method database and `OBJ_NAME_do_all` existed, and why it lands here now that Phase 13
+/// has. The names are added in the order `OBJ_NAME_do_all` returns them, which is the
+/// authority's own order argument (the crate's registry order rather than a hash order, and the
+/// numbers are not observable through any export).
 pub(crate) fn ossl_namemap_stored(libctx: *mut c_void) -> *mut OsslNamemap {
-    lib_ctx_get_data(libctx, OSSL_LIB_CTX_NAMEMAP_INDEX).cast::<OsslNamemap>()
+    let namemap = lib_ctx_get_data(libctx, OSSL_LIB_CTX_NAMEMAP_INDEX).cast::<OsslNamemap>();
+    if namemap.is_null() {
+        return namemap;
+    }
+    // SAFETY: `namemap` is a live stored map and the pre-population is the authority's own
+    // first-use step; the map's own lock guards each insertion (*not* the block as a whole,
+    // which matches the authority, whose pre-population runs outside the map's lock).
+    if ossl_namemap_empty(namemap) == 1 {
+        // SAFETY: `namemap` is a live, empty stored map, which is `prepopulate_legacy_names`'
+        // precondition.
+        unsafe { prepopulate_legacy_names(namemap) };
+    }
+    namemap
+}
+
+/// `#define OSSL_MAX_NAME_SIZE 50` — `include/internal/sizes.h:15`.
+const OSSL_MAX_NAME_SIZE: usize = 50;
+
+/// `static void get_legacy_evp_names(int base_nid, int nid, const char *pem_name, void *arg)` —
+/// `crypto/core_namemap.c`.
+///
+/// # Safety
+/// `arg` must be a live `OSSL_NAMEMAP`; `pem_name` NULL or NUL-terminated.
+unsafe fn get_legacy_evp_names(
+    base_nid: c_int,
+    nid: c_int,
+    pem_name: *const c_char,
+    arg: *mut c_void,
+) {
+    let namemap = arg.cast::<OsslNamemap>();
+    let mut num = 0;
+    if base_nid != NID_undef {
+        // SAFETY: `namemap` is live per the contract and every name is NUL-terminated.
+        num = unsafe { ossl_namemap_add_name(namemap, num, OBJ_nid2sn(base_nid)) };
+        // SAFETY: as above.
+        num = unsafe { ossl_namemap_add_name(namemap, num, OBJ_nid2ln(base_nid)) };
+    }
+    if nid != NID_undef {
+        // SAFETY: as above.
+        num = unsafe { ossl_namemap_add_name(namemap, num, OBJ_nid2sn(nid)) };
+        // SAFETY: as above.
+        num = unsafe { ossl_namemap_add_name(namemap, num, OBJ_nid2ln(nid)) };
+        // `OBJ_nid2obj` answers a static object or NULL for any integer.
+        let obj = OBJ_nid2obj(nid);
+        if !obj.is_null() {
+            let mut txtoid = [0 as c_char; OSSL_MAX_NAME_SIZE];
+            // SAFETY: `txtoid` is writable for its whole length and `obj` is live.
+            if unsafe { OBJ_obj2txt(txtoid.as_mut_ptr(), OSSL_MAX_NAME_SIZE as c_int, obj, 1) } > 0
+            {
+                // SAFETY: the map is live and `txtoid` is NUL-terminated by `OBJ_obj2txt`.
+                num = unsafe { ossl_namemap_add_name(namemap, num, txtoid.as_ptr()) };
+            }
+        }
+    }
+    if !pem_name.is_null() {
+        // SAFETY: the map is live and `pem_name` is NUL-terminated per the contract.
+        let _ = unsafe { ossl_namemap_add_name(namemap, num, pem_name) };
+    }
+}
+
+/// `static void get_legacy_cipher_names(const OBJ_NAME *on, void *arg)`.
+unsafe extern "C" fn get_legacy_cipher_names(on: *const ObjName, arg: *mut c_void) {
+    // SAFETY: `on` is the walk's own row and both strings are the table's.
+    let cipher = unsafe { OBJ_NAME_get((*on).name, (*on).type_) }.cast::<EvpCipher>();
+    if !cipher.is_null() {
+        // SAFETY: `cipher` is the table's live method and `arg` the live map.
+        unsafe { get_legacy_evp_names(NID_undef, EVP_CIPHER_get_nid(cipher), ptr::null(), arg) };
+    }
+}
+
+/// `static void get_legacy_md_names(const OBJ_NAME *on, void *arg)`.
+unsafe extern "C" fn get_legacy_md_names(on: *const ObjName, arg: *mut c_void) {
+    // SAFETY: as `get_legacy_cipher_names`.
+    let md = unsafe { OBJ_NAME_get((*on).name, (*on).type_) }.cast::<EvpMd>();
+    if !md.is_null() {
+        // SAFETY: `md` is the table's live method and `arg` the live map.
+        unsafe { get_legacy_evp_names(0, EVP_MD_get_type(md), ptr::null(), arg) };
+    }
+}
+
+/// `static void get_legacy_pkey_meth_names(const EVP_PKEY_ASN1_METHOD *ameth, void *arg)`.
+///
+/// # Safety
+/// `ameth` must be a live `EVP_PKEY_ASN1_METHOD` and `arg` a live `OSSL_NAMEMAP`.
+unsafe fn get_legacy_pkey_meth_names(ameth: *const EvpPkeyAsn1Method, arg: *mut c_void) {
+    let mut nid = 0;
+    let mut base_nid = 0;
+    let mut flags = 0;
+    let mut pem_name: *const c_char = ptr::null();
+    // SAFETY: `ameth` is live per the contract and every out-parameter is this frame's.
+    unsafe {
+        EVP_PKEY_asn1_get0_info(
+            &mut nid,
+            &mut base_nid,
+            &mut flags,
+            ptr::null_mut(),
+            &mut pem_name,
+            ameth,
+        );
+    }
+    if nid != NID_undef {
+        if flags & ASN1_PKEY_ALIAS as c_int == 0 {
+            if nid == EVP_PKEY_DHX {
+                // SAFETY: `arg` is live per the contract.
+                unsafe { get_legacy_evp_names(0, nid, c"DHX".as_ptr(), arg) };
+            }
+            // SAFETY: as above.
+            unsafe { get_legacy_evp_names(0, nid, pem_name, arg) };
+        } else if nid == EVP_PKEY_SM2 {
+            // SAFETY: as above.
+            unsafe { get_legacy_evp_names(0, nid, pem_name, arg) };
+        } else {
+            // SAFETY: as above.
+            unsafe { get_legacy_evp_names(base_nid, nid, pem_name, arg) };
+        }
+    }
+}
+
+/// `crypto/core_namemap.c`'s first-use pre-population, in the authority's order.
+///
+/// # Safety
+/// `namemap` must be a live, empty stored map.
+unsafe fn prepopulate_legacy_names(namemap: *mut OsslNamemap) {
+    // SAFETY: the two adder bits register Phase 13's statics in the `OBJ_NAME` table (its answer
+    // is ignored here as it is in the authority), and the two walks read that table.
+    unsafe {
+        OPENSSL_init_crypto(
+            OPENSSL_INIT_ADD_ALL_CIPHERS | OPENSSL_INIT_ADD_ALL_DIGESTS,
+            ptr::null(),
+        );
+        OBJ_NAME_do_all(
+            OBJ_NAME_TYPE_CIPHER_METH,
+            Some(get_legacy_cipher_names),
+            namemap.cast::<c_void>(),
+        );
+        OBJ_NAME_do_all(
+            OBJ_NAME_TYPE_MD_METH,
+            Some(get_legacy_md_names),
+            namemap.cast::<c_void>(),
+        );
+
+        // Some old providers (<= 3.5) may not have the rsassaPSS alias; the authority adds it
+        // and its three other spellings by hand here.
+        let num = ossl_namemap_add_name(namemap, 0, c"RSA-PSS".as_ptr());
+        if num != 0 {
+            ossl_namemap_add_name(namemap, num, c"rsassaPss".as_ptr());
+            ossl_namemap_add_name(namemap, num, c"RSASSA-PSS".as_ptr());
+            ossl_namemap_add_name(namemap, num, c"1.2.840.113549.1.1.10".as_ptr());
+        }
+
+        // And the legacy `EVP_PKEY_ASN1_METHOD` short/long/PEM names.
+        let end = EVP_PKEY_asn1_get_count();
+        for i in 0..end {
+            get_legacy_pkey_meth_names(EVP_PKEY_asn1_get0(i), namemap.cast::<c_void>());
+        }
+    }
 }
 
 /// `OSSL_NAMEMAP *ossl_namemap_new(OSSL_LIB_CTX *libctx)`

@@ -14,6 +14,13 @@
         "symbol": "ossl_get_wininstallcontext"
       },
       {
+        "authority_unit": "crypto/engine/eng_dyn.c",
+        "evidence": "docs/PHASE-13-LEGACY-SEAL.md section 5 and section 10; src/engine/eng_list.rs:9-19; src/engine/mod.rs:77-79; docs/DECISIONS.md D528",
+        "owner_phase": 16,
+        "reason": "`crypto/engine/eng_dyn.c` is the dynamic ENGINE loader: `engine_load_dynamic_int` and the `dynamic`/`rdrand` built-ins it registers are absent, so `ENGINE_by_id`'s dynamic fallback and the authority's built-in engine ids are not reconstructed. No Phase-13 subphase owns the unit -- 13.1 transcribes `ENGINE_by_id`'s miss path whole and takes the authority's own `notfound` arm -- so it is owed to the installed distribution/config/module stratum, whose `DSO_load` and `OPENSSL_ENGINES` handling are the loader's dependency.",
+        "symbol": "engine_load_dynamic_int"
+      },
+      {
         "authority_unit": "providers/legacy-dso-legacyprov.c",
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12",
         "owner_phase": 13,
