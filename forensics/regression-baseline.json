@@ -704,10 +704,10 @@
     "9": "complete"
   },
   "prerequisites": {
-    "blocking_dependencies": 3,
+    "blocking_dependencies": 4,
     "divergence_names_covered": 47,
     "findings": 0,
-    "language_census": 9056,
+    "language_census": 9102,
     "sealed_census": 50
   },
   "provider_implemented": [

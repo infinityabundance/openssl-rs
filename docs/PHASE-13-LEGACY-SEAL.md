@@ -53,8 +53,8 @@ present, which cannot count as parity (`docs/PARITY_MODEL.md:22`) — exactly as
   (`receipt-run-openssl-rs-rt-{engine,engine-table,engine-ctrl,ui,txtdb,evp-legacy,legacy-remainder,handoff}-*`),
   sixteen adjudicated challenge records (both operators on every court) and the
   `sensitivity-backed` claim
-  `33853572edd67681cfb94938d12b5ee33b01741228d04b085cd1fb62f71a8954`, binding
-  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.17` with zero blockers and all eight premises carrying
+  `0a41552436190044cf55c32e95960a66e8cc472144c17840bd2cc29546c30006`, binding
+  `openssl-rt-3.6.4-r2` to `openssl-rs 0.0.18` with zero blockers and all eight premises carrying
   stdout and exit. §8 states what that is.
 - Gemel checkpoint: **present, and it is this stratum's.** `forensics/GEMEL_TRAJECTORY.md`'s head
   change is Phase 13's `C99` and its `current:` is
@@ -274,12 +274,15 @@ were corrected in 13.6c, and the court grew 720 → 1135 observations with 0 res
 objects. That is exactly the class the differential court exists to reach: a field the authority
 publishes and a transcription can get wrong without any caller noticing.
 
-**A lower-unit identity divergence surfaces rather than being hidden, and the court names it.** The
-legacy `OBJ_NAME` cipher table the authority fills at `OPENSSL_init_crypto` is empty in this crate,
-so `EVP_get_cipherbyname(name)` cannot resolve the fetched identity the authority resolves. Every
-such arm is printed as a `pending.` line with its reason rather than compared
-(`courts/phase13/rt_evp_legacy_probe.c:376-383`); §5 records every arm it reaches. This is the
-same lower-unit divergence the Phase-12 CPS/CMS/TS and OCSP courts already name.
+**A lower-unit identity divergence surfaced and was then closed.** While the legacy `OBJ_NAME`
+cipher table was empty, `EVP_get_cipherbyname(name)` could not resolve the fetched identity the
+authority resolves, and every such arm was printed as a `pending.` line with its reason rather than
+compared (`courts/phase13/rt_evp_legacy_probe.c:376-383`). The registration the table needs then
+landed (D526): `src/evp/c_allc.rs`/`c_alld.rs` transcribe `crypto/evp/c_allc.c`/`c_alld.c`,
+`src/runtime/init.rs`'s `add_all_legacy_methods` calls them for the two `OPENSSL_INIT_ADD_ALL_*`
+bits, and `src/context/namemap.rs`'s `ossl_namemap_stored` runs the authority's first-use
+pre-population, so the table is filled on the fetch path too. The arms now compare the values, and
+`EVP_CIPHER_get_nid` on a fetched `DES-CBC` answers `NID_des_cbc` as the authority does.
 
 **A random boundary is named rather than compared.** `EVP_des_ede3_wrap` draws its eight-byte IV
 with `RAND_bytes`, so its round-trip value is not a function of the library alone; the arm is
@@ -303,19 +306,21 @@ convention Phases 9 through 12 established.
 ## 5. Fault boundaries — recorded, not reproduced
 
 Where the authority dereferences a NULL, relies on an unset field, or crashes, the court does not
-call it and the divergence is recorded. **One divergence obligation names Phase 13 as its
-`current_owner`, and it does not block.** `forensics/divergence-obligations.json` reads 10 rows and
-**0 blocking**; `D-EVP-CIPHER-LEGACY-NID-1` is Phase 13's, its trigger basis is `manual` and
-unadjudicated, and its derived `blocking` is false, so no live obligation outran this stratum's
-evidence and `phase_state.py` derives `complete`. The boundaries this stratum actually met are
-recorded in the places below.
+call it and the divergence is recorded. **One divergence obligation named Phase 13 as its
+`current_owner`, and it did not block.** `forensics/divergence-obligations.json` read 10 rows and
+**0 blocking** at seal time; `D-EVP-CIPHER-LEGACY-NID-1` was Phase 13's, its trigger basis is
+`manual`, and its derived `blocking` was false, so no live obligation outran this stratum's
+evidence and `phase_state.py` derives `complete`. D526 then retired the row to `fixed` by landing
+the legacy `OBJ_NAME` registration the entry records as missing. The boundaries this stratum
+actually met are recorded in the places below.
 
-- **The legacy `OBJ_NAME` / `EVP_get_cipherbyname` divergence is named, not hidden.** The legacy
-  `OBJ_NAME` cipher table the authority fills at `OPENSSL_init_crypto` is empty in the candidate, so
-  every `EVP_get_cipherbyname(name)` arm is a `pending.<name>.byname=` line whose value is
-  `legacy-OBJ_NAME-cipher-table-empty-in-candidate`; `RT-EVP-LEGACY`'s transcript carries one per
-  cipher static (`courts/phase13/rt_evp_legacy_probe.c:25-28,376-383`). D525 records it; the
-  accessors, the object sizes and the round trips are compared.
+- **The legacy `OBJ_NAME` / `EVP_get_cipherbyname` divergence was named, then closed.** While the
+  legacy `OBJ_NAME` cipher table was empty in the candidate, every `EVP_get_cipherbyname(name)` arm
+  was a `pending.<name>.byname=` line whose value was
+  `legacy-OBJ_NAME-cipher-table-empty-in-candidate` (`courts/phase13/rt_evp_legacy_probe.c:25-28,376-383`).
+  D526 landed the registration (`src/evp/c_allc.rs`, `src/runtime/init.rs`,
+  `src/context/namemap.rs`), so the arms are compared now; the accessors, the object sizes and the
+  round trips always were.
 - **The `EVP_des_ede3_wrap` random IV is not compared.** Its round trip draws an eight-byte IV with
   `RAND_bytes`, so the arm is `pending.<name>.roundtrip=tdes-wrap-draws-a-random-iv`
   (`courts/phase13/rt_evp_legacy_probe.c:401-407`); the object's sizes and flags are still compared.
@@ -384,7 +389,7 @@ recorded in the places below.
 8. **The FRF and Gemel evidence is established, and §8 records what it is.** `docs/RELEASE_GATES.md`
    §2 items 6, 8 and 10 are met by the chain entry §8 records: eight receipts, sixteen adjudicated
    challenge records, the `sensitivity-backed` claim
-   `33853572edd67681cfb94938d12b5ee33b01741228d04b085cd1fb62f71a8954` with zero blockers, and the
+   `0a41552436190044cf55c32e95960a66e8cc472144c17840bd2cc29546c30006` with zero blockers, and the
    Gemel checkpoint `K53` whose summary names Phase 13 and the FRF chain. Phase 13's derived state
    is `complete`.
 
@@ -405,7 +410,7 @@ asserted.
 | every implemented export is observed by a court | `forensics/atlas/court-coverage.json` phase-13 block (`:44712`); `unmatched` 0, enforced for `complete` by `forensics/tools/phase_state.py` |
 | the reference basis covers the inherited exports | `RT-PHASE13-REF` (`courts/phase13/rt_coverage_ref_probe.c`), registered with the ledger and runner (`docs/PHASE-13-SUBPHASES.md:237-259`); D199/D236 |
 | no authority fault is reproduced | §5, and the boundaries recorded in the probes and D525 |
-| no blocking divergence obligation names this stratum | `forensics/divergence-obligations.json`: 10 rows, 0 blocking; `D-EVP-CIPHER-LEGACY-NID-1` is Phase 13's and does not block |
+| no blocking divergence obligation names this stratum | `forensics/divergence-obligations.json`: 10 rows, 0 blocking; `D-EVP-CIPHER-LEGACY-NID-1` was Phase 13's and did not block, and D526 has since retired it to `fixed` |
 | `ABI-PROTOTYPE`, `ABI-SYMBOL` and `ABI-DYNAMIC` stay clean | `forensics/atlas/ownership-audit.json`: `problems` empty, `implemented_by_two_strata` empty |
 | the prototype court clean | `forensics/atlas/prototype-court.json`: `mismatches` 0 |
 | the dispatch court clean | `forensics/atlas/dispatch-court.json`: `problems` 0 |
@@ -459,10 +464,14 @@ attaches to a Phase-13 FRF residual.** Items 6, 8 and 10 retired when §8's chai
   records — both declared axes (`stdout-first-line` and `exit-class`) on each of the eight courts,
   every one `saw_defect` and `specificity_clean` — which is what makes the claim
   `sensitivity-backed` rather than merely green (D13). `.frf/claims/` carries the compiled claim
-  `33853572edd67681cfb94938d12b5ee33b01741228d04b085cd1fb62f71a8954`, compiled at
+  `0a41552436190044cf55c32e95960a66e8cc472144c17840bd2cc29546c30006`, compiled at
   `--policy sensitivity-backed` over the eight receipts, binding authority `openssl-rt-3.6.4-r2` to
-  candidate `openssl-rs 0.0.17` with zero blockers and all eight premises asserting both `stdout`
+  candidate `openssl-rs 0.0.18` with zero blockers and all eight premises asserting both `stdout`
   and `exit`.
+  **The identity moved with the 0.0.18 release.** The store was recreated from clean at candidate
+  0.0.18 — FRF run identities are content-addressed on the declaration, which carries the candidate
+  version, so every claim identity moves with a release — and the id quoted here supersedes the
+  previous generation's `33853572…`.
 - **The Gemel change and checkpoint are this stratum's.** The change `C99` names Phase 13 and the
   FRF chain, and the checkpoint `K53`
   (`checkpoint.80d5b1bc4e22d27af750f51dfacc1f2aab7b1803f3a3369e177852e588b8c715`) closes it; the
@@ -488,7 +497,7 @@ subphases deliberately do not activate the legacy provider.
 
 - **The FRF/Gemel chain entry has landed.** §8's subject is now the objects on disk: the eight
   declarations, eight receipts, sixteen adjudicated challenges, the claim
-  `33853572edd67681cfb94938d12b5ee33b01741228d04b085cd1fb62f71a8954` and the checkpoint `K53`.
+  `0a41552436190044cf55c32e95960a66e8cc472144c17840bd2cc29546c30006` and the checkpoint `K53`.
   This stratum registers no `CT-*` court, so the entry covers the eight behavioural differential
   courts and nothing is recorded as not declarable; `RT-PHASE13-REF` is the reference basis and is
   not declarable. Items 6, 8 and 10 of §7 retired with it, and `phase_state.py` derives `complete`.
@@ -526,9 +535,12 @@ the evidence forced rather than the ones a reviewer might have preferred.
    `ENGINE_by_id`'s miss path whole and takes the authority's own `notfound` arm, so the dynamic
    fallback is recorded rather than fabricated; the built-in `rdrand`/`dynamic` ids are therefore
    not observed (`src/engine/eng_list.rs:9-19`, `src/engine/mod.rs:77-79`).
-4. **The legacy `OBJ_NAME` table is empty in the candidate, and the divergence is named.** The
-   `EVP_get_cipherbyname` arms are `pending.` with the reason rather than compared, and §5 collects
-   every arm the divergence reaches (`courts/phase13/rt_evp_legacy_probe.c:25-28,376-383`).
+4. **The legacy `OBJ_NAME` table was empty in the candidate, and D526 later filled it.** The
+   `EVP_get_cipherbyname` arms were `pending.` with the reason rather than compared
+   (`courts/phase13/rt_evp_legacy_probe.c:25-28,376-383`); 13.6's registration
+   (`src/evp/c_allc.rs`/`c_alld.rs`, wired by `src/runtime/init.rs`'s `add_all_legacy_methods`, with
+   `ossl_namemap_stored`'s first-use pre-population) closed it, and `D-EVP-CIPHER-LEGACY-NID-1` is
+   now `fixed`.
 5. **Two candidate bugs were found and fixed by the court.** `RT-EVP-LEGACY` exposed the
    `IDEA_ECB`/`SEED_ECB` `iv_len`, corrected in 13.6c; the court grew 720 → 1135 observations and
    the authority-tier atlas re-derives byte-identically (D525).
@@ -544,7 +556,7 @@ the evidence forced rather than the ones a reviewer might have preferred.
 8. **The FRF/Gemel chain entry landed after the seal was first written, and §7 and §8 record it.**
    The seal's first revision recorded items 6, 8 and 10 as owed; the chain entry added the eight
    declarations, eight receipts, sixteen adjudicated challenges, the `sensitivity-backed` claim
-   `33853572edd67681cfb94938d12b5ee33b01741228d04b085cd1fb62f71a8954` and the Gemel change `C99` /
+   `0a41552436190044cf55c32e95960a66e8cc472144c17840bd2cc29546c30006` and the Gemel change `C99` /
    checkpoint `K53`, so the three items retired and `phase_state.py` derives `complete`. The
    correction is appended here for the reason item 1 gives.
 9. **The Phase-13 slices left the pipeline's generated atlases stale, and 13.9 regenerates and

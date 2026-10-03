@@ -269,6 +269,14 @@
       "reason": "The regenerated prerequisite atlas names the Phase-12 CMP and CMS crate modules (`src/cmp/*`, `src/cms/*`) for the first time. `forensics/atlas/transcription-edges.json` had not been re-derived since 12.1-12.6 landed, so the gate's direction B did not see those units and the fifty-five authority internals the CMP remainder still owes were invisible to it; the re-derivation makes them countable, and each is now a deferral in `forensics/prerequisites.json` naming the subphase that lands it (the CMP remainder 12.4 left open, which the plan blocks on 12.7's CRMF/ESS surface). This is the *visibility* movement D132 and D134 recorded for this metric: a whole authority unit that nothing referenced became visible, not a dependency that became unreal or a piece of work that was undone. Nothing else on the plane moves -- `findings` stays 0 and `sealed_census` stays 51 -- and the five `cmp_asn.c` allocators the crate builds under Rust names are covered by a `named_differently` divergence rather than counted here.",
       "authority_artifact": "forensics/prerequisites.json",
       "recorded_by": "docs/DECISIONS.md (this Phase-12 session entry); the 55 CMP-remainder deferrals in forensics/prerequisites.json"
+    },
+    {
+      "metric": "blocking_dependencies",
+      "before": 3,
+      "after": 4,
+      "reason": "Recording `crypto/engine/eng_dyn.c`'s absent dynamic loader as a deferral (D528) made a whole authority unit visible to the prerequisite gate for the first time. Nothing in the crate referenced `engine_load_dynamic_int` -- 13.1 transcribed `ENGINE_by_id`'s miss path whole and took the authority's own `notfound` arm -- so the unit sat unnamed and the gate could not see the gap. `forensics/prerequisites.json` now records it as owed to Phase 16 (the installed distribution / config / module stratum), which is the established mechanism this metric is for: the count rises because a name became *visible*, not because a prerequisite appeared. The same class as D132's 11 -> 12, D134's 12 -> 15 and the Phase-12 row above: an invariant that cannot tell a legitimate change from a hidden omission.",
+      "authority_artifact": "forensics/prerequisites.json",
+      "recorded_by": "docs/DECISIONS.md D528"
     }
   ]
 }
