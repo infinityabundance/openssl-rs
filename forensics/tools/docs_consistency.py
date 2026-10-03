@@ -387,18 +387,15 @@ for _phase in active_phases():
     CHECKS.append(active_status_check(_phase, _plan))
 
 # A `(check id, document)` pair here is exempt from the numeric comparison, and the
-# reason is printed with every run. The entry below is a quantity a document legitimately
-# binds to a *past* moment rather than to the present state, and it names the moment. An
-# entry that stops contradicting the evidence -- or whose claim is gone -- fails, so this
-# is not a place to park a check that is inconvenient. README.md's status narrative used to
-# carry one of these; D432 removed the narrative, so the entry went with it rather than
-# staying as an exemption that no longer does any work.
-EXEMPTIONS: dict[tuple[str, str], str] = {
-    ("phase7_claim_candidate_version", "docs/PHASE-7-EVP-SEAL.md"): (
-        "the FRF claim named there is a stored object compiled under 0.0.10; the seal "
-        "records the claim's version, not the crate's current version"
-    ),
-}
+# reason is printed with every run. An entry is a quantity a document legitimately binds
+# to a *past* moment rather than to the present state, and it names the moment. An entry
+# that stops contradicting the evidence -- or whose claim is gone -- fails, so this is not
+# a place to park a check that is inconvenient. README.md's status narrative used to carry
+# one of these; D432 removed the narrative, so the entry went with it. The
+# `phase7_claim_candidate_version` entry went the same way when the 0.0.18 release recreated
+# the FRF store from clean and recompiled Phase 7's claim: the seal now records the current
+# claim, so the exemption no longer does any work and is removed rather than retained.
+EXEMPTIONS: dict[tuple[str, str], str] = {}
 
 
 def self_test() -> int:
