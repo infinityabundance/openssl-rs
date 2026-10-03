@@ -1,5 +1,6 @@
-//! Phase 14.1–14.5 — `ssl/`: the `libssl` object model, method tables, cipher/configuration
-//! surface, record layer and handshake-state readers.
+//! Phase 14.1–14.10 — `ssl/`: the `libssl` object model, method tables, cipher/configuration
+//! surface, record layer, handshake-state readers, the BIO pair, the DTLS layer and the init/error/
+//! QUIC bridge.
 //!
 //! `docs/PHASE-14-SUBPHASES.md` section 2 gives 14.1 the `ssl_lib.c` unit (342 open rows) and 14.2
 //! `methods.c` (21) plus `s3_lib.c` (3). The crate lays the authority's `ssl/` tree out as
@@ -317,15 +318,55 @@
 //! Its court is `RT-STATEM` (`courts/phase14/rt_statem_probe.c`), registered in
 //! `forensics/tools/phase14_courts.py`.
 //!
+//! ## 14.6: the BIO pair and buffers
+//!
+//! 14.6 lands the whole of `ssl/bio_ssl.c` as `src/ssl/bio_ssl.rs`: the `"ssl"` `BIO_METHOD` and
+//! its seven callbacks, the `BIO_SSL` record with the authority's renegotiation counters, the four
+//! constructors and the two session controls. It needed two internal helpers in this crate's
+//! `ssl_lib.rs` — `ssl_set_accept_state`/`ssl_set_connect_state` (whose public `SSL_set_*_state`
+//! rows stay open) and a reduced `ssl_copy_session_id` for the reachable fresh-connection arm —
+//! rather than the still-open public entries. `src/ssl/bio_ssl.rs` records the four reductions:
+//! the renegotiation trigger never fires, `BIO_CTRL_DUP` and `BIO_CTRL_RESET`'s role restore are
+//! reduced, and the session copy is that reduced body. Its court is `RT-SSL-BIO`
+//! (`courts/phase14/rt_ssl_bio_probe.c`), registered in `forensics/tools/phase14_courts.py`.
+//!
+//! ## 14.8: the DTLS layer
+//!
+//! 14.8 lands the two DTLS units. **`ssl/d1_lib.c`** is `src/ssl/d1_lib.rs`: `DTLSv1_listen`, the
+//! data-MTU and timer-callback entry points, and the internal `dtls1_new_state`/`dtls1_free` that
+//! `SSL_new`/`SSL_free` call for a DTLS method. **`ssl/d1_srtp.c`** is `src/ssl/d1_srtp.rs`: the
+//! twelve-profile table, the `:`-separated name parser and the four profile entries. Each records
+//! its divergences: `DTLSv1_listen` is reduced past the cookie stage (which needs `WPACKET` and the
+//! record layer), and the `IS_QUIC_METHOD` and negotiated-profile arms are unreachable. Its court
+//! is `RT-DTLS` (`courts/phase14/rt_dtls_probe.c`), registered in
+//! `forensics/tools/phase14_courts.py`.
+//!
+//! ## 14.10: the init, error and QUIC bridge
+//!
+//! 14.10 lands four units. **`ssl/ssl_init.c`** is `src/ssl/ssl_init.rs`: `OPENSSL_init_ssl`, with the
+//! authority's option folding and one base `RUN_ONCE` (the dead `stopped` arm and
+//! `ssl_sort_cipher_list` are recorded reductions). **`ssl/ssl_err_legacy.c`** is
+//! `src/ssl/ssl_err_legacy.rs`: `ERR_load_SSL_strings`. **`ssl/quic/quic_tls_api.c`** and
+//! **`ssl/quic/quic_impl.c`** are `src/ssl/quic/quic_tls_api.rs` and `src/ssl/quic/quic_impl.rs`:
+//! the QUIC TLS accessors and `SSL_inject_net_dgram`, reduced to their refusal arms because the
+//! object the success arms drive is Phase 15's. Its court is `RT-SSL-INIT`
+//! (`courts/phase14/rt_ssl_init_probe.c`), registered in `forensics/tools/phase14_courts.py`.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
+pub mod bio_ssl;
+pub mod d1_lib;
+pub mod d1_srtp;
 pub mod methods;
+pub mod quic;
 pub mod record;
 pub mod rio;
 pub mod s3_lib;
 pub mod ssl_ciph;
 pub mod ssl_ciph_table;
 pub mod ssl_conf;
+pub mod ssl_err_legacy;
+pub mod ssl_init;
 pub mod ssl_lib;
 pub mod statem;
 pub mod t1_lib;

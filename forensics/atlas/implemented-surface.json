@@ -508,7 +508,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 16625,
+      "compiler_emitted_count": 17081,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -6419,18 +6419,29 @@
       },
       "libssl": {
         "authority_exports": 603,
-        "implemented": 378,
+        "implemented": 397,
         "implemented_symbols": [
+          "BIO_f_ssl",
+          "BIO_new_buffer_ssl_connect",
+          "BIO_new_ssl",
+          "BIO_new_ssl_connect",
+          "BIO_ssl_copy_session_id",
+          "BIO_ssl_shutdown",
           "DTLS_client_method",
+          "DTLS_get_data_mtu",
           "DTLS_method",
           "DTLS_server_method",
+          "DTLS_set_timer_cb",
           "DTLSv1_2_client_method",
           "DTLSv1_2_method",
           "DTLSv1_2_server_method",
           "DTLSv1_client_method",
+          "DTLSv1_listen",
           "DTLSv1_method",
           "DTLSv1_server_method",
+          "ERR_load_SSL_strings",
           "OPENSSL_cipher_name",
+          "OPENSSL_init_ssl",
           "OSSL_default_cipher_list",
           "OSSL_default_ciphersuites",
           "SSL_CIPHER_description",
@@ -6561,6 +6572,7 @@
           "SSL_CTX_set_session_ticket_cb",
           "SSL_CTX_set_tlsext_max_fragment_length",
           "SSL_CTX_set_tlsext_ticket_key_evp_cb",
+          "SSL_CTX_set_tlsext_use_srtp",
           "SSL_CTX_set_trust",
           "SSL_CTX_set_verify",
           "SSL_CTX_set_verify_depth",
@@ -6657,6 +6669,7 @@
           "SSL_get_rpoll_descriptor",
           "SSL_get_security_callback",
           "SSL_get_security_level",
+          "SSL_get_selected_srtp_profile",
           "SSL_get_server_random",
           "SSL_get_servername",
           "SSL_get_servername_type",
@@ -6664,6 +6677,7 @@
           "SSL_get_shutdown",
           "SSL_get_sigalgs",
           "SSL_get_signature_type_nid",
+          "SSL_get_srtp_profiles",
           "SSL_get_ssl_method",
           "SSL_get_state",
           "SSL_get_stream_id",
@@ -6686,6 +6700,7 @@
           "SSL_has_pending",
           "SSL_in_before",
           "SSL_in_init",
+          "SSL_inject_net_dgram",
           "SSL_is_connection",
           "SSL_is_domain",
           "SSL_is_dtls",
@@ -6757,6 +6772,9 @@
           "SSL_set_psk_server_callback",
           "SSL_set_psk_use_session_callback",
           "SSL_set_purpose",
+          "SSL_set_quic_tls_cbs",
+          "SSL_set_quic_tls_early_data_enabled",
+          "SSL_set_quic_tls_transport_params",
           "SSL_set_quiet_shutdown",
           "SSL_set_read_ahead",
           "SSL_set_record_padding_callback",
@@ -6769,6 +6787,7 @@
           "SSL_set_shutdown",
           "SSL_set_ssl_method",
           "SSL_set_tlsext_max_fragment_length",
+          "SSL_set_tlsext_use_srtp",
           "SSL_set_trust",
           "SSL_set_value_uint",
           "SSL_set_verify",
@@ -6800,23 +6819,23 @@
           "TLSv1_method",
           "TLSv1_server_method"
         ],
-        "scaffolded": 225
+        "scaffolded": 206
       }
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 6274,
-      "scaffolded": 225
+      "implemented": 6293,
+      "scaffolded": 206
     }
   },
-  "body_hash": "7e152883ce9ba427b4eacac89a24465aa89dad1038c8a54b2784bbeea5341b5e",
+  "body_hash": "f17710b44a816db9fcb6fbeb5911099e55f146b1624c75f38ab25a78bb6d4ad6",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "8b0c4fb0c5d163514eb5eb770dbd6605d96bc77dad316027f66565df67f05674"
+      "sha256": "2c6d6cd79f7b790e7e4b6c5e0a59b4f346cb76ffa24057a8bbeb82eba1b67597"
     },
     {
       "name": "authority-exports",

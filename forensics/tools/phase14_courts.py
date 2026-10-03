@@ -32,9 +32,10 @@ The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 Every court `docs/PHASE-14-SUBPHASES.md` section 2 names is named in `PENDING_COURTS` below with
 the subphase that brings it, unless that subphase has landed its court. `RT-SSL-OBJECT` (14.1),
-`RT-SSL-METHODS` (14.2), `RT-SSL-CIPH` (14.3), `RT-RECORD` (14.4) and `RT-STATEM` (14.5) are
-registered below; `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and
-`RT-HANDOFF` remain pending, so 'not run yet' cannot be read as 'passed'.
+`RT-SSL-METHODS` (14.2), `RT-SSL-CIPH` (14.3), `RT-RECORD` (14.4), `RT-STATEM` (14.5),
+`RT-SSL-BIO` (14.6), `RT-DTLS` (14.8) and `RT-SSL-INIT` (14.10) are registered below;
+`RT-SESSION-CERT`, `RT-SSL-EXT` and `RT-HANDOFF` remain pending, so 'not run yet' cannot be read
+as 'passed'.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -90,6 +91,9 @@ COURTS: list[tuple[str, str]] = [
     ("RT-SSL-CIPH", "rt_ssl_ciph_probe.c"),
     ("RT-RECORD", "rt_record_probe.c"),
     ("RT-STATEM", "rt_statem_probe.c"),
+    ("RT-SSL-BIO", "rt_ssl_bio_probe.c"),
+    ("RT-DTLS", "rt_dtls_probe.c"),
+    ("RT-SSL-INIT", "rt_ssl_init_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. **Every one of the plan's behavioural
@@ -97,11 +101,8 @@ COURTS: list[tuple[str, str]] = [
 # working set is open and the only court it can register is the reference basis. Each row is
 # printed with the subphase that brings it so that "not run yet" cannot be read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "RT-SSL-BIO": "14.6 (the BIO pair and buffers)",
     "RT-SESSION-CERT": "14.7 (the session and certificate plumbing)",
-    "RT-DTLS": "14.8 (the DTLS layer)",
     "RT-SSL-EXT": "14.9 (the TLS extension and SRP surface)",
-    "RT-SSL-INIT": "14.10 (the init, error and QUIC bridge)",
     "RT-HANDOFF": "14.11 (the received hand-offs)",
 }
 
@@ -298,13 +299,26 @@ def main(argv: list[str]) -> int:
             "over a fresh connection and NULL, the custom-extension add/has/supported surface, the "
             "signature-algorithm readers and `SSL_get1_builtin_sigalgs`, `SSL_check_chain`'s "
             "refusal arms, the max-fragment-length setters and "
-            "`SSL_SESSION_get_max_fragment_length` over a zeroed session image. None is a parity claim "
+            and "the `SSL_SESSION_get_max_fragment_length` over a zeroed session image. `RT-SSL-BIO` (14.6) "
+            "is the sixth: `courts/phase14/rt_ssl_bio_probe.c` drives the `BIO_f_ssl` method over a "
+            "fixed `TLS_method()` context, `BIO_new_ssl`/`BIO_new_ssl_connect`/"
+            "`BIO_new_buffer_ssl_connect` and their NULL-context refusals, the `BIO_C_SSL_MODE` and "
+            "renegotiation controls, `BIO_ssl_copy_session_id`'s refusal and accepted arms and "
+            "`BIO_ssl_shutdown` over NULL and a BIO chain. `RT-DTLS` (14.8) is the seventh: "
+            "`courts/phase14/rt_dtls_probe.c` drives `DTLSv1_listen`'s refusal arms over a fixed "
+            "in-memory datagram BIO, `DTLS_get_data_mtu` and `DTLS_set_timer_cb` over NULL and a "
+            "fresh DTLS connection, and the SRTP profile surface "
+            "(`SSL_CTX_set_tlsext_use_srtp`/`SSL_set_tlsext_use_srtp`/`SSL_get_srtp_profiles`/"
+            "`SSL_get_selected_srtp_profile`). `RT-SSL-INIT` (14.10) is the eighth: "
+            "`courts/phase14/rt_ssl_init_probe.c` drives `OPENSSL_init_ssl` over fixed option words "
+            "and its refusal arm, `ERR_load_SSL_strings`, and the QUIC TLS accessors' "
+            "setter/refusal arms over an incomplete `OSSL_DISPATCH` table. None is a parity claim "
             "about a completed handshake, which no arm of any of them drives. `SSL_get0_group_name` "
             "on a live connection and `SSL_group_to_name`'s known-NID arm are recorded in their "
             "modules as reduced rather than driven. Every other behavioural court the plan names "
-            "is named in `pending_courts` with the subphase that brings it -- `RT-SSL-BIO`, "
-            "`RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, "
-            "`RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' "
+            "is named in `pending_courts` with the subphase that brings it -- "
+            "`RT-SESSION-CERT`, `RT-SSL-EXT` and `RT-HANDOFF` -- and none is registered here, so "
+            "'not run yet' "
             "cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not "
             "`called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural "
             "courts compare."

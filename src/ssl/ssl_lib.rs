@@ -40,6 +40,8 @@ use crate::runtime::ex_data::{
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::stack::{OPENSSL_sk_free, OpenSslStack};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
+use crate::ssl::d1_lib::{dtls1_free, dtls1_new_state, Dtls1State};
+use crate::ssl::quic::quic_tls_api::QuicTlsCallbacks;
 use crate::ssl::statem::extensions_cust::CustomExtMethod;
 use crate::x509::v3_utl::a2i_IPADDRESS;
 use crate::x509::x509_cmp::X509_check_private_key;
@@ -595,6 +597,9 @@ pub struct SslCtx {
     pub disabled_enc_mask: u32,
     /// `uint32_t disabled_mac_mask`.
     pub disabled_mac_mask: u32,
+    /// `STACK_OF(SRTP_PROTECTION_PROFILE) *srtp_profiles` — the DTLS-SRTP offer list
+    /// (`SSL_CTX_set_tlsext_use_srtp`); NULL until the setter runs. `src/ssl/d1_srtp.rs` owns it.
+    pub srtp_profiles: *mut OpenSslStack,
 }
 
 /// `struct ssl_st` — `ssl_local.h`, carrying the `SSL_CONNECTION` fields Slice 1 reads.
@@ -829,6 +834,24 @@ pub struct Ssl {
     pub clienthello: *mut c_void,
     /// `int pha_enabled`.
     pub pha_enabled: c_int,
+    /// `STACK_OF(SRTP_PROTECTION_PROFILE) *srtp_profiles` — the connection's own offer list
+    /// (`SSL_set_tlsext_use_srtp`); NULL until the setter runs. `src/ssl/d1_srtp.rs` owns it.
+    pub srtp_profiles: *mut OpenSslStack,
+    /// `SRTP_PROTECTION_PROFILE *srtp_profile` — the negotiated profile, NULL before a handshake.
+    pub srtp_profile: *mut c_void,
+    /// `DTLS1_STATE *d1` — the DTLS state block (`dtls1_new`, `d1_lib.c:65`). `SSL_new` allocates it
+    /// for a DTLS method and leaves it NULL for a TLS one, as the authority does; `src/ssl/d1_lib.rs`
+    /// owns its fields.
+    pub d1: *mut Dtls1State,
+    /// `QUIC_TLS *qtls` — the QUIC TLS object `SSL_set_quic_tls_cbs` would build. NULL for every
+    /// connection this crate builds, because the QUIC bridge is reduced to its refusal arms
+    /// (14.10; `src/ssl/quic/quic_tls_api.rs`).
+    pub qtls: *mut c_void,
+    /// `OSSL_QUIC_TLS_CALLBACKS qtcb` — the callback table `SSL_set_quic_tls_cbs` fills from a
+    /// dispatch array.
+    pub qtcb: QuicTlsCallbacks,
+    /// `void *qtarg` — the callback argument `SSL_set_quic_tls_cbs` stores.
+    pub qtarg: *mut c_void,
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1179,6 +1202,7 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
             OPENSSL_sk_free((*ctx).cipher_list);
             OPENSSL_sk_free((*ctx).cipher_list_by_id);
             OPENSSL_sk_free((*ctx).tls13_ciphersuites);
+            OPENSSL_sk_free((*ctx).srtp_profiles);
             X509_VERIFY_PARAM_free((*ctx).param);
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
             X509_STORE_free((*ctx).cert_store);
@@ -1262,6 +1286,16 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             (*s).rstate = SSL_ST_READ_HEADER;
             // `ossl_ssl_connection_new_int` (`ssl_lib.c:907`) seeds the key-update state.
             (*s).key_update = SSL_KEY_UPDATE_NONE;
+            // `SSL_new` runs the method's `ssl_new`, which for a DTLS method is `dtls1_new`
+            // (`d1_lib.c:65-108`): allocate the DTLS state block, with the server cookie length
+            // pre-set. A TLS method leaves `d1` NULL, exactly as the authority does.
+            if (*method).dtls {
+                (*s).d1 = dtls1_new_state((*s).server != 0);
+                if (*s).d1.is_null() {
+                    SSL_free(s);
+                    return ptr::null_mut();
+                }
+            }
 
             if CRYPTO_new_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data) == 0 {
                 SSL_CTX_free(ctx);
@@ -1372,6 +1406,91 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
     })
 }
 
+/// `ssl_set_accept_state` — the non-QUIC body of `void SSL_set_accept_state(SSL *s)`
+/// (`ssl/ssl_lib.c:4986-5004`).
+///
+/// The public entry point is `ssl_lib.c`'s row and stays in the Phase 2 ABI scaffold, so this is
+/// the internal equivalent 14.6 and 14.8 call: it installs the server role, clears the shutdown
+/// word, resets the message-flow state (`ossl_statem_clear`) and the record read state
+/// (`RECORD_LAYER_reset`), and sets the handshake entry. The authority's `handshake_func` is
+/// `method->ssl_accept`; this crate's method table carries no such pointer (14.2 stores scalars), so
+/// a stub stands in — no arm of any landing court drives a handshake.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+pub(crate) unsafe fn ssl_set_accept_state(s: *mut Ssl) {
+    if s.is_null() {
+        return;
+    }
+    // SAFETY: `s` is non-NULL and live per the caller's contract.
+    unsafe {
+        (*s).server = 1;
+        (*s).shutdown = 0;
+        (*s).hand_state = TLS_ST_BEFORE;
+        (*s).statem_state = MSG_FLOW_UNINITED;
+        (*s).in_init = 1;
+        (*s).handshake_func = Some(ssl_handshake_stub);
+        (*s).rstate = SSL_ST_READ_HEADER;
+    }
+}
+
+/// `ssl_set_connect_state` — the non-QUIC body of `void SSL_set_connect_state(SSL *s)`
+/// (`ssl/ssl_lib.c:5006-5024`). As [`ssl_set_accept_state`], with the client role.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+pub(crate) unsafe fn ssl_set_connect_state(s: *mut Ssl) {
+    if s.is_null() {
+        return;
+    }
+    // SAFETY: `s` is non-NULL and live per the caller's contract.
+    unsafe {
+        (*s).server = 0;
+        (*s).shutdown = 0;
+        (*s).hand_state = TLS_ST_BEFORE;
+        (*s).statem_state = MSG_FLOW_UNINITED;
+        (*s).in_init = 1;
+        (*s).handshake_func = Some(ssl_handshake_stub);
+        (*s).rstate = SSL_ST_READ_HEADER;
+    }
+}
+
+/// The handshake entry [`ssl_set_accept_state`] installs; the authority's is the method's own
+/// `ssl_accept`/`ssl_connect`. Only its presence is observable in this stratum.
+unsafe extern "C" fn ssl_handshake_stub(_s: *mut Ssl) -> c_int {
+    0
+}
+
+/// `SSL_copy_session_id` — the reduced body of `int SSL_copy_session_id(SSL *t, const SSL *f)`
+/// (`ssl/ssl_lib.c:2029-2062`), for `bio_ssl.c`'s `BIO_ssl_copy_session_id`.
+///
+/// The authority first re-points `t`'s session at `f`'s (`SSL_set_session`, 14.7's) and shares
+/// `f`'s certificate container under a new reference (`ssl_cert_free`/`CRYPTO_UP_REF`). This crate
+/// models neither the session object nor the certificate reference count in 14.1, and both are
+/// 14.7's; the reachable arm here is a pair of fresh connections, where `SSL_set_session(t, NULL)`
+/// succeeds, the methods are equal, and the shared container's observable (`SSL_get_certificate`)
+/// is NULL on both sides. This reduced body copies the security attributes into `t`'s own
+/// container (never sharing the pointer, so `SSL_free` cannot double-free) and copies the
+/// session-id context, and reports the authority's answer for that case. The deeper arms are
+/// recorded as reduced in `src/ssl/bio_ssl.rs`.
+///
+/// # Safety
+/// `t` and `f` must point to live connections.
+pub(crate) unsafe fn ssl_copy_session_id(t: *mut Ssl, f: *const Ssl) -> c_int {
+    if t.is_null() || f.is_null() {
+        return 0;
+    }
+    // SAFETY: both pointers are live per the caller's contract.
+    unsafe {
+        cert_copy_security((*t).cert, (*f).cert);
+        let len = (*f).sid_ctx_length;
+        if SSL_set_session_id_context(t, (*f).sid_ctx.as_ptr(), len) == 0 {
+            return 0;
+        }
+    }
+    1
+}
+
 /// `int SSL_up_ref(SSL *s)` — `ssl/ssl_lib.c:1018-1028`.
 ///
 /// # Safety
@@ -1409,6 +1528,8 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             OPENSSL_sk_free((*s).cipher_list);
             OPENSSL_sk_free((*s).cipher_list_by_id);
             OPENSSL_sk_free((*s).tls13_ciphersuites);
+            OPENSSL_sk_free((*s).srtp_profiles);
+            dtls1_free(s);
             BIO_free_all((*s).wbio);
             BIO_free_all((*s).rbio);
             X509_VERIFY_PARAM_free((*s).param);
@@ -1504,13 +1625,17 @@ pub unsafe extern "C" fn SSL_is_dtls(s: *const Ssl) -> c_int {
 
 /// `int SSL_is_tls(const SSL *s)` — `ssl/ssl_lib.c:993-1006`.
 ///
+/// The authority's body is `SSL_CONNECTION_FROM_CONST_SSL(s) == NULL ? 0 :
+/// !SSL_CONNECTION_IS_DTLS(sc)`, so a NULL connection is not TLS; the crate's shared `is_dtls`
+/// helper answers `false` for NULL, which is why the NULL test is explicit here.
+///
 /// # Safety
 /// `s` must be NULL or a live connection.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_is_tls(s: *const Ssl) -> c_int {
     guard_ffi(0, || {
         // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
-        if unsafe { is_quic(s) } {
+        if s.is_null() || unsafe { is_quic(s) } {
             return 0;
         }
         // SAFETY: `s` is NULL or live.
@@ -3971,7 +4096,7 @@ pub unsafe extern "C" fn SSL_set_rfd(s: *mut Ssl, fd: c_int) -> c_int {
 /// # Safety
 /// `s` must be NULL or a live connection; `buf` must hold `num` writable bytes and `readbytes` be
 /// writable.
-unsafe fn ssl_read_internal(
+pub(crate) unsafe fn ssl_read_internal(
     s: *mut Ssl,
     _buf: *mut c_void,
     _num: usize,
@@ -4016,7 +4141,7 @@ unsafe fn ssl_peek_internal(
 /// # Safety
 /// `s` must be NULL or a live connection; `buf` must hold `num` readable bytes and `written` be
 /// writable.
-unsafe fn ssl_write_internal(
+pub(crate) unsafe fn ssl_write_internal(
     s: *mut Ssl,
     _buf: *const c_void,
     _num: usize,
