@@ -116,6 +116,11 @@ FRF_CHALLENGES = ".frf/challenges"
 FRF_CLAIMS = ".frf/claims"
 GEMEL_TRAJECTORY = "forensics/GEMEL_TRAJECTORY.md"
 
+# The authored court-coverage rows, whose `reference_probes` set is the independent record of
+# which courts are reference bases rather than differential transcript courts. It is *not*
+# `gen_frf_courts.py`, which is the registry the FRF predicate checks.
+FRF_COVERAGE_ROWS = "forensics/atlas/court-coverage-rows.json"
+
 # The two axes every runtime court declares (`observables` stdout and exit in its manifest) and
 # whose challenge records FRF carries as these `operator` values. A court is not sensitivity-clean
 # unless both have been seen to fire on their own axis and to spare the other (D13, D201); one
@@ -1132,6 +1137,63 @@ def _frf_declaration(court: str) -> str:
     return f"{FRF_DECLARATIONS}/{court}/manifest.yaml"
 
 
+def _reference_probes() -> frozenset[str]:
+    """The authored `reference_probes` set from the court-coverage rows.
+
+    Court-coverage data (those courts contribute basis `referenced`, not `called`, D199),
+    authored rather than derived from `gen_frf_courts.py`. It is the independent record of which
+    courts take addresses rather than diffing a transcript.
+    """
+    doc = read_json(FRF_COVERAGE_ROWS)
+    if doc is None:
+        return frozenset()
+    return frozenset(doc.get("reference_probes", []))
+
+
+def _frf_court_inventory(phase: int) -> list[tuple[str, str, bool, str | None]]:
+    """Every court the stratum itself ran, classified for FRF declarability.
+
+    `(frf court id, probe stem, declarable, exclusion reason)`, read from
+    `artifacts/phase<N>/COURTS.json` -- **the stratum's own record of the courts it ran**, not the
+    FRF declaration registry. That is the whole point: `gen_frf_courts.py` is the thing
+    `frf_gemel_blocking_reason` checks, so deriving the *requirement* from it would let a stratum
+    that forgot to register a court define its own completeness -- `_frf_declared_courts` would
+    answer the empty set and the rule would return `""`. The requirement therefore comes from an
+    independent inventory and the registry must satisfy it.
+
+    A court's own `frf_declarable`/`frf_exclusion` fields are authoritative when a runner emits
+    them. When they are absent -- every inventory written before those fields existed -- the two
+    documented exclusion rules apply: a court named in the authored `reference_probes` set takes
+    addresses rather than diffing a transcript, and a `CT-` court is vector-driven and compiled
+    against the candidate alone (D13, D201). Every exclusion carries a reason, so none is silent.
+    """
+    doc = read_json(f"artifacts/phase{phase}/COURTS.json")
+    if doc is None:
+        return []
+    refs = _reference_probes()
+    out: list[tuple[str, str, bool, str | None]] = []
+    for row in doc.get("body", {}).get("courts", []):
+        name = row["court"]
+        court_id = "openssl-rs-" + name.lower()
+        probe = Path(row.get("probe", "")).stem
+        declarable = row.get("frf_declarable")
+        exclusion = row.get("frf_exclusion")
+        if declarable is None:
+            if name in refs:
+                declarable = False
+                exclusion = ("reference-basis probe: takes addresses, prints non-NULL, no "
+                             "transcript to diff (authored `reference_probes`)")
+            elif name.startswith("CT-"):
+                declarable = False
+                exclusion = ("vector-driven correctness court, compiled against the candidate "
+                             "alone (D13, D201)")
+            else:
+                declarable = True
+                exclusion = None
+        out.append((court_id, probe, bool(declarable), exclusion))
+    return out
+
+
 def _frf_declared_courts(phase: int) -> list[tuple[str, str]]:
     """`(court id, probe)` for every court `gen_frf_courts.py` declares at `phase`.
 
@@ -1239,8 +1301,8 @@ def frf_gemel_blocking_reason(phase: int) -> str:
 
     The five clauses, every one read from disk:
 
-      1. every court `gen_frf_courts.py` declares at this phase has an FRF declaration staging
-         its probe pair;
+      1. every court the stratum's own `artifacts/phase<N>/COURTS.json` marks FRF-declarable is
+         declared in `gen_frf_courts.py`, staging its probe pair;
       2. every declarable court has a receipt (`receipt-run-<court>-*` in `.frf/receipts`);
       3. every declarable court has two adjudicated challenges -- `saw_defect` and
          `specificity_clean` both true -- covering both operators;
@@ -1250,20 +1312,36 @@ def frf_gemel_blocking_reason(phase: int) -> str:
          exemption `FRF_CHAIN_CHECKPOINT_EXEMPT` for the strata whose checkpoints predate the
          phrase).
 
-    A stratum with no declared court has begun no chain and is not blocked here; Phase 22 is an
-    atlas stratum with no export courts and is out of scope for the same reason every other
-    export-shaped rule scopes it out.
+    A stratum whose own court inventory declares no FRF-declarable court has begun no chain and is
+    not blocked here; Phase 22 is an atlas stratum with no export courts and is out of scope for the
+    same reason every other export-shaped rule scopes it out.
     """
     if phase not in STRATUM_EVIDENCE or phase == 22:
         return ""
-    declared = _frf_declared_courts(phase)
-    if not declared:
-        return ""
+
+    # **The requirement is the stratum's own court inventory, and the registry must satisfy it.**
+    inventory = _frf_court_inventory(phase)
+    required = [(court, probe) for court, probe, declarable, _excl in inventory if declarable]
+    declared = dict(_frf_declared_courts(phase))
 
     problems: list[str] = []
 
+    # A court the inventory marks declarable but the registry does not declare is a finding, so a
+    # forgotten registry row can no longer make the requirement vanish. The containment is
+    # one-way: the registry may carry *extra* courts, e.g. a reference basis whose probe happens
+    # to diff a real transcript (Phase 11's `RT-X509-REF`), which is evidence rather than a fault.
+    missing_registry = [court for court, _probe in required if court not in declared]
+    if missing_registry:
+        problems.append(
+            f"{len(missing_registry)} court(s) that artifacts/phase{phase}/COURTS.json marks "
+            f"FRF-declarable have no row in the gen_frf_courts.py registry: "
+            + ", ".join(missing_registry)
+        )
+    if not required and not problems:
+        return ""
+
     undeclared = [
-        court for court, probe in declared
+        court for court, probe in required
         if not (
             exists(_frf_declaration(court))
             and exists(f"artifacts/phase{phase}/probes/{probe}.authority")
@@ -1272,7 +1350,7 @@ def frf_gemel_blocking_reason(phase: int) -> str:
     ]
     if undeclared:
         problems.append(
-            f"{len(undeclared)} of {len(declared)} declared court(s) have no FRF declaration "
+            f"{len(undeclared)} of {len(required)} required court(s) have no FRF declaration "
             f"staging their artifacts/phase{phase}/probes/<probe>.{{authority,candidate}} pair "
             f"({FRF_DECLARATIONS}/openssl-rs-<court>/manifest.yaml): "
             + ", ".join(undeclared)
@@ -1281,15 +1359,15 @@ def frf_gemel_blocking_reason(phase: int) -> str:
     receipts = _frf_receipt_index()
     challenges = _frf_challenge_index()
 
-    no_receipt = [court for court, _probe in declared if not receipts.get(court)]
+    no_receipt = [court for court, _probe in required if not receipts.get(court)]
     if no_receipt:
         problems.append(
-            f"{len(no_receipt)} declared court(s) have no receipt in {FRF_RECEIPTS}: "
+            f"{len(no_receipt)} required court(s) have no receipt in {FRF_RECEIPTS}: "
             + ", ".join(no_receipt)
         )
 
     unadjudicated: list[str] = []
-    for court, _probe in declared:
+    for court, _probe in required:
         adjudicated = [
             c for c in challenges.get(court, [])
             if c.get("saw_defect") and c.get("specificity_clean")
@@ -1299,7 +1377,7 @@ def frf_gemel_blocking_reason(phase: int) -> str:
             unadjudicated.append(court)
     if unadjudicated:
         problems.append(
-            f"{len(unadjudicated)} declared court(s) lack two adjudicated challenges "
+            f"{len(unadjudicated)} required court(s) lack two adjudicated challenges "
             f"(`saw_defect` and `specificity_clean` true) covering both operators "
             f"{FRF_CHALLENGE_OPERATORS} in {FRF_CHALLENGES}: " + ", ".join(unadjudicated)
         )
@@ -1308,14 +1386,14 @@ def frf_gemel_blocking_reason(phase: int) -> str:
     for claim in _frf_claim_docs():
         if claim.get("policy") != "sensitivity-backed" or claim.get("blockers"):
             continue
-        required = set(claim.get("requires") or ())
-        if all(receipts.get(court, set()) & required for court, _probe in declared):
+        premises = set(claim.get("requires") or ())
+        if all(receipts.get(court, set()) & premises for court, _probe in required):
             covered = True
             break
     if not covered:
         problems.append(
             f"no `sensitivity-backed` claim with zero blockers in {FRF_CLAIMS} covers a receipt "
-            f"of every one of the {len(declared)} declared court(s)"
+            f"of every one of the {len(required)} required court(s)"
         )
 
     if phase not in FRF_CHAIN_CHECKPOINT_EXEMPT and not any(
@@ -1477,7 +1555,62 @@ def self_test() -> int:
         return 1
     print(
         "[phase-state] self-test ok: the stale row (manual, open, unadjudicated) is caught "
-        "without a human")
+        "without a human"
+    )
+
+    # ---- second control: the FRF requirement cannot be defined by its own registry ----
+    # The requirement is read from the stratum's own `artifacts/phase<N>/COURTS.json` (`D524`);
+    # `gen_frf_courts.py` is the registry the rule *checks*. Emptying the registry for a stratum
+    # that derives `complete` must therefore **block** it -- every required court has no registry
+    # row -- rather than make its requirement vanish. The old shape derived the requirement from
+    # the registry (`_frf_declared_courts`) and returned `""` when it was empty, so a forgotten
+    # registry row was indistinguishable from nothing being owed. This control reconstructs that
+    # shape and refuses to pass unless the rule fires.
+    # The divergence control above can use any complete stratum -- phase 22 works, since an
+    # atlas stratum owns divergence rows. This control cannot: the FRF rule is scoped out of
+    # phase 22 and of any stratum whose own court inventory declares no FRF-declarable court, so
+    # emptying such a registry is *correctly* no reason. The control therefore needs a complete
+    # stratum whose own `artifacts/phase<N>/COURTS.json` actually declares FRF-declarable courts
+    # -- discovered from that inventory, never from the registry it is about to empty.
+    frf_owner_row = next(
+        (row for row in reversed(complete)
+         if row["phase"] != 22
+         and row["phase"] in STRATUM_EVIDENCE
+         and any(declarable for _c, _p, declarable, _e
+                 in _frf_court_inventory(row["phase"]))),
+        None,
+    )
+    if frf_owner_row is None:
+        print(
+            "[phase-state] SELF-TEST FAILED: no stratum derives `complete` with an "
+            "FRF-declarable court in its own court inventory, so the registry-independence "
+            "control cannot run",
+            file=sys.stderr,
+        )
+        return 1
+    frf_owner = frf_owner_row["phase"]
+    saved_courts = gen_frf_courts.COURTS
+    try:
+        gen_frf_courts.COURTS = [row for row in saved_courts if row[1] != frf_owner]
+        frf_reason = frf_gemel_blocking_reason(frf_owner)
+    finally:
+        gen_frf_courts.COURTS = saved_courts
+    print(
+        f"[phase-state] self-test: emptied the gen_frf_courts.py registry for phase {frf_owner} "
+        f"({frf_owner_row['name']}), which derives `complete`:"
+    )
+    print(f"  {frf_reason or '(no reason: the requirement vanished with its registry)'}")
+    if not frf_reason or "gen_frf_courts.py registry" not in frf_reason:
+        print(
+            "[phase-state] SELF-TEST FAILED: emptying the FRF registry for a complete stratum did "
+            "not refuse it; the requirement is still defined by the registry it checks",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        "[phase-state] self-test ok: emptying the FRF registry refuses the stratum through its "
+        "own court inventory, so a forgotten registry row cannot define completion"
+    )
     return 0
 
 
