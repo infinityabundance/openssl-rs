@@ -31,10 +31,10 @@ stratum from the day it begins. See docs/PHASE-14-SUBPHASES.md section 4.3.
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 Every court `docs/PHASE-14-SUBPHASES.md` section 2 names is named in `PENDING_COURTS` below with
-the subphase that brings it, unless that subphase has landed its court. `RT-SSL-OBJECT` (14.1) is
-registered below; `RT-SSL-METHODS`, `RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`,
-`RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` remain pending, so
-'not run yet' cannot be read as 'passed'.
+the subphase that brings it, unless that subphase has landed its court. `RT-SSL-OBJECT` (14.1) and
+`RT-SSL-METHODS` (14.2) are registered below; `RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`,
+`RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` remain
+pending, so 'not run yet' cannot be read as 'passed'.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -86,6 +86,7 @@ RUN_TIMEOUT_S = "60"
 COURTS: list[tuple[str, str]] = [
     ("RT-PHASE14-REF", "rt_coverage_ref_probe.c"),
     ("RT-SSL-OBJECT", "rt_ssl_object_probe.c"),
+    ("RT-SSL-METHODS", "rt_ssl_methods_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. **Every one of the plan's behavioural
@@ -93,7 +94,6 @@ COURTS: list[tuple[str, str]] = [
 # working set is open and the only court it can register is the reference basis. Each row is
 # printed with the subphase that brings it so that "not run yet" cannot be read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "RT-SSL-METHODS": "14.2 (the method and version tables)",
     "RT-SSL-CIPH": "14.3 (the cipher and configuration surface)",
     "RT-RECORD": "14.4 (the record layer)",
     "RT-STATEM": "14.5 (the handshake state machine)",
@@ -276,14 +276,22 @@ def main(argv: list[str]) -> int:
             "`SSL_CTX`/`SSL` object model -- allocation, refcount, ex-data, the accessor and "
             "control surface, the callback setters, `SSL_set_bio` over memory BIOs and the "
             "NULL/uninitialised arms -- against a fixed `TLS_method()`, and the two transcripts "
-            "are compared line by line. It is not a parity claim about a completed handshake, "
-            "which no arm of it drives. Every other behavioural court the plan names is named in "
-            "`pending_courts` with the subphase that brings it -- `RT-SSL-METHODS`, "
-            "`RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, "
-            "`RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered "
-            "here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: "
-            "`referenced` is not `called`, and docs/PHASE-14-SUBPHASES.md section 3 records what "
-            "the behavioural courts compare."
+            "are compared line by line. `RT-SSL-METHODS` (14.2) is the second: "
+            "`courts/phase14/rt_ssl_methods_probe.c` drives the 21 `TLS_*`/`DTLS_*`/`TLSv1_*` "
+            "constructors and the version surface each installs (`SSL_version`, "
+            "`SSL_client_version`, `SSL_get_version`, `SSL_is_dtls`, `SSL_is_server`, the "
+            "`min`/`max` protocol getters and the default timeout), `SSL_group_to_name`'s "
+            "unknown-NID arms, `SSL_get0_group_name`'s NULL-connection arm and the "
+            "ticket-key callback setter, and the two refusal arms. Neither is a parity claim "
+            "about a completed handshake, which no arm of either drives. `SSL_get0_group_name` "
+            "on a live connection and `SSL_group_to_name`'s known-NID arm are recorded in their "
+            "modules as reduced rather than driven. Every other behavioural court the plan names "
+            "is named in `pending_courts` with the subphase that brings it -- `RT-SSL-CIPH`, "
+            "`RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, "
+            "`RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' "
+            "cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not "
+            "`called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural "
+            "courts compare."
         ),
     }
 

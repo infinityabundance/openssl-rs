@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 600,
       "deferred_to_later_phase": 0,
-      "implemented": 291,
-      "open_in_this_stratum": 309,
+      "implemented": 314,
+      "open_in_this_stratum": 286,
       "owned": 600,
       "received_by_handoff": 0
     },
@@ -15,6 +15,15 @@
     "handoffs_discharged": {},
     "handoffs_discharged_with_reasons": {},
     "implemented": [
+      "DTLS_client_method",
+      "DTLS_method",
+      "DTLS_server_method",
+      "DTLSv1_2_client_method",
+      "DTLSv1_2_method",
+      "DTLSv1_2_server_method",
+      "DTLSv1_client_method",
+      "DTLSv1_method",
+      "DTLSv1_server_method",
       "SSL_CTX_callback_ctrl",
       "SSL_CTX_check_private_key",
       "SSL_CTX_clear_options",
@@ -102,6 +111,7 @@
       "SSL_CTX_set_security_level",
       "SSL_CTX_set_session_id_context",
       "SSL_CTX_set_session_ticket_cb",
+      "SSL_CTX_set_tlsext_ticket_key_evp_cb",
       "SSL_CTX_set_trust",
       "SSL_CTX_set_verify",
       "SSL_CTX_set_verify_depth",
@@ -138,6 +148,7 @@
       "SSL_get0_client_cert_type",
       "SSL_get0_connection",
       "SSL_get0_domain",
+      "SSL_get0_group_name",
       "SSL_get0_listener",
       "SSL_get0_next_proto_negotiated",
       "SSL_get0_param",
@@ -210,6 +221,7 @@
       "SSL_get_wbio",
       "SSL_get_wfd",
       "SSL_get_wpoll_descriptor",
+      "SSL_group_to_name",
       "SSL_handle_events",
       "SSL_has_pending",
       "SSL_is_connection",
@@ -305,7 +317,18 @@
       "SSL_write",
       "SSL_write_ex",
       "SSL_write_ex2",
-      "TLS_method"
+      "TLS_client_method",
+      "TLS_method",
+      "TLS_server_method",
+      "TLSv1_1_client_method",
+      "TLSv1_1_method",
+      "TLSv1_1_server_method",
+      "TLSv1_2_client_method",
+      "TLSv1_2_method",
+      "TLSv1_2_server_method",
+      "TLSv1_client_method",
+      "TLSv1_method",
+      "TLSv1_server_method"
     ],
     "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs, and ssl/<dir>/<stem>.c -> src/ssl/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
     "module_overrides": [],
@@ -349,27 +372,9 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "DTLS_client_method"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/d1_lib.rs",
         "received_from_phase": null,
         "symbol": "DTLS_get_data_mtu"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "DTLS_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "DTLS_server_method"
       },
       {
         "declaring_header": "ssl.h",
@@ -379,45 +384,9 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "DTLSv1_2_client_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "DTLSv1_2_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "DTLSv1_2_server_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "DTLSv1_client_method"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/d1_lib.rs",
         "received_from_phase": null,
         "symbol": "DTLSv1_listen"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "DTLSv1_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "DTLSv1_server_method"
       },
       {
         "declaring_header": "sslerr_legacy.h",
@@ -1026,12 +995,6 @@
         "symbol": "SSL_CTX_set_tlsext_max_fragment_length"
       },
       {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/s3_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_tlsext_ticket_key_evp_cb"
-      },
-      {
         "declaring_header": "srtp.h",
         "module": "src/ssl/d1_srtp.rs",
         "received_from_phase": null,
@@ -1561,12 +1524,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/s3_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_group_name"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_cert.rs",
         "received_from_phase": null,
         "symbol": "SSL_get0_peer_CA_list"
@@ -1732,12 +1689,6 @@
         "module": "src/ssl/statem/statem.rs",
         "received_from_phase": null,
         "symbol": "SSL_get_state"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/s3_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_group_to_name"
       },
       {
         "declaring_header": "ssl.h",
@@ -2083,72 +2034,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLS_client_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLS_server_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLSv1_1_client_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLSv1_1_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLSv1_1_server_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLSv1_2_client_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLSv1_2_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLSv1_2_server_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLSv1_client_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLSv1_method"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/methods.rs",
-        "received_from_phase": null,
-        "symbol": "TLSv1_server_method"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_asn1.rs",
         "received_from_phase": null,
         "symbol": "d2i_SSL_SESSION"
@@ -2236,7 +2121,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "96c4a0bd87fdef055b27f98f2fabd15a32be9590db0368960e63a1fdf5cae9e1"
+      "sha256": "146751cf5e6584e5a3a6baed06ea75aeb4fb4c17413d0070b013dec892dc5983"
     }
   ],
   "kind": "phase14-obligations",

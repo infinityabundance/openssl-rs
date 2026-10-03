@@ -1,9 +1,9 @@
-//! Phase 14.1 — `ssl/`: the `libssl` (`SSL_CTX`/`SSL`) object model.
+//! Phase 14.1–14.2 — `ssl/`: the `libssl` object model and method tables.
 //!
-//! `docs/PHASE-14-SUBPHASES.md` section 2 gives 14.1 the `ssl_lib.c` unit (342 open rows). The
-//! crate lays the authority's `ssl/` tree out as `src/ssl/`, one module per translation unit
-//! (`ssl/ssl_lib.c` -> `src/ssl/ssl_lib.rs`), exactly as `forensics/tools/phase14_obligations.py`'s
-//! `crate_module` maps it.
+//! `docs/PHASE-14-SUBPHASES.md` section 2 gives 14.1 the `ssl_lib.c` unit (342 open rows) and 14.2
+//! `methods.c` (21) plus `s3_lib.c` (3). The crate lays the authority's `ssl/` tree out as
+//! `src/ssl/`, one module per translation unit (`ssl/ssl_lib.c` -> `src/ssl/ssl_lib.rs`), exactly as
+//! `forensics/tools/phase14_obligations.py`'s `crate_module` maps it.
 //!
 //! ## Slice 1: what landed, and what is withheld by name
 //!
@@ -73,8 +73,8 @@
 //! its context with `TLS_method()`, which `methods.c` (14.2) owns. Without it the object model has
 //! no constructor to allocate a method with (`SSL_CTX_new(NULL)` is the refusal arm, not a
 //! context), so Slice 1 lands the one constructor it needs — `TLS_method` — in
-//! `src/ssl/methods.rs` and records it as a measured correction to the plan's ordering. The rest of
-//! 14.2 stays open.
+//! `src/ssl/methods.rs` and records it as a measured correction to the plan's ordering. 14.2 then
+//! lands the rest of that unit beside it.
 //!
 //! ## Slice 2: the verify, transparency, ALPN and connection-accessor surface
 //!
@@ -226,7 +226,32 @@
 //!   `set_cert_type` are file-static in the authority; they are private functions here with the same
 //!   body.
 //!
+//! ## 14.2: the method and version tables
+//!
+//! 14.2 lands `methods.c` and `s3_lib.c`. **`methods.c`** is `src/ssl/methods.rs`: the 21 exported
+//! `TLS_*`/`DTLS_*`/`TLSv1_*` constructors and the static tables the `IMPLEMENT_*_meth_func` macros
+//! build (`ssl_local.h:2344-2464`). **`s3_lib.c`** is `src/ssl/s3_lib.rs`: `SSL_CTX_set_tlsext_ticket_key_evp_cb`,
+//! `SSL_get0_group_name` and `SSL_group_to_name`.
+//!
+//! **A correction 14.2 makes to the object model, and why.** `SSL_new` (`src/ssl/ssl_lib.rs`) now
+//! installs the method family's maximum protocol version for both any-version spellings: the
+//! authority's `tls1_clear` (`t1_lib.c:136-139`) maps `TLS_ANY_VERSION` to `TLS_MAX_VERSION_INTERNAL`
+//! and `dtls1_clear` (`d1_lib.c:217-218`) maps `DTLS_ANY_VERSION` to `DTLS_MAX_VERSION_INTERNAL`.
+//! Slice 1 carried only the TLS rule because `DTLS_method` did not exist yet; `DTLS_method` is
+//! 14.2's, so the DTLS rule lands with it.
+//!
+//! **The ticket-key callback is stored on the context.** `SSL_CTX_set_tlsext_ticket_key_evp_cb`
+//! writes `ctx->ext.ticket_key_evp_cb`, so `SslCtx` gains one field (`ticket_key_evp_cb`) and the
+//! `TicketKeyEvpCb` type alias. The authority exposes no getter for it; the court drives the
+//! setter's return only, and the handshake path that would observe the callback is 14.7's.
+//!
+//! **The group table is 14.5's, so the two group-name accessors reduce to NULL.** `SSL_CTX_new_ex`
+//! does not run `ssl_load_groups`, so `ctx->group_list` is empty and every lookup misses; the
+//! court drives only the unknown-NID arms and names the known-NID arm `pending`. See
+//! `src/ssl/s3_lib.rs` for the full divergence record.
+//!
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod methods;
+pub mod s3_lib;
 pub mod ssl_lib;
