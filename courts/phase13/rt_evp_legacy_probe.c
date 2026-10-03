@@ -8,10 +8,16 @@
  *
  * ## What this probe drives
  *
- * The ninety `EVP_CIPHER` statics 13.6 lands -- the thirty-eight `EVP_aes_*` accessors of
- * `crypto/evp/e_aes.c` and the four `EVP_aes_*_cbc_hmac_sha*` of `crypto/evp/e_aes_cbc_hmac_sha1.c`
- * and `_sha256.c` (13.6a), and the twenty-seven `EVP_aria_*` of `crypto/evp/e_aria.c` and the
- * twenty-one `EVP_camellia_*` of `crypto/evp/e_camellia.c` (13.6b). For each:
+ * The one hundred and forty-two `EVP_CIPHER` statics 13.6 lands -- the thirty-eight `EVP_aes_*`
+ * accessors of `crypto/evp/e_aes.c` and the four `EVP_aes_*_cbc_hmac_sha*` of
+ * `crypto/evp/e_aes_cbc_hmac_sha1.c` and `_sha256.c` (13.6a), the twenty-seven `EVP_aria_*` of
+ * `crypto/evp/e_aria.c` and the twenty-one `EVP_camellia_*` of `crypto/evp/e_camellia.c` (13.6b),
+ * and the fifty-two of 13.6c: the six `EVP_des_*` of `crypto/evp/e_des.c`, the thirteen
+ * `EVP_des_ede*` of `crypto/evp/e_des3.c`, the six `EVP_rc2_*` of `crypto/evp/e_rc2.c`, the five
+ * `EVP_sm4_*` of `crypto/evp/e_sm4.c`, the four `EVP_bf_*`/`EVP_cast5_*`/`EVP_idea_*`/
+ * `EVP_seed_*` of their units, the two `EVP_rc4*` of `crypto/evp/e_rc4.c`, the two
+ * `EVP_chacha20*` of `crypto/evp/e_chacha20_poly1305.c`, `EVP_rc4_hmac_md5` and `EVP_desx_cbc`.
+ * For each:
  *
  *   * the accessor's answer (`acc=`), and the object's `nid` derived short name (`name=`); the
  *     block size, key length, IV length and `flags` the object publishes (`bs=`, `kl=`, `ivl=`,
@@ -60,7 +66,7 @@ static void out_hex(const char *key, const unsigned char *p, int n)
     printf("\n");
 }
 
-enum kind { PLAIN, GCM, CCM, OCB, WRAP };
+enum kind { PLAIN, GCM, CCM, OCB, WRAP, WRAP_RANDOM };
 
 typedef const EVP_CIPHER *(*ciph_fn)(void);
 
@@ -123,6 +129,37 @@ static const struct ent ENTRIES[] = {
     { EVP_camellia_256_ofb, PLAIN }, { EVP_camellia_256_cfb128, PLAIN },
     { EVP_camellia_256_cfb1, PLAIN }, { EVP_camellia_256_cfb8, PLAIN },
     { EVP_camellia_256_ctr, PLAIN },
+    /* 13.6c: the single-DES, 3DES/DESX, Blowfish, CAST5, IDEA, SEED, RC2, RC4, SM4, ChaCha20 and
+     * RC4-HMAC-MD5 statics. The former legacy-provider-only families (single DES, DESX, BF, CAST5,
+     * IDEA, SEED, RC2, RC4, RC4-HMAC-MD5) are fetched by short name and refused identically on both
+     * sides -- the default provider does not publish them and only it is activated -- so their
+     * round-trip arm reports `rt=0` with an empty ciphertext on both transcripts; the statics' own
+     * fields are still compared. DES-EDE/EDE3, SM4 and ChaCha20 are the default provider's rows and
+     * round-trip for real; DES-EDE3-WRAP and ChaCha20-Poly1305 keep their own sequences. */
+    { EVP_des_cbc, PLAIN }, { EVP_des_cfb1, PLAIN }, { EVP_des_cfb64, PLAIN },
+    { EVP_des_cfb8, PLAIN }, { EVP_des_ecb, PLAIN }, { EVP_des_ofb, PLAIN },
+    { EVP_des_ede, PLAIN }, { EVP_des_ede3, PLAIN },
+    { EVP_des_ede_cbc, PLAIN }, { EVP_des_ede_cfb64, PLAIN },
+    { EVP_des_ede_ecb, PLAIN }, { EVP_des_ede_ofb, PLAIN },
+    { EVP_des_ede3_cbc, PLAIN }, { EVP_des_ede3_cfb1, PLAIN },
+    { EVP_des_ede3_cfb64, PLAIN }, { EVP_des_ede3_cfb8, PLAIN },
+    { EVP_des_ede3_ecb, PLAIN }, { EVP_des_ede3_ofb, PLAIN },
+    { EVP_des_ede3_wrap, WRAP_RANDOM },
+    { EVP_desx_cbc, PLAIN },
+    { EVP_bf_cbc, PLAIN }, { EVP_bf_cfb64, PLAIN }, { EVP_bf_ecb, PLAIN },
+    { EVP_bf_ofb, PLAIN },
+    { EVP_cast5_cbc, PLAIN }, { EVP_cast5_cfb64, PLAIN }, { EVP_cast5_ecb, PLAIN },
+    { EVP_cast5_ofb, PLAIN },
+    { EVP_idea_cbc, PLAIN }, { EVP_idea_cfb64, PLAIN }, { EVP_idea_ecb, PLAIN },
+    { EVP_idea_ofb, PLAIN },
+    { EVP_seed_cbc, PLAIN }, { EVP_seed_cfb128, PLAIN }, { EVP_seed_ecb, PLAIN },
+    { EVP_seed_ofb, PLAIN },
+    { EVP_rc2_cbc, PLAIN }, { EVP_rc2_cfb64, PLAIN }, { EVP_rc2_ecb, PLAIN },
+    { EVP_rc2_ofb, PLAIN }, { EVP_rc2_40_cbc, PLAIN }, { EVP_rc2_64_cbc, PLAIN },
+    { EVP_rc4, PLAIN }, { EVP_rc4_40, PLAIN }, { EVP_rc4_hmac_md5, PLAIN },
+    { EVP_sm4_cbc, PLAIN }, { EVP_sm4_ecb, PLAIN }, { EVP_sm4_ofb, PLAIN },
+    { EVP_sm4_cfb128, PLAIN }, { EVP_sm4_ctr, PLAIN },
+    { EVP_chacha20, PLAIN }, { EVP_chacha20_poly1305, GCM },
 };
 
 #define PT_LEN 32
@@ -314,6 +351,15 @@ int main(void)
         case WRAP:
             rt = rt_wrap(c, ct, &ctlen);
             break;
+        case WRAP_RANDOM:
+            /* The DES-EDE3 key-wrap construction draws its eight-byte IV with `RAND_bytes`
+             * (`e_des3.c:375`, and the provider row likewise), so the ciphertext is not
+             * deterministic and the round trip cannot be compared byte for byte. The accessor
+             * and the object's fields above are still compared; this one value is named
+             * `pending.` with the reason. */
+            snprintf(key, sizeof key, "pending.%s.roundtrip", name);
+            printf("%s=%s\n", key, "tdes-wrap-draws-a-random-iv");
+            continue;
         }
         snprintf(key, sizeof key, "%s.ct", name);
         out_hex(key, ct, ctlen);

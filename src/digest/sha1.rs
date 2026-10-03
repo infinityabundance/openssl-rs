@@ -230,6 +230,46 @@ pub unsafe extern "C" fn SHA1_Transform(c: *mut ShaCtx, data: *const u8) {
     unsafe { md32::transform(c, data) };
 }
 
+/// `unsigned char *ossl_sha1(const unsigned char *d, size_t n, unsigned char *md)` —
+/// `crypto/sha/sha1_one.c:23-36`.
+///
+/// The low-level one-shot, distinct from the exported [`SHA1`]: this one drives the `SHA1_*`
+/// primitives directly and never touches the provider fetch, which is why
+/// `crypto/evp/e_des3.c`'s 3DES key-wrap calls it. `md` NULL selects the file's `static
+/// unsigned char m[SHA_DIGEST_LENGTH]`, shared between calls exactly as the authority shares it,
+/// and the context is cleansed before returning.
+///
+/// It is `pub(crate)` and not `#[no_mangle]`: the authority declares it in an uninstalled header
+/// (`include/crypto/sha.h`) and it is not in the exported symbol set.
+///
+/// # Safety
+/// `d` readable for `n` bytes; `md` NULL or writable for 20 bytes.
+pub(crate) unsafe fn ossl_sha1(d: *const u8, n: usize, md: *mut u8) -> *mut u8 {
+    static mut STATIC_MD: [u8; 20] = [0; 20];
+    // SAFETY: the address of a `static mut` in this file, exactly as the authority's `m` is; the
+    // NULL arm is the only writer.
+    let md = if md.is_null() {
+        ptr::addr_of_mut!(STATIC_MD).cast::<u8>()
+    } else {
+        md
+    };
+    let mut c = core::mem::MaybeUninit::<ShaCtx>::uninit();
+    // SAFETY: `c` is a fresh local of the right size, `d` is readable for `n` bytes, and `md` is
+    // writable for 20 per the contract.
+    unsafe {
+        if SHA1_Init(c.as_mut_ptr()) == 0 {
+            return ptr::null_mut();
+        }
+        SHA1_Update(c.as_mut_ptr(), d.cast::<c_void>(), n);
+        SHA1_Final(md, c.as_mut_ptr());
+        crate::runtime::mem::OPENSSL_cleanse(
+            c.as_mut_ptr().cast::<c_void>(),
+            core::mem::size_of::<ShaCtx>(),
+        );
+    }
+    md
+}
+
 /// `unsigned char *SHA1(const unsigned char *d, size_t n, unsigned char *md)` —
 /// `crypto/sha/sha1_one.c:38-45`.
 ///

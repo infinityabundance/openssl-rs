@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 189,
       "deferred_to_later_phase": 0,
-      "implemented": 283,
-      "open_in_this_stratum": 94,
+      "implemented": 335,
+      "open_in_this_stratum": 42,
       "owned": 377,
       "received_by_handoff": 188
     },
@@ -1905,6 +1905,10 @@
       "EVP_aria_256_ecb",
       "EVP_aria_256_gcm",
       "EVP_aria_256_ofb",
+      "EVP_bf_cbc",
+      "EVP_bf_cfb64",
+      "EVP_bf_ecb",
+      "EVP_bf_ofb",
       "EVP_camellia_128_cbc",
       "EVP_camellia_128_cfb1",
       "EVP_camellia_128_cfb128",
@@ -1926,6 +1930,54 @@
       "EVP_camellia_256_ctr",
       "EVP_camellia_256_ecb",
       "EVP_camellia_256_ofb",
+      "EVP_cast5_cbc",
+      "EVP_cast5_cfb64",
+      "EVP_cast5_ecb",
+      "EVP_cast5_ofb",
+      "EVP_chacha20",
+      "EVP_chacha20_poly1305",
+      "EVP_des_cbc",
+      "EVP_des_cfb1",
+      "EVP_des_cfb64",
+      "EVP_des_cfb8",
+      "EVP_des_ecb",
+      "EVP_des_ede",
+      "EVP_des_ede3",
+      "EVP_des_ede3_cbc",
+      "EVP_des_ede3_cfb1",
+      "EVP_des_ede3_cfb64",
+      "EVP_des_ede3_cfb8",
+      "EVP_des_ede3_ecb",
+      "EVP_des_ede3_ofb",
+      "EVP_des_ede3_wrap",
+      "EVP_des_ede_cbc",
+      "EVP_des_ede_cfb64",
+      "EVP_des_ede_ecb",
+      "EVP_des_ede_ofb",
+      "EVP_des_ofb",
+      "EVP_desx_cbc",
+      "EVP_idea_cbc",
+      "EVP_idea_cfb64",
+      "EVP_idea_ecb",
+      "EVP_idea_ofb",
+      "EVP_rc2_40_cbc",
+      "EVP_rc2_64_cbc",
+      "EVP_rc2_cbc",
+      "EVP_rc2_cfb64",
+      "EVP_rc2_ecb",
+      "EVP_rc2_ofb",
+      "EVP_rc4",
+      "EVP_rc4_40",
+      "EVP_rc4_hmac_md5",
+      "EVP_seed_cbc",
+      "EVP_seed_cfb128",
+      "EVP_seed_ecb",
+      "EVP_seed_ofb",
+      "EVP_sm4_cbc",
+      "EVP_sm4_cfb128",
+      "EVP_sm4_ctr",
+      "EVP_sm4_ecb",
+      "EVP_sm4_ofb",
       "PEM_read_PrivateKey",
       "PEM_read_PrivateKey_ex",
       "PEM_read_bio_PrivateKey",
@@ -2149,210 +2201,6 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/e_bf.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_bf_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_bf.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_bf_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_bf.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_bf_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_bf.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_bf_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_cast.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_cast5_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_cast.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_cast5_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_cast.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_cast5_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_cast.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_cast5_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_chacha20_poly1305.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_chacha20"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_chacha20_poly1305.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_chacha20_poly1305"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede3"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede3_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede3_cfb1"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede3_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede3_cfb8"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede3_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede3_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede3_wrap"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ede_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_des.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_des_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_xcbc_d.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_desx_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_idea.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_idea_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_idea.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_idea_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_idea.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_idea_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_idea.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_idea_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/evp/legacy_md4.rs",
         "received_from_phase": 7,
         "symbol": "EVP_md4"
@@ -2365,117 +2213,9 @@
       },
       {
         "declaring_header": "evp.h",
-        "module": "src/evp/e_rc2.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_rc2_40_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_rc2.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_rc2_64_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_rc2.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_rc2_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_rc2.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_rc2_cfb64"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_rc2.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_rc2_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_rc2.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_rc2_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_rc4.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_rc4"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_rc4.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_rc4_40"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_rc4_hmac_md5.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_rc4_hmac_md5"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_seed.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_seed_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_seed.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_seed_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_seed.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_seed_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_seed.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_seed_ofb"
-      },
-      {
-        "declaring_header": "evp.h",
         "module": "src/sm3/legacy_sm3.rs",
         "received_from_phase": 7,
         "symbol": "EVP_sm3"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_sm4.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_sm4_cbc"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_sm4.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_sm4_cfb128"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_sm4.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_sm4_ctr"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_sm4.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_sm4_ecb"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/e_sm4.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_sm4_ofb"
       },
       {
         "declaring_header": "evp.h",
@@ -2665,7 +2405,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "0feefb55168b128eb2cfdd5db8f6af166732247e5dd7c3b2f0f5ddd1a14d8ba6"
+      "sha256": "c508a39ccaddda756d18dbf456b9fa1425726c428bb73c911de5a64d5bbd4222"
     },
     {
       "name": "phase3-obligations",

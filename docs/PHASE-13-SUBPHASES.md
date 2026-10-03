@@ -343,6 +343,20 @@ pack (`cbc`/`ecb`/`ofb`/`cfb128`/`cfb1`/`cfb8`) and CTR for 128/192/256, plus GC
 same `RT-EVP-LEGACY` court drives them beside the AES statics, with the same fetched-identity
 `pending.` arm.
 
+Subphase 13.6c landed the remaining fifty-two legacy EVP cipher statics: the six `EVP_des_*` of
+`crypto/evp/e_des.c`, the thirteen `EVP_des_ede*` of `crypto/evp/e_des3.c` (including
+`EVP_des_ede3_wrap`), the six `EVP_rc2_*` of `crypto/evp/e_rc2.c`, the five `EVP_sm4_*` of
+`crypto/evp/e_sm4.c`, the four `EVP_bf_*`/`EVP_cast5_*`/`EVP_idea_*`/`EVP_seed_*` of their units,
+the two `EVP_rc4*` of `crypto/evp/e_rc4.c`, the two `EVP_chacha20*` of
+`crypto/evp/e_chacha20_poly1305.c`, `EVP_rc4_hmac_md5` and `EVP_desx_cbc`. `RT-EVP-LEGACY` drives
+them beside the earlier slices. The former legacy-provider-only families (single DES, DESX,
+Blowfish, CAST5, IDEA, SEED, RC2, RC4 and RC4-HMAC-MD5) are fetched by short name and refused
+identically on both sides -- the default provider does not publish them and only it is activated --
+so their round-trip arm reports `rt=0` with an empty ciphertext on both transcripts while their
+fields are still compared; `EVP_des_ede3_wrap` draws a random IV, so its round-trip value is
+`pending.` with that reason. The `EVP_MD` statics (`legacy_md4.c`, `legacy_mdc2.c`,
+`legacy_wp.c`, `legacy_sm3.c`) and `p_lib.c` stay 13.6's own work.
+
 Subphase 13.4 drove the UI framework rather than landing code: all 62 names -- the UI object
 (`ui_lib.rs`), the built-in console method (`ui_openssl.rs`), the `UI_UTIL_*` helpers
 (`ui_util.rs`) and the null method (`ui_null.rs`) -- had already landed as substrate the earlier
@@ -358,14 +372,17 @@ reference basis.
 
 **Open exports (checked against the ledger):**
 
-The open set is the deprecated statics over TXT_DB and the rest of the legacy EVP method statics.
-Representative names are `ASYNC_WAIT_CTX_new`, `EVP_des_ede3_cbc`, `PEM_write_bio_PrivateKey`,
-`TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`. Every one is open
-rather than implemented, and each is assigned to a subphase by §2's partition. The AES statics are
-not in this list: subphase 13.6a landed the thirty-eight `EVP_aes_*` accessors and the four
-`EVP_aes_*_cbc_hmac_sha*` stitched statics, and subphase 13.6b landed the twenty-seven `EVP_aria_*`
-and twenty-one `EVP_camellia_*` accessors, so they are implemented and courted by `RT-EVP-LEGACY`
-rather than open. The TXT_DB codec is not in this list either: subphase 13.5 landed all six of its names, so they are implemented and
+The open set is the ASYNC job-and-wait framework, the remaining PEM private-key readers, the last
+legacy EVP method statics and the two `p_lib.c` names. Representative names are
+`ASYNC_WAIT_CTX_new`, `EVP_md4`, `PEM_write_bio_PrivateKey`, `TS_CONF_set_crypto_device`,
+`TS_CONF_set_default_engine` and `SRP_VBASE_init`. Every one is open rather than implemented, and
+each is assigned to a subphase by §2's partition. The AES statics are not in this list: subphase
+13.6a landed the thirty-eight `EVP_aes_*` accessors and the four `EVP_aes_*_cbc_hmac_sha*` stitched
+statics, subphase 13.6b landed the twenty-seven `EVP_aria_*` and twenty-one `EVP_camellia_*`
+accessors, and subphase 13.6c landed the remaining fifty-two legacy EVP cipher statics (DES, 3DES,
+DESX, Blowfish, CAST5, IDEA, SEED, RC2, RC4, RC4-HMAC-MD5, SM4, ChaCha20 and ChaCha20-Poly1305), so
+they are implemented and courted by `RT-EVP-LEGACY` rather than open. The TXT_DB codec is not in
+this list either: subphase 13.5 landed all six of its names, so they are implemented and
 courted by `RT-TXTDB` rather than open. The UI framework is not in this list either: subphase
 13.4 drove all 62 of its names through the RT-UI court, so they are implemented and called rather
 than open, and none of them is left merely referenced by the activation basis.
