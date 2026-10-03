@@ -24,7 +24,7 @@ enforced here:
 | 13 | Legacy / deprecated compatibility | `complete` |  |
 | 14 | TLS / DTLS (libssl) | `complete` |  |
 | 15 | QUIC / ECH and modern SSL surface | `complete` |  |
-| 16 | CLI / config / filesystem contract | `not-started` | not started |
+| 16 | CLI / config / filesystem contract | `in-progress` | 48 open obligation(s) of this stratum recorded in forensics/phase16-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase16-obligations.json` publishes `unit: cli-config contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts 39 legacy provider registration rows, six prerequisite deferrals and three CLI/config/filesystem contract units. The provider-row rule below independently holds it open on the 39 `unimplemented` `providers/legacyprov.c` rows. Its `artifacts/phase16/COURTS.json` registers no court at activation because it owns no symbol for a differential probe to observe; every behavioural court is `pending` with the subphase that lands it. `docs/PHASE-16-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D485, D525, D528) |
 | 17 | Downstream replacement court | `not-started` | not started |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | not started |
 | 19 | Performance / CPU dispatch | `not-started` | not started |

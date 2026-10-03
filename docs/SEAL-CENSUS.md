@@ -41,7 +41,7 @@ declared owner; this is that assignment.
 | 13 | Legacy / deprecated compatibility | `complete` | 189 | 377 | 377 | 0 | 0 |
 | 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
-| 16 | CLI / config / filesystem contract | `not-started` | 0 | — | — | — | — |
+| 16 | CLI / config / filesystem contract | `in-progress` | 0 | 48 | 0 | 0 | 48 |
 | 17 | Downstream replacement court | `not-started` | 0 | — | — | — | — |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
@@ -507,6 +507,23 @@ Courts: `all pass`, 2 court(s), **33** authority observation(s) over 2 transcrip
 |---|---|---|
 | RT-PHASE15-REF | `pass` | 3 |
 | RT-QUIC | `pass` | 30 |
+
+## Phase 16 — CLI / config / filesystem contract
+
+* state: `in-progress`
+* blocking: 48 open obligation(s) of this stratum recorded in forensics/phase16-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase16-obligations.json` publishes `unit: cli-config contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts 39 legacy provider registration rows, six prerequisite deferrals and three CLI/config/filesystem contract units. The provider-row rule below independently holds it open on the 39 `unimplemented` `providers/legacyprov.c` rows. Its `artifacts/phase16/COURTS.json` registers no court at activation because it owns no symbol for a differential probe to observe; every behavioural court is `pending` with the subphase that lands it. `docs/PHASE-16-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D485, D525, D528)
+* seal: none written yet (`unnamed`)
+* ledger: `forensics/phase16-obligations.json`
+* atlas-owned: 0
+* owned working set: 48
+* implemented: 0
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 48**
+
+Courts: `all pass`, 0 court(s), **0** authority observation(s) over 0 transcript court(s).
+
+| court | verdict | observations |
+|---|---|---|
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

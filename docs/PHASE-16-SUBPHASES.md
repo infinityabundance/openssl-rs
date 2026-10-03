@@ -1,0 +1,166 @@
+# Phase 16 — CLI / config / filesystem contract, as subphases
+
+## 0. What this stratum is, and what it is not
+
+Phase 16 is the stratum `docs/RELEASE_GATES.md` §1 names "CLI / config / filesystem contract".
+Unlike every stratum from 3 to 15 it owns **no exported symbol**: reading
+`forensics/atlas/symbol-ownership.json` for `owner_phase == 16` yields nothing, because the
+declaring-header rule assigns no installed header to this stratum. Its unit is therefore not a
+symbol. What it owes is three kinds of *row*:
+
+* **the legacy provider registration rows.** `forensics/atlas/provider-algorithms.json` records
+  39 digest/cipher/KDF/SKEYMGMT rows for `providers/legacyprov.c` with `owning_phase: 16`, and
+  `forensics/atlas/provider-algorithm-plans.json` hands them here rather than to Phase 13, whose
+  subphases deliberately do not activate the legacy provider (D525, docs/PHASE-13-SUBPHASES.md
+  §3.6). The loadable module the candidate ships as a scaffold `ossl-modules/legacy.so` is the
+  installed-module contract, and this stratum owns it;
+* **the prerequisite deferrals.** `forensics/prerequisites.json` records four symbols and two
+  authority units with `owner_phase: 16` — the `OPENSSLDIR`/install-context strings, the absent
+  dynamic ENGINE loader, the CLI option-list capture defect, and the two TLS message-layer units
+  Phase 15 sealed without (D528, D490, D525);
+* **the CLI / config / filesystem contract** proper: the `openssl` CLI, config loading and the
+  installed distribution layout, whose authority surface the Phase-1 capture and the Phase-22
+  atlases measure.
+
+It is **not** the algorithms the legacy rows name, and **not** the library surface the CLI
+drives. A legacy provider row is a registration row, not an export; the CLI is a program over
+`libcrypto`/`libssl`, not a namespace of them. A subphase that discovers its unit is somewhere
+else records that rather than forcing the row (§4).
+
+## 1. The measurement this plan rests on
+
+Every number below is read from an atlas, not typed, and `forensics/phase16-obligations.json` is
+authoritative for the present.
+
+**Phase 16 owns zero exports.** Reading `forensics/atlas/symbol-ownership.json` for
+`owner_phase == 16` returns no record: the stratum's `atlas_owned` count is `0`, and the ledger
+fails closed if that ever stops being true rather than silently counting a symbol through a
+non-export unit.
+
+**It receives 39 provider registration rows.** Reading
+`forensics/atlas/provider-algorithms.json` for `owning_phase == 16` gives 39 rows of the `legacy`
+provider, all `unimplemented` at activation: 4 `OSSL_OP_DIGEST` (MD4, MDC2, WHIRLPOOL,
+RIPEMD-160), 32 `OSSL_OP_CIPHER` (CAST5, BF, IDEA, SEED, RC2, RC4, DESX, DES), 2 `OSSL_OP_KDF`
+(PBKDF1, PVKKDF) and 1 `OSSL_OP_SKEYMGMT` (GENERIC-SECRET). `provider-algorithm-plans.json`
+assigns them to Phase 16; the census's `projection` therefore reads `open[16] = 39`, and it is
+the census, not this document, that the provider-row rule in `phase_state.py` reads.
+
+**It receives four symbol deferrals and two unit deferrals.** Reading
+`forensics/prerequisites.json` for `owner_phase == 16`: the symbol deferrals
+`ossl_get_openssldir` and `ossl_get_wininstallcontext` (the `OPENSSLDIR`/install-context strings
+of `src/runtime/defaults.rs`), `engine_load_dynamic_int` (`crypto/engine/eng_dyn.c`, the absent
+dynamic ENGINE loader, D528) and `cli_option_list_parse` (the Phase-1 CLI capture, D490); and the
+two `deferred_to_later_stratum` units `ssl/statem/statem_clnt.c` and `ssl/statem/statem_srvr.c`,
+the TLS message layer Phase 14 handed to Phase 15 and Phase 15 sealed without (D525's correction).
+
+**The CLI / config / filesystem contract is three units**, each derived from an atlas that
+measures the authority surface: `cli` (the Phase-1 capture
+`forensics/atlas/openssl-3.6.4-production/cli-commands.json`, whose 55 commands carry
+`option_count 0` until the capture is regenerated), `config` (the default-path deferrals above)
+and `filesystem` (the `ossl-modules/` loadable-module contract, measured by the 39 legacy rows).
+
+**The ledger's unit is not an exported symbol.** `forensics/phase16-obligations.json` publishes
+`unit: "cli-config contract"`, its `implemented`/`open` export lists are empty *by measurement*,
+and its working set is counted in `open_in_this_stratum` over the provider, deferral and contract
+rows. `atlas_common.NON_EXPORT_UNITS` names the unit, so the two tools that partition the export
+universe (`court_coverage.py`, `ownership_audit.py`) skip this ledger rather than reconcile a
+symbol set that does not exist.
+
+**Phase 16 begins on nothing of its own.** No module of this stratum has landed: there is no
+`apps/` CLI, no dynamic ENGINE loader, no regenerated CLI capture and no activated legacy
+provider table, so `open_in_this_stratum` opens at the whole working set and moves only as the
+subphases below land. **That split moves as the stratum lands its own units: the ledger's
+`counts` is the live record and this section is the activation measurement.**
+
+## 2. The subphases
+
+| # | Subphase | Owns | Depends on | Courts |
+|---|---|---|---|---|
+| 16.0 | **The plan and the ledger** | `docs/PHASE-16-SUBPHASES.md` and the measurement in §1. The ledger (`forensics/phase16-obligations.json`) and its generator land with it, together with the runner `forensics/tools/phase16_courts.py` and the empty registry it writes. **The runner cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and this stratum's obligations are not exports, so its first runnable court is a later subphase's. | 15 | — |
+| 16.1 | **The legacy provider module** | `providers/legacyprov.c` (39 registration rows). The `ossl-modules/legacy.so` loadable-module contract, whose dispatch tables the census records; the rows are published only when the module activates, so the table and the module land together. | 16.0 | `RT-LEGACY-MODULE` (pending) |
+| 16.2 | **The dynamic ENGINE loader** | `crypto/engine/eng_dyn.c` (`engine_load_dynamic_int`). The dynamic loader `ENGINE_by_id`'s miss path reaches, and the `dynamic`/`rdrand` built-ins it registers; `DSO_load` and `OPENSSL_ENGINES` handling are its dependency. | 16.1 | `RT-ENGINE-DYN` (pending) |
+| 16.3 | **The directory and install-context plane** | `src/runtime/defaults.rs` (`ossl_get_openssldir`, `ossl_get_wininstallcontext`). The `OPENSSLDIR` directory plane and the install context, the distribution facts the x509 default paths and `CONF_get1_default_config_file` stand on. | 16.2 | `RT-DEFAULTS` (pending) |
+| 16.4 | **The `openssl` CLI and config loading** | `apps/openssl.c` (the CLI) and the config-loading surface. The command dispatch over `libcrypto`/`libssl`, and the regenerated Phase-1 CLI capture (`cli_option_list_parse`) in lockstep with the historical authority. | 16.3 | `RT-CLI`, `RT-CONFIG` (pending) |
+| 16.5 | **The TLS message layer units** | `ssl/statem/statem_clnt.c` and `ssl/statem/statem_srvr.c`. The client and server message construction and parsing Phase 15 sealed without; the state-machine control surface (`statem.c`) already landed. | 16.4 | `RT-STATEM-REMAINDER` (pending) |
+| 16.6 | **The seal** | nothing in the crate — evidence: `docs/PHASE-16-CLI-SEAL.md` (at the seal) | 16.0–16.5 | — |
+
+The rows above the seal partition the working set by source: the 39 provider rows are 16.1's, the
+six prerequisite deferrals are 16.2's through 16.5's, and the three contract units are 16.1's and
+16.4's. The partition is derived from `forensics/phase16-obligations.json` joined to
+`forensics/atlas/provider-algorithms.json` and `forensics/prerequisites.json`, not typed.
+
+## 3. What each subphase must honour
+
+**3.1 A provider registration row is not an exported symbol, and the census is the arbiter.**
+`phase_state.py`'s provider-row rule reads each row's own `implementation_state` and the census's
+`projection`; a stratum may not be complete while any row it owns is `unimplemented`, and
+"handed on" is a projection rather than a state a row carries (D237, D295). Phase 16 owns these
+rows because the installed module does, so no subphase may leave a row unpublished behind a
+green court.
+
+**3.2 A distribution fact is not an authority fact, and the divergence is recorded rather than
+diffed.** The `OPENSSLDIR` strings name the admitted build's forensic tree; the candidate is not
+installed there, so a name that returns such a path would be a false statement about this build.
+The candidate answers its own build-time path or the empty C string, and a court that cannot
+compare the string records the divergence instead of failing on it.
+
+**3.3 The CLI is a program over the libraries, not a third namespace.** A command's contract is
+its option grammar and its exit class, measured against the authority's own built binary; the
+Phase-1 capture is a distribution artefact of this stratum, and regenerating it alone would leave
+a spurious option-set differential against the historical authority, so the two are regenerated
+in lockstep (D490).
+
+**3.4 Nothing here is a parity claim about the library.** A landed provider row says the module
+publishes the registration, not that every arm of the algorithm matches; a landed CLI says a
+command exists, not that its output is the authority's. A name that cannot be driven is named
+`pending` rather than counted as passing.
+
+## 4. Measured corrections, and the precondition
+
+**4.1 The working set is not an export projection, and the ledger says so by its unit.** The
+atlas gives this stratum zero exports, so `forensics/phase16-obligations.json` cannot be the
+export projection Phases 3 through 15 publish. Its unit is `cli-config contract`, recorded in
+`atlas_common.NON_EXPORT_UNITS` so that the export-partitioning tools skip it, exactly as
+Phase 22's `compatibility plane` is (D485). The ledger fails closed if the ownership atlas ever
+assigns this stratum an export, because then the non-export unit would be wrong.
+
+**4.2 The precondition this plan places on 16.0, and it is not optional.** `run_courts.py`
+refuses a stratum that is not `not-started` and has no runner. This stratum lands
+`forensics/tools/phase16_courts.py` with **no runnable court**: its obligations are not exports,
+so no differential probe over a symbol set is its evidence, and its first behavioural courts
+(`RT-LEGACY-MODULE`, `RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`,
+`RT-STATEM-REMAINDER`) are named in `PENDING_COURTS` and land with the subphases that build the
+things they drive. **No court is registered in `gen_frf_courts.py`**: that registry is the
+stratum's seal. So the activation order is: the ledger, the plan, the runner and its empty
+registry land **together**, or `run_courts.py` fails and the tree carries an activation whose
+runner is refused.
+
+**4.3 "CLI / config / filesystem contract" here is the contract, not the whole of Phase 22's
+whole-program atlas.** Phase 22 measures the authority's CLI, configuration and installed
+distribution; Phase 16 *implements* the candidate's. The two are different strata and different
+planes, and this plan reconciles them by naming which Phase-22 surface each contract unit is
+measured against rather than by widening the ownership table.
+
+## 5. Process
+
+This stratum inherits Phases 8 through 15's process unchanged: a subphase lands its code, its
+court and its regenerated artefacts in **one commit**; every name a subphase lands carries a
+court edge where it has one; and an artefact that a source change moves is regenerated in the
+same commit. `docs/DECISIONS.md` is append-only and this document is not a decision record.
+
+**This plan's own boundaries are the census's, and the census will correct them.** The subphase
+table above was written from the provider rows in
+`forensics/atlas/provider-algorithms.json`, the deferrals in `forensics/prerequisites.json` and
+the three-row measurement in §1. A subphase that discovers its unit is elsewhere records that
+rather than forcing the row.
+
+**Landed exports (checked against the ledger):**
+
+None. The ownership atlas assigns this stratum zero exports, so the clause binds nothing: the
+ledger's implemented list is empty by measurement, not by omission.
+
+**Open exports (checked against the ledger):**
+
+None. This stratum owns no export, so its obligations are provider registration rows,
+prerequisite deferrals and the CLI/config/filesystem contract, recorded in the ledger's own
+blocks rather than as open exports.

@@ -4,10 +4,19 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {},
-    "census_by_stratum": {},
+    "census": {
+      "units_not_reached": 2
+    },
+    "census_by_stratum": {
+      "16": 2
+    },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {},
+    "census_samples": {
+      "units_not_reached": [
+        "apps/openssl.c",
+        "providers/legacyprov.c"
+      ]
+    },
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -16,6 +25,7 @@
         "docs/PHASE-13-SUBPHASES.md",
         "docs/PHASE-14-SUBPHASES.md",
         "docs/PHASE-15-SUBPHASES.md",
+        "docs/PHASE-16-SUBPHASES.md",
         "docs/PHASE-22-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
@@ -23,13 +33,13 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 168,
-      "symbols_named_by_a_row": 112,
-      "symbols_reached": 112,
+      "rows_judged": 175,
+      "symbols_named_by_a_row": 115,
+      "symbols_reached": 115,
       "unit_records": 99,
       "units_named_by_a_record": 102,
-      "units_named_by_a_row": 490,
-      "units_reached": 490
+      "units_named_by_a_row": 493,
+      "units_reached": 491
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -38,6 +48,14 @@
       "complete"
     ],
     "promised_units": {
+      "apps/openssl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "16:16.4"
+        ],
+        "transcribed_by": []
+      },
       "crypto/asn1/a_digest.c": {
         "defines": [
           "ossl_asn1_item_digest_ex"
@@ -2070,6 +2088,16 @@
         "transcribed_by": [
           "src/engine/eng_ctrl.rs"
         ]
+      },
+      "crypto/engine/eng_dyn.c": {
+        "defines": [
+          "engine_load_dynamic_int"
+        ],
+        "recorded_by": "deferral:engine_load_dynamic_int",
+        "subphases": [
+          "16:16.2"
+        ],
+        "transcribed_by": []
       },
       "crypto/engine/eng_fat.c": {
         "defines": [],
@@ -6141,6 +6169,14 @@
         ],
         "transcribed_by": []
       },
+      "providers/legacyprov.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "16:16.1"
+        ],
+        "transcribed_by": []
+      },
       "ssl/bio_ssl.c": {
         "defines": [],
         "recorded_by": null,
@@ -6599,7 +6635,8 @@
         "recorded_by": null,
         "subphases": [
           "14:14.5",
-          "14:14.5b"
+          "14:14.5b",
+          "16:16.5"
         ],
         "transcribed_by": [
           "src/ssl/statem/statem.rs"
@@ -6630,7 +6667,8 @@
         ],
         "recorded_by": "units:ssl/statem/statem_clnt.c",
         "subphases": [
-          "14:14.5b"
+          "14:14.5b",
+          "16:16.5"
         ],
         "transcribed_by": []
       },
@@ -6691,7 +6729,8 @@
         ],
         "recorded_by": "units:ssl/statem/statem_srvr.c",
         "subphases": [
-          "14:14.5b"
+          "14:14.5b",
+          "16:16.5"
         ],
         "transcribed_by": []
       },
@@ -7285,7 +7324,7 @@
       "transcribed_units": 592
     }
   },
-  "body_hash": "e069e7d78e56d8a4bb6acac0b600787a3fa8b0e8c556e879e4dcf078966bcb97",
+  "body_hash": "72834e3b5c7f3e0995f0e94f96d27121cb0d1e6b0bb08056ac59d31664a15753",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -7301,12 +7340,12 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8102978e08655ad7bbb16b1be75cfb57893d7c9a4e0fe047d81a286c4e30372e"
+      "sha256": "7c09a4238ff10a7283df5a4dab1b4e735712c26c336feb194feaa8a840581469"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "1b4970bf209e4a21ba14b42ae304fedefbcc65b7e896f8b622b47e591d608e67"
+      "sha256": "1a3ed82fecf18f9579c366a26412501e4eeef9006884d7ab086480bacde84933"
     },
     {
       "name": "prerequisites",
@@ -7347,6 +7386,11 @@
       "name": "plan-PHASE-15-SUBPHASES",
       "path": "docs/PHASE-15-SUBPHASES.md",
       "sha256": "b1a9606959d2c988c114dcfd6ac58f00b85aa1607841631b82849cd920caac76"
+    },
+    {
+      "name": "plan-PHASE-16-SUBPHASES",
+      "path": "docs/PHASE-16-SUBPHASES.md",
+      "sha256": "2d32a91872b770e4d15430cbf46c3237141d6de86a79397184fae6fdae2827ae"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

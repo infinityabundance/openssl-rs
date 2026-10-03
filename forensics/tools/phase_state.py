@@ -1013,6 +1013,26 @@ PHASE15_MODULES = [
     "forensics/tools/phase15_obligations.py",
 ]
 
+# Phase 16 is the CLI / config / filesystem contract stratum, and **it owns no exported symbol**:
+# reading `forensics/atlas/symbol-ownership.json` for `owner_phase == 16` yields no record, so
+# its ledger's unit is not a symbol. `forensics/phase16-obligations.json` records its unit as
+# `cli-config contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools
+# skip it, as they skip Phase 22's `compatibility plane`), and its working set is instead the 39
+# legacy provider registration rows `forensics/atlas/provider-algorithms.json` assigns it, the
+# six prerequisite deferrals `forensics/prerequisites.json` records with `owner_phase: 16`, and
+# three CLI / config / filesystem contract units. The provider-row rule below independently
+# holds the stratum open: 39 of its rows are `unimplemented`. The stratum registers no
+# coverage-reference probe, because it owns no symbol to take an address of, so its runner's
+# registry is empty at activation and every behavioural court is `pending` with the subphase that
+# lands it. `docs/PHASE-16-SUBPHASES.md` section 4 records the activation measurement and the
+# precondition it places on the runner.
+PHASE16_COURTS = "artifacts/phase16/COURTS.json"
+PHASE16_OBLIGATIONS = "forensics/phase16-obligations.json"
+PHASE16_MODULES = [
+    "docs/PHASE-16-SUBPHASES.md",
+    "forensics/tools/phase16_obligations.py",
+]
+
 # Phase 22 is an *atlas* stratum, not an export stratum, so its evidence is not the same shape as
 # every other stratum's: no export universe, no ownership projection and no provider row. What it
 # owes instead is the plan, the residual ledger its closure produces, the atlas's own courts and
@@ -1145,6 +1165,22 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "The stratum owns no provider registration row: QUIC is not a "
                             "provider and this stratum activates none "
                             "(docs/PHASE-15-SUBPHASES.md sections 1 and 4)"
+                        )),
+    16: StratumEvidence(PHASE16_MODULES, PHASE16_OBLIGATIONS, PHASE16_COURTS,
+                        ledger_note=(
+                            "This stratum owns **no exported symbol**, so its ledger's unit is "
+                            "not a symbol: `forensics/phase16-obligations.json` publishes "
+                            "`unit: cli-config contract` and its `implemented`/`open` *export* "
+                            "lists are empty by measurement, while `open_in_this_stratum` "
+                            "counts 39 legacy provider registration rows, six prerequisite "
+                            "deferrals and three CLI/config/filesystem contract units. The "
+                            "provider-row rule below independently holds it open on the 39 "
+                            "`unimplemented` `providers/legacyprov.c` rows. Its `artifacts/"
+                            "phase16/COURTS.json` registers no court at activation because it "
+                            "owns no symbol for a differential probe to observe; every "
+                            "behavioural court is `pending` with the subphase that lands it. "
+                            "`docs/PHASE-16-SUBPHASES.md` sections 1 and 4 record the "
+                            "measurement (docs/DECISIONS.md D485, D525, D528)"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no
