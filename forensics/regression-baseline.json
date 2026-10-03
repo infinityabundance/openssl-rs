@@ -4,6 +4,7 @@
     "phase11",
     "phase12",
     "phase13",
+    "phase14",
     "phase2",
     "phase22",
     "phase3",
@@ -435,6 +436,10 @@
       "observations": 127,
       "verdict": "pass"
     },
+    "RT-PHASE14-REF": {
+      "observations": 600,
+      "verdict": "pass"
+    },
     "RT-PHASE22-BINARY": {
       "observations": 0,
       "verdict": "pass"
@@ -637,6 +642,7 @@
     "phase11": 2,
     "phase12": 3,
     "phase13": 0,
+    "phase14": 0,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -655,6 +661,7 @@
     "phase11": 0,
     "phase12": 0,
     "phase13": 0,
+    "phase14": 600,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -669,6 +676,7 @@
     "phase11": 1467,
     "phase12": 1033,
     "phase13": 377,
+    "phase14": 600,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -685,7 +693,7 @@
     "11": "complete",
     "12": "complete",
     "13": "complete",
-    "14": "not-started",
+    "14": "in-progress",
     "15": "not-started",
     "16": "not-started",
     "17": "not-started",

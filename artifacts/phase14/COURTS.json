@@ -1,0 +1,60 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-PHASE14-REF` is the activation **reference basis**: its probe takes the address of each of the stratum's 600 atlas-owned `ssl.h`/`tls1.h`/`srtp.h`/`sslerr_legacy.h` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). This stratum is the first whose covered set is entirely unimplemented at activation: `implemented-surface.json` records `0` implemented `libssl` symbols, so the atlas's phase-14 row binds no `referenced` name yet, and the probe takes addresses rather than calling because the Phase 2 ABI scaffold aborts when called. Every behavioural court the plan names is named in `pending_courts` with the subphase that brings it -- `RT-SSL-OBJECT`, `RT-SSL-METHODS`, `RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural courts compare.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 600,
+        "candidate_exit_code": 0,
+        "candidate_observations": 600,
+        "candidate_stderr_tail": [],
+        "court": "RT-PHASE14-REF",
+        "crashed": false,
+        "probe": "courts/phase14/rt_coverage_ref_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {
+      "RT-DTLS": "14.8 (the DTLS layer)",
+      "RT-HANDOFF": "14.11 (the received hand-offs)",
+      "RT-RECORD": "14.4 (the record layer)",
+      "RT-SESSION-CERT": "14.7 (the session and certificate plumbing)",
+      "RT-SSL-BIO": "14.6 (the BIO pair and buffers)",
+      "RT-SSL-CIPH": "14.3 (the cipher and configuration surface)",
+      "RT-SSL-EXT": "14.9 (the TLS extension and SRP surface)",
+      "RT-SSL-INIT": "14.10 (the init, error and QUIC bridge)",
+      "RT-SSL-METHODS": "14.2 (the method and version tables)",
+      "RT-SSL-OBJECT": "14.1 (the SSL_CTX/SSL object model)",
+      "RT-STATEM": "14.5 (the handshake state machine)"
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 1,
+      "total": 1
+    }
+  },
+  "generator": "forensics/tools/phase14_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+      "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_coverage_ref_probe.c",
+      "sha256": "c0c730be28e10bae11a9a50a1a1caf79eacfce808e24e262e67ad88d9161f7ef"
+    }
+  ],
+  "kind": "phase14-courts",
+  "schema": "openssl-rs/atlas/phase14-courts/v1"
+}
