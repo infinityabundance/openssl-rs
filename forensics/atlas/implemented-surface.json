@@ -508,7 +508,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 17012,
+      "compiler_emitted_count": 17040,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -6419,7 +6419,7 @@
       },
       "libssl": {
         "authority_exports": 603,
-        "implemented": 584,
+        "implemented": 600,
         "implemented_symbols": [
           "BIO_f_ssl",
           "BIO_new_buffer_ssl_connect",
@@ -6495,6 +6495,10 @@
           "SSL_CTX_config",
           "SSL_CTX_ct_is_enabled",
           "SSL_CTX_ctrl",
+          "SSL_CTX_dane_clear_flags",
+          "SSL_CTX_dane_enable",
+          "SSL_CTX_dane_mtype_set",
+          "SSL_CTX_dane_set_flags",
           "SSL_CTX_enable_ct",
           "SSL_CTX_flush_sessions",
           "SSL_CTX_flush_sessions_ex",
@@ -6695,6 +6699,7 @@
           "SSL_add1_to_CA_list",
           "SSL_add_client_CA",
           "SSL_add_dir_cert_subjects_to_stack",
+          "SSL_add_expected_rpk",
           "SSL_add_file_cert_subjects_to_stack",
           "SSL_add_ssl_module",
           "SSL_add_store_cert_subjects_to_stack",
@@ -6703,6 +6708,7 @@
           "SSL_alert_type_string",
           "SSL_alert_type_string_long",
           "SSL_alloc_buffers",
+          "SSL_bytes_to_cipher_list",
           "SSL_callback_ctrl",
           "SSL_certs_clear",
           "SSL_check_chain",
@@ -6725,7 +6731,12 @@
           "SSL_copy_session_id",
           "SSL_ct_is_enabled",
           "SSL_ctrl",
+          "SSL_dane_clear_flags",
+          "SSL_dane_enable",
+          "SSL_dane_set_flags",
+          "SSL_dane_tlsa_add",
           "SSL_do_handshake",
+          "SSL_dup",
           "SSL_dup_CA_list",
           "SSL_enable_ct",
           "SSL_export_keying_material",
@@ -6737,6 +6748,9 @@
           "SSL_get0_alpn_selected",
           "SSL_get0_client_cert_type",
           "SSL_get0_connection",
+          "SSL_get0_dane",
+          "SSL_get0_dane_authority",
+          "SSL_get0_dane_tlsa",
           "SSL_get0_domain",
           "SSL_get0_group_name",
           "SSL_get0_listener",
@@ -6754,6 +6768,7 @@
           "SSL_get1_compressed_cert",
           "SSL_get1_peer_certificate",
           "SSL_get1_session",
+          "SSL_get1_supported_ciphers",
           "SSL_get_SSL_CTX",
           "SSL_get_accept_connection_queue_len",
           "SSL_get_accept_stream_queue_len",
@@ -6894,6 +6909,7 @@
           "SSL_set1_initial_peer_addr",
           "SSL_set1_param",
           "SSL_set1_server_cert_type",
+          "SSL_set_SSL_CTX",
           "SSL_set_accept_state",
           "SSL_set_allow_early_data_cb",
           "SSL_set_alpn_protos",
@@ -7006,23 +7022,23 @@
           "d2i_SSL_SESSION_ex",
           "i2d_SSL_SESSION"
         ],
-        "scaffolded": 19
+        "scaffolded": 3
       }
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 6480,
-      "scaffolded": 19
+      "implemented": 6496,
+      "scaffolded": 3
     }
   },
-  "body_hash": "3e1a1a79fd44c64a798e7398368b38f799fb351aa3914aaae07d19338808614a",
+  "body_hash": "2174ccaddf804c1b73c488309f62f3ed1789b9a39bf37d1e1eccc344518ae3a6",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "1bad652a920669716b3aa873d7e7e8e6ad073767d96c6e09d977d1768f6e0989"
+      "sha256": "573b0ea4e683e47cf7de8bd4156dbc9ed2221751944c6f294cf63057b432fdfe"
     },
     {
       "name": "authority-exports",

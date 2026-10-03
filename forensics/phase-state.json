@@ -543,7 +543,7 @@
         "stratum": "Legacy / deprecated compatibility"
       },
       {
-        "blocking": "16 open obligation(s) of this stratum recorded in forensics/phase14-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. All six hundred of the exports it owns are its own four headers' (`ssl.h` 582, `tls1.h` 13, `srtp.h` 4, `sslerr_legacy.h` 1) and no earlier stratum's ledger records a hand-off to it, so its working set is exactly the atlas projection -- the first stratum that inherits nothing. **Unlike every earlier activation, not one of the six hundred is implemented at activation**: libssl is the candidate distribution's second namespace and its exports are present only as the Phase 2 ABI scaffold, so its `open` count is its whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; the ledger's `counts` and `forensics/atlas/implemented-surface.json` are the live record. The stratum owns no provider registration row: libssl is not a provider and this stratum activates none (docs/PHASE-14-SUBPHASES.md sections 1 and 4)",
+        "blocking": "Phase 14's FRF chain entry is incomplete: 10 court(s) that artifacts/phase14/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-ssl-object, openssl-rs-rt-ssl-methods, openssl-rs-rt-ssl-ciph, openssl-rs-rt-record, openssl-rs-rt-statem, openssl-rs-rt-ssl-bio, openssl-rs-rt-dtls, openssl-rs-rt-ssl-init, openssl-rs-rt-session-cert, openssl-rs-rt-ssl-ext; 10 of 10 required court(s) have no FRF declaration staging their artifacts/phase14/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-ssl-object, openssl-rs-rt-ssl-methods, openssl-rs-rt-ssl-ciph, openssl-rs-rt-record, openssl-rs-rt-statem, openssl-rs-rt-ssl-bio, openssl-rs-rt-dtls, openssl-rs-rt-ssl-init, openssl-rs-rt-session-cert, openssl-rs-rt-ssl-ext; 10 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-ssl-object, openssl-rs-rt-ssl-methods, openssl-rs-rt-ssl-ciph, openssl-rs-rt-record, openssl-rs-rt-statem, openssl-rs-rt-ssl-bio, openssl-rs-rt-dtls, openssl-rs-rt-ssl-init, openssl-rs-rt-session-cert, openssl-rs-rt-ssl-ext; 10 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-ssl-object, openssl-rs-rt-ssl-methods, openssl-rs-rt-ssl-ciph, openssl-rs-rt-record, openssl-rs-rt-statem, openssl-rs-rt-ssl-bio, openssl-rs-rt-dtls, openssl-rs-rt-ssl-init, openssl-rs-rt-session-cert, openssl-rs-rt-ssl-ext; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 10 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 14 and the FRF chain",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -675,7 +675,7 @@
       "not_started": 7
     }
   },
-  "body_hash": "bd77abd97eade684e35ffda8055c7b26dbeda320b4d1fa617dcc2377d1abff07",
+  "body_hash": "a46583c68a1e3342e65073849bcb1b72da31ffb156ac98455a22556bc3544fcf",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

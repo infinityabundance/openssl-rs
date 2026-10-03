@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 600,
       "deferred_to_later_phase": 0,
-      "implemented": 584,
-      "open_in_this_stratum": 16,
+      "implemented": 600,
+      "open_in_this_stratum": 0,
       "owned": 600,
       "received_by_handoff": 0
     },
@@ -89,6 +89,10 @@
       "SSL_CTX_config",
       "SSL_CTX_ct_is_enabled",
       "SSL_CTX_ctrl",
+      "SSL_CTX_dane_clear_flags",
+      "SSL_CTX_dane_enable",
+      "SSL_CTX_dane_mtype_set",
+      "SSL_CTX_dane_set_flags",
       "SSL_CTX_enable_ct",
       "SSL_CTX_flush_sessions",
       "SSL_CTX_flush_sessions_ex",
@@ -289,6 +293,7 @@
       "SSL_add1_to_CA_list",
       "SSL_add_client_CA",
       "SSL_add_dir_cert_subjects_to_stack",
+      "SSL_add_expected_rpk",
       "SSL_add_file_cert_subjects_to_stack",
       "SSL_add_ssl_module",
       "SSL_add_store_cert_subjects_to_stack",
@@ -297,6 +302,7 @@
       "SSL_alert_type_string",
       "SSL_alert_type_string_long",
       "SSL_alloc_buffers",
+      "SSL_bytes_to_cipher_list",
       "SSL_callback_ctrl",
       "SSL_certs_clear",
       "SSL_check_chain",
@@ -319,7 +325,12 @@
       "SSL_copy_session_id",
       "SSL_ct_is_enabled",
       "SSL_ctrl",
+      "SSL_dane_clear_flags",
+      "SSL_dane_enable",
+      "SSL_dane_set_flags",
+      "SSL_dane_tlsa_add",
       "SSL_do_handshake",
+      "SSL_dup",
       "SSL_dup_CA_list",
       "SSL_enable_ct",
       "SSL_export_keying_material",
@@ -331,6 +342,9 @@
       "SSL_get0_alpn_selected",
       "SSL_get0_client_cert_type",
       "SSL_get0_connection",
+      "SSL_get0_dane",
+      "SSL_get0_dane_authority",
+      "SSL_get0_dane_tlsa",
       "SSL_get0_domain",
       "SSL_get0_group_name",
       "SSL_get0_listener",
@@ -348,6 +362,7 @@
       "SSL_get1_compressed_cert",
       "SSL_get1_peer_certificate",
       "SSL_get1_session",
+      "SSL_get1_supported_ciphers",
       "SSL_get_SSL_CTX",
       "SSL_get_accept_connection_queue_len",
       "SSL_get_accept_stream_queue_len",
@@ -488,6 +503,7 @@
       "SSL_set1_initial_peer_addr",
       "SSL_set1_param",
       "SSL_set1_server_cert_type",
+      "SSL_set_SSL_CTX",
       "SSL_set_accept_state",
       "SSL_set_allow_early_data_cb",
       "SSL_set_alpn_protos",
@@ -603,104 +619,7 @@
     "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs, and ssl/<dir>/<stem>.c -> src/ssl/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
     "module_overrides": [],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Phase 14's working set is exactly its atlas-owned universe -- 600 `libssl` exports over `ssl.h` (582), `tls1.h` (13), `srtp.h` (4) and `sslerr_legacy.h` (1) -- and no earlier stratum defers a symbol to it, so `received_by_handoff` is 0. **Unlike every earlier activation, not one symbol is implemented at activation**: libssl is the candidate distribution's second namespace, its exports are present only as the Phase 2 ABI scaffold, and `forensics/atlas/implemented-surface.json` records `implemented: 0` for libssl, so the ledger's `implemented` count is 0 and its `open` count is the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum ships no provider registration row: libssl is not a provider and this stratum activates none. Nothing here is a parity claim: a symbol in `implemented` would be at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-14-SUBPHASES.md section 4 decides when the stratum may be called complete.",
-    "open": [
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_dane_clear_flags"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_dane_enable"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_dane_mtype_set"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_dane_set_flags"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_add_expected_rpk"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_bytes_to_cipher_list"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_dane_clear_flags"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_dane_enable"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_dane_set_flags"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_dane_tlsa_add"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_dup"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_dane"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_dane_authority"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get0_dane_tlsa"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get1_supported_ciphers"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/ssl_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_SSL_CTX"
-      }
-    ],
+    "open": [],
     "owned_by_header": {
       "srtp.h": 4,
       "ssl.h": 582,
@@ -771,7 +690,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "3e1a1a79fd44c64a798e7398368b38f799fb351aa3914aaae07d19338808614a"
+      "sha256": "2174ccaddf804c1b73c488309f62f3ed1789b9a39bf37d1e1eccc344518ae3a6"
     }
   ],
   "kind": "phase14-obligations",

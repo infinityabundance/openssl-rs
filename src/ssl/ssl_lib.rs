@@ -26,45 +26,74 @@ use crate::ct::ct_log::{
     CtlogStore,
 };
 use crate::engine::eng_lib::Engine;
-use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_get_security_bits};
+use crate::evp::digest::{EVP_MD_get_size, EvpMd};
+use crate::evp::legacy_evp::EVP_get_digestbyname;
+use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_get_security_bits, EVP_PKEY_up_ref, EvpPkey};
 use crate::ffi::guard_ffi;
+use crate::packet::Packet;
 use crate::runtime::bio::bss_sock::BIO_s_socket;
 use crate::runtime::bio::iolib::{BIO_get_rpoll_descriptor, BIO_get_wpoll_descriptor};
+use crate::runtime::bio::sys::memcmp;
 use crate::runtime::bio::{
     BIO_ctrl, BIO_find_type, BIO_free_all, BIO_int_ctrl, BIO_method_type, BIO_new, BIO_next,
     BIO_pop, BIO_push, BIO_up_ref, Bio, BioPollDescriptor, BIO_C_GET_FD, BIO_C_SET_FD, BIO_NOCLOSE,
     BIO_TYPE_DESCRIPTOR,
 };
+use crate::runtime::err::err_reasons::{
+    SSL_R_CONTEXT_NOT_DANE_ENABLED, SSL_R_DANE_ALREADY_ENABLED,
+    SSL_R_DANE_CANNOT_OVERRIDE_MTYPE_FULL, SSL_R_DANE_NOT_ENABLED, SSL_R_DANE_TLSA_BAD_CERTIFICATE,
+    SSL_R_DANE_TLSA_BAD_CERTIFICATE_USAGE, SSL_R_DANE_TLSA_BAD_DATA_LENGTH,
+    SSL_R_DANE_TLSA_BAD_DIGEST_LENGTH, SSL_R_DANE_TLSA_BAD_MATCHING_TYPE,
+    SSL_R_DANE_TLSA_BAD_PUBLIC_KEY, SSL_R_DANE_TLSA_BAD_SELECTOR, SSL_R_DANE_TLSA_NULL_DATA,
+    SSL_R_ERROR_IN_RECEIVED_CIPHER_LIST, SSL_R_ERROR_SETTING_TLSA_BASE_DOMAIN,
+    SSL_R_NO_CIPHERS_SPECIFIED,
+};
 use crate::runtime::err::{raise_with, ERR_peek_error, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::ex_data::{
-    CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data, CRYPTO_set_ex_data, CryptoExData,
-    CRYPTO_EX_INDEX_SSL, CRYPTO_EX_INDEX_SSL_CTX,
+    CRYPTO_dup_ex_data, CRYPTO_free_ex_data, CRYPTO_get_ex_data, CRYPTO_new_ex_data,
+    CRYPTO_set_ex_data, CryptoExData, CRYPTO_EX_INDEX_SSL, CRYPTO_EX_INDEX_SSL_CTX,
 };
-use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
+use crate::runtime::mem::{
+    CRYPTO_calloc, CRYPTO_free, CRYPTO_malloc, CRYPTO_memdup, CRYPTO_realloc_array, CRYPTO_strdup,
+    CRYPTO_zalloc,
+};
+use crate::runtime::obj::{NID_sha256, NID_sha512, NID_undef, OBJ_nid2sn};
 use crate::runtime::stack::{
-    OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_pop_free,
-    OPENSSL_sk_value, OpenSslStack,
+    OPENSSL_sk_dup, OPENSSL_sk_find, OPENSSL_sk_free, OPENSSL_sk_insert, OPENSSL_sk_new_null,
+    OPENSSL_sk_new_reserve, OPENSSL_sk_num, OPENSSL_sk_pop_free, OPENSSL_sk_push, OPENSSL_sk_value,
+    OpenSslStack,
 };
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
 use crate::ssl::d1_lib::{dtls1_free, dtls1_new_state, Dtls1State};
 use crate::ssl::quic::quic_tls_api::QuicTlsCallbacks;
+use crate::ssl::s3_lib::ssl3_ctrl_set_tlsext_host_name;
 use crate::ssl::ssl_cert::{ssl_ctx_security, ssl_security};
+use crate::ssl::ssl_ciph::ssl3_get_cipher_by_char;
+use crate::ssl::ssl_ciph_table::SslCipher;
 use crate::ssl::ssl_sess::{
     ssl_ctx_session_cache_free, SSL_SESSION_free, SSL_get_session, SSL_set_session,
 };
-use crate::ssl::statem::extensions_cust::CustomExtMethod;
+use crate::ssl::statem::extensions_cust::{
+    custom_exts_copy, custom_exts_copy_conn, custom_exts_copy_flags, CustomExtMethod,
+};
 use crate::ssl::statem::statem::{
     ossl_statem_accept, ossl_statem_check_finish_init, ossl_statem_clear, ossl_statem_connect,
     ossl_statem_in_error, ossl_statem_set_in_init, SSL_in_before, SSL_in_init,
     SSL_is_init_finished,
 };
+use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled};
 use crate::x509::by_dir::X509_LOOKUP_hash_dir;
 use crate::x509::by_file::X509_LOOKUP_file;
 use crate::x509::by_store::X509_LOOKUP_store;
-use crate::x509::dane::SslDane;
+use crate::x509::dane::{
+    danetls_enabled, danetls_usage_bit, DaneCtx, DanetlsRecord, SslDane, DANETLS_MATCHING_2256,
+    DANETLS_MATCHING_2512, DANETLS_MATCHING_FULL, DANETLS_MATCHING_LAST, DANETLS_SELECTOR_CERT,
+    DANETLS_SELECTOR_LAST, DANETLS_SELECTOR_SPKI, DANETLS_TA_MASK, DANETLS_USAGE_DANE_EE,
+    DANETLS_USAGE_DANE_TA, DANETLS_USAGE_LAST,
+};
 use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
 use crate::x509::v3_utl::a2i_IPADDRESS;
-use crate::x509::x509_cmp::X509_check_private_key;
+use crate::x509::x509_cmp::{X509_chain_up_ref, X509_check_private_key, X509_get0_pubkey};
 use crate::x509::x509_d2::{
     X509_STORE_load_file_ex, X509_STORE_load_path, X509_STORE_load_store_ex,
     X509_STORE_set_default_paths_ex,
@@ -82,8 +111,9 @@ use crate::x509::x509_vpm::{
     X509_VERIFY_PARAM_set_depth, X509_VERIFY_PARAM_set_hostflags, X509_VERIFY_PARAM_set_purpose,
     X509_VERIFY_PARAM_set_trust,
 };
-use crate::x509::x_name::{X509Name, X509_NAME_free};
-use crate::x509::x_x509::{X509_free, X509};
+use crate::x509::x_name::{X509Name, X509_NAME_dup, X509_NAME_free};
+use crate::x509::x_pubkey::{d2i_PUBKEY, i2d_PUBKEY};
+use crate::x509::x_x509::{d2i_X509, X509_free, X509};
 
 /// `OPENSSL_FILE` of this translation unit, used on allocation and `ERR_raise` sites.
 const FILE: *const c_char = c"ssl/ssl_lib.c".as_ptr();
@@ -194,6 +224,8 @@ const SSL_HRR_PENDING: c_int = 1;
 const ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED: c_int = 257 | (3 << 18);
 /// `ERR_R_UNSUPPORTED` — `err.h.in:366` (`268 | ERR_RFLAG_COMMON`, `ERR_RFLAG_COMMON = 2 << 18`).
 const ERR_R_UNSUPPORTED: c_int = 268 | (2 << 18);
+/// `ERR_R_CRYPTO_LIB` — `err.h` (`15 | ERR_RFLAG_COMMON`).
+const ERR_R_CRYPTO_LIB: c_int = 15 | (2 << 18);
 /// `ERR_R_PASSED_INVALID_ARGUMENT` — `err.h.in:360` (`262 | ERR_RFLAG_COMMON`).
 const ERR_R_PASSED_INVALID_ARGUMENT: c_int = 262 | (2 << 18);
 
@@ -382,6 +414,10 @@ const SSL_ERROR_SYSCALL: c_int = 5;
 
 /// `TLS_CIPHER_LEN` — `ssl_local.h`: the two-byte cipher-suite coordinate.
 const TLS_CIPHER_LEN: c_int = 2;
+/// `SSLV2_CIPHER_LEN` — `ssl_local.h`: the three-byte SSLv2-compatible coordinate.
+const SSLV2_CIPHER_LEN: c_int = 3;
+/// `SSL_SECOP_CIPHER_SUPPORTED` — `ssl.h:2716` (`1 | SSL_SECOP_OTHER_CIPHER`).
+const SSL_SECOP_CIPHER_SUPPORTED: c_int = 1 | (1 << 16);
 
 /// `SSL_TYPE_SSL_CONNECTION` — the ordinary connection type.
 const SSL_TYPE_SSL_CONNECTION: c_int = 0;
@@ -407,6 +443,10 @@ const SSL_CT_VALIDATION_PERMISSIVE: c_int = 0;
 const SSL_CT_VALIDATION_STRICT: c_int = 1;
 /// `TLSEXT_NAMETYPE_host_name` — `tls1.h:171`.
 const TLSEXT_NAMETYPE_HOST_NAME: c_int = 0;
+/// `SSL_CTRL_SET_TLSEXT_HOSTNAME` — `ssl.h:1268`.
+const SSL_CTRL_SET_TLSEXT_HOSTNAME: c_int = 55;
+/// `TLSEXT_STATUSTYPE_nothing` — `tls1.h` (the "no OCSP status request" sentinel).
+const TLSEXT_STATUSTYPE_NOTHING: c_int = -1;
 /// `TLSEXT_cert_type_x509` — `tls1.h:240`.
 const TLSEXT_CERT_TYPE_X509: u8 = 0;
 /// `TLSEXT_cert_type_rpk` — `tls1.h:242`.
@@ -645,6 +685,144 @@ unsafe fn cert_copy_security(to: *mut Cert, from: *const Cert) {
     }
 }
 
+/// `CERT *ssl_cert_dup(CERT *cert)` — `ssl/ssl_cert.c:95-236`.
+///
+/// The authority's per-slot duplication in full: every `pkeys[]` entry up-refs its
+/// certificate, private key, chain, serverinfo block and compressed forms, and the container's
+/// `dh_tmp`, flag word, certificate callback, security attributes, custom-extension table and PSK
+/// identity hint are copied. The fields this crate's `Cert` does not model — the authority's
+/// `conf_sigalgs`/`client_sigalgs`/`ctype`, `verify_store`/`chain_store` and `dh_tmp_auto` — are
+/// not copied; `src/ssl/mod.rs` records the reduction. `OPENSSL_NO_COMP_ALG` is defined in the
+/// admitted build, so the `comp_cert[]` loop is the authority's guard-off body.
+///
+/// # Safety
+/// `cert` must be NULL or a live certificate container.
+unsafe fn ssl_cert_dup(cert: *const Cert) -> *mut Cert {
+    if cert.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `cert_new` returns a live zeroed container or NULL.
+    let ret = unsafe { cert_new() };
+    if ret.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `cert` and `ret` are live; every write is to the fresh container `ret`.
+    unsafe {
+        (*ret).ssl_pkey_num = (*cert).ssl_pkey_num;
+        (*ret).key_index = (*cert).key_index;
+
+        if !(*cert).dh_tmp.is_null() {
+            if EVP_PKEY_up_ref((*cert).dh_tmp.cast()) == 0 {
+                cert_free(ret);
+                return ptr::null_mut();
+            }
+            (*ret).dh_tmp = (*cert).dh_tmp;
+        }
+        (*ret).dh_tmp_cb = (*cert).dh_tmp_cb;
+
+        for i in 0..(*ret).ssl_pkey_num {
+            let cpk = &(*cert).pkeys[i];
+            let rpk = &mut (*ret).pkeys[i];
+            if !cpk.x509.is_null() {
+                X509_up_ref(cpk.x509);
+                rpk.x509 = cpk.x509;
+            }
+            if !cpk.privatekey.is_null() {
+                EVP_PKEY_up_ref(cpk.privatekey.cast());
+                rpk.privatekey = cpk.privatekey;
+            }
+            if !cpk.chain.is_null() {
+                rpk.chain = X509_chain_up_ref(cpk.chain);
+                if rpk.chain.is_null() {
+                    cert_free(ret);
+                    return ptr::null_mut();
+                }
+            }
+            if !cpk.serverinfo.is_null() {
+                rpk.serverinfo =
+                    CRYPTO_memdup(cpk.serverinfo.cast(), cpk.serverinfo_length, FILE, 154)
+                        .cast::<u8>();
+                if rpk.serverinfo.is_null() {
+                    cert_free(ret);
+                    return ptr::null_mut();
+                }
+                rpk.serverinfo_length = cpk.serverinfo_length;
+            }
+            for j in 0..TLSEXT_COMP_CERT_LIMIT {
+                if !cpk.comp_cert[j].is_null() {
+                    crate::ssl::ssl_cert_comp::OSSL_COMP_CERT_up_ref(cpk.comp_cert[j]);
+                    rpk.comp_cert[j] = cpk.comp_cert[j];
+                }
+            }
+        }
+
+        (*ret).cert_flags = (*cert).cert_flags;
+        (*ret).cert_cb = (*cert).cert_cb;
+        (*ret).cert_cb_arg = (*cert).cert_cb_arg;
+        (*ret).sec_cb = (*cert).sec_cb;
+        (*ret).sec_level = (*cert).sec_level;
+        (*ret).sec_ex = (*cert).sec_ex;
+
+        if custom_exts_copy(&mut (*ret).custext, &(*cert).custext) == 0 {
+            cert_free(ret);
+            return ptr::null_mut();
+        }
+        if !(*cert).psk_identity_hint.is_null() {
+            (*ret).psk_identity_hint = CRYPTO_strdup((*cert).psk_identity_hint, FILE, 225);
+            if (*ret).psk_identity_hint.is_null() {
+                cert_free(ret);
+                return ptr::null_mut();
+            }
+        }
+    }
+    ret
+}
+
+/// `static int dup_ca_names(STACK_OF(X509_NAME) **dst, STACK_OF(X509_NAME) *src)` —
+/// `ssl/ssl_lib.c:5101-5129`.
+///
+/// # Safety
+/// `dst` must be a writable slot; `src` must be NULL or a live name stack.
+unsafe fn dup_ca_names(dst: *mut *mut OpenSslStack, src: *mut OpenSslStack) -> c_int {
+    if src.is_null() {
+        // SAFETY: `dst` is writable per the caller's contract.
+        unsafe { *dst = ptr::null_mut() };
+        return 1;
+    }
+    // SAFETY: no preconditions.
+    let sk = OPENSSL_sk_new_null();
+    if sk.is_null() {
+        return 0;
+    }
+    // SAFETY: `src` is a live stack per the caller's contract.
+    let num = unsafe { OPENSSL_sk_num(src) };
+    let mut i = 0;
+    while i < num {
+        // SAFETY: `i` is in range of `src`.
+        let xn = unsafe { OPENSSL_sk_value(src, i) }.cast::<X509Name>();
+        // SAFETY: `xn` is a live name.
+        let dup = unsafe { X509_NAME_dup(xn) };
+        if dup.is_null() {
+            // SAFETY: `sk` is a live stack of owned names.
+            unsafe { OPENSSL_sk_pop_free(sk, Some(x509_name_free_void)) };
+            return 0;
+        }
+        // SAFETY: `sk` is live; `dup` is an owned name whose ownership moves on insert.
+        if unsafe { OPENSSL_sk_insert(sk, dup.cast(), i) } == 0 {
+            // SAFETY: `dup` is an owned name; `sk` a live stack of owned names.
+            unsafe {
+                X509_NAME_free(dup);
+                OPENSSL_sk_pop_free(sk, Some(x509_name_free_void));
+            }
+            return 0;
+        }
+        i += 1;
+    }
+    // SAFETY: `dst` is writable.
+    unsafe { *dst = sk };
+    1
+}
+
 // -------------------------------------------------------------------------------------------
 // SSL_CTX and SSL
 // -------------------------------------------------------------------------------------------
@@ -836,9 +1014,10 @@ pub struct SslCtx {
     /// `GEN_SESSION_CB generate_session_id`.
     #[allow(dead_code)] // stored for the setter's contract; read by the session path (14.7)
     pub generate_session_id: Option<GenerateSessionIdCb>,
-    /// `unsigned long dane.flags` — the DANE flag word `SSL_CTX_dane_[set|clear]_flags` touches.
-    #[allow(dead_code)] // stored for the DANE setters/getters (14.1 remainder)
-    pub(crate) dane: SslDane,
+    /// `struct dane_ctx_st dane` — the context's shared DANE digest table (`ssl_local.h:1093`);
+    /// `SSL_CTX_dane_*` writes it and `dane_ctx_enable` fills it (`x509::dane`).
+    #[allow(dead_code)] // read by the DANE setters/getters landed in 14.7b
+    pub(crate) dane: DaneCtx,
     /// `ENGINE *client_cert_engine` — the engine `SSL_CTX_set_client_cert_engine` installs
     /// (`ssl_local.h:1065`).
     #[allow(dead_code)] // stored for the setter's contract; read by the client-cert path
@@ -869,6 +1048,8 @@ pub struct SslCtx {
     pub ext_alpn_len: c_uint,
     /// `uint8_t ext.max_fragment_len_mode` — the context-wide MFL (`SSL_CTX_set_tlsext_max_fragment_length`).
     pub ext_max_fragment_len_mode: u8,
+    /// `int ext.status_type` — the OCSP status request type (`ssl_lib.c:4222`'s `TLSEXT_STATUSTYPE_nothing`).
+    pub ext_status_type: c_int,
     /// `SSL_CTX_npn_select_cb_func ext.npn_select_cb`.
     pub npn_select_cb: Option<NpnSelectCb>,
     /// `void *ext.npn_select_cb_arg`.
@@ -1009,6 +1190,9 @@ pub struct Ssl {
     /// `uint8_t ext.max_fragment_len_mode` — the connection-wide MFL
     /// (`SSL_set_tlsext_max_fragment_length`).
     pub max_fragment_len_mode: u8,
+    /// `int ext.status_type` — the OCSP status request type, copied from the context by `SSL_new`
+    /// (`ssl_lib.c:820`).
+    pub ext_status_type: c_int,
     /// `OSSL_HANDSHAKE_STATE statem.hand_state` — the state `SSL_get_state` reports.
     pub hand_state: c_int,
     /// `enum MSG_FLOW_* statem.state` — the message-flow state `SSL_in_before` reads.
@@ -1037,6 +1221,15 @@ pub struct Ssl {
     pub s3_tmp_finish_md_len: c_int,
     /// `uint32_t s3.tmp.peer_finish_md_len` — 0 before a handshake (`SSL_IS_FIRST_HANDSHAKE`, 14.5b).
     pub s3_tmp_peer_finish_md_len: c_int,
+    /// `uint32_t s3.tmp.mask_a` — the disabled auth-algorithm mask `ssl_set_client_disabled` builds
+    /// and `ssl_cipher_disabled` reads (`t1_lib.c:2850`). Lands with 14.7b's `SSL_get1_supported_ciphers`.
+    pub mask_a: u32,
+    /// `uint32_t s3.tmp.mask_k` — the disabled key-exchange mask (`t1_lib.c:2851`).
+    pub mask_k: u32,
+    /// `int s3.tmp.min_ver` — the connection's minimum supported version (`ssl_get_min_max_version`).
+    pub min_ver: c_int,
+    /// `int s3.tmp.max_ver` — the connection's maximum supported version; 0 disables every cipher.
+    pub max_ver: c_int,
     /// `size_t rlayer.wpend_tot` — the pending-write counter (`RECORD_LAYER_write_pending`, 14.5b).
     pub wpend_tot: usize,
     /// `int ext.extra_tickets_expected` — `SSL_new_session_ticket`'s counter (14.5b).
@@ -1136,8 +1329,8 @@ pub struct Ssl {
     /// `const SSL_CIPHER *s3.tmp.new_cipher` — the pending cipher (`SSL_get_pending_cipher`). Set
     /// by the handshake; NULL before one.
     pub pending_cipher: *const crate::ssl::ssl_ciph_table::SslCipher,
-    /// `SSL_DANE dane` — the DANE per-connection state (`ssl_local.h:1792`).
-    #[allow(dead_code)] // stored for the DANE setters/getters (14.1 remainder)
+    /// `SSL_DANE dane` — the DANE per-connection state (`ssl_local.h:1493`).
+    #[allow(dead_code)] // read by the DANE setters/getters landed in 14.7b
     pub(crate) dane: SslDane,
     /// `SRP_CTX srp_ctx` — the SRP credential block a connection copies from its context
     /// (`ssl_local.h:1794`).
@@ -1646,6 +1839,8 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
             (*ret).max_early_data = 0;
             (*ret).recv_max_early_data = SSL3_RT_MAX_PLAIN_LENGTH as u32;
             (*ret).num_tickets = 2;
+            // `ssl_lib.c:4222`: no OCSP status request type is configured by default.
+            (*ret).ext_status_type = TLSEXT_STATUSTYPE_NOTHING;
 
             // `ssl_lib.c:4075-4111`: load the cipher tables, install the default TLSv1.3
             // ciphersuites and build the default TLSv1.2-and-earlier preference list.
@@ -1735,6 +1930,7 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
             X509_STORE_free((*ctx).cert_store);
             cert_free((*ctx).cert);
+            dane_ctx_final(&mut (*ctx).dane);
             CTLOG_STORE_free((*ctx).ctlog_store);
             CRYPTO_free((*ctx).client_cert_type.cast(), FILE, 0);
             CRYPTO_free((*ctx).server_cert_type.cast(), FILE, 0);
@@ -1808,6 +2004,7 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             // `ossl_ssl_connection_new_int` (`ssl_lib.c:810`) copies the context MFL when the
             // object is not QUIC; every object here is a TLS connection.
             (*s).max_fragment_len_mode = (*ctx).ext_max_fragment_len_mode;
+            (*s).ext_status_type = (*ctx).ext_status_type;
             (*s).rlayer_default_read_buf_len = (*ctx).default_read_buf_len;
             // `RECORD_LAYER_reset` (`rec_layer_s3.c:72-98`) installs a fresh record-read method on
             // the connection; its init sets `rl->rstate = SSL_ST_READ_HEADER` (`tls_common.c:1335`).
@@ -3016,6 +3213,13 @@ pub unsafe extern "C" fn SSL_ctrl(
                 }
             }
             SSL_CTRL_GET_EXTMS_SUPPORT => -1, // no session, so the authority answers -1.
+            // `ssl3_ctrl`'s `SSL_CTRL_SET_TLSEXT_HOSTNAME` arm (`s3_lib.c:4024-4054`), reached
+            // because the authority's `SSL_ctrl` falls through to the method's control dispatcher.
+            // This crate has no `ssl3_ctrl` pointer, so the one arm DANE needs is landed here.
+            SSL_CTRL_SET_TLSEXT_HOSTNAME => {
+                // SAFETY: `sc` is live; `parg` is NULL or a NUL-terminated name per the contract.
+                unsafe { ssl3_ctrl_set_tlsext_host_name(s, larg, parg) }
+            }
             SSL_CTRL_GET_MIN_PROTO_VERSION => sc.min_proto_version as c_long,
             SSL_CTRL_GET_MAX_PROTO_VERSION => sc.max_proto_version as c_long,
             _ => 0,
@@ -9024,5 +9228,1196 @@ pub unsafe extern "C" fn SSL_get0_peer_rpk(s: *const Ssl) -> *mut c_void {
         }
         // SAFETY: `session` is live.
         unsafe { (*session).peer_rpk }
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// 14.7b — the DANE record surface and the RPK-expected setter (`ssl/ssl_lib.c`)
+//
+// The twelve DANE/RPK exports 14.1 withheld, and the internal helpers `ssl_lib.c`'s own body
+// reaches: `dane_ctx_enable`/`dane_ctx_final`, the `dane_mds` table, `tlsa_free`/`dane_final`,
+// `ssl_dane_dup`, `dane_mtype_set`, `tlsa_md_get` and `dane_tlsa_add`. The public `SSL_DANE`
+// record itself is `crate::x509::dane`'s, modelled from `include/internal/dane.h`, because
+// Phase 11's verification engine shares it; this section is the `ssl_lib.c` half that fills and
+// reads it. `SSL_dane_enable` reaches the `SSL_CTRL_SET_TLSEXT_HOSTNAME` arm of `ssl3_ctrl`
+// (`src/ssl/s3_lib.rs`) through `SSL_ctrl`.
+// -------------------------------------------------------------------------------------------
+
+/// `dane_mds[]` — `ssl/ssl_lib.c:102-110`, the `(mtype, ord, nid)` default digest table.
+const DANE_MDS: [(u8, u8, c_int); 3] = [
+    (DANETLS_MATCHING_FULL, 0, NID_undef),
+    (DANETLS_MATCHING_2256, 1, NID_sha256),
+    (DANETLS_MATCHING_2512, 2, NID_sha512),
+];
+
+/// `EVP_get_digestbynid(nid)` — the `evp.h` macro `EVP_get_digestbyname(OBJ_nid2sn(nid))`.
+///
+/// # Safety
+/// `nid` is a digest NID; the resolved object is a process-lifetime static.
+unsafe fn evp_get_digestbynid(nid: c_int) -> *const EvpMd {
+    // SAFETY: both calls are the macro's own expansion; `OBJ_nid2sn` answers a static string or
+    // NULL, and `EVP_get_digestbyname` tolerates the NULL name.
+    unsafe { EVP_get_digestbyname(OBJ_nid2sn(nid)) }
+}
+
+/// `static int dane_ctx_enable(struct dane_ctx_st *dctx)` — `ssl/ssl_lib.c:112-147`.
+///
+/// # Safety
+/// `dctx` must be a live `DaneCtx`.
+unsafe fn dane_ctx_enable(dctx: *mut DaneCtx) -> c_int {
+    // SAFETY: `dctx` is live per the caller's contract.
+    if !unsafe { (*dctx).mdevp }.is_null() {
+        return 1;
+    }
+    let mdmax = DANETLS_MATCHING_LAST;
+    let n = mdmax as usize + 1;
+    // SAFETY: two fresh `CRYPTO_calloc` blocks of `n` pointer-sized slots / `n` bytes.
+    let mdevp =
+        CRYPTO_calloc(n, core::mem::size_of::<*const EvpMd>(), FILE, 123).cast::<*const EvpMd>();
+    let mdord = CRYPTO_calloc(n, 1, FILE, 124).cast::<u8>();
+    if mdord.is_null() || mdevp.is_null() {
+        // SAFETY: each pointer is NULL or an owned `CRYPTO_calloc` block.
+        unsafe {
+            CRYPTO_free(mdord.cast(), FILE, 127);
+            CRYPTO_free(mdevp.cast(), FILE, 128);
+        }
+        return 0;
+    }
+    let mut i = 0usize;
+    while i < DANE_MDS.len() {
+        let (mtype, ord, nid) = DANE_MDS[i];
+        if nid != NID_undef {
+            // SAFETY: `nid` is a table NID.
+            let md = unsafe { evp_get_digestbynid(nid) };
+            if !md.is_null() {
+                // SAFETY: `mdevp`/`mdord` have `n` slots and `mtype <= mdmax < n`.
+                unsafe {
+                    *mdevp.add(mtype as usize) = md;
+                    *mdord.add(mtype as usize) = ord;
+                }
+            }
+        }
+        i += 1;
+    }
+    // SAFETY: `dctx` is live.
+    unsafe {
+        (*dctx).mdevp = mdevp;
+        (*dctx).mdord = mdord;
+        (*dctx).mdmax = mdmax;
+    }
+    1
+}
+
+/// `static void dane_ctx_final(struct dane_ctx_st *dctx)` — `ssl/ssl_lib.c:149-157`.
+///
+/// # Safety
+/// `dctx` must be a live `DaneCtx`.
+unsafe fn dane_ctx_final(dctx: *mut DaneCtx) {
+    // SAFETY: `dctx` is live per the caller's contract; each pointer is NULL or owned.
+    unsafe {
+        CRYPTO_free((*dctx).mdevp.cast(), FILE, 151);
+        (*dctx).mdevp = ptr::null_mut();
+        CRYPTO_free((*dctx).mdord.cast(), FILE, 154);
+        (*dctx).mdord = ptr::null_mut();
+        (*dctx).mdmax = 0;
+    }
+}
+
+/// `static void tlsa_free(danetls_record *t)` — `ssl/ssl_lib.c:159-166`.
+///
+/// # Safety
+/// `t` must be NULL or an owned `danetls_record`.
+unsafe extern "C" fn tlsa_free(t: *mut c_void) {
+    let t = t.cast::<DanetlsRecord>();
+    if t.is_null() {
+        return;
+    }
+    // SAFETY: `t` is a live owned record per the caller's contract.
+    unsafe {
+        CRYPTO_free((*t).data.cast(), FILE, 163);
+        EVP_PKEY_free((*t).spki);
+        CRYPTO_free(t.cast(), FILE, 165);
+    }
+}
+
+/// `static void dane_final(SSL_DANE *dane)` — `ssl/ssl_lib.c:168-181`.
+///
+/// # Safety
+/// `dane` must be a live `SslDane`.
+unsafe fn dane_final(dane: *mut SslDane) {
+    // SAFETY: `dane` is live per the caller's contract; each field is NULL or owned.
+    unsafe {
+        OPENSSL_sk_pop_free((*dane).trecs, Some(tlsa_free));
+        (*dane).trecs = ptr::null_mut();
+        OSSL_STACK_OF_X509_free((*dane).certs);
+        (*dane).certs = ptr::null_mut();
+        X509_free((*dane).mcert);
+        (*dane).mcert = ptr::null_mut();
+        (*dane).mtlsa = ptr::null_mut();
+        (*dane).mdpth = -1;
+        (*dane).pdpth = -1;
+    }
+}
+
+/// `static int ssl_dane_dup(SSL_CONNECTION *to, SSL_CONNECTION *from)` — `ssl/ssl_lib.c:186-214`.
+///
+/// # Safety
+/// `to` and `from` must be live connections.
+pub(crate) unsafe fn ssl_dane_dup(to: *mut Ssl, from: *const Ssl) -> c_int {
+    // SAFETY: `from` is live per the caller's contract.
+    if !unsafe { danetls_enabled(ptr::addr_of!((*from).dane) as *mut SslDane) } {
+        return 1;
+    }
+    // SAFETY: both are live; `trecs` is a live stack because `DANETLS_ENABLED` held.
+    let num = unsafe { OPENSSL_sk_num((*from).dane.trecs) };
+    // SAFETY: `to` is live.
+    unsafe { dane_final(ptr::addr_of_mut!((*to).dane)) };
+    // SAFETY: `to` is live; its context is a live context.
+    let ctx = unsafe { (*to).ctx };
+    // SAFETY: `to` is live and its `dane` was just finalised.
+    unsafe {
+        (*to).dane.flags = (*from).dane.flags;
+        (*to).dane.dctx = ptr::addr_of_mut!((*ctx).dane);
+        (*to).dane.trecs = OPENSSL_sk_new_reserve(None, num);
+    }
+    // SAFETY: `trecs` was just assigned.
+    if unsafe { (*to).dane.trecs }.is_null() {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(ERR_R_CRYPTO_LIB, 201) };
+        return 0;
+    }
+    let mut i = 0;
+    while i < num {
+        // SAFETY: `i` is in range of `from`'s record stack.
+        let t = unsafe { OPENSSL_sk_value((*from).dane.trecs, i) }.cast::<DanetlsRecord>();
+        // SAFETY: `t` is a live record; `to`/`from` are live.
+        let r = unsafe {
+            dane_tlsa_add(
+                ptr::addr_of_mut!((*to).dane),
+                (*t).usage,
+                (*t).selector,
+                (*t).mtype,
+                (*t).data,
+                (*t).dlen,
+            )
+        };
+        if r <= 0 {
+            return 0;
+        }
+        i += 1;
+    }
+    1
+}
+
+/// `static int dane_mtype_set(struct dane_ctx_st *dctx, const EVP_MD *md, uint8_t mtype,
+/// uint8_t ord)` — `ssl/ssl_lib.c:216-255`.
+///
+/// # Safety
+/// `dctx` must be a live `DaneCtx`; `md` must be NULL or a live digest.
+unsafe fn dane_mtype_set(dctx: *mut DaneCtx, md: *const EvpMd, mtype: u8, ord: u8) -> c_int {
+    if mtype == DANETLS_MATCHING_FULL && !md.is_null() {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(SSL_R_DANE_CANNOT_OVERRIDE_MTYPE_FULL, 222) };
+        return 0;
+    }
+    // SAFETY: `dctx` is live per the caller's contract.
+    if mtype > unsafe { (*dctx).mdmax } {
+        let n = mtype as usize + 1;
+        // SAFETY: `dctx->mdevp` is NULL or an owned block being grown to `n` slots.
+        let mdevp = unsafe {
+            CRYPTO_realloc_array(
+                (*dctx).mdevp.cast(),
+                n,
+                core::mem::size_of::<*const EvpMd>(),
+                FILE,
+                231,
+            )
+        }
+        .cast::<*const EvpMd>();
+        if mdevp.is_null() {
+            return -1;
+        }
+        // SAFETY: `dctx` is live.
+        unsafe { (*dctx).mdevp = mdevp };
+        // SAFETY: `dctx->mdord` is NULL or an owned block being grown to `n` bytes.
+        let mdord =
+            unsafe { CRYPTO_realloc_array((*dctx).mdord.cast(), n, 1, FILE, 236) }.cast::<u8>();
+        if mdord.is_null() {
+            return -1;
+        }
+        // SAFETY: `dctx` is live.
+        unsafe { (*dctx).mdord = mdord };
+        // Zero-fill any gaps.
+        // SAFETY: `dctx` is live per the caller's contract.
+        let mut i = unsafe { (*dctx).mdmax } as usize + 1;
+        while i < mtype as usize {
+            // SAFETY: `mdevp`/`mdord` have `n` slots and `i < mtype < n`.
+            unsafe {
+                *mdevp.add(i) = ptr::null();
+                *mdord.add(i) = 0;
+            }
+            i += 1;
+        }
+        // SAFETY: `dctx` is live.
+        unsafe { (*dctx).mdmax = mtype };
+    }
+    // SAFETY: `dctx` is live and both tables have at least `mtype+1` slots after the growth above.
+    unsafe {
+        *(*dctx).mdevp.add(mtype as usize) = md;
+        *(*dctx).mdord.add(mtype as usize) = if md.is_null() { 0 } else { ord };
+    }
+    1
+}
+
+/// `static const EVP_MD *tlsa_md_get(SSL_DANE *dane, uint8_t mtype)` — `ssl/ssl_lib.c:257-262`.
+///
+/// # Safety
+/// `dane` and its `dctx` must be live.
+unsafe fn tlsa_md_get(dane: *const SslDane, mtype: u8) -> *const EvpMd {
+    // SAFETY: `dane` and its `dctx` are live per the caller's contract.
+    unsafe {
+        let dctx = (*dane).dctx;
+        if mtype > (*dctx).mdmax {
+            return ptr::null();
+        }
+        *(*dctx).mdevp.add(mtype as usize)
+    }
+}
+
+/// `static int dane_tlsa_add(SSL_DANE *dane, uint8_t usage, uint8_t selector, uint8_t mtype,
+/// const unsigned char *data, size_t dlen)` — `ssl/ssl_lib.c:264-443`.
+///
+/// # Safety
+/// `dane` must be a live `SslDane`; `data` must be readable for `dlen` bytes or NULL.
+unsafe fn dane_tlsa_add(
+    dane: *mut SslDane,
+    usage: u8,
+    selector: u8,
+    mtype: u8,
+    data: *const u8,
+    dlen: usize,
+) -> c_int {
+    // SAFETY: `dane` is live per the caller's contract.
+    if unsafe { (*dane).trecs }.is_null() {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(SSL_R_DANE_NOT_ENABLED, 277) };
+        return -1;
+    }
+    if dlen > c_int::MAX as usize {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_DATA_LENGTH, 282) };
+        return 0;
+    }
+    let ilen = dlen as c_int;
+    if usage > DANETLS_USAGE_LAST {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_CERTIFICATE_USAGE, 287) };
+        return 0;
+    }
+    if selector > DANETLS_SELECTOR_LAST {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_SELECTOR, 292) };
+        return 0;
+    }
+    let mut md: *const EvpMd = ptr::null();
+    if mtype != DANETLS_MATCHING_FULL {
+        // SAFETY: `dane` is live.
+        md = unsafe { tlsa_md_get(dane, mtype) };
+        if md.is_null() {
+            // SAFETY: thread-local error state.
+            unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_MATCHING_TYPE, 299) };
+            return 0;
+        }
+    }
+    if !md.is_null() {
+        // SAFETY: `md` is a live digest.
+        let mdsize = unsafe { EVP_MD_get_size(md) };
+        if mdsize <= 0 || dlen != mdsize as usize {
+            // SAFETY: thread-local error state.
+            unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_DIGEST_LENGTH, 307) };
+            return 0;
+        }
+    }
+    if data.is_null() {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(SSL_R_DANE_TLSA_NULL_DATA, 312) };
+        return 0;
+    }
+    // SAFETY: a fresh zeroed `danetls_record`.
+    let t = CRYPTO_zalloc(core::mem::size_of::<DanetlsRecord>(), FILE, 316).cast::<DanetlsRecord>();
+    if t.is_null() {
+        return -1;
+    }
+    // SAFETY: `t` is a fresh record; `data` is readable for `dlen` bytes.
+    unsafe {
+        (*t).usage = usage;
+        (*t).selector = selector;
+        (*t).mtype = mtype;
+        (*t).data = CRYPTO_malloc(dlen, FILE, 322).cast::<u8>();
+    }
+    // SAFETY: `t->data` was just assigned.
+    if unsafe { (*t).data }.is_null() {
+        // SAFETY: `t` is an owned record.
+        unsafe { tlsa_free(t.cast()) };
+        return -1;
+    }
+    // SAFETY: `t->data` has `dlen` bytes; `data` is readable for `dlen`.
+    unsafe {
+        ptr::copy_nonoverlapping(data, (*t).data, dlen);
+        (*t).dlen = dlen;
+    }
+
+    // Validate and cache a full certificate or public key.
+    if mtype == DANETLS_MATCHING_FULL {
+        let mut cert: *mut X509 = ptr::null_mut();
+        let mut pkey: *mut EvpPkey = ptr::null_mut();
+        let mut p = data;
+        match selector {
+            DANETLS_SELECTOR_CERT => {
+                // SAFETY: `data` is readable for `ilen` bytes; `p` is the cursor `d2i_X509` advances.
+                let decoded = unsafe { d2i_X509(&mut cert, &mut p, ilen as c_long) };
+                if decoded.is_null() || p < data || dlen != p as usize - data as usize {
+                    // SAFETY: `cert` is NULL or an owned certificate.
+                    unsafe { X509_free(cert) };
+                    // SAFETY: `t` is an owned record.
+                    unsafe { tlsa_free(t.cast()) };
+                    // SAFETY: thread-local error state.
+                    unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_CERTIFICATE, 341) };
+                    return 0;
+                }
+                // SAFETY: `cert` is a live certificate.
+                if unsafe { X509_get0_pubkey(cert) }.is_null() {
+                    // SAFETY: `cert` is an owned certificate; `t` an owned record.
+                    unsafe {
+                        X509_free(cert);
+                        tlsa_free(t.cast());
+                    }
+                    // SAFETY: thread-local error state.
+                    unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_CERTIFICATE, 347) };
+                    return 0;
+                }
+                if (danetls_usage_bit(usage as u32) & DANETLS_TA_MASK) == 0 {
+                    // SAFETY: `cert` is an owned certificate no longer needed.
+                    unsafe { X509_free(cert) };
+                } else {
+                    // SAFETY: `dane` is live; `cert` is an owned certificate.
+                    let pushed = unsafe {
+                        if (*dane).certs.is_null() {
+                            (*dane).certs = OPENSSL_sk_new_null();
+                        }
+                        !(*dane).certs.is_null() && OPENSSL_sk_push((*dane).certs, cert.cast()) != 0
+                    };
+                    if !pushed {
+                        // SAFETY: thread-local error state.
+                        unsafe { raise_ssl(ERR_R_CRYPTO_LIB, 376) };
+                        // SAFETY: `cert` an owned certificate; `t` an owned record.
+                        unsafe {
+                            X509_free(cert);
+                            tlsa_free(t.cast());
+                        }
+                        return -1;
+                    }
+                }
+            }
+            DANETLS_SELECTOR_SPKI => {
+                // SAFETY: `data` is readable for `ilen` bytes; `p` is the cursor `d2i_PUBKEY` advances.
+                let decoded = unsafe { d2i_PUBKEY(&mut pkey, &mut p, ilen as c_long) };
+                if decoded.is_null() || p < data || dlen != p as usize - data as usize {
+                    // SAFETY: `pkey` is NULL or an owned key.
+                    unsafe { EVP_PKEY_free(pkey) };
+                    // SAFETY: `t` is an owned record.
+                    unsafe { tlsa_free(t.cast()) };
+                    // SAFETY: thread-local error state.
+                    unsafe { raise_ssl(SSL_R_DANE_TLSA_BAD_PUBLIC_KEY, 387) };
+                    return 0;
+                }
+                if usage == DANETLS_USAGE_DANE_TA {
+                    // SAFETY: `t` is a live record; `pkey` is an owned key now owned by it.
+                    unsafe { (*t).spki = pkey };
+                } else {
+                    // SAFETY: `pkey` is an owned key no longer needed.
+                    unsafe { EVP_PKEY_free(pkey) };
+                }
+            }
+            _ => {}
+        }
+    }
+
+    // Find the insertion point, sorted descending by usage, selector and digest ordinal.
+    // SAFETY: `dane` is live; `trecs` is live.
+    let num = unsafe { OPENSSL_sk_num((*dane).trecs) };
+    let mut i = 0;
+    while i < num {
+        // SAFETY: `i` is in range.
+        let rec = unsafe { OPENSSL_sk_value((*dane).trecs, i) }.cast::<DanetlsRecord>();
+        // SAFETY: `rec` is a live record; `dane->dctx` is live.
+        unsafe {
+            if (*rec).usage > usage {
+                i += 1;
+                continue;
+            }
+            if (*rec).usage < usage {
+                break;
+            }
+            if (*rec).selector > selector {
+                i += 1;
+                continue;
+            }
+            if (*rec).selector < selector {
+                break;
+            }
+            let dctx = (*dane).dctx;
+            if *(*dctx).mdord.add((*rec).mtype as usize) > *(*dctx).mdord.add(mtype as usize) {
+                i += 1;
+                continue;
+            }
+            break;
+        }
+    }
+    // SAFETY: `dane->trecs` is live; `t` is an owned record whose ownership moves into the stack.
+    if unsafe { OPENSSL_sk_insert((*dane).trecs, t.cast(), i) } == 0 {
+        // SAFETY: `t` is an owned record.
+        unsafe { tlsa_free(t.cast()) };
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(ERR_R_CRYPTO_LIB, 437) };
+        return -1;
+    }
+    // SAFETY: `dane` is live.
+    unsafe { (*dane).umask |= danetls_usage_bit(usage as u32) };
+    1
+}
+
+/// `int SSL_CTX_dane_enable(SSL_CTX *ctx)` — `ssl/ssl_lib.c:1209-1212`.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_dane_enable(ctx: *mut SslCtx) -> c_int {
+    guard_ffi(0, || {
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is non-NULL and live.
+        unsafe { dane_ctx_enable(ptr::addr_of_mut!((*ctx).dane)) }
+    })
+}
+
+/// `unsigned long SSL_CTX_dane_set_flags(SSL_CTX *ctx, unsigned long flags)` —
+/// `ssl/ssl_lib.c:1214-1220`.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_dane_set_flags(ctx: *mut SslCtx, flags: c_ulong) -> c_ulong {
+    guard_ffi(0, || {
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is non-NULL and live.
+        let d = unsafe { &mut (*ctx).dane };
+        let orig = d.flags;
+        d.flags |= flags;
+        orig
+    })
+}
+
+/// `unsigned long SSL_CTX_dane_clear_flags(SSL_CTX *ctx, unsigned long flags)` —
+/// `ssl/ssl_lib.c:1222-1228`.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_dane_clear_flags(ctx: *mut SslCtx, flags: c_ulong) -> c_ulong {
+    guard_ffi(0, || {
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is non-NULL and live.
+        let d = unsafe { &mut (*ctx).dane };
+        let orig = d.flags;
+        d.flags &= !flags;
+        orig
+    })
+}
+
+/// `SSL_set_tlsext_host_name(s, name)` — the `ssl.h:1893` macro, whose body is
+/// `SSL_ctrl(s, SSL_CTRL_SET_TLSEXT_HOSTNAME, TLSEXT_NAMETYPE_host_name, (char *)name)`.
+///
+/// # Safety
+/// `s` must be a live connection; `name` must be NULL or NUL-terminated.
+unsafe fn ssl_set_tlsext_host_name(s: *mut Ssl, name: *const c_char) -> c_long {
+    // SAFETY: forwarded per the caller's contract.
+    unsafe {
+        SSL_ctrl(
+            s,
+            SSL_CTRL_SET_TLSEXT_HOSTNAME,
+            TLSEXT_NAMETYPE_HOST_NAME as c_long,
+            name.cast_mut().cast(),
+        )
+    }
+}
+
+/// `int SSL_dane_enable(SSL *s, const char *basedomain)` — `ssl/ssl_lib.c:1230-1276`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `basedomain` must be NULL or NUL-terminated.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_dane_enable(s: *mut Ssl, basedomain: *const c_char) -> c_int {
+    guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live per the caller's contract; `basedomain` is NULL or NUL-terminated.
+        unsafe {
+            let ctx = (*s).ctx;
+            if (*ctx).dane.mdmax == 0 {
+                raise_ssl(SSL_R_CONTEXT_NOT_DANE_ENABLED, 1240);
+                return 0;
+            }
+            if !(*s).dane.trecs.is_null() {
+                raise_ssl(SSL_R_DANE_ALREADY_ENABLED, 1244);
+                return 0;
+            }
+            if (*s).ext_hostname.is_null() && ssl_set_tlsext_host_name(s, basedomain) == 0 {
+                raise_ssl(SSL_R_ERROR_SETTING_TLSA_BASE_DOMAIN, 1255);
+                return -1;
+            }
+            if X509_VERIFY_PARAM_set1_host((*s).param, basedomain, 0) == 0 {
+                raise_ssl(SSL_R_ERROR_SETTING_TLSA_BASE_DOMAIN, 1262);
+                return -1;
+            }
+            (*s).dane.mdpth = -1;
+            (*s).dane.pdpth = -1;
+            (*s).dane.dctx = ptr::addr_of_mut!((*ctx).dane);
+            (*s).dane.trecs = OPENSSL_sk_new_null();
+            if (*s).dane.trecs.is_null() {
+                raise_ssl(ERR_R_CRYPTO_LIB, 1272);
+                return -1;
+            }
+        }
+        1
+    })
+}
+
+/// `unsigned long SSL_dane_set_flags(SSL *ssl, unsigned long flags)` — `ssl/ssl_lib.c:1278-1290`.
+///
+/// # Safety
+/// `ssl` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_dane_set_flags(ssl: *mut Ssl, flags: c_ulong) -> c_ulong {
+    guard_ffi(0, || {
+        if ssl.is_null() {
+            return 0;
+        }
+        // SAFETY: `ssl` is non-NULL and live.
+        let d = unsafe { &mut (*ssl).dane };
+        let orig = d.flags;
+        d.flags |= flags;
+        orig
+    })
+}
+
+/// `unsigned long SSL_dane_clear_flags(SSL *ssl, unsigned long flags)` — `ssl/ssl_lib.c:1292-1304`.
+///
+/// # Safety
+/// `ssl` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_dane_clear_flags(ssl: *mut Ssl, flags: c_ulong) -> c_ulong {
+    guard_ffi(0, || {
+        if ssl.is_null() {
+            return 0;
+        }
+        // SAFETY: `ssl` is non-NULL and live.
+        let d = unsafe { &mut (*ssl).dane };
+        let orig = d.flags;
+        d.flags &= !flags;
+        orig
+    })
+}
+
+/// `int SSL_get0_dane_authority(SSL *s, X509 **mcert, EVP_PKEY **mspki)` —
+/// `ssl/ssl_lib.c:1306-1325`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `mcert`/`mspki` NULL or writable slots.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_dane_authority(
+    s: *mut Ssl,
+    mcert: *mut *mut X509,
+    mspki: *mut *mut EvpPkey,
+) -> c_int {
+    guard_ffi(-1, || {
+        if s.is_null() {
+            return -1;
+        }
+        // SAFETY: `s` is live per the caller's contract; the out-slots are NULL or writable.
+        unsafe {
+            let dane = ptr::addr_of_mut!((*s).dane);
+            if !danetls_enabled(dane) || (*s).verify_result != X509_V_OK {
+                return -1;
+            }
+            if !(*dane).mtlsa.is_null() {
+                if !mcert.is_null() {
+                    *mcert = (*dane).mcert;
+                }
+                if !mspki.is_null() {
+                    *mspki = if (*dane).mcert.is_null() {
+                        (*(*dane).mtlsa).spki
+                    } else {
+                        ptr::null_mut()
+                    };
+                }
+            }
+            (*dane).mdpth
+        }
+    })
+}
+
+/// `int SSL_get0_dane_tlsa(SSL *s, uint8_t *usage, uint8_t *selector, uint8_t *mtype,
+/// const unsigned char **data, size_t *dlen)` — `ssl/ssl_lib.c:1327-1353`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; every out-pointer NULL or a writable slot.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_dane_tlsa(
+    s: *mut Ssl,
+    usage: *mut u8,
+    selector: *mut u8,
+    mtype: *mut u8,
+    data: *mut *const u8,
+    dlen: *mut usize,
+) -> c_int {
+    guard_ffi(-1, || {
+        if s.is_null() {
+            return -1;
+        }
+        // SAFETY: `s` is live; every out-pointer is NULL or writable per the contract.
+        unsafe {
+            let dane = ptr::addr_of_mut!((*s).dane);
+            if !danetls_enabled(dane) || (*s).verify_result != X509_V_OK {
+                return -1;
+            }
+            if !(*dane).mtlsa.is_null() {
+                let t = (*dane).mtlsa;
+                if !usage.is_null() {
+                    *usage = (*t).usage;
+                }
+                if !selector.is_null() {
+                    *selector = (*t).selector;
+                }
+                if !mtype.is_null() {
+                    *mtype = (*t).mtype;
+                }
+                if !data.is_null() {
+                    *data = (*t).data;
+                }
+                if !dlen.is_null() {
+                    *dlen = (*t).dlen;
+                }
+            }
+            (*dane).mdpth
+        }
+    })
+}
+
+/// `SSL_DANE *SSL_get0_dane(SSL *s)` — `ssl/ssl_lib.c:1355-1363`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get0_dane(s: *mut Ssl) -> *mut SslDane {
+    guard_ffi(ptr::null_mut(), || {
+        if s.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `s` is non-NULL and live.
+        unsafe { ptr::addr_of_mut!((*s).dane) }
+    })
+}
+
+/// `int SSL_dane_tlsa_add(SSL *s, uint8_t usage, uint8_t selector, uint8_t mtype,
+/// const unsigned char *data, size_t dlen)` — `ssl/ssl_lib.c:1365-1374`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `data` readable for `dlen` bytes or NULL.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_dane_tlsa_add(
+    s: *mut Ssl,
+    usage: u8,
+    selector: u8,
+    mtype: u8,
+    data: *const u8,
+    dlen: usize,
+) -> c_int {
+    guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live; `data` readable for `dlen` bytes or NULL per the contract.
+        unsafe {
+            dane_tlsa_add(
+                ptr::addr_of_mut!((*s).dane),
+                usage,
+                selector,
+                mtype,
+                data,
+                dlen,
+            )
+        }
+    })
+}
+
+/// `int SSL_CTX_dane_mtype_set(SSL_CTX *ctx, const EVP_MD *md, uint8_t mtype, uint8_t ord)` —
+/// `ssl/ssl_lib.c:1376-1380`.
+///
+/// # Safety
+/// `ctx` must be NULL or a live context; `md` NULL or a live digest.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_CTX_dane_mtype_set(
+    ctx: *mut SslCtx,
+    md: *const EvpMd,
+    mtype: u8,
+    ord: u8,
+) -> c_int {
+    guard_ffi(0, || {
+        if ctx.is_null() {
+            return 0;
+        }
+        // SAFETY: `ctx` is non-NULL and live; `md` NULL or live per the contract.
+        unsafe { dane_mtype_set(ptr::addr_of_mut!((*ctx).dane), md, mtype, ord) }
+    })
+}
+
+/// `int SSL_add_expected_rpk(SSL *s, EVP_PKEY *rpk)` — `ssl/ssl_lib.c:8190-8208`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `rpk` must be a live key.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_add_expected_rpk(s: *mut Ssl, rpk: *mut EvpPkey) -> c_int {
+    guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe {
+            let dane = SSL_get0_dane(s);
+            if dane.is_null() || (*dane).dctx.is_null() {
+                return 0;
+            }
+            let mut data: *mut u8 = ptr::null_mut();
+            let ret = i2d_PUBKEY(rpk, &mut data);
+            if ret <= 0 {
+                return 0;
+            }
+            let ok = SSL_dane_tlsa_add(
+                s,
+                DANETLS_USAGE_DANE_EE,
+                DANETLS_SELECTOR_SPKI,
+                DANETLS_MATCHING_FULL,
+                data,
+                ret as usize,
+            ) > 0;
+            CRYPTO_free(data.cast(), FILE, 8206);
+            c_int::from(ok)
+        }
+    })
+}
+
+/// `SSL *SSL_dup(SSL *s)` — `ssl/ssl_lib.c:5131-5266`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_dup(s: *mut Ssl) -> *mut Ssl {
+    guard_ffi(ptr::null_mut(), || {
+        if s.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `s` is live per the caller's contract; every pointer this body uses is derived
+        // from it or from the fresh `SSL_new` it allocates.
+        unsafe {
+            // If we are not quiescent, just up_ref.
+            if SSL_in_init(s) == 0 || SSL_in_before(s) == 0 {
+                up_ref(&(*s).references);
+                return s;
+            }
+
+            let ret = SSL_new((*s).ctx);
+            if ret.is_null() {
+                return ptr::null_mut();
+            }
+
+            if !(*s).session.is_null() {
+                if SSL_copy_session_id(ret, s) == 0 {
+                    SSL_free(ret);
+                    return ptr::null_mut();
+                }
+            } else {
+                if SSL_set_ssl_method(ret, (*s).method) == 0 {
+                    SSL_free(ret);
+                    return ptr::null_mut();
+                }
+                if !(*s).cert.is_null() {
+                    cert_free((*ret).cert);
+                    (*ret).cert = ssl_cert_dup((*s).cert);
+                    if (*ret).cert.is_null() {
+                        SSL_free(ret);
+                        return ptr::null_mut();
+                    }
+                }
+                if SSL_set_session_id_context(ret, (*s).sid_ctx.as_ptr(), (*s).sid_ctx_length) == 0
+                {
+                    SSL_free(ret);
+                    return ptr::null_mut();
+                }
+            }
+
+            if ssl_dane_dup(ret, s) == 0 {
+                SSL_free(ret);
+                return ptr::null_mut();
+            }
+            (*ret).version = (*s).version;
+            (*ret).options = (*s).options;
+            (*ret).min_proto_version = (*s).min_proto_version;
+            (*ret).max_proto_version = (*s).max_proto_version;
+            (*ret).mode = (*s).mode;
+            SSL_ctrl(
+                ret,
+                SSL_CTRL_SET_MAX_CERT_LIST,
+                SSL_ctrl(s, SSL_CTRL_GET_MAX_CERT_LIST, 0, ptr::null_mut()),
+                ptr::null_mut(),
+            );
+            SSL_set_read_ahead(ret, SSL_get_read_ahead(s));
+            (*ret).msg_callback = (*s).msg_callback;
+            (*ret).msg_callback_arg = (*s).msg_callback_arg;
+            SSL_set_verify(ret, SSL_get_verify_mode(s), SSL_get_verify_callback(s));
+            SSL_set_verify_depth(ret, SSL_get_verify_depth(s));
+            (*ret).generate_session_id = (*s).generate_session_id;
+            SSL_set_info_callback(ret, SSL_get_info_callback(s));
+
+            if CRYPTO_dup_ex_data(CRYPTO_EX_INDEX_SSL, &mut (*ret).ex_data, &(*s).ex_data) == 0 {
+                SSL_free(ret);
+                return ptr::null_mut();
+            }
+
+            (*ret).server = (*s).server;
+            if (*s).handshake_func.is_some() {
+                if (*s).server != 0 {
+                    SSL_set_accept_state(ret);
+                } else {
+                    SSL_set_connect_state(ret);
+                }
+            }
+            (*ret).shutdown = (*s).shutdown;
+            (*ret).hit = (*s).hit;
+            (*ret).default_passwd_callback = (*s).default_passwd_callback;
+            (*ret).default_passwd_callback_userdata = (*s).default_passwd_callback_userdata;
+            X509_VERIFY_PARAM_inherit((*ret).param, (*s).param);
+
+            if !(*s).cipher_list.is_null() {
+                (*ret).cipher_list = OPENSSL_sk_dup((*s).cipher_list);
+                if (*ret).cipher_list.is_null() {
+                    SSL_free(ret);
+                    return ptr::null_mut();
+                }
+            }
+            if !(*s).cipher_list_by_id.is_null() {
+                (*ret).cipher_list_by_id = OPENSSL_sk_dup((*s).cipher_list_by_id);
+                if (*ret).cipher_list_by_id.is_null() {
+                    SSL_free(ret);
+                    return ptr::null_mut();
+                }
+            }
+
+            if dup_ca_names(&mut (*ret).ca_names, (*s).ca_names) == 0
+                || dup_ca_names(&mut (*ret).client_ca_names, (*s).client_ca_names) == 0
+            {
+                SSL_free(ret);
+                return ptr::null_mut();
+            }
+
+            if !(*s).server_cert_type.is_null() {
+                CRYPTO_free((*ret).server_cert_type.cast(), FILE, 5237);
+                (*ret).server_cert_type = CRYPTO_memdup(
+                    (*s).server_cert_type.cast(),
+                    (*s).server_cert_type_len,
+                    FILE,
+                    5238,
+                )
+                .cast::<u8>();
+                if (*ret).server_cert_type.is_null() {
+                    SSL_free(ret);
+                    return ptr::null_mut();
+                }
+                (*ret).server_cert_type_len = (*s).server_cert_type_len;
+            }
+            if !(*s).client_cert_type.is_null() {
+                CRYPTO_free((*ret).client_cert_type.cast(), FILE, 5246);
+                (*ret).client_cert_type = CRYPTO_memdup(
+                    (*s).client_cert_type.cast(),
+                    (*s).client_cert_type_len,
+                    FILE,
+                    5247,
+                )
+                .cast::<u8>();
+                if (*ret).client_cert_type.is_null() {
+                    SSL_free(ret);
+                    return ptr::null_mut();
+                }
+                (*ret).client_cert_type_len = (*s).client_cert_type_len;
+            }
+
+            (*ret).ct_validation_callback = (*s).ct_validation_callback;
+            (*ret).ct_validation_callback_arg = (*s).ct_validation_callback_arg;
+            (*ret).ext_status_type = (*s).ext_status_type;
+
+            ret
+        }
+    })
+}
+
+/// `SSL_CTX *SSL_set_SSL_CTX(SSL *ssl, SSL_CTX *ctx)` — `ssl/ssl_lib.c:5492-5543`.
+///
+/// # Safety
+/// `ssl` must be NULL or a live connection; `ctx` must be NULL or a live context.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_set_SSL_CTX(ssl: *mut Ssl, ctx: *mut SslCtx) -> *mut SslCtx {
+    guard_ffi(ptr::null_mut(), || {
+        if ssl.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `ssl` is live per the caller's contract; `ctx` NULL or live.
+        unsafe {
+            if (*ssl).ctx == ctx {
+                return (*ssl).ctx;
+            }
+            let mut ctx = ctx;
+            if ctx.is_null() {
+                ctx = (*ssl).session_ctx;
+            }
+            let new_cert = ssl_cert_dup((*ctx).cert);
+            if new_cert.is_null() {
+                return ptr::null_mut();
+            }
+            if custom_exts_copy_conn(&mut (*new_cert).custext, &(*(*ssl).cert).custext) == 0
+                || custom_exts_copy_flags(&mut (*new_cert).custext, &(*(*ssl).cert).custext) == 0
+            {
+                cert_free(new_cert);
+                return ptr::null_mut();
+            }
+            if (*ssl).sid_ctx_length as usize > SSL_MAX_SID_CTX_LENGTH {
+                cert_free(new_cert);
+                return ptr::null_mut();
+            }
+            if SSL_CTX_up_ref(ctx) == 0 {
+                cert_free(new_cert);
+                return ptr::null_mut();
+            }
+            let old = (*ssl).ctx;
+            if !old.is_null()
+                && (*ssl).sid_ctx_length == (*old).sid_ctx_length
+                && memcmp(
+                    (*ssl).sid_ctx.as_ptr().cast(),
+                    (*old).sid_ctx.as_ptr().cast(),
+                    (*ssl).sid_ctx_length as usize,
+                ) == 0
+            {
+                (*ssl).sid_ctx_length = (*ctx).sid_ctx_length;
+                (*ssl).sid_ctx = (*ctx).sid_ctx;
+            }
+            cert_free((*ssl).cert);
+            (*ssl).cert = new_cert;
+            SSL_CTX_free(old);
+            (*ssl).ctx = ctx;
+            (*ssl).ctx
+        }
+    })
+}
+
+// -------------------------------------------------------------------------------------------
+// 14.7b — the byte-to-cipher-list parser and the supported-cipher filter (`ssl_lib.c`)
+// -------------------------------------------------------------------------------------------
+
+/// `int SSL_bytes_to_cipher_list(SSL *s, const unsigned char *bytes, size_t len, int isv2format,
+/// STACK_OF(SSL_CIPHER) **sk, STACK_OF(SSL_CIPHER) **scsvs)` — `ssl/ssl_lib.c:7157-7170`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection; `bytes` readable for `len` bytes; `sk`/`scsvs` NULL or
+/// writable stack slots.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_bytes_to_cipher_list(
+    s: *mut Ssl,
+    bytes: *const u8,
+    len: usize,
+    isv2format: c_int,
+    sk: *mut *mut OpenSslStack,
+    scsvs: *mut *mut OpenSslStack,
+) -> c_int {
+    guard_ffi(0, || {
+        if s.is_null() {
+            return 0;
+        }
+        // SAFETY: `bytes` is readable for `len` bytes per the caller's contract.
+        let Some(mut pkt) = (unsafe { Packet::buf_init(bytes, len) }) else {
+            return 0;
+        };
+        // SAFETY: `s` is live; `sk`/`scsvs` NULL or writable per the contract.
+        unsafe { ossl_bytes_to_cipher_list(s, &mut pkt, sk, scsvs, isv2format, 0) }
+    })
+}
+
+/// `int ossl_bytes_to_cipher_list(SSL_CONNECTION *s, PACKET *cipher_suites,
+/// STACK_OF(SSL_CIPHER) **skp, STACK_OF(SSL_CIPHER) **scsvs_out, int sslv2format, int fatal)` —
+/// `ssl/ssl_lib.c:7172-7255`.
+///
+/// # Safety
+/// `s` must be a live connection; `cipher_suites` a live packet; `skp`/`scsvs_out` NULL or writable.
+unsafe fn ossl_bytes_to_cipher_list(
+    s: *mut Ssl,
+    cipher_suites: &mut Packet,
+    skp: *mut *mut OpenSslStack,
+    scsvs_out: *mut *mut OpenSslStack,
+    sslv2format: c_int,
+    _fatal: c_int,
+) -> c_int {
+    let _ = s;
+    let n = if sslv2format != 0 {
+        SSLV2_CIPHER_LEN
+    } else {
+        TLS_CIPHER_LEN
+    } as usize;
+
+    if cipher_suites.remaining() == 0 {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(SSL_R_NO_CIPHERS_SPECIFIED, 7190) };
+        return 0;
+    }
+    if !cipher_suites.remaining().is_multiple_of(n) {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(SSL_R_ERROR_IN_RECEIVED_CIPHER_LIST, 7199) };
+        return 0;
+    }
+
+    let sk = OPENSSL_sk_new_null();
+    let scsvs = OPENSSL_sk_new_null();
+    if sk.is_null() || scsvs.is_null() {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(ERR_R_CRYPTO_LIB, 7209) };
+        // SAFETY: each pointer is NULL or an owned stack.
+        unsafe {
+            OPENSSL_sk_free(sk);
+            OPENSSL_sk_free(scsvs);
+        }
+        return 0;
+    }
+
+    // SAFETY: `cipher_suites` is a live packet; each returned span is readable for `n` bytes.
+    while let Some(cptr) = unsafe { cipher_suites.get_bytes(n) } {
+        // SSLv2-compatible ClientHello SSLv3 ciphers have a zero first byte; true SSLv2 ciphers
+        // have a non-zero one and this library supports none of them, so they are skipped.
+        // SAFETY: `cptr` is readable for `n` bytes.
+        if sslv2format != 0 && unsafe { *cptr } != 0 {
+            continue;
+        }
+        // For SSLv2-compat, ignore the leading 0-byte.
+        let cptr = if sslv2format != 0 {
+            // SAFETY: `n == 3`, so `cptr.add(1)` is still inside the `n`-byte span.
+            unsafe { cptr.add(1) }
+        } else {
+            cptr
+        };
+        // SAFETY: `cptr` points at two readable bytes.
+        let c = unsafe { ssl3_get_cipher_by_char(cptr) };
+        if !c.is_null() {
+            // SAFETY: `c` is a live cipher table row.
+            let valid = unsafe { (*c).valid } != 0;
+            // SAFETY: `sk`/`scsvs` are live stacks; `c` is a row whose lifetime is the process.
+            let pushed = unsafe {
+                if valid {
+                    OPENSSL_sk_push(sk, c.cast())
+                } else {
+                    OPENSSL_sk_push(scsvs, c.cast())
+                }
+            };
+            if pushed == 0 {
+                // SAFETY: thread-local error state.
+                unsafe { raise_ssl(ERR_R_CRYPTO_LIB, 7229) };
+                // SAFETY: `sk`/`scsvs` are owned stacks.
+                unsafe {
+                    OPENSSL_sk_free(sk);
+                    OPENSSL_sk_free(scsvs);
+                }
+                return 0;
+            }
+        }
+    }
+    if cipher_suites.remaining() > 0 {
+        // SAFETY: thread-local error state.
+        unsafe { raise_ssl(SSL_R_BAD_LENGTH, 7238) };
+        // SAFETY: `sk`/`scsvs` are owned stacks.
+        unsafe {
+            OPENSSL_sk_free(sk);
+            OPENSSL_sk_free(scsvs);
+        }
+        return 0;
+    }
+
+    if !skp.is_null() {
+        // SAFETY: `skp` is writable per the contract.
+        unsafe { *skp = sk };
+    } else {
+        // SAFETY: `sk` is an owned stack.
+        unsafe { OPENSSL_sk_free(sk) };
+    }
+    if !scsvs_out.is_null() {
+        // SAFETY: `scsvs_out` is writable per the contract.
+        unsafe { *scsvs_out = scsvs };
+    } else {
+        // SAFETY: `scsvs` is an owned stack.
+        unsafe { OPENSSL_sk_free(scsvs) };
+    }
+    1
+}
+
+/// `STACK_OF(SSL_CIPHER) *SSL_get1_supported_ciphers(SSL *s)` — `ssl/ssl_lib.c:3276-3304`.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+#[no_mangle]
+pub unsafe extern "C" fn SSL_get1_supported_ciphers(s: *mut Ssl) -> *mut OpenSslStack {
+    guard_ffi(ptr::null_mut(), || {
+        if s.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `s` is live per the caller's contract.
+        unsafe {
+            let ciphers = SSL_get_ciphers(s);
+            if ciphers.is_null() {
+                return ptr::null_mut();
+            }
+            if ssl_set_client_disabled(s) == 0 {
+                return ptr::null_mut();
+            }
+            let mut sk: *mut OpenSslStack = ptr::null_mut();
+            let num = OPENSSL_sk_num(ciphers);
+            let mut i = 0;
+            while i < num {
+                let c = OPENSSL_sk_value(ciphers, i).cast::<SslCipher>();
+                if ssl_cipher_disabled(s, c, SSL_SECOP_CIPHER_SUPPORTED, 0) == 0 {
+                    if sk.is_null() {
+                        sk = OPENSSL_sk_new_null();
+                        if sk.is_null() {
+                            return ptr::null_mut();
+                        }
+                    }
+                    if OPENSSL_sk_push(sk, c.cast()) == 0 {
+                        OPENSSL_sk_free(sk);
+                        return ptr::null_mut();
+                    }
+                }
+                i += 1;
+            }
+            sk
+        }
     })
 }

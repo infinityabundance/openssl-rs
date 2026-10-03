@@ -541,23 +541,53 @@
 //! which lets `use_certificate_chain_file` read the trailing CA certificates as `ssl_rsa.c:546-573`
 //! does.
 //!
-//! The rows that stay open are blocked by internals this stratum has not landed, not by a later
-//! phase: `SSL_bytes_to_cipher_list` and `SSL_get1_supported_ciphers` need
-//! `ssl_set_client_disabled`/`SSL_cipher_disabled` (`t1_lib.c:2848`/`:2882`), whose
-//! `s3.tmp.mask_a`/`mask_k`/`min_ver`/`max_ver` block this crate does not model (14.5's unit);
-//! `SSL_dup` and `SSL_set_SSL_CTX` need `ssl_cert_dup` plus `custom_exts_copy_conn`/
-//! `custom_exts_copy_flags` (14.7's `ssl_cert.c`); and the twelve DANE/RPK rows
-//! (`SSL_[CTX_]dane_*`, `SSL_get0_dane*`, `SSL_add_expected_rpk`) need
-//! `SSL_set_tlsext_host_name`'s `SSL_ctrl` command (`SSL_CTRL_SET_TLSEXT_HOSTNAME`, unlanded) and the
-//! certificate/public-key decode-and-insert path of `ssl_lib.c:264-443`. Each waits on its named
-//! helper rather than an invented body.
+//! The rows that stayed open were blocked by internals this stratum had not landed, not by a later
+//! phase. **14.7b lands all sixteen**, each with the helper it waited on:
 //!
-//! **The thirteen handshake entry points closed in 14.5b** (see that section above): once the state
-//! machine's control surface and fresh-connection driver landed, `SSL_accept`, `SSL_connect`,
-//! `SSL_key_update`, `SSL_renegotiate`/`_abbreviated`, `SSL_new_session_ticket`,
-//! `SSL_read_early_data`, `SSL_write_early_data`, `SSL_export_keying_material`/`_early`,
-//! `SSL_sendfile`, `SSL_stateless` and `SSL_verify_client_post_handshake` are the authority's own
-//! guards over it. The 16 rows above are what remains open.
+//! * **The twelve DANE/RPK rows** — `SSL_CTX_dane_enable`, `SSL_CTX_dane_mtype_set`,
+//!   `SSL_CTX_dane_set_flags`/`_clear_flags`, `SSL_dane_enable`, `SSL_dane_set_flags`/`_clear_flags`,
+//!   `SSL_dane_tlsa_add`, `SSL_get0_dane`, `SSL_get0_dane_authority`, `SSL_get0_dane_tlsa` and
+//!   `SSL_add_expected_rpk` — with the `ssl_lib.c` internals they reach (`dane_ctx_enable`/`_final`,
+//!   the `dane_mds` table, `tlsa_free`/`dane_final`, `ssl_dane_dup`, `dane_mtype_set`, `tlsa_md_get`,
+//!   `dane_tlsa_add`). The `SSL_DANE`/`dane_ctx_st`/`danetls_record` records are `crate::x509::dane`'s
+//!   (Phase 11's verifier shares them); `SslCtx.dane` becomes the authority's inline `dane_ctx_st`,
+//!   which it had not been. `SSL_dane_enable`'s `SSL_CTRL_SET_TLSEXT_HOSTNAME` command lands as
+//!   `ssl3_ctrl`'s body in `src/ssl/s3_lib.rs` and is reached from `SSL_ctrl`.
+//! * **`SSL_dup` and `SSL_set_SSL_CTX`** — with `ssl_cert_dup` (`ssl_cert.c:95`'s per-slot up-ref
+//!   duplication), `dup_ca_names`, and `custom_exts_copy`/`_copy_conn`/`_copy_flags`
+//!   (`extensions_cust.c:256-370`), which required `CustomExtMethod: Copy`.
+//! * **`SSL_bytes_to_cipher_list`** — with the `ossl_bytes_to_cipher_list` body over the crate's
+//!   `Packet` cursor and `ssl3_get_cipher_by_char`.
+//! * **`SSL_get1_supported_ciphers`** — with `ssl_set_client_disabled`/`ssl_cipher_disabled`
+//!   (`t1_lib.c:2848`/`:2882`) and the `s3.tmp.mask_a`/`mask_k`/`min_ver`/`max_ver` words they read,
+//!   now fields on `Ssl`; the `ssl_get_min_max_version`/`ssl_version_cmp`/`ssl_method_error` trio is
+//!   `statem_lib.c`'s and lands in `src/ssl/statem/statem_lib.rs`.
+//!
+//! ## 14.7b's measured divergences, recorded rather than hidden
+//!
+//! * **`ssl_set_sig_mask` is reduced.** The authority walks `tls12_get_psigalgs` and clears an
+//!   auth-family bit for every supported signature algorithm, consulting `tls1_lookup_sigalg`,
+//!   `ssl_cert_lookup_by_idx` and `tls12_sigalg_allowed` (the `SIGALG_LOOKUP` `sig_idx`/`secbits`
+//!   columns, unlanded). This crate walks its own `sigalg_lookup_tbl` and clears each family that
+//!   has a row; for the admitted default table every family has one, so `mask_a` receives the same
+//!   0 the authority leaves and no court arm observes the difference.
+//! * **`ssl_get_min_max_version` reads the crate's reduced default security callback.** The
+//!   authority's `ssl_method_error` rejects SSLv3 at security level 2, so its `min_ver` is
+//!   `TLS1_VERSION`; this crate's `ssl_security` (14.1's recorded reduction) answers 1 for the
+//!   version check, so `min_ver` is `SSL3_VERSION`. The cipher filter is unaffected (every cipher in
+//!   the default list has `max_tls >= SSL3`), and the court drives only the filtered list.
+//! * **`ssl_cert_dup` copies only the fields this crate's `Cert` models.** The authority's
+//!   `conf_sigalgs`/`client_sigalgs`/`ctype`, `verify_store`/`chain_store` and `dh_tmp_auto` are not
+//!   modelled and are not copied. `OPENSSL_NO_COMP_ALG` is defined, so the `comp_cert[]` loop is the
+//!   authority's guard-off body.
+//! * **The DANE context methods guard a NULL argument; the authority does not.** `SSL_CTX_dane_*`
+//!   check NULL where the authority dereferences, the same reduction `s3_lib.rs` records for
+//!   `SSL_CTX_set_tlsext_ticket_key_evp_cb`.
+//! * **`SSL_dup`'s session and quiescent arms are unreachable here.** A fresh connection takes the
+//!   full-copy branch (`sc->session == NULL`) and `SSL_in_init`/`SSL_in_before` are both true; the
+//!   `sc->session != NULL` (`SSL_copy_session_id`) branch and the `CRYPTO_UP_REF` "not quiescent"
+//!   early return need a handshake, which the unlanded message layer cannot complete. The court
+//!   drives the full-copy branch.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 

@@ -54,6 +54,10 @@
 #include <openssl/bio.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
+#include <openssl/stack.h>
+#include <openssl/x509.h>
 
 static void out_int(const char *key, long v)
 {
@@ -111,6 +115,33 @@ static int sec_cb(const SSL *s, const SSL_CTX *c, int op, int bits, int nid,
     (void)ex;
     return 1;
 }
+
+/*
+ * The fixed certificate 14.7b's DANE arms feed to `SSL_dane_tlsa_add` and `SSL_add_expected_rpk`.
+ * It is the same in-memory RSA fixture `RT-SESSION-CERT` uses; the arms compare the DANE calls'
+ * return codes and the record read-backs, never a byte of the certificate, so the two sides need
+ * only *a* valid certificate.
+ */
+static const char dane_cert_pem[] =
+"-----BEGIN CERTIFICATE-----\n"
+"MIIDBTCCAe2gAwIBAgIUai6zKVesbjbmumuBUT1EmR0LTSYwDQYJKoZIhvcNAQEL\n"
+"BQAwHzEdMBsGA1UEAwwUb3BlbnNzbC1ycyBSVC1UUyBUU0EwHhcNMjYxMDAyMTQ1\n"
+"MDMyWhcNMzYwOTI5MTQ1MDMyWjAfMR0wGwYDVQQDDBRvcGVuc3NsLXJzIFJULVRT\n"
+"IFRTQTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAKbf9sygrBw5JAOl\n"
+"mVzYEOdZpCxku+03NQvBKBgac1D4FBqMh+sbT5oJ5MKw6Z8EDNaMnoaznNStyNrX\n"
+"Zip2Vt4gDoztoYKsqa2sSOipaEUAtJo+mVPxuKwykQDt0NdotpGeorlhggvtYm27\n"
+"L1hBps5JwFsjvaAdNuulJxPwy7mGk5KilzKnBwa0gZ3qBL/kkumbGt32OnCeuc0Y\n"
+"g9oxA7gRaXvOJMP7GaNr0yhXwRvzN4PrabmzUw5BtdJehJ0ZjvFnHeDVegC7o+QN\n"
+"7YG8G5F9xyda+Ze/ZmWIza7qy926QQT9MMkLkRHkLcTGLYx/XaMoLUoHYsN0RzYa\n"
+"tqRJ3GcCAwEAAaM5MDcwFgYDVR0lAQH/BAwwCgYIKwYBBQUHAwgwHQYDVR0OBBYE\n"
+"FM00nZ1j6GwRnuM1Oh1f7clXTP9cMA0GCSqGSIb3DQEBCwUAA4IBAQAsbpTJW6mS\n"
+"nv2Jrc3DaZ6QeLf/kSCASY5Y6ylLzE5M8KC3RHU7YCB/PD/nGyqoxMLgGMOH3Nn/\n"
+"mwxLu05SiemBI9p6d59j+q8rhE8pKEZ8n9czpRUpKN8Wjf7Yny195n/+TU567+j5\n"
+"KixrqitsAzRjsnj4EqFt3CdrfJmM7IDOPlnoec8bQz5u8vvZtyGEYnPm+1oI8EvP\n"
+"Kl/zKGx7tUSjMvb/44m11dPvkZPoyLFCBKyJ+qAgTzZ0iJYL0O1k1Py8FL/FZnju\n"
+"/NYYetkHhw/9j6LPCriy488A1qdY76vN0NSxfQEuQKg3M55OIo2q6qZ4TQtdkiUl\n"
+"o/wkQUeccaED\n"
+"-----END CERTIFICATE-----\n";
 
 int main(void)
 {
@@ -653,6 +684,192 @@ int main(void)
         ERR_clear_error();
         out_int("hs.stateless", SSL_stateless(st));
         SSL_free(st);
+    }
+
+    /* ----------------------------------------------------------------------------------------
+     * O. The 14.7b rows: the DANE/RPK surface, SSL_dup, SSL_set_SSL_CTX and the cipher-list parser.
+     *
+     * Every arm is a fixed input and a small-integer / fixed-string / pointer-identity answer. The
+     * DANE arms use one fixed in-memory certificate; the compared values are the DANE calls' return
+     * codes and the read-backs' unchanged out-parameters, never a byte of the certificate. No clock
+     * and no network move a value.
+     * -------------------------------------------------------------------------------------- */
+
+    /* The DANE record surface over a fixed certificate. */
+    {
+        SSL_CTX *dctx = SSL_CTX_new(TLS_method());
+        SSL *dssl = SSL_new(dctx);
+        BIO *bc = BIO_new_mem_buf(dane_cert_pem, -1);
+        X509 *cert = PEM_read_bio_X509(bc, NULL, NULL, NULL);
+        unsigned char *cder = NULL, *pder = NULL;
+        int cderlen = cert != NULL ? i2d_X509(cert, &cder) : 0;
+        EVP_PKEY *pk = cert != NULL ? X509_get0_pubkey(cert) : NULL;
+        int pderlen = pk != NULL ? i2d_PUBKEY(pk, &pder) : 0;
+
+        out_int("dane.cert.ok", cert != NULL);
+        out_int("dane.cert.pubkey_ok", pk != NULL);
+        out_int("dane.cert.der_nonempty", cderlen > 0);
+        out_int("dane.cert.spki_nonempty", pderlen > 0);
+
+        out_int("dane.ctx.enable", SSL_CTX_dane_enable(dctx));
+        out_int("dane.ctx.enable_again", SSL_CTX_dane_enable(dctx));
+        out_int("dane.ctx.set_flags.ret", (long)SSL_CTX_dane_set_flags(dctx, 1));
+        out_int("dane.ctx.set_flags.ret2", (long)SSL_CTX_dane_set_flags(dctx, 4));
+        out_int("dane.ctx.clear_flags.ret", (long)SSL_CTX_dane_clear_flags(dctx, 1));
+        out_int("dane.ctx.mtype_full_override", SSL_CTX_dane_mtype_set(dctx, EVP_sha256(), 0, 0));
+        out_int("dane.ctx.mtype_custom", SSL_CTX_dane_mtype_set(dctx, EVP_sha256(), 17, 3));
+
+        out_int("dane.ssl.enable", SSL_dane_enable(dssl, "example.com"));
+        out_int("dane.ssl.enable_again", SSL_dane_enable(dssl, "example.com"));
+        out_int("dane.ssl.set_flags.ret", (long)SSL_dane_set_flags(dssl, 1));
+        out_int("dane.ssl.set_flags.ret2", (long)SSL_dane_set_flags(dssl, 2));
+        out_int("dane.ssl.clear_flags.ret", (long)SSL_dane_clear_flags(dssl, 1));
+        out_int("dane.get0.nonnull", SSL_get0_dane(dssl) != NULL);
+
+        out_int("dane.tlsa.bad_usage", SSL_dane_tlsa_add(dssl, 4, 0, 1, pder, pderlen));
+        out_int("dane.tlsa.bad_selector", SSL_dane_tlsa_add(dssl, 3, 2, 1, pder, pderlen));
+        out_int("dane.tlsa.bad_mtype", SSL_dane_tlsa_add(dssl, 3, 0, 5, pder, pderlen));
+        out_int("dane.tlsa.null_data", SSL_dane_tlsa_add(dssl, 3, 0, 1, NULL, 0));
+        out_int("dane.tlsa.digest_bad_len", SSL_dane_tlsa_add(dssl, 3, 0, 1, pder, 5));
+        {
+            unsigned char dig[32];
+            memset(dig, 0x5A, sizeof dig);
+            out_int("dane.tlsa.digest_ok", SSL_dane_tlsa_add(dssl, 3, 0, 1, dig, sizeof dig));
+        }
+        out_int("dane.tlsa.cert_ok", SSL_dane_tlsa_add(dssl, 3, 0, 0, cder, cderlen));
+        out_int("dane.tlsa.spki_ok", SSL_dane_tlsa_add(dssl, 3, 1, 0, pder, pderlen));
+        out_int("dane.rpk.ok", SSL_add_expected_rpk(dssl, pk));
+        out_int("dane.rpk.null_key", SSL_add_expected_rpk(dssl, NULL));
+
+        {
+            uint8_t usage = 0xEE, selector = 0xEE, mt = 0xEE;
+            const unsigned char *tdata = (const unsigned char *)0x1;
+            size_t tdlen = 99;
+            out_int("dane.get0.authority", SSL_get0_dane_authority(dssl, NULL, NULL));
+            out_int("dane.get0.tlsa.ret",
+                    SSL_get0_dane_tlsa(dssl, &usage, &selector, &mt, &tdata, &tdlen));
+            out_int("dane.get0.tlsa.usage_untouched", usage == 0xEE);
+            out_int("dane.get0.tlsa.mtype_untouched", mt == 0xEE);
+            out_int("dane.get0.tlsa.dlen_untouched", tdlen == 99);
+        }
+
+        /* Without `SSL_dane_enable`, `dane->trecs` is NULL: both setters refuse. */
+        {
+            SSL *nd = SSL_new(dctx);
+            out_int("dane.tlsa.not_enabled", SSL_dane_tlsa_add(nd, 3, 0, 1, pder, pderlen));
+            out_int("dane.rpk.not_enabled", SSL_add_expected_rpk(nd, pk));
+            SSL_free(nd);
+        }
+
+        OPENSSL_free(cder);
+        OPENSSL_free(pder);
+        X509_free(cert);
+        BIO_free(bc);
+        SSL_free(dssl);
+        SSL_CTX_free(dctx);
+    }
+
+    /* `SSL_bytes_to_cipher_list` over fixed bytes. */
+    {
+        SSL *b = SSL_new(ctx);
+        OPENSSL_STACK *sk = NULL, *scsvs = NULL;
+        const unsigned char two[2] = { 0x13, 0x01 };      /* TLS_AES_128_GCM_SHA256 */
+        const unsigned char four[4] = { 0x13, 0x01, 0xC0, 0x2F };
+        const unsigned char scsv[2] = { 0x00, 0xFF };     /* renegotiation-info SCSV */
+        const unsigned char unknown[2] = { 0x00, 0x01 };
+        const unsigned char odd[1] = { 0x13 };
+
+        out_int("b2cl.empty", SSL_bytes_to_cipher_list(b, two, 0, 0, &sk, &scsvs));
+        out_int("b2cl.odd", SSL_bytes_to_cipher_list(b, odd, 1, 0, &sk, &scsvs));
+
+        out_int("b2cl.two.ret", SSL_bytes_to_cipher_list(b, two, 2, 0, &sk, &scsvs));
+        out_int("b2cl.two.n", OPENSSL_sk_num(sk));
+        out_str("b2cl.two.name0",
+                SSL_CIPHER_get_name((const SSL_CIPHER *)OPENSSL_sk_value(sk, 0)));
+        out_int("b2cl.two.scsvs_n", OPENSSL_sk_num(scsvs));
+        OPENSSL_sk_free(sk);
+        OPENSSL_sk_free(scsvs);
+        sk = NULL;
+        scsvs = NULL;
+
+        out_int("b2cl.four.ret", SSL_bytes_to_cipher_list(b, four, 4, 0, &sk, &scsvs));
+        out_int("b2cl.four.n", OPENSSL_sk_num(sk));
+        out_str("b2cl.four.name0",
+                SSL_CIPHER_get_name((const SSL_CIPHER *)OPENSSL_sk_value(sk, 0)));
+        out_str("b2cl.four.name1",
+                SSL_CIPHER_get_name((const SSL_CIPHER *)OPENSSL_sk_value(sk, 1)));
+        OPENSSL_sk_free(sk);
+        OPENSSL_sk_free(scsvs);
+        sk = NULL;
+        scsvs = NULL;
+
+        out_int("b2cl.scsv.ret", SSL_bytes_to_cipher_list(b, scsv, 2, 0, &sk, &scsvs));
+        out_int("b2cl.scsv.n", OPENSSL_sk_num(sk));
+        out_int("b2cl.scsv.scsvs_n", OPENSSL_sk_num(scsvs));
+        out_str("b2cl.scsv.name0",
+                SSL_CIPHER_get_name((const SSL_CIPHER *)OPENSSL_sk_value(scsvs, 0)));
+        OPENSSL_sk_free(sk);
+        OPENSSL_sk_free(scsvs);
+        sk = NULL;
+        scsvs = NULL;
+
+        out_int("b2cl.unknown.ret", SSL_bytes_to_cipher_list(b, unknown, 2, 0, &sk, &scsvs));
+        out_int("b2cl.unknown.n", OPENSSL_sk_num(sk));
+        out_int("b2cl.unknown.scsvs_n", OPENSSL_sk_num(scsvs));
+        OPENSSL_sk_free(sk);
+        OPENSSL_sk_free(scsvs);
+        SSL_free(b);
+    }
+
+    /* `SSL_get1_supported_ciphers` over a fixed cipher set. */
+    {
+        SSL_CTX *cctx = SSL_CTX_new(TLS_method());
+        out_int("get1.set_list", SSL_CTX_set_cipher_list(cctx, "AES128-SHA:AES256-SHA"));
+        SSL *cs = SSL_new(cctx);
+        OPENSSL_STACK *sup = SSL_get1_supported_ciphers(cs);
+        out_int("get1.nonnull", sup != NULL);
+        out_int("get1.n", OPENSSL_sk_num(sup));
+        out_str("get1.name0",
+                SSL_CIPHER_get_name((const SSL_CIPHER *)OPENSSL_sk_value(sup, 0)));
+        out_str("get1.name1",
+                SSL_CIPHER_get_name((const SSL_CIPHER *)OPENSSL_sk_value(sup, 1)));
+        OPENSSL_sk_free(sup);
+        SSL_free(cs);
+        SSL_CTX_free(cctx);
+    }
+
+    /* `SSL_dup` and `SSL_set_SSL_CTX` over fixed objects. */
+    {
+        SSL_CTX *uctx = SSL_CTX_new(TLS_method());
+        SSL *orig = SSL_new(uctx);
+        SSL *dup = SSL_dup(orig);
+        out_int("dup.nonnull", dup != NULL);
+        out_int("dup.distinct", dup != NULL && dup != orig);
+        out_int("dup.ctx", SSL_get_SSL_CTX(dup) == SSL_get_SSL_CTX(orig));
+        out_int("dup.server", SSL_is_server(dup) == SSL_is_server(orig));
+        out_int("dup.version", SSL_version(dup) == SSL_version(orig));
+        out_int("dup.options", SSL_get_options(dup) == SSL_get_options(orig));
+        out_int("dup.verify_mode", SSL_get_verify_mode(dup) == SSL_get_verify_mode(orig));
+        out_int("dup.verify_depth", SSL_get_verify_depth(dup) == SSL_get_verify_depth(orig));
+        out_int("dup.cert_null", SSL_get_certificate(dup) == NULL);
+        SSL_free(dup);
+        SSL_free(orig);
+        SSL_CTX_free(uctx);
+    }
+    {
+        SSL_CTX *c1 = SSL_CTX_new(TLS_method());
+        SSL_CTX *c2 = SSL_CTX_new(TLS_method());
+        SSL *s2 = SSL_new(c1);
+        out_int("set_ctx.same", SSL_set_SSL_CTX(s2, c1) == c1);
+        out_int("set_ctx.switch", SSL_set_SSL_CTX(s2, c2) == c2);
+        out_int("set_ctx.get", SSL_get_SSL_CTX(s2) == c2);
+        out_int("set_ctx.cert_null", SSL_get_certificate(s2) == NULL);
+        out_int("set_ctx.null", SSL_set_SSL_CTX(s2, NULL) == c1);
+        out_int("set_ctx.get_after_null", SSL_get_SSL_CTX(s2) == c1);
+        out_int("set_ctx.null_ssl", SSL_set_SSL_CTX(NULL, c2) == NULL);
+        SSL_free(s2);
+        SSL_CTX_free(c1);
+        SSL_CTX_free(c2);
     }
 
     /* ----------------------------------------------------------------------------------------

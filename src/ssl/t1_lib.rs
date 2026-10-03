@@ -62,7 +62,13 @@ use crate::runtime::mem::CRYPTO_malloc;
 use crate::runtime::obj::{
     NID_sha1, NID_sha224, NID_sha256, NID_sha384, NID_sha512, NID_undef, OBJ_nid2ln,
 };
-use crate::ssl::ssl_lib::{Ssl, SslCtx, SslSession};
+use crate::ssl::ssl_cert::ssl_security;
+use crate::ssl::ssl_ciph_table::{
+    SSL_aDSS, SSL_aECDSA, SSL_aPSK, SSL_aRSA, SSL_aSRP, SSL_kDHEPSK, SSL_kECDHE, SSL_kECDHEPSK,
+    SSL_kPSK, SSL_kRSAPSK, SSL_kSRP, SslCipher,
+};
+use crate::ssl::ssl_lib::{SSL_is_dtls, Ssl, SslCtx, SslSession};
+use crate::ssl::statem::statem_lib::{ssl_get_min_max_version, ssl_version_cmp};
 
 /// `ERR_LIB_SSL` — `include/openssl/err.h.in:91`.
 const ERR_LIB_SSL: c_int = 20;
@@ -547,5 +553,128 @@ pub unsafe extern "C" fn SSL_get1_builtin_sigalgs(libctx: *mut c_void) -> *mut c
         ptr::copy_nonoverlapping(bytes.as_ptr(), ret, bytes.len());
         *ret.add(bytes.len()) = 0;
     }
-    ret.cast::<c_char>()
+    ret.cast()
+}
+
+// -------------------------------------------------------------------------------------------
+// 14.7b — the client-disabled mask trackers (`t1_lib.c`)
+//
+// `SSL_get1_supported_ciphers` (`ssl_lib.c:3276`) filters a connection's cipher list through
+// `ssl_set_client_disabled` and `ssl_cipher_disabled`; both are `t1_lib.c` internals 14.1 recorded
+// as the row's blocker. The `s3.tmp.mask_a`/`mask_k`/`min_ver`/`max_ver` words they read are now
+// fields on `Ssl`, and the `ssl_get_min_max_version`/`ssl_version_cmp` pair they call is in
+// `src/ssl/statem/statem_lib.rs`.
+// -------------------------------------------------------------------------------------------
+
+/// `SSL_SECOP_SIGALG_MASK` — `ssl.h:2740` (`14 | SSL_SECOP_OTHER_SIGALG`).
+const SSL_SECOP_SIGALG_MASK: c_int = 14 | (5 << 16);
+/// `SSL3_VERSION` — `ssl3.h:136`.
+const SSL3_VERSION: c_int = 0x0300;
+/// `TLS1_VERSION` — `tls1.h:199`.
+const TLS1_VERSION: c_int = 0x0301;
+
+/// `void ssl_set_sig_mask(uint32_t *pmask_a, SSL_CONNECTION *s, int op)` —
+/// `ssl/t1_lib.c:3395-3423`.
+///
+/// **Reduced, and recorded here rather than hidden.** The authority walks `tls12_get_psigalgs` and
+/// clears an auth-family bit for every supported signature algorithm, consulting `tls1_lookup_sigalg`,
+/// `ssl_cert_lookup_by_idx` and `tls12_sigalg_allowed` — the `SIGALG_LOOKUP` table's `sig_idx` and
+/// `secbits` columns and the security check, none of which this stratum's `SigAlgLookup` models.
+/// This function walks the crate's own `sigalg_lookup_tbl` and clears each auth family that has at
+/// least one row. For the admitted build's default table every family (RSA, DSA, ECDSA) has one, so
+/// the authority's security-level filtering is not observable at the reachable arms and `*pmask_a`
+/// receives the same 0 the authority leaves.
+///
+/// # Safety
+/// `pmask_a` must be a writable `uint32_t`; `s` must be a live connection.
+unsafe fn ssl_set_sig_mask(pmask_a: *mut u32, s: *mut Ssl, _op: c_int) {
+    let _ = s;
+    let mut disabled_mask: u32 = (SSL_aRSA | SSL_aDSS | SSL_aECDSA) as u32;
+    for row in SIGALG_LOOKUP_TBL.iter() {
+        let amask: u32 = if row.sig == EVP_PKEY_RSA || row.sig == EVP_PKEY_RSA_PSS {
+            SSL_aRSA as u32
+        } else if row.sig == EVP_PKEY_EC {
+            SSL_aECDSA as u32
+        } else if row.sig == EVP_PKEY_DSA {
+            SSL_aDSS as u32
+        } else {
+            0
+        };
+        if amask != 0 {
+            disabled_mask &= !amask;
+        }
+    }
+    // SAFETY: `pmask_a` is writable per the caller's contract.
+    unsafe { *pmask_a |= disabled_mask };
+}
+
+/// `int ssl_set_client_disabled(SSL_CONNECTION *s)` — `ssl/t1_lib.c:2848-2871`.
+///
+/// # Safety
+/// `s` must be a live connection.
+pub(crate) unsafe fn ssl_set_client_disabled(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
+        (*s).mask_a = 0;
+        (*s).mask_k = 0;
+        ssl_set_sig_mask(&mut (*s).mask_a, s, SSL_SECOP_SIGALG_MASK);
+        if ssl_get_min_max_version(s, &mut (*s).min_ver, &mut (*s).max_ver, ptr::null_mut()) != 0 {
+            return 0;
+        }
+        // With PSK there must be a client callback set.
+        if (*s).psk_client_callback.is_none() {
+            (*s).mask_a |= SSL_aPSK as u32;
+            (*s).mask_k |= (SSL_kPSK | SSL_kRSAPSK | SSL_kECDHEPSK | SSL_kDHEPSK) as u32;
+        }
+        if ((*s).srp_ctx.srp_mask & SSL_kSRP) == 0 {
+            (*s).mask_a |= SSL_aSRP as u32;
+            (*s).mask_k |= SSL_kSRP as u32;
+        }
+    }
+    1
+}
+
+/// `int ssl_cipher_disabled(const SSL_CONNECTION *s, const SSL_CIPHER *c, int op, int ecdhe)` —
+/// `ssl/t1_lib.c:2882-2919`.
+///
+/// Returns 1 when the cipher is disabled, 0 when enabled. The `SSL_IS_QUIC_INT_HANDSHAKE` arm is
+/// unreachable for every object this crate builds.
+///
+/// # Safety
+/// `s` must be a live connection; `c` must be a live cipher table row.
+pub(crate) unsafe fn ssl_cipher_disabled(
+    s: *const Ssl,
+    c: *const SslCipher,
+    op: c_int,
+    ecdhe: c_int,
+) -> c_int {
+    // SAFETY: `s` and `c` are live per the caller's contract.
+    unsafe {
+        let dtls = SSL_is_dtls(s) != 0;
+        let mut minversion = if dtls { (*c).min_dtls } else { (*c).min_tls };
+        let maxversion = if dtls { (*c).max_dtls } else { (*c).max_tls };
+
+        if ((*c).algorithm_mkey & (*s).mask_k) != 0 || ((*c).algorithm_auth & (*s).mask_a) != 0 {
+            return 1;
+        }
+        if (*s).max_ver == 0 {
+            return 1;
+        }
+
+        // For historical reasons ECDHE is allowed in SSLv3 when we are a client.
+        if minversion == TLS1_VERSION
+            && ecdhe != 0
+            && ((*c).algorithm_mkey & (SSL_kECDHE | SSL_kECDHEPSK) as u32) != 0
+        {
+            minversion = SSL3_VERSION;
+        }
+
+        if ssl_version_cmp(s, minversion, (*s).max_ver) > 0
+            || ssl_version_cmp(s, maxversion, (*s).min_ver) < 0
+        {
+            return 1;
+        }
+
+        c_int::from(ssl_security(s, op, (*c).strength_bits, 0, c.cast_mut().cast()) == 0)
+    }
 }
