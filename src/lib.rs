@@ -85,6 +85,11 @@ pub mod cms;
 // (the plan orders 12.4 before 12.7). See `src/cmp/mod.rs`.
 pub mod cmp;
 pub mod context;
+// Phase 13.7 — `crypto/async/`: the ASYNC job-and-wait framework. The directory is named for
+// the authority's `crypto/async/`, and its files follow that layout; the module is reachable as
+// `crypto_async` because `async` is a Rust keyword. See `src/async/mod.rs`.
+#[path = "async/mod.rs"]
+pub mod crypto_async;
 // Phase 12.7 — `crypto/crmf/`: the Certificate Request Message Format (RFC 4211). The item groups
 // landed crate-internally in 12.4; this stratum publishes the CRMF surface. See `src/crmf/mod.rs`.
 pub mod crmf;

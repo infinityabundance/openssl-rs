@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 2993,
-      "owned": 9629,
+      "owned": 9634,
       "records": 19839,
-      "unowned": 10210
+      "unowned": 10205
     },
     "definition": "every macro and enum member the authority's installed and internal headers define, with the header that defines it and that header's owning stratum",
     "installed_headers": [
@@ -4025,7 +4025,7 @@
         ],
         "kind": "macro",
         "name": "ASYNC_ARCH",
-        "owner_phase": null
+        "owner_phase": 13
       },
       {
         "defined_in": [
@@ -4129,7 +4129,7 @@
         ],
         "kind": "macro",
         "name": "ASYNC_POSIX",
-        "owner_phase": null
+        "owner_phase": 13
       },
       {
         "defined_in": [
@@ -69149,7 +69149,7 @@
         ],
         "kind": "macro",
         "name": "OSSL_CRYPTO_ASYNC_POSIX_H",
-        "owner_phase": null
+        "owner_phase": 13
       },
       {
         "defined_in": [
@@ -132064,7 +132064,7 @@
         ],
         "kind": "macro",
         "name": "USE_SWAPCONTEXT",
-        "owner_phase": null
+        "owner_phase": 13
       },
       {
         "defined_in": [
@@ -139053,7 +139053,7 @@
         ],
         "kind": "macro",
         "name": "async_fibre_init_dispatcher",
-        "owner_phase": null
+        "owner_phase": 13
       },
       {
         "defined_in": [
@@ -159200,9 +159200,7 @@
       "ASN1_R_WRONG_INTEGER_TYPE",
       "ASN1_R_WRONG_PUBLIC_KEY_TYPE",
       "ASN1_R_WRONG_TAG",
-      "ASYNC_ARCH",
       "ASYNC_NULL",
-      "ASYNC_POSIX",
       "ASYNC_R_FAILED_TO_SET_POOL",
       "ASYNC_R_FAILED_TO_SWAP_CONTEXT",
       "ASYNC_R_INIT_FAILED",
@@ -159517,7 +159515,9 @@
       "CMS_OIK_PUBKEY",
       "CMS_RECIPINFO_ISSUER_SERIAL",
       "CMS_RECIPINFO_KEYIDENTIFIER",
-      "CMS_REK_ISSUER_SERIAL"
+      "CMS_REK_ISSUER_SERIAL",
+      "CMS_REK_KEYIDENTIFIER",
+      "CMS_REVCHOICE_CRL"
     ]
   },
   "generator": "forensics/tools/gen_prerequisite_atlas.py",

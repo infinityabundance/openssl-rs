@@ -28,6 +28,7 @@
 //! | `OPENSSL_INIT_ATFORK` | the authority's `openssl_init_fork_handlers()` is `return 1`, i.e. a no-op on the admitted pthread profile (verified in the 3.6.4 source) |
 //! | `OPENSSL_INIT_NO_ATEXIT` | fully honoured: it suppresses the `atexit` registration |
 //! | `OPENSSL_INIT_BASE_ONLY` | internal flag; base init is all this build has |
+//! | `OPENSSL_INIT_ASYNC` | **implemented** (13.7): runs `async_init()`, which creates the fibre-memory lock. The authority's `ossl_init_async` runs it at the authority's own position, after the config step and before the engine steps; `crypto/async` landed with 13.7, so the bit left the refused set |
 //! | unknown bits | the authority ORs unknown bits into its done-mask and ignores them |
 //!
 //! **Refused** with `ERR_LIB_CRYPTO`/`ERR_R_INIT_FAIL` and a `0` return. Each of
@@ -39,16 +40,16 @@
 //! |---|---|---|
 //! | `ADD_ALL_CIPHERS` | EVP/OBJ (4, 7) | registers the legacy cipher methods in the `OBJ_NAME` database |
 //! | `ADD_ALL_DIGESTS` | EVP/OBJ (4, 7) | registers the legacy digest methods |
-//! | `ASYNC` | ASYNC (7) | initialises the async job framework |
 //! | `ENGINE_*` | ENGINE (13) | loads/registers engines |
 //!
 //! Refusals happen *after* the `atexit` step and **before** the config step,
-//! matching the authority's ordering: `init.c` tests `ADD_ALL_*`, `ASYNC` and the
+//! matching the authority's ordering: `init.c` tests `ADD_ALL_*` and the
 //! `ENGINE_*` bits ahead of its `OPENSSL_INIT_LOAD_CONFIG` block, so a refused call
 //! still has the side effects the authority would have had by that point and does
 //! **not** have the ones it would not. That distinction was unobservable while the
 //! config step loaded nothing; it stopped being unobservable in 6.10c, and the
-//! position below is the correction.
+//! position below is the correction. The `OPENSSL_INIT_ASYNC` step the authority
+//! places *after* config is now taken, since 13.7 landed `crypto/async`.
 //!
 //! ## Idempotency, and being safe from a constructor or `atexit` frame
 //!
@@ -184,7 +185,11 @@ pub(crate) const OPENSSL_INIT_LOAD_CONFIG: u64 = 0x0000_0040;
 /// `OPENSSL_INIT_NO_LOAD_CONFIG`
 const OPENSSL_INIT_NO_LOAD_CONFIG: u64 = 0x0000_0080;
 /// `OPENSSL_INIT_ASYNC`
-const OPENSSL_INIT_ASYNC: u64 = 0x0000_0100;
+///
+/// Enabled by Phase 13.7: the authority's `ossl_init_async` runs `async_init()`
+/// (`crypto/init.c:301`), and every `ASYNC_*` entry point reaches it through this bit. It left
+/// `INIT_UNSUPPORTED` when `crypto/async` landed.
+pub(crate) const OPENSSL_INIT_ASYNC: u64 = 0x0000_0100;
 /// `OPENSSL_INIT_ENGINE_RDRAND`
 const OPENSSL_INIT_ENGINE_RDRAND: u64 = 0x0000_0200;
 /// `OPENSSL_INIT_ENGINE_DYNAMIC`
@@ -243,6 +248,9 @@ const OPENSSL_INIT_NO_ATEXIT: u64 = 0x0008_0000;
 /// Do not add to this list without reading the module note: refusal is the
 /// honest choice *because* these are not no-ops in the authority.
 ///
+/// `OPENSSL_INIT_ASYNC` left this list in Phase 13.7, when `crypto/async` landed and its
+/// `ossl_init_async` step could be added at the authority's own position (below).
+///
 /// `OPENSSL_INIT_LOAD_CONFIG` was on this list until Phase 5 needed it, and it left
 /// the list for good in Phase 6.10c: the authority's config step is
 /// `CONF_modules_load_file_ex(global_default, NULL, NULL, DEFAULT_CONF_MFLAGS)`,
@@ -251,8 +259,7 @@ const OPENSSL_INIT_NO_ATEXIT: u64 = 0x0008_0000;
 /// `ASN1_STRING_TABLE_get` observes first and what the RT-ASN1-STR court measured.
 /// See `docs/DECISIONS.md` D86 for the phase in which the loader was absent, and
 /// the entry that supersedes it for the phase in which it arrived.
-const INIT_UNSUPPORTED: u64 = OPENSSL_INIT_ASYNC
-    | OPENSSL_INIT_ENGINE_RDRAND
+const INIT_UNSUPPORTED: u64 = OPENSSL_INIT_ENGINE_RDRAND
     | OPENSSL_INIT_ENGINE_DYNAMIC
     | OPENSSL_INIT_ENGINE_OPENSSL
     | OPENSSL_INIT_ENGINE_CRYPTODEV
@@ -555,6 +562,40 @@ fn run_config_once(body: extern "C" fn()) -> c_int {
     CONFIG_ONCE_RET.load(Ordering::Acquire)
 }
 
+/// `static CRYPTO_ONCE async = CRYPTO_ONCE_STATIC_INIT;` — `crypto/init.c:299`.
+static ASYNC_ONCE: AtomicI32 = AtomicI32::new(0);
+
+/// The `RUN_ONCE` macro's `async_ossl_ret_` — what `ossl_init_async` answered, kept for every
+/// later `RUN_ONCE(&async, ossl_init_async)` to read.
+static ASYNC_ONCE_RET: AtomicI32 = AtomicI32::new(0);
+
+/// `static int async_inited = 0;` — `crypto/init.c:300`, read by `OPENSSL_cleanup`.
+static ASYNC_INITED: AtomicBool = AtomicBool::new(false);
+
+/// `DEFINE_RUN_ONCE_STATIC(ossl_init_async)` — `crypto/init.c:301-308`.
+///
+/// `async_init()` is `crypto/async/arch/async_posix.c`'s `async_local_init`, which creates the
+/// fibre-memory lock; a failure leaves `async_inited` clear, so cleanup does not free a lock
+/// that was never made.
+extern "C" fn ossl_init_async() {
+    let ret = crate::crypto_async::job::async_init();
+    ASYNC_ONCE_RET.store(ret, Ordering::Release);
+    if ret != 0 {
+        ASYNC_INITED.store(true, Ordering::Release);
+    }
+}
+
+/// `RUN_ONCE(&async, ossl_init_async)`: run the body once, then answer its recorded result.
+fn run_async_once() -> c_int {
+    // SAFETY: the once is this module's own static, initially zero, and the body is a safe
+    // `extern "C" fn` of no arguments.
+    let ran = unsafe { CRYPTO_THREAD_run_once(ASYNC_ONCE.as_ptr(), Some(ossl_init_async)) };
+    if ran == 0 {
+        return 0;
+    }
+    ASYNC_ONCE_RET.load(Ordering::Acquire)
+}
+
 /// `int loading = CRYPTO_THREAD_get_local(&in_init_config_local) != NULL;`
 fn config_loading() -> bool {
     // SAFETY: the key was created by `base_init` and this function is only reachable through
@@ -764,6 +805,12 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSet
             }
         }
 
+        // The async step, at the authority's own position: after the configuration step and
+        // before the engine steps (`crypto/init.c:647-649`).
+        if opts & OPENSSL_INIT_ASYNC != 0 && run_async_once() == 0 {
+            return 0;
+        }
+
         if opts & INIT_UNSUPPORTED != 0 {
             raise_init_fail();
             return 0;
@@ -930,6 +977,12 @@ pub extern "C" fn OPENSSL_cleanup() {
         // SAFETY: the key was created by `base_init`, which is what got us here — `BASE_INITED`
         // is set only after it succeeded — and this is its only deleter.
         unsafe { CRYPTO_THREAD_cleanup_local(IN_INIT_CONFIG_LOCAL.as_ptr()) };
+        // `async_deinit()`, at the authority's position (`crypto/init.c:428-431`): after the
+        // configuration key is released and before `ossl_config_modules_free()`. Guarded on
+        // `async_inited`, the authority's own condition.
+        if ASYNC_INITED.swap(false, Ordering::AcqRel) {
+            crate::crypto_async::job::async_deinit();
+        }
         // `ossl_config_modules_free()`. The authority's comment places it here for a
         // dependency reason and not for tidiness: *"ossl_config_modules_free() can end up in
         // ENGINE code so must be called before engine_cleanup_int()"*. It is
@@ -1388,10 +1441,28 @@ mod tests {
     }
 
     #[test]
+    fn the_async_bit_is_accepted_and_raises_nothing() {
+        with_init_lock(|| {
+            ERR_clear_error();
+            assert_eq!(
+                OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, core::ptr::null()),
+                1,
+                "OPENSSL_INIT_ASYNC must be accepted now that crypto/async landed"
+            );
+            assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
+            /* And it is recorded, so the second call takes the fast path and still answers 1. */
+            assert_eq!(
+                OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, core::ptr::null()),
+                1
+            );
+            assert_eq!(ERR_peek_error(), 0);
+        });
+    }
+
+    #[test]
     fn unsupported_options_fail_with_init_fail_and_do_not_get_recorded() {
         with_init_lock(|| {
             let cases = [
-                OPENSSL_INIT_ASYNC,
                 OPENSSL_INIT_ENGINE_RDRAND,
                 OPENSSL_INIT_ENGINE_DYNAMIC,
                 OPENSSL_INIT_ENGINE_OPENSSL,

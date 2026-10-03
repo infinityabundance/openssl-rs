@@ -272,6 +272,13 @@
         "openssl_rs_stat_exists",
         "openssl_rs_stat_is_dir",
         "openssl_rs_store_vctrl",
+        "openssl_rs_ucontext_align",
+        "openssl_rs_ucontext_capable",
+        "openssl_rs_ucontext_getcontext",
+        "openssl_rs_ucontext_set_stack",
+        "openssl_rs_ucontext_size",
+        "openssl_rs_ucontext_stack",
+        "openssl_rs_ucontext_swapcontext",
         "openssl_rs_va_fp",
         "openssl_rs_va_gp",
         "ossl_X509_PUBKEY_INTERNAL_free",
@@ -501,7 +508,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 16426,
+      "compiler_emitted_count": 16218,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -509,7 +516,7 @@
     "libraries": {
       "libcrypto": {
         "authority_exports": 5896,
-        "implemented": 5860,
+        "implemented": 5893,
         "implemented_symbols": [
           "ACCESS_DESCRIPTION_free",
           "ACCESS_DESCRIPTION_it",
@@ -788,6 +795,28 @@
           "ASRange_free",
           "ASRange_it",
           "ASRange_new",
+          "ASYNC_WAIT_CTX_clear_fd",
+          "ASYNC_WAIT_CTX_free",
+          "ASYNC_WAIT_CTX_get_all_fds",
+          "ASYNC_WAIT_CTX_get_callback",
+          "ASYNC_WAIT_CTX_get_changed_fds",
+          "ASYNC_WAIT_CTX_get_fd",
+          "ASYNC_WAIT_CTX_get_status",
+          "ASYNC_WAIT_CTX_new",
+          "ASYNC_WAIT_CTX_set_callback",
+          "ASYNC_WAIT_CTX_set_status",
+          "ASYNC_WAIT_CTX_set_wait_fd",
+          "ASYNC_block_pause",
+          "ASYNC_cleanup_thread",
+          "ASYNC_get_current_job",
+          "ASYNC_get_mem_functions",
+          "ASYNC_get_wait_ctx",
+          "ASYNC_init_thread",
+          "ASYNC_is_capable",
+          "ASYNC_pause_job",
+          "ASYNC_set_mem_functions",
+          "ASYNC_start_job",
+          "ASYNC_unblock_pause",
           "AUTHORITY_INFO_ACCESS_free",
           "AUTHORITY_INFO_ACCESS_it",
           "AUTHORITY_INFO_ACCESS_new",
@@ -4235,6 +4264,8 @@
           "PEM_read_bio_PKCS8_PRIV_KEY_INFO",
           "PEM_read_bio_PUBKEY",
           "PEM_read_bio_PUBKEY_ex",
+          "PEM_read_bio_Parameters",
+          "PEM_read_bio_Parameters_ex",
           "PEM_read_bio_PrivateKey",
           "PEM_read_bio_PrivateKey_ex",
           "PEM_read_bio_RSAPrivateKey",
@@ -4260,9 +4291,13 @@
           "PEM_write_NETSCAPE_CERT_SEQUENCE",
           "PEM_write_PKCS7",
           "PEM_write_PKCS8",
+          "PEM_write_PKCS8PrivateKey",
+          "PEM_write_PKCS8PrivateKey_nid",
           "PEM_write_PKCS8_PRIV_KEY_INFO",
           "PEM_write_PUBKEY",
           "PEM_write_PUBKEY_ex",
+          "PEM_write_PrivateKey",
+          "PEM_write_PrivateKey_ex",
           "PEM_write_RSAPrivateKey",
           "PEM_write_RSAPublicKey",
           "PEM_write_RSA_PUBKEY",
@@ -4289,9 +4324,14 @@
           "PEM_write_bio_PKCS7",
           "PEM_write_bio_PKCS7_stream",
           "PEM_write_bio_PKCS8",
+          "PEM_write_bio_PKCS8PrivateKey",
+          "PEM_write_bio_PKCS8PrivateKey_nid",
           "PEM_write_bio_PKCS8_PRIV_KEY_INFO",
           "PEM_write_bio_PUBKEY",
           "PEM_write_bio_PUBKEY_ex",
+          "PEM_write_bio_Parameters",
+          "PEM_write_bio_PrivateKey",
+          "PEM_write_bio_PrivateKey_ex",
           "PEM_write_bio_PrivateKey_traditional",
           "PEM_write_bio_RSAPrivateKey",
           "PEM_write_bio_RSAPublicKey",
@@ -6372,7 +6412,7 @@
           "v2i_GENERAL_NAMES",
           "v2i_GENERAL_NAME_ex"
         ],
-        "scaffolded": 36
+        "scaffolded": 3
       },
       "libssl": {
         "authority_exports": 603,
@@ -6383,18 +6423,18 @@
     },
     "totals": {
       "authority_exports": 6499,
-      "implemented": 5860,
-      "scaffolded": 639
+      "implemented": 5893,
+      "scaffolded": 606
     }
   },
-  "body_hash": "8be38e647bfb3694f35a56322839e11782f4afeaee24a3ecc2b2e8914171f698",
+  "body_hash": "61f85a623b33aa9810260d878d9dd299f0d437fcab5465acb76d2cf2d62bd9a2",
   "body_hash_note": "hashed over the evidence subset of `body`; `internal_symbols` is excluded because it carries build-product counts (docs/DECISIONS.md D30). Ledgers bind this digest rather than the file digest, so the build product cannot propagate into them.",
   "generator": "forensics/tools/implemented_surface.py",
   "inputs": [
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "17d9a95fef8763f4dc6caf28c688999600ccd194b44f8ff768ee1ba151b1b5da"
+      "sha256": "08e787b1efb0dda7bb986211c49c4a13844124048c64cb391a412d85d3ea5f2b"
     },
     {
       "name": "authority-exports",

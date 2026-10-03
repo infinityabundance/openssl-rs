@@ -39902,6 +39902,116 @@ pub(crate) const UI_OPENSSL_561: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `async_release_job` at `crypto/async/async.c:144` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ASYNC_144: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 144,
+    func: c"async_release_job",
+    lib: 51,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `async_start_func` at `crypto/async/async.c:158` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ASYNC_158: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 158,
+    func: c"async_start_func",
+    lib: 51,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `async_start_func` at `crypto/async/async.c:174` (ASYNC_R_FAILED_TO_SWAP_CONTEXT).
+pub(crate) const ASYNC_174: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 174,
+    func: c"async_start_func",
+    lib: 51,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ASYNC_start_job` at `crypto/async/async.c:227` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ASYNC_227: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 227,
+    func: c"ASYNC_start_job",
+    lib: 51,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ASYNC_start_job` at `crypto/async/async.c:234` (ASYNC_R_FAILED_TO_SWAP_CONTEXT).
+pub(crate) const ASYNC_234: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 234,
+    func: c"ASYNC_start_job",
+    lib: 51,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ASYNC_start_job` at `crypto/async/async.c:247` (ERR_R_INTERNAL_ERROR).
+pub(crate) const ASYNC_247: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 247,
+    func: c"ASYNC_start_job",
+    lib: 51,
+    reason: 786691,
+    dynamic_reason: false,
+};
+
+/// `ASYNC_start_job` at `crypto/async/async.c:276` (ASYNC_R_FAILED_TO_SWAP_CONTEXT).
+pub(crate) const ASYNC_276: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 276,
+    func: c"ASYNC_start_job",
+    lib: 51,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ASYNC_pause_job` at `crypto/async/async.c:313` (ASYNC_R_FAILED_TO_SWAP_CONTEXT).
+pub(crate) const ASYNC_313: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 313,
+    func: c"ASYNC_pause_job",
+    lib: 51,
+    reason: 102,
+    dynamic_reason: false,
+};
+
+/// `ASYNC_init_thread` at `crypto/async/async.c:351` (ASYNC_R_INVALID_POOL_SIZE).
+pub(crate) const ASYNC_351: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 351,
+    func: c"ASYNC_init_thread",
+    lib: 51,
+    reason: 103,
+    dynamic_reason: false,
+};
+
+/// `ASYNC_init_thread` at `crypto/async/async.c:367` (ERR_R_CRYPTO_LIB).
+pub(crate) const ASYNC_367: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 367,
+    func: c"ASYNC_init_thread",
+    lib: 51,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `ASYNC_init_thread` at `crypto/async/async.c:393` (ASYNC_R_FAILED_TO_SET_POOL).
+pub(crate) const ASYNC_393: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/async/async.c",
+    line: 393,
+    func: c"ASYNC_init_thread",
+    lib: 51,
+    reason: 101,
+    dynamic_reason: false,
+};
+
 /// `PEM_read_bio_DHparams` at `crypto/pem/pem_all.c:201` (ERR_R_ASN1_LIB).
 pub(crate) const PEM_ALL_201: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/pem/pem_all.c",
@@ -50570,6 +50680,17 @@ pub(crate) static ALL: &[ErrSite] = &[
     UI_OPENSSL_502,
     UI_OPENSSL_534,
     UI_OPENSSL_561,
+    ASYNC_144,
+    ASYNC_158,
+    ASYNC_174,
+    ASYNC_227,
+    ASYNC_234,
+    ASYNC_247,
+    ASYNC_276,
+    ASYNC_313,
+    ASYNC_351,
+    ASYNC_367,
+    ASYNC_393,
     PEM_ALL_201,
     PEM_ALL_214,
     PASSPHRASE_38,

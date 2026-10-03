@@ -1132,6 +1132,16 @@ COVERED_FILES = [
     # table) and `ui_null.c` raises nothing, so neither is covered.
     ("crypto/ui/ui_lib.c", "UI_LIB"),
     ("crypto/ui/ui_openssl.c", "UI_OPENSSL"),
+    # Phase 13.7: `crypto/async/async.c`, the job framework's raises. Every one is a
+    # coordinate the crate now transcribes: `async_release_job`'s `ERR_R_INTERNAL_ERROR`
+    # (`:144`), `async_start_func`'s (`:158`), the four
+    # `ASYNC_R_FAILED_TO_SWAP_CONTEXT` sites (`:174`, `:234`, `:276`, `:313`), the two
+    # remaining `ERR_R_INTERNAL_ERROR` ones (`:227`, `:247`),
+    # `ASYNC_init_thread`'s `ASYNC_R_INVALID_POOL_SIZE` (`:351`) and `ERR_R_CRYPTO_LIB`
+    # (`:367`), and `ASYNC_R_FAILED_TO_SET_POOL` (`:393`). `async_wait.c` and
+    # `arch/async_posix.c` raise nothing, so neither is covered -- a raise nobody makes is
+    # not a coordinate.
+    ("crypto/async/async.c", "ASYNC"),
     # Phase 8.9's `crypto/pem/pem_all.c`. The `IMPLEMENT_PEM_*` expansions raise nothing --
     # they are one call to a `PEM_ASN1_*` -- so the two sites are the two hand-written readers'
     # (`PEM_read_bio_DHparams` at `:201`, `PEM_read_DHparams` at `:214`).
@@ -2037,6 +2047,9 @@ def resolve_symbols(authority, symbols: list[str], work: Path) -> dict[str, int]
         # `engineerr.h` is an installed header (it ships beside `engine.h`), so this is
         # `ecerr.h`'s fallthrough-free case again.
         "#include <openssl/engineerr.h>",
+        # Phase 13.7: `ASYNC_R_*` for `crypto/async/async.c`'s pool and switch failures.
+        # `asyncerr.h` is an installed header, so this is `engineerr.h`'s case again.
+        "#include <openssl/asyncerr.h>",
         "#include <stdio.h>",
         "",
     ]

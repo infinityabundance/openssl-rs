@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 189,
       "deferred_to_later_phase": 0,
-      "implemented": 341,
-      "open_in_this_stratum": 36,
+      "implemented": 374,
+      "open_in_this_stratum": 3,
       "owned": 377,
       "received_by_handoff": 188
     },
@@ -1715,6 +1715,28 @@
       ]
     },
     "implemented": [
+      "ASYNC_WAIT_CTX_clear_fd",
+      "ASYNC_WAIT_CTX_free",
+      "ASYNC_WAIT_CTX_get_all_fds",
+      "ASYNC_WAIT_CTX_get_callback",
+      "ASYNC_WAIT_CTX_get_changed_fds",
+      "ASYNC_WAIT_CTX_get_fd",
+      "ASYNC_WAIT_CTX_get_status",
+      "ASYNC_WAIT_CTX_new",
+      "ASYNC_WAIT_CTX_set_callback",
+      "ASYNC_WAIT_CTX_set_status",
+      "ASYNC_WAIT_CTX_set_wait_fd",
+      "ASYNC_block_pause",
+      "ASYNC_cleanup_thread",
+      "ASYNC_get_current_job",
+      "ASYNC_get_mem_functions",
+      "ASYNC_get_wait_ctx",
+      "ASYNC_init_thread",
+      "ASYNC_is_capable",
+      "ASYNC_pause_job",
+      "ASYNC_set_mem_functions",
+      "ASYNC_start_job",
+      "ASYNC_unblock_pause",
       "ENGINE_add",
       "ENGINE_add_conf_module",
       "ENGINE_by_id",
@@ -1986,8 +2008,19 @@
       "EVP_whirlpool",
       "PEM_read_PrivateKey",
       "PEM_read_PrivateKey_ex",
+      "PEM_read_bio_Parameters",
+      "PEM_read_bio_Parameters_ex",
       "PEM_read_bio_PrivateKey",
       "PEM_read_bio_PrivateKey_ex",
+      "PEM_write_PKCS8PrivateKey",
+      "PEM_write_PKCS8PrivateKey_nid",
+      "PEM_write_PrivateKey",
+      "PEM_write_PrivateKey_ex",
+      "PEM_write_bio_PKCS8PrivateKey",
+      "PEM_write_bio_PKCS8PrivateKey_nid",
+      "PEM_write_bio_Parameters",
+      "PEM_write_bio_PrivateKey",
+      "PEM_write_bio_PrivateKey_ex",
       "TXT_DB_create_index",
       "TXT_DB_free",
       "TXT_DB_get_by_index",
@@ -2061,204 +2094,6 @@
     "module_overrides": [],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation, this ledger's working set is more than its atlas-owned universe: 189 exports are `engine.h`'s, `ui.h`'s and `txt_db.h`'s, and 188 more arrive as recorded hand-offs from phases 3, 7 and 12. It also does not start with that whole working set open: 123 atlas-owned exports were landed before activation as substrate the earlier strata needed, and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` hand-offs are already implemented (Phase 8 landed them, D369), so the ledger's `implemented` count is not zero and its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum owns 39 provider registration rows, all unimplemented at activation (`forensics/atlas/provider-algorithms.json`). Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-13-SUBPHASES.md section 4 decides when the stratum may be called complete.",
     "open": [
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_clear_fd"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_free"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_get_all_fds"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_get_callback"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_get_changed_fds"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_get_fd"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_get_status"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_new"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_set_callback"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_set_status"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async_wait.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_WAIT_CTX_set_wait_fd"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_block_pause"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_cleanup_thread"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_get_current_job"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/arch/async_posix.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_get_mem_functions"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_get_wait_ctx"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_init_thread"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/arch/async_posix.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_is_capable"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_pause_job"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/arch/async_posix.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_set_mem_functions"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_start_job"
-      },
-      {
-        "declaring_header": "async.h",
-        "module": "src/async/async.rs",
-        "received_from_phase": 3,
-        "symbol": "ASYNC_unblock_pause"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pkey.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_read_bio_Parameters"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pkey.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_read_bio_Parameters_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_PKCS8PrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_PKCS8PrivateKey_nid"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pkey.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_PrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pkey.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_PrivateKey_ex"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_bio_PKCS8PrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pk8.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_bio_PKCS8PrivateKey_nid"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pkey.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_bio_Parameters"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pkey.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_bio_PrivateKey"
-      },
-      {
-        "declaring_header": "pem.h",
-        "module": "src/pem/pem_pkey.rs",
-        "received_from_phase": 7,
-        "symbol": "PEM_write_bio_PrivateKey_ex"
-      },
       {
         "declaring_header": "srp.h",
         "module": "src/srp/srp_vfy.rs",
@@ -2375,7 +2210,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "8be38e647bfb3694f35a56322839e11782f4afeaee24a3ecc2b2e8914171f698"
+      "sha256": "61f85a623b33aa9810260d878d9dd299f0d437fcab5465acb76d2cf2d62bd9a2"
     },
     {
       "name": "phase3-obligations",

@@ -114,16 +114,35 @@ method with its provider counterpart by short name, so the bytes are the Phase-8
 both sides -- the observable `docs/PHASE-13-SUBPHASES.md` section 3.6 names. AEAD (GCM/CCM/OCB),
 wrap/wrap-pad and the stitched CBC-HMAC statics are driven with their own sequences. It does
 **not** print an address (so the fetched-identity divergence the CPS/CMS/TS and OCSP courts name
-cannot leak into a comparison), never reads the error queue, and never drives the CBC-HMAC statics'
+cannot leak into a comparison, never reads the error queue, and never drives the CBC-HMAC statics'
 TLS-record AAD arms, which `RT-CIPHER`'s `rt_cbchmac_records` arm already covers.
+
+`RT-LEGACY-REMAINDER`, and what it compares
+------------------------------------------
+13.7's court, `courts/phase13/rt_legacy_remainder_probe.c`, drives the two things 13.7 lands. For
+the PEM half it writes a fixed in-process RSA key through `PEM_write_bio_PrivateKey[_ex]`,
+`PEM_write_PrivateKey[_ex]`, `PEM_write_bio_PKCS8PrivateKey[_nid]` and
+`PEM_write_PKCS8PrivateKey[_nid]`, re-reads each block with `PEM_read_bio_PrivateKey[_ex]` and
+`PEM_read_PrivateKey[_ex]`, and compares the decoded key's `id` and bit count, the fixed PEM
+banner, the encrypted round trip and the wrong-pass phrase refusal -- **not** a key byte, DER
+byte or ciphertext byte, because the key is generated in-process and differs between the two
+sides. For the ASYNC half it starts a job that `ASYNC_block_pause`s, `ASYNC_pause_job`s (a no-op
+while blocked), `ASYNC_unblock_pause`s, then pauses for real, and compares the
+`ASYNC_PAUSE`/`ASYNC_FINISH` sequence, `ASYNC_get_current_job`/`ASYNC_get_wait_ctx`, the step
+counter, the whole `ASYNC_WAIT_CTX_*` surface, `ASYNC_is_capable`, the pool-size refusal and the
+allocator-pair freeze. It never drains the error queue (the decoder-first leg records a differing
+coordinate, D-DECODER-ABSENT-1), does not drive `PEM_read_bio_Parameters[_ex]` over a valid
+`DH PARAMETERS` block (the authority answers a key where this crate answers NULL), and
+`PEM_write_bio_Parameters` only over an RSA key (whose method has no `param_encode`), so no
+divergent arm is compared. See docs/PHASE-13-SUBPHASES.md section 3.7.
 
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" -- the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-LEGACY-REMAINDER` and `RT-HANDOFF` are the remaining subphases'
-own courts: 13.7's PEM readers and ASYNC framework, and 13.8's received TS_CONF and SRP hand-offs.
+later activation established. `RT-HANDOFF` is the remaining subphase's own court: 13.8's received
+TS_CONF and SRP hand-offs.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -133,8 +152,9 @@ command dispatch, the UI method callbacks driven through a fixed in-process meth
 TXT_DB read/write/update codec over a fixed text database. The legacy EVP method statics will be
 driven over the authority's own primitives where an observable exists, and named `pending` where
 the fetched-identity divergence the later CPS/CMS/TS courts already name makes a value
-un-comparable. Nothing here is a parity claim about the meaning of an ENGINE registration or a
-prompt.
+un-comparable. The PEM readers and the ASYNC framework are driven over an in-process key and a
+pausing job, and the decoder-absent and parameter arms are left undriven rather than compared.
+Nothing here is a parity claim about the meaning of an ENGINE registration or a prompt.
 
 SPDX-License-Identifier: Apache-2.0"""
 
@@ -178,6 +198,7 @@ COURTS: list[tuple[str, str]] = [
     ("RT-UI", "rt_ui_probe.c"),
     ("RT-TXTDB", "rt_txtdb_probe.c"),
     ("RT-EVP-LEGACY", "rt_evp_legacy_probe.c"),
+    ("RT-LEGACY-REMAINDER", "rt_legacy_remainder_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -185,7 +206,6 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-13-SUBPHASES.md` section 2's, one per work
 # subphase.
 PENDING_COURTS: dict[str, str] = {
-    "RT-LEGACY-REMAINDER": "13.7 (the PEM private-key readers and the ASYNC framework)",
     "RT-HANDOFF": "13.8 (the received TS_CONF and SRP hand-offs)",
 }
 
@@ -398,10 +418,19 @@ def main(argv: list[str]) -> int:
             "AEAD (GCM/CCM/OCB), wrap/wrap-pad and the stitched CBC-HMAC statics driven by their "
             "own sequences -- not an address (so the fetched-identity divergence cannot leak "
             "into a comparison), not the error queue, and not the CBC-HMAC TLS-record AAD arms, "
-            "which `RT-CIPHER` already covers. The other two behavioural courts the "
-            "plan names are named in `pending_courts` with the subphases that bring them -- "
-            "`RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
-            "none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
+            "which `RT-CIPHER` already covers. `RT-LEGACY-REMAINDER` is 13.7's behavioural "
+            "court: it **calls** the PEM private-key writers and readers over a fixed "
+            "in-process RSA key written to and re-read from a memory BIO and its `_ex`/`FILE` "
+            "spellings, comparing the decoded key's `id` and bit count, the fixed PEM banner, "
+            "the encrypted round trip and the wrong-passphrase refusal (never a key, DER or "
+            "ciphertext byte), and it **calls** the `ASYNC_*` framework -- `ASYNC_init_thread`, "
+            "`ASYNC_start_job`, a job that block-pauses, pauses once and resumes, "
+            "`ASYNC_get_current_job`/`ASYNC_get_wait_ctx`, the whole `ASYNC_WAIT_CTX_*` surface "
+            "and the pool-size refusal -- comparing the transition sequence and the state each "
+            "leaves, not the error queue; the decoder-absent `DH PARAMETERS` arm is left "
+            "undriven rather than compared. The one remaining behavioural court the plan names "
+            "is named in `pending_courts` with its subphase -- `RT-HANDOFF` -- and is not "
+            "registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
             "is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md "
             "section 3 records what the behavioural courts compare."
         ),
