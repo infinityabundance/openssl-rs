@@ -75,7 +75,22 @@ pub mod chacha;
 // number from the pinned authority's `crypto/` tree; the modules that read them carry the
 // structure.
 pub(crate) mod cipher_tables;
+// Phase 12.3 — `crypto/cms/`: the CMS container, its item groups and the signer/recipient
+// engines. `crypto/asn1/asn_mime.c`'s `SMIME_*` hand-off (Phase 12.9) and the ESS item groups
+// (Phase 12.7) are reached as the authority's own prototypes rather than re-landed here. See
+// `src/cms/mod.rs`.
+pub mod cms;
+// Phase 12.4 — `crypto/cmp/`: the Certificate Management Protocol. The `OSSL_CMP_*` context and
+// object model; the CRMF item groups its message engine carries are pulled forward crate-internally
+// (the plan orders 12.4 before 12.7). See `src/cmp/mod.rs`.
+pub mod cmp;
 pub mod context;
+// Phase 12.7 — `crypto/crmf/`: the Certificate Request Message Format (RFC 4211). The item groups
+// landed crate-internally in 12.4; this stratum publishes the CRMF surface. See `src/crmf/mod.rs`.
+pub mod crmf;
+// Phase 12.7 — `crypto/ess/`: the ESS signing-certificate item groups and library. See
+// `src/ess/mod.rs`.
+pub mod ess;
 // Phase 10.14.15 — `crypto/ct/`: Certificate Transparency. The directory is new here; it lands
 // the units `crypto/x509/v3_x509v3`/`ct_x509v3.c`'s table is blocked on. See `src/ct/mod.rs`.
 pub mod ct;
@@ -185,6 +200,11 @@ pub mod sm4;
 // Phase 8's `crypto/sm2/` (D406): the SM2 Z-digest/sign pair and the `SM2_Ciphertext` codec, the
 // two crypt units the `SM2` signature and asym-cipher rows publish on.
 pub(crate) mod sm2;
+// Phase 12.8 — `crypto/srp/`: the RFC 5054 SRP surface. The arithmetic (`srp_lib`), the
+// verifier store and creators (`srp_vfy`) and the group constants (`crypto/bn/bn_srp.c`, as
+// `crate::bn::bn_srp`) land here; `SRP_VBASE_init` waits on Phase 13's `TXT_DB_read`. See
+// `src/srp/mod.rs`.
+pub(crate) mod srp;
 pub mod status;
 // Phase 10 (10.5) — `crypto/store/`: the `OSSL_STORE_LOADER` object and its registry, the
 // provider-side loader method fetched over slot 15, and `store_lib.c`'s `OSSL_STORE_CTX` state
@@ -194,6 +214,11 @@ pub mod status;
 // `ossl_store_handle_load_result`) in its module doc. The `file_store.c` provider row is the
 // only whole unit still withheld.
 pub mod store;
+// Phase 12.5 — `crypto/ts/`: the RFC 3161 timestamping surface. The item groups, accessors,
+// print text, verify context and `CONF` readers land here; `TS_RESP_create_response` and the
+// verify entry points wait on the Phase 12.7 ESS item group and the two engine-reading `CONF`
+// setters wait on Phase 13's `ENGINE_by_id`. See `src/ts/mod.rs`.
+pub mod ts;
 // Test-only: the one process-wide lock that serialises tests touching the crate's
 // process-global state (init/cleanup, the default `OSSL_LIB_CTX`, the memory
 // functions, the error registry, the object database, the property/method stores,

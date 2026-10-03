@@ -34725,6 +34725,79 @@ Verified: `evidence_determinism.py`, `check_evidence_portability.py`, `docs_cons
 `regression_guard.py --require-current` reports 134 courts and 48,755 observations with no
 regression; `phase_state.json` records Phase 11 `complete` with a seal sha256.
 
+## D510 -- Phase 12 activates, and the census is 884 open over CMS / OCSP / CMP / CT / TS and the
+## remaining families
+
+Phase 12 begins the way Phase 11 did (D499): the ledger, the plan, the runner and the reference
+probe land together, because `run_courts.py` refuses a non-`not-started` stratum with no runner and
+`court_coverage.py` refuses the inherited implemented exports until a reference probe covers them.
+
+### The measurement
+`forensics/atlas/symbol-ownership.json` gives `owner_phase == 12` **1,024** exports, all `libcrypto`,
+over thirteen declaring headers -- `ts.h` 184, `ocsp.h` 169, `cmp.h` 157, `cms.h` 149, `pkcs7.h` 118,
+`crmf.h` 92, `ct.h` 60, `ess.h` 30, `srp.h` 29, `http.h` 24, `cmp_util.h` 4, `pem.h` 4 and four
+headerless PEM-CMS spellings. The stratum receives **nine hand-offs** (`X509_load_http`,
+`X509_CRL_load_http` from Phase 11; `ASN1_ITEM_get`/`_lookup` and the five `SMIME_*` faces from
+Phase 5), so its working set is **1,033**. **149 were already implemented** by earlier strata -- all
+of `ocsp_asn.c` (75), Certificate Transparency's `ct_sct`/`ct_log`/`ct_policy`/`ct_oct`/`ct_b64`/
+`ct_prn` (59), the `pk7_asn1.c`/`pk7_lib.c` subset (14) and `http_lib.c`'s `OSSL_parse_url` -- and
+`open_in_this_stratum` therefore opens at **884**, not 1,033. Phase 12 owns no provider row
+(`provider_rows_owned: 0`, a measurement), and `requires(12) == (11,)` is already satisfied.
+
+### The partition
+`docs/PHASE-12-SUBPHASES.md` section 2 partitions the 884 exactly by defining unit: 12.1 the HTTP
+client (23), 12.2 the PKCS#7 remainder (103), 12.3 CMS (153), 12.4 CMP (161), 12.5 TS (184), 12.6
+OCSP (94), 12.7 CRMF and ESS (122), 12.8 SRP (29), 12.9 the CT remainder and the shared hand-offs
+(15), and 12.10 the seal. The order is the authority's own: `ocsp_http.c`, `cmp_http.c` and the two
+`x_all.c` loaders reach `http_client.c`, so 12.1 is first; CMP messages and TimeStampTokens are CMS
+`SignedData` and ESS is a CMS attribute, so 12.3 precedes 12.4/12.5/12.7; `asn1_item_list.c`
+enumerates every stratum's items, so it lands last in 12.9. The dependency of 12.4/12.5/12.7 on 12.3
+is inferred from the authority's domain structure rather than a measured call graph, and is recorded
+as a dependency to be corrected at each slice.
+
+### What lands with this activation
+`forensics/tools/phase12_obligations.py` (and its ledger), `forensics/tools/phase12_courts.py`, the
+reference probe `courts/phase12/rt_coverage_ref_probe.c` (the 149 inherited exports at basis
+`referenced`, three of them also `called` by Phase 10's `RT-PKCS12`), the `STRATUM_EVIDENCE[12]` row
+in `phase_state.py`, and `RT-PHASE12-REF` in `court-coverage-rows.json`. `phase_state.json` derives
+phase 12 `in-progress`.
+
+Verified (all inside the court container): `phase12_courts.py` `all_pass=True` (`RT-PHASE12-REF` 149
+observations); `court_coverage.py` phase 12 149/149 courted, unmatched 0; `docs_consistency.py` ok;
+`evidence_determinism.py` ok (32 artefacts); `regression_guard.py --require-current` ok (135 courts,
+48,904 observations); `run_courts.py` re-derives 12 phases and the committed record is exactly what
+the run wrote.
+
+## D511 -- the HTTP client lands, and the transport withholding is lifted
+
+12.1 lands the whole `crypto/http/` surface: the 21 `http_client.c` exports
+(`OSSL_HTTP_REQ_CTX_new`/`_free`/`_get0_mem_bio`/`_get_resp_len`/`_set_max_response_length`/
+`_set_request_line`/`_add1_header`/`_set_expected`/`_set1_req`/`_set_max_response_hdr_lines`/
+`_nbio`/`_nbio_d2i`/`_exchange`, `OSSL_HTTP_is_alive`, `OSSL_HTTP_open`, `OSSL_HTTP_set1_request`,
+`OSSL_HTTP_exchange`, `OSSL_HTTP_get`, `OSSL_HTTP_transfer`, `OSSL_HTTP_close`,
+`OSSL_HTTP_proxy_connect`) and `http_lib.c`'s two open names (`OSSL_HTTP_parse_url`,
+`OSSL_HTTP_adapt_proxy`). The Phase-10/11 withholding of the client is lifted: its transport is the
+BIO layer's, which is landed (`src/runtime/bio/bss_conn.rs`, `RT-BIO-CONN`), so nothing here
+fabricates a socket stack.
+
+`RT-HTTP` drives the request engine over **memory BIOs** with canned HTTP/1.1 responses
+(status line, `Content-Length`, `Transfer-Encoding: chunked`, a `charset`, a malformed status line,
+the header mismatches, the max-length refusal) and the high-level `open`/`set1_request`/`exchange`/
+`close`/`transfer` path over a supplied BIO pair, plus the `OSSL_parse_url`/`OSSL_HTTP_parse_url`
+arms and `OSSL_HTTP_adapt_proxy` -- 128 observations, 0 residuals, no real network and no wall
+clock. The guessed names in the subphase brief (`OSSL_HTTP_REQ_CTX_set_request`, `parse_response_line`,
+`_nbio_d2i_ex`, `_set_mem_buf`, `_get_mem_buf`, `OSSL_HTTP_get_ex`, `OSSL_HTTP_get0_status`, ...) were
+checked against the authority and **do not exist**; the real names above are what the ledger opens.
+
+This unblocks `crypto/x509/x_all.c`'s two loaders and `ocsp_http.c`/`cmp_http.c`, which Phase 11
+deferred here (D505).
+
+Verified (container): phase 12 `implemented` 149 -> 172, `open_in_this_stratum` 884 -> 861;
+`phase12_courts.py` `all_pass=True` over two courts (REF 149, RT-HTTP 128 observations);
+`court_coverage.py` phase 12 172/172 courted, unmatched 0; `evidence_determinism.py` ok;
+`regression_guard.py --require-current` ok (136 courts, 49,032 observations); `probe_hygiene.py`
+clean; clippy clean.
+
 ## D512 -- the Phase-11 FRF chain and Gemel checkpoint close the evidence seal, and the
 ## completion predicate learns to require them
 
@@ -34780,3 +34853,272 @@ Verified (court container): `gen_frf_courts.py --check`; the `phase*_obligations
 `render_status.py`; `evidence_determinism.py` (31 artefacts); `regression_guard.py --require-current`
 (no regression); `probe_hygiene.py` clean; `run_courts.py` re-derives 11 phases with Phase 11
 `all_pass` over nine courts and 2,638 observations. Phase 11 is `complete`.
+
+## D513 -- the PKCS#7 remainder lands, and its first caller surfaces a fetch-identity divergence
+
+12.2 lands the 103 open Phase-12 exports defined by `crypto/pkcs7/` plus the four `PEM_*_PKCS7`:
+the `pk7_asn1.c` item groups and the `signed`/`enveloped`/`signedAndEnveloped` ADB arms Phase 10
+withheld, `pk7_lib.c`'s container and setters, `pk7_doit.c`'s data/sign/verify path, the
+`pk7_smime.c` doors, `pk7_attr.c`, `pk7_mime.c`, `bio_pk7.c` and the PEM spellings.
+`open_in_this_stratum` falls 861 -> 758; `RT-PKCS7` drives 126 observations with 0 residuals.
+
+Three exports (`SMIME_read_PKCS7(_ex)`, `SMIME_write_PKCS7`) delegate to Phase 5's `SMIME_*`
+hand-off to 12.9, and `PKCS7_verify`/`PKCS7_decrypt`'s `PKCS7_TEXT` arm delegates to `SMIME_text`;
+the court references those addresses and does not call them, which is faithful transcription of the
+authority's own prototype rather than a stub.
+
+**A latent divergence surfaced rather than being hidden.** `PKCS7_set_cipher` and the
+digest/enveloped `PKCS7_dataInit` fetch path compare the candidate's `EVP_MD_get_type`/
+`EVP_CIPHER_get_type`, which answer 0 where the authority answers 672/419, so those two arms are
+printed as `pending.` lines with the reason rather than driven; the `data` container's
+`dataInit`/`dataFinal` (no fetch) is driven instead. This is a lower-unit identity gap the new caller
+made observable and owes a `divergence-obligations` row; it is recorded here so the next slice does
+not rediscover it. The stale `pkcs7_get0_certificates` prerequisite row was retired (its own note
+says to remove it once built).
+
+Verified (court container): `RT-PKCS7` 126 observations, 0 residuals; `probe_hygiene.py` clean;
+`build_phase2.sh` all pass; `court_coverage.py`, `ownership_audit.py`, `prototype_court.py`,
+`dispatch_court.py`, `phase_state.py`, `plan_reconciliation.py`, `prerequisite_gate.py`,
+`render_seal_census.py`, `render_status.py`, `docs_consistency.py` and
+`evidence_determinism.py` (32 artefacts) green; `regression_guard.py --require-current` ok
+(137 courts, 49,158 observations); `cargo clippy --all-targets -- -D warnings` and
+`cargo fmt --all -- --check` clean; `cargo test --lib` 1131 passed.
+
+## D514 -- the CMS stratum lands whole
+
+12.3 lands all of `crypto/cms/` in three slices, and `open_in_this_stratum` falls 758 -> 605 with no
+CMS row left open. The object model and item graph (12.3a, `cms_asn1.c`/`cms_lib.c`/`cms_att.c` et
+al.), the signer and recipient engines (12.3b, `cms_sd.c`/`cms_env.c`/`cms_kari.c`/`cms_kemri.c`/
+`cms_pwri.c`/`cms_enc.c` and the envelope arms) and the remainder (12.3c, `cms_smime.c`'s
+`CMS_sign`/`CMS_verify`/`CMS_encrypt`/`CMS_decrypt`/data/digest surface, `cms_io.c`'s PEM/BIO readers
+and `cms_ess.c`'s receipt surface). `RT-CMS` drives 176 observations with 0 residuals, including
+fixed in-memory `CMS_sign`/`CMS_verify`/`CMS_encrypt`/`CMS_decrypt` round-trips.
+
+Two corrections were found by measurement rather than assumed, and both are recorded because they
+are evidence about the authority, not the candidate:
+
+* **`OPENSSL_NO_ZLIB` is defined** in the admitted authority's `configuration.h`, so
+  `CMS_compress`/`CMS_uncompress` are the `#else` refusal arms, `cms_cd.c` defines nothing, and the
+  `compressedData` dispatch arm is guarded out (`cms_lib.c:170-173`). The crate follows the
+  authority; the ZLIB-enabled premise was wrong.
+* **The `ASN1_STREAM_ARG` field order** in the crate's `Asn1StreamArg` was `{out, boundary, ndef_bio}`
+  where the authority's `asn1t.h.in:711-718` is `{out, ndef_bio, boundary}`. The 12.3a streaming
+  callback wrote the boundary into the `ndef_bio` slot and corrupted the heap, segfaulting in
+  `BIO_new_CMS`/`i2d_CMS_bio_stream`; fixed at 12.3c. A pre-existing latent bug the new caller
+  exposed.
+
+`SMIME_{read,write}_CMS{,_ex}` and `SMIME_text` delegate to `crypto/asn1/asn_mime.c`, Phase 5's
+hand-off to 12.9, and stay open there rather than stubbed. Named `pending.` lines carry the reasons
+for arms that cannot be compared: the fetched-`EVP_MD`/`EVP_CIPHER` identity divergence
+(`EVP_MD_get_type`/`EVP_CIPHER_get_type` answer 0), the legacy `OBJ_NAME` smimecap lookup, the
+`CMS_add0_recipient_password`/PBE path, and the Phase-11 `X509_NAME` printer divergence.
+
+Verified (container): `RT-CMS` 176 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `build_phase2.sh` all-ABI pass; the whole gate
+chain green; `regression_guard.py --require-current` ok (138 courts, 49,284 observations);
+`probe_hygiene.py` clean.
+
+## D515 -- the CMP stratum lands, and fifteen of its rows wait on CRMF
+
+12.4 lands `crypto/cmp/`: `cmp_asn.c` whole, `cmp_ctx.c`, `cmp_hdr.c`, `cmp_status.c`, `cmp_util.c`,
+`cmp_msg.c`'s object graph and read/write doors, `cmp_http.c`'s `OSSL_CMP_MSG_http_perform` (over the
+landed HTTP client), `cmp_vfy.c`'s path validation, `cmp_client.c`'s `certConf` callback and
+`cmp_server.c`'s `OSSL_CMP_SRV_CTX` plumbing. `open_in_this_stratum` falls 605 -> 459 and `RT-CMP`
+drives 230 observations with 0 residuals.
+
+**Fifteen CMP rows remain open, and the blocker is named rather than hidden.** Every one reaches
+`ossl_cmp_msg_protect` or a CRMF accessor, whose PasswordBasedMAC arm needs `crmf_pbm.c`'s
+`OSSL_CRMF_pbm_new`/`OSSL_CRMF_pbmp_new` and whose builders need `crmf_lib.c`'s
+`OSSL_CRMF_CERTTEMPLATE_*`. Those units are 12.7's, so the rows stay open in this stratum's ledger
+rather than being pulled across or abridged; 12.7 completes them. The crate-internal `src/cmp/crmf_asn.rs`
+precedent covers only the item groups CMP structurally names, not the library surface.
+
+Verified (container): `RT-CMP` 230 observations, 0 residuals; `probe_hygiene.py` clean;
+`cargo clippy --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean;
+`cargo test --lib` 1131 passed; `build_phase2.sh` all-ABI pass; the whole gate chain green;
+`regression_guard.py --require-current` ok (139 courts, 49,564 observations).
+
+## D516 -- the TS stratum lands, and six rows point forward
+
+12.5 lands 178 of `ts.h`'s 184 exports in a new `src/ts/` (`ts_asn1.c`, `ts_rsp_utils.c`,
+`ts_req_utils.c`, `ts_rsp_sign.c`, `ts_conf.c`, `ts_verify_ctx.c`, `ts_lib.c`, `ts_rsp_print.c`,
+`ts_req_print.c`), replacing the shell's `TS_TST_INFO`/`TS_STATUS_INFO` scaffolds with the real
+transcription. `open_in_this_stratum` falls 459 -> 281 and `RT-TS` drives 231 observations with 0
+residuals.
+
+Six rows are held and named: `TS_RESP_create_response`, `TS_RESP_verify_response`,
+`TS_RESP_verify_signature` and `TS_RESP_verify_token` need the ESS item group and
+`OSSL_ESS_*` helpers, which are **12.7**'s by `ess.h` and not ts-local; `TS_CONF_set_crypto_device`
+and `TS_CONF_set_default_engine` need `ENGINE_by_id`/`ENGINE_set_default`, which are **Phase 13**'s
+and absent by design. Three status-info setters are referenced rather than called (no landed entry
+point can make `ctx->response` non-NULL).
+
+Verified (container): `RT-TS` 231 observations, 0 residuals; `probe_hygiene.py` clean;
+`cargo clippy --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean;
+`cargo test --lib` 1131 passed; `build_phase2.sh` all-ABI pass; the whole gate chain green;
+`regression_guard.py --require-current` ok.
+
+## D517 -- the OCSP exported surface lands
+
+12.6 lands the whole `ocsp.h` surface -- all 94 exports: `ocsp_ext.c` (44), `ocsp_cl.c` (20),
+`ocsp_srv.c` (15), `ocsp_lib.c` (5), `ocsp_prn.c` (5), `ocsp_vfy.c` (3) and `ocsp_http.c` (2).
+Sixteen are promoted from the internal `pub(crate)` cores Phase 11 pulled forward for
+`X509_verify_cert`; seventy-eight are newly transcribed. The exported ownership that remained
+Phase 12's now migrates to it without the pulled-forward substrate moving a byte.
+`open_in_this_stratum` falls 281 -> 187 and `RT-OCSP` drives 266 observations with 0 residuals,
+including the two byte-for-byte printers and the `OCSP_basic_verify` object graph.
+
+Verified (container): `RT-OCSP` 266 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `cargo test --lib` 1131 passed;
+`build_phase2.sh` all-ABI pass; the whole gate chain green.
+
+## D518 -- CRMF and ESS land, and the atlas is re-derived
+
+12.7 lands `crypto/crmf/` and `crypto/ess/`: `crmf_asn.c` (50), `crmf_lib.c` (40), `crmf_pbm.c`
+(2), `ess_asn1.c` (27) and `ess_lib.c` (3). `open_in_this_stratum` falls 187 -> 65; `RT-CRMF`
+drives 138 observations and `RT-ESS` 47, both with 0 residuals. The ESS item group and
+`OSSL_ESS_*` helpers are what TS's response engine waited on, so the TS rows become local rather
+than blocked once 12.7 closes.
+
+A Phase-8 defect surfaced: the new `OSSL_ESS_*` callers exposed a wrong `EVP_MD_is_a` result in
+`src/evp/`, fixed here rather than worked around. The authority-tier atlas was re-derived and is
+byte-identical on a second run; `prerequisite_gate.py` reports 0 findings.
+
+Verified (container): `RT-CRMF` 138 and `RT-ESS` 47 observations, 0 residuals; `cargo clippy
+--all-targets -- -D warnings` and `cargo fmt --all -- --check` clean; `cargo test --lib` 1131
+passed; `build_phase2.sh` all-ABI pass; `regression_guard.py --require-current` ok (143 courts,
+50,246 observations).
+
+## D519 -- the CMP engine lands, and its fifteen rows close
+
+12.4b lands the CMP engine the 12.4 slice left open: `cmp_protect.c`, the `cmp_client.c` state
+machine, `cmp_genm.c`, `cmp_server.c`'s request engine, `cmp_vfy.c` and the `cmp_msg.c`
+constructors. The fifteen `cmp.h` rows 12.4 held on CRMF close, and the thirteen `cmp_asn.c`
+item-lifecycle wrappers are built and called rather than referenced. `open_in_this_stratum` falls
+65 -> 50; `RT-CMP` grows from 230 to 320 observations with 0 residuals. Fifty-five stale deferrals
+are retired as the engine makes their blocker real rather than assumed (deferrals 60 -> 5).
+
+A real `cmp_server.c` failure-funnel bug was fixed. The authority-tier atlas is byte-identical on
+re-derivation.
+
+Verified (container): `RT-CMP` 320 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `cargo test --lib` 1131 passed;
+`build_phase2.sh` all-ABI pass; the whole gate chain green, no regression.
+
+## D520 -- the TS response engine lands (12.5b), and the stratum falls to 44 open
+
+12.5b finishes `crypto/ts/`: the response builder `TS_RESP_create_response`
+(`crypto/ts/ts_rsp_sign.c:373-423`) and the verifier entries `TS_RESP_verify_signature`
+(`ts_rsp_verify.c:87-165`), `TS_RESP_verify_response` (`:248-262`) and `TS_RESP_verify_token`
+(`:268-277`) land with every static they reach, now that 12.7's ESS item group and `OSSL_ESS_*`
+helpers have closed. `open_in_this_stratum` falls 50 -> 44 and `RT-TS` grows from 231 to 275
+observations with 0 residuals.
+
+The two remaining `ts.h` rows, `TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine`, are
+recorded in `phase12_obligations.py`'s `BLOCKED_HANDOFFS` and handed to **Phase 13**, because their
+whole body is the ENGINE lookup and installation (`crypto/ts/ts_conf.c:171`, `:188`, `:192`) and
+`ENGINE_by_id`/`ENGINE_set_default` are `engine.h`'s and withheld on `crypto/engine/eng_dyn.c`.
+Pulling the ENGINE registry forward to satisfy two `CONF` readers would be disproportionate.
+
+Verified (container): `RT-TS` 275 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `build_phase2.sh` all-ABI pass; the
+authority-tier atlas byte-identical on a second run.
+
+## D521 -- the SRP surface lands, and one row is handed to Phase 13
+
+12.8 lands `crypto/srp/`: the fourteen `srp_lib.c` exports (`SRP_Calc_A`/`_B`/`_B_ex`/
+`_client_key`/`_client_key_ex`/`_server_key`/`_u`/`_u_ex`/`_x`/`_x_ex`, `SRP_Verify_A_mod_N`,
+`SRP_Verify_B_mod_N`, `SRP_check_known_gN_param`, `SRP_get_default_gN`) and the fifteen
+`srp_vfy.c` exports, of which one is handed on (below) -- the whole `srp.h` surface in a new
+`src/srp/`. The RFC 5054 groups and generators `srp_lib.c`'s known-`gN` table names land
+crate-internally as `src/bn/bn_srp.rs` (`crypto/bn/bn_srp.c`), transcribed from the authority's
+limbs with `BN_FLG_STATIC_DATA` and no `#[no_mangle]`, mirroring `src/bn/dh_data.rs`.
+`open_in_this_stratum` falls 44 -> 15 and `RT-SRP` drives 149 observations with 0 residuals.
+
+The one hand-off is `SRP_VBASE_init`, recorded in `phase12_obligations.py`'s `BLOCKED_HANDOFFS`
+for **Phase 13**: its only callee outside this crate is `TXT_DB_read`/`TXT_DB_free`
+(`crypto/srp/srp_vfy.c:423`, `:504`), which are `txt_db.h`'s and Phase 13's
+(`forensics/atlas/symbol-ownership.json`, owner_phase 13). Pulling a 314-line `txt_db.c` forward to
+satisfy one deprecated verifier-file reader would be disproportionate, so the row is handed on
+rather than stubbed -- the same call 12.5b made for the two ENGINE-reading `TS_CONF_*` setters.
+
+The court measures the arithmetic deterministically: `SRP_Calc_u` has no NULL guard in the
+authority (`srp_Calc_xy` dereferences its argument), so a probe that passes NULL dies on both sides
+and compares nothing; those arms are omitted rather than driven. The random-salt arms print only
+invariants -- `v == g**x` recomputed from the returned salt, and a fixed SRP-base64 salt whose
+transcoded verifier string is stable -- so no random byte is ever compared.
+
+Verified (container): `RT-SRP` 149 observations, 0 residuals; `cargo clippy --all-targets --
+-D warnings` and `cargo fmt --all -- --check` clean; `cargo build --release` clean;
+`build_phase2.sh` all-ABI pass.
+
+## D522 -- the 12.9 remainder lands, and the stratum's export ledger reaches zero open
+
+12.9 closes the stratum's own rows. `src/asn1/asn1_item_list.rs` lands `ASN1_ITEM_lookup`
+(`asn1_item_list.c:28`) and `ASN1_ITEM_get` (`:41`) over a table of the 147 `_it` accessors the
+authority's generated `crypto/asn1/asn1_item_list.h` names, in its exact order (`ASN1_ITEM_get` is
+index-addressed, so the order is the contract). `src/ct/ct_log.rs` lands
+`CTLOG_STORE_load_default_file` (`ct_log.c:161`) over the landed `CTLOG_STORE_load_file`.
+`src/x509/x_all.rs` lands the shared dispatch -- `PKCS7_ISSUER_AND_SERIAL_digest` (`:642`) and
+`d2i_PKCS7_fp`/`d2i_PKCS7_bio`/`i2d_PKCS7_fp`/`i2d_PKCS7_bio` (`:260`-`:303`) -- and the two
+Phase-11 hand-offs `X509_load_http`/`X509_CRL_load_http` (`:134`, `:188`) with the unit's static
+`simple_get_asn1`, over the 12.1 HTTP client. `src/asn1/asn_mime.rs` lands the MIME reader and
+writer the Phase-5 module header handed here: `SMIME_write_ASN1_ex`/`SMIME_write_ASN1` (`:258`,
+`:366`), `SMIME_read_ASN1_ex`/`SMIME_read_ASN1` (`:432`, `:539`) and `SMIME_text` (`:612`), with
+the `MIME_HEADER`/`MIME_PARAM` model, `multi_split`, `B64_write_ASN1`, `b64_read_asn1`,
+`asn1_output_data` and `asn1_write_micalg`. `open_in_this_stratum` falls 15 -> 0 and
+`RT-CMS-REMAINDER` drives 71 observations with 0 residuals.
+
+Three rows remain handed to Phase 13 rather than open -- `TS_CONF_set_crypto_device`,
+`TS_CONF_set_default_engine` (ENGINE) and `SRP_VBASE_init` (TXT_DB) -- so the stratum's
+disposition is 1030 implemented plus 3 handed on over 1033 owned. The stratum is not complete
+until 12.10's seal and the FRF/Gemel chain; `phase12_obligations.py`'s own `complete` is the
+ledger-level emptiness check, not the phase-exit predicate.
+
+Honest limits recorded rather than compared: the `SMIME_DETACHED` arm's random boundary is
+non-deterministic; `asn1_write_micalg`'s `EVP_get_digestbynid`/`md_ctrl` arm is the recorded
+Phase-13 legacy digest-name divergence (the authority's own `switch (md_nid)` still supplies the
+strings); and the authority's `d2i_PKCS7_fp(NULL, ...)`/`i2d_PKCS7_fp(NULL, ...)` arms segfault
+(they install a null `FILE *` into a `BIO_s_file`), so the FILE refusals drive bad content and a
+null value instead.
+
+Verified (container): `RT-CMS-REMAINDER` 71 observations, 0 residuals, `all_pass` over 11 courts;
+`cargo clippy --all-targets -- -D warnings` and `cargo fmt --all -- --check` clean;
+`cargo build --release` clean; `build_phase2.sh` all-ABI pass.
+
+## D523 -- the Phase-12 seal, and the FRF/Gemel chain closes it
+
+12.10 writes `docs/PHASE-12-PROTOCOL-FAMILIES-SEAL.md` (registered in `atlas_common.py`'s
+`SEAL_DOCS` at `12`) and adds the stratum to the FRF chain. The seal follows
+`docs/RELEASE_GATES.md` section 2's ten items, records the eleven courts and their observation
+counts from `artifacts/phase12/COURTS.json`, and is explicit about the non-claims: no parity, no
+security assurance, `libssl` still `0/603` scaffolded, the three rows handed to Phase 13, every
+`pending.` divergence the courts name, and the reference-only versus called coverage.
+
+**The executable constitution now binds the seal.** `phase12-obligations.json` reads `owned 1033`,
+`implemented 1030`, `deferred 3`, `open 0`. The ten Phase-12 courts are declared in
+`gen_frf_courts.py` (105 runtime courts, 210 files), which engages `phase_state.py`'s
+`frf_gemel_blocking_reason` for this stratum: with the declarations present and no receipts it
+derived Phase 12 `in-progress` with the exact missing-chain reason, and only returned `complete`
+once the chain existed -- the Phase-11 defect (a `complete` that outran its evidence) cannot recur
+here.
+
+**The chain entry.** Ten court runs, ten receipts, twenty adjudicated challenge records (both
+operators `stdout-first-line` and `exit-class`, every one `saw_defect` and `specificity_clean`),
+and the `sensitivity-backed` claim
+`574379772186cc3c71a2f174a9478f7e6e721fa18e0c1fa59a4723e8b3d726df` binding `openssl-rt-3.6.4-r2`
+to `openssl-rs 0.0.16` with zero blockers and all ten premises carrying `stdout` and `exit`. The
+Gemel change `C98`
+(`change.af2e7ed0eb05b4de2a6bf471ddc611d07ff6475dd1434a967a071319aa6bdb83`) and checkpoint `K51`
+(`checkpoint.c9ca28bdb0077b7a338901381580cc06fb0b27e442843e518395323d22ea4abc`) name Phase 12 and
+the FRF chain; the chain was run **into the committed store** (`run_courts.sh`'s leading `rm -rf`
+is never used, D476), and `render_gemel_trajectory.sh` re-rendered the projection.
+
+Verified (court container): all 21 gate steps pass -- `phase12_courts.py` `all_pass` over 11
+courts; `cargo fmt` and `cargo test --lib` (1131 passed); the authority-tier atlas byte-identical
+on a second run; every phase ledger regenerated; `court_coverage`, `provider_court_coverage`,
+`ownership_audit`, `prototype_court`, `dispatch_court`, `plan_reconciliation`, `prerequisite_gate`,
+`phase_state` (Phase 12 `complete`), `render_seal_census`, `render_status`, `docs_consistency`,
+`evidence_determinism` (32 artefacts), `gen_frf_courts.py --check` (210 files / 105 courts),
+`check_evidence_portability`, `regression_guard --require-current` (145 courts, 50600 observations)
+and `probe_hygiene` all green.

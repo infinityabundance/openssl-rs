@@ -2,6 +2,7 @@
   "court_phases": [
     "phase10",
     "phase11",
+    "phase12",
     "phase2",
     "phase22",
     "phase3",
@@ -197,6 +198,18 @@
       "observations": 26,
       "verdict": "pass"
     },
+    "RT-CMP": {
+      "observations": 320,
+      "verdict": "pass"
+    },
+    "RT-CMS": {
+      "observations": 176,
+      "verdict": "pass"
+    },
+    "RT-CMS-REMAINDER": {
+      "observations": 71,
+      "verdict": "pass"
+    },
     "RT-CODEC": {
       "observations": 4160,
       "verdict": "pass"
@@ -211,6 +224,10 @@
     },
     "RT-CONF-MOD": {
       "observations": 247,
+      "verdict": "pass"
+    },
+    "RT-CRMF": {
+      "observations": 138,
       "verdict": "pass"
     },
     "RT-DH": {
@@ -247,6 +264,10 @@
     },
     "RT-ERR-BIO": {
       "observations": 17,
+      "verdict": "pass"
+    },
+    "RT-ESS": {
+      "observations": 47,
       "verdict": "pass"
     },
     "RT-EVP-BIO": {
@@ -325,6 +346,10 @@
       "observations": 65,
       "verdict": "pass"
     },
+    "RT-HTTP": {
+      "observations": 128,
+      "verdict": "pass"
+    },
     "RT-KEYFORMAT": {
       "observations": 370,
       "verdict": "pass"
@@ -361,6 +386,10 @@
       "observations": 91,
       "verdict": "pass"
     },
+    "RT-OCSP": {
+      "observations": 266,
+      "verdict": "pass"
+    },
     "RT-PARAM": {
       "observations": 1162,
       "verdict": "pass"
@@ -371,6 +400,10 @@
     },
     "RT-PEM-KEY": {
       "observations": 102,
+      "verdict": "pass"
+    },
+    "RT-PHASE12-REF": {
+      "observations": 149,
       "verdict": "pass"
     },
     "RT-PHASE22-BINARY": {
@@ -441,6 +474,10 @@
       "observations": 353,
       "verdict": "pass"
     },
+    "RT-PKCS7": {
+      "observations": 126,
+      "verdict": "pass"
+    },
     "RT-PROVIDER": {
       "observations": 83,
       "verdict": "pass"
@@ -493,6 +530,10 @@
       "observations": 472,
       "verdict": "pass"
     },
+    "RT-SRP": {
+      "observations": 149,
+      "verdict": "pass"
+    },
     "RT-STACK": {
       "observations": 159,
       "verdict": "pass"
@@ -507,6 +548,10 @@
     },
     "RT-THREADDATA": {
       "observations": 54,
+      "verdict": "pass"
+    },
+    "RT-TS": {
+      "observations": 275,
       "verdict": "pass"
     },
     "RT-X509": {
@@ -553,6 +598,7 @@
   "deferred": {
     "phase10": 0,
     "phase11": 2,
+    "phase12": 3,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -563,12 +609,13 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 4765,
+    "libcrypto": 5646,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
+    "phase12": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -581,6 +628,7 @@
   "owned_obligations": {
     "phase10": 298,
     "phase11": 1467,
+    "phase12": 1033,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -595,7 +643,7 @@
     "1": "complete",
     "10": "complete",
     "11": "complete",
-    "12": "not-started",
+    "12": "complete",
     "13": "not-started",
     "14": "not-started",
     "15": "not-started",
@@ -617,10 +665,10 @@
   },
   "prerequisites": {
     "blocking_dependencies": 5,
-    "divergence_names_covered": 36,
+    "divergence_names_covered": 47,
     "findings": 0,
-    "language_census": 7378,
-    "sealed_census": 52
+    "language_census": 8818,
+    "sealed_census": 50
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",

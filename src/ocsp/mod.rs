@@ -18,16 +18,22 @@ pub mod v3_ocsp;
 
 // Phase 11.2b -- the OCSP *functions* the Phase-11 verification engine's OCSP arm
 // (`crypto/x509/x509_vfy.c`'s `check_cert_ocsp_resp`) needs, pulled forward as internal
-// `pub(crate)` transcriptions. None is `#[no_mangle]`: the `OCSP_*` exports are Phase 12's.
+// `pub(crate)` transcriptions. Phase 12.6 promotes them to the exported surface and lands the
+// remaining `crypto/ocsp/` units.
 //
 // * [`ocsp_lib`] -- `OCSP_cert_to_id`, `OCSP_cert_id_new`, `OCSP_id_issuer_cmp`, `OCSP_id_cmp`,
 //   `OCSP_CERTID_dup` (`crypto/ocsp/ocsp_lib.c`).
-// * [`ocsp_srv`] -- `OCSP_id_get0_info` (`crypto/ocsp/ocsp_srv.c`).
-// * [`ocsp_cl`] -- the response reader (`crypto/ocsp/ocsp_cl.c`).
-// * [`ocsp_vfy`] -- the signer/id helpers (`crypto/ocsp/ocsp_vfy.c`), including `ocsp_verify_signer`
-//   and `OCSP_basic_verify`, which land with the Phase-11 engine slice (11.2c) that supplies
-//   `crate::x509::x509_vfy::{X509_STORE_CTX_init, X509_verify_cert}`.
+// * [`ocsp_srv`] -- the responder builder (`crypto/ocsp/ocsp_srv.c`).
+// * [`ocsp_cl`] -- the request builder and response reader (`crypto/ocsp/ocsp_cl.c`).
+// * [`ocsp_vfy`] -- the signer/id helpers and `OCSP_basic_verify` (`crypto/ocsp/ocsp_vfy.c`).
+// * [`ocsp_ext`] -- the extension wrappers, nonce handling and constructors
+//   (`crypto/ocsp/ocsp_ext.c`).
+// * [`ocsp_prn`] -- the text printers (`crypto/ocsp/ocsp_prn.c`).
+// * [`ocsp_http`] -- `OCSP_sendreq_new`/`OCSP_sendreq_bio` (`crypto/ocsp/ocsp_http.c`).
 pub mod ocsp_cl;
+pub mod ocsp_ext;
+pub mod ocsp_http;
 pub mod ocsp_lib;
+pub mod ocsp_prn;
 pub mod ocsp_srv;
 pub mod ocsp_vfy;

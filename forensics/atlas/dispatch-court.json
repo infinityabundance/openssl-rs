@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 648,
+      "crate_files_read": 711,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,14 +12,14 @@
       "identities_authority_only": 45,
       "identities_checked": 232,
       "identities_mismatches": 0,
-      "links_convention": 271,
+      "links_convention": 286,
       "links_documented": 25,
       "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 315,
-      "signatures_checked": 322,
+      "signatures_authority_only": 301,
+      "signatures_checked": 337,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 211,
+      "signatures_not_a_dispatch": 212,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -1546,17 +1546,7 @@
         "OPENSSL_sk_copyfunc",
         "OPENSSL_sk_freefunc",
         "OPENSSL_sk_freefunc_thunk",
-        "OSSL_CMP_SRV_certConf_cb_t",
-        "OSSL_CMP_SRV_cert_request_cb_t",
-        "OSSL_CMP_SRV_clean_transaction_cb_t",
-        "OSSL_CMP_SRV_delayed_delivery_cb_t",
         "OSSL_CMP_SRV_error_cb_t",
-        "OSSL_CMP_SRV_genm_cb_t",
-        "OSSL_CMP_SRV_pollReq_cb_t",
-        "OSSL_CMP_SRV_rr_cb_t",
-        "OSSL_CMP_certConf_cb_t",
-        "OSSL_CMP_log_cb_t",
-        "OSSL_CMP_transfer_cb_t",
         "OSSL_FUNC",
         "OSSL_FUNC_BIO_new_file_fn",
         "OSSL_FUNC_BIO_new_membuf_fn",
@@ -1601,7 +1591,6 @@
         "OSSL_FUNC_provider_unquery_operation_fn",
         "OSSL_FUNC_rand_set_callbacks_fn",
         "OSSL_FUNC_self_test_cb_fn",
-        "OSSL_HTTP_bio_cb_t",
         "OSSL_INOUT_CALLBACK",
         "SSL_CTX_alpn_select_cb_func",
         "SSL_CTX_decrypt_session_ticket_fn",
@@ -1621,9 +1610,6 @@
         "SSL_psk_server_cb_func",
         "SSL_psk_use_session_cb_func",
         "SSL_verify_cb",
-        "TS_extension_cb",
-        "TS_serial_cb",
-        "TS_time_cb",
         "X509V3_EXT_FREE",
         "X509V3_EXT_R2I",
         "bio_info_cb",
@@ -1870,6 +1856,94 @@
           "authority": "i2d_of_void",
           "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)))",
           "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_transfer_cb_t",
+          "at": "src/cmp/cmp_ctx.rs",
+          "authority": "OSSL_CMP_transfer_cb_t",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_certConf_cb_t",
+          "at": "src/cmp/cmp_ctx.rs",
+          "authority": "OSSL_CMP_certConf_cb_t",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), int:4:s, ptr(ptr(const(int:1:s))))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), int:4:s, ptr(ptr(const(int:1:s))))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_HTTP_bio_cb_t",
+          "at": "src/cmp/cmp_ctx.rs",
+          "authority": "OSSL_HTTP_bio_cb_t",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque), int:4:s, int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque), int:4:s, int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_SRV_cert_request_cb_t",
+          "at": "src/cmp/cmp_server.rs",
+          "authority": "OSSL_CMP_SRV_cert_request_cb_t",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)), int:4:s, ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(opaque)), ptr(ptr(opaque)), ptr(ptr(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)), int:4:s, ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(opaque)), ptr(ptr(opaque)), ptr(ptr(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_SRV_rr_cb_t",
+          "at": "src/cmp/cmp_server.rs",
+          "authority": "OSSL_CMP_SRV_rr_cb_t",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), ptr(const(opaque)))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_SRV_genm_cb_t",
+          "at": "src/cmp/cmp_server.rs",
+          "authority": "OSSL_CMP_SRV_genm_cb_t",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), ptr(const(opaque)), ptr(ptr(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_SRV_certConf_cb_t",
+          "at": "src/cmp/cmp_server.rs",
+          "authority": "OSSL_CMP_SRV_certConf_cb_t",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(const(opaque)), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(const(opaque)), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_SRV_pollReq_cb_t",
+          "at": "src/cmp/cmp_server.rs",
+          "authority": "OSSL_CMP_SRV_pollReq_cb_t",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(ptr(opaque)), ptr(int:8:s))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)), int:4:s, ptr(ptr(opaque)), ptr(int:8:s))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_SRV_delayed_delivery_cb_t",
+          "at": "src/cmp/cmp_server.rs",
+          "authority": "OSSL_CMP_SRV_delayed_delivery_cb_t",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_SRV_clean_transaction_cb_t",
+          "at": "src/cmp/cmp_server.rs",
+          "authority": "OSSL_CMP_SRV_clean_transaction_cb_t",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "OSSL_CMP_log_cb_t",
+          "at": "src/cmp/cmp_util.rs",
+          "authority": "OSSL_CMP_log_cb_t",
+          "authority_signature": "fptr(int:4:s; ptr(const(int:1:s)), ptr(const(int:1:s)), int:4:s, int:4:s, ptr(const(int:1:s)))",
+          "crate_signature": "fptr(int:4:s; ptr(const(int:1:s)), ptr(const(int:1:s)), int:4:s, int:4:s, ptr(const(int:1:s)))",
           "how": "convention"
         },
         {
@@ -3649,6 +3723,14 @@
           "how": "convention"
         },
         {
+          "alias": "OSSL_HTTP_bio_cb_t",
+          "at": "src/http/http_client.rs",
+          "authority": "OSSL_HTTP_bio_cb_t",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque), int:4:s, int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque), int:4:s, int:4:s)",
+          "how": "convention"
+        },
+        {
           "alias": "Block128F",
           "at": "src/modes/mod.rs",
           "authority": "block128_f",
@@ -4193,6 +4275,30 @@
           "how": "convention"
         },
         {
+          "alias": "TsSerialCb",
+          "at": "src/ts/ts_rsp_sign.rs",
+          "authority": "TS_serial_cb",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "TsTimeCb",
+          "at": "src/ts/ts_rsp_sign.rs",
+          "authority": "TS_time_cb",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(int:8:s), ptr(int:8:s))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(int:8:s), ptr(int:8:s))",
+          "how": "convention"
+        },
+        {
+          "alias": "TsExtensionCb",
+          "at": "src/ts/ts_rsp_sign.rs",
+          "authority": "TS_extension_cb",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
           "alias": "X509V3ExtNew",
           "at": "src/x509/v3_lib.rs",
           "authority": "X509V3_EXT_NEW",
@@ -4430,6 +4536,11 @@
           "alias": "NistReduce",
           "at": "src/bn/nist.rs",
           "why": "not an authority type: a crate-local callback shape with no header counterpart"
+        },
+        {
+          "alias": "OsslCmpAllowUnprotectedCb",
+          "at": "src/cmp/cmp_vfy.rs",
+          "why": "not a provider dispatch: a callback typedef declared in `crypto/cmp/cmp_local.h:996`, which is internal, so the atlas records no typedef for it"
         },
         {
           "alias": "DhGenerateKeyFn",

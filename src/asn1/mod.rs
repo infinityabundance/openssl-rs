@@ -68,6 +68,9 @@ pub mod a_utf8;
 // `ASN1_verify`. `ASN1_item_verify_ctx` is the single blocker 10.10 left on the Phase-7 row.
 pub mod a_verify;
 pub mod asn1_gen;
+// Phase 12.9's `crypto/asn1/asn1_item_list.c` -- `ASN1_ITEM_lookup`/`ASN1_ITEM_get`
+// over the authority's generated 147-entry item list. Handed from Phase 5 (D80).
+pub(crate) mod asn1_item_list;
 pub mod asn_mime;
 pub mod asn_pack;
 pub mod bio_asn1;
