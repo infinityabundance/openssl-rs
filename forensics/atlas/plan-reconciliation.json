@@ -4,18 +4,10 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "names_a_file_the_authority_does_not_have": 1
-    },
-    "census_by_stratum": {
-      "13": 1
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "names_a_file_the_authority_does_not_have": [
-        "docs/PHASE-13-SUBPHASES.md:13:13.7:arch/async_posix.c"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -34,8 +26,8 @@
       "symbols_reached": 108,
       "unit_records": 97,
       "units_named_by_a_record": 99,
-      "units_named_by_a_row": 456,
-      "units_reached": 456
+      "units_named_by_a_row": 457,
+      "units_reached": 457
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -328,6 +320,22 @@
         ],
         "transcribed_by": [
           "src/asn1_dsa.rs"
+        ]
+      },
+      "crypto/async/arch/async_posix.c": {
+        "defines": [
+          "async_fibre_free",
+          "async_fibre_makecontext",
+          "async_local_cleanup",
+          "async_local_deinit",
+          "async_local_init"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.7"
+        ],
+        "transcribed_by": [
+          "src/async/arch/async_posix.rs"
         ]
       },
       "crypto/async/async.c": {
@@ -6141,9 +6149,9 @@
         "owner_phase": null
       },
       "crypto/async/async.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/async/async.rs",
+        "owner_phase": null
       },
       "crypto/chacha/chacha_enc.c": {
         "class": "reached_by_a_named_construct",
@@ -6201,69 +6209,69 @@
         "owner_phase": null
       },
       "crypto/evp/c_allc.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_lib.rs",
+        "owner_phase": null
       },
       "crypto/evp/c_alld.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/p_lib.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_aes.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_aes.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_aes_cbc_hmac_sha1.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_aes_cbc_hmac_sha1.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_aes_cbc_hmac_sha256.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_aes_cbc_hmac_sha256.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_aria.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_aria.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_bf.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_bf.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_camellia.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_camellia.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_cast.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_cast.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_chacha20_poly1305.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_chacha20_poly1305.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_des.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_des.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_des3.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_des3.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_idea.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_idea.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_null.c": {
         "class": "reached_by_a_named_construct",
@@ -6271,39 +6279,39 @@
         "owner_phase": null
       },
       "crypto/evp/e_old.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_des3.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_rc2.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_rc2.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_rc4.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_rc4.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_rc4_hmac_md5.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_rc4_hmac_md5.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_seed.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_seed.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_sm4.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_sm4.rs",
+        "owner_phase": null
       },
       "crypto/evp/e_xcbc_d.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/e_xcbc_d.rs",
+        "owner_phase": null
       },
       "crypto/evp/ec_support.c": {
         "class": "reached_by_a_named_construct",
@@ -6331,24 +6339,24 @@
         "owner_phase": null
       },
       "crypto/evp/legacy_md4.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/legacy_md4.rs",
+        "owner_phase": null
       },
       "crypto/evp/legacy_md5_sha1.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/legacy_md5.rs",
+        "owner_phase": null
       },
       "crypto/evp/legacy_mdc2.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/legacy_mdc2.rs",
+        "owner_phase": null
       },
       "crypto/evp/legacy_wp.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/evp/legacy_wp.rs",
+        "owner_phase": null
       },
       "crypto/evp/m_null.c": {
         "class": "reached_by_a_named_construct",
@@ -6401,14 +6409,14 @@
         "owner_phase": null
       },
       "crypto/pem/pem_pk8.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/pem/pem_pk8.rs",
+        "owner_phase": null
       },
       "crypto/pem/pem_pkey.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 13
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/pem/pem_pkey.rs",
+        "owner_phase": null
       },
       "crypto/pem/pem_sign.c": {
         "class": "reached_by_a_named_construct",
@@ -6622,7 +6630,7 @@
       "transcribed_units": 559
     }
   },
-  "body_hash": "a7718f1240b190bf70e5ca1d29382d5b2f96122c1c39bab4b7737ed84ebbfa6e",
+  "body_hash": "7999fe97731fba5b9eaade0616848a8a7b36e08212cb6650f84d3ed19d2c7ec5",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -6638,17 +6646,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5595fed5da67642789f14faad274b02ea886596d818c0d46815b0448c679f9dd"
+      "sha256": "5b75f0a9c1b926a20cecd40da5a30c91bb674d02d7303b669633615e0bc1f740"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "33ef6cd1cc0675ef9e8a2fd7519f2b55c5317bd55555eb2cb9f6ad1ac08e4eb3"
+      "sha256": "a0cbd212606075a0a95178fd07fa3dbc01ac1ae1c56a30a76d26bc64d8d20e19"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "7a2cc1623c36669b1b8f880c0d7da54c7a2578426f875c7b8b34e3192a4d5d05"
+      "sha256": "5245b767d6239352b2e130bbbcdad5db7b2486b463e2c54bb4bad367c742ebf2"
     },
     {
       "name": "source-manifest",
@@ -6673,7 +6681,7 @@
     {
       "name": "plan-PHASE-13-SUBPHASES",
       "path": "docs/PHASE-13-SUBPHASES.md",
-      "sha256": "abd688e827abe9285e6954b008d23b7f173beda4097b3a150042abc96e5ff1c2"
+      "sha256": "6e57fbd977ff8dd9763ef20a30badac40aa472d56096274c557fae41066454c0"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

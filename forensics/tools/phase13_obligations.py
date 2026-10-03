@@ -36,10 +36,14 @@ The edges are discovered rather than typed: every row of every `forensics/phase*
 whose `owning_phase` is 13, so a stratum that defers a symbol to this one is recorded on both
 sides by construction.
 
-**This stratum owns provider registration rows**, and the census's phase-13 slice is the 39
-legacy digest and cipher rows (`forensics/atlas/provider-algorithms.json`), all unimplemented
-at activation. Unlike Phase 12, whose slice of that census is empty, this ledger records the
-count it reads rather than leaving a reader to infer it.
+**This stratum ships no provider registration row**, and the census records where the legacy
+rows went. The 39 legacy digest and cipher rows `providers/legacyprov.c` publishes
+(`forensics/atlas/provider-algorithms.json`) belong to the loadable module the candidate ships as
+a scaffold `ossl-modules/legacy.so`, and `forensics/atlas/provider-algorithm-plans.json` hands them
+to the distribution stratum (Phase 16), which owns the installed module contract. This stratum owns
+the deprecated METHOD-era statics that reach those algorithms and the `OSSL_provider_init` symbol,
+but its subphases deliberately do not activate the legacy provider, so `provider_rows_owned` reads
+`0` -- the mirror of Phase 12, whose slice of the census is empty.
 
 Four situations, kept apart
 ---------------------------
@@ -293,8 +297,11 @@ def main(argv: list[str]) -> int:
         )
 
     # The provider registration rows this stratum owns, read from the census's own
-    # `owning_phase`. Phase 13 owns the 39 legacy digest and cipher rows; at activation all are
-    # unimplemented, and the count is emitted rather than omitted so a reader need not infer it.
+    # `owning_phase`. Phase 13 ships no provider row: the 39 legacy digest and cipher rows
+    # `providers/legacyprov.c` publishes are handed to the distribution stratum (Phase 16) by
+    # `provider-algorithm-plans.json`, because the loadable module is a scaffold this stratum's
+    # subphases do not activate. The count is emitted rather than omitted so a reader need not
+    # infer it.
     provider_doc = json.loads((REPO_ROOT / PROVIDER_ALGORITHMS).read_text(encoding="utf-8"))
     provider_owned = [
         r for r in provider_doc["body"]["rows"] if r["owning_phase"] == PHASE
@@ -363,8 +370,10 @@ def main(argv: list[str]) -> int:
             "its `open` count is not the whole working set. That split moves as this stratum "
             "lands its own units, so this note does not restate its counts; `counts` above is "
             "the live record and `forensics/atlas/implemented-surface.json` is the authority "
-            "behind it. This stratum owns 39 provider registration rows, all unimplemented at "
-            "activation (`forensics/atlas/provider-algorithms.json`). Nothing here is a parity "
+            "behind it. This stratum ships no provider registration row: the 39 legacy digest "
+            "and cipher rows `providers/legacyprov.c` publishes are the loadable module the "
+            "candidate ships as a scaffold, handed to the distribution stratum (Phase 16). "
+            "Nothing here is a parity "
             "claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md "
             "terms, and docs/PHASE-13-SUBPHASES.md section 4 decides when the stratum may be "
             "called complete."

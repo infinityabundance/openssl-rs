@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 720,
+      "crate_files_read": 747,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,14 +12,14 @@
       "identities_authority_only": 45,
       "identities_checked": 232,
       "identities_mismatches": 0,
-      "links_convention": 286,
+      "links_convention": 290,
       "links_documented": 25,
       "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 301,
-      "signatures_checked": 337,
+      "signatures_authority_only": 298,
+      "signatures_checked": 341,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 212,
+      "signatures_not_a_dispatch": 218,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -1526,9 +1526,6 @@
         "ASN1_primitive_c2i",
         "ASN1_primitive_i2c",
         "ASN1_primitive_print",
-        "ASYNC_callback_fn",
-        "ASYNC_stack_alloc_fn",
-        "ASYNC_stack_free_fn",
         "BIO_dgram_sctp_notification_handler_fn",
         "CRYPTO_EX_free",
         "DTLS_timer_cb",
@@ -1856,6 +1853,30 @@
           "authority": "i2d_of_void",
           "authority_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)))",
           "crate_signature": "fptr(int:4:s; ptr(const(opaque)), ptr(ptr(int:1:u)))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsyncStackAllocFn",
+          "at": "src/async/arch/async_posix.rs",
+          "authority": "ASYNC_stack_alloc_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(int:8:u))",
+          "crate_signature": "fptr(ptr(opaque); ptr(int:8:u))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsyncStackFreeFn",
+          "at": "src/async/arch/async_posix.rs",
+          "authority": "ASYNC_stack_free_fn",
+          "authority_signature": "fptr(void; ptr(opaque))",
+          "crate_signature": "fptr(void; ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "AsyncCallbackFn",
+          "at": "src/async/async_wait.rs",
+          "authority": "ASYNC_callback_fn",
+          "authority_signature": "fptr(int:4:s; ptr(opaque))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque))",
           "how": "convention"
         },
         {
@@ -2616,6 +2637,14 @@
           "authority": "OSSL_FUNC_digest_gettable_ctx_params_fn",
           "authority_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
           "crate_signature": "fptr(ptr(const(opaque)); ptr(opaque), ptr(opaque))",
+          "how": "convention"
+        },
+        {
+          "alias": "Ecb128F",
+          "at": "src/evp/e_sm4.rs",
+          "authority": "ecb128_f",
+          "authority_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), int:4:s)",
+          "crate_signature": "fptr(void; ptr(const(int:1:u)), ptr(int:1:u), int:8:u, ptr(const(opaque)), int:4:s)",
           "how": "convention"
         },
         {
@@ -4958,6 +4987,21 @@
           "why": "not a provider dispatch: a member of `EVP_CIPHER`'s or `EVP_MD`'s legacy callback list in `evp.h`, declared as a plain function pointer rather than through `OSSL_CORE_MAKE_FUNC`"
         },
         {
+          "alias": "XtsStreamF",
+          "at": "src/evp/e_aes.rs",
+          "why": "not a provider dispatch: a function-pointer typedef local to a legacy cipher static's context struct or the TXT_DB codec, which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "DesCbcF",
+          "at": "src/evp/e_des.rs",
+          "why": "not a provider dispatch: a function-pointer typedef local to a legacy cipher static's context struct or the TXT_DB codec, which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "DesEdeCbcF",
+          "at": "src/evp/e_des3.rs",
+          "why": "not a provider dispatch: a function-pointer typedef local to a legacy cipher static's context struct or the TXT_DB codec, which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
           "alias": "MethodFromAlgorithmFn",
           "at": "src/evp/fetch.rs",
           "why": "not a provider dispatch: the authority declares it as a member of `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h:41-47`), a struct of plain function pointers in an internal header, so there is no typedef for the atlas to record"
@@ -5521,6 +5565,21 @@
           "alias": "StoreInfoNewFn",
           "at": "src/store/store_result.rs",
           "why": "not a provider dispatch: the authority declares this `typedef` inside `store_result.c` itself (`:317`), not in an installed header, so the typedefs atlas has no record of it"
+        },
+        {
+          "alias": "QualFn",
+          "at": "src/txt_db/txt_db.rs",
+          "why": "not a provider dispatch: a function-pointer typedef local to a legacy cipher static's context struct or the TXT_DB codec, which the atlas -- whose universe is the installed public surface -- records no typedef for"
+        },
+        {
+          "alias": "HashFn",
+          "at": "src/txt_db/txt_db.rs",
+          "why": "not a provider dispatch: `lhash.h.in`'s `LHASH_HASH_FN` / `LHASH_COMP_FN` / `LHASH_DOALL*` macros generate it per type, so there is no single typedef"
+        },
+        {
+          "alias": "CompFn",
+          "at": "src/txt_db/txt_db.rs",
+          "why": "not a provider dispatch: `safestack.h.in`'s `sk_*_compfunc` / `freefunc` / `copyfunc` macros generate it per type, so there is no single typedef"
         },
         {
           "alias": "UiOpenSessionFn",

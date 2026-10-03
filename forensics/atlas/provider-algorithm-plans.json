@@ -89,26 +89,26 @@
   {
    "provider": "legacy",
    "operation": "OSSL_OP_DIGEST",
-   "phase": 13,
-   "blocked_by": "the legacy provider is Phase 13's; the digests it publishes (MD4, MDC2, RIPEMD-160, WHIRLPOOL) are the ones the default provider deliberately does not carry."
+   "phase": 16,
+   "blocked_by": "the legacy provider's digests (MD4, MDC2, RIPEMD-160, WHIRLPOOL) are the ones the default provider deliberately does not carry. Phase 13 owns the deprecated METHOD-era statics that reach them and the `OSSL_provider_init` symbol, but its subphases deliberately do not activate the legacy provider (docs/PHASE-13-SUBPHASES.md section 3.6), so the loadable module the candidate ships as a scaffold `ossl-modules/legacy.so` is handed to the distribution stratum, which owns the installed module contract."
   },
   {
    "provider": "legacy",
    "operation": "OSSL_OP_CIPHER",
-   "phase": 13,
-   "blocked_by": "the legacy provider is Phase 13's."
+   "phase": 16,
+   "blocked_by": "the legacy provider module ships as a scaffold (`ossl-modules/legacy.so`); publishing its table is the distribution stratum's, which owns the installed module contract."
   },
   {
    "provider": "legacy",
    "operation": "OSSL_OP_KDF",
-   "phase": 13,
-   "blocked_by": "the legacy provider is Phase 13's."
+   "phase": 16,
+   "blocked_by": "the legacy provider module ships as a scaffold (`ossl-modules/legacy.so`); publishing its table is the distribution stratum's, which owns the installed module contract."
   },
   {
    "provider": "legacy",
    "operation": "OSSL_OP_SKEYMGMT",
-   "phase": 13,
-   "blocked_by": "the legacy provider is Phase 13's."
+   "phase": 16,
+   "blocked_by": "the legacy provider module ships as a scaffold (`ossl-modules/legacy.so`); publishing its table is the distribution stratum's, which owns the installed module contract."
   },
   {
    "provider": "base",

@@ -401,11 +401,36 @@ LINKS: dict[str, tuple[str, ...]] = {
     "DecoderCleanupFn": ("OSSL_DECODER_CLEANUP",),
 }
 
+# Phase 13's legacy cipher statics and TXT_DB codec declare function-pointer typedefs local to
+# their own units and context structs -- `e_aes.c:68-71`'s XTS perlasm `stream`, `e_des.c:31-34`
+# and `e_des3.c:31-34`'s `stream.cbc`, and `txt_db.h:52`'s per-field index qualifier. The atlas's
+# universe is the installed public surface, so it records no typedef for a `.c`-local type or for a
+# callback written inline in a struct member, and the convention rule has no authority name for the
+# crate's aliases to join on. The same rule `aeswrap_fn` and `equal_fn` are exempted under.
+LEGACY_CTX_CALLBACK = (
+    "not a provider dispatch: a function-pointer typedef local to a legacy cipher static's context "
+    "struct or the TXT_DB codec, which the atlas -- whose universe is the installed public "
+    "surface -- records no typedef for")
+
+
 # ---------------------------------------------------------------------------------------------
 # `NOT_A_DISPATCH` -- what each remaining alias is instead. Checked in both directions: an entry
 # naming an alias the crate does not declare is a failure.
 # ---------------------------------------------------------------------------------------------
 NOT_A_DISPATCH: dict[str, str] = {
+    # --- Phase 13: the legacy cipher statics and the TXT_DB codec -----------------------------
+    # The legacy `EVP_CIPHER` statics' context structs carry `.c`-local callback typedefs
+    # (`e_aes.c:68-71`'s XTS perlasm stream, `e_des.c:31-34`/`e_des3.c:31-34`'s `stream.cbc`),
+    # and `txt_db.c`'s index slots carry the `TXT_DB` qualifier (`txt_db.h:52`) and the lhash hash
+    # callback (`OPENSSL_LH_HASHFUNC`). Like `aeswrap_fn` and `equal_fn`, the atlas -- whose
+    # universe is the installed public surface -- records no typedef for a `.c`-local type or an
+    # inline struct member, so the convention rule has no authority name for the crate's aliases
+    # to link to. Landed with 13.5 and 13.6.
+    "XtsStreamF@src/evp/e_aes.rs": LEGACY_CTX_CALLBACK,
+    "DesCbcF@src/evp/e_des.rs": LEGACY_CTX_CALLBACK,
+    "DesEdeCbcF@src/evp/e_des3.rs": LEGACY_CTX_CALLBACK,
+    "QualFn@src/txt_db/txt_db.rs": LEGACY_CTX_CALLBACK,
+    "HashFn@src/txt_db/txt_db.rs": LHASH_MACRO,
     # --- `crypto/cmp/cmp_local.h` (12.4b) ---------------------------------------------------
     "OsslCmpAllowUnprotectedCb": CMP_LOCAL_TYPEDEF,
     # --- `OSSL_METHOD_CONSTRUCT_METHOD` (`include/internal/core.h`) -------------------------

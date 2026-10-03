@@ -207,13 +207,13 @@ LEGACY_HANDOFFS: list[tuple[tuple[str, ...], str, str]] = [
     # so the row is retired rather than left covering a symbol the crate now defines -- which
     # `BLOCKED_HANDOFFS`' own fail-closed rule refuses. `EVP_md4` and `EVP_mdc2` stay.
     (("EVP_mdc2",), "crypto/mdc2/", "`legacy_mdc2.c`, itself over `crypto/des/`"),
-    (("EVP_sha",), "crypto/sha/",
-     "`legacy_sha.c`, which builds every SHA-1, SHA-2, SHA-3 and SHAKE static in one table"),
-    (("EVP_blake2",), "providers/implementations/digests/",
-     "`legacy_blake2.c`, whose callbacks call the provider BLAKE2 implementation's "
-     "`ossl_blake2b_*`/`ossl_blake2s_*` (the authority has no `crypto/blake2/`; the name this "
-     "row carried from D196 was wrong and the unit check found it)"),
-    (("EVP_ripemd",), "crypto/ripemd/", "`legacy_ripemd.c`"),
+    # `EVP_sha`/`EVP_shake`, `EVP_blake2` and `EVP_ripemd` were three rows here until D291 and the
+    # `EVP_MD` slices landed every one of their statics in this stratum's own `src/evp/` modules,
+    # and 13.6d then landed the last four legacy `EVP_MD` statics (`EVP_md4`, `EVP_mdc2`,
+    # `EVP_whirlpool`, `EVP_sm3`) that Phase 7 hands on. The three rows are retired rather than left
+    # covering symbols the crate now defines: their families are this stratum's, not Phase 13's, and
+    # the 16 names they matched (`EVP_sha*`, `EVP_shake*`, `EVP_blake2*`, `EVP_ripemd160`) are in no
+    # receiving ledger, so keeping the row would hand on a symbol no stratum receives.
     (("EVP_whirlpool",), "crypto/whrlpool/",
      "`legacy_wp.c`, whose callbacks call `crypto/whrlpool/`'s own primitives; the directory "
      "is spelled `whrlpool`, and the `crypto/whirlpool/` this row carried from D196 was a "
@@ -712,7 +712,7 @@ def main(argv: list[str]) -> int:
                 f"{', '.join(unknown)}; the unit is a typo or the atlas is stale"
             )
         for sym in owned:
-            if sym in done or sym in handed_on:
+            if sym in handed_on:
                 continue
             if any(sym == p or sym.startswith(p) for p in prefixes):
                 handed_on[sym] = {
