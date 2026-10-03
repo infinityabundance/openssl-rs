@@ -35122,3 +35122,42 @@ on a second run; every phase ledger regenerated; `court_coverage`, `provider_cou
 `evidence_determinism` (32 artefacts), `gen_frf_courts.py --check` (210 files / 105 courts),
 `check_evidence_portability`, `regression_guard --require-current` (145 courts, 50600 observations)
 and `probe_hygiene` all green.
+
+## D524 -- the FRF requirement is read from the court inventory, not the registry it checks
+
+The FRF completion predicate (`phase_state.frf_gemel_blocking_reason`) derived the *required*
+court set from `gen_frf_courts.py`'s `COURTS` registry -- the very object it checks. A stratum that
+reached zero open rows, passing courts and a seal but simply forgot to register a court would
+answer `_frf_declared_courts(phase) == []`, and the rule returned `""`: the registry defined its own
+completeness. The requirement now comes from an independent inventory instead: the stratum's own
+`artifacts/phase<N>/COURTS.json`, whose courts carry an explicit `frf_declarable`/`frf_exclusion`
+pair when a runner emits it, falling back to the two documented exclusion rules (a court named in
+the authored `reference_probes` set of `forensics/atlas/court-coverage-rows.json`, and the `CT-`
+vector-court convention, D13/D201). Every exclusion carries a reason, so none is silent. The
+genealogy is now `required court set (inventory) -> registry declarations -> receipts ->
+challenges -> claim premises`, with the registry required to *satisfy* the inventory (the
+containment is one-way, so a reference basis that happens to diff a transcript, like Phase 11's
+`RT-X509-REF`, may be declared as extra evidence).
+
+**The control.** `phase_state.py --self-test` gains a second sensitivity control that empties the
+`gen_frf_courts.py` registry for a complete stratum and requires the predicate to refuse it through
+its own inventory; it reconstructs the exact shape the old rule could not see and refuses to pass
+unless the rule fires. It is now run by CI (`static gates`), where the predicate had not been run at
+all before.
+
+**The gap it found, and closed.** The moment the requirement stopped being self-defined, Phase 6
+blocked: `RT-PROVIDER-3P` and `RT-CONF-MOD` are differential courts in `artifacts/phase6/COURTS.json`
+(both passing, 40 and 247 observations, authority exit 0) whose probe pairs are staged, but they
+were added to `forensics/tools/phase6_courts.py` in `5042c2fa` (Phase 6.10b-d) **after** the Phase-6
+chain was cut and were never registered, so the chain carried no receipt, challenge or claim premise
+for them. They are now declared (`gen_frf_courts.py`, 107 runtime courts), run and receipted (two
+receipts, zero residuals), challenged on both operators (`stdout-first-line` and `exit-class`, every
+one `saw_defect` and `specificity_clean`), and covered by the new `sensitivity-backed` claim
+`06554705a39f6157b08e24b6900fe51bf204311a41b39aad1830b710a9c89a18` (nine premises, zero
+blockers). `forensics/frf/README.md` and `docs/RELEASE_GATES.md` move 105 -> 107 declarations and
+`seven Phase 6` -> `nine Phase 6`.
+
+Verified (container): `phase_state.py --self-test` both controls ok; `phase_state.py` 14 complete /
+0 in-progress; `gen_frf_courts.py --check` (214 files / 107 courts); `docs_consistency.py`;
+`render_seal_census.py`; `render_status.py`; `evidence_determinism.py --keep` (32 artefacts);
+`regression_guard.py --require-current` (145 courts, 50600 observations).

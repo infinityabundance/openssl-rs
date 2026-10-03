@@ -321,6 +321,10 @@ COURTS: list[tuple[str, int, str, str]] = [
      "name that cannot be resolved; and the unload, teardown, reload and second "
      "unload that show initialisation happening exactly once and the teardown "
      "waiting for the last reference"),
+    ("rt-provider-3p", 6, "rt_provider_3p_probe",
+     "the third-party provider surface, driven"),
+    ("rt-conf-mod", 6, "rt_conf_mod_probe",
+     "the CONF module registry and automatic loader, driven"),
     # Phase 7 — the fetch core, the method store and the EVP object families.
     #
     # Each description is the court's own one-line subject, the line its probe

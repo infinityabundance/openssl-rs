@@ -1,0 +1,257 @@
+transcript.sha256=6dfdde5a4dd115e343ac44b2c3c135302dd128a92ef22ec91afb2933979beeca
+-- A: the registry and the implicit run-once
+A_null_conf_load=1 err=0
+A_no_openssl_conf_load=1 err=0
+A_oids_load=1 err=0
+A_oids_nid_known=1 err=0
+A_oids_shortname=rt-cm-oid err=0
+-- A2: the zero-length prefix match, and which entry is first
+A2_weird_load=-1
+A2_weird_load_lib=14
+A2_weird_load_reason=109
+A2_weird_load_line=286
+A2_weird_load_file=../../src/openssl-3.6.4/crypto/conf/conf_mod.c
+A2_weird_load_func=module_run
+A2_weird_load_data=module=.weird, value=no_such_oid_section retcode=-1      
+A2_weird_load_flags=3
+A2_weird_load_reasonstr=module initialization error
+-- B: CONF_module_add, the two registrations, and the name grammar
+B_add_first=1 err=0
+B_add_duplicate=1 err=0
+B_add_a2=1 err=0
+B_add_a3=1 err=0
+B_add_fail=1 err=0
+B_load_main=1 err=0
+B_load_main_first_inits=1 err=0
+B_load_main_duplicate_inits=0 err=0
+B_load_main_name=rt-cm-a err=0
+B_load_main_value=from-init-sect err=0
+B_load_main_flags_roundtrip=1 err=0
+B_load_main_usr_roundtrip=1 err=0
+B_load_main_pmod_seen=1 err=0
+B_load_main_pmod_usr_roundtrip=1 err=0
+B_dotted_load=-1 err=117440625
+B_dotted_inits=2 err=0
+B_dotted_last_name=rt-cm-a.beta err=0
+B_dotted_last_value=two err=0
+B_fail_load=-1
+B_fail_load_lib=14
+B_fail_load_reason=109
+B_fail_load_line=286
+B_fail_load_file=../../src/openssl-3.6.4/crypto/conf/conf_mod.c
+B_fail_load_func=module_run
+B_fail_load_data=module=rt-cm-fail, value=fv retcode=-1      
+B_fail_load_flags=3
+B_fail_load_reasonstr=module initialization error
+B_fail_inits=1 err=0
+B_fail_finishes=1 err=0
+B_fail_finish_after_init=1 err=0
+B_mixed_load=1 err=0
+B_mixed_fail_inits=1 err=0
+B_mixed_a_inits=1 err=0
+-- C: the file-shaped entry point and its flag word
+C_missing_file_flags0=0 err=117440626
+C_missing_file_ignore_missing=1 err=0
+C_missing_file_ignore_rc=1 err=0
+C_empty_file_flags0=1 err=0
+C_empty_file_ran_a=0 err=0
+C_badsec_flags0=0
+C_badsec_flags0_lib=14
+C_badsec_flags0_reason=124
+C_badsec_flags0_line=163
+C_badsec_flags0_file=../../src/openssl-3.6.4/crypto/conf/conf_mod.c
+C_badsec_flags0_func=CONF_modules_load
+C_badsec_flags0_data=openssl_conf=no_such_section
+C_badsec_flags0_flags=3
+C_badsec_flags0_reasonstr=openssl conf references missing section
+C_badsec_silent=0 err=0
+C_badsec_silent_err=0 err=0
+C_unknown_flags0=-1
+C_unknown_flags0_lib=14
+C_unknown_flags0_reason=113
+C_unknown_flags0_line=276
+C_unknown_flags0_file=../../src/openssl-3.6.4/crypto/conf/conf_mod.c
+C_unknown_flags0_func=module_run
+C_unknown_flags0_data=module=nosuchmodule
+C_unknown_flags0_flags=3
+C_unknown_flags0_reasonstr=unknown module name
+C_unknown_silent=-1 err=0
+C_unknown_silent_err=0 err=0
+C_unknown_ignore_rc=1
+C_unknown_ignore_rc_lib=0
+C_unknown_ignore_rc_reason=0
+C_unknown_ignore_rc_line=0
+C_unknown_ignore_rc_file=(null)
+C_unknown_ignore_rc_func=(null)
+C_unknown_ignore_rc_data=(null)
+C_unknown_ignore_rc_flags=0
+C_unknown_ignore_rc_reasonstr=(null)
+C_default_file=1 err=0
+C_default_file_ran_a=1 err=0
+C_unknown_with_dso=-1
+C_unknown_with_dso_lib=14
+C_unknown_with_dso_reason=113
+C_unknown_with_dso_line=276
+C_unknown_with_dso_file=../../src/openssl-3.6.4/crypto/conf/conf_mod.c
+C_unknown_with_dso_func=module_run
+C_unknown_with_dso_data=module=nosuchmodule
+C_unknown_with_dso_flags=3
+C_unknown_with_dso_reasonstr=unknown module name
+-- D: unload, finish, and the two return-early paths
+D_after_unload0=1 err=0
+D_after_unload0_ran_a=1 err=0
+D_after_finish=1 err=0
+D_after_finish_ran_a=1 err=0
+D_after_unload1_unknown=-1
+D_after_unload1_unknown_lib=14
+D_after_unload1_unknown_reason=113
+D_after_unload1_unknown_line=276
+D_after_unload1_unknown_file=../../src/openssl-3.6.4/crypto/conf/conf_mod.c
+D_after_unload1_unknown_func=module_run
+D_after_unload1_unknown_data=module=rt-cm-a
+D_after_unload1_unknown_flags=3
+D_after_unload1_unknown_reasonstr=unknown module name
+-- F: the automatic loader, one fresh process per first call
+m1_first_load=1 err=0
+m1_first_load_ran_a=1 err=0
+m1_oid_known=0 err=67108967
+m1_second_load=1 err=0
+m1_second_load_err=0 err=0
+m1_second_load_ran_a_again=1 err=0
+m1_config_after_load_ran_a=0 err=0
+m1_exit_code=0 err=0
+m2_first_load=1 err=0
+m2_first_load_ran_a=1 err=0
+m2_oid_known=0 err=67108967
+m2_base_only=1 err=0
+m2_exit_code=0 err=0
+m3_first_load=0
+m3_first_load_lib=14
+m3_first_load_reason=114
+m3_first_load_line=179
+m3_first_load_file=../../src/openssl-3.6.4/crypto/conf/conf_def.c
+m3_first_load_func=def_load
+m3_first_load_data=
+m3_first_load_flags=0
+m3_first_load_reasonstr=no such file
+m3_second_load=1 err=0
+m3_second_load_err=0 err=0
+m3_second_load_ran_a=0 err=0
+m3_oid_known=0 err=67108967
+m3_exit_code=0 err=0
+m4_both_bits_load=1 err=0
+m4_both_bits_ran_a=0 err=0
+m4_both_bits_oid_known=0 err=67108967
+m4_exit_code=0 err=0
+m5_ran_a3=1 err=0
+m5_ran_a=0 err=0
+m5_a3_name=rt-cm-a3 err=0
+m5_a3_value=from-appname-sect err=0
+m5_exit_code=0 err=0
+m6_ran_a3=0 err=0
+m6_ran_a=1 err=0
+m6_exit_code=0 err=0
+-- G: the ssl_conf module, and the store its reader fills
+G_before_any_load=empty err=0
+G_before_find=0 err=0
+G_load=1
+G_load_lib=0
+G_load_reason=0
+G_load_line=0
+G_load_file=(null)
+G_load_func=(null)
+G_load_data=(null)
+G_load_flags=0
+G_load_reasonstr=(null)
+G_find_system_default=1 err=0
+G_idx=0 err=0
+G_find_absent=0 err=0
+G_find_null=0 err=0
+G_find_empty=0 err=0
+G_set_name=system_default err=0
+G_set_count=2 err=0
+G_cmd0_name=CipherString err=0
+G_cmd0_arg=DEFAULT:@SECLEVEL=2 err=0
+G_cmd1_name=MinProtocol err=0
+G_cmd1_arg=TLSv1.2 err=0
+G_reload=1
+G_reload_lib=0
+G_reload_reason=0
+G_reload_line=0
+G_reload_file=(null)
+G_reload_func=(null)
+G_reload_data=(null)
+G_reload_flags=0
+G_reload_reasonstr=(null)
+G_reload_find_system_default=1 err=0
+G_reload_idx=0 err=0
+G_reload_find_absent=0 err=0
+G_reload_find_null=0 err=0
+G_reload_find_empty=0 err=0
+G_reload_set_name=system_default err=0
+G_reload_set_count=2 err=0
+G_reload_cmd0_name=CipherString err=0
+G_reload_cmd0_arg=DEFAULT:@SECLEVEL=2 err=0
+G_reload_cmd1_name=MinProtocol err=0
+G_reload_cmd1_arg=TLSv1.2 err=0
+G_nosect_load=-1
+G_nosect_0_lib=14
+G_nosect_0_reason=120
+G_nosect_0_line=75
+G_nosect_0_func=ssl_module_init
+G_nosect_0_data=section=no_such_section
+G_nosect_1_lib=14
+G_nosect_1_reason=109
+G_nosect_1_line=286
+G_nosect_1_func=module_run
+G_nosect_1_data=module=ssl_conf, value=no_such_section retcode=-1      
+G_nosect_2_lib=0
+G_nosect_2_reason=0
+G_nosect_2_line=0
+G_nosect_2_func=(null)
+G_nosect_2_data=(null)
+G_after_nosect_find=0 err=0
+G_nocmds_load=-1
+G_nocmds_0_lib=14
+G_nocmds_0_reason=118
+G_nocmds_0_line=94
+G_nocmds_0_func=ssl_module_init
+G_nocmds_0_data=name=system_default, value=no_such_command_section
+G_nocmds_1_lib=14
+G_nocmds_1_reason=109
+G_nocmds_1_line=286
+G_nocmds_1_func=module_run
+G_nocmds_1_data=module=ssl_conf, value=ssl_sect retcode=-1      
+G_nocmds_2_lib=0
+G_nocmds_2_reason=0
+G_nocmds_2_line=0
+G_nocmds_2_func=(null)
+G_nocmds_2_data=(null)
+G_after_nocmds_find=0 err=0
+G_reload_after_failure=1
+G_reload_after_failure_lib=0
+G_reload_after_failure_reason=0
+G_reload_after_failure_line=0
+G_reload_after_failure_file=(null)
+G_reload_after_failure_func=(null)
+G_reload_after_failure_data=(null)
+G_reload_after_failure_flags=0
+G_reload_after_failure_reasonstr=(null)
+G_recovered_find=1 err=0
+-- E: config_diagnostics, which is sticky and is observed last
+E_diagnostics_before=0 err=0
+E_diag_absent_load=-1 err=117440625
+E_diagnostics_after_absent=0 err=0
+E_diag_on_load=-1 err=117440625
+E_diagnostics_after_on=1 err=0
+E_unknown_ignore_rc_with_diag=-1
+E_unknown_ignore_rc_with_diag_lib=14
+E_unknown_ignore_rc_with_diag_reason=113
+E_unknown_ignore_rc_with_diag_line=276
+E_unknown_ignore_rc_with_diag_file=../../src/openssl-3.6.4/crypto/conf/conf_mod.c
+E_unknown_ignore_rc_with_diag_func=module_run
+E_unknown_ignore_rc_with_diag_data=module=nosuchmodule
+E_unknown_ignore_rc_with_diag_flags=3
+E_unknown_ignore_rc_with_diag_reasonstr=unknown module name
+E_diag_null_conf=1 err=0
+-- done
