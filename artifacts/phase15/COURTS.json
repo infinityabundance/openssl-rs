@@ -1,0 +1,70 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-PHASE15-REF` is the activation **reference basis**: its probe takes the address of each of the stratum's three atlas-owned `quic.h` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-QUIC` is the stratum's **behavioural** court: `courts/phase15/rt_quic_probe.c` drives the three `OSSL_QUIC_*_method` constructors `src/ssl/quic/quic_method.rs` lands -- the non-NULL returns and the distinctness of the three statics, `SSL_CTX_new`'s acceptance of each and the identity `SSL_CTX_get_ssl_method` reports back, the method's `tls1_default_timeout`, the version-inflexible protocol-bound arm, and the NULL-method refusal -- and the two transcripts are compared line by line. It does not drive `SSL_new`: the QUIC connection object is not this unit's, so a candidate connection from these methods reports `SSL_is_quic == 0` where the authority reports `1`, and that divergence is recorded in the module rather than diffed. Nothing here is a parity claim about a completed handshake, which no arm drives; docs/PHASE-15-SUBPHASES.md section 3 records what the court compares.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 3,
+        "candidate_exit_code": 0,
+        "candidate_observations": 3,
+        "candidate_stderr_tail": [],
+        "court": "RT-PHASE15-REF",
+        "crashed": false,
+        "probe": "courts/phase15/rt_coverage_ref_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase15/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase15/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 30,
+        "candidate_exit_code": 0,
+        "candidate_observations": 30,
+        "candidate_stderr_tail": [],
+        "court": "RT-QUIC",
+        "crashed": false,
+        "probe": "courts/phase15/rt_quic_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase15/probes/rt_quic_probe.authority",
+          "candidate": "artifacts/phase15/probes/rt_quic_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {},
+    "summary": {
+      "fail": 0,
+      "pass": 2,
+      "total": 2
+    }
+  },
+  "generator": "forensics/tools/phase15_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json",
+      "sha256": "3e4ff935edc852001e0c7d26d0ba318fab10ac15147c9fff99b7fa6a0d55e634"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase15/rt_coverage_ref_probe.c",
+      "sha256": "cc8919ac44d3b9a210499ee18b8121aaa3451fc81f46e12367f0e8ef0fbd4684"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase15/rt_quic_probe.c",
+      "sha256": "f34ea7b6ccff178655fac500c5bc23142f09741944e9ab9b2c52b13213285a6e"
+    }
+  ],
+  "kind": "phase15-courts",
+  "schema": "openssl-rs/atlas/phase15-courts/v1"
+}

@@ -1025,7 +1025,7 @@
     "implemented_by_two_strata": [],
     "implemented_exports": {
       "libcrypto": 5896,
-      "libssl": 600
+      "libssl": 603
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json; every export the atlas gives a stratum appears in that stratum's ledger; every row a stratum's ledger carries for another stratum's export is a hand-off that stratum recorded",
     "ledger_agreement": [
@@ -1275,6 +1275,18 @@
         "only_in_ledger_examples": [],
         "open": 0,
         "phase": 14
+      },
+      {
+        "atlas": 3,
+        "deferred": 0,
+        "implemented": 3,
+        "ledger": 3,
+        "only_in_atlas": 0,
+        "only_in_atlas_examples": [],
+        "only_in_ledger": 0,
+        "only_in_ledger_examples": [],
+        "open": 0,
+        "phase": 15
       }
     ],
     "ledgers": [
@@ -1325,6 +1337,10 @@
       {
         "ledger": "forensics/phase14-obligations.json",
         "phase": 14
+      },
+      {
+        "ledger": "forensics/phase15-obligations.json",
+        "phase": 15
       }
     ],
     "note": "`unowned_remainder` is not a defect: the strata above Phase 6 have no ledgers yet, so their exports are covered by nothing. It is the scope no ledger has claimed, recorded as a count and in full rather than left implied. `implemented_by_two_strata` and `handoff_reconciliation` are the cross-ledger invariants that stop one piece of work being counted twice or falling between two strata, and `ledger_agreement` is the atlas reconciliation in both directions. Only `problems` is a defect list, and a non-empty one fails this tool.",
@@ -1338,19 +1354,10 @@
         "symbols": []
       },
       "libssl": {
-        "classes": [
-          {
-            "class": "O",
-            "count": 3
-          }
-        ],
-        "count": 3,
-        "covered_by_a_ledger": 600,
-        "symbols": [
-          "OSSL_QUIC_client_method",
-          "OSSL_QUIC_client_thread_method",
-          "OSSL_QUIC_server_method"
-        ]
+        "classes": [],
+        "count": 0,
+        "covered_by_a_ledger": 603,
+        "symbols": []
       }
     },
     "why": "an export that no ledger mentions is invisible to every completeness claim at once, so the shell scaffolds it and no obligation records it (docs/DECISIONS.md D49, D51, D72, D97)"
@@ -1360,7 +1367,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4eec22d2e8141da5999d3cc012b05dd0ad36394f21c90f5e5b254753d2d4b8f5"
+      "sha256": "8102978e08655ad7bbb16b1be75cfb57893d7c9a4e0fe047d81a286c4e30372e"
     },
     {
       "name": "authority-symbols",
@@ -1375,62 +1382,67 @@
     {
       "name": "ledger-3",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "df82cf413679869b3291b2e26ed13a86aeb9f728cee4a8e205d834980a057cd9"
+      "sha256": "dc40d98616752521cfad9c6f2479980d0ccb71526748688b52481dc7bffd4983"
     },
     {
       "name": "ledger-4",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "67750d9b4ce02e8c873e3581dade02f24dbffe68088df7945305742f6eb1b314"
+      "sha256": "63fbc6039353f60ee88418b2be5e1d1211c788dc773694e9925b1ee4c9d86ddf"
     },
     {
       "name": "ledger-5",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "87d293679de3e1b16c6d8584f1792efa306a36d4e16f425914423022fe40fb83"
+      "sha256": "bc3c3d7ae542fffe9980991cf09c5d016cfc6e247583018f579c04049dc69d04"
     },
     {
       "name": "ledger-6",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "01b46351b5d540b25601ad5e5afcf4dd3d5df174f17e0747f3aec407adaf8149"
+      "sha256": "8988a502218bd1986542ee643f24c3faf7d2c64b2736cfe8753750916534727d"
     },
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "e96f4dd4cac76c4d9ca3cd71ed59c49c0f8fbf9fee276dea62a29876ff6ec3ab"
+      "sha256": "a277790a272d81a2f692d78cfda3e70103068b589be80c6f22381e0366566606"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "cade5f53ecc91081f4bc7825c4119b14ced6d9f2ff7e37eea8114dfa8550a2be"
+      "sha256": "c941a678ca80b9d75eeb6e050700749c69d3b017bf47cbfe538c337b5db855d9"
     },
     {
       "name": "ledger-9",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "f0b1b95d6c27612636805fafb054ccfa4570e0731f4f0c98a1c459ef9df1e907"
+      "sha256": "24e91b19c791711d3d3718f8dfcb20466f63f6b7d303e91218ecfdd26ad54a0f"
     },
     {
       "name": "ledger-10",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "5ce8f5ecb4784493bb262d4856afc5f59157bf55a5294b81f1074ce704838bf1"
+      "sha256": "a7787cfd76b0227b7539fd29e0c833ae0e5660d9ffebfd484b1bd3706e41bef2"
     },
     {
       "name": "ledger-11",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "b9a22cec216d77cb56ed0723a9e8e9a6fe2721783b7a4cb5c20242421783aa35"
+      "sha256": "97ddd16bba5e8d8981fd15501083392493ed6bf7aaa70f62c7e3cc7ba9206551"
     },
     {
       "name": "ledger-12",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "a237aebd2652eccfd5d7fe3e90b21c9bff269ee34e1cd50f997f3ad55197c2b6"
+      "sha256": "ff1575986cd837823cf099d96b904af5bd0aa405b4be82f11b7460a4e3489dac"
     },
     {
       "name": "ledger-13",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "1b4752c610d1574310b74a62bb1a095c38f0a77ce2f4ac6397239997e8e0c61c"
+      "sha256": "d9cc76ba9a63a9fc0515e932ee20b805507ec939c79feaa68bbb644573a9663a"
     },
     {
       "name": "ledger-14",
       "path": "forensics/phase14-obligations.json",
-      "sha256": "c24a1b9e6eef658ec67ab3b8ea3a535c60cdbfa1102bae6b56b94ebc9aeb568f"
+      "sha256": "9bc418040a3e5458000e695def52e58f527ae21fe651fbbc25dd143c81a1d0c7"
+    },
+    {
+      "name": "ledger-15",
+      "path": "forensics/phase15-obligations.json",
+      "sha256": "e6af0b12d6a9fb79490c9c4628b3495299e8040469e267eb0b9665f88db338f2"
     }
   ],
   "kind": "ownership-audit",
