@@ -1,0 +1,57 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "`RT-PHASE13-REF` is a **reference-basis** court: its probe takes the address of each of this stratum's 127 inherited `implemented` exports -- the 61 `ENGINE_*` object, accessor and table names, the 62 `UI_*` names and the four `PEM_read[_bio]_PrivateKey` spellings -- and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). Every behavioural court the plan names is named in `pending_courts` with the subphase that brings it -- `RT-ENGINE`, `RT-ENGINE-TABLE`, `RT-ENGINE-CTRL`, `RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md section 3 records what the behavioural courts compare.",
+    "courts": [
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 127,
+        "candidate_exit_code": 0,
+        "candidate_observations": 127,
+        "candidate_stderr_tail": [],
+        "court": "RT-PHASE13-REF",
+        "crashed": false,
+        "probe": "courts/phase13/rt_coverage_ref_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase13/probes/rt_coverage_ref_probe.authority",
+          "candidate": "artifacts/phase13/probes/rt_coverage_ref_probe.candidate"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "pending_courts": {
+      "RT-ENGINE": "13.1 (the ENGINE object, registry and dynamic-loading surface)",
+      "RT-ENGINE-CTRL": "13.3 (the ENGINE control and command surface)",
+      "RT-ENGINE-TABLE": "13.2 (the ENGINE table and method binding)",
+      "RT-EVP-LEGACY": "13.6 (the legacy EVP method statics)",
+      "RT-HANDOFF": "13.8 (the received TS_CONF and SRP hand-offs)",
+      "RT-LEGACY-REMAINDER": "13.7 (the PEM private-key readers and the ASYNC framework)",
+      "RT-TXTDB": "13.5 (the TXT_DB text database)",
+      "RT-UI": "13.4 (the UI framework)"
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 1,
+      "total": 1
+    }
+  },
+  "generator": "forensics/tools/phase13_courts.py",
+  "inputs": [
+    {
+      "name": "authority-symbols",
+      "path": "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "sha256": "487c963a2af12e97113389bd8c76b7dcd6b199b87975b42657e4ab5158a45ae6"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase13/rt_coverage_ref_probe.c",
+      "sha256": "8e55fbec579f2306cfa2623c3d375ad940beeb69b4c2a19238bf1ab726bc81fe"
+    }
+  ],
+  "kind": "phase13-courts",
+  "schema": "openssl-rs/atlas/phase13-courts/v1"
+}

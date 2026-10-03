@@ -4,15 +4,39 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {},
-    "census_by_stratum": {},
+    "census": {
+      "names_a_file_the_authority_does_not_have": 1,
+      "units_not_reached": 12
+    },
+    "census_by_stratum": {
+      "13": 13
+    },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {},
+    "census_samples": {
+      "names_a_file_the_authority_does_not_have": [
+        "docs/PHASE-13-SUBPHASES.md:13:13.7:arch/async_posix.c"
+      ],
+      "units_not_reached": [
+        "crypto/async/async_wait.c",
+        "crypto/engine/eng_all.c",
+        "crypto/engine/eng_cnf.c",
+        "crypto/engine/eng_fat.c",
+        "crypto/engine/eng_pkey.c",
+        "crypto/engine/tb_cipher.c",
+        "crypto/engine/tb_dh.c",
+        "crypto/engine/tb_dsa.c",
+        "crypto/engine/tb_eckey.c",
+        "crypto/engine/tb_rand.c",
+        "crypto/engine/tb_rsa.c",
+        "crypto/txt_db/txt_db.c"
+      ]
+    },
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
         "docs/PHASE-11-SUBPHASES.md",
         "docs/PHASE-12-SUBPHASES.md",
+        "docs/PHASE-13-SUBPHASES.md",
         "docs/PHASE-22-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
@@ -20,13 +44,13 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 140,
+      "rows_judged": 150,
       "symbols_named_by_a_row": 108,
       "symbols_reached": 108,
       "unit_records": 97,
       "units_named_by_a_record": 99,
-      "units_named_by_a_row": 433,
-      "units_reached": 433
+      "units_named_by_a_row": 456,
+      "units_reached": 444
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -330,7 +354,18 @@
         ],
         "recorded_by": "units:crypto/async/async.c",
         "subphases": [
+          "13:13.7",
           "6:6.10"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/async/async_wait.c": {
+        "defines": [
+          "async_wait_ctx_reset_counts"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.7"
         ],
         "transcribed_by": []
       },
@@ -2007,6 +2042,176 @@
           "src/decoder_pkey.rs"
         ]
       },
+      "crypto/engine/eng_all.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.1"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/engine/eng_cnf.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.1"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/engine/eng_ctrl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.3"
+        ],
+        "transcribed_by": [
+          "src/engine/eng_ctrl.rs"
+        ]
+      },
+      "crypto/engine/eng_fat.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.3"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/engine/eng_init.c": {
+        "defines": [
+          "engine_unlocked_finish",
+          "engine_unlocked_init"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.1"
+        ],
+        "transcribed_by": [
+          "src/engine/eng_init.rs"
+        ]
+      },
+      "crypto/engine/eng_lib.c": {
+        "defines": [
+          "do_engine_lock_init_ossl_",
+          "do_engine_lock_init_ossl_ret_",
+          "engine_cleanup_add_first",
+          "engine_cleanup_add_last",
+          "engine_cleanup_int",
+          "engine_free_util",
+          "engine_lock_init",
+          "engine_set_all_null",
+          "global_engine_lock"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.1"
+        ],
+        "transcribed_by": [
+          "src/engine/eng_lib.rs"
+        ]
+      },
+      "crypto/engine/eng_list.c": {
+        "defines": [
+          "engine_add_dynamic_id",
+          "engine_remove_dynamic_id"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.1"
+        ],
+        "transcribed_by": [
+          "src/engine/eng_list.rs"
+        ]
+      },
+      "crypto/engine/eng_pkey.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/engine/tb_asnmth.c": {
+        "defines": [
+          "engine_pkey_asn1_meths_free"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": [
+          "src/engine/tb_asnmth.rs"
+        ]
+      },
+      "crypto/engine/tb_cipher.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/engine/tb_dh.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/engine/tb_digest.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": [
+          "src/engine/tb_digest.rs"
+        ]
+      },
+      "crypto/engine/tb_dsa.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/engine/tb_eckey.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/engine/tb_pkmeth.c": {
+        "defines": [
+          "engine_pkey_meths_free"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": [
+          "src/engine/tb_pkmeth.rs"
+        ]
+      },
+      "crypto/engine/tb_rand.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/engine/tb_rsa.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.2"
+        ],
+        "transcribed_by": []
+      },
       "crypto/err/err.c": {
         "defines": [
           "err_cleanup",
@@ -2197,6 +2402,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_aes.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2206,6 +2412,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_aes_cbc_hmac_sha1.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2215,6 +2422,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_aes_cbc_hmac_sha256.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2224,6 +2432,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_aria.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2233,6 +2442,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_bf.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2242,6 +2452,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_camellia.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2251,6 +2462,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_cast.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2260,6 +2472,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_chacha20_poly1305.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2269,6 +2482,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_des.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2278,6 +2492,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_des3.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2287,6 +2502,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_idea.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2325,6 +2541,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_rc2.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2334,6 +2551,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_rc4.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2343,6 +2561,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_rc4_hmac_md5.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2352,6 +2571,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_seed.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2361,6 +2581,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_sm4.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2370,6 +2591,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/e_xcbc_d.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2698,6 +2920,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/legacy_md4.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2726,6 +2949,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/legacy_mdc2.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2758,6 +2982,7 @@
         "defines": [],
         "recorded_by": "units:crypto/evp/legacy_wp.c",
         "subphases": [
+          "13:13.6",
           "7:7.3",
           "7:7.3g"
         ],
@@ -2897,6 +3122,7 @@
         ],
         "recorded_by": null,
         "subphases": [
+          "13:13.6",
           "7:7.4",
           "7:7.4a",
           "7:7.4e",
@@ -3426,6 +3652,7 @@
         "subphases": [
           "10:10.6",
           "11:11.6",
+          "13:13.7",
           "7:7.5"
         ],
         "transcribed_by": [
@@ -3438,6 +3665,7 @@
         "recorded_by": "units:crypto/pem/pem_pkey.c",
         "subphases": [
           "10:10.6",
+          "13:13.7",
           "7:7.5",
           "8:8.9"
         ],
@@ -4148,7 +4376,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "12:12.8"
+          "12:12.8",
+          "13:13.8"
         ],
         "transcribed_by": [
           "src/srp/srp_vfy.rs"
@@ -4296,7 +4525,8 @@
         "defines": [],
         "recorded_by": null,
         "subphases": [
-          "12:12.5"
+          "12:12.5",
+          "13:13.8"
         ],
         "transcribed_by": [
           "src/ts/ts_conf.rs"
@@ -4380,6 +4610,54 @@
         ],
         "transcribed_by": [
           "src/ts/ts_verify_ctx.rs"
+        ]
+      },
+      "crypto/txt_db/txt_db.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.5"
+        ],
+        "transcribed_by": []
+      },
+      "crypto/ui/ui_lib.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.4"
+        ],
+        "transcribed_by": [
+          "src/ui/ui_lib.rs"
+        ]
+      },
+      "crypto/ui/ui_null.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.4"
+        ],
+        "transcribed_by": [
+          "src/ui/ui_null.rs"
+        ]
+      },
+      "crypto/ui/ui_openssl.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.4"
+        ],
+        "transcribed_by": [
+          "src/ui/ui_openssl.rs"
+        ]
+      },
+      "crypto/ui/ui_util.c": {
+        "defines": [],
+        "recorded_by": null,
+        "subphases": [
+          "13:13.4"
+        ],
+        "transcribed_by": [
+          "src/ui/ui_util.rs"
         ]
       },
       "crypto/x509/by_dir.c": {
@@ -6292,7 +6570,7 @@
       "transcribed_units": 524
     }
   },
-  "body_hash": "44b46463d8956c3736efe00d53e1777a7393adfe7b5637141566e05076698aae",
+  "body_hash": "3c376fc9a47712d48ad2046ece61b980aaf0005a9c8c035e92653ab5fcbc1719",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -6313,7 +6591,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "c6629f41c26748b2d696d2e78ddd5e872e5c382e7f955dc6ae85c4699d466338"
+      "sha256": "cd83962bacc5963c25d1f31c8e57e12b3d49bd7345b92d2340df5de8320899a9"
     },
     {
       "name": "prerequisites",
@@ -6339,6 +6617,11 @@
       "name": "plan-PHASE-12-SUBPHASES",
       "path": "docs/PHASE-12-SUBPHASES.md",
       "sha256": "e628d446df450885617f16b5239c8991cd39bd5364496b17d58453605e0eab9d"
+    },
+    {
+      "name": "plan-PHASE-13-SUBPHASES",
+      "path": "docs/PHASE-13-SUBPHASES.md",
+      "sha256": "dfeaa7ebc1c782fd3ed3f05edb0e56f60a2d0d01d10c80a5687a3e85b1f6a199"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",
