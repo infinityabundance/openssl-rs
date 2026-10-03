@@ -157,6 +157,14 @@ jobs:
       - name: Evidence determinism
         run: python3 forensics/tools/evidence_determinism.py
 
+      # The phase-completion predicate, with its two sensitivity controls. The FRF
+      # requirement is read from each stratum's own artifacts/phase<N>/COURTS.json, and
+      # the control proves that emptying the gen_frf_courts.py registry for a complete
+      # stratum refuses it rather than making its requirement vanish (D524). Without this
+      # step the predicate was not run in CI at all.
+      - name: Phase completion predicate (and its sensitivity controls)
+        run: python3 forensics/tools/phase_state.py --self-test
+
       # An export the ownership atlas assigns a stratum must appear in that stratum's
       # ledger, and a row a ledger carries for another stratum's export must be a
       # hand-off that stratum recorded. Both were unchecked: D49, D51 and D72 record
