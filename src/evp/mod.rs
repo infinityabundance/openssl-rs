@@ -51,6 +51,10 @@ pub mod cipher_ctx;
 pub mod digest;
 // Phase 13.6a's `crypto/evp/e_aes.c`: the deprecated `EVP_CIPHER` statics the AES modes return.
 pub mod e_aes;
+// Phase 13.6b's `crypto/evp/e_aria.c` and `crypto/evp/e_camellia.c`: the deprecated `EVP_CIPHER`
+// statics the ARIA and Camellia modes return.
+pub mod e_aria;
+pub mod e_camellia;
 // Phase 13.6a's two AES-CBC-HMAC stitched statics, whose callbacks reuse the provider construction.
 pub mod e_aes_cbc_hmac_sha1;
 pub mod e_aes_cbc_hmac_sha256;

@@ -329,10 +329,19 @@ the provider construction (`src/provider/cipher.rs`, D274/D276) rather than keep
 transcription. Its court is `RT-EVP-LEGACY`. The fetched-identity divergence the later courts name
 leaves the `EVP_get_cipherbyname` arm `pending.` -- the legacy `OBJ_NAME` cipher table the
 authority fills at `OPENSSL_init_crypto` is empty in this crate -- while the accessors, the object
-sizes and the round trips are compared. The remaining legacy statics (`e_aria.c`, `e_camellia.c`,
-`e_des3.c`, `e_des.c`, `e_rc2.c`, `e_sm4.c`, the four remaining `e_*` units, `e_chacha20_poly1305.c`,
+sizes and the round trips are compared. The remaining legacy statics (`e_des3.c`, `e_des.c`,
+`e_rc2.c`, `e_sm4.c`, the four remaining `e_*` units, `e_chacha20_poly1305.c`,
 `e_rc4.c`, `e_rc4_hmac_md5.c`, `e_xcbc_d.c`, `legacy_md4.c`, `legacy_mdc2.c`, `legacy_wp.c` and
 `p_lib.c`) stay 13.6's own work.
+
+Subphase 13.6b landed the ARIA and Camellia slices of the same statics. `src/evp/e_aria.rs`
+contributes the twenty-seven `EVP_aria_*` accessors of `crypto/evp/e_aria.c` -- the generic block
+pack (`cbc`/`ecb`/`ofb`/`cfb128`/`cfb1`/`cfb8`) and CTR for 128/192/256, plus GCM and CCM for
+128/192/256 -- and `src/evp/e_camellia.rs` contributes the twenty-one `EVP_camellia_*` accessors of
+`crypto/evp/e_camellia.c` (the same seven generic modes per key length), as the deprecated
+`EVP_CIPHER` statics whose callbacks call the Phase-8 `ossl_aria_*`/`Camellia_*` primitives. The
+same `RT-EVP-LEGACY` court drives them beside the AES statics, with the same fetched-identity
+`pending.` arm.
 
 Subphase 13.4 drove the UI framework rather than landing code: all 62 names -- the UI object
 (`ui_lib.rs`), the built-in console method (`ui_openssl.rs`), the `UI_UTIL_*` helpers
@@ -350,11 +359,12 @@ reference basis.
 **Open exports (checked against the ledger):**
 
 The open set is the deprecated statics over TXT_DB and the rest of the legacy EVP method statics.
-Representative names are `ASYNC_WAIT_CTX_new`, `EVP_aria_128_cbc`, `PEM_write_bio_PrivateKey`,
+Representative names are `ASYNC_WAIT_CTX_new`, `EVP_des_ede3_cbc`, `PEM_write_bio_PrivateKey`,
 `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`. Every one is open
 rather than implemented, and each is assigned to a subphase by §2's partition. The AES statics are
 not in this list: subphase 13.6a landed the thirty-eight `EVP_aes_*` accessors and the four
-`EVP_aes_*_cbc_hmac_sha*` stitched statics, so they are implemented and courted by `RT-EVP-LEGACY`
+`EVP_aes_*_cbc_hmac_sha*` stitched statics, and subphase 13.6b landed the twenty-seven `EVP_aria_*`
+and twenty-one `EVP_camellia_*` accessors, so they are implemented and courted by `RT-EVP-LEGACY`
 rather than open. The TXT_DB codec is not in this list either: subphase 13.5 landed all six of its names, so they are implemented and
 courted by `RT-TXTDB` rather than open. The UI framework is not in this list either: subphase
 13.4 drove all 62 of its names through the RT-UI court, so they are implemented and called rather
