@@ -89,8 +89,8 @@ against this stratum -- the mirror of Phases 12 and 13.
 | 14.1 | **The `SSL_CTX`/`SSL` object model** | `ssl_lib.c` (342 open). The `SSL_CTX` and `SSL` allocation, reference counts, ex-data, the accessor and control surface (`SSL_CTX_ctrl`/`SSL_ctrl` and the option/flag/mode/verify accessors), the callback setters, the BIO/`SSL_set_bio` plumbing and the error/read/write entry points. **342 open rows over 1 unit.** **Slice 1 landed (checked against the ledger): 164 of the 342 `ssl_lib.c` rows — the object model and its accessor/control/callback/BIO surface — plus `TLS_method` pulled forward from 14.2 as the one constructor 14.1's court needs; 178 `ssl_lib.c` rows and 20 `methods.c` rows remain open.** | 14.0 | `RT-SSL-OBJECT` |
 | 14.2 | **The method and version tables** | `methods.c` (21), `s3_lib.c` (3). The `TLS_*`/`DTLS_*`/`TLSv1_*` constructor table and the protocol-version accessors it installs (`SSL_get0_group_name`, `SSL_group_to_name`, the ticket-key callback). **24 open rows over 2 units.** **Landed (checked against the ledger): the 23 rows still open at activation — the 20 `methods.c` constructors plus `s3_lib.c`'s three — with `TLS_method` already pulled forward into 14.1, so all 21 `methods.c` constructors are present.** | 14.1 | `RT-SSL-METHODS` |
 | 14.3 | **The cipher and configuration surface** | `ssl_ciph.c` (25), `ssl_conf.c` (11). The cipher and ciphersuite tables and their `SSL_CIPHER_*` readers, the `OSSL_default_*` lists, and the `SSL_CONF_CTX_*`/`SSL_CONF_cmd*` command parser the `openssl` config reader drives. **36 open rows over 2 units.** **Landed (checked against the ledger): all 36 rows, plus the five `ssl_lib.c` cipher-list accessors the plan already names 14.3's — `SSL_CTX_set_cipher_list`, `SSL_set_cipher_list`, `SSL_CTX_get_ciphers`, `SSL_get_ciphers` and `SSL_get_cipher_list` — pulled forward because the court drives them.** | 14.1 | `RT-SSL-CIPH` |
-| 14.4 | **The record layer** | `rec_layer_s3.c` (4), `poll_immediate.c` (1). The default read-buffer length accessors, the record-state string readers and the non-blocking `SSL_poll`. **5 open rows over 2 units.** | 14.1 | `RT-RECORD` |
-| 14.5 | **The handshake state machine** | `statem.c` (4), `extensions_cust.c` (5), `t1_lib.c` (9). The state readers (`SSL_get_state`, `SSL_in_before`, `SSL_in_init`, `SSL_is_init_finished`), the custom-extension registration surface and the signature-algorithm and max-fragment-length surface. **18 open rows over 3 units.** | 14.1 | `RT-STATEM` |
+| 14.4 | **The record layer** | `rec_layer_s3.c` (4), `poll_immediate.c` (1). The default read-buffer length accessors, the record-state string readers and the non-blocking `SSL_poll`. **5 open rows over 2 units.** **Landed (checked against the ledger): all 5 rows — `rec_layer_s3.c`'s four (`SSL_CTX_set_default_read_buffer_len`, `SSL_set_default_read_buffer_len`, `SSL_rstate_string`, `SSL_rstate_string_long`) and `poll_immediate.c`'s one (`SSL_poll`). The stratum stood at 360 of the 600 atlas-owned exports implemented, with 240 open.** | 14.1 | `RT-RECORD` |
+| 14.5 | **The handshake state machine** | `statem.c` (4), `extensions_cust.c` (5), `t1_lib.c` (9). The state readers (`SSL_get_state`, `SSL_in_before`, `SSL_in_init`, `SSL_is_init_finished`), the custom-extension registration surface and the signature-algorithm and max-fragment-length surface. **18 open rows over 3 units.** **Landed (checked against the ledger): all 18 rows — `statem.c`'s four, `extensions_cust.c`'s five and `t1_lib.c`'s nine. The stratum now stands at 378 of the 600 atlas-owned exports implemented, with 222 open.** | 14.1 | `RT-STATEM` |
 | 14.6 | **The BIO pair and buffers** | `bio_ssl.c` (6). `BIO_f_ssl`/`BIO_new_ssl`/`BIO_new_ssl_connect`/`BIO_new_buffer_ssl_connect` and the session-copy/shutdown BIO controls. **6 open rows over 1 unit.** | 14.1 | `RT-SSL-BIO` |
 | 14.7 | **The session and certificate plumbing** | `ssl_sess.c` (65), `ssl_cert.c` (20), `ssl_rsa.c` (19), `ssl_rsa_legacy.c` (6), `ssl_cert_comp.c` (8), `ssl_asn1.c` (3), `ssl_txt.c` (3). The session cache and PEM/DER session codec, the CA-list and certificate/private-key loaders (including the deprecated `use_RSAPrivateKey` spellings), certificate compression and the session printers. **124 open rows over 7 units** — the largest subphase. | 14.1 | `RT-SESSION-CERT` |
 | 14.8 | **The DTLS layer** | `d1_lib.c` (3), `d1_srtp.c` (4). `DTLSv1_listen`, the DTLS data-MTU and timer callbacks, and the DTLS-SRTP profile surface. **7 open rows over 2 units.** | 14.2 | `RT-DTLS` |
@@ -297,12 +297,42 @@ stay recognised but unwired until 14.5/14.7. Its court is `RT-SSL-CIPH`
 (`courts/phase14/rt_ssl_ciph_probe.c`), registered in `forensics/tools/phase14_courts.py`. The
 stratum now stands at 355 of the 600 atlas-owned exports implemented, with 245 open.
 
+Subphase 14.4 landed the record layer: the 5 rows open at its activation — `rec_layer_s3.c`'s four
+and `poll_immediate.c`'s one. `src/ssl/record/rec_layer_s3.rs` carries the two default read-buffer
+length setters (`SSL_CTX_set_default_read_buffer_len`, `SSL_set_default_read_buffer_len`) and the two
+record-state string readers (`SSL_rstate_string`/`_long`), which read a `rlayer.rstate` scalar a fresh
+connection sets to `SSL_ST_READ_HEADER` so they answer the authority's `"RH"`/`"read header"`.
+`src/ssl/rio/poll_immediate.rs` carries the non-QUIC `SSL_poll` readout and its three refusal arms.
+Both files record their divergences: the record-read method object is not modelled (only the state
+value the switch reads), the buffer-length setters have no public reader on either side, and
+`SSL_poll`'s QUIC and blocking paths are unreachable for objects this crate builds. Its court is
+`RT-RECORD` (`courts/phase14/rt_record_probe.c`), registered in `forensics/tools/phase14_courts.py`.
+The stratum stood at 360 of the 600 atlas-owned exports implemented, with 240 open.
+
+Subphase 14.5 landed the handshake state machine: the 18 rows open at its activation — `statem.c`'s
+four, `extensions_cust.c`'s five and `t1_lib.c`'s nine. `src/ssl/statem/statem.rs` carries the four
+state readers, reading the three state words `SSL_new` installs to the authority's post-`SSL_new`
+values (`TLS_ST_BEFORE`, `MSG_FLOW_UNINITED`, `in_init = 1`). `src/ssl/statem/extensions_cust.rs`
+carries the custom-extension registration surface (the type switch, the accept/refuse ladder and the
+role-aware lookup), which required a `custext` record list on `Cert`. `src/ssl/t1_lib.rs` carries the
+MFL accessors, the four signature-algorithm readers, `SSL_check_chain`'s refusal arms and the
+provider-probing `SSL_get1_builtin_sigalgs`, whose table it transcribes. Each file records its
+divergences: the sigalg lookup cache is not loaded (14.1's recorded `SSL_CTX_new_ex` reduction),
+`SSL_check_chain` lands only its refusal arms, the old-style custom-extension callbacks are stored
+without the authority's wrapper allocation, and the GOST rows of the sigalg table are omitted because
+the admitted authority's default provider publishes neither their digests nor their key types. Its
+court is `RT-STATEM` (`courts/phase14/rt_statem_probe.c`), registered in
+`forensics/tools/phase14_courts.py`. The stratum now stands at 378 of the 600 atlas-owned exports
+implemented, with 222 open.
+
 **Open exports (checked against the ledger):**
 
-The remaining 245 exports are the object model's deeper surface and the strata that depend on it:
-173 of them 14.1's own (the session and certificate plumbing,
-DANE, the CT surface, the client-hello readers and the QUIC stream accessors, which reach 14.4
-through 14.7), and the rest distributed across subphases 14.4 to 14.10 as section 2 partitions
-them. Representative names are `SSL_get_state`,
-`BIO_new_ssl`, `PEM_read_SSL_SESSION`, `SSL_CTX_use_certificate`, `DTLSv1_listen`,
-`SSL_CTX_add_custom_ext`, `OPENSSL_init_ssl` and `SSL_trace`.
+The remaining 222 exports are the object model's deeper surface and the strata that depend on it:
+47 `ssl_lib.c` rows (14.1's own session/certificate plumbing, DANE, the CT surface, the client-hello
+readers and the QUIC stream accessors), 65 `ssl_sess.c` rows and the rest distributed across
+subphases 14.6 to 14.10 as section 2 partitions them — `bio_ssl.c` (6), `ssl_cert.c` (20),
+`ssl_rsa.c` (19), `ssl_rsa_legacy.c` (6), `ssl_cert_comp.c` (8), `ssl_asn1.c` (3), `ssl_txt.c` (3),
+`d1_lib.c` (3), `d1_srtp.c` (4), `tls_srp.c` (19), `ssl_stat.c` (6), `ssl_mcnf.c` (3), `tls_depr.c`
+(3), `t1_trce.c` (1), `ssl_init.c` (1), `ssl_err_legacy.c` (1) and the four `quic/` rows.
+Representative names are `BIO_new_ssl`, `PEM_read_SSL_SESSION`, `SSL_CTX_use_certificate`,
+`DTLSv1_listen`, `SSL_CTX_config`, `OPENSSL_init_ssl` and `SSL_trace`.

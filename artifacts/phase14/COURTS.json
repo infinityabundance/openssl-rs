@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-PHASE14-REF` is the activation **reference basis**: its probe takes the address of each of the stratum's 600 atlas-owned `ssl.h`/`tls1.h`/`srtp.h`/`sslerr_legacy.h` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-SSL-OBJECT` (14.1) is the stratum's first **behavioural** court: `courts/phase14/rt_ssl_object_probe.c` drives the `SSL_CTX`/`SSL` object model -- allocation, refcount, ex-data, the accessor and control surface, the callback setters, `SSL_set_bio` over memory BIOs and the NULL/uninitialised arms -- against a fixed `TLS_method()`, and the two transcripts are compared line by line. `RT-SSL-METHODS` (14.2) is the second: `courts/phase14/rt_ssl_methods_probe.c` drives the 21 `TLS_*`/`DTLS_*`/`TLSv1_*` constructors and the version surface each installs (`SSL_version`, `SSL_client_version`, `SSL_get_version`, `SSL_is_dtls`, `SSL_is_server`, the the `min`/`max` protocol getters and the default timeout), `SSL_group_to_name`'s unknown-NID arms, `SSL_get0_group_name`'s NULL-connection arm and the ticket-key callback setter, and the two refusal arms. `RT-SSL-CIPH` (14.3) is the third: `courts/phase14/rt_ssl_ciph_probe.c` drives the `SSL_CIPHER_*` readers over fixed wire ids through `SSL_CIPHER_find`, the `OSSL_default_*` strings, the `SSL_CTX_set_cipher_list`/`SSL_CTX_set_ciphersuites`/`SSL_CTX_get_ciphers` / `SSL_get_ciphers`/`SSL_get_cipher_list` surface, and the `SSL_CONF_CTX_new`/`SSL_CONF_cmd`/`SSL_CONF_cmd_value_type`/`SSL_CONF_CTX_finish` parser over fixed `cmd,arg` pairs. None is a parity claim about a completed handshake, which no arm of any of them drives. `SSL_get0_group_name` on a live connection and `SSL_group_to_name`'s known-NID arm are recorded in their modules as reduced rather than driven. Every other behavioural court the plan names is named in `pending_courts` with the subphase that brings it -- `RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural courts compare.",
+    "claim": "`RT-PHASE14-REF` is the activation **reference basis**: its probe takes the address of each of the stratum's 600 atlas-owned `ssl.h`/`tls1.h`/`srtp.h`/`sslerr_legacy.h` exports and prints whether each is non-NULL. A symbol covered only by it means the candidate distribution defines the name -- which the link proves -- and NOT that any arm of it was driven; the court coverage atlas records those at basis `referenced`, never `called` (docs/DECISIONS.md D199). `RT-SSL-OBJECT` (14.1) is the stratum's first **behavioural** court: `courts/phase14/rt_ssl_object_probe.c` drives the `SSL_CTX`/`SSL` object model -- allocation, refcount, ex-data, the accessor and control surface, the callback setters, `SSL_set_bio` over memory BIOs and the NULL/uninitialised arms -- against a fixed `TLS_method()`, and the two transcripts are compared line by line. `RT-SSL-METHODS` (14.2) is the second: `courts/phase14/rt_ssl_methods_probe.c` drives the 21 `TLS_*`/`DTLS_*`/`TLSv1_*` constructors and the version surface each installs (`SSL_version`, `SSL_client_version`, `SSL_get_version`, `SSL_is_dtls`, `SSL_is_server`, the the `min`/`max` protocol getters and the default timeout), `SSL_group_to_name`'s unknown-NID arms, `SSL_get0_group_name`'s NULL-connection arm and the ticket-key callback setter, and the two refusal arms. `RT-SSL-CIPH` (14.3) is the third: `courts/phase14/rt_ssl_ciph_probe.c` drives the `SSL_CIPHER_*` readers over fixed wire ids through `SSL_CIPHER_find`, the `OSSL_default_*` strings, the `SSL_CTX_set_cipher_list`/`SSL_CTX_set_ciphersuites`/`SSL_CTX_get_ciphers` / `SSL_get_ciphers`/`SSL_get_cipher_list` surface, and the `SSL_CONF_CTX_new`/`SSL_CONF_cmd`/`SSL_CONF_cmd_value_type`/`SSL_CONF_CTX_finish` parser over fixed `cmd,arg` pairs. `RT-RECORD` (14.4) is the fourth: `courts/phase14/rt_record_probe.c` drives the default read-buffer length setters, the record-state strings `SSL_rstate_string`/`_long` over a fresh connection and NULL, and `SSL_poll` over fixed in-memory `SSL_POLL_ITEM` arrays -- the zero-item, NULL-SSL, non-QUIC-SSL, socket, unknown-type, NULL-then-refused, refused-first and NO_HANDLE_EVENTS arms -- with a zero timeout so nothing blocks. `RT-STATEM` (14.5) is the fifth: `courts/phase14/rt_statem_probe.c` drives the four handshake-state readers over a fresh connection and NULL, the custom-extension add/has/supported surface, the signature-algorithm readers and `SSL_get1_builtin_sigalgs`, `SSL_check_chain`'s refusal arms, the max-fragment-length setters and `SSL_SESSION_get_max_fragment_length` over a zeroed session image. None is a parity claim about a completed handshake, which no arm of any of them drives. `SSL_get0_group_name` on a live connection and `SSL_group_to_name`'s known-NID arm are recorded in their modules as reduced rather than driven. Every other behavioural court the plan names is named in `pending_courts` with the subphase that brings it -- `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not `called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural courts compare.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -72,22 +72,54 @@
           "candidate": "artifacts/phase14/probes/rt_ssl_ciph_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 38,
+        "candidate_exit_code": 0,
+        "candidate_observations": 38,
+        "candidate_stderr_tail": [],
+        "court": "RT-RECORD",
+        "crashed": false,
+        "probe": "courts/phase14/rt_record_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_record_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_record_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 52,
+        "candidate_exit_code": 0,
+        "candidate_observations": 52,
+        "candidate_stderr_tail": [],
+        "court": "RT-STATEM",
+        "crashed": false,
+        "probe": "courts/phase14/rt_statem_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase14/probes/rt_statem_probe.authority",
+          "candidate": "artifacts/phase14/probes/rt_statem_probe.candidate"
+        },
+        "verdict": "pass"
       }
     ],
     "pending_courts": {
       "RT-DTLS": "14.8 (the DTLS layer)",
       "RT-HANDOFF": "14.11 (the received hand-offs)",
-      "RT-RECORD": "14.4 (the record layer)",
       "RT-SESSION-CERT": "14.7 (the session and certificate plumbing)",
       "RT-SSL-BIO": "14.6 (the BIO pair and buffers)",
       "RT-SSL-EXT": "14.9 (the TLS extension and SRP surface)",
-      "RT-SSL-INIT": "14.10 (the init, error and QUIC bridge)",
-      "RT-STATEM": "14.5 (the handshake state machine)"
+      "RT-SSL-INIT": "14.10 (the init, error and QUIC bridge)"
     },
     "summary": {
       "fail": 0,
-      "pass": 4,
-      "total": 4
+      "pass": 6,
+      "total": 6
     }
   },
   "generator": "forensics/tools/phase14_courts.py",
@@ -116,6 +148,16 @@
       "name": "probe",
       "path": "courts/phase14/rt_ssl_ciph_probe.c",
       "sha256": "1b27c49faed7aba7157e8a0ea5d7f8fb1bc8a36769d1b9cdf6d0d2ab007f3e82"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_record_probe.c",
+      "sha256": "05880aff71f711867b42138a688befa8acc0fc876662b0c4e26e331ab65c6a42"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_statem_probe.c",
+      "sha256": "f7aa5a9ad49d95ffb877df145853611213c11c6952a9cb6494b0035cbee3ee08"
     }
   ],
   "kind": "phase14-courts",

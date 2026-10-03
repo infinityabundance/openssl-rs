@@ -32,9 +32,9 @@ The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 Every court `docs/PHASE-14-SUBPHASES.md` section 2 names is named in `PENDING_COURTS` below with
 the subphase that brings it, unless that subphase has landed its court. `RT-SSL-OBJECT` (14.1),
-`RT-SSL-METHODS` (14.2) and `RT-SSL-CIPH` (14.3) are registered below; `RT-RECORD`, `RT-STATEM`,
-`RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` remain
-pending, so 'not run yet' cannot be read as 'passed'.
+`RT-SSL-METHODS` (14.2), `RT-SSL-CIPH` (14.3), `RT-RECORD` (14.4) and `RT-STATEM` (14.5) are
+registered below; `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and
+`RT-HANDOFF` remain pending, so 'not run yet' cannot be read as 'passed'.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -88,6 +88,8 @@ COURTS: list[tuple[str, str]] = [
     ("RT-SSL-OBJECT", "rt_ssl_object_probe.c"),
     ("RT-SSL-METHODS", "rt_ssl_methods_probe.c"),
     ("RT-SSL-CIPH", "rt_ssl_ciph_probe.c"),
+    ("RT-RECORD", "rt_record_probe.c"),
+    ("RT-STATEM", "rt_statem_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. **Every one of the plan's behavioural
@@ -95,8 +97,6 @@ COURTS: list[tuple[str, str]] = [
 # working set is open and the only court it can register is the reference basis. Each row is
 # printed with the subphase that brings it so that "not run yet" cannot be read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "RT-RECORD": "14.4 (the record layer)",
-    "RT-STATEM": "14.5 (the handshake state machine)",
     "RT-SSL-BIO": "14.6 (the BIO pair and buffers)",
     "RT-SESSION-CERT": "14.7 (the session and certificate plumbing)",
     "RT-DTLS": "14.8 (the DTLS layer)",
@@ -288,12 +288,22 @@ def main(argv: list[str]) -> int:
             "`SSL_CTX_set_cipher_list`/`SSL_CTX_set_ciphersuites`/`SSL_CTX_get_ciphers` / "
             "`SSL_get_ciphers`/`SSL_get_cipher_list` surface, and the `SSL_CONF_CTX_new`/"
             "`SSL_CONF_cmd`/`SSL_CONF_cmd_value_type`/`SSL_CONF_CTX_finish` parser over fixed "
-            "`cmd,arg` pairs. None is a parity claim "
+            "`cmd,arg` pairs. `RT-RECORD` (14.4) is the fourth: "
+            "`courts/phase14/rt_record_probe.c` drives the default read-buffer length setters, the "
+            "record-state strings `SSL_rstate_string`/`_long` over a fresh connection and NULL, and "
+            "`SSL_poll` over fixed in-memory `SSL_POLL_ITEM` arrays -- the zero-item, NULL-SSL, "
+            "non-QUIC-SSL, socket, unknown-type, NULL-then-refused, refused-first and "
+            "NO_HANDLE_EVENTS arms -- with a zero timeout so nothing blocks. `RT-STATEM` (14.5) is "
+            "the fifth: `courts/phase14/rt_statem_probe.c` drives the four handshake-state readers "
+            "over a fresh connection and NULL, the custom-extension add/has/supported surface, the "
+            "signature-algorithm readers and `SSL_get1_builtin_sigalgs`, `SSL_check_chain`'s "
+            "refusal arms, the max-fragment-length setters and "
+            "`SSL_SESSION_get_max_fragment_length` over a zeroed session image. None is a parity claim "
             "about a completed handshake, which no arm of any of them drives. `SSL_get0_group_name` "
             "on a live connection and `SSL_group_to_name`'s known-NID arm are recorded in their "
             "modules as reduced rather than driven. Every other behavioural court the plan names "
-            "is named in `pending_courts` with the subphase that brings it -- `RT-RECORD`, "
-            "`RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, "
+            "is named in `pending_courts` with the subphase that brings it -- `RT-SSL-BIO`, "
+            "`RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, "
             "`RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' "
             "cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not "
             "`called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural "

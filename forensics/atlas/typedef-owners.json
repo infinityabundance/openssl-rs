@@ -4,9 +4,9 @@
     "counts": {
       "installed_headers": 139,
       "internal_only": 407,
-      "owned": 769,
+      "owned": 779,
       "records": 1573,
-      "unowned": 804
+      "unowned": 794
     },
     "definition": "every typedef name the authority's installed and internal headers introduce, with the header that introduces it and that header's owning stratum",
     "installed_headers": [
@@ -1333,7 +1333,7 @@
         ],
         "kind": "typedef",
         "name": "CON_FUNC_RETURN",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -2614,7 +2614,7 @@
         ],
         "kind": "typedef",
         "name": "MSG_FLOW_STATE",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -6742,7 +6742,7 @@
         ],
         "kind": "typedef",
         "name": "OSSL_STATEM",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -8207,7 +8207,7 @@
         ],
         "kind": "typedef",
         "name": "READ_STATE",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -8527,7 +8527,7 @@
         ],
         "kind": "typedef",
         "name": "SSL_CONNECTION",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -9087,7 +9087,7 @@
         ],
         "kind": "typedef",
         "name": "WORK_STATE",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -9111,7 +9111,7 @@
         ],
         "kind": "typedef",
         "name": "WRITE_STATE",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -9119,7 +9119,7 @@
         ],
         "kind": "typedef",
         "name": "WRITE_TRAN",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -10356,7 +10356,7 @@
         ],
         "kind": "typedef",
         "name": "ossl_statem_finish_mutate_handshake_cb",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -10364,7 +10364,7 @@
         ],
         "kind": "typedef",
         "name": "ossl_statem_mutate_handshake_cb",
-        "owner_phase": null
+        "owner_phase": 14
       },
       {
         "defined_in": [
@@ -12822,7 +12822,6 @@
       "COMP_CTX",
       "COMP_METHOD",
       "CONF",
-      "CON_FUNC_RETURN",
       "CRYPTO_CONDVAR",
       "CRYPTO_EX_DATA",
       "CRYPTO_MUTEX",
@@ -12908,7 +12907,6 @@
       "ML_COMMON_PKCS8_FMT_PREF",
       "ML_COMMON_SPKI_FMT",
       "ML_DSA_SIG",
-      "MSG_FLOW_STATE",
       "MSG_PROCESS_RETURN",
       "NAME_CONSTRAINTS",
       "NAME_FUNCS",
@@ -13259,7 +13257,9 @@
       "OSSL_HPKE_AEAD_INFO",
       "OSSL_HPKE_KDF_INFO",
       "OSSL_HPKE_KEM_INFO",
-      "OSSL_HTTP_REQ_CTX"
+      "OSSL_HTTP_REQ_CTX",
+      "OSSL_INOUT_CALLBACK",
+      "OSSL_ITEM"
     ]
   },
   "generator": "forensics/tools/gen_prerequisite_atlas.py",

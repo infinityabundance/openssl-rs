@@ -40,6 +40,7 @@ use crate::runtime::ex_data::{
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
 use crate::runtime::stack::{OPENSSL_sk_free, OpenSslStack};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
+use crate::ssl::statem::extensions_cust::CustomExtMethod;
 use crate::x509::v3_utl::a2i_IPADDRESS;
 use crate::x509::x509_cmp::X509_check_private_key;
 use crate::x509::x509_d2::{
@@ -258,6 +259,14 @@ const SSL_KEY_UPDATE_NONE: c_int = -1;
 const SSL_WANT_READING: c_int = SSL_READING;
 /// `SSL_WANT_WRITING`.
 const SSL_WANT_WRITING: c_int = SSL_WRITING;
+/// `TLS_ST_BEFORE` — `ssl.h:1066`, the first `OSSL_HANDSHAKE_STATE`; the state a fresh
+/// connection reports (`ossl_statem_clear`, `statem.c:133`).
+const TLS_ST_BEFORE: c_int = 0;
+/// `MSG_FLOW_UNINITED` — `internal/statem.h:52`, the first `MSG_FLOW_STATE`; the message-flow
+/// state a fresh connection reports (`ossl_statem_clear`, `statem.c:132`).
+const MSG_FLOW_UNINITED: c_int = 0;
+/// `SSL_ST_READ_HEADER` — `ssl.h:1113`; the record read state a fresh connection installs.
+const SSL_ST_READ_HEADER: c_int = 0xF0;
 
 // -------------------------------------------------------------------------------------------
 // Method table (pulled forward from 14.2 for the one constructor the court needs)
@@ -322,6 +331,12 @@ pub struct Cert {
     pub cert_cb_arg: *mut c_void,
     /// `char *psk_identity_hint` — the PSK identity hint (`SSL_[CTX_]use_psk_identity_hint`).
     pub psk_identity_hint: *mut c_char,
+    /// `custom_ext_methods custext` — the registered custom extensions. The authority stores a
+    /// heap array of `custom_ext_method`; this crate stores the same records in a `Vec`, because
+    /// the table is this crate's own and never crosses the FFI boundary as a struct. The
+    /// callbacks are never invoked in this slice (no handshake), so their arguments are kept
+    /// verbatim rather than wrapped.
+    pub custext: Vec<CustomExtMethod>,
 }
 
 /// A context's or a connection's certificate container, freshly allocated and empty.
@@ -351,6 +366,12 @@ unsafe fn cert_free(c: *mut Cert) {
         // SAFETY: `c` is a live `Cert` per the caller's contract; a NULL `psk_identity_hint` is
         // `CRYPTO_free`'s own no-op.
         unsafe {
+            // SAFETY: `c` is live; `custext` is the `Vec` `cert_new` zero-initialised and
+            // `SSL_CTX_add_*_custom_ext` may have grown. Dropping it in place releases the
+            // record buffer (the records hold only borrowed callback pointers and raw args the
+            // caller owns, exactly as the authority's `custom_exts_free` releases only the
+            // array when the old-style wrapper is absent).
+            ptr::drop_in_place(ptr::addr_of_mut!((*c).custext));
             CRYPTO_free((*c).psk_identity_hint.cast(), FILE, 0);
             CRYPTO_free(c.cast(), FILE, 0);
         }
@@ -546,6 +567,8 @@ pub struct SslCtx {
     pub ext_alpn: *mut u8,
     /// `unsigned int ext.alpn_len`.
     pub ext_alpn_len: c_uint,
+    /// `uint8_t ext.max_fragment_len_mode` — the context-wide MFL (`SSL_CTX_set_tlsext_max_fragment_length`).
+    pub ext_max_fragment_len_mode: u8,
     /// `SSL_CTX_npn_select_cb_func ext.npn_select_cb`.
     pub npn_select_cb: Option<NpnSelectCb>,
     /// `void *ext.npn_select_cb_arg`.
@@ -643,6 +666,35 @@ pub struct Ssl {
     pub max_pipelines: usize,
     /// `size_t default_read_buf_len`.
     pub default_read_buf_len: usize,
+    /// `size_t rlayer.default_read_buf_len` — the connection's MFL read buffer
+    /// (`SSL_set_default_read_buffer_len`). Distinct from the context field only by identity,
+    /// as in the authority; the record layer that would consume it is not modelled.
+    pub rlayer_default_read_buf_len: usize,
+    /// `int rlayer.rstate` — the record read state (`SSL_ST_READ_HEADER`/`SSL_ST_READ_BODY`).
+    /// `RECORD_LAYER_reset` installs a fresh read method, whose init sets it to `SSL_ST_READ_HEADER`
+    /// (`tls_common.c:1335`), so `SSL_rstate_string` answers `"RH"` for a fresh connection.
+    pub rstate: c_int,
+    /// `uint8_t ext.max_fragment_len_mode` — the connection-wide MFL
+    /// (`SSL_set_tlsext_max_fragment_length`).
+    pub max_fragment_len_mode: u8,
+    /// `OSSL_HANDSHAKE_STATE statem.hand_state` — the state `SSL_get_state` reports.
+    pub hand_state: c_int,
+    /// `enum MSG_FLOW_* statem.state` — the message-flow state `SSL_in_before` reads.
+    pub statem_state: c_int,
+    /// `int statem.in_init` — the flag `SSL_in_init`/`SSL_is_init_finished` read.
+    pub in_init: c_int,
+    /// `uint16_t *s3.tmp.peer_sigalgs` — the peer's signature-algorithm list (always NULL here).
+    pub peer_sigalgs: *mut u16,
+    /// `size_t s3.tmp.peer_sigalgslen`.
+    pub peer_sigalgslen: usize,
+    /// `SIGALG_LOOKUP **shared_sigalgs` — the negotiated list (always NULL here).
+    pub shared_sigalgs: *mut c_void,
+    /// `size_t shared_sigalgslen`.
+    pub shared_sigalgslen: usize,
+    /// `const SIGALG_LOOKUP *s3.tmp.sigalg` — this side's chosen sigalg (always NULL here).
+    pub sigalg: *const c_void,
+    /// `const SIGALG_LOOKUP *s3.tmp.peer_sigalg` — the peer's chosen sigalg (always NULL here).
+    pub peer_sigalg: *const c_void,
     /// `int read_ahead`.
     pub read_ahead: c_int,
     /// `CRYPTO_EX_DATA ex_data`.
@@ -892,6 +944,8 @@ pub struct SslSession {
     pub ext_hostname: *mut c_char,
     /// `uint32_t ext.max_early_data`.
     pub ext_max_early_data: u32,
+    /// `uint8_t ext.max_fragment_len_mode` — `SSL_SESSION_get_max_fragment_length` reads it.
+    pub max_fragment_len_mode: u8,
 }
 
 /// `struct timeval` — the two-`long` layout `SSL_get_event_timeout` writes on this platform.
@@ -1192,6 +1246,20 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             (*s).client_version = (*method).version;
             (*s).server = c_int::from((*method).default_server);
             (*s).rwstate = SSL_NOTHING;
+            // `ossl_ssl_connection_reset` (`ssl_lib.c:605`) calls `ossl_statem_clear`, which
+            // resets the message-flow state to `MSG_FLOW_UNINITED`, the handshake state to
+            // `TLS_ST_BEFORE` and `in_init` to 1 (`statem.c:130-136`). This slice does not run
+            // the method's `ssl_init`/`ssl_reset`, so the same observable state is installed here.
+            (*s).hand_state = TLS_ST_BEFORE;
+            (*s).statem_state = MSG_FLOW_UNINITED;
+            (*s).in_init = 1;
+            // `ossl_ssl_connection_new_int` (`ssl_lib.c:810`) copies the context MFL when the
+            // object is not QUIC; every object here is a TLS connection.
+            (*s).max_fragment_len_mode = (*ctx).ext_max_fragment_len_mode;
+            (*s).rlayer_default_read_buf_len = (*ctx).default_read_buf_len;
+            // `RECORD_LAYER_reset` (`rec_layer_s3.c:72-98`) installs a fresh record-read method on
+            // the connection; its init sets `rl->rstate = SSL_ST_READ_HEADER` (`tls_common.c:1335`).
+            (*s).rstate = SSL_ST_READ_HEADER;
             // `ossl_ssl_connection_new_int` (`ssl_lib.c:907`) seeds the key-update state.
             (*s).key_update = SSL_KEY_UPDATE_NONE;
 

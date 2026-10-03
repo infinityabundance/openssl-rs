@@ -2182,6 +2182,68 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase14/rt_record_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 38,
+              "-O1": 38,
+              "-O2": 38
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 38,
+              "-O1": 38,
+              "-O2": 38
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase14/rt_ssl_ciph_probe.c",
         "sides": {
           "authority": {
@@ -2360,6 +2422,68 @@
               "-O0": 258,
               "-O1": 258,
               "-O2": 258
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase14/rt_statem_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 52,
+              "-O1": 52,
+              "-O2": 52
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 52,
+              "-O1": 52,
+              "-O2": 52
             },
             "side": "candidate",
             "verdict": "clean"
@@ -7764,8 +7888,8 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 125,
-      "total": 125,
+      "clean": 127,
+      "total": 127,
       "unstable": 0
     }
   },
@@ -7948,6 +8072,11 @@
     },
     {
       "name": "probe",
+      "path": "courts/phase14/rt_record_probe.c",
+      "sha256": "05880aff71f711867b42138a688befa8acc0fc876662b0c4e26e331ab65c6a42"
+    },
+    {
+      "name": "probe",
       "path": "courts/phase14/rt_ssl_ciph_probe.c",
       "sha256": "1b27c49faed7aba7157e8a0ea5d7f8fb1bc8a36769d1b9cdf6d0d2ab007f3e82"
     },
@@ -7960,6 +8089,11 @@
       "name": "probe",
       "path": "courts/phase14/rt_ssl_object_probe.c",
       "sha256": "7b80d1bd456cbb9ec9b8bbb1cc81fd22c721bb2a66f44ade09e5ccd49376d423"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase14/rt_statem_probe.c",
+      "sha256": "f7aa5a9ad49d95ffb877df145853611213c11c6952a9cb6494b0035cbee3ee08"
     },
     {
       "name": "probe",

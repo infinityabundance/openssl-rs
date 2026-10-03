@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 600,
       "deferred_to_later_phase": 0,
-      "implemented": 355,
-      "open_in_this_stratum": 245,
+      "implemented": 378,
+      "open_in_this_stratum": 222,
       "owned": 600,
       "received_by_handoff": 0
     },
@@ -58,6 +58,9 @@
       "SSL_CONF_cmd",
       "SSL_CONF_cmd_argv",
       "SSL_CONF_cmd_value_type",
+      "SSL_CTX_add_client_custom_ext",
+      "SSL_CTX_add_custom_ext",
+      "SSL_CTX_add_server_custom_ext",
       "SSL_CTX_callback_ctrl",
       "SSL_CTX_check_private_key",
       "SSL_CTX_clear_options",
@@ -91,6 +94,7 @@
       "SSL_CTX_get_verify_callback",
       "SSL_CTX_get_verify_depth",
       "SSL_CTX_get_verify_mode",
+      "SSL_CTX_has_client_custom_ext",
       "SSL_CTX_load_verify_dir",
       "SSL_CTX_load_verify_file",
       "SSL_CTX_load_verify_locations",
@@ -121,6 +125,7 @@
       "SSL_CTX_set_default_ctlog_list_file",
       "SSL_CTX_set_default_passwd_cb",
       "SSL_CTX_set_default_passwd_cb_userdata",
+      "SSL_CTX_set_default_read_buffer_len",
       "SSL_CTX_set_default_verify_paths",
       "SSL_CTX_set_domain_flags",
       "SSL_CTX_set_ex_data",
@@ -148,6 +153,7 @@
       "SSL_CTX_set_security_level",
       "SSL_CTX_set_session_id_context",
       "SSL_CTX_set_session_ticket_cb",
+      "SSL_CTX_set_tlsext_max_fragment_length",
       "SSL_CTX_set_tlsext_ticket_key_evp_cb",
       "SSL_CTX_set_trust",
       "SSL_CTX_set_verify",
@@ -155,6 +161,7 @@
       "SSL_CTX_up_ref",
       "SSL_CTX_use_psk_identity_hint",
       "SSL_SESSION_get_master_key",
+      "SSL_SESSION_get_max_fragment_length",
       "SSL_SESSION_set1_master_key",
       "SSL_accept_connection",
       "SSL_accept_stream",
@@ -162,6 +169,7 @@
       "SSL_alloc_buffers",
       "SSL_callback_ctrl",
       "SSL_certs_clear",
+      "SSL_check_chain",
       "SSL_check_private_key",
       "SSL_clear",
       "SSL_clear_options",
@@ -179,6 +187,7 @@
       "SSL_ctrl",
       "SSL_do_handshake",
       "SSL_enable_ct",
+      "SSL_extension_supported",
       "SSL_free",
       "SSL_free_buffers",
       "SSL_get0_alpn_selected",
@@ -195,6 +204,7 @@
       "SSL_get0_security_ex_data",
       "SSL_get0_server_cert_type",
       "SSL_get0_verified_chain",
+      "SSL_get1_builtin_sigalgs",
       "SSL_get1_peer_certificate",
       "SSL_get_SSL_CTX",
       "SSL_get_accept_connection_queue_len",
@@ -228,6 +238,7 @@
       "SSL_get_options",
       "SSL_get_peer_cert_chain",
       "SSL_get_peer_finished",
+      "SSL_get_peer_signature_type_nid",
       "SSL_get_privatekey",
       "SSL_get_psk_identity",
       "SSL_get_psk_identity_hint",
@@ -243,8 +254,12 @@
       "SSL_get_server_random",
       "SSL_get_servername",
       "SSL_get_servername_type",
+      "SSL_get_shared_sigalgs",
       "SSL_get_shutdown",
+      "SSL_get_sigalgs",
+      "SSL_get_signature_type_nid",
       "SSL_get_ssl_method",
+      "SSL_get_state",
       "SSL_get_stream_id",
       "SSL_get_stream_read_error_code",
       "SSL_get_stream_read_state",
@@ -263,9 +278,12 @@
       "SSL_group_to_name",
       "SSL_handle_events",
       "SSL_has_pending",
+      "SSL_in_before",
+      "SSL_in_init",
       "SSL_is_connection",
       "SSL_is_domain",
       "SSL_is_dtls",
+      "SSL_is_init_finished",
       "SSL_is_listener",
       "SSL_is_quic",
       "SSL_is_server",
@@ -283,9 +301,12 @@
       "SSL_peek",
       "SSL_peek_ex",
       "SSL_pending",
+      "SSL_poll",
       "SSL_read",
       "SSL_read_ex",
       "SSL_renegotiate_pending",
+      "SSL_rstate_string",
+      "SSL_rstate_string_long",
       "SSL_select_next_proto",
       "SSL_session_reused",
       "SSL_set0_rbio",
@@ -311,6 +332,7 @@
       "SSL_set_debug",
       "SSL_set_default_passwd_cb",
       "SSL_set_default_passwd_cb_userdata",
+      "SSL_set_default_read_buffer_len",
       "SSL_set_default_stream_mode",
       "SSL_set_ex_data",
       "SSL_set_fd",
@@ -340,6 +362,7 @@
       "SSL_set_session_id_context",
       "SSL_set_shutdown",
       "SSL_set_ssl_method",
+      "SSL_set_tlsext_max_fragment_length",
       "SSL_set_trust",
       "SSL_set_value_uint",
       "SSL_set_verify",
@@ -497,24 +520,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/statem/extensions_cust.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_add_client_custom_ext"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/statem/extensions_cust.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_add_custom_ext"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/statem/extensions_cust.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_add_server_custom_ext"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_add_session"
@@ -602,12 +607,6 @@
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_get_timeout"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/statem/extensions_cust.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_has_client_custom_ext"
       },
       {
         "declaring_header": "ssl.h",
@@ -713,12 +712,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/record/rec_layer_s3.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_default_read_buffer_len"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_set_default_verify_dir"
@@ -806,12 +799,6 @@
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_CTX_set_timeout"
-      },
-      {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/t1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_CTX_set_tlsext_max_fragment_length"
       },
       {
         "declaring_header": "srtp.h",
@@ -992,12 +979,6 @@
         "module": "src/ssl/ssl_sess.rs",
         "received_from_phase": null,
         "symbol": "SSL_SESSION_get_max_early_data"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/t1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_SESSION_get_max_fragment_length"
       },
       {
         "declaring_header": "ssl.h",
@@ -1234,12 +1215,6 @@
         "symbol": "SSL_bytes_to_cipher_list"
       },
       {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/t1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_check_chain"
-      },
-      {
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_cert_comp.rs",
         "received_from_phase": null,
@@ -1313,12 +1288,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/statem/extensions_cust.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_extension_supported"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_cert.rs",
         "received_from_phase": null,
         "symbol": "SSL_get0_CA_list"
@@ -1352,12 +1321,6 @@
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_get0_peer_rpk"
-      },
-      {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/t1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get1_builtin_sigalgs"
       },
       {
         "declaring_header": "ssl.h",
@@ -1414,12 +1377,6 @@
         "symbol": "SSL_get_ex_data_X509_STORE_CTX_idx"
       },
       {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/t1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_peer_signature_type_nid"
-      },
-      {
         "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
@@ -1442,24 +1399,6 @@
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_get_shared_ciphers"
-      },
-      {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/t1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_shared_sigalgs"
-      },
-      {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/t1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_sigalgs"
-      },
-      {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/t1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_signature_type_nid"
       },
       {
         "declaring_header": "ssl.h",
@@ -1493,39 +1432,15 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/statem/statem.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_get_state"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_has_matching_session_id"
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/statem/statem.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_in_before"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/statem/statem.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_in_init"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/quic/quic_impl.rs",
         "received_from_phase": null,
         "symbol": "SSL_inject_net_dgram"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/statem/statem.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_is_init_finished"
       },
       {
         "declaring_header": "ssl.h",
@@ -1553,12 +1468,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/rio/poll_immediate.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_poll"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_read_early_data"
@@ -1574,18 +1483,6 @@
         "module": "src/ssl/ssl_lib.rs",
         "received_from_phase": null,
         "symbol": "SSL_renegotiate_abbreviated"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/record/rec_layer_s3.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_rstate_string"
-      },
-      {
-        "declaring_header": "ssl.h",
-        "module": "src/ssl/record/rec_layer_s3.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_rstate_string_long"
       },
       {
         "declaring_header": "ssl.h",
@@ -1643,12 +1540,6 @@
       },
       {
         "declaring_header": "ssl.h",
-        "module": "src/ssl/record/rec_layer_s3.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_default_read_buffer_len"
-      },
-      {
-        "declaring_header": "ssl.h",
         "module": "src/ssl/quic/quic_tls_api.rs",
         "received_from_phase": null,
         "symbol": "SSL_set_quic_tls_cbs"
@@ -1700,12 +1591,6 @@
         "module": "src/ssl/tls_srp.rs",
         "received_from_phase": null,
         "symbol": "SSL_set_srp_server_param_pw"
-      },
-      {
-        "declaring_header": "tls1.h",
-        "module": "src/ssl/t1_lib.rs",
-        "received_from_phase": null,
-        "symbol": "SSL_set_tlsext_max_fragment_length"
       },
       {
         "declaring_header": "srtp.h",
@@ -1916,7 +1801,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "eb65673eb9d8acd6cfec99a23ef491315eff8630bbcb8b4126b1ce4d85ac2901"
+      "sha256": "7e152883ce9ba427b4eacac89a24465aa89dad1038c8a54b2784bbeea5341b5e"
     }
   ],
   "kind": "phase14-obligations",
