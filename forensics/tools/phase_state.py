@@ -954,9 +954,12 @@ PHASE12_MODULES = [
 # stratum `in-progress` because its ledger has an open count, not because it has a plan alone.
 # **That split moves as the stratum lands its own units**, so the note below does not restate its
 # counts: the ledger's `counts` is the live record and `forensics/atlas/implemented-surface.json`
-# is the authority behind it. It owns **39 provider registration rows**, all unimplemented at
-# activation. `docs/PHASE-13-SUBPHASES.md` section 4 records the activation measurement and the
-# precondition it places on the coverage join.
+# is the authority behind it. It owns **no provider registration row**: the 39 legacy digest and
+# cipher rows `forensics/atlas/provider-algorithms.json` records for `providers/legacyprov.c` are
+# the loadable module the candidate ships as a scaffold `ossl-modules/legacy.so`, which this
+# stratum's subphases deliberately do not activate, so `provider-algorithm-plans.json` hands them
+# to the distribution stratum (Phase 16). `docs/PHASE-13-SUBPHASES.md` section 4 records the
+# activation measurement and the precondition it places on the coverage join.
 PHASE13_COURTS = "artifacts/phase13/COURTS.json"
 PHASE13_OBLIGATIONS = "forensics/phase13-obligations.json"
 PHASE13_MODULES = [
@@ -1056,8 +1059,11 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "That split moves as this stratum lands its own units, so this note "
                             "does not restate its counts; the ledger's `counts` and "
                             "`forensics/atlas/implemented-surface.json` are the live record. The "
-                            "stratum owns 39 provider registration rows, all unimplemented "
-                            "(docs/PHASE-13-SUBPHASES.md sections 1 and 4)"
+                            "stratum owns no provider registration row: the 39 legacy digest and "
+                            "cipher rows of `providers/legacyprov.c` are the loadable module the "
+                            "candidate ships as a scaffold `ossl-modules/legacy.so`, handed to the "
+                            "distribution stratum (Phase 16) because this stratum's subphases do "
+                            "not activate it (docs/PHASE-13-SUBPHASES.md sections 1 and 4)"
                         )),
     # Phase 22's evidence is read by `evidence_for`'s own phase-22 branch rather than this row's
     # ledger shape, but the row must exist: `main` refuses a stratum with evidence on disk and no

@@ -259,6 +259,18 @@
       "observations": 183,
       "verdict": "pass"
     },
+    "RT-ENGINE": {
+      "observations": 30,
+      "verdict": "pass"
+    },
+    "RT-ENGINE-CTRL": {
+      "observations": 73,
+      "verdict": "pass"
+    },
+    "RT-ENGINE-TABLE": {
+      "observations": 76,
+      "verdict": "pass"
+    },
     "RT-ERR": {
       "observations": 3857,
       "verdict": "pass"
@@ -293,6 +305,10 @@
     },
     "RT-EVP-KEYMGMT": {
       "observations": 73,
+      "verdict": "pass"
+    },
+    "RT-EVP-LEGACY": {
+      "observations": 1167,
       "verdict": "pass"
     },
     "RT-EVP-MAC": {
@@ -339,6 +355,10 @@
       "observations": 217,
       "verdict": "pass"
     },
+    "RT-HANDOFF": {
+      "observations": 30,
+      "verdict": "pass"
+    },
     "RT-HMAC": {
       "observations": 32,
       "verdict": "pass"
@@ -361,6 +381,10 @@
     },
     "RT-KEYMGMT": {
       "observations": 608,
+      "verdict": "pass"
+    },
+    "RT-LEGACY-REMAINDER": {
+      "observations": 78,
       "verdict": "pass"
     },
     "RT-LHASH": {
@@ -559,6 +583,14 @@
       "observations": 275,
       "verdict": "pass"
     },
+    "RT-TXTDB": {
+      "observations": 57,
+      "verdict": "pass"
+    },
+    "RT-UI": {
+      "observations": 278,
+      "verdict": "pass"
+    },
     "RT-X509": {
       "observations": 52,
       "verdict": "pass"
@@ -615,14 +647,14 @@
     "phase9": 0
   },
   "implemented": {
-    "libcrypto": 5646,
+    "libcrypto": 5896,
     "libssl": 0
   },
   "open_obligations": {
     "phase10": 0,
     "phase11": 0,
     "phase12": 0,
-    "phase13": 250,
+    "phase13": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -652,7 +684,7 @@
     "10": "complete",
     "11": "complete",
     "12": "complete",
-    "13": "in-progress",
+    "13": "complete",
     "14": "not-started",
     "15": "not-started",
     "16": "not-started",
@@ -672,10 +704,10 @@
     "9": "complete"
   },
   "prerequisites": {
-    "blocking_dependencies": 5,
+    "blocking_dependencies": 3,
     "divergence_names_covered": 47,
     "findings": 0,
-    "language_census": 8818,
+    "language_census": 9056,
     "sealed_census": 50
   },
   "provider_implemented": [
@@ -1640,14 +1672,14 @@
   "provider_rows": {
     "handed_on_by_phase": {
       "10": 39,
-      "13": 0,
+      "16": 0,
       "8": 39,
       "9": 39
     },
     "implemented": 957,
     "open_by_phase": {
       "10": 0,
-      "13": 39,
+      "16": 39,
       "8": 0,
       "9": 0
     },

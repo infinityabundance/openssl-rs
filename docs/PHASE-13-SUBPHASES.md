@@ -90,13 +90,18 @@ atlas projection's own open subset is 66; the 188 hand-offs account for the rema
 `e_rc2.c` (6), `e_sm4.c` (5), `eng_fat.c` (4), `pem_pk8.c` (4), the four remaining `e_*` units
 (four each), `ts_conf.c` (2), `srp_vfy.c` (1) and the narrower remainder.
 
-**Phase 13 owns 39 provider registration rows**, and that is a measurement rather than an
-omission: `forensics/atlas/provider-algorithms.json` records the 39 legacy digest and cipher rows
-(`MD4`, `MDC2`, `WHIRLPOOL`, `RIPEMD-160`, the `CAST5`, `BF`, `IDEA`, `SEED`, `RC2`, `RC4`,
-`DES`/`DESX` ciphers, `PBKDF1`, `PVKKDF` and `GENERIC-SECRET`) with `owning_phase == 13`, and all
-39 are `unimplemented` at activation, so `forensics/phase13-obligations.json`'s
-`provider_rows_owned` is `39` and `phase_state.py`'s provider-row rule holds the stratum open on
-them. This is the opposite of Phase 12, whose census slice is empty.
+**Phase 13 publishes no provider registration row, and the census records where the legacy rows went.** The 39
+legacy digest and cipher rows (`MD4`, `MDC2`, `WHIRLPOOL`, `RIPEMD-160`, the `CAST5`, `BF`,
+`IDEA`, `SEED`, `RC2`, `RC4`, `DES`/`DESX` ciphers, `PBKDF1`, `PVKKDF` and `GENERIC-SECRET`)
+that `forensics/atlas/provider-algorithms.json` records for `providers/legacyprov.c` are the
+loadable module the candidate ships as a scaffold `ossl-modules/legacy.so`
+(`forensics/tools/build_phase2.sh`). This stratum owns the deprecated METHOD-era statics that
+reach those algorithms and the `OSSL_provider_init` symbol (D-dependency), but its subphases
+deliberately do not activate the legacy provider (§3.6: only the default provider is active), so
+`forensics/atlas/provider-algorithm-plans.json` hands the module's rows to the distribution
+stratum (Phase 16), which owns the installed `ossl-modules/` contract. The ledger's
+`provider_rows_owned` is therefore `0` and `phase_state.py`'s provider-row rule has nothing to hold
+against this stratum -- the mirror of Phase 12, whose census slice is empty for the same reason.
 
 ## 2. The subphases
 
@@ -109,7 +114,7 @@ them. This is the opposite of Phase 12, whose census slice is empty.
 | 13.4 | **The UI framework** | `ui_lib.c` (0), `ui_openssl.c` (0), `ui_util.c` (0), `ui_null.c` (0). The `UI` object, the `UI_METHOD` callback table, the prompt constructor and the `UI_UTIL_*` helpers. **0 open rows** — all 62 names landed before activation as substrate the earlier strata needed, so this subphase's act is to *drive* them through `RT-UI`. | 13.0 | `RT-UI` |
 | 13.5 | **TXT_DB** | `txt_db.c` (6): `TXT_DB_read`/`TXT_DB_free`/`TXT_DB_write`/`TXT_DB_insert`/`TXT_DB_create_index`/`TXT_DB_get_by_index`. **6 open rows over 1 unit** — the whole of `txt_db.h`. | 13.0 | `RT-TXTDB` |
 | 13.6 | **The legacy EVP method statics** | `e_aes.c` (38), `e_aria.c` (27), `e_camellia.c` (21), `e_des3.c` (13), `e_des.c` (6), `e_rc2.c` (6), `e_sm4.c` (5), `e_bf.c`/`e_cast.c`/`e_idea.c`/`e_seed.c` (4 each), `e_chacha20_poly1305.c`/`e_rc4.c`/`e_aes_cbc_hmac_sha1.c`/`e_aes_cbc_hmac_sha256.c` (2 each), `e_rc4_hmac_md5.c`/`e_xcbc_d.c` (1 each), `legacy_md4.c`/`legacy_mdc2.c`/`legacy_wp.c` (1 each), `p_lib.c` (2). The deprecated `EVP_CIPHER`/`EVP_MD` statics whose callbacks call the Phase 8 primitives, handed here by Phase 7. **148 open rows over 21 units** — the largest subphase. | 13.1 | `RT-EVP-LEGACY` |
-| 13.7 | **The PEM private-key readers and the ASYNC framework** | `pem_pkey.c` (7), `pem_pk8.c` (4), `async.c` (8), `async_wait.c` (11), `arch/async_posix.c` (3). The `PEM_read[_bio]_PrivateKey` typed readers (four of the eleven already landed) and the `ASYNC_*` job-and-wait framework handed here by Phase 3. **33 open rows over 5 units.** | 13.6 | `RT-LEGACY-REMAINDER` |
+| 13.7 | **The PEM private-key readers and the ASYNC framework** | `pem_pkey.c` (7), `pem_pk8.c` (4), `async.c` (8), `async_wait.c` (11), `crypto/async/arch/async_posix.c` (3). The `PEM_read[_bio]_PrivateKey` typed readers (four of the eleven already landed) and the `ASYNC_*` job-and-wait framework handed here by Phase 3. **33 open rows over 5 units.** | 13.6 | `RT-LEGACY-REMAINDER` |
 | 13.8 | **The received TS_CONF and SRP hand-offs** | `ts_conf.c` (2: `TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine`) and `srp_vfy.c` (1: `SRP_VBASE_init`). The three Phase 12 rows, now that the ENGINE registry (13.1) and TXT_DB (13.5) their bodies reach exist. **3 open rows over 2 units.** | 13.1, 13.5 | `RT-HANDOFF` |
 | 13.9 | **The seal** | nothing in the crate — evidence: `docs/PHASE-13-LEGACY-SEAL.md` | 13.0–13.8 | — |
 
@@ -226,13 +231,15 @@ ledger's `handoffs_discharged` block is the discovery, and `forensics/tools/owne
 reconciles the two sides. The 123 atlas-owned landings are not this stratum's own work either;
 they were pulled forward by the earlier strata as substrate, and §1 names the split.
 
-**4.2 This stratum owns provider rows, and the ledger says so rather than leaving it implied.**
-Reading `forensics/atlas/provider-algorithms.json` for `owning_phase == 13` yields the 39 legacy
-digest and cipher rows, all `unimplemented` at activation, so `phase_state.py`'s provider-row rule
-and `provider_court_coverage.py` both hold the stratum open on them, and
-`forensics/phase13-obligations.json` carries `provider_rows_owned: 39`. A reader who expected the
-last export stratum to publish no rows would otherwise have to infer the count from the census.
-This is the mirror of Phase 12's `0`.
+**4.2 This stratum ships no provider row, and the plan says where the legacy rows went.** Reading
+`forensics/atlas/provider-algorithms.json` for `owning_phase == 13` yields nothing: the 39 legacy
+digest and cipher rows `providers/legacyprov.c` publishes belong to the loadable module the
+candidate ships as a scaffold `ossl-modules/legacy.so`, and `provider-algorithm-plans.json` hands
+them to the distribution stratum (Phase 16). `phase_state.py`'s provider-row rule and
+`provider_court_coverage.py` therefore have nothing to hold against this stratum, and
+`forensics/phase13-obligations.json` carries `provider_rows_owned: 0`. A reader who expected the
+last export stratum to publish rows would otherwise have to infer the count from the census,
+which is why the hand-off is recorded rather than implied. This is the mirror of Phase 12's `0`.
 
 **4.3 The precondition this plan places on 13.0, and it is not optional.** Two fail-closed
 joiners refuse this stratum's activation as specified, and both are measured rather than argued:

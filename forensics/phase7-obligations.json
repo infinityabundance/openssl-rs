@@ -4,7 +4,7 @@
     "blocker_liveness": {
       "findings": 0,
       "legacy_rows": 146,
-      "legacy_unit_claims": 20,
+      "legacy_unit_claims": 17,
       "structured_blockers": 0,
       "structured_rows": 0,
       "unblocked_rows": 19,
@@ -2987,7 +2987,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "25b434c571d612a3579ca8ef113e55070969dd80f16c67c658e667879d80cfa0"
+      "sha256": "2b08fb3154c2c61bb05c9b4bc9335f35d444f566a967eefe007bc4573dca0016"
     },
     {
       "name": "export-defining-units",
@@ -2997,22 +2997,22 @@
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "a45c07007b5a9b554b869015d272d9c6f806442ba4071c119faf188cc5a08134"
+      "sha256": "307eeabd191cbd65ebbbc6df8ebb545fa7816344d2c0237a46f96d7d64f39e2f"
     },
     {
       "name": "typedef-owners",
       "path": "forensics/atlas/typedef-owners.json",
-      "sha256": "7d08aeb2d40f9d94b547fddf6920218b7fa1d17669313fa490d26c6c3ca9d06a"
+      "sha256": "5a7a65cf44f7e9ebb59ddd8dcc36ef8f6ce85f0babbda25ede76de357fd8754e"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "7a2cc1623c36669b1b8f880c0d7da54c7a2578426f875c7b8b34e3192a4d5d05"
+      "sha256": "5245b767d6239352b2e130bbbcdad5db7b2486b463e2c54bb4bad367c742ebf2"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "0cb45e8a146b6697deebe4de182fbecd7a0eb023030667c3a0176c91549d583e"
+      "sha256": "a0cbd212606075a0a95178fd07fa3dbc01ac1ae1c56a30a76d26bc64d8d20e19"
     },
     {
       "name": "authority-source-tree-and-crate-source",
@@ -3021,7 +3021,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "65c48ead37b38d42abeea54e92af1b20785db1e4086851d07569537d10db28bb"
+      "sha256": "d94e301222e6a8e014767c2984c6d857e2529339c77b03b7bd6ea1ed29163f17"
     }
   ],
   "kind": "phase7-obligations",

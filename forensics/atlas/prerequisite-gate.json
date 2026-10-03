@@ -2,7 +2,6 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "blocking_dependencies": [
-      "OSSL_provider_init -> phase 13 (providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.)",
       "cli_option_list_parse -> phase 16 (Transferred to 22.9 and repaired there; what remains deferred to Phase 16 is regenerating the Phase-1 capture with the fixed parser. parse_option_list() (forensics/tools/atlas_runtime.py) matched the authority's `openssl list -options <cmd>` rows against a help-text shape (`-in val        Input file`) that the output never produces, and the real rows are `name type` pairs (`help -`, `in <`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count was 0 and all 2,008 raw rows stayed unstructured. 22.9 rewrote the parser to the authority's actual grammar and re-enumerated the whole namespace from the authority's own built binary (forensics/authorities/build/openssl-3.6.4-production/apps/openssl): forensics/atlas/phase22/cli-surface.json now carries 120 commands with 4,314 structured options, 0 refused rows and 0 commands_with_zero_options, and RT-PHASE22-CLI proves the repaired parser reads a real row and refuses a malformed one (and turns to fail when the parser is broken in memory). The Phase-16-owned Phase-1 capture forensics/atlas/openssl-3.6.4-production/cli-commands.json still carries option_count 0 on all 55 commands: it is Phase 16 (cli-config) that owns the CLI stratum and would regenerate production and historical in lockstep, since regenerating only the production authority would leave a spurious option-set differential against the historical one. Closure: parse_option_list() reads the authority's actual option shape and the structured surface (22.9's cli-surface.json now, and the Phase-16 capture once regenerated) has a non-zero structured option_count for every command.)",
       "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; `ossl_get_enginesdir`, its sibling, moved to Phase 13.1 with `ENGINE_by_id`)",
       "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with `ossl_get_openssldir` rather than special-cased)"
@@ -831,7 +830,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "bb52fb06371d299499c980fc814bc84eda7a40c4ccb00a44e34c0cad51c2925a",
+  "body_hash": "03c432aa94ecfb3e1ee1e288792589cf040c66cd20247a7e00ac6188794a8216",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -867,17 +866,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5595fed5da67642789f14faad274b02ea886596d818c0d46815b0448c679f9dd"
+      "sha256": "5b75f0a9c1b926a20cecd40da5a30c91bb674d02d7303b669633615e0bc1f740"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "33ef6cd1cc0675ef9e8a2fd7519f2b55c5317bd55555eb2cb9f6ad1ac08e4eb3"
+      "sha256": "a0cbd212606075a0a95178fd07fa3dbc01ac1ae1c56a30a76d26bc64d8d20e19"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "7a2cc1623c36669b1b8f880c0d7da54c7a2578426f875c7b8b34e3192a4d5d05"
+      "sha256": "5245b767d6239352b2e130bbbcdad5db7b2486b463e2c54bb4bad367c742ebf2"
     },
     {
       "name": "crate-source-tree",

@@ -232,7 +232,7 @@
       "3": [
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -240,7 +240,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -248,7 +248,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -256,7 +256,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -264,7 +264,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -272,7 +272,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -280,7 +280,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -288,7 +288,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -296,7 +296,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -304,7 +304,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -312,7 +312,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -320,7 +320,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -328,7 +328,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -336,7 +336,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -344,7 +344,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -352,7 +352,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -360,7 +360,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -368,7 +368,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -376,7 +376,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -384,7 +384,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -392,7 +392,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -400,7 +400,7 @@
         },
         {
           "declaring_header": "async.h",
-          "implemented_by_owner": false,
+          "implemented_by_owner": true,
           "module": "src/runtime/async/",
           "owning_phase": 13,
           "reason": "the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13",
@@ -2095,7 +2095,7 @@
     ],
     "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
     "module_overrides": [],
-    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation, this ledger's working set is more than its atlas-owned universe: 189 exports are `engine.h`'s, `ui.h`'s and `txt_db.h`'s, and 188 more arrive as recorded hand-offs from phases 3, 7 and 12. It also does not start with that whole working set open: 123 atlas-owned exports were landed before activation as substrate the earlier strata needed, and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` hand-offs are already implemented (Phase 8 landed them, D369), so the ledger's `implemented` count is not zero and its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum owns 39 provider registration rows, all unimplemented at activation (`forensics/atlas/provider-algorithms.json`). Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-13-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation, this ledger's working set is more than its atlas-owned universe: 189 exports are `engine.h`'s, `ui.h`'s and `txt_db.h`'s, and 188 more arrive as recorded hand-offs from phases 3, 7 and 12. It also does not start with that whole working set open: 123 atlas-owned exports were landed before activation as substrate the earlier strata needed, and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` hand-offs are already implemented (Phase 8 landed them, D369), so the ledger's `implemented` count is not zero and its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum ships no provider registration row: the 39 legacy digest and cipher rows `providers/legacyprov.c` publishes are the loadable module the candidate ships as a scaffold, handed to the distribution stratum (Phase 16). Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-13-SUBPHASES.md section 4 decides when the stratum may be called complete.",
     "open": [],
     "owned_by_header": {
       "async.h": 22,
@@ -2161,7 +2161,7 @@
       "src/ui/ui_openssl.rs": 3,
       "src/ui/ui_util.rs": 3
     },
-    "provider_rows_owned": 39,
+    "provider_rows_owned": 0,
     "rule": "the stratum's working set is the projection of forensics/atlas/symbol-ownership.json for phase 13, plus every symbol an earlier stratum's ledger records as handed to it: a symbol belongs to the stratum that owns the header declaring it, and a discharged hand-off belongs to the stratum that built it"
   },
   "generator": "forensics/tools/phase13_obligations.py",
@@ -2189,7 +2189,7 @@
     {
       "name": "provider-algorithms",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "d7b2138ccf175e9d3ffa58b738729344f315b6a52e1b3c81427e593d6659bba5"
+      "sha256": "49798d9f9eb936aee03e1b62046a8979823756112021cf10e4ad1ac94d8e2aa7"
     },
     {
       "name": "implemented-surface",
@@ -2199,17 +2199,17 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "9ff1fa774fbe685c9b36cb17d4992bc5722b10c871989ea52bbef61f5bf59528"
+      "sha256": "5c2389ade1ac7e7548fe115b86a4ef87ffba4ff966fcd51d185184a3eeb224c7"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "b77680db279fa421ebdb67a775ffdb3bde25d5dca480724db41e03921d20de88"
+      "sha256": "f293c03dbf27ed1809f95a1da8e095de94decdf09e669cf65cf3c4eb69bf908b"
     },
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "f9ce763c994793b2f762f8643cf88e749500ce5f12554a0294163fa28556f757"
+      "sha256": "93f44ba116810f43edd6f0bd6cbecdbf1031b9af3e1d3af17e5dcf898a38ac1b"
     }
   ],
   "kind": "phase13-obligations",

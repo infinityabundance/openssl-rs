@@ -35161,3 +35161,61 @@ Verified (container): `phase_state.py --self-test` both controls ok; `phase_stat
 0 in-progress; `gen_frf_courts.py --check` (214 files / 107 courts); `docs_consistency.py`;
 `render_seal_census.py`; `render_status.py`; `evidence_determinism.py --keep` (32 artefacts);
 `regression_guard.py --require-current` (145 courts, 50600 observations).
+
+## D525 -- the Phase-13 seal, the FRF/Gemel chain closes it, and the legacy-provider rows are handed on
+
+13.9 writes `docs/PHASE-13-LEGACY-SEAL.md` (registered in `atlas_common.py`'s `SEAL_DOCS` at `13`)
+and adds the stratum to the FRF chain. The seal follows `docs/RELEASE_GATES.md` section 2's ten
+items, records the nine courts and their observation counts from `artifacts/phase13/COURTS.json`,
+and is explicit about the non-claims: no parity, no security assurance, `libssl` still `0/603`
+scaffolded, every `pending.` divergence the courts name (the legacy `OBJ_NAME`/`EVP_get_cipherbyname`
+table, the `DH PARAMETERS` reader, the wrap random IV, the absent `crypto/engine/eng_dyn.c`), and
+the reference-only versus called coverage.
+
+**The executable constitution now binds the seal.** `phase13-obligations.json` reads `owned 377`,
+`implemented 377`, `deferred 0`, `open 0`. The eight Phase-13 courts are declared in
+`gen_frf_courts.py` (115 runtime courts, 230 files), which engages `phase_state.py`'s
+`frf_gemel_blocking_reason` for this stratum: with the declarations present and no receipts it
+derived Phase 13 `in-progress` with the exact missing-chain reason, and only returned `complete`
+once the chain existed -- the Phase-11 defect (a `complete` that outran its evidence) cannot recur
+here.
+
+**The chain entry.** Eight court runs, eight receipts, sixteen adjudicated challenge records (both
+operators `stdout-first-line` and `exit-class`, every one `saw_defect` and `specificity_clean`),
+and the `sensitivity-backed` claim
+`33853572edd67681cfb94938d12b5ee33b01741228d04b085cd1fb62f71a8954` binding `openssl-rt-3.6.4-r2`
+to `openssl-rs 0.0.17` with zero blockers and all eight premises carrying `stdout` and `exit`. The
+Gemel change `C99` and checkpoint `K53`
+(`checkpoint.80d5b1bc4e22d27af750f51dfacc1f2aab7b1803f3a3369e177852e588b8c715`) name Phase 13 and
+the FRF chain; the chain was run **into the committed store** (`run_courts.sh`'s leading `rm -rf`
+is never used, D476), and `render_gemel_trajectory.sh` re-rendered the projection.
+
+**The 39 legacy-provider rows are handed to Phase 16, not left as this stratum's open rows.**
+Phase 13's subphases deliberately do not activate the legacy provider
+(`docs/PHASE-13-SUBPHASES.md` section 3.6: only the default provider is active), so the loadable
+module the candidate ships as a scaffold `ossl-modules/legacy.so` -- whose
+`providers/legacyprov.c` publishes the 39 legacy digest and cipher rows -- is handed by
+`provider-algorithm-plans.json` to the distribution stratum (Phase 16), which owns the installed
+module contract. `forensics/phase13-obligations.json`'s `provider_rows_owned` moves 39 -> 0,
+`provider-algorithms.json`'s projection reads `{8: 0, 9: 0, 10: 0, 16: 39}`, and the plan's sections
+1 and 4.2 are corrected to match. Handing a row to a later stratum is a decision this project allows
+and taking it back is a decision too (D295); the alternative -- leaving a module this stratum's
+subphases never planned to publish as the reason a sealed stratum stays `in-progress` -- would make
+the provider-row rule unanswerable rather than honest.
+
+**The Phase-13 slices left three generated atlases stale, and 13.9 reconciles them.** 13.5–13.7
+landed units without re-running the whole pipeline, so `court_coverage.py` regenerated to an
+`implemented by both phase 7 and phase 13` fatal (Phase 7's `LEGACY_HANDOFFS` still retired the
+landed statics' edges), `dispatch_court.py` found five new `.c`-local callback aliases unlinked, and
+`prerequisites.json`'s `units` block still deferred 27 units to a now-sealed stratum. 13.9 retires
+the three digest families Phase 7 itself implements (`EVP_sha`/`EVP_shake`, `EVP_blake2`,
+`EVP_ripemd`) from `LEGACY_HANDOFFS` and keeps the landed legacy edge, exempts the five aliases
+(`XtsStreamF`, `DesCbcF`, `DesEdeCbcF`, `QualFn`, `HashFn`), reclassifies the 27 records as
+`reached_by_a_named_construct`, and corrects the plan's `arch/async_posix.c` to
+`crypto/async/arch/async_posix.c`.
+
+Verified (court container): `phase_state.py` Phase 13 `complete` with an empty blocking reason and
+`--self-test` both controls ok; `gen_frf_courts.py --check` (230 files / 115 courts);
+`docs_consistency.py`; `render_seal_census.py`; `render_status.py`; `gen_prerequisite_atlas.py`
+byte-identical on a second run; `evidence_determinism.py --keep` (33 artefacts);
+`regression_guard.py --require-current` (146 courts, 50727 observations).
