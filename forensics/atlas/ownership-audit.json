@@ -1976,7 +1976,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "5b75f0a9c1b926a20cecd40da5a30c91bb674d02d7303b669633615e0bc1f740"
+      "sha256": "69872bb9ff11d10c0f00c0b0c3affbc5326bffcf2a7e49cabcb5e7f67f6dcb67"
     },
     {
       "name": "authority-symbols",
@@ -2011,37 +2011,37 @@
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "0baf0d3162bc545954fc3ee891615f5fcd86c23d9c0dd8a59b6f2829746423ef"
+      "sha256": "73b146889753c908859bb08931b82453f65facf0c933a70a5af01674ce230434"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "a4b4ce3a7fd806ae0c72267a8144952263cf9b0d9e83c9198a0e3ab1c9199c2f"
+      "sha256": "936b72444d45697f6abdbe6c5f74949b0cfc65fef066d3071523e2ba69c65c17"
     },
     {
       "name": "ledger-9",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "e7b431a439153952432f3bc3368704e669f5fc552f96019aa392acee16130c41"
+      "sha256": "bf7c2fa8b4e4c2d7fe1170cddf3f0056588a5a7480967787cfd2e91c7862af23"
     },
     {
       "name": "ledger-10",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "38883473a23deb18bdb5c72c82571dc0e0829eb34a7e6597aa8cc8ffdce1423c"
+      "sha256": "3ab59e11794ca364ba5f8cca88d5d4fbd22557d787d611f215c38146cdd7e57e"
     },
     {
       "name": "ledger-11",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "076d1fff78c4d4ec2d47c66ed3b585c8869b33c4ad5236ffce94cb638a4f6fff"
+      "sha256": "9ad4baa27529b58003056347695748877b840ff9837ddd944c376f15d7f742ac"
     },
     {
       "name": "ledger-12",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "93f44ba116810f43edd6f0bd6cbecdbf1031b9af3e1d3af17e5dcf898a38ac1b"
+      "sha256": "6d84ce27b4ef4185b781edea3f0e526383c667dd15403e993a71a9d0b3bf5bb9"
     },
     {
       "name": "ledger-13",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "7c829824b8c0afd27bed83196b7993b073a669a2f774693418e94a7f4d3053a8"
+      "sha256": "7ca86a7f14678f3ab9107b435971aa66a3ef9dfe3ac9c43b07207b6fad0cac62"
     }
   ],
   "kind": "ownership-audit",

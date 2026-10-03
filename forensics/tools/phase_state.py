@@ -1130,7 +1130,34 @@ def provider_rows_for(phase: int) -> dict | None:
     }
 
 
-def divergence_blocking_reason(phase: int, doc: dict | None = None) -> str:
+def evaluate_manual_adjudication(row: dict, states: dict[int, str] | None) -> tuple[bool | None, str]:
+    """Re-evaluate a manual row's machine fact against the derived states.
+
+    A manual `open` row's `adjudication` may rest on a machine fact: `adjudication_phase` names the
+    stratum whose derived state it cites and `adjudication_requires` the state it needs. When the
+    row names no fact (`adjudication_requires` empty) this returns `None`, and the row's rendered
+    `blocking` decides. When it does, it returns whether the cited stratum's *freshly derived*
+    state still equals the required one, plus an observation naming both -- which is the precise
+    blocking reason when it no longer does.
+
+    `states` is `None` while `derive_state_rows` is still computing the states; the fact is then
+    undecided rather than guessed, and the fixed-point pass re-evaluates it once the states exist.
+    """
+    requires = row.get("adjudication_requires", "")
+    if not requires or states is None:
+        return None, ""
+    cited = int(row.get("adjudication_phase", -1))
+    actual = states.get(cited)
+    return (
+        actual == requires,
+        f"its adjudication rests on phase {cited} being `{requires}`, and the machine state "
+        f"derives `{actual}`",
+    )
+
+
+def divergence_blocking_reason(
+    phase: int, doc: dict | None = None, states: dict[int, str] | None = None
+) -> str:
     """The reason a blocking divergence obligation holds this stratum open.
 
     `docs/SECURITY_DIVERGENCE_POLICY.md`'s entries carry a `**Trigger:**`: the condition under
@@ -1140,18 +1167,26 @@ def divergence_blocking_reason(phase: int, doc: dict | None = None) -> str:
     because the register was prose and nothing read it. `divergence_obligations.py` renders the
     trigger-bearing entries as rows, so the rule can be executable:
 
-        a row blocks its `current_owner` when its derived `blocking` is true, which the
-        register sets for an `open` obligation whose trigger has materially fired
-        (`trigger_satisfied`) or which is a `manual` row with no `adjudication`
+        a row blocks its `current_owner` when its derived `blocking` is true, which the register
+        sets for an `open` obligation whose trigger has materially fired (`trigger_satisfied`),
+        which is a `manual` row with no `adjudication`, or whose manual `adjudication` rests on a
+        machine fact (`adjudication_phase`/`adjudication_requires`) that no longer holds
 
-    and this function reads that derived `blocking` -- not the trigger state itself -- scoped by
-    the row's own `current_owner` equality, so the artefact and the rule cannot disagree about
-    *which* stratum a row blocks. Deriving the trigger state is the point: the hand-typed
-    `trigger_satisfied` this replaces is what let `D-DECODER-ABSENT-1` read `false` while its
-    trigger had fired.
+    and this function reads that derived state scoped by the row's own `current_owner` equality,
+    so the artefact and the rule cannot disagree about *which* stratum a row blocks. Deriving the
+    trigger state is the point: the hand-typed `trigger_satisfied` this replaces is what let
+    `D-DECODER-ABSENT-1` read `false` while its trigger had fired.
+
+    **The manual machine fact is re-evaluated here, every run.** The generator runs before
+    `phase-state.json` and cannot read a fresh state, so a manual adjudication that cites one is a
+    human sentence until this function re-evaluates its `(adjudication_phase,
+    adjudication_requires)` against the states derived in this run; the moment the cited state is
+    anything else, the row blocks its owner instead of reading open-but-nonblocking forever. This
+    is the general bug `D-EVP-CIPHER-LEGACY-NID-1` exposed.
 
     `doc` exists so `--self-test` can hand in a reconstructed artefact; it defaults to reading the
-    committed file.
+    committed file. `states` exists for the same reason; it is `None` during `derive_state_rows`'
+    first pass (the fact is undecided then) and the derived map in the fixed-point pass.
 
     **Fail-closed when the artefact is absent.** The register is what makes the rule checkable,
     so a missing `divergence-obligations.json` is a fatal, not an empty result: returning "" would
@@ -1168,18 +1203,31 @@ def divergence_blocking_reason(phase: int, doc: dict | None = None) -> str:
             file=sys.stderr,
         )
         raise SystemExit(1)
-    owed = [
-        row for row in doc["body"]["rows"]
-        if row["current_owner"] == phase and row["blocking"]
-    ]
+    owed: list[tuple[dict, str]] = []
+    for row in doc["body"]["rows"]:
+        if row["current_owner"] != phase or row.get("disposition") != "open":
+            continue
+        evaluated = dict(row)
+        holds, observation = evaluate_manual_adjudication(row, states)
+        if holds is not None:
+            evaluated["adjudication_predicate_satisfied"] = holds
+        # The register's derivation, not the rendered `blocking`: the same function the generator
+        # used, so a reconstructed row (and a machine fact) is judged by the real rule.
+        if derive_blocking(evaluated):
+            owed.append((row, observation))
     if not owed:
         return ""
-    ids = ", ".join(row["id"] for row in owed)
-    return (
+    ids = ", ".join(row["id"] for row, _obs in owed)
+    reasons = [obs for _row, obs in owed if obs]
+    reason = (
         f"{len(owed)} blocking divergence obligation(s) of this stratum -- an `open` row whose "
-        f"trigger has fired, or an `open` `manual` row with no adjudication ({DIVERGENCE_OBLIGATIONS}): "
-        f"{ids}"
+        f"trigger has fired, an `open` `manual` row with no adjudication, or an `open` `manual` "
+        f"row whose machine-checked adjudication no longer holds "
+        f"({DIVERGENCE_OBLIGATIONS}): {ids}"
     )
+    if reasons:
+        reason += "; " + "; ".join(reasons)
+    return reason
 
 
 def _frf_declaration(court: str) -> str:
@@ -1535,12 +1583,29 @@ def derive_state_rows() -> list[dict]:
                     "blocked by the dependency invariant: phase "
                     + ", ".join(str(d) for d in incomplete) + " is not complete")
                 changed = True
+        # The manual-adjudication clause of the divergence rule, re-evaluated against the states
+        # as they now stand (Fix 2; the general bug `D-EVP-CIPHER-LEGACY-NID-1` exposed). A manual
+        # `open` row whose `adjudication` cites a machine phase-state fact is only checkable once
+        # the states exist, so the first pass left it undecided; this is where a stale fact blocks
+        # the owner. The clause sits **inside** the fixed point so a stratum it forces
+        # `in-progress` propagates through `REQUIRES` on the next iteration.
+        states_now = {r["phase"]: r["state"] for r in rows}
+        for row in rows:
+            if row["state"] != "complete":
+                continue
+            reason = divergence_blocking_reason(row["phase"], states=states_now)
+            if reason:
+                row["state"] = "in-progress"
+                row["blocking"] = reason
+                changed = True
     return rows
 
 
 # The id the sensitivity control stamps on the row it reconstructs. It cannot collide with a real
 # register id, and the control requires the rule's reason to name it.
 SELF_TEST_STALE_ID = "SELF-TEST-STALE-ROW"
+# The id the second control stamps on the stale-*adjudication* row it reconstructs.
+SELF_TEST_STALE_ADJ_ID = "SELF-TEST-STALE-ADJUDICATION"
 
 
 def self_test() -> int:
@@ -1660,6 +1725,53 @@ def self_test() -> int:
     print(
         "[phase-state] self-test ok: emptying the FRF registry refuses the stratum through its "
         "own court inventory, so a forgotten registry row cannot define completion"
+    )
+
+    # ---- third control: a stale manual adjudication must fail closed ----
+    # Fix 2's general bug, which `D-EVP-CIPHER-LEGACY-NID-1` exposed: `divergence_obligations.py`
+    # treated `manual` + nonempty `adjudication` as non-blocking, so an adjudication that rested on
+    # a machine fact ("Phase N is not-started") kept the row open-but-nonblocking after the fact
+    # changed. The control reconstructs exactly that shape -- an `open`, `manual` row with a
+    # nonempty `adjudication` whose `adjudication_requires` the owner no longer satisfies -- against
+    # a stratum that derives `complete`, and requires the rule to block it. It refuses to pass
+    # otherwise, because a check that has never been seen to fire is not evidence.
+    stale_adj = {
+        "id": SELF_TEST_STALE_ADJ_ID,
+        "current_owner": owner["phase"],
+        "trigger_basis": "manual",
+        "trigger_predicate": "",
+        "trigger_satisfied": None,
+        "adjudication": (
+            f"the cited phase is `not-started`, so the trigger is adjudicated as not fired"
+        ),
+        # The machine fact the adjudication cites: the owner's own state, which the control knows
+        # derives `complete` and the row requires to be `not-started`.
+        "adjudication_phase": owner["phase"],
+        "adjudication_requires": "not-started",
+        "disposition": "open",
+    }
+    reconstructed_adj = copy.deepcopy(doc)
+    reconstructed_adj["body"]["rows"].append(stale_adj)
+    states = {r["phase"]: r["state"] for r in rows}
+    adj_reason = divergence_blocking_reason(
+        owner["phase"], doc=reconstructed_adj, states=states
+    )
+    print(
+        f"[phase-state] self-test: reconstructed a stale manual adjudication ({stale_adj['id']})"
+        f" owned by phase {owner['phase']} ({owner['name']}), which derives `complete`, resting on "
+        f"`adjudication_phase` {owner['phase']} being `not-started`:"
+    )
+    print(f"  {adj_reason or '(no reason: the rule did not fire)'}")
+    if not adj_reason or SELF_TEST_STALE_ADJ_ID not in adj_reason:
+        print(
+            "[phase-state] SELF-TEST FAILED: a manual, open row whose nonempty adjudication rests "
+            "on a machine fact the owner no longer satisfies did not block",
+            file=sys.stderr,
+        )
+        return 1
+    print(
+        "[phase-state] self-test ok: a stale manual adjudication is re-evaluated against the "
+        "derived states and blocks its owner"
     )
     return 0
 

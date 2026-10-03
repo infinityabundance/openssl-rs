@@ -538,7 +538,7 @@
         "name": "legacy",
         "phase": 13,
         "provider_rows": null,
-        "seal_sha256": "e2ad9fa0d16d53be42584c0340cdcf2baef70d288032b06c11097a62fcc3cdab",
+        "seal_sha256": "fefc2857f3d88c18aa7b5bf7d26f6c89a0f9a8a2d1ab25a82435b7f8f69100fd",
         "state": "complete",
         "stratum": "Legacy / deprecated compatibility"
       },
@@ -667,7 +667,7 @@
       "not_started": 8
     }
   },
-  "body_hash": "bf47c1adbf789629194fd42e8c8bfd436da6eb56a8dd2aa26d54cad45bf2d27e",
+  "body_hash": "a70d8fb09a82df9a5dd6b2128a4c8894b993390ee4f7b20e2cf60cbf4371f3e6",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

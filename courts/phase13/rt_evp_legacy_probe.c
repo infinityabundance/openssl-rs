@@ -373,14 +373,13 @@ int main(void)
         snprintf(key, sizeof key, "%s.flags", name);
         printf("%s=%lx\n", key, (unsigned long)EVP_CIPHER_get_flags(c));
 
-        /* The fetched-identity arm. `EVP_get_cipherbyname` first reads the legacy `OBJ_NAME`
-         * cipher table, which the authority fills at `OPENSSL_init_crypto` and this crate does
-         * not yet populate (13.1's recorded divergence), so the *answer* is not comparable: it
-         * is driven and named `pending.` rather than compared, the contract section 3.6 records. */
+        /* The fetched-identity arm, now compared: `EVP_get_cipherbyname` reads the legacy
+         * `OBJ_NAME` cipher table, which `OPENSSL_init_crypto(ADD_ALL_CIPHERS)` populates from
+         * the statics this court drives (`crypto/evp/c_allc.c`), so both sides answer non-NULL.
+         * The registered divergence `D-EVP-CIPHER-LEGACY-NID-1` is retired here. */
         bnum = EVP_get_cipherbyname(name) != NULL;
-        (void)bnum;
-        snprintf(key, sizeof key, "pending.%s.byname", name);
-        printf("%s=%s\n", key, "legacy-OBJ_NAME-cipher-table-empty-in-candidate");
+        snprintf(key, sizeof key, "%s.byname", name);
+        out_int(key, bnum);
 
         memset(ct, 0, sizeof ct);
         switch (e->kind) {

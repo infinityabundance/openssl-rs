@@ -35219,3 +35219,80 @@ Verified (court container): `phase_state.py` Phase 13 `complete` with an empty b
 `docs_consistency.py`; `render_seal_census.py`; `render_status.py`; `gen_prerequisite_atlas.py`
 byte-identical on a second run; `evidence_determinism.py --keep` (33 artefacts);
 `regression_guard.py --require-current` (146 courts, 50727 observations).
+
+---
+
+## D526 -- the legacy `OBJ_NAME` registration lands, `ossl_namemap_stored` pre-populates, and D-EVP-CIPHER-LEGACY-NID-1 is retired
+
+**Decision.** Transcribe `crypto/evp/c_allc.c` and `c_alld.c` as `src/evp/c_allc.rs`
+(`openssl_add_all_ciphers_int`) and `src/evp/c_alld.rs` (`openssl_add_all_digests_int`); wire
+`src/runtime/init.rs`'s `add_all_legacy_methods(opts)` to call them for
+`OPENSSL_INIT_ADD_ALL_CIPHERS`/`OPENSSL_INIT_ADD_ALL_DIGESTS`; and land `crypto/core_namemap.c`'s
+first-use pre-population in `src/context/namemap.rs`'s `ossl_namemap_stored`. The `OPENSSL_NO_RC5`
+and `no-md2` blocks are not transcribed because the admitted profile compiles them out. The
+divergence row `D-EVP-CIPHER-LEGACY-NID-1` moves to `disposition: fixed`.
+
+**Why.** The row's adjudication claimed "Phase 13 is `not-started`, so no wrapper has been written"
+while Phase 13 was complete and every wrapper existed, so it was false. The underlying divergence
+was still real, and the reason is that a wrapper is not a registration: `add_all_legacy_methods`
+was `{ let _ = opts; }`, so the two adder bits put nothing in the `OBJ_NAME` table `set_legacy_nid`
+(`src/evp/cipher.rs`) searches. Wiring the bits is the registration the register entry's trigger
+names; the *fetch* path additionally needs the authority's own first-use pre-population, because
+`evp_cipher_from_algorithm` runs `set_legacy_nid` and the authority only fills the table beforehand
+because `ossl_namemap_stored` calls `OPENSSL_init_crypto(ADD_ALL_CIPHERS|ADD_ALL_DIGESTS)` when the
+stored map is empty. D109 had deferred that pre-population **whole** because it "cannot be built
+before the legacy method database and `OBJ_NAME_do_all` exist, which is Phase 13"; both now exist,
+so it lands.
+
+**Evidence.** Measured directly against `artifacts/phase2/install`: `EVP_CIPHER_fetch(NULL,
+"AES-128-CBC")` answers `nid` 419 and `EVP_CIPHER_get_nid(EVP_get_cipherbyname("DES-CBC"))`
+answers 31 (`NID_des_cbc`), as the authority does (`EVP_CIPHER_get_nid` on a fetched `DES-CBC` was
+0 before). `RT-EVP-LEGACY`'s per-static `<name>.byname` arms and `RT-EVP-PBE`'s
+`pbe.alg_add.methods_nids` arm are compared now rather than printed as markers.
+
+**Consequence.** The same registration removes the cause of the legacy-digest-table divergences the
+Phase-8/10/12 courts recorded (D333/D343/D344/D458): `EVP_get_digestbyname` now resolves. Those
+courts' `pending.` arms still print their markers, so they remain green, but their blockers no
+longer hold and a follow-up may compare them in turn.
+
+---
+
+## D527 -- a manual divergence adjudication is machine-checked, and a stale one fails closed
+
+**Decision.** A manual register row with a nonempty `adjudication` must name the machine fact it
+rests on: `adjudication_phase` (the stratum whose derived state it cites) and `adjudication_requires`
+(the state it needs). `forensics/tools/phase_state.py` re-evaluates
+`(adjudication_phase, adjudication_requires)` against the freshly derived states on every run, and
+`derive_blocking` blocks the row's `current_owner` the moment `adjudication_predicate_satisfied` is
+false. The behaviour is exercised by a third `--self-test` control that reconstructs a stale manual
+adjudication against a stratum that derives `complete`.
+
+**Why.** This is the general bug D526 exposed. `divergence_obligations.py` treated `manual` plus a
+nonempty `adjudication` as non-blocking regardless of the adjudication's truth, so an adjudication
+that rested on "Phase N is not-started" silently kept its row open-but-nonblocking after Phase N
+became `complete`. Making the fact a named, re-evaluated predicate turns that from a sentence into a
+check: the row now blocks until the cited state is the required one again, or the row is retired.
+
+**Evidence.** `phase_state.py --self-test`'s three controls pass; the third prints the precise
+reason (`... SELF-TEST-STALE-ADJUDICATION; its adjudication rests on phase 22 being not-started, and
+the machine state derives complete`).
+
+---
+
+## D528 -- the absent dynamic ENGINE loader is a machine-readable Phase-16 obligation
+
+**Decision.** Record `engine_load_dynamic_int` -- `crypto/engine/eng_dyn.c`'s entry point -- in
+`forensics/prerequisites.json`'s `deferrals`, with `owner_phase: 16` and the unit named in
+`authority_unit`.
+
+**Why.** `crypto/engine/eng_dyn.c` is genuinely absent and no stratum owned it: 13.1 transcribed
+`ENGINE_by_id`'s miss path whole and took the authority's own `notfound` arm, so the dynamic
+fallback and the `dynamic`/`rdrand` built-ins were recorded in prose (the seal and D525) but in no
+machine record. The prerequisite gate's `deferrals` is the established mechanism for an unlanded
+authority-internal symbol with an owning stratum, and Phase 16 (the installed distribution / config
+/ module stratum) is where `DSO_load` and `OPENSSL_ENGINES` handling live, so it is the loader's
+owner. The record makes the gap an owned dependency rather than an unowned one.
+
+**Evidence.** `prerequisite_gate.py` reports `engine_load_dynamic_int -> phase 16` among its four
+`blocking_dependencies`, alongside the three pre-existing Phase-16 entries.
+`src/runtime/init.rs`s
