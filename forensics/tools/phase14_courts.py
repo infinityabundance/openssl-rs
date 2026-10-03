@@ -94,6 +94,7 @@ COURTS: list[tuple[str, str]] = [
     ("RT-SSL-BIO", "rt_ssl_bio_probe.c"),
     ("RT-DTLS", "rt_dtls_probe.c"),
     ("RT-SSL-INIT", "rt_ssl_init_probe.c"),
+    ("RT-SESSION-CERT", "rt_session_cert_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. **Every one of the plan's behavioural
@@ -101,7 +102,6 @@ COURTS: list[tuple[str, str]] = [
 # working set is open and the only court it can register is the reference basis. Each row is
 # printed with the subphase that brings it so that "not run yet" cannot be read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "RT-SESSION-CERT": "14.7 (the session and certificate plumbing)",
     "RT-SSL-EXT": "14.9 (the TLS extension and SRP surface)",
     "RT-HANDOFF": "14.11 (the received hand-offs)",
 }
@@ -312,12 +312,21 @@ def main(argv: list[str]) -> int:
             "`SSL_get_selected_srtp_profile`). `RT-SSL-INIT` (14.10) is the eighth: "
             "`courts/phase14/rt_ssl_init_probe.c` drives `OPENSSL_init_ssl` over fixed option words "
             "and its refusal arm, `ERR_load_SSL_strings`, and the QUIC TLS accessors' "
-            "setter/refusal arms over an incomplete `OSSL_DISPATCH` table. None is a parity claim "
+            "setter/refusal arms over an incomplete `OSSL_DISPATCH` table. `RT-SESSION-CERT` (14.7) "
+            "is the ninth: `courts/phase14/rt_session_cert_probe.c` drives the session object "
+            "(new/free/dup/refcounts and the accessor, master-key, id and time setters/getters), the "
+            "per-context session cache and the callback setters, the `i2d_SSL_SESSION`/"
+            "`d2i_SSL_SESSION[_ex]` DER codec and the four PEM spellings over a fixed in-process "
+            "session, the CA-list surface, the certificate/private-key loaders (the `use_certificate*`/"
+            "`use_PrivateKey*` object, ASN1 and file spellings, `use_cert_and_key`, the serverinfo "
+            "installers and the deprecated `use_RSAPrivateKey` spellings) over a fixed in-memory RSA "
+            "certificate/key pair, the certificate-compression refusals, and `SSL_SESSION_print`/"
+            "`_fp`/`_keylog` compared byte for byte. None is a parity claim "
             "about a completed handshake, which no arm of any of them drives. `SSL_get0_group_name` "
             "on a live connection and `SSL_group_to_name`'s known-NID arm are recorded in their "
             "modules as reduced rather than driven. Every other behavioural court the plan names "
             "is named in `pending_courts` with the subphase that brings it -- "
-            "`RT-SESSION-CERT`, `RT-SSL-EXT` and `RT-HANDOFF` -- and none is registered here, so "
+            "`RT-SSL-EXT` and `RT-HANDOFF` -- and none is registered here, so "
             "'not run yet' "
             "cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not "
             "`called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural "

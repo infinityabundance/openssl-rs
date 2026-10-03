@@ -76,7 +76,7 @@ fn ssl3_num_ciphers() -> c_int {
 }
 
 /// `ssl_protocol_to_string` — `ssl_lib.c:5038-5064`.
-fn ssl_protocol_to_string(version: c_int) -> *const c_char {
+pub(crate) fn ssl_protocol_to_string(version: c_int) -> *const c_char {
     let s: &[u8] = match version as u64 {
         t::TLS1_3_VERSION => b"TLSv1.3\0",
         t::TLS1_2_VERSION => b"TLSv1.2\0",
@@ -109,7 +109,7 @@ unsafe fn ssl3_get_cipher(u: c_uint) -> *const SslCipher {
 ///
 /// # Safety
 /// No precondition; the returned pointer is into a process-lifetime static.
-unsafe fn ssl3_get_cipher_by_id(id: u32) -> *const SslCipher {
+pub(crate) unsafe fn ssl3_get_cipher_by_id(id: u32) -> *const SslCipher {
     for tbl in [
         &t::TLS13_CIPHERS[..],
         &t::SSL3_CIPHERS[..],

@@ -24,6 +24,7 @@ use crate::ct::ct_log::{
     CTLOG_STORE_free, CTLOG_STORE_load_default_file, CTLOG_STORE_load_file, CTLOG_STORE_new_ex,
     CtlogStore,
 };
+use crate::evp::pkey::EVP_PKEY_free;
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::bss_sock::BIO_s_socket;
 use crate::runtime::bio::iolib::{BIO_get_rpoll_descriptor, BIO_get_wpoll_descriptor};
@@ -38,11 +39,13 @@ use crate::runtime::ex_data::{
     CRYPTO_EX_INDEX_SSL, CRYPTO_EX_INDEX_SSL_CTX,
 };
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup, CRYPTO_strdup, CRYPTO_zalloc};
-use crate::runtime::stack::{OPENSSL_sk_free, OpenSslStack};
+use crate::runtime::stack::{OPENSSL_sk_free, OPENSSL_sk_pop_free, OpenSslStack};
 use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new, CryptoRwlock};
 use crate::ssl::d1_lib::{dtls1_free, dtls1_new_state, Dtls1State};
 use crate::ssl::quic::quic_tls_api::QuicTlsCallbacks;
+use crate::ssl::ssl_sess::{ssl_ctx_session_cache_free, SSL_SESSION_free};
 use crate::ssl::statem::extensions_cust::CustomExtMethod;
+use crate::x509::t_x509::OSSL_STACK_OF_X509_free;
 use crate::x509::v3_utl::a2i_IPADDRESS;
 use crate::x509::x509_cmp::X509_check_private_key;
 use crate::x509::x509_d2::{
@@ -59,7 +62,8 @@ use crate::x509::x509_vpm::{
     X509_VERIFY_PARAM_set_depth, X509_VERIFY_PARAM_set_hostflags, X509_VERIFY_PARAM_set_purpose,
     X509_VERIFY_PARAM_set_trust,
 };
-use crate::x509::x_x509::X509;
+use crate::x509::x_name::{X509Name, X509_NAME_free};
+use crate::x509::x_x509::{X509_free, X509};
 
 /// `OPENSSL_FILE` of this translation unit, used on allocation and `ERR_raise` sites.
 const FILE: *const c_char = c"ssl/ssl_lib.c".as_ptr();
@@ -135,7 +139,25 @@ pub const DTLS_ANY_VERSION: c_int = 0x1_FFFF;
 const DTLS_MAX_VERSION_INTERNAL: c_int = DTLS1_2_VERSION;
 
 /// `SSL_MAX_SID_CTX_LENGTH` — `ssl.h:64`.
-const SSL_MAX_SID_CTX_LENGTH: usize = 32;
+pub const SSL_MAX_SID_CTX_LENGTH: usize = 32;
+/// `SSL_PKEY_NUM` — `ssl_local.h:328`.
+pub const SSL_PKEY_NUM: usize = 9;
+/// `SSL_PKEY_RSA` — `ssl_local.h:319`.
+pub const SSL_PKEY_RSA: usize = 0;
+/// `TLSEXT_comp_cert_limit` — `tls1.h:216`.
+pub const TLSEXT_COMP_CERT_LIMIT: usize = 4;
+/// `SSL_MAX_SSL_SESSION_ID_LENGTH` — `ssl.h:64`.
+pub const SSL_MAX_SSL_SESSION_ID_LENGTH: usize = 32;
+/// `SSL3_MAX_SSL_SESSION_ID_LENGTH` — `ssl3.h:134`.
+pub const SSL3_MAX_SSL_SESSION_ID_LENGTH: usize = 32;
+/// `TLS13_MAX_RESUMPTION_PSK_LENGTH` — `ssl_local.h:448`.
+pub const TLS13_MAX_RESUMPTION_PSK_LENGTH: usize = 512;
+/// `EVP_MAX_MD_SIZE` — `evp.h`.
+pub const EVP_MAX_MD_SIZE: usize = 64;
+/// `SSL_MAX_MASTER_KEY_LENGTH` — `ssl.h`: the TLS1.2 master-key ceiling.
+pub const SSL_MAX_MASTER_KEY_LENGTH: usize = 48;
+/// `SSL_SESS_FLAG_EXTMS` — `ssl_local.h:567`.
+pub const SSL_SESS_FLAG_EXTMS: u32 = 0x1;
 /// `SSL_MAX_CERT_LIST_DEFAULT` — `ssl.h:692`.
 const SSL_MAX_CERT_LIST_DEFAULT: usize = 1024 * 100;
 /// `SSL_SESSION_CACHE_MAX_SIZE_DEFAULT` — `ssl.h:694`.
@@ -302,20 +324,39 @@ pub struct SslMethod {
 // CERT — the per-context/per-connection certificate container (a reduced `ssl_cert_st`)
 // -------------------------------------------------------------------------------------------
 
-/// `struct cert_pkey` — `ssl_local.h`, reduced to the two accessors this slice reads.
+/// `struct cert_pkey` — `ssl_local.h:2008-2026`, reduced to the fields this stratum reads.
 #[repr(C)]
 pub struct CertKey {
     /// `X509 *x509` — the leaf certificate, NULL until a loader runs (14.7).
-    pub x509: *mut c_void,
+    pub x509: *mut X509,
     /// `EVP_PKEY *privatekey` — the leaf key, NULL until a loader runs (14.7).
     pub privatekey: *mut c_void,
+    /// `STACK_OF(X509) *chain` — the extra chain certificates (`ssl_set_cert_and_key`).
+    pub chain: *mut OpenSslStack,
+    /// `unsigned char *serverinfo` — the serverinfo block (`SSL_CTX_use_serverinfo_ex`).
+    pub serverinfo: *mut u8,
+    /// `size_t serverinfo_length`.
+    pub serverinfo_length: usize,
+    /// `OSSL_COMP_CERT *comp_cert[TLSEXT_comp_cert_limit]` — the pre-compressed forms
+    /// (`ssl_cert_comp.c`).
+    pub comp_cert: [*mut crate::ssl::ssl_cert_comp::OsslCompCert; TLSEXT_COMP_CERT_LIMIT],
+    /// `int cert_comp_used` — set by the compression pass.
+    pub cert_comp_used: c_int,
 }
 
-/// `struct ssl_cert_st` — `ssl_local.h`, reduced to the fields Slice 1 reads.
+/// `struct ssl_cert_st` — `ssl_local.h:2008-2145`, reduced to the fields this stratum reads.
 #[repr(C)]
 pub struct Cert {
-    /// `CERT_PKEY *key` — the active leaf certificate/key pair.
-    pub key: CertKey,
+    /// `CERT_PKEY *pkeys` — the per-key-type certificate slots (`SSL_PKEY_NUM` of them).
+    pub pkeys: [CertKey; SSL_PKEY_NUM],
+    /// `ssl_pkey_num` — the slot count (always `SSL_PKEY_NUM` here).
+    pub ssl_pkey_num: usize,
+    /// `CERT_PKEY *key` — the active slot, stored as an index into `pkeys`.
+    pub key_index: usize,
+    /// `CRYPTO_REF_COUNT references` — `ssl_cert_dup`/`ssl_cert_free`.
+    pub references: AtomicI32,
+    /// `int cert_comp_prefs[TLSEXT_comp_cert_limit]` — `SSL_CTX_set1_cert_comp_preference`.
+    pub cert_comp_prefs: [c_int; TLSEXT_COMP_CERT_LIMIT],
     /// `int sec_level` — the security level (`SSL_[CTX_]set/get_security_level`).
     pub sec_level: c_int,
     /// `int (*sec_cb)(...)` — the security callback.
@@ -354,9 +395,47 @@ unsafe fn cert_new() -> *mut Cert {
         unsafe {
             (*c).sec_level = 2;
             (*c).sec_cb = Some(ssl_security_default_callback);
+            (*c).ssl_pkey_num = SSL_PKEY_NUM;
+            (*c).key_index = SSL_PKEY_RSA;
+            (*c).references = AtomicI32::new(1);
         }
     }
     c
+}
+
+/// The active `CERT_PKEY` a certificate container holds (`c->key`, stored here as an index).
+///
+/// # Safety
+/// `c` must be a live `Cert`.
+pub(crate) unsafe fn cert_active_key(c: *mut Cert) -> *mut CertKey {
+    // SAFETY: `c` is live per the caller's contract; `key_index` is in range because it is only
+    // ever written with a slot index.
+    unsafe { ptr::addr_of_mut!((*c).pkeys[(*c).key_index]) }
+}
+
+/// Free one certificate slot's heap contents (the authority's `ssl_cert_clear_certs` body for one
+/// `CERT_PKEY`).
+///
+/// # Safety
+/// `cpk` must be a live `CertKey`.
+unsafe fn cert_pkey_clear(cpk: *mut CertKey) {
+    // SAFETY: `cpk` is live per the caller's contract; each field is NULL or an owned object.
+    unsafe {
+        X509_free((*cpk).x509);
+        (*cpk).x509 = ptr::null_mut();
+        EVP_PKEY_free((*cpk).privatekey.cast());
+        (*cpk).privatekey = ptr::null_mut();
+        OSSL_STACK_OF_X509_free((*cpk).chain);
+        (*cpk).chain = ptr::null_mut();
+        CRYPTO_free((*cpk).serverinfo.cast(), FILE, 0);
+        (*cpk).serverinfo = ptr::null_mut();
+        (*cpk).serverinfo_length = 0;
+        for j in 0..TLSEXT_COMP_CERT_LIMIT {
+            crate::ssl::ssl_cert_comp::OSSL_COMP_CERT_free((*cpk).comp_cert[j]);
+            (*cpk).comp_cert[j] = ptr::null_mut();
+        }
+        (*cpk).cert_comp_used = 0;
+    }
 }
 
 /// Release a certificate container.
@@ -368,6 +447,9 @@ unsafe fn cert_free(c: *mut Cert) {
         // SAFETY: `c` is a live `Cert` per the caller's contract; a NULL `psk_identity_hint` is
         // `CRYPTO_free`'s own no-op.
         unsafe {
+            for i in 0..SSL_PKEY_NUM {
+                cert_pkey_clear(ptr::addr_of_mut!((*c).pkeys[i]));
+            }
             // SAFETY: `c` is live; `custext` is the `Vec` `cert_new` zero-initialised and
             // `SSL_CTX_add_*_custom_ext` may have grown. Dropping it in place releases the
             // record buffer (the records hold only borrowed callback pointers and raw args the
@@ -395,15 +477,29 @@ unsafe fn cert_copy_security(to: *mut Cert, from: *const Cert) {
     t.sec_cb = f.sec_cb;
     t.sec_ex = f.sec_ex;
     t.cert_flags = f.cert_flags;
-    t.key.x509 = f.key.x509;
-    t.key.privatekey = f.key.privatekey;
+    t.key_index = f.key_index;
+    // The active leaf pair is **up-reffed** into the copy, so the copy owns its own references
+    // and `cert_free` can release them (the authority's `ssl_cert_dup` reference-counts every
+    // slot; this reduced copy handles the active one).
+    let fslot = &f.pkeys[f.key_index];
+    let tslot = &mut t.pkeys[f.key_index];
+    if !fslot.x509.is_null() {
+        // SAFETY: `fslot.x509` is a live certificate.
+        unsafe { X509_up_ref(fslot.x509) };
+        tslot.x509 = fslot.x509;
+    }
+    if !fslot.privatekey.is_null() {
+        // SAFETY: `fslot.privatekey` is a live key.
+        unsafe { crate::evp::pkey::EVP_PKEY_up_ref(fslot.privatekey.cast()) };
+        tslot.privatekey = fslot.privatekey;
+    }
 }
 
 // -------------------------------------------------------------------------------------------
 // SSL_CTX and SSL
 // -------------------------------------------------------------------------------------------
 
-/// `struct ssl_ctx_st` — `ssl_local.h:793`, reduced to the fields Slice 1 reads or writes.
+/// `struct ssl_cert_st` — `ssl_local.h:2008-2145`.
 #[repr(C)]
 pub struct SslCtx {
     /// `CRYPTO_REF_COUNT references` — the context's reference count.
@@ -600,6 +696,35 @@ pub struct SslCtx {
     /// `STACK_OF(SRTP_PROTECTION_PROFILE) *srtp_profiles` — the DTLS-SRTP offer list
     /// (`SSL_CTX_set_tlsext_use_srtp`); NULL until the setter runs. `src/ssl/d1_srtp.rs` owns it.
     pub srtp_profiles: *mut OpenSslStack,
+    /// `STACK_OF(X509_NAME) *ca_names` — the CA-name list (`SSL_CTX_[set0|get0]_CA_list`).
+    pub ca_names: *mut OpenSslStack,
+    /// `STACK_OF(X509_NAME) *client_ca_names` — the client-CA list.
+    pub client_ca_names: *mut OpenSslStack,
+    /// `int cert_comp_prefs[TLSEXT_comp_cert_limit]` — `SSL_CTX_set1_cert_comp_preference`.
+    pub cert_comp_prefs: [c_int; TLSEXT_COMP_CERT_LIMIT],
+    /// `LHASH_OF(SSL_SESSION) *sessions` — the internal session cache (`ssl_sess.c`). The
+    /// authority uses an `LHASH` keyed on the session id; this crate stores the sessions in an
+    /// `OpenSslStack` and searches it linearly, which is observational-equivalent for the cache
+    /// controls the court drives.
+    pub sessions: *mut OpenSslStack,
+    /// `int (*new_session_cb)(SSL *, SSL_SESSION *)` — `SSL_CTX_sess_set_new_cb`.
+    pub new_session_cb: Option<NewSessionCb>,
+    /// `void (*remove_session_cb)(SSL_CTX *, SSL_SESSION *)` — `SSL_CTX_sess_set_remove_cb`.
+    pub remove_session_cb: Option<RemoveSessionCb>,
+    /// `SSL_SESSION *(*get_session_cb)(SSL *, const unsigned char *, int, int *)`.
+    pub get_session_cb: Option<GetSessionCb>,
+    /// `int (*client_cert_cb)(SSL *, X509 **, EVP_PKEY **)` — `SSL_CTX_set_client_cert_cb`.
+    pub client_cert_cb: Option<ClientCertCb>,
+    /// `int (*app_gen_cookie_cb)(SSL *, unsigned char *, unsigned int *)`.
+    pub app_gen_cookie_cb: Option<GenCookieCb>,
+    /// `int (*app_verify_cookie_cb)(SSL *, const unsigned char *, unsigned int)`.
+    pub app_verify_cookie_cb: Option<VerifyCookieCb>,
+    /// `int (*gen_stateless_cookie_cb)(SSL *, unsigned char *, size_t *)`.
+    pub gen_stateless_cookie_cb: Option<GenStatelessCookieCb>,
+    /// `int (*verify_stateless_cookie_cb)(SSL *, const unsigned char *, size_t)`.
+    pub verify_stateless_cookie_cb: Option<VerifyStatelessCookieCb>,
+    /// `void (*info_callback)(const SSL *, int, int)` — `SSL_CTX_set_info_callback`.
+    pub info_callback: Option<InfoCb>,
 }
 
 /// `struct ssl_st` — `ssl_local.h`, carrying the `SSL_CONNECTION` fields Slice 1 reads.
@@ -852,6 +977,25 @@ pub struct Ssl {
     pub qtcb: QuicTlsCallbacks,
     /// `void *qtarg` — the callback argument `SSL_set_quic_tls_cbs` stores.
     pub qtarg: *mut c_void,
+    /// `STACK_OF(X509_NAME) *ca_names` — the connection's own CA-name list.
+    pub ca_names: *mut OpenSslStack,
+    /// `STACK_OF(X509_NAME) *client_ca_names` — the connection's own client-CA list.
+    pub client_ca_names: *mut OpenSslStack,
+    /// `STACK_OF(X509_NAME) *s3.tmp.peer_ca_names` — the CA names the peer sent
+    /// (`SSL_get0_peer_CA_list`).
+    pub peer_ca_names: *mut OpenSslStack,
+    /// `int cert_comp_prefs[TLSEXT_comp_cert_limit]` — `SSL_set1_cert_comp_preference`.
+    pub cert_comp_prefs: [c_int; TLSEXT_COMP_CERT_LIMIT],
+    /// `tls_session_secret_cb_fn ext.session_secret_cb` — `SSL_set_session_secret_cb`.
+    pub session_secret_cb: Option<SessionSecretCb>,
+    /// `void *ext.session_secret_cb_arg`.
+    pub session_secret_cb_arg: *mut c_void,
+    /// `tls_session_ticket_ext_cb_fn ext.session_ticket_cb` — `SSL_set_session_ticket_ext_cb`.
+    pub session_ticket_cb: Option<SessionTicketExtCb>,
+    /// `void *ext.session_ticket_cb_arg`.
+    pub session_ticket_cb_arg: *mut c_void,
+    /// `TLS_SESSION_TICKET_EXT *ext.session_ticket` — `SSL_set_session_ticket_ext`.
+    pub session_ticket: *mut TlsSessionTicketExt,
 }
 
 // -------------------------------------------------------------------------------------------
@@ -935,40 +1079,136 @@ pub type NpnSelectCb =
 /// `SSL_CTX_npn_advertised_cb_func` — `ssl.h`.
 pub type NpnAdvertisedCb =
     unsafe extern "C" fn(*mut Ssl, *mut *const u8, *mut c_uint, *mut c_void) -> c_int;
+/// `int (*new_session_cb)(SSL *, SSL_SESSION *)` — `ssl.h`.
+pub type NewSessionCb = unsafe extern "C" fn(*mut Ssl, *mut SslSession) -> c_int;
+/// `void (*remove_session_cb)(SSL_CTX *, SSL_SESSION *)` — `ssl.h`.
+pub type RemoveSessionCb = unsafe extern "C" fn(*mut SslCtx, *mut SslSession);
+/// `SSL_SESSION *(*get_session_cb)(SSL *, const unsigned char *, int, int *)` — `ssl.h`.
+pub type GetSessionCb =
+    unsafe extern "C" fn(*mut Ssl, *const u8, c_int, *mut c_int) -> *mut SslSession;
+/// `int (*client_cert_cb)(SSL *, X509 **, EVP_PKEY **)` — `ssl.h`.
+pub type ClientCertCb = unsafe extern "C" fn(*mut Ssl, *mut *mut X509, *mut *mut c_void) -> c_int;
+/// `int (*app_gen_cookie_cb)(SSL *, unsigned char *, unsigned int *)` — `ssl.h`.
+pub type GenCookieCb = unsafe extern "C" fn(*mut Ssl, *mut u8, *mut c_uint) -> c_int;
+/// `int (*app_verify_cookie_cb)(SSL *, const unsigned char *, unsigned int)` — `ssl.h`.
+pub type VerifyCookieCb = unsafe extern "C" fn(*mut Ssl, *const u8, c_uint) -> c_int;
+/// `int (*gen_stateless_cookie_cb)(SSL *, unsigned char *, size_t *)` — `ssl.h`.
+pub type GenStatelessCookieCb = unsafe extern "C" fn(*mut Ssl, *mut u8, *mut usize) -> c_int;
+/// `int (*verify_stateless_cookie_cb)(SSL *, const unsigned char *, size_t)` — `ssl.h`.
+pub type VerifyStatelessCookieCb = unsafe extern "C" fn(*mut Ssl, *const u8, usize) -> c_int;
+/// `tls_session_secret_cb_fn` — `ssl.h:934`.
+pub type SessionSecretCb = unsafe extern "C" fn(
+    *mut Ssl,
+    *mut c_void,
+    *mut c_int,
+    *mut OpenSslStack,
+    *mut *const crate::ssl::ssl_ciph_table::SslCipher,
+    *mut c_void,
+) -> c_int;
+/// `tls_session_ticket_ext_cb_fn` — `ssl.h`.
+pub type SessionTicketExtCb =
+    unsafe extern "C" fn(*mut Ssl, *const u8, c_int, *mut c_void) -> c_int;
 
-/// `struct SSL_SESSION` — `ssl_local.h`, reduced to the fields `ssl_lib.c` reads or writes.
+/// `struct tls_session_ticket_ext_st` — `ssl_local.h`, the record `SSL_set_session_ticket_ext`
+/// allocates: a length and a flexible data array that follows it (`data = self + 1`).
+#[repr(C)]
+pub struct TlsSessionTicketExt {
+    /// `unsigned short length`.
+    pub length: u16,
+    /// `void *data` — the bytes immediately after this record in the authority; stored as a
+    /// pointer into the same allocation here.
+    pub data: *mut c_void,
+}
+
+/// `struct SSL_SESSION` — `ssl_local.h:476-564`, the whole record.
 ///
-/// Sessions are 14.7's (`ssl_sess.c`), so no session object is allocated in this slice and the
-/// `session` pointer is NULL throughout; the two master-key accessors below are stated so their
-/// shape is fixed, and the field order here is this crate's own because the struct is opaque.
+/// The structure is opaque to a consumer, so its field order here is this crate's own; the
+/// fields and their types are the authority's. `time`/`timeout`/`calc_timeout` store **seconds**
+/// rather than the authority's `OSSL_TIME` nanoseconds (`ssl_session_calculate_timeout`,
+/// `ssl_sess.c:48`), because every reader in this stratum converts back to `time_t` and no
+/// nanosecond-resolution arm is observable.
 #[repr(C)]
 pub struct SslSession {
     /// `int ssl_version`.
     pub ssl_version: c_int,
-    /// `unsigned int session_id_length`.
-    pub session_id_length: c_uint,
-    /// `unsigned char session_id[SSL_MAX_SSL_SESSION_ID_LENGTH]`.
-    pub session_id: [u8; SSL_MAX_SID_CTX_LENGTH],
-    /// `unsigned char master_key[SSL_MAX_MASTER_KEY_LENGTH]`.
-    pub master_key: [u8; 48],
-    /// `unsigned int master_key_length`.
+    /// `size_t master_key_length`.
     pub master_key_length: usize,
+    /// `unsigned char early_secret[EVP_MAX_MD_SIZE]`.
+    pub early_secret: [u8; EVP_MAX_MD_SIZE],
+    /// `unsigned char master_key[TLS13_MAX_RESUMPTION_PSK_LENGTH]`.
+    pub master_key: [u8; TLS13_MAX_RESUMPTION_PSK_LENGTH],
+    /// `size_t session_id_length`.
+    pub session_id_length: usize,
+    /// `unsigned char session_id[SSL_MAX_SSL_SESSION_ID_LENGTH]`.
+    pub session_id: [u8; SSL_MAX_SSL_SESSION_ID_LENGTH],
+    /// `size_t sid_ctx_length`.
+    pub sid_ctx_length: usize,
+    /// `unsigned char sid_ctx[SSL_MAX_SID_CTX_LENGTH]`.
+    pub sid_ctx: [u8; SSL_MAX_SID_CTX_LENGTH],
+    /// `char *psk_identity_hint`.
+    pub psk_identity_hint: *mut c_char,
+    /// `char *psk_identity`.
+    pub psk_identity: *mut c_char,
+    /// `int not_resumable`.
+    pub not_resumable: c_int,
+    /// `EVP_PKEY *peer_rpk`.
+    pub peer_rpk: *mut c_void,
     /// `X509 *peer`.
     pub peer: *mut X509,
     /// `STACK_OF(X509) *peer_chain`.
-    pub peer_chain: *mut c_void,
-    /// `EVP_PKEY *peer_rpk`.
-    pub peer_rpk: *mut c_void,
-    /// `char *psk_identity`.
-    pub psk_identity: *mut c_char,
-    /// `char *psk_identity_hint`.
-    pub psk_identity_hint: *mut c_char,
+    pub peer_chain: *mut OpenSslStack,
+    /// `long verify_result`.
+    pub verify_result: c_long,
+    /// `OSSL_TIME time`, in seconds (see the type note).
+    pub time: u64,
+    /// `OSSL_TIME timeout`, in seconds.
+    pub timeout: u64,
+    /// `OSSL_TIME calc_timeout`, in seconds.
+    pub calc_timeout: u64,
+    /// `unsigned int compress_meth`.
+    pub compress_meth: c_uint,
+    /// `const SSL_CIPHER *cipher`.
+    pub cipher: *const crate::ssl::ssl_ciph_table::SslCipher,
+    /// `unsigned long cipher_id`.
+    pub cipher_id: c_ulong,
+    /// `unsigned int kex_group`.
+    pub kex_group: c_uint,
+    /// `CRYPTO_EX_DATA ex_data`.
+    pub ex_data: CryptoExData,
     /// `char *ext.hostname`.
     pub ext_hostname: *mut c_char,
+    /// `unsigned char *ext.tick`.
+    pub ext_tick: *mut u8,
+    /// `size_t ext.ticklen`.
+    pub ext_ticklen: usize,
+    /// `unsigned long ext.tick_lifetime_hint`.
+    pub ext_tick_lifetime_hint: c_ulong,
+    /// `uint32_t ext.tick_age_add`.
+    pub ext_tick_age_add: u32,
     /// `uint32_t ext.max_early_data`.
     pub ext_max_early_data: u32,
+    /// `unsigned char *ext.alpn_selected`.
+    pub ext_alpn_selected: *mut u8,
+    /// `size_t ext.alpn_selected_len`.
+    pub ext_alpn_selected_len: usize,
     /// `uint8_t ext.max_fragment_len_mode` — `SSL_SESSION_get_max_fragment_length` reads it.
     pub max_fragment_len_mode: u8,
+    /// `char *srp_username`.
+    pub srp_username: *mut c_char,
+    /// `unsigned char *ticket_appdata`.
+    pub ticket_appdata: *mut u8,
+    /// `size_t ticket_appdata_len`.
+    pub ticket_appdata_len: usize,
+    /// `uint32_t flags`.
+    pub flags: u32,
+    /// `SSL_CTX *owner` — the cache context the session is linked into.
+    pub owner: *mut SslCtx,
+    /// `struct ssl_session_st *prev`.
+    pub prev: *mut SslSession,
+    /// `struct ssl_session_st *next`.
+    pub next: *mut SslSession,
+    /// `CRYPTO_REF_COUNT references`.
+    pub references: AtomicI32,
 }
 
 /// `struct timeval` — the two-`long` layout `SSL_get_event_timeout` writes on this platform.
@@ -1182,6 +1422,15 @@ pub unsafe extern "C" fn SSL_CTX_up_ref(ctx: *mut SslCtx) -> c_int {
     })
 }
 
+/// `sk_X509_NAME_pop_free`'s destructor thunk: `X509_NAME_free` over a `void *` slot.
+///
+/// # Safety
+/// `p` must be NULL or a live `X509_NAME`.
+unsafe extern "C" fn x509_name_free_void(p: *mut c_void) {
+    // SAFETY: `p` is NULL or a live name per the caller's contract.
+    unsafe { X509_NAME_free(p.cast::<X509Name>()) };
+}
+
 /// `void SSL_CTX_free(SSL_CTX *ctx)` — `ssl/ssl_lib.c:4350-4468`.
 ///
 /// # Safety
@@ -1203,6 +1452,9 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
             OPENSSL_sk_free((*ctx).cipher_list_by_id);
             OPENSSL_sk_free((*ctx).tls13_ciphersuites);
             OPENSSL_sk_free((*ctx).srtp_profiles);
+            ssl_ctx_session_cache_free(ctx);
+            OPENSSL_sk_pop_free((*ctx).ca_names, Some(x509_name_free_void));
+            OPENSSL_sk_pop_free((*ctx).client_ca_names, Some(x509_name_free_void));
             X509_VERIFY_PARAM_free((*ctx).param);
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL_CTX, ctx.cast(), &mut (*ctx).ex_data);
             X509_STORE_free((*ctx).cert_store);
@@ -1529,6 +1781,11 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             OPENSSL_sk_free((*s).cipher_list_by_id);
             OPENSSL_sk_free((*s).tls13_ciphersuites);
             OPENSSL_sk_free((*s).srtp_profiles);
+            OPENSSL_sk_pop_free((*s).ca_names, Some(x509_name_free_void));
+            OPENSSL_sk_pop_free((*s).client_ca_names, Some(x509_name_free_void));
+            OPENSSL_sk_pop_free((*s).peer_ca_names, Some(x509_name_free_void));
+            SSL_SESSION_free((*s).session);
+            CRYPTO_free((*s).session_ticket.cast(), FILE, 0);
             dtls1_free(s);
             BIO_free_all((*s).wbio);
             BIO_free_all((*s).rbio);
@@ -4370,7 +4627,7 @@ pub unsafe extern "C" fn SSL_get_certificate(s: *const Ssl) -> *mut c_void {
             return ptr::null_mut();
         }
         // SAFETY: `s` and its `cert` are live.
-        unsafe { (*(*s).cert).key.x509 }
+        unsafe { (*cert_active_key((*s).cert)).x509.cast::<c_void>() }
     })
 }
 
@@ -4386,7 +4643,7 @@ pub unsafe extern "C" fn SSL_get_privatekey(s: *const Ssl) -> *mut c_void {
             return ptr::null_mut();
         }
         // SAFETY: `s` and its `cert` are live.
-        unsafe { (*(*s).cert).key.privatekey }
+        unsafe { (*cert_active_key((*s).cert)).privatekey }
     })
 }
 
@@ -4402,7 +4659,7 @@ pub unsafe extern "C" fn SSL_CTX_get0_certificate(ctx: *const SslCtx) -> *mut c_
             return ptr::null_mut();
         }
         // SAFETY: `ctx` and its `cert` are live.
-        unsafe { (*(*ctx).cert).key.x509 }
+        unsafe { (*cert_active_key((*ctx).cert)).x509.cast::<c_void>() }
     })
 }
 
@@ -4418,7 +4675,7 @@ pub unsafe extern "C" fn SSL_CTX_get0_privatekey(ctx: *const SslCtx) -> *mut c_v
             return ptr::null_mut();
         }
         // SAFETY: `ctx` and its `cert` are live.
-        unsafe { (*(*ctx).cert).key.privatekey }
+        unsafe { (*cert_active_key((*ctx).cert)).privatekey }
     })
 }
 
@@ -4706,13 +4963,21 @@ pub unsafe extern "C" fn SSL_CTX_set_default_verify_paths(ctx: *mut SslCtx) -> c
 pub unsafe extern "C" fn SSL_CTX_check_private_key(ctx: *const SslCtx) -> c_int {
     guard_ffi(0, || {
         // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
-        if ctx.is_null() || unsafe { (*(*ctx).cert).key.x509 }.is_null() {
+        if ctx.is_null() {
             // SAFETY: a constant site.
             unsafe { raise_ssl(SSL_R_NO_CERTIFICATE_ASSIGNED, 2068) };
             return 0;
         }
         // SAFETY: `ctx` is non-NULL and live.
-        if unsafe { (*(*ctx).cert).key.privatekey }.is_null() {
+        let cpk = unsafe { cert_active_key((*ctx).cert) };
+        // SAFETY: `cpk` points into the live container.
+        if unsafe { (*cpk).x509 }.is_null() {
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_NO_CERTIFICATE_ASSIGNED, 2068) };
+            return 0;
+        }
+        // SAFETY: `cpk` points into the live container.
+        if unsafe { (*cpk).privatekey }.is_null() {
             // SAFETY: a constant site.
             unsafe { raise_ssl(SSL_R_NO_PRIVATE_KEY_ASSIGNED, 2072) };
             return 0;
@@ -4720,11 +4985,8 @@ pub unsafe extern "C" fn SSL_CTX_check_private_key(ctx: *const SslCtx) -> c_int 
         // SAFETY: both pointers are the live leaf pair per the checks above.
         unsafe {
             X509_check_private_key(
-                (*(*ctx).cert).key.x509.cast::<X509>(),
-                (*(*ctx).cert)
-                    .key
-                    .privatekey
-                    .cast::<crate::evp::pkey::EvpPkey>(),
+                (*cpk).x509,
+                (*cpk).privatekey.cast::<crate::evp::pkey::EvpPkey>(),
             )
         }
     })
@@ -4744,13 +5006,15 @@ pub unsafe extern "C" fn SSL_check_private_key(ssl: *const Ssl) -> c_int {
             return 0;
         }
         // SAFETY: `ssl` is non-NULL and live.
-        if unsafe { (*(*ssl).cert).key.x509 }.is_null() {
+        let cpk = unsafe { cert_active_key((*ssl).cert) };
+        // SAFETY: `cpk` points into the live container.
+        if unsafe { (*cpk).x509 }.is_null() {
             // SAFETY: a constant site.
             unsafe { raise_ssl(SSL_R_NO_CERTIFICATE_ASSIGNED, 2088) };
             return 0;
         }
-        // SAFETY: `ssl` is non-NULL and live.
-        if unsafe { (*(*ssl).cert).key.privatekey }.is_null() {
+        // SAFETY: `cpk` points into the live container.
+        if unsafe { (*cpk).privatekey }.is_null() {
             // SAFETY: a constant site.
             unsafe { raise_ssl(SSL_R_NO_PRIVATE_KEY_ASSIGNED, 2092) };
             return 0;
@@ -4758,11 +5022,8 @@ pub unsafe extern "C" fn SSL_check_private_key(ssl: *const Ssl) -> c_int {
         // SAFETY: both pointers are the live leaf pair per the checks above.
         unsafe {
             X509_check_private_key(
-                (*(*ssl).cert).key.x509.cast::<X509>(),
-                (*(*ssl).cert)
-                    .key
-                    .privatekey
-                    .cast::<crate::evp::pkey::EvpPkey>(),
+                (*cpk).x509,
+                (*cpk).privatekey.cast::<crate::evp::pkey::EvpPkey>(),
             )
         }
     })
@@ -4783,10 +5044,12 @@ pub unsafe extern "C" fn SSL_certs_clear(s: *mut Ssl) {
         // SAFETY: `s` is live per the caller's contract.
         let c = unsafe { (*s).cert };
         if !c.is_null() {
-            // SAFETY: `c` is the live certificate container.
+            // SAFETY: `c` is the live certificate container; clearing every slot is the
+            // authority's `ssl_cert_clear_certs` body.
             unsafe {
-                (*c).key.x509 = ptr::null_mut();
-                (*c).key.privatekey = ptr::null_mut();
+                for i in 0..SSL_PKEY_NUM {
+                    cert_pkey_clear(ptr::addr_of_mut!((*c).pkeys[i]));
+                }
             }
         }
     })
@@ -4842,7 +5105,7 @@ pub unsafe extern "C" fn SSL_get_peer_cert_chain(s: *const Ssl) -> *mut c_void {
             ptr::null_mut()
         } else {
             // SAFETY: `session` is the live session per the check above.
-            unsafe { (*session).peer_chain }
+            unsafe { (*session).peer_chain.cast::<c_void>() }
         }
     })
 }
