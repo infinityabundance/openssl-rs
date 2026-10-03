@@ -227,6 +227,13 @@ pub mod ts;
 // `clippy::module_inception`.
 #[path = "txt_db/txt_db.rs"]
 pub mod txt_db;
+// Phase 13.6d -- `crypto/sm3/legacy_sm3.c`: the deprecated `EVP_MD` static `EVP_sm3()` returns.
+// The SM3 primitive itself is `crypto/sm3/sm3.c` and already lives at `src/digest/sm3.rs`, but
+// the legacy translation unit is its own unit and the module layout follows the authority, so the
+// file is named for it (`crypto/sm3/legacy_sm3.c` -> `src/sm3/legacy_sm3.rs`) and declared here
+// rather than through a `mod.rs` that would trigger `clippy::module_inception`.
+#[path = "sm3/legacy_sm3.rs"]
+pub mod legacy_sm3;
 // Test-only: the one process-wide lock that serialises tests touching the crate's
 // process-global state (init/cleanup, the default `OSSL_LIB_CTX`, the memory
 // functions, the error registry, the object database, the property/method stores,

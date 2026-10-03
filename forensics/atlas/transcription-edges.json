@@ -1790,11 +1790,25 @@
         "translation_unit": "crypto/evp/names.c"
       },
       {
+        "module": "src/evp/legacy_md4.rs",
+        "phase": 7,
+        "phase_source": "export-ownership",
+        "share": "1/1",
+        "translation_unit": "crypto/evp/legacy_md4.c"
+      },
+      {
         "module": "src/evp/legacy_md5.rs",
         "phase": 7,
         "phase_source": "export-ownership",
         "share": "1/2",
         "translation_unit": "crypto/evp/legacy_md5.c"
+      },
+      {
+        "module": "src/evp/legacy_mdc2.rs",
+        "phase": 7,
+        "phase_source": "export-ownership",
+        "share": "1/1",
+        "translation_unit": "crypto/evp/legacy_mdc2.c"
       },
       {
         "module": "src/evp/legacy_ripemd.rs",
@@ -1816,6 +1830,13 @@
         "phase_source": "export-ownership",
         "share": "6/6",
         "translation_unit": "crypto/evp/legacy_sha.c"
+      },
+      {
+        "module": "src/evp/legacy_wp.rs",
+        "phase": 7,
+        "phase_source": "export-ownership",
+        "share": "1/1",
+        "translation_unit": "crypto/evp/legacy_wp.c"
       },
       {
         "module": "src/evp/mac.rs",
@@ -1879,6 +1900,13 @@
         "phase_source": "export-ownership",
         "share": "8/8",
         "translation_unit": "crypto/evp/p_legacy.c"
+      },
+      {
+        "module": "src/evp/p_lib.rs",
+        "phase": 7,
+        "phase_source": "export-ownership",
+        "share": "2/2",
+        "translation_unit": "crypto/evp/p_lib.c"
       },
       {
         "module": "src/evp/pbe.rs",
@@ -3580,6 +3608,13 @@
         "phase_source": "module-declaration",
         "share": "5/5",
         "translation_unit": "crypto/sm2/sm2_sign.c"
+      },
+      {
+        "module": "src/sm3/legacy_sm3.rs",
+        "phase": 7,
+        "phase_source": "export-ownership",
+        "share": "1/1",
+        "translation_unit": "crypto/sm3/legacy_sm3.c"
       },
       {
         "module": "src/sm4.rs",
@@ -48082,6 +48117,37 @@
         "identifiers": [
           "EVP_MD",
           "EVP_ORIG_GLOBAL",
+          "EVP_md4",
+          "IMPLEMENT_LEGACY_EVP_MD_METH",
+          "LEGACY_EVP_MD_METH_TABLE",
+          "MD4",
+          "MD4_CBLOCK",
+          "MD4_DIGEST_LENGTH",
+          "NID_md4",
+          "NID_md4WithRSAEncryption",
+          "NULL",
+          "const",
+          "h",
+          "include",
+          "md4",
+          "md4_final",
+          "md4_init",
+          "md4_md",
+          "md4_update",
+          "openssl",
+          "return",
+          "static",
+          "void"
+        ],
+        "modules": [
+          "src/evp/legacy_md4.rs"
+        ],
+        "tu": "crypto/evp/legacy_md4.c"
+      },
+      {
+        "identifiers": [
+          "EVP_MD",
+          "EVP_ORIG_GLOBAL",
           "EVP_md5",
           "IMPLEMENT_LEGACY_EVP_MD_METH",
           "LEGACY_EVP_MD_METH_TABLE",
@@ -48108,6 +48174,37 @@
           "src/evp/legacy_md5.rs"
         ],
         "tu": "crypto/evp/legacy_md5.c"
+      },
+      {
+        "identifiers": [
+          "EVP_MD",
+          "EVP_ORIG_GLOBAL",
+          "EVP_mdc2",
+          "IMPLEMENT_LEGACY_EVP_MD_METH",
+          "LEGACY_EVP_MD_METH_TABLE",
+          "MDC2",
+          "MDC2_BLOCK",
+          "MDC2_DIGEST_LENGTH",
+          "NID_mdc2",
+          "NID_mdc2WithRSA",
+          "NULL",
+          "const",
+          "h",
+          "include",
+          "mdc2",
+          "mdc2_final",
+          "mdc2_init",
+          "mdc2_md",
+          "mdc2_update",
+          "openssl",
+          "return",
+          "static",
+          "void"
+        ],
+        "modules": [
+          "src/evp/legacy_mdc2.rs"
+        ],
+        "tu": "crypto/evp/legacy_mdc2.c"
       },
       {
         "identifiers": [
@@ -48299,6 +48396,37 @@
           "src/evp/legacy_sha3.rs"
         ],
         "tu": "crypto/evp/legacy_sha.c"
+      },
+      {
+        "identifiers": [
+          "EVP_MD",
+          "EVP_ORIG_GLOBAL",
+          "EVP_whirlpool",
+          "IMPLEMENT_LEGACY_EVP_MD_METH",
+          "LEGACY_EVP_MD_METH_TABLE",
+          "NID_whirlpool",
+          "NULL",
+          "WHIRLPOOL",
+          "WHIRLPOOL_BBLOCK",
+          "WHIRLPOOL_DIGEST_LENGTH",
+          "const",
+          "h",
+          "include",
+          "openssl",
+          "return",
+          "static",
+          "void",
+          "whirlpool_md",
+          "whrlpool",
+          "wp",
+          "wp_final",
+          "wp_init",
+          "wp_update"
+        ],
+        "modules": [
+          "src/evp/legacy_wp.rs"
+        ],
+        "tu": "crypto/evp/legacy_wp.c"
       },
       {
         "identifiers": [
@@ -49514,6 +49642,7 @@
           "x"
         ],
         "modules": [
+          "src/evp/p_lib.rs",
           "src/evp/pkey.rs"
         ],
         "tu": "crypto/evp/p_lib.c"
@@ -71091,6 +71220,35 @@
           "src/sm2/sign.rs"
         ],
         "tu": "crypto/sm2/sm2_sign.c"
+      },
+      {
+        "identifiers": [
+          "EVP_MD",
+          "EVP_ORIG_GLOBAL",
+          "EVP_sm3",
+          "IMPLEMENT_LEGACY_EVP_MD_METH_LC",
+          "LEGACY_EVP_MD_METH_TABLE",
+          "NID_sm3",
+          "NID_sm3WithRSAEncryption",
+          "NULL",
+          "SM3_CBLOCK",
+          "SM3_DIGEST_LENGTH",
+          "const",
+          "include",
+          "ossl_sm3",
+          "return",
+          "sm3_int",
+          "sm3_int_final",
+          "sm3_int_init",
+          "sm3_int_update",
+          "sm3_md",
+          "static",
+          "void"
+        ],
+        "modules": [
+          "src/sm3/legacy_sm3.rs"
+        ],
+        "tu": "crypto/sm3/legacy_sm3.c"
       },
       {
         "identifiers": [

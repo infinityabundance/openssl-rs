@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 189,
       "deferred_to_later_phase": 0,
-      "implemented": 335,
-      "open_in_this_stratum": 42,
+      "implemented": 341,
+      "open_in_this_stratum": 36,
       "owned": 377,
       "received_by_handoff": 188
     },
@@ -1836,6 +1836,8 @@
       "ENGINE_unregister_pkey_asn1_meths",
       "ENGINE_unregister_pkey_meths",
       "ENGINE_up_ref",
+      "EVP_PKEY_get0_engine",
+      "EVP_PKEY_set1_engine",
       "EVP_aes_128_cbc",
       "EVP_aes_128_cbc_hmac_sha1",
       "EVP_aes_128_cbc_hmac_sha256",
@@ -1960,6 +1962,8 @@
       "EVP_idea_cfb64",
       "EVP_idea_ecb",
       "EVP_idea_ofb",
+      "EVP_md4",
+      "EVP_mdc2",
       "EVP_rc2_40_cbc",
       "EVP_rc2_64_cbc",
       "EVP_rc2_cbc",
@@ -1973,11 +1977,13 @@
       "EVP_seed_cfb128",
       "EVP_seed_ecb",
       "EVP_seed_ofb",
+      "EVP_sm3",
       "EVP_sm4_cbc",
       "EVP_sm4_cfb128",
       "EVP_sm4_ctr",
       "EVP_sm4_ecb",
       "EVP_sm4_ofb",
+      "EVP_whirlpool",
       "PEM_read_PrivateKey",
       "PEM_read_PrivateKey_ex",
       "PEM_read_bio_PrivateKey",
@@ -2188,42 +2194,6 @@
         "symbol": "ASYNC_unblock_pause"
       },
       {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_get0_engine"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/p_lib.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_PKEY_set1_engine"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_md4.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_md4"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_mdc2.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_mdc2"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/sm3/legacy_sm3.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_sm3"
-      },
-      {
-        "declaring_header": "evp.h",
-        "module": "src/evp/legacy_wp.rs",
-        "received_from_phase": 7,
-        "symbol": "EVP_whirlpool"
-      },
-      {
         "declaring_header": "pem.h",
         "module": "src/pem/pem_pkey.rs",
         "received_from_phase": 7,
@@ -2405,7 +2375,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "c508a39ccaddda756d18dbf456b9fa1425726c428bb73c911de5a64d5bbd4222"
+      "sha256": "8be38e647bfb3694f35a56322839e11782f4afeaee24a3ecc2b2e8914171f698"
     },
     {
       "name": "phase3-obligations",

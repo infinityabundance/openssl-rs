@@ -37,6 +37,21 @@
  * stitched CBC-HMAC statics as plain CBC (an unset TLS AAD leaves `payload_length` at its sentinel,
  * the authority's own "not TLS mode" arm).
  *
+ * Subphase 13.6d adds the four deprecated `EVP_MD` statics -- `EVP_md4` and `EVP_mdc2` of
+ * `crypto/evp/legacy_md4.c` and `legacy_mdc2.c`, `EVP_whirlpool` of `crypto/evp/legacy_wp.c` and
+ * `EVP_sm3` of `crypto/sm3/legacy_sm3.c` -- and the two `crypto/evp/p_lib.c` names
+ * `EVP_PKEY_set1_engine` and `EVP_PKEY_get0_engine`. For each digest it prints the accessor's
+ * answer (`acc=`), the `nid`-derived short name (`name=`), the published `md_size`/`block_size`/
+ * `type`/`flags` (`size=`, `bs=`, `type=`, `flags=`), and a fixed-input digest over `PT` as the
+ * digest bytes and a success flag (`dg=`, `rt=`). `EVP_DigestInit_ex` replaces a legacy method
+ * with its provider counterpart by `nid`-derived short name, so `EVP_sm3` -- the default
+ * provider's row -- digests for real on both sides. `EVP_md4`, `EVP_mdc2` and `EVP_whirlpool` are
+ * the **legacy provider's** rows and only the default provider is activated, so their init is
+ * refused identically on both sides and their arm reports `rt=0` with an empty `dg=`; their
+ * published fields are still compared. The two `p_lib.c` names are driven over a fresh
+ * `EVP_PKEY` with the NULL engine, the only engine this link can hold: the accessor answers NULL,
+ * the setter's clearing arm succeeds, and the accessor still answers NULL.
+ *
  * ## What this probe does not do
  *
  * It never prints an address, so the fetched-identity divergence cannot leak into a comparison; it
@@ -289,6 +304,37 @@ done:
     return ok;
 }
 
+/* The fixed-input digest of `PT` under one static. Returns 1 and sets `*outlen` on success, 0 on
+ * refusal -- which is what the three legacy-provider-only digests report here. */
+static int rt_digest(const EVP_MD *md, unsigned char *out, unsigned int *outlen)
+{
+    EVP_MD_CTX *ctx = EVP_MD_CTX_new();
+    int ok = 0;
+
+    *outlen = 0;
+    if (ctx == NULL)
+        return 0;
+    if (EVP_DigestInit_ex(ctx, md, NULL) != 1)
+        goto done;
+    if (EVP_DigestUpdate(ctx, PT, PT_LEN) != 1)
+        goto done;
+    if (EVP_DigestFinal_ex(ctx, out, outlen) != 1)
+        goto done;
+    ok = 1;
+
+done:
+    EVP_MD_CTX_free(ctx);
+    return ok;
+}
+
+/* 13.6d: the deprecated `EVP_MD` statics. Order is the authority units': legacy_md4, legacy_mdc2,
+ * legacy_wp, then sm3. */
+typedef const EVP_MD *(*md_fn)(void);
+
+static const md_fn MD_ENTRIES[] = {
+    EVP_md4, EVP_mdc2, EVP_whirlpool, EVP_sm3,
+};
+
 int main(void)
 {
     size_t i;
@@ -365,6 +411,59 @@ int main(void)
         out_hex(key, ct, ctlen);
         snprintf(key, sizeof key, "%s.rt", name);
         out_int(key, rt);
+    }
+
+    /* 13.6d: the four deprecated `EVP_MD` statics. `EVP_DigestInit_ex` fetches the provider
+     * counterpart by `nid`-derived short name, so `EVP_sm3` digests for real while the three
+     * legacy-provider-only digests are refused identically on both sides. */
+    for (i = 0; i < sizeof(MD_ENTRIES) / sizeof(MD_ENTRIES[0]); i++) {
+        const EVP_MD *md = MD_ENTRIES[i]();
+        const char *name;
+        unsigned char dg[EVP_MAX_MD_SIZE];
+        unsigned int dglen = 0;
+        int rt;
+        char key[64];
+
+        if (md == NULL) {
+            printf("mdentry%zu.acc=0\n", i);
+            continue;
+        }
+        name = OBJ_nid2sn(EVP_MD_get_type(md));
+        if (name == NULL)
+            name = "NULL";
+
+        snprintf(key, sizeof key, "%s.acc", name);
+        out_int(key, 1);
+        snprintf(key, sizeof key, "%s.size", name);
+        out_int(key, EVP_MD_get_size(md));
+        snprintf(key, sizeof key, "%s.bs", name);
+        out_int(key, EVP_MD_get_block_size(md));
+        snprintf(key, sizeof key, "%s.type", name);
+        out_int(key, EVP_MD_get_type(md));
+        snprintf(key, sizeof key, "%s.flags", name);
+        printf("%s=%lx\n", key, (unsigned long)EVP_MD_get_flags(md));
+
+        memset(dg, 0, sizeof dg);
+        rt = rt_digest(md, dg, &dglen);
+        snprintf(key, sizeof key, "%s.rt", name);
+        out_int(key, rt);
+        snprintf(key, sizeof key, "%s.dg", name);
+        out_hex(key, dg, (int)dglen);
+    }
+
+    /* 13.6d: `crypto/evp/p_lib.c`'s engine remainder, over a fresh key and the NULL engine. The
+     * accessor reads `pkey->engine` and the setter writes `pkey->pmeth_engine`, and both are NULL
+     * on a key this link built. */
+    {
+        EVP_PKEY *k = EVP_PKEY_new();
+
+        out_int("pkey.new", k != NULL);
+        if (k != NULL) {
+            out_int("pkey.get0_engine", EVP_PKEY_get0_engine(k) == NULL);
+            out_int("pkey.set1_engine_null", EVP_PKEY_set1_engine(k, NULL));
+            out_int("pkey.get0_engine_after", EVP_PKEY_get0_engine(k) == NULL);
+            EVP_PKEY_free(k);
+        }
     }
     return 0;
 }
