@@ -1,12 +1,12 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "complete": false,
+    "complete": true,
     "counts": {
       "atlas_owned": 189,
       "deferred_to_later_phase": 0,
-      "implemented": 374,
-      "open_in_this_stratum": 3,
+      "implemented": 377,
+      "open_in_this_stratum": 0,
       "owned": 377,
       "received_by_handoff": 188
     },
@@ -213,19 +213,19 @@
         {
           "declaring_header": "srp.h",
           "owning_phase": 13,
-          "reason": "its body reads and releases a verifier file through `TXT_DB_read` (`crypto/srp/srp_vfy.c:423`) and `TXT_DB_free` (`:504`), and both are declared in `include/openssl/txt_db.h`, which is Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13). The rest of `crypto/srp/srp_vfy.c` lands in 12.8, including the private helpers that only `SRP_VBASE_init` reaches; pulling the `TXT_DB` reader forward to satisfy one deprecated entry point is disproportionate, so the row is handed to Phase 13 rather than stubbed",
+          "reason": "its body reads and releases a verifier file through `TXT_DB_read` (`crypto/srp/srp_vfy.c:423`) and `TXT_DB_free` (`:504`), and both are declared in `include/openssl/txt_db.h`, which is Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13). The rest of `crypto/srp/srp_vfy.c` landed in 12.8, including the private helpers that only `SRP_VBASE_init` reaches. **13.5 landed `TXT_DB_read`/`TXT_DB_free` and 13.8 transcribed the body in `src/srp/srp_vfy.rs`**, so the blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the export is still Phase 13's to write in the ledger's arithmetic -- this row is what puts the name in `forensics/phase13-obligations.json`'s working set -- and retiring it would move a built export into this sealed stratum's `implemented` list on the strength of work this stratum did not do.",
           "symbol": "SRP_VBASE_init"
         },
         {
           "declaring_header": "ts.h",
           "owning_phase": 13,
-          "reason": "both are guarded by `#ifndef OPENSSL_NO_ENGINE` in `crypto/ts/ts_conf.c` and their body is the ENGINE lookup and installation: `TS_CONF_set_default_engine` calls `ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it (`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13), and `src/engine/eng_list.rs` records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. Pulling the ENGINE registry forward to satisfy two `CONF` readers is disproportionate, so the rows are handed to Phase 13 rather than stubbed",
+          "reason": "both are guarded by `#ifndef OPENSSL_NO_ENGINE` in `crypto/ts/ts_conf.c` and their body is the ENGINE lookup and installation: `TS_CONF_set_default_engine` calls `ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it (`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13). **13.1 landed `ENGINE_by_id` and 13.2 landed `ENGINE_set_default`, and 13.8 transcribed both readers in `src/ts/ts_conf.rs`**, so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the pair is still Phase 13's to write in the ledger's arithmetic -- this row is what puts the two names in `forensics/phase13-obligations.json`'s working set -- and retiring it would move two built exports into this sealed stratum's `implemented` list on the strength of work this stratum did not do.",
           "symbol": "TS_CONF_set_crypto_device"
         },
         {
           "declaring_header": "ts.h",
           "owning_phase": 13,
-          "reason": "both are guarded by `#ifndef OPENSSL_NO_ENGINE` in `crypto/ts/ts_conf.c` and their body is the ENGINE lookup and installation: `TS_CONF_set_default_engine` calls `ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it (`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13), and `src/engine/eng_list.rs` records `ENGINE_by_id` as withheld on `crypto/engine/eng_dyn.c`. Pulling the ENGINE registry forward to satisfy two `CONF` readers is disproportionate, so the rows are handed to Phase 13 rather than stubbed",
+          "reason": "both are guarded by `#ifndef OPENSSL_NO_ENGINE` in `crypto/ts/ts_conf.c` and their body is the ENGINE lookup and installation: `TS_CONF_set_default_engine` calls `ENGINE_by_id(name)` (`crypto/ts/ts_conf.c:188`) and `ENGINE_set_default(e, ENGINE_METHOD_ALL)` (`:192`), and `TS_CONF_set_crypto_device` delegates to it (`:171`, `:188`); `ENGINE_by_id` and `ENGINE_set_default` are `engine.h`'s and Phase 13's (`forensics/atlas/symbol-ownership.json`, owner_phase 13). **13.1 landed `ENGINE_by_id` and 13.2 landed `ENGINE_set_default`, and 13.8 transcribed both readers in `src/ts/ts_conf.rs`**, so every blocker this row named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the pair is still Phase 13's to write in the ledger's arithmetic -- this row is what puts the two names in `forensics/phase13-obligations.json`'s working set -- and retiring it would move two built exports into this sealed stratum's `implemented` list on the strength of work this stratum did not do.",
           "symbol": "TS_CONF_set_default_engine"
         }
       ],
@@ -2021,6 +2021,9 @@
       "PEM_write_bio_Parameters",
       "PEM_write_bio_PrivateKey",
       "PEM_write_bio_PrivateKey_ex",
+      "SRP_VBASE_init",
+      "TS_CONF_set_crypto_device",
+      "TS_CONF_set_default_engine",
       "TXT_DB_create_index",
       "TXT_DB_free",
       "TXT_DB_get_by_index",
@@ -2093,26 +2096,7 @@
     "module_label_rule": "the module a symbol is expected in is the crate's layout of the authority translation unit that defines it (forensics/atlas/export-defining-units.json): crypto/<dir>/<stem>.c -> src/<dir>/<stem>.rs. A **label**: the universe comes from the ownership atlas, and `main` fails when any symbol the atlas gives this stratum (or an earlier one hands it) has no defining unit",
     "module_overrides": [],
     "note": "`complete` is true only when every export in the working set is either implemented or handed to a later stratum. `open` is the only list that blocks the stratum. Unlike every earlier activation, this ledger's working set is more than its atlas-owned universe: 189 exports are `engine.h`'s, `ui.h`'s and `txt_db.h`'s, and 188 more arrive as recorded hand-offs from phases 3, 7 and 12. It also does not start with that whole working set open: 123 atlas-owned exports were landed before activation as substrate the earlier strata needed, and the four Phase 7 -> 13 `PEM_read[_bio]_PrivateKey` hand-offs are already implemented (Phase 8 landed them, D369), so the ledger's `implemented` count is not zero and its `open` count is not the whole working set. That split moves as this stratum lands its own units, so this note does not restate its counts; `counts` above is the live record and `forensics/atlas/implemented-surface.json` is the authority behind it. This stratum owns 39 provider registration rows, all unimplemented at activation (`forensics/atlas/provider-algorithms.json`). Nothing here is a parity claim: a symbol in `implemented` is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-13-SUBPHASES.md section 4 decides when the stratum may be called complete.",
-    "open": [
-      {
-        "declaring_header": "srp.h",
-        "module": "src/srp/srp_vfy.rs",
-        "received_from_phase": 12,
-        "symbol": "SRP_VBASE_init"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": 12,
-        "symbol": "TS_CONF_set_crypto_device"
-      },
-      {
-        "declaring_header": "ts.h",
-        "module": "src/ts/ts_conf.rs",
-        "received_from_phase": 12,
-        "symbol": "TS_CONF_set_default_engine"
-      }
-    ],
+    "open": [],
     "owned_by_header": {
       "async.h": 22,
       "engine.h": 121,
@@ -2210,7 +2194,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "61f85a623b33aa9810260d878d9dd299f0d437fcab5465acb76d2cf2d62bd9a2"
+      "sha256": "2b08fb3154c2c61bb05c9b4bc9335f35d444f566a967eefe007bc4573dca0016"
     },
     {
       "name": "phase3-obligations",
@@ -2225,7 +2209,7 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "c77e513937b0b436970479d493288905e04bb4a6fff473940ecb0e47847c832b"
+      "sha256": "f9ce763c994793b2f762f8643cf88e749500ce5f12554a0294163fa28556f757"
     }
   ],
   "kind": "phase13-obligations",

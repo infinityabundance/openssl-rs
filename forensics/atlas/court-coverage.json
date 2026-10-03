@@ -13,12 +13,11 @@
       9,
       10,
       11,
-      12
-    ],
-    "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
-    "in_progress": [
+      12,
       13
     ],
+    "definition": "a stratum that has begun is one with an obligation ledger on disk; `complete` records whether it has sealed. Every export a begun stratum implements is partitioned below, whether the stratum is in-progress or complete",
+    "in_progress": [],
     "not_yet_begun": [],
     "strata": [
       {
@@ -609,6 +608,7 @@
               "RT-EVP-SKEY",
               "RT-EXDATA",
               "RT-FETCH",
+              "RT-HANDOFF",
               "RT-HMAC",
               "RT-HPKE",
               "RT-HTTP",
@@ -2759,6 +2759,7 @@
               "RT-EC",
               "RT-ERR-BIO",
               "RT-EVP-PEM",
+              "RT-HANDOFF",
               "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-LEGACY-REMAINDER",
@@ -3328,6 +3329,7 @@
               "RT-CMS",
               "RT-CMS-REMAINDER",
               "RT-CONF",
+              "RT-HANDOFF",
               "RT-HTTP",
               "RT-KEYFORMAT",
               "RT-LEGACY-REMAINDER",
@@ -4173,6 +4175,7 @@
             "courts": [
               "RT-CONF",
               "RT-CONF-MOD",
+              "RT-HANDOFF",
               "RT-STORE",
               "RT-TS",
               "RT-X509",
@@ -4235,6 +4238,7 @@
             "basis": "called",
             "courts": [
               "RT-CONF",
+              "RT-HANDOFF",
               "RT-STORE",
               "RT-TS",
               "RT-X509",
@@ -4255,6 +4259,7 @@
             "courts": [
               "RT-CONF",
               "RT-CONF-MOD",
+              "RT-HANDOFF",
               "RT-STORE",
               "RT-TS",
               "RT-X509",
@@ -7280,6 +7285,7 @@
               "RT-DH",
               "RT-DSA",
               "RT-EC",
+              "RT-HANDOFF",
               "RT-RSA"
             ],
             "symbol": "BN_num_bits"
@@ -39728,6 +39734,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-HANDOFF",
               "RT-SRP"
             ],
             "symbol": "SRP_VBASE_free"
@@ -39742,6 +39749,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-HANDOFF",
               "RT-SRP"
             ],
             "symbol": "SRP_VBASE_get_by_user"
@@ -39749,6 +39757,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-HANDOFF",
               "RT-SRP"
             ],
             "symbol": "SRP_VBASE_new"
@@ -41891,12 +41900,12 @@
         "staged_candidate_probes": 11
       },
       {
-        "completed": false,
+        "completed": true,
         "counts": {
-          "directly_courted": 374,
-          "directly_courted_called": 345,
+          "directly_courted": 377,
+          "directly_courted_called": 348,
           "directly_courted_referenced": 29,
-          "implemented": 374,
+          "implemented": 377,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -44138,6 +44147,27 @@
           {
             "basis": "called",
             "courts": [
+              "RT-HANDOFF"
+            ],
+            "symbol": "SRP_VBASE_init"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HANDOFF"
+            ],
+            "symbol": "TS_CONF_set_crypto_device"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-HANDOFF"
+            ],
+            "symbol": "TS_CONF_set_default_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-TXTDB"
             ],
             "symbol": "TXT_DB_create_index"
@@ -44680,14 +44710,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 13,
-        "staged_candidate_probes": 8
+        "staged_candidate_probes": 9
       }
     ],
     "totals": {
-      "directly_courted": 5885,
-      "directly_courted_called": 4877,
+      "directly_courted": 5888,
+      "directly_courted_called": 4880,
       "directly_courted_referenced": 1008,
-      "implemented": 5893,
+      "implemented": 5896,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -44698,7 +44728,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "76514909b60039cef899670ec22f6935da47c85153abd0347e80c4b32f201ade"
+      "sha256": "5b75f0a9c1b926a20cecd40da5a30c91bb674d02d7303b669633615e0bc1f740"
     },
     {
       "name": "symbol-ownership",
@@ -44803,7 +44833,7 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "c77e513937b0b436970479d493288905e04bb4a6fff473940ecb0e47847c832b"
+      "sha256": "f9ce763c994793b2f762f8643cf88e749500ce5f12554a0294163fa28556f757"
     },
     {
       "name": "phase12-courts",
@@ -44813,12 +44843,12 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "5cf451f133301641fdaf2b080b1697ae57be3213fc6fb57d244636412932a9ec"
+      "sha256": "7f8a9ae55547a95e9b30f122502f3e7d7096219ce1e5833f37841255d0b64a09"
     },
     {
       "name": "phase13-courts",
       "path": "artifacts/phase13/COURTS.json",
-      "sha256": "97ed34c07519221239aa050977a7eb36c8eb7e635d04118dea1ae2b2072961f3"
+      "sha256": "75bc6444480528f9a373efe3b24656b633147d6660d6279571c25485c45fe706"
     }
   ],
   "kind": "court-coverage",

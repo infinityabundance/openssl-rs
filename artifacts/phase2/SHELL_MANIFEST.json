@@ -10,11 +10,11 @@
       {
         "artifact": "artifacts/phase2/shell/libcrypto.shell.rs",
         "authority_exports": 5896,
-        "implemented_excluded": 5893,
+        "implemented_excluded": 5896,
         "role": "scaffolded-symbols",
         "runtime": "std",
-        "scaffolded": 3,
-        "sha256": "4ec79a797b4cb77551e8866e9151b6b16fe788db54d36926bb2e34a170e144e6"
+        "scaffolded": 0,
+        "sha256": "efa0fbce5c0e96ab7ddd539f7b798f4ad893f5c120c99cb44077f7c74ea65606"
       },
       {
         "artifact": "artifacts/phase2/pkgconfig/libcrypto.pc",
@@ -75,7 +75,7 @@
     "authority": "openssl-3.6.4-production",
     "authority_version": "3.6.4",
     "implemented_excluded": {
-      "libcrypto": 5893,
+      "libcrypto": 5896,
       "libssl": 0
     },
     "scaffold_policy": "every generated symbol definition is SCAFFOLDED; it cannot count as parity, and it aborts rather than returning a plausible value (docs/CUSTODIAN_CONTRACT.md §5)",
@@ -85,7 +85,7 @@
       "libssl": "libssl.so.3"
     }
   },
-  "body_hash": "1997daecf47976070bceb84b4e7a0899a4f7378d5326ff8c01b9832f133e3b0b",
+  "body_hash": "5acf06cc96097d0581229f5662a2ffd08959fdbb36bdd63f64ebb680e1ed6923",
   "generator": "forensics/tools/phase2_shell.py",
   "inputs": [],
   "kind": "phase2-shell",

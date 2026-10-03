@@ -3655,7 +3655,7 @@
         "module": "src/srp/srp_vfy.rs",
         "phase": 12,
         "phase_source": "export-ownership",
-        "share": "14/14",
+        "share": "15/15",
         "translation_unit": "crypto/srp/srp_vfy.c"
       },
       {
@@ -3704,7 +3704,7 @@
         "module": "src/ts/ts_conf.rs",
         "phase": 12,
         "phase_source": "export-ownership",
-        "share": "18/18",
+        "share": "20/20",
         "translation_unit": "crypto/ts/ts_conf.c"
       },
       {

@@ -194,7 +194,20 @@ coordinate for each malformed arm. The `ASYNC_*` framework's `ASYNC_start_job`/`
 `ASYNC_WAIT_CTX` state each transition leaves, and a probe that only reads the `WAIT_CTX` would
 measure half of it, so the transition sequence is printed.
 
-**3.8 Nothing here is a parity claim about the meaning of an ENGINE registration or a prompt.** A
+**3.8 The received hand-offs are a lookup and a file parse, and their return values are the
+contract.** `TS_CONF_set_default_engine`'s answer is `1` for the literal `"builtin"`, and
+otherwise the `ENGINE_by_id`/`ENGINE_set_default` result; `TS_CONF_set_crypto_device`'s answer is
+`1` when its NULL-or-section-supplied device installs no engine or one the default-engine
+installer accepts, and `0` when it refuses. The court drives exactly those arms over a fixed
+`CONF` -- a NULL device with no section entry, a NULL device with `crypto_device = builtin`, an
+explicit `"builtin"`, and an unknown id -- and pins them to the authority's own integers.
+`SRP_VBASE_init`'s answer is one of the `SRP_ERR_*` codes or `SRP_NO_ERROR`, and the observable is
+both that code and the state the parse leaves (`vb->default_g`/`default_N`, and the user a
+subsequent `SRP_VBASE_get_by_user` finds); the court drives the `I`/`V` records, the seed-key
+path and the NULL-file, absent-file, wrong-field-count and undecodable-base64 refusals. It uses
+no built-in engine id whose registration diverges and never reads the error queue.
+
+**3.9 Nothing here is a parity claim about the meaning of an ENGINE registration or a prompt.** A
 transcription that returns an `ENGINE` the authority also returns has not been shown to behave
 like every ENGINE, and §3.4's prompt is only as good as the fixed method the court supplies. The
 measured surface is the one above, and a name that cannot be driven is named `pending` rather than
@@ -406,24 +419,24 @@ answer NULL where the authority answers a key for a written `DH PARAMETERS` bloc
 decoder-absence divergence `D-DECODER-ABSENT-1` already names -- so the court drives them over an
 empty BIO and leaves the divergent arm undriven rather than compared.
 
+Subphase 13.8 landed the three received hand-offs, the last open rows. `src/ts/ts_conf.rs` gained
+`TS_CONF_set_crypto_device` and `TS_CONF_set_default_engine` (`crypto/ts/ts_conf.c`), the
+`#ifndef OPENSSL_NO_ENGINE` pair 12.5 withheld: the device reader delegates to the default-engine
+installer, whose body is `ENGINE_by_id` (`:188`) and `ENGINE_set_default(e, ENGINE_METHOD_ALL)`
+(`:192`), landed by 13.1 and 13.2. `src/srp/srp_vfy.rs` gained `SRP_VBASE_init`
+(`crypto/srp/srp_vfy.c:394-510`), the entry point 12.8 withheld on the `TXT_DB_read`/
+`TXT_DB_free` that 13.5 landed; its five private helpers lost the item-level
+`#[allow(dead_code)]` markers whose note named that withheld caller, since the caller now exists.
+Its court is `RT-HANDOFF`. Because the three are Phase 13's by hand-off rather than by the atlas,
+landing them leaves Phase 12's hand-off edges **retargeted** rather than retired, the move
+`phase7_obligations.py`'s `ENGINE_get_pkey_meth` row made in 13.2: the two `BLOCKED_HANDOFFS` rows
+of `forensics/tools/phase12_obligations.py` moved to its new `UNBLOCKED_HANDOFFS` table, so
+`forensics/phase12-obligations.json` still records them as handed to Phase 13 and
+`forensics/tools/ownership_audit.py` reconciles the two ledgers in both directions.
+
 **Open exports (checked against the ledger):**
 
-The open set is the three Phase 12 hand-offs. Representative names are
-`TS_CONF_set_crypto_device`, `TS_CONF_set_default_engine` and `SRP_VBASE_init`, each assigned to
-subphase 13.8 by §2's partition. The ASYNC job-and-wait framework is not in this list: subphase
-13.7 landed all twenty-two `ASYNC_*` names (`src/async/async.rs`, `async_wait.rs` and
-`arch/async_posix.rs`), so they are implemented and courted by `RT-LEGACY-REMAINDER` rather than
-open. The remaining PEM private-key readers and writers are not in this list either: subphase 13.7
-landed them, so they are implemented and courted by `RT-LEGACY-REMAINDER` rather than open. The AES
-statics are not in this list: subphase 13.6a landed the thirty-eight
-`EVP_aes_*` accessors and the four `EVP_aes_*_cbc_hmac_sha*` stitched statics, subphase 13.6b landed
-the twenty-seven `EVP_aria_*` and twenty-one `EVP_camellia_*` accessors, and subphase 13.6c landed
-the remaining fifty-two legacy EVP cipher statics (DES, 3DES, DESX, Blowfish, CAST5, IDEA, SEED,
-RC2, RC4, RC4-HMAC-MD5, SM4, ChaCha20 and ChaCha20-Poly1305), so they are implemented and courted by
-`RT-EVP-LEGACY` rather than open. The four deprecated EVP_MD statics and the two p_lib.c names are
-not in this list either: subphase 13.6d landed them, so they are implemented and courted by
-`RT-EVP-LEGACY` rather than open. The TXT_DB codec is not in this list either: subphase 13.5 landed
-all six of its names, so they are implemented and courted by `RT-TXTDB` rather than open. The UI
-framework is not in this list either: subphase 13.4 drove all 62 of its names through the RT-UI
-court, so they are implemented and called rather than open, and none of them is left merely
-referenced by the activation basis.
+None. Subphase 13.8 landed the last three Phase 12 hand-offs, so this stratum's obligation ledger
+reports an open count of zero and complete, and every name it holds is implemented and courted,
+directly or by hand-off. Section 2's partition open counts are the activation measurement; the
+ledger counts is the live record and it now has no open row.
