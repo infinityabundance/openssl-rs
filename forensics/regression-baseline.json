@@ -5,6 +5,7 @@
     "phase12",
     "phase13",
     "phase14",
+    "phase15",
     "phase2",
     "phase22",
     "phase3",
@@ -444,6 +445,10 @@
       "observations": 600,
       "verdict": "pass"
     },
+    "RT-PHASE15-REF": {
+      "observations": 3,
+      "verdict": "pass"
+    },
     "RT-PHASE22-BINARY": {
       "observations": 0,
       "verdict": "pass"
@@ -534,6 +539,10 @@
     },
     "RT-PUBKEY": {
       "observations": 100,
+      "verdict": "pass"
+    },
+    "RT-QUIC": {
+      "observations": 30,
       "verdict": "pass"
     },
     "RT-RAND": {
@@ -683,6 +692,7 @@
     "phase12": 3,
     "phase13": 0,
     "phase14": 0,
+    "phase15": 0,
     "phase22": 0,
     "phase3": 43,
     "phase4": 23,
@@ -694,7 +704,7 @@
   },
   "implemented": {
     "libcrypto": 5896,
-    "libssl": 600
+    "libssl": 603
   },
   "open_obligations": {
     "phase10": 0,
@@ -702,6 +712,7 @@
     "phase12": 0,
     "phase13": 0,
     "phase14": 0,
+    "phase15": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -717,6 +728,7 @@
     "phase12": 1033,
     "phase13": 377,
     "phase14": 600,
+    "phase15": 3,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -734,7 +746,7 @@
     "12": "complete",
     "13": "complete",
     "14": "complete",
-    "15": "not-started",
+    "15": "complete",
     "16": "not-started",
     "17": "not-started",
     "18": "not-started",
@@ -755,7 +767,7 @@
     "blocking_dependencies": 4,
     "divergence_names_covered": 47,
     "findings": 0,
-    "language_census": 11461,
+    "language_census": 11459,
     "sealed_census": 404
   },
   "provider_implemented": [

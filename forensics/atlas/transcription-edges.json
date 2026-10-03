@@ -3708,6 +3708,13 @@
         "translation_unit": "ssl/quic/quic_impl.c"
       },
       {
+        "module": "src/ssl/quic/quic_method.rs",
+        "phase": 15,
+        "phase_source": "module-declaration",
+        "share": "3/3",
+        "translation_unit": "ssl/quic/quic_method.c"
+      },
+      {
         "module": "src/ssl/quic/quic_tls_api.rs",
         "phase": 14,
         "phase_source": "module-declaration",
@@ -91410,6 +91417,28 @@
           "src/ssl/quic/quic_impl.rs"
         ],
         "tu": "ssl/quic/quic_impl.c"
+      },
+      {
+        "identifiers": [
+          "IMPLEMENT_quic_meth_func",
+          "OSSL_QUIC_ANY_VERSION",
+          "OSSL_QUIC_client_method",
+          "OSSL_QUIC_client_thread_method",
+          "OSSL_QUIC_server_method",
+          "h",
+          "include",
+          "macros",
+          "objects",
+          "openssl",
+          "ossl_quic_accept",
+          "ossl_quic_connect",
+          "ssl3_undef_enc_method",
+          "ssl_undefined_function"
+        ],
+        "modules": [
+          "src/ssl/quic/quic_method.rs"
+        ],
+        "tu": "ssl/quic/quic_method.c"
       },
       {
         "identifiers": [
