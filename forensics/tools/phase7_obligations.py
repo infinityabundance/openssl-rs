@@ -64,7 +64,6 @@ from atlas_common import (  # noqa: E402
 # same atlases, and two copies would be two things to keep true. See D198.
 from blocker_liveness import (  # noqa: E402
     BlockerAtlas,
-    Blocker,
     BlockedHandoff,
     blockers_to_json,
     check_rows,
@@ -267,28 +266,14 @@ LEGACY_HANDOFFS: list[tuple[tuple[str, ...], str, str]] = [
 # convention is now a check rather than a sentence.
 # ---------------------------------------------------------------------------------------------
 
+# The structured blocked hand-offs. **Empty as of 13.2**, which landed the last blocker the one
+# remaining row named: `ENGINE_get_pkey_meth` (`src/engine/tb_pkmeth.rs`) joined the already
+# landed `ENGINE_init`/`ENGINE_finish`, so the `EVP_PKEY_get0_engine`/`EVP_PKEY_set1_engine`
+# deferral was falsified and moved to `UNBLOCKED_HANDOFFS` below rather than retired -- the
+# exports are still Phase 13's to write, and only the authority blockers have landed. The
+# mechanism is kept true rather than deleted: a future deferral with a file:line claim belongs
+# here, and `check_rows` has nothing to check while the list is empty by construction.
 BLOCKED_HANDOFFS: list[BlockedHandoff] = [
-    BlockedHandoff(
-        symbols=(
-            "EVP_PKEY_get0_engine", "EVP_PKEY_set1_engine",
-        ),
-        binding_phase=13,
-        blocked_by=(
-            Blocker("ENGINE_init", "crypto/engine/eng_init.c", 86, "exported", 13),
-            Blocker("ENGINE_get_pkey_meth", "crypto/engine/tb_pkmeth.c", 74, "exported", 13),
-            Blocker("ENGINE_finish", "crypto/engine/eng_init.c", 106, "exported", 13),
-        ),
-        reason=(
-            "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and "
-            "`ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; `:750` reads "
-            "`pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this crate's `EvpPkey` has "
-            "neither field -- they are absent with the rest of the legacy attribute block "
-            "(`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else."
-        ),
-    ),
-    # The `EVP_add_alg_module` blocked hand-off was retired when the 10.14.3 slice landed
-    # `X509V3_get_value_bool`, its only blocker; the export itself landed the same pass in
-    # `src/evp/evp_cnf.rs`. Retired rather than left stale, the rule D453/D454 used.
 ]
 
 # ---------------------------------------------------------------------------------------------
@@ -315,6 +300,20 @@ BLOCKED_HANDOFFS: list[BlockedHandoff] = [
 # ---------------------------------------------------------------------------------------------
 
 UNBLOCKED_HANDOFFS: list[tuple[tuple[str, ...], int, str]] = [
+    (
+        ("EVP_PKEY_get0_engine", "EVP_PKEY_set1_engine"),
+        13,
+        "`crypto/evp/p_lib.c:732` reads and writes `pkey->pmeth_engine`/`pkey->engine` through "
+        "`ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, "
+        "`:745`). **13.2 landed `ENGINE_get_pkey_meth`** (`src/engine/tb_pkmeth.rs`) with the "
+        "key-loader surface and the six method tables, so every blocker the row's `blocked_by` "
+        "named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: "
+        "the pair is still Phase 13's to write -- `EVP_PKEY` has neither field, absent with the "
+        "rest of the legacy attribute block (`src/evp/pkey.rs` module doc) -- and retiring it "
+        "would move the pair into this sealed stratum's `implemented` list on the strength of "
+        "work this stratum did not do. The row is what `phase13_obligations.py` reads to count "
+        "the pair as received.",
+    ),
     (
         ("EVP_SealInit",),
         9,

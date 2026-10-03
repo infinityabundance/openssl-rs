@@ -38,16 +38,29 @@ does **not** observe the built-in registry directly, because the authority regis
 does it read the error queue. See docs/PHASE-13-SUBPHASES.md section 3.1 for what the court is
 required to compare.
 
+`RT-ENGINE-TABLE`, and what it compares
+---------------------------------------
+13.2's court, `courts/phase13/rt_engine_table_probe.c`, drives the table and method-binding
+surface the subphase lands over a synthetic ENGINE built with the landed `ENGINE_new`/
+`ENGINE_set_id`/`ENGINE_set_name`/`ENGINE_add`. It compares the identity each setter binds and
+each getter returns, the cipher table's register/select/fetch/unregister cycle, the
+`ENGINE_register_all_*` walk and the `dummy_nid` default select for the cipher/RSA/DSA/DH/EC/RAND
+tables, the `ENGINE_get_pkey_meth` fetch and its absent-NID refusal, the three key-loader
+setter/getter pairs and the NULL/uninitialised/no-loader refusals of
+`ENGINE_load_private_key`/`_public_key`/`_ssl_client_cert`, and the no-method registration no-op.
+It does **not** pass a NULL engine to a method getter (the authority dereferences it), and it never
+reads the error queue, so the refusal arms' `ENGINE_R_*` raises cannot leak into a comparison. See
+docs/PHASE-13-SUBPHASES.md section 3.2 for what the court is required to compare.
+
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 A court the plan names and this stratum cannot run yet is NOT registered here. It is named in
 `PENDING_COURTS` with the subphase that brings it, and every name is printed on each run, so "not
 run yet" cannot be read as "passed" -- the contract Phase 8's `PENDING_CORRECTNESS_COURTS` and every
-later activation established. `RT-ENGINE-TABLE`, `RT-ENGINE-CTRL`, `RT-UI`, `RT-TXTDB`,
-`RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` are the remaining subphases' own courts:
-13.2's table and method binding, 13.3's control and command surface, 13.4's UI framework, 13.5's
-TXT_DB database, 13.6's legacy EVP method statics, 13.7's PEM readers and ASYNC framework, and
-13.8's received TS_CONF and SRP hand-offs.
+later activation established. `RT-ENGINE-CTRL`, `RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`,
+`RT-LEGACY-REMAINDER` and `RT-HANDOFF` are the remaining subphases' own courts: 13.3's control and
+command surface, 13.4's UI framework, 13.5's TXT_DB database, 13.6's legacy EVP method statics,
+13.7's PEM readers and ASYNC framework, and 13.8's received TS_CONF and SRP hand-offs.
 
 What the behavioural courts will compare, and what they will not
 ----------------------------------------------------------------
@@ -97,6 +110,7 @@ RUN_TIMEOUT_S = "60"
 COURTS: list[tuple[str, str]] = [
     ("RT-PHASE13-REF", "rt_coverage_ref_probe.c"),
     ("RT-ENGINE", "rt_engine_probe.c"),
+    ("RT-ENGINE-TABLE", "rt_engine_table_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Not a registered court: nothing here can
@@ -104,7 +118,6 @@ COURTS: list[tuple[str, str]] = [
 # as "passed". The court names are `docs/PHASE-13-SUBPHASES.md` section 2's, one per work
 # subphase.
 PENDING_COURTS: dict[str, str] = {
-    "RT-ENGINE-TABLE": "13.2 (the ENGINE table and method binding)",
     "RT-ENGINE-CTRL": "13.3 (the ENGINE control and command surface)",
     "RT-UI": "13.4 (the UI framework)",
     "RT-TXTDB": "13.5 (the TXT_DB text database)",
@@ -284,12 +297,18 @@ def main(argv: list[str]) -> int:
             "registry's observed `id`/`name`, object identity, the NULL/absent refusals, the "
             "refcount effect and the built-in loader's shared registry arm -- not the built-in "
             "registry itself, whose `rdrand`/`dynamic` divergence src/engine/eng_all.rs records, "
-            "and not the error queue. Every other behavioural court the plan names is named in "
-            "`pending_courts` with the subphase that brings it -- `RT-ENGINE-TABLE`, "
-            "`RT-ENGINE-CTRL`, `RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and "
-            "`RT-HANDOFF` -- and none is registered here, so 'not run yet' cannot be read as "
-            "'passed'. Nothing here is a parity claim: `referenced` is not `called`, and "
-            "docs/PHASE-13-SUBPHASES.md section 3 records what the behavioural courts compare."
+            "and not the error queue. `RT-ENGINE-TABLE` is 13.2's behavioural court: it **calls** "
+            "the `tb_cipher`/`tb_rsa`/`tb_dsa`/`tb_dh`/`tb_eckey`/`tb_rand` table surface, "
+            "`ENGINE_get_pkey_meth` and the `eng_pkey.c` key-loader entry points over a synthetic "
+            "ENGINE and compares the bound method identities, the register/select/unregister "
+            "cycle, the `ENGINE_register_all_*` walk, the `dummy_nid` default select and the "
+            "NULL/uninitialised/no-loader refusals -- not a NULL engine handed to a method "
+            "getter, and not the error queue. Every other behavioural court the plan names is "
+            "named in `pending_courts` with the subphase that brings it -- `RT-ENGINE-CTRL`, "
+            "`RT-UI`, `RT-TXTDB`, `RT-EVP-LEGACY`, `RT-LEGACY-REMAINDER` and `RT-HANDOFF` -- and "
+            "none is registered here, so 'not run yet' cannot be read as 'passed'. Nothing here "
+            "is a parity claim: `referenced` is not `called`, and docs/PHASE-13-SUBPHASES.md "
+            "section 3 records what the behavioural courts compare."
         ),
     }
 

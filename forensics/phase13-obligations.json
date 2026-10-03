@@ -5,8 +5,8 @@
     "counts": {
       "atlas_owned": 189,
       "deferred_to_later_phase": 0,
-      "implemented": 130,
-      "open_in_this_stratum": 247,
+      "implemented": 183,
+      "open_in_this_stratum": 194,
       "owned": 377,
       "received_by_handoff": 188
     },
@@ -410,62 +410,18 @@
       "7": [
         {
           "binding_phase": 13,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/engine/eng_init.c",
-              "kind": "exported",
-              "line": 86,
-              "name": "ENGINE_init",
-              "owning_phase": 13
-            },
-            {
-              "authority_unit": "crypto/engine/tb_pkmeth.c",
-              "kind": "exported",
-              "line": 74,
-              "name": "ENGINE_get_pkey_meth",
-              "owning_phase": 13
-            },
-            {
-              "authority_unit": "crypto/engine/eng_init.c",
-              "kind": "exported",
-              "line": 106,
-              "name": "ENGINE_finish",
-              "owning_phase": 13
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 13,
-          "reason": "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; `:750` reads `pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this crate's `EvpPkey` has neither field -- they are absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else.",
+          "reason": "`crypto/evp/p_lib.c:732` reads and writes `pkey->pmeth_engine`/`pkey->engine` through `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`). **13.2 landed `ENGINE_get_pkey_meth`** (`src/engine/tb_pkmeth.rs`) with the key-loader surface and the six method tables, so every blocker the row's `blocked_by` named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the pair is still Phase 13's to write -- `EVP_PKEY` has neither field, absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc) -- and retiring it would move the pair into this sealed stratum's `implemented` list on the strength of work this stratum did not do. The row is what `phase13_obligations.py` reads to count the pair as received.",
           "symbol": "EVP_PKEY_get0_engine"
         },
         {
           "binding_phase": 13,
-          "blocked_by": [
-            {
-              "authority_unit": "crypto/engine/eng_init.c",
-              "kind": "exported",
-              "line": 86,
-              "name": "ENGINE_init",
-              "owning_phase": 13
-            },
-            {
-              "authority_unit": "crypto/engine/tb_pkmeth.c",
-              "kind": "exported",
-              "line": 74,
-              "name": "ENGINE_get_pkey_meth",
-              "owning_phase": 13
-            },
-            {
-              "authority_unit": "crypto/engine/eng_init.c",
-              "kind": "exported",
-              "line": 106,
-              "name": "ENGINE_finish",
-              "owning_phase": 13
-            }
-          ],
+          "blocked_by": [],
           "declaring_header": "evp.h",
           "owning_phase": 13,
-          "reason": "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; `:750` reads `pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this crate's `EvpPkey` has neither field -- they are absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else.",
+          "reason": "`crypto/evp/p_lib.c:732` reads and writes `pkey->pmeth_engine`/`pkey->engine` through `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`). **13.2 landed `ENGINE_get_pkey_meth`** (`src/engine/tb_pkmeth.rs`) with the key-loader surface and the six method tables, so every blocker the row's `blocked_by` named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the pair is still Phase 13's to write -- `EVP_PKEY` has neither field, absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc) -- and retiring it would move the pair into this sealed stratum's `implemented` list on the strength of work this stratum did not do. The row is what `phase13_obligations.py` reads to count the pair as received.",
           "symbol": "EVP_PKEY_set1_engine"
         },
         {
@@ -1768,8 +1724,21 @@
       "ENGINE_ctrl_cmd_string",
       "ENGINE_finish",
       "ENGINE_free",
+      "ENGINE_get_DH",
+      "ENGINE_get_DSA",
+      "ENGINE_get_EC",
+      "ENGINE_get_RAND",
+      "ENGINE_get_RSA",
+      "ENGINE_get_cipher",
+      "ENGINE_get_cipher_engine",
+      "ENGINE_get_ciphers",
       "ENGINE_get_cmd_defns",
       "ENGINE_get_ctrl_function",
+      "ENGINE_get_default_DH",
+      "ENGINE_get_default_DSA",
+      "ENGINE_get_default_EC",
+      "ENGINE_get_default_RAND",
+      "ENGINE_get_default_RSA",
       "ENGINE_get_destroy_function",
       "ENGINE_get_digest",
       "ENGINE_get_digest_engine",
@@ -1781,30 +1750,61 @@
       "ENGINE_get_id",
       "ENGINE_get_init_function",
       "ENGINE_get_last",
+      "ENGINE_get_load_privkey_function",
+      "ENGINE_get_load_pubkey_function",
       "ENGINE_get_name",
       "ENGINE_get_next",
       "ENGINE_get_pkey_asn1_meth",
       "ENGINE_get_pkey_asn1_meth_engine",
       "ENGINE_get_pkey_asn1_meth_str",
       "ENGINE_get_pkey_asn1_meths",
+      "ENGINE_get_pkey_meth",
       "ENGINE_get_pkey_meth_engine",
       "ENGINE_get_pkey_meths",
       "ENGINE_get_prev",
+      "ENGINE_get_ssl_client_cert_function",
       "ENGINE_get_static_state",
       "ENGINE_get_table_flags",
       "ENGINE_init",
       "ENGINE_load_builtin_engines",
+      "ENGINE_load_private_key",
+      "ENGINE_load_public_key",
+      "ENGINE_load_ssl_client_cert",
       "ENGINE_new",
       "ENGINE_pkey_asn1_find_str",
+      "ENGINE_register_DH",
+      "ENGINE_register_DSA",
+      "ENGINE_register_EC",
+      "ENGINE_register_RAND",
+      "ENGINE_register_RSA",
+      "ENGINE_register_all_DH",
+      "ENGINE_register_all_DSA",
+      "ENGINE_register_all_EC",
+      "ENGINE_register_all_RAND",
+      "ENGINE_register_all_RSA",
+      "ENGINE_register_all_ciphers",
       "ENGINE_register_all_digests",
       "ENGINE_register_all_pkey_asn1_meths",
       "ENGINE_register_all_pkey_meths",
+      "ENGINE_register_ciphers",
       "ENGINE_register_digests",
       "ENGINE_register_pkey_asn1_meths",
       "ENGINE_register_pkey_meths",
       "ENGINE_remove",
+      "ENGINE_set_DH",
+      "ENGINE_set_DSA",
+      "ENGINE_set_EC",
+      "ENGINE_set_RAND",
+      "ENGINE_set_RSA",
+      "ENGINE_set_ciphers",
       "ENGINE_set_cmd_defns",
       "ENGINE_set_ctrl_function",
+      "ENGINE_set_default_DH",
+      "ENGINE_set_default_DSA",
+      "ENGINE_set_default_EC",
+      "ENGINE_set_default_RAND",
+      "ENGINE_set_default_RSA",
+      "ENGINE_set_default_ciphers",
       "ENGINE_set_default_digests",
       "ENGINE_set_default_pkey_asn1_meths",
       "ENGINE_set_default_pkey_meths",
@@ -1815,10 +1815,19 @@
       "ENGINE_set_flags",
       "ENGINE_set_id",
       "ENGINE_set_init_function",
+      "ENGINE_set_load_privkey_function",
+      "ENGINE_set_load_pubkey_function",
+      "ENGINE_set_load_ssl_client_cert_function",
       "ENGINE_set_name",
       "ENGINE_set_pkey_asn1_meths",
       "ENGINE_set_pkey_meths",
       "ENGINE_set_table_flags",
+      "ENGINE_unregister_DH",
+      "ENGINE_unregister_DSA",
+      "ENGINE_unregister_EC",
+      "ENGINE_unregister_RAND",
+      "ENGINE_unregister_RSA",
+      "ENGINE_unregister_ciphers",
       "ENGINE_unregister_digests",
       "ENGINE_unregister_pkey_asn1_meths",
       "ENGINE_unregister_pkey_meths",
@@ -2028,201 +2037,9 @@
       },
       {
         "declaring_header": "engine.h",
-        "module": "src/engine/tb_dh.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_DH"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_DSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_eckey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_EC"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rand.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_RAND"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_RSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_cipher"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_cipher_engine"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_ciphers"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dh.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_default_DH"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_default_DSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_eckey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_default_EC"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rand.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_default_RAND"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_default_RSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_load_privkey_function"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_load_pubkey_function"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_pkmeth.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_pkey_meth"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_get_ssl_client_cert_function"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_load_private_key"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_load_public_key"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_load_ssl_client_cert"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dh.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_DH"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_DSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_eckey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_EC"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rand.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_RAND"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_RSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dh.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_all_DH"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_all_DSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_eckey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_all_EC"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rand.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_all_RAND"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_all_RSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_all_ciphers"
-      },
-      {
-        "declaring_header": "engine.h",
         "module": "src/engine/eng_fat.rs",
         "received_from_phase": null,
         "symbol": "ENGINE_register_all_complete"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_register_ciphers"
       },
       {
         "declaring_header": "engine.h",
@@ -2232,141 +2049,15 @@
       },
       {
         "declaring_header": "engine.h",
-        "module": "src/engine/tb_dh.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_DH"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_DSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_eckey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_EC"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rand.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_RAND"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_RSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_ciphers"
-      },
-      {
-        "declaring_header": "engine.h",
         "module": "src/engine/eng_fat.rs",
         "received_from_phase": null,
         "symbol": "ENGINE_set_default"
       },
       {
         "declaring_header": "engine.h",
-        "module": "src/engine/tb_dh.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_default_DH"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_default_DSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_eckey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_default_EC"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rand.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_default_RAND"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_default_RSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_default_ciphers"
-      },
-      {
-        "declaring_header": "engine.h",
         "module": "src/engine/eng_fat.rs",
         "received_from_phase": null,
         "symbol": "ENGINE_set_default_string"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_load_privkey_function"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_load_pubkey_function"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/eng_pkey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_set_load_ssl_client_cert_function"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dh.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_unregister_DH"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_dsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_unregister_DSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_eckey.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_unregister_EC"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rand.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_unregister_RAND"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_rsa.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_unregister_RSA"
-      },
-      {
-        "declaring_header": "engine.h",
-        "module": "src/engine/tb_cipher.rs",
-        "received_from_phase": null,
-        "symbol": "ENGINE_unregister_ciphers"
       },
       {
         "declaring_header": "evp.h",
@@ -3474,22 +3165,22 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "bf867360099ec1a3838fd0db57613bf7a7c940dc5c4f9f58bb96b0023d17b373"
+      "sha256": "9e091327797e44490708e5a734bf8bb21f936cf97129e8ceaa34731540a4185d"
     },
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "6ad3db673ef924410417b17d61c2a157f4b9a269b54a30598e487de1895c95a5"
+      "sha256": "b3519abe4294c601fe453f914caf0df520b8bc21c31712a82ce608743b5b7a82"
     },
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "5f09a2446e0202c471f4401440a9f97c6392559fb602b9a797be482046c55099"
+      "sha256": "1eab612867d3b9cf4b6782671c4a4689743e49dacb96291521066328f3c12446"
     },
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "6e0880606bf48322a628836b021a62d3e85800c99a51cdf63e8f9b9aa5d2329e"
+      "sha256": "49006c9fc2610753b9a3febb8091e1a958d6f49ba39e56311e9ee4382cc48747"
     }
   ],
   "kind": "phase13-obligations",

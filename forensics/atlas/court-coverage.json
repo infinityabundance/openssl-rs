@@ -41837,10 +41837,10 @@
       {
         "completed": false,
         "counts": {
-          "directly_courted": 130,
-          "directly_courted_called": 33,
-          "directly_courted_referenced": 97,
-          "implemented": 130,
+          "directly_courted": 183,
+          "directly_courted_called": 90,
+          "directly_courted_referenced": 93,
+          "implemented": 183,
           "indirectly_courted": 0,
           "non_observable": 0,
           "unmatched": 0
@@ -41850,6 +41850,7 @@
             "basis": "called",
             "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
@@ -41900,6 +41901,7 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
@@ -41909,10 +41911,67 @@
             "basis": "called",
             "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
             "symbol": "ENGINE_free"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_cipher"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_cipher_engine"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_ciphers"
           },
           {
             "basis": "referenced",
@@ -41927,6 +41986,41 @@
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_get_ctrl_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_default_RSA"
           },
           {
             "basis": "referenced",
@@ -42015,6 +42109,20 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_load_privkey_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_load_pubkey_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-ENGINE",
               "RT-PHASE13-REF",
               "RT-STORE"
@@ -42058,15 +42166,24 @@
             "symbol": "ENGINE_get_pkey_asn1_meths"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_pkey_meth"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_get_pkey_meth_engine"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_get_pkey_meths"
@@ -42077,6 +42194,13 @@
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_get_prev"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_get_ssl_client_cert_function"
           },
           {
             "basis": "called",
@@ -42095,8 +42219,9 @@
             "symbol": "ENGINE_get_table_flags"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_init"
@@ -42111,7 +42236,29 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_load_private_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_load_public_key"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_load_ssl_client_cert"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
@@ -42123,6 +42270,83 @@
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_pkey_asn1_find_str"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_all_ciphers"
           },
           {
             "basis": "referenced",
@@ -42144,6 +42368,13 @@
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_register_all_pkey_meths"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_register_ciphers"
           },
           {
             "basis": "called",
@@ -42177,6 +42408,48 @@
             "symbol": "ENGINE_remove"
           },
           {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_ciphers"
+          },
+          {
             "basis": "referenced",
             "courts": [
               "RT-PHASE13-REF"
@@ -42189,6 +42462,48 @@
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_set_ctrl_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_default_ciphers"
           },
           {
             "basis": "referenced",
@@ -42252,6 +42567,7 @@
             "basis": "called",
             "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
@@ -42267,7 +42583,29 @@
           {
             "basis": "called",
             "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_load_privkey_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_load_pubkey_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_set_load_ssl_client_cert_function"
+          },
+          {
+            "basis": "called",
+            "courts": [
               "RT-ENGINE",
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF",
               "RT-STORE"
             ],
@@ -42281,8 +42619,9 @@
             "symbol": "ENGINE_set_pkey_asn1_meths"
           },
           {
-            "basis": "referenced",
+            "basis": "called",
             "courts": [
+              "RT-ENGINE-TABLE",
               "RT-PHASE13-REF"
             ],
             "symbol": "ENGINE_set_pkey_meths"
@@ -42294,6 +42633,48 @@
               "RT-STORE"
             ],
             "symbol": "ENGINE_set_table_flags"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_DH"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_DSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_EC"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_RAND"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_RSA"
+          },
+          {
+            "basis": "called",
+            "courts": [
+              "RT-ENGINE-TABLE"
+            ],
+            "symbol": "ENGINE_unregister_ciphers"
           },
           {
             "basis": "called",
@@ -42804,14 +43185,14 @@
         "indirectly_courted": [],
         "non_observable": [],
         "phase": 13,
-        "staged_candidate_probes": 2
+        "staged_candidate_probes": 3
       }
     ],
     "totals": {
-      "directly_courted": 5641,
-      "directly_courted_called": 4565,
-      "directly_courted_referenced": 1076,
-      "implemented": 5649,
+      "directly_courted": 5694,
+      "directly_courted_called": 4622,
+      "directly_courted_referenced": 1072,
+      "implemented": 5702,
       "indirectly_courted": 8,
       "non_observable": 0
     },
@@ -42822,7 +43203,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "c795695a7fd016a7f5fc777a5b86c594daf9743532479bab99d5d8a8572f7c95"
+      "sha256": "8f23605ea8dd028cf13baf7dac90f05287e5980e7c47d302f21e171fe102bbd5"
     },
     {
       "name": "symbol-ownership",
@@ -42837,7 +43218,7 @@
     {
       "name": "phase3-obligations",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "6ad3db673ef924410417b17d61c2a157f4b9a269b54a30598e487de1895c95a5"
+      "sha256": "b3519abe4294c601fe453f914caf0df520b8bc21c31712a82ce608743b5b7a82"
     },
     {
       "name": "phase3-courts",
@@ -42847,7 +43228,7 @@
     {
       "name": "phase4-obligations",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "d62c983e9c9db448bfd97c116c9219259fb3bc5ffc075374f31f197715b7e7a5"
+      "sha256": "5ebc6a6d32b6c6f71394ecc04f275727a2f8bf122d21a6f2974e66223cb60ddc"
     },
     {
       "name": "phase4-courts",
@@ -42857,7 +43238,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "af07a80bec3b37c239660008cf27ddf20ab6c163f223c36f9d10f57ca3c3cd0d"
+      "sha256": "034ff2fa751a2b6875edf05dc4b449c5f31704a494815ce5a4bafc8e68e538d7"
     },
     {
       "name": "phase5-courts",
@@ -42867,7 +43248,7 @@
     {
       "name": "phase6-obligations",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "30015d8716f9a9a0eb69732cbb876cec42b85457a7bd0314d777f410f50a5035"
+      "sha256": "c436a170523929ebac634dac1ba9bd8e1cdb02d4e145cb15139099d78491b765"
     },
     {
       "name": "phase6-courts",
@@ -42877,7 +43258,7 @@
     {
       "name": "phase7-obligations",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "5f09a2446e0202c471f4401440a9f97c6392559fb602b9a797be482046c55099"
+      "sha256": "1eab612867d3b9cf4b6782671c4a4689743e49dacb96291521066328f3c12446"
     },
     {
       "name": "phase7-courts",
@@ -42887,7 +43268,7 @@
     {
       "name": "phase8-obligations",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "5647ee700c290bc90428c15555d820e8330564dd0d570175769b5f6fc76d91d7"
+      "sha256": "460f4702b1724ce6a769b88a3bb8c3ab6bb560b2ed0b115d98feba298440412c"
     },
     {
       "name": "phase8-courts",
@@ -42897,7 +43278,7 @@
     {
       "name": "phase9-obligations",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "bce43019f1455190cb8bfa940440cc1ec76045e9145037f6d22c2ebe51952e1a"
+      "sha256": "3d033eaa81a1e8db197d51371b85c394b0052130557d431603e3dbb7ab48f1b7"
     },
     {
       "name": "phase9-courts",
@@ -42907,7 +43288,7 @@
     {
       "name": "phase10-obligations",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "dcf435dc79f10c158b8d6d67473f22bce78f9f4dd52530e09e63f94731e52f70"
+      "sha256": "fdacaeaa25d3591911e4f34350273db3edff9772c86c777c8a580079ac350145"
     },
     {
       "name": "phase10-courts",
@@ -42917,7 +43298,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "be8bd50b78e3eeb193f68d96a277f1bde2e222303f655c5059da7b2a3395321f"
+      "sha256": "2015b615aaaac3e400e78d5385d028a388db51c37901e9977780041b37e614ac"
     },
     {
       "name": "phase11-courts",
@@ -42927,7 +43308,7 @@
     {
       "name": "phase12-obligations",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "6e0880606bf48322a628836b021a62d3e85800c99a51cdf63e8f9b9aa5d2329e"
+      "sha256": "49006c9fc2610753b9a3febb8091e1a958d6f49ba39e56311e9ee4382cc48747"
     },
     {
       "name": "phase12-courts",
@@ -42937,12 +43318,12 @@
     {
       "name": "phase13-obligations",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "132eefc168798eda48144337ee6a735583adc322cb07f2b1d5f238f54928b148"
+      "sha256": "b1866d789a7fc2dbc4ed10e263eb7fb3cc52eaa417f8d8dc1ba8d41e0e262954"
     },
     {
       "name": "phase13-courts",
       "path": "artifacts/phase13/COURTS.json",
-      "sha256": "a64935c0c7a6bb47c3c6fdeaa170585f71963a0f39a8c322d3f4e014eb13864e"
+      "sha256": "65de2ab734badc5062bad71f26c7861dc2d9f9207c35ec18e6e486823e78f795"
     }
   ],
   "kind": "court-coverage",

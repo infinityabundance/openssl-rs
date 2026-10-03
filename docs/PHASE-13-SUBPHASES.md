@@ -285,11 +285,24 @@ and accessor surface was already in: `ENGINE_new`, `ENGINE_free`, `ENGINE_up_ref
 that list was landed before this stratum's first slice as substrate the earlier strata needed; the
 ledger is the record and this sentence names only what those landings left here.
 
+Subphase 13.2 landed the ENGINE table and method-binding surface. The cipher table
+(`src/engine/tb_cipher.rs`) contributes `ENGINE_set_ciphers`, `ENGINE_get_ciphers`,
+`ENGINE_register_ciphers`, `ENGINE_register_all_ciphers`, `ENGINE_set_default_ciphers`,
+`ENGINE_unregister_ciphers`, `ENGINE_get_cipher` and `ENGINE_get_cipher_engine`; `tb_pkmeth.rs`
+contributes `ENGINE_get_pkey_meth`; the four legacy method tables and RAND contribute
+`ENGINE_set_RSA`/`_DSA`/`_DH`/`_EC`/`_RAND`, the `ENGINE_get_RSA`/`_DSA`/`_DH`/`_EC`/`_RAND`
+getters, the `ENGINE_register_*`/`ENGINE_register_all_*`/`ENGINE_set_default_*`/`ENGINE_unregister_*`
+set and `ENGINE_get_default_RSA`/`_DSA`/`_DH`/`_EC`/`_RAND` (`src/engine/tb_rsa.rs`,
+`tb_dsa.rs`, `tb_dh.rs`, `tb_eckey.rs` and `tb_rand.rs`); and `src/engine/eng_pkey.rs` contributes
+the three `ENGINE_set_load_*_function`/`ENGINE_get_load_*_function` pairs and
+`ENGINE_load_private_key`, `ENGINE_load_public_key` and `ENGINE_load_ssl_client_cert`. Those, with
+the three names 13.1 landed, are the ledger's `implemented` additions.
+
 **Open exports (checked against the ledger):**
 
-The open set is the ENGINE table and control surface, the TXT_DB
+The open set is the ENGINE control surface, the TXT_DB
 codec and the deprecated statics over them. Representative names are
-`ENGINE_set_default`, `ENGINE_register_all_ciphers`, `TXT_DB_read`, `TXT_DB_free`, `TXT_DB_write`,
+`ENGINE_set_default`, `TXT_DB_read`, `TXT_DB_free`, `TXT_DB_write`,
 `TXT_DB_insert`, `TXT_DB_create_index`, `TXT_DB_get_by_index`, `ASYNC_WAIT_CTX_new`,
 `EVP_aes_128_cbc`, `PEM_write_bio_PrivateKey`, `TS_CONF_set_crypto_device`,
 `TS_CONF_set_default_engine` and `SRP_VBASE_init`. Every one is open rather than implemented, and

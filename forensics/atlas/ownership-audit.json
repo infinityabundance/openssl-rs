@@ -1024,7 +1024,7 @@
     },
     "implemented_by_two_strata": [],
     "implemented_exports": {
-      "libcrypto": 5649,
+      "libcrypto": 5702,
       "libssl": 0
     },
     "invariant": "every authority export has exactly one declared owner in forensics/atlas/symbol-ownership.json; every export the atlas gives a stratum appears in that stratum's ledger; every row a stratum's ledger carries for another stratum's export is a hand-off that stratum recorded",
@@ -1244,7 +1244,7 @@
       {
         "atlas": 189,
         "deferred": 0,
-        "implemented": 130,
+        "implemented": 183,
         "ledger": 377,
         "only_in_atlas": 0,
         "only_in_atlas_examples": [],
@@ -1261,7 +1261,7 @@
           "ASYNC_WAIT_CTX_set_callback",
           "ASYNC_WAIT_CTX_set_status"
         ],
-        "open": 247,
+        "open": 194,
         "phase": 13
       }
     ],
@@ -1976,7 +1976,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "c795695a7fd016a7f5fc777a5b86c594daf9743532479bab99d5d8a8572f7c95"
+      "sha256": "8f23605ea8dd028cf13baf7dac90f05287e5980e7c47d302f21e171fe102bbd5"
     },
     {
       "name": "authority-symbols",
@@ -1991,57 +1991,57 @@
     {
       "name": "ledger-3",
       "path": "forensics/phase3-obligations.json",
-      "sha256": "6ad3db673ef924410417b17d61c2a157f4b9a269b54a30598e487de1895c95a5"
+      "sha256": "b3519abe4294c601fe453f914caf0df520b8bc21c31712a82ce608743b5b7a82"
     },
     {
       "name": "ledger-4",
       "path": "forensics/phase4-obligations.json",
-      "sha256": "d62c983e9c9db448bfd97c116c9219259fb3bc5ffc075374f31f197715b7e7a5"
+      "sha256": "5ebc6a6d32b6c6f71394ecc04f275727a2f8bf122d21a6f2974e66223cb60ddc"
     },
     {
       "name": "ledger-5",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "af07a80bec3b37c239660008cf27ddf20ab6c163f223c36f9d10f57ca3c3cd0d"
+      "sha256": "034ff2fa751a2b6875edf05dc4b449c5f31704a494815ce5a4bafc8e68e538d7"
     },
     {
       "name": "ledger-6",
       "path": "forensics/phase6-obligations.json",
-      "sha256": "30015d8716f9a9a0eb69732cbb876cec42b85457a7bd0314d777f410f50a5035"
+      "sha256": "c436a170523929ebac634dac1ba9bd8e1cdb02d4e145cb15139099d78491b765"
     },
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "7936749b1bcf12142f4ab7aec93373a2139e2c853ae539da6b6af846aaddb619"
+      "sha256": "1eab612867d3b9cf4b6782671c4a4689743e49dacb96291521066328f3c12446"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "5647ee700c290bc90428c15555d820e8330564dd0d570175769b5f6fc76d91d7"
+      "sha256": "460f4702b1724ce6a769b88a3bb8c3ab6bb560b2ed0b115d98feba298440412c"
     },
     {
       "name": "ledger-9",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "bce43019f1455190cb8bfa940440cc1ec76045e9145037f6d22c2ebe51952e1a"
+      "sha256": "3d033eaa81a1e8db197d51371b85c394b0052130557d431603e3dbb7ab48f1b7"
     },
     {
       "name": "ledger-10",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "dcf435dc79f10c158b8d6d67473f22bce78f9f4dd52530e09e63f94731e52f70"
+      "sha256": "fdacaeaa25d3591911e4f34350273db3edff9772c86c777c8a580079ac350145"
     },
     {
       "name": "ledger-11",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "be8bd50b78e3eeb193f68d96a277f1bde2e222303f655c5059da7b2a3395321f"
+      "sha256": "2015b615aaaac3e400e78d5385d028a388db51c37901e9977780041b37e614ac"
     },
     {
       "name": "ledger-12",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "6e0880606bf48322a628836b021a62d3e85800c99a51cdf63e8f9b9aa5d2329e"
+      "sha256": "49006c9fc2610753b9a3febb8091e1a958d6f49ba39e56311e9ee4382cc48747"
     },
     {
       "name": "ledger-13",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "132eefc168798eda48144337ee6a735583adc322cb07f2b1d5f238f54928b148"
+      "sha256": "b1866d789a7fc2dbc4ed10e263eb7fb3cc52eaa417f8d8dc1ba8d41e0e262954"
     }
   ],
   "kind": "ownership-audit",

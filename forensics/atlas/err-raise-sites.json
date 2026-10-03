@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "counts": {
-      "sites": 4641,
+      "sites": 4653,
       "unattributed": 0
     },
     "covered_files": [
@@ -398,8 +398,10 @@
       "crypto/engine/eng_init.c",
       "crypto/engine/eng_lib.c",
       "crypto/engine/eng_list.c",
+      "crypto/engine/eng_pkey.c",
       "crypto/engine/eng_table.c",
       "crypto/engine/tb_asnmth.c",
+      "crypto/engine/tb_cipher.c",
       "crypto/engine/tb_digest.c",
       "crypto/engine/tb_pkmeth.c",
       "providers/implementations/storemgmt/file_store.c",
@@ -69693,6 +69695,171 @@
         "rel_source": "crypto/engine/eng_list.c"
       },
       {
+        "const_name": "ENG_PKEY_62",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_private_key",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 62,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_69",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_private_key",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 69,
+        "macro": "ERR_raise",
+        "reason": 117,
+        "reason_symbol": "ENGINE_R_NOT_INITIALISED",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_74",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_private_key",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 74,
+        "macro": "ERR_raise",
+        "reason": 125,
+        "reason_symbol": "ENGINE_R_NO_LOAD_FUNCTION",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_79",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_private_key",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 79,
+        "macro": "ERR_raise",
+        "reason": 128,
+        "reason_symbol": "ENGINE_R_FAILED_LOADING_PRIVATE_KEY",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_91",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_public_key",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 91,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_98",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_public_key",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 98,
+        "macro": "ERR_raise",
+        "reason": 117,
+        "reason_symbol": "ENGINE_R_NOT_INITIALISED",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_103",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_public_key",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 103,
+        "macro": "ERR_raise",
+        "reason": 125,
+        "reason_symbol": "ENGINE_R_NO_LOAD_FUNCTION",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_108",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_public_key",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 108,
+        "macro": "ERR_raise",
+        "reason": 129,
+        "reason_symbol": "ENGINE_R_FAILED_LOADING_PUBLIC_KEY",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_121",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_ssl_client_cert",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 121,
+        "macro": "ERR_raise",
+        "reason": 786690,
+        "reason_symbol": "ERR_R_PASSED_NULL_PARAMETER",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_128",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_ssl_client_cert",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 128,
+        "macro": "ERR_raise",
+        "reason": 117,
+        "reason_symbol": "ENGINE_R_NOT_INITIALISED",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
+        "const_name": "ENG_PKEY_133",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+        "function": "ENGINE_load_ssl_client_cert",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 133,
+        "macro": "ERR_raise",
+        "reason": 125,
+        "reason_symbol": "ENGINE_R_NO_LOAD_FUNCTION",
+        "rel_source": "crypto/engine/eng_pkey.c"
+      },
+      {
         "const_name": "ENG_TABLE_135",
         "data_format": null,
         "dynamic_reason": false,
@@ -69751,6 +69918,21 @@
         "reason": 524303,
         "reason_symbol": "ERR_R_CRYPTO_LIB",
         "rel_source": "crypto/engine/tb_asnmth.c"
+      },
+      {
+        "const_name": "TB_CIPHER_78",
+        "data_format": null,
+        "dynamic_reason": false,
+        "file": "../../src/openssl-3.6.4/crypto/engine/tb_cipher.c",
+        "function": "ENGINE_get_cipher",
+        "generated": false,
+        "lib": 38,
+        "lib_symbol": "ERR_LIB_ENGINE",
+        "line": 78,
+        "macro": "ERR_raise",
+        "reason": 146,
+        "reason_symbol": "ENGINE_R_UNIMPLEMENTED_CIPHER",
+        "rel_source": "crypto/engine/tb_cipher.c"
       },
       {
         "const_name": "TB_DIGEST_78",
@@ -72124,6 +72306,11 @@
       "sha256": "63c18a4f5bef6ebf0b141db10b3e76e633e6aacdec45ed60ac8fae7646b3cd1b"
     },
     {
+      "name": "authority:crypto/engine/eng_pkey.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/engine/eng_pkey.c",
+      "sha256": "93b4796757ecc8d35c13b8273968f7e96e9bf0ce6611cf09b6ecc23f4dfeaf1f"
+    },
+    {
       "name": "authority:crypto/engine/eng_table.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/engine/eng_table.c",
       "sha256": "873e3fe9d3b81a109b36e2cfaa8ba2e47cbfe1948e013a50165ab65e056a96f7"
@@ -72132,6 +72319,11 @@
       "name": "authority:crypto/engine/tb_asnmth.c",
       "path": "forensics/authorities/src/openssl-3.6.4/crypto/engine/tb_asnmth.c",
       "sha256": "1763a91e795b653cc54be06f6ac192148248c659b9b70c5c5668bd99f0efacdc"
+    },
+    {
+      "name": "authority:crypto/engine/tb_cipher.c",
+      "path": "forensics/authorities/src/openssl-3.6.4/crypto/engine/tb_cipher.c",
+      "sha256": "3279dbe01a4e5a4e1c67b10b0f86666f893fa608b1b501098d281003cfcf72f7"
     },
     {
       "name": "authority:crypto/engine/tb_digest.c",

@@ -5,10 +5,10 @@
       "findings": 0,
       "legacy_rows": 146,
       "legacy_unit_claims": 20,
-      "structured_blockers": 3,
-      "structured_rows": 1,
-      "unblocked_rows": 18,
-      "unblocked_symbols": 66
+      "structured_blockers": 0,
+      "structured_rows": 0,
+      "unblocked_rows": 19,
+      "unblocked_symbols": 68
     },
     "complete": true,
     "counts": {
@@ -110,32 +110,10 @@
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/engine/eng_init.c",
-            "kind": "exported",
-            "line": 86,
-            "name": "ENGINE_init",
-            "owning_phase": 13
-          },
-          {
-            "authority_unit": "crypto/engine/tb_pkmeth.c",
-            "kind": "exported",
-            "line": 74,
-            "name": "ENGINE_get_pkey_meth",
-            "owning_phase": 13
-          },
-          {
-            "authority_unit": "crypto/engine/eng_init.c",
-            "kind": "exported",
-            "line": 106,
-            "name": "ENGINE_finish",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 13,
-        "reason": "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; `:750` reads `pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this crate's `EvpPkey` has neither field -- they are absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else.",
+        "reason": "`crypto/evp/p_lib.c:732` reads and writes `pkey->pmeth_engine`/`pkey->engine` through `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`). **13.2 landed `ENGINE_get_pkey_meth`** (`src/engine/tb_pkmeth.rs`) with the key-loader surface and the six method tables, so every blocker the row's `blocked_by` named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the pair is still Phase 13's to write -- `EVP_PKEY` has neither field, absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc) -- and retiring it would move the pair into this sealed stratum's `implemented` list on the strength of work this stratum did not do. The row is what `phase13_obligations.py` reads to count the pair as received.",
         "symbol": "EVP_PKEY_get0_engine"
       },
       {
@@ -268,32 +246,10 @@
       },
       {
         "binding_phase": 13,
-        "blocked_by": [
-          {
-            "authority_unit": "crypto/engine/eng_init.c",
-            "kind": "exported",
-            "line": 86,
-            "name": "ENGINE_init",
-            "owning_phase": 13
-          },
-          {
-            "authority_unit": "crypto/engine/tb_pkmeth.c",
-            "kind": "exported",
-            "line": 74,
-            "name": "ENGINE_get_pkey_meth",
-            "owning_phase": 13
-          },
-          {
-            "authority_unit": "crypto/engine/eng_init.c",
-            "kind": "exported",
-            "line": 106,
-            "name": "ENGINE_finish",
-            "owning_phase": 13
-          }
-        ],
+        "blocked_by": [],
         "declaring_header": "evp.h",
         "owning_phase": 13,
-        "reason": "`crypto/evp/p_lib.c:732` calls `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`) and writes `pkey->pmeth_engine`; `:750` reads `pkey->engine`. `ENGINE` is `engine.h`'s and Phase 13's, and this crate's `EvpPkey` has neither field -- they are absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc), so the pair is blocked on Phase 13 and on nothing else.",
+        "reason": "`crypto/evp/p_lib.c:732` reads and writes `pkey->pmeth_engine`/`pkey->engine` through `ENGINE_init` (`:735`), `ENGINE_get_pkey_meth` (`:739`) and `ENGINE_finish` (`:736`, `:745`). **13.2 landed `ENGINE_get_pkey_meth`** (`src/engine/tb_pkmeth.rs`) with the key-loader surface and the six method tables, so every blocker the row's `blocked_by` named has landed and the row moves here from `BLOCKED_HANDOFFS` rather than retiring: the pair is still Phase 13's to write -- `EVP_PKEY` has neither field, absent with the rest of the legacy attribute block (`src/evp/pkey.rs` module doc) -- and retiring it would move the pair into this sealed stratum's `implemented` list on the strength of work this stratum did not do. The row is what `phase13_obligations.py` reads to count the pair as received.",
         "symbol": "EVP_PKEY_set1_engine"
       },
       {
@@ -3031,7 +2987,7 @@
     {
       "name": "implemented-surface",
       "note": "evidence digest (body_hash) of forensics/atlas/implemented-surface.json; the artefact's file digest is deliberately not used because the file also records build-product observations",
-      "sha256": "bf867360099ec1a3838fd0db57613bf7a7c940dc5c4f9f58bb96b0023d17b373"
+      "sha256": "9e091327797e44490708e5a734bf8bb21f936cf97129e8ceaa34731540a4185d"
     },
     {
       "name": "export-defining-units",
@@ -3056,7 +3012,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "24d26696377e1bad3f7c1692474743a9b50c05f7ca17bdd96a4f6255d54ee90b"
+      "sha256": "0cb45e8a146b6697deebe4de182fbecd7a0eb023030667c3a0176c91549d583e"
     },
     {
       "name": "authority-source-tree-and-crate-source",
@@ -3065,7 +3021,7 @@
     {
       "name": "phase5-obligations",
       "path": "forensics/phase5-obligations.json",
-      "sha256": "af07a80bec3b37c239660008cf27ddf20ab6c163f223c36f9d10f57ca3c3cd0d"
+      "sha256": "034ff2fa751a2b6875edf05dc4b449c5f31704a494815ce5a4bafc8e68e538d7"
     }
   ],
   "kind": "phase7-obligations",
