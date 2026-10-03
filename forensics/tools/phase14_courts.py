@@ -31,8 +31,8 @@ stratum from the day it begins. See docs/PHASE-14-SUBPHASES.md section 4.3.
 The behavioural courts the plan gives the later subphases
 ---------------------------------------------------------
 Every court `docs/PHASE-14-SUBPHASES.md` section 2 names is named in `PENDING_COURTS` below with
-the subphase that brings it, unless that subphase has landed its court. `RT-SSL-OBJECT` (14.1) and
-`RT-SSL-METHODS` (14.2) are registered below; `RT-SSL-CIPH`, `RT-RECORD`, `RT-STATEM`,
+the subphase that brings it, unless that subphase has landed its court. `RT-SSL-OBJECT` (14.1),
+`RT-SSL-METHODS` (14.2) and `RT-SSL-CIPH` (14.3) are registered below; `RT-RECORD`, `RT-STATEM`,
 `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, `RT-SSL-INIT` and `RT-HANDOFF` remain
 pending, so 'not run yet' cannot be read as 'passed'.
 
@@ -87,6 +87,7 @@ COURTS: list[tuple[str, str]] = [
     ("RT-PHASE14-REF", "rt_coverage_ref_probe.c"),
     ("RT-SSL-OBJECT", "rt_ssl_object_probe.c"),
     ("RT-SSL-METHODS", "rt_ssl_methods_probe.c"),
+    ("RT-SSL-CIPH", "rt_ssl_ciph_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. **Every one of the plan's behavioural
@@ -94,7 +95,6 @@ COURTS: list[tuple[str, str]] = [
 # working set is open and the only court it can register is the reference basis. Each row is
 # printed with the subphase that brings it so that "not run yet" cannot be read as "passed".
 PENDING_COURTS: dict[str, str] = {
-    "RT-SSL-CIPH": "14.3 (the cipher and configuration surface)",
     "RT-RECORD": "14.4 (the record layer)",
     "RT-STATEM": "14.5 (the handshake state machine)",
     "RT-SSL-BIO": "14.6 (the BIO pair and buffers)",
@@ -280,14 +280,20 @@ def main(argv: list[str]) -> int:
             "`courts/phase14/rt_ssl_methods_probe.c` drives the 21 `TLS_*`/`DTLS_*`/`TLSv1_*` "
             "constructors and the version surface each installs (`SSL_version`, "
             "`SSL_client_version`, `SSL_get_version`, `SSL_is_dtls`, `SSL_is_server`, the "
-            "`min`/`max` protocol getters and the default timeout), `SSL_group_to_name`'s "
+            "the `min`/`max` protocol getters and the default timeout), `SSL_group_to_name`'s "
             "unknown-NID arms, `SSL_get0_group_name`'s NULL-connection arm and the "
-            "ticket-key callback setter, and the two refusal arms. Neither is a parity claim "
-            "about a completed handshake, which no arm of either drives. `SSL_get0_group_name` "
+            "ticket-key callback setter, and the two refusal arms. `RT-SSL-CIPH` (14.3) is the "
+            "third: `courts/phase14/rt_ssl_ciph_probe.c` drives the `SSL_CIPHER_*` readers over "
+            "fixed wire ids through `SSL_CIPHER_find`, the `OSSL_default_*` strings, the "
+            "`SSL_CTX_set_cipher_list`/`SSL_CTX_set_ciphersuites`/`SSL_CTX_get_ciphers` / "
+            "`SSL_get_ciphers`/`SSL_get_cipher_list` surface, and the `SSL_CONF_CTX_new`/"
+            "`SSL_CONF_cmd`/`SSL_CONF_cmd_value_type`/`SSL_CONF_CTX_finish` parser over fixed "
+            "`cmd,arg` pairs. None is a parity claim "
+            "about a completed handshake, which no arm of any of them drives. `SSL_get0_group_name` "
             "on a live connection and `SSL_group_to_name`'s known-NID arm are recorded in their "
             "modules as reduced rather than driven. Every other behavioural court the plan names "
-            "is named in `pending_courts` with the subphase that brings it -- `RT-SSL-CIPH`, "
-            "`RT-RECORD`, `RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, "
+            "is named in `pending_courts` with the subphase that brings it -- `RT-RECORD`, "
+            "`RT-STATEM`, `RT-SSL-BIO`, `RT-SESSION-CERT`, `RT-DTLS`, `RT-SSL-EXT`, "
             "`RT-SSL-INIT` and `RT-HANDOFF` -- and none is registered here, so 'not run yet' "
             "cannot be read as 'passed'. Nothing here is a parity claim: `referenced` is not "
             "`called`, and docs/PHASE-14-SUBPHASES.md section 3 records what the behavioural "
