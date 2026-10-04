@@ -2,15 +2,11 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "blocking_dependencies": [
-      "cli_option_list_parse -> phase 16 (Transferred to 22.9 and repaired there; what remains deferred to Phase 16 is regenerating the Phase-1 capture with the fixed parser. parse_option_list() (forensics/tools/atlas_runtime.py) matched the authority's `openssl list -options <cmd>` rows against a help-text shape (`-in val        Input file`) that the output never produces, and the real rows are `name type` pairs (`help -`, `in <`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count was 0 and all 2,008 raw rows stayed unstructured. 22.9 rewrote the parser to the authority's actual grammar and re-enumerated the whole namespace from the authority's own built binary (forensics/authorities/build/openssl-3.6.4-production/apps/openssl): forensics/atlas/phase22/cli-surface.json now carries 120 commands with 4,314 structured options, 0 refused rows and 0 commands_with_zero_options, and RT-PHASE22-CLI proves the repaired parser reads a real row and refuses a malformed one (and turns to fail when the parser is broken in memory). The Phase-16-owned Phase-1 capture forensics/atlas/openssl-3.6.4-production/cli-commands.json still carries option_count 0 on all 55 commands: it is Phase 16 (cli-config) that owns the CLI stratum and would regenerate production and historical in lockstep, since regenerating only the production authority would leave a spurious option-set differential against the historical one. Closure: parse_option_list() reads the authority's actual option shape and the structured surface (22.9's cli-surface.json now, and the Phase-16 capture once regenerated) has a non-zero structured option_count for every command.)",
-      "engine_load_dynamic_int -> phase 16 (`crypto/engine/eng_dyn.c` is the dynamic ENGINE loader: `engine_load_dynamic_int` and the `dynamic`/`rdrand` built-ins it registers are absent, so `ENGINE_by_id`'s dynamic fallback and the authority's built-in engine ids are not reconstructed. No Phase-13 subphase owns the unit -- 13.1 transcribes `ENGINE_by_id`'s miss path whole and takes the authority's own `notfound` arm -- so it is owed to the installed distribution/config/module stratum, whose `DSO_load` and `OPENSSL_ENGINES` handling are the loader's dependency.)",
-      "ossl_get_openssldir -> phase 16 (The OPENSSL_info strings rather than anything the registry reads; `ossl_get_enginesdir`, its sibling, moved to Phase 13.1 with `ENGINE_by_id`)",
-      "ossl_get_wininstallcontext -> phase 16 (A Windows-only string the admitted Linux/x86-64 profile does not build, carried with `ossl_get_openssldir` rather than special-cased)"
+      "cli_option_list_parse -> phase 16 (Transferred to 22.9 and repaired there; what remains deferred to Phase 16 is regenerating the Phase-1 capture with the fixed parser. parse_option_list() (forensics/tools/atlas_runtime.py) matched the authority's `openssl list -options <cmd>` rows against a help-text shape (`-in val        Input file`) that the output never produces, and the real rows are `name type` pairs (`help -`, `in <`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count was 0 and all 2,008 raw rows stayed unstructured. 22.9 rewrote the parser to the authority's actual grammar and re-enumerated the whole namespace from the authority's own built binary (forensics/authorities/build/openssl-3.6.4-production/apps/openssl): forensics/atlas/phase22/cli-surface.json now carries 120 commands with 4,314 structured options, 0 refused rows and 0 commands_with_zero_options, and RT-PHASE22-CLI proves the repaired parser reads a real row and refuses a malformed one (and turns to fail when the parser is broken in memory). The Phase-16-owned Phase-1 capture forensics/atlas/openssl-3.6.4-production/cli-commands.json still carries option_count 0 on all 55 commands: it is Phase 16 (cli-config) that owns the CLI stratum and would regenerate production and historical in lockstep, since regenerating only the production authority would leave a spurious option-set differential against the historical one. Closure: parse_option_list() reads the authority's actual option shape and the structured surface (22.9's cli-surface.json now, and the Phase-16 capture once regenerated) has a non-zero structured option_count for every command.)"
     ],
     "census": {
-      "covered_by_a_divergence": 87,
-      "language_surface_not_modelled_by_name": 11459,
-      "planned_prerequisites": 4
+      "covered_by_a_divergence": 90,
+      "language_surface_not_modelled_by_name": 11484
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -29,6 +25,7 @@
         "OSSL_CRMF_POPO_free": 1,
         "OSSL_CRMF_POPO_new": 1,
         "arg": 1,
+        "bind_engine": 1,
         "bn_set_static_words": 1,
         "cb_arg": 1,
         "engine_cleanup_int": 1,
@@ -49,6 +46,7 @@
         "ossl_lib_ctx_unlock": 2,
         "ossl_lib_ctx_write_lock": 2,
         "ossl_release_default_drbg_ctx": 2,
+        "ossl_set_error_state": 1,
         "out_len": 1,
         "outlen": 1,
         "pkt": 1,
@@ -60,7 +58,8 @@
         "u16": 1,
         "u32": 1,
         "u64": 1,
-        "u8": 1
+        "u8": 1,
+        "v_check": 1
       },
       "language_surface_not_modelled_by_name": {
         "crypto/aria/aria.c": 3,
@@ -284,6 +283,7 @@
         "crypto/engine/eng_all.c": 1,
         "crypto/engine/eng_cnf.c": 14,
         "crypto/engine/eng_ctrl.c": 6,
+        "crypto/engine/eng_dyn.c": 24,
         "crypto/engine/eng_fat.c": 5,
         "crypto/engine/eng_init.c": 7,
         "crypto/engine/eng_lib.c": 19,
@@ -333,7 +333,7 @@
         "crypto/evp/ec_support.c": 1,
         "crypto/evp/encode.c": 6,
         "crypto/evp/evp_cnf.c": 11,
-        "crypto/evp/evp_enc.c": 25,
+        "crypto/evp/evp_enc.c": 24,
         "crypto/evp/evp_fetch.c": 17,
         "crypto/evp/evp_key.c": 7,
         "crypto/evp/evp_lib.c": 21,
@@ -621,6 +621,7 @@
         "crypto/x509/x_x509.c": 28,
         "crypto/x509/x_x509a.c": 14,
         "providers/baseprov.c": 25,
+        "providers/prov_running.c": 2,
         "ssl/bio_ssl.c": 20,
         "ssl/d1_lib.c": 56,
         "ssl/d1_srtp.c": 24,
@@ -652,10 +653,6 @@
         "ssl/t1_trce.c": 101,
         "ssl/tls_depr.c": 17,
         "ssl/tls_srp.c": 19
-      },
-      "planned_prerequisites": {
-        "ossl_get_openssldir": 3,
-        "ossl_get_wininstallcontext": 1
       }
     },
     "census_not_a_failure": "the C language surface is counted and listed, never failed: the crate models C types, macros and reason codes differently on purpose, and a lexical scan cannot tell a rename from a gap",
@@ -678,6 +675,7 @@
         "OSSL_CRMF_POPO_free",
         "OSSL_CRMF_POPO_new",
         "arg",
+        "bind_engine",
         "bn_set_static_words",
         "cb_arg",
         "engine_cleanup_int",
@@ -697,7 +695,6 @@
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
         "ossl_lib_ctx_get_concrete",
-        "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data",
         "ossl_lib_ctx_get_data"
@@ -743,22 +740,16 @@
         "crypto/asn1/a_dup.c:i2d_of_void",
         "crypto/asn1/a_dup.c:void",
         "crypto/asn1/a_i2d_fp.c:ASN1_ITEM"
-      ],
-      "planned_prerequisites": [
-        "ossl_get_openssldir",
-        "ossl_get_openssldir",
-        "ossl_get_openssldir",
-        "ossl_get_wininstallcontext"
       ]
     },
     "checked": {
-      "authority_units": 592,
-      "crate_modules": 786,
+      "authority_units": 594,
+      "crate_modules": 788,
       "deferral_blocker_rows": 0,
-      "deferrals_recorded": 5,
-      "divergence_names_covered": 47,
-      "divergence_rows": 11,
-      "names_referenced_and_not_built": 19
+      "deferrals_recorded": 2,
+      "divergence_names_covered": 50,
+      "divergence_rows": 13,
+      "names_referenced_and_not_built": 21
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
     "counts": {},
@@ -1248,7 +1239,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "5aaf134a5d2fc4a7816e8f5eddf9a741812c4e54fa9f7fc10a1f86c5476285ac",
+  "body_hash": "c606c915f3ebbf494d8a601c02e65777552eb9df22179a50c82d15fb782de1e0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1269,7 +1260,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "b9a32440f4d93fd03471d1da570b62349ab29d5bd49c26316f6d5cdb55299cea"
+      "sha256": "3f8f48bc15e7a8ed00cb921375786b2b0f63d07b37781918b64f84209fb32223"
     },
     {
       "name": "symbol-ownership",
@@ -1284,17 +1275,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8102978e08655ad7bbb16b1be75cfb57893d7c9a4e0fe047d81a286c4e30372e"
+      "sha256": "52bef0aa1b09dd99f4b5c07a4a0b01db8599c061a8d188311deecea4eddf27e8"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "1b4970bf209e4a21ba14b42ae304fedefbcc65b7e896f8b622b47e591d608e67"
+      "sha256": "52204bc91f1e9db1074b8ad6af2a3421d6d2eef1a9358c13cc3cf52b626acd43"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "4dde21f48014bf43bed6b24ab5551f7b93ad27dfb5b7668f5165740d76958282"
+      "sha256": "b7b2c18961bd9b09cea6d7ec330da813256cbb286eb6435bd9cca0660b2906a9"
     },
     {
       "name": "crate-source-tree",

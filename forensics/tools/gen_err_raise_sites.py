@@ -1449,7 +1449,10 @@ COVERED_FILES = [
     # listed, for the `eng_all.c` reason. Phase 13.3 added the control fat helpers
     # (`eng_fat.c`), whose one site is `ENGINE_set_default_string`'s
     # `ENGINE_R_INVALID_STRING` refusal (`str=%s`) -- the dispatch itself raises nothing.
+    # Phase 16.2 added the dynamic-engine loader (`eng_dyn.c`), whose fourteen sites are
+    # `ENGINE_R_*` control/load refusals and two `ERR_R_CRYPTO_LIB` allocation failures.
     ("crypto/engine/eng_ctrl.c", "ENG_CTRL"),
+    ("crypto/engine/eng_dyn.c", "ENG_DYN"),
     ("crypto/engine/eng_cnf.c", "ENG_CNF"),
     ("crypto/engine/eng_fat.c", "ENG_FAT"),
     ("crypto/engine/eng_init.c", "ENG_INIT"),

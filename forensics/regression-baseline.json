@@ -234,6 +234,10 @@
       "observations": 138,
       "verdict": "pass"
     },
+    "RT-DEFAULTS": {
+      "observations": 10,
+      "verdict": "pass"
+    },
     "RT-DH": {
       "observations": 589,
       "verdict": "pass"
@@ -272,6 +276,10 @@
     },
     "RT-ENGINE-CTRL": {
       "observations": 73,
+      "verdict": "pass"
+    },
+    "RT-ENGINE-DYN": {
+      "observations": 10,
       "verdict": "pass"
     },
     "RT-ENGINE-TABLE": {
@@ -719,7 +727,7 @@
     "phase13": 0,
     "phase14": 0,
     "phase15": 0,
-    "phase16": 8,
+    "phase16": 4,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -736,7 +744,7 @@
     "phase13": 377,
     "phase14": 600,
     "phase15": 3,
-    "phase16": 48,
+    "phase16": 45,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -772,10 +780,10 @@
     "9": "complete"
   },
   "prerequisites": {
-    "blocking_dependencies": 4,
-    "divergence_names_covered": 47,
+    "blocking_dependencies": 1,
+    "divergence_names_covered": 50,
     "findings": 0,
-    "language_census": 11459,
+    "language_census": 11484,
     "sealed_census": 404
   },
   "provider_implemented": [

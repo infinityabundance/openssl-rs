@@ -10,6 +10,8 @@ same program, so the expectation cannot drift.
 
 `RT-LEGACY-MODULE`, and what it compares
 ----------------------------------------
+`RT-LEGACY-MODULE`, and what it compares
+----------------------------------------
 16.1's court, `courts/phase16/rt_legacy_module_probe.c`, loads the `legacy` provider
 through the same `OSSL_PROVIDER_load` path the authority's own CLI uses — the module's
 `OSSL_provider_init` on one side, the candidate's `ossl-modules/legacy.so` on the other,
@@ -26,10 +28,40 @@ provider, and two `PBKDF1` derives the row must refuse. It does **not** read the
 queue; every slice of 16.1 is landed, so `OSSL_OP_CIPHER` and `OSSL_OP_KDF` are queried
 and the comparison measures the whole table. See docs/PHASE-16-SUBPHASES.md section 3.
 
+`RT-ENGINE-DYN`, and what it compares
+-------------------------------------
+16.2's court, `courts/phase16/rt_engine_dyn_probe.c`, drives `ENGINE_by_id` over the
+loader 16.2 lands (`crypto/engine/eng_dyn.c`): the NULL-id refusal, the
+`OPENSSL_INIT_ENGINE_DYNAMIC` bit whose step registers the `dynamic` built-in, the
+`dynamic` engine id/name read back (and a second lookup answering a second object,
+because the engine carries `ENGINE_FLAGS_BY_ID_COPY`), the dynamic fallback itself
+(`ENGINE_by_id`'s miss path recurses into `ENGINE_by_id("dynamic")` and runs the
+`ID`/`DIR_LOAD`/`DIR_ADD`/`LIST_ADD`/`LOAD` control chain) with `OPENSSL_ENGINES`
+pointed at a fixed object-free directory so the `LOAD` refuses, and the empty-id
+refusal. A real `.so` load is not driven: the candidate shell installs no *engine*
+module, and the distribution's engine-module contract is 16.4's `filesystem` unit,
+so the probe records that rather than fabricating a fixture. The `rdrand` id is not
+observed because it is `crypto/engine/eng_rdrand.c`'s separate unit. See
+courts/phase16/rt_engine_dyn_probe.c and docs/PHASE-16-SUBPHASES.md section 4.
+
+`RT-DEFAULTS`, and what it compares
+-----------------------------------
+16.3's court, `courts/phase16/rt_defaults_probe.c`, drives the two `crypto/defaults.c`
+functions through the public surfaces that stand on them: `OPENSSL_info(1001)` is
+`ossl_get_openssldir()`, as a `'static` C string equal to `X509_get_default_cert_area()`
+on both sides (both are the same build-time `OPENSSLDIR`), the four
+`X509_get_default_*` paths keep their `/certs`, `/cert.pem` and `/private` relationship to
+that area, `OPENSSL_info(1009)` is `ossl_get_wininstallcontext()` (the literal
+`"Undefined"`, equal on both sides), and the refusal arm (an unrecognised code is NULL;
+the seed-source and CPU settings codes are a recorded divergence and are not observed). The
+raw authority path
+is deliberately not printed, because the candidate answers its own `OPENSSL_RS_OPENSSLDIR`
+(empty when unset) and the difference is a *value* the stratum does not claim; the engines
+and modules dirs are not observed for the same reason. See
+courts/phase16/rt_defaults_probe.c and docs/PHASE-16-SUBPHASES.md section 4.
+
 The pending courts, and what each awaits
 -----------------------------------------
-  * `RT-ENGINE-DYN` — `engine_load_dynamic_int` and the `dynamic`/`rdrand` built-ins (16.2).
-  * `RT-DEFAULTS` — the `OPENSSLDIR` directory plane and the install context (16.3).
   * `RT-CLI`, `RT-CONFIG` — the `openssl` CLI and config loading, and the regenerated
     Phase-1 capture (16.4).
   * `RT-STATEM-REMAINDER` — `ssl/statem/statem_clnt.c` and `statem_srvr.c` (16.5).
@@ -72,15 +104,14 @@ RUN_TIMEOUT_S = "60"
 # cannot be committed.
 COURTS: list[tuple[str, str]] = [
     ("RT-LEGACY-MODULE", "rt_legacy_module_probe.c"),
+    ("RT-ENGINE-DYN", "rt_engine_dyn_probe.c"),
+    ("RT-DEFAULTS", "rt_defaults_probe.c"),
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that
 # lands the probe and what the court will drive, so "nothing registered" is a stated distance
 # rather than a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-ENGINE-DYN": "16.2: engine_load_dynamic_int and the dynamic/rdrand built-ins, through "
-                     "DSO_load and OPENSSL_ENGINES",
-    "RT-DEFAULTS": "16.3: the OPENSSLDIR directory plane and the install context",
     "RT-CLI": "16.4: the openssl CLI command dispatch and its option grammar",
     "RT-CONFIG": "16.4: config loading and the regenerated Phase-1 CLI capture",
     "RT-STATEM-REMAINDER": "16.5: the ssl/statem/statem_clnt.c and statem_srvr.c message layer",
@@ -256,11 +287,27 @@ def main(argv: list[str]) -> int:
             "and exercises the refusal arms (an unknown digest/cipher/KDF name, a legacy name "
             "asked of the `default` provider, and two `PBKDF1` derives the row must refuse) -- "
             "not the error queue. The 39-row table is fully published, so "
-            "`forensics/atlas/provider-algorithms.json` records `provider_rows_open` 0. The "
-            "other five courts the plan names -- `RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, "
-            "`RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in `pending_courts` with the "
-            "subphase that lands each. docs/PHASE-16-SUBPHASES.md sections 3 and 4 record what "
-            "each court compares."
+            "`forensics/atlas/provider-algorithms.json` records `provider_rows_open` 0. "
+            "`RT-ENGINE-DYN` is 16.2's: it **initialises** the `OPENSSL_INIT_ENGINE_DYNAMIC` "
+            "bit (whose step runs `engine_load_dynamic_int` and registers the `dynamic` "
+            "built-in), **reads** the `dynamic` engine id and name back through "
+            "`ENGINE_by_id`, **drives** the dynamic fallback (`ENGINE_by_id`'s miss path "
+            "recurses into `ENGINE_by_id(\"dynamic\")` and runs the `ID`/`DIR_LOAD`/`DIR_ADD`/"
+            "`LIST_ADD`/`LOAD` control chain) with `OPENSSL_ENGINES` pointed at a fixed "
+            "object-free directory, and exercises the NULL-, absent- and empty-id refusals. "
+            "`RT-DEFAULTS` is 16.3's: it **reads** `OPENSSL_info(OPENSSL_INFO_CONFIG_DIR)` "
+            "(which is `ossl_get_openssldir()`) and checks it equals "
+            "`X509_get_default_cert_area()`, **checks** the four `X509_get_default_*` paths' "
+            "`/certs`/`/cert.pem`/`/private` relationship to that area, **reads** "
+            "`OPENSSL_info(OPENSSL_INFO_WINDOWS_CONTEXT)` (which is "
+            "`ossl_get_wininstallcontext()`, the literal `\"Undefined\"`) and exercises the "
+            "refusal arm (an unrecognised code is NULL; the seed-source and CPU settings "
+            "codes are a recorded divergence and are not observed). The raw "
+            "authority `OPENSSLDIR` is not printed: the candidate answers its own build path "
+            "and the difference is a value the stratum does not claim. The other three courts "
+            "the plan names -- `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in "
+            "`pending_courts` with the subphase that lands each. docs/PHASE-16-SUBPHASES.md "
+            "sections 3 and 4 record what each court compares."
         ),
     }
 

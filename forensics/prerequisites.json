@@ -2,25 +2,6 @@
   "body": {
     "deferrals": [
       {
-        "evidence": "src/runtime/defaults.rs module doc",
-        "owner_phase": 16,
-        "reason": "The OPENSSL_info strings rather than anything the registry reads; `ossl_get_enginesdir`, its sibling, moved to Phase 13.1 with `ENGINE_by_id`",
-        "symbol": "ossl_get_openssldir"
-      },
-      {
-        "evidence": "src/runtime/defaults.rs module doc",
-        "owner_phase": 16,
-        "reason": "A Windows-only string the admitted Linux/x86-64 profile does not build, carried with `ossl_get_openssldir` rather than special-cased",
-        "symbol": "ossl_get_wininstallcontext"
-      },
-      {
-        "authority_unit": "crypto/engine/eng_dyn.c",
-        "evidence": "docs/PHASE-13-LEGACY-SEAL.md section 5 and section 10; src/engine/eng_list.rs:9-19; src/engine/mod.rs:77-79; docs/DECISIONS.md D528",
-        "owner_phase": 16,
-        "reason": "`crypto/engine/eng_dyn.c` is the dynamic ENGINE loader: `engine_load_dynamic_int` and the `dynamic`/`rdrand` built-ins it registers are absent, so `ENGINE_by_id`'s dynamic fallback and the authority's built-in engine ids are not reconstructed. No Phase-13 subphase owns the unit -- 13.1 transcribes `ENGINE_by_id`'s miss path whole and takes the authority's own `notfound` arm -- so it is owed to the installed distribution/config/module stratum, whose `DSO_load` and `OPENSSL_ENGINES` handling are the loader's dependency.",
-        "symbol": "engine_load_dynamic_int"
-      },
-      {
         "authority_unit": "providers/legacy-dso-legacyprov.c",
         "evidence": "docs/PHASE-6-SUBPHASES.md rows 6.8d and 6.12",
         "owner_phase": 13,
@@ -171,6 +152,31 @@
         "evidence": "forensics/atlas/macro-owners.json (defined_in for each name); the gate's first-run report, recorded in docs/DECISIONS.md D123; docs/DECISIONS.md D275 (the `scan_typedefs` grammar fix and the four retirements)",
         "note": "Each of these is a name the authority's *non-installed* headers introduce -- `#define F(x)` in crypto/md4/md4_local.h and crypto/sha/sha_local.h, `u8`/`u16`/`u32`/`u64` in crypto/aes/aes_local.h, macro-body and parameter names in include/internal/list.h, quic_*.h and sha3.h, and `sleep` in include/internal/e_os.h, which is EINTR-retry shim over the C library's -- and each also appears in this crate as an ordinary Rust identifier: a generic parameter, a local binding, a width alias, or a word inside a doc comment. A lexical scan of either side cannot separate those two facts, which is why this is a recorded class rather than a narrower matcher: a matcher tuned to drop `u8` would also drop a real collision. The gate holds the list exact, so a new member has to be looked at. **`stdin` joined at D350**, with `src/ui/ui_openssl.rs`: `include/internal/e_os.h` spells `stdin`/`stdout`/`stderr` as macros for the systems whose C library has no `FILE *` stream objects (VMS, MSDOS), and the console method compares its session's input stream against `stdin` and falls back to it, so the crate declares the libc `static mut stdin` exactly where it needs it -- the same shadowing `stderr` has had since Phase 4. Three earlier members -- `cbc` (D239), `initkey` (D242) and `now` -- and the one-member `not_in_this_profile` row that carried `initiv` (D265) were retired at D275: each was a *struct-member function-pointer field*, not a type, and `scan_typedefs` had taken the field's name out of the enclosing struct body. The grammar now reads a typedef's name from after the closing brace of a struct/union/enum body, so all four left the type universe and the records that existed only to cover them are gone. `initiv`'s own record had already said the honest disposition of that lexical false positive was to fix the atlas.",
         "owner_module": "several"
+      },
+      {
+        "authority_units": [
+          "engines/afalg-dso-e_afalg.c"
+        ],
+        "class": "shadowed_by_a_crate_identifier",
+        "covers": [
+          "bind_engine",
+          "v_check"
+        ],
+        "evidence": "forensics/atlas/internal-symbols.json (both names' translation_unit is engines/afalg-dso-e_afalg.c); src/engine/eng_dyn.rs",
+        "note": "`bind_engine` and `v_check` are not functions `crypto/engine/eng_dyn.c` defines. They are the two symbol names the dynamic loader binds in a loaded shared library -- `DSO_bind_func(ctx->dynamic_dso, ctx->DYNAMIC_F2/F1)` (`eng_dyn.c:435`/`:450`, `DYNAMIC_F2 = \"bind_engine\"`, `DYNAMIC_F1 = \"v_check\"`) -- and their defining authority units are the engine DSOs (`engines/afalg-dso-e_afalg.c` and its siblings), which this crate does not build. The gate observes the names because Phase 16.2's `DynamicDataCtx` carries the authority's own field names `bind_engine` and `v_check`, so the Rust field identifiers collide with the authority symbols. No crate function by either name is owed, and the two lookups are the `DynamicDataCtx` fields plus the two string literals.",
+        "owner_module": "src/engine/eng_dyn.rs"
+      },
+      {
+        "authority_units": [
+          "providers/prov_running.c"
+        ],
+        "class": "modelled_differently",
+        "covers": [
+          "ossl_set_error_state"
+        ],
+        "evidence": "src/provider/digest.rs:137; src/provider/legacyprov.rs; forensics/atlas/transcription-edges.json (`src/provider/legacyprov.rs` is `providers/prov_running.c`'s module)",
+        "note": "`providers/prov_running.c` defines `ossl_set_error_state` and `ossl_prov_is_running`. The crate implements the latter as a per-provider local (the base/legacy and default providers are always running in this distribution) and models the former as the no-op the same callers take: a provider that is always running never transitions to an error state, so nothing calls a crate `ossl_set_error_state` and no function by that name is owed. Phase 16.1's module edge `src/provider/legacyprov.rs -> providers/prov_running.c` is what made the name visible to the gate; this record is the Phase-16 prerequisite-plane reconciliation the earlier stale atlas did not carry.",
+        "owner_module": "src/provider/legacyprov.rs"
       }
     ],
     "rule": [

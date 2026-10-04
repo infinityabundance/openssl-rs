@@ -29,6 +29,7 @@
 //! | `OPENSSL_INIT_NO_ATEXIT` | fully honoured: it suppresses the `atexit` registration |
 //! | `OPENSSL_INIT_BASE_ONLY` | internal flag; base init is all this build has |
 //! | `OPENSSL_INIT_ASYNC` | **implemented** (13.7): runs `async_init()`, which creates the fibre-memory lock. The authority's `ossl_init_async` runs it at the authority's own position, after the config step and before the engine steps; `crypto/async` landed with 13.7, so the bit left the refused set |
+//! | `OPENSSL_INIT_ENGINE_DYNAMIC` | **implemented** (16.2): runs `engine_load_dynamic_int()`, which registers the `dynamic` engine. The authority's `ossl_init_engine_dynamic` runs it after the `engine_openssl`/`engine_rdrand` steps and before the platform engines (`crypto/init.c:660-662`); `crypto/engine/eng_dyn.c` landed with 16.2, so this one bit left the refused set. `OPENSSL_INIT_ENGINE_ALL_BUILTIN` still trips the remaining engine bits below |
 //! | unknown bits | the authority ORs unknown bits into its done-mask and ignores them |
 //!
 //! **Refused** with `ERR_LIB_CRYPTO`/`ERR_R_INIT_FAIL` and a `0` return. Each of
@@ -40,7 +41,7 @@
 //! |---|---|---|
 //! | `ADD_ALL_CIPHERS` | EVP/OBJ (4, 7) | registers the legacy cipher methods in the `OBJ_NAME` database |
 //! | `ADD_ALL_DIGESTS` | EVP/OBJ (4, 7) | registers the legacy digest methods |
-//! | `ENGINE_*` | ENGINE (13) | loads/registers engines |
+//! | `ENGINE_*` (the remaining bits) | ENGINE (13) | loads/registers `openssl`, `rdrand` and the platform engines; `DYNAMIC` is landed, but `eng_openssl.c`/`eng_rdrand.c` and the platform units are not, so those bits stay refused |
 //!
 //! Refusals happen *after* the `atexit` step and **before** the config step,
 //! matching the authority's ordering: `init.c` tests `ADD_ALL_*` and the
@@ -107,6 +108,7 @@
 //! OpenSSL_version(7)           -> "3.6.4"
 //! OpenSSL_version(10)          -> "OSSL_WINCTX: Undefined"
 //! OpenSSL_version(unknown)     -> "not available"
+//! OPENSSL_info(1001)           -> the build's OPENSSL_RS_OPENSSLDIR (empty when unset)
 //! OPENSSL_info(1004)           -> ".so"
 //! OPENSSL_info(1005)           -> "/"
 //! OPENSSL_info(1006)           -> ":"
@@ -136,14 +138,18 @@
 //! ```
 //!
 //! The replacements use the authority's own "not available" vocabulary
-//! (`OPENSSLDIR: N/A`, `ENGINESDIR: N/A`, `MODULESDIR: N/A`, `CPUINFO: N/A`) or
-//! `NULL` for `OPENSSL_info`, which the header documents as the "information is
-//! not available" result. Where the divergent surface is a *subsystem* (CPU
-//! dispatch, Phase 19; installed directories, Phases 2/16) the open obligation
-//! names the phase that will make it real; where it is build provenance
-//! (`CFLAGS`, `BUILT_ON`) no phase can make the authority's own string true, so
-//! the obligation is to decide and document this build's provenance string once
-//! the distribution profile is fixed.
+//! (`CPUINFO: N/A`) or `NULL` for `OPENSSL_info`, which the header documents as
+//! the "information is not available" result. **Phase 16.3 moved the directory
+//! plane off that list for the crate**: `OPENSSL_info(1001/1002/1003)` now return
+//! the landed `crypto/defaults.c` functions, so 1001 answers this build's
+//! `OPENSSL_RS_OPENSSLDIR` (a *value* divergence, empty when unset rather than
+//! NULL) and 1002/1003 answer NULL only because this build configured no
+//! engines/modules prefix. Where the divergent surface is a *subsystem* (CPU
+//! dispatch, Phase 19; seed source, Phase 9) the open obligation names the phase
+//! that will make it real; where it is build provenance (`CFLAGS`, `BUILT_ON`) no
+//! phase can make the authority's own string true, so the obligation is to decide
+//! and document this build's provenance string once the distribution profile is
+//! fixed.
 
 use core::ffi::{c_char, c_int, c_uint, c_ulong, c_void, CStr};
 use core::sync::atomic::{AtomicBool, AtomicI32, AtomicPtr, AtomicU32, AtomicU64, Ordering};
@@ -268,7 +274,6 @@ const OPENSSL_INIT_NO_ATEXIT: u64 = 0x0008_0000;
 /// See `docs/DECISIONS.md` D86 for the phase in which the loader was absent, and
 /// the entry that supersedes it for the phase in which it arrived.
 const INIT_UNSUPPORTED: u64 = OPENSSL_INIT_ENGINE_RDRAND
-    | OPENSSL_INIT_ENGINE_DYNAMIC
     | OPENSSL_INIT_ENGINE_OPENSSL
     | OPENSSL_INIT_ENGINE_CRYPTODEV
     | OPENSSL_INIT_ENGINE_CAPI
@@ -386,7 +391,9 @@ const VERSION_BUILT_ON: &CStr = c"built on: N/A";
 //   OBL-INIT-VERSION-BUILT-ON      VERSION_BUILT_ON diverges (authority's clock)
 //   OBL-INIT-VERSION-DIRS          OPENSSLDIR/ENGINESDIR/MODULESDIR are "N/A"
 //   OBL-INIT-VERSION-CPU-INFO      CPUINFO is "N/A" (Phase 19 CPU dispatch)
-//   OBL-INIT-INFO-DIRS             OPENSSL_info(1001..1003) return NULL
+//   OBL-INIT-INFO-DIRS             OPENSSL_info(1001) is the build's own OPENSSLDIR (empty
+//                                  when unset, non-NULL); OPENSSL_info(1002/1003) are the
+//                                  landed defaults functions, NULL when no prefix was built
 //   OBL-INIT-INFO-SEED-SOURCE      OPENSSL_info(1007) returns NULL (Phase 9)
 //   OBL-INIT-INFO-CPU-SETTINGS     OPENSSL_info(1008) returns NULL (Phase 19)
 
@@ -602,6 +609,38 @@ fn run_async_once() -> c_int {
         return 0;
     }
     ASYNC_ONCE_RET.load(Ordering::Acquire)
+}
+
+/// `static CRYPTO_ONCE engine_dynamic = CRYPTO_ONCE_STATIC_INIT;` — `crypto/init.c:327`.
+static ENGINE_DYNAMIC_ONCE: AtomicI32 = AtomicI32::new(0);
+
+/// The `RUN_ONCE` macro's `engine_dynamic_ossl_ret_` — what `ossl_init_engine_dynamic`
+/// answered. The authority's body always returns 1.
+static ENGINE_DYNAMIC_ONCE_RET: AtomicI32 = AtomicI32::new(0);
+
+/// `DEFINE_RUN_ONCE_STATIC(ossl_init_engine_dynamic)` — `crypto/init.c:328-333`.
+///
+/// The one call is `engine_load_dynamic_int()`, which Phase 16.2 landed as
+/// `crate::engine::eng_dyn::engine_load_dynamic_int`.
+extern "C" fn ossl_init_engine_dynamic() {
+    // SAFETY: the loader registers the `dynamic` engine in the process-global registry; the
+    // caller asked for that bit.
+    unsafe { crate::engine::eng_dyn::engine_load_dynamic_int() };
+    ENGINE_DYNAMIC_ONCE_RET.store(1, Ordering::Release);
+}
+
+/// `RUN_ONCE(&engine_dynamic, ossl_init_engine_dynamic)`: run the body once, then answer its
+/// recorded result.
+fn run_engine_dynamic_once() -> c_int {
+    // SAFETY: the once is this module's own static, initially zero, and the body is a safe
+    // `extern "C" fn` of no arguments.
+    let ran = unsafe {
+        CRYPTO_THREAD_run_once(ENGINE_DYNAMIC_ONCE.as_ptr(), Some(ossl_init_engine_dynamic))
+    };
+    if ran == 0 {
+        return 0;
+    }
+    ENGINE_DYNAMIC_ONCE_RET.load(Ordering::Acquire)
 }
 
 /// `int loading = CRYPTO_THREAD_get_local(&in_init_config_local) != NULL;`
@@ -821,6 +860,14 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSet
 
         if opts & INIT_UNSUPPORTED != 0 {
             raise_init_fail();
+            return 0;
+        }
+
+        // The dynamic-engine step, at the authority's own position: after the
+        // `engine_openssl` and `engine_rdrand` steps and before the platform engines
+        // (`crypto/init.c:660-662`). Phase 16.2 landed `engine_load_dynamic_int`, so the
+        // `DYNAMIC` bit left `INIT_UNSUPPORTED`; the other engine bits stay refused.
+        if opts & OPENSSL_INIT_ENGINE_DYNAMIC != 0 && run_engine_dynamic_once() == 0 {
             return 0;
         }
 
@@ -1201,27 +1248,27 @@ pub extern "C" fn OpenSSL_version(t: c_int) -> *const c_char {
 
 /// `const char *OPENSSL_info(int type)`
 ///
-/// Returns NULL when the information is not available, which is the authority's
-/// documented result for an unrecognised type and for CPU settings it could not
-/// initialise. The structural strings (DSO extension, separators, the non-Windows
-/// context) are returned verbatim; the directory, seed-source and CPU strings
-/// describe subsystems that do not exist yet and return NULL, so a caller's
-/// `if (s != NULL)` guard takes the same branch it would for genuinely
-/// unavailable information.
+/// `crypto/info.c:243-291`. Returns NULL when the information is not available, which is
+/// the authority's documented result for an unrecognised type and for CPU settings it
+/// could not initialise. The structural strings (DSO extension, separators) are returned
+/// verbatim. Phase 16.3 routed the directory and install-context codes to the landed
+/// `crypto/defaults.c` functions: `OPENSSL_INFO_CONFIG_DIR` is `ossl_get_openssldir()`,
+/// `ENGINES_DIR`/`MODULES_DIR` are `ossl_get_enginesdir()`/`ossl_get_modulesdir()` (both
+/// NULL when the build configured no prefix), and `WINDOWS_CONTEXT` is
+/// `ossl_get_wininstallcontext()`. The seed-source and CPU strings still describe
+/// subsystems that do not exist yet and return NULL.
 #[no_mangle]
 pub extern "C" fn OPENSSL_info(t: c_int) -> *const c_char {
     guard_ffi(core::ptr::null(), || match t {
         OPENSSL_INFO_DSO_EXTENSION => c".so".as_ptr(),
         OPENSSL_INFO_DIR_FILENAME_SEPARATOR => c"/".as_ptr(),
         OPENSSL_INFO_LIST_SEPARATOR => c":".as_ptr(),
-        OPENSSL_INFO_WINDOWS_CONTEXT => c"Undefined".as_ptr(),
-        // CONFIG_DIR / ENGINES_DIR / MODULES_DIR: no installed layout yet
-        // (Phases 2/16). SEED_SOURCE: RAND is Phase 9. CPU_SETTINGS: Phase 19.
-        OPENSSL_INFO_CONFIG_DIR
-        | OPENSSL_INFO_ENGINES_DIR
-        | OPENSSL_INFO_MODULES_DIR
-        | OPENSSL_INFO_SEED_SOURCE
-        | OPENSSL_INFO_CPU_SETTINGS => core::ptr::null(),
+        OPENSSL_INFO_CONFIG_DIR => crate::runtime::defaults::ossl_get_openssldir(),
+        OPENSSL_INFO_ENGINES_DIR => crate::runtime::defaults::ossl_get_enginesdir(),
+        OPENSSL_INFO_MODULES_DIR => crate::runtime::defaults::ossl_get_modulesdir(),
+        OPENSSL_INFO_WINDOWS_CONTEXT => crate::runtime::defaults::ossl_get_wininstallcontext(),
+        // SEED_SOURCE: RAND is Phase 9. CPU_SETTINGS: Phase 19.
+        OPENSSL_INFO_SEED_SOURCE | OPENSSL_INFO_CPU_SETTINGS => core::ptr::null(),
         _ => core::ptr::null(),
     })
 }
@@ -1379,8 +1426,15 @@ mod tests {
             to_bytes(OPENSSL_info(OPENSSL_INFO_WINDOWS_CONTEXT)),
             b"Undefined"
         );
-        // Subsystems that do not exist yet report "not available" (NULL).
-        assert!(OPENSSL_info(OPENSSL_INFO_CONFIG_DIR).is_null());
+        // Phase 16.3 routed the directory plane to `crypto/defaults.c`. An unset
+        // `OPENSSL_RS_OPENSSLDIR` is the empty C string, never NULL; the engines and
+        // modules dirs answer NULL when the build configured no prefix; the seed-source
+        // and CPU strings still describe absent subsystems.
+        let openssldir = OPENSSL_info(OPENSSL_INFO_CONFIG_DIR);
+        assert!(
+            !openssldir.is_null(),
+            "the build's OPENSSLDIR is always a C string"
+        );
         assert!(OPENSSL_info(OPENSSL_INFO_ENGINES_DIR).is_null());
         assert!(OPENSSL_info(OPENSSL_INFO_MODULES_DIR).is_null());
         assert!(OPENSSL_info(OPENSSL_INFO_SEED_SOURCE).is_null());
@@ -1468,11 +1522,29 @@ mod tests {
     }
 
     #[test]
+    fn the_dynamic_engine_bit_is_accepted_and_raises_nothing() {
+        with_init_lock(|| {
+            ERR_clear_error();
+            assert_eq!(
+                OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC, core::ptr::null()),
+                1,
+                "OPENSSL_INIT_ENGINE_DYNAMIC must be accepted now that eng_dyn landed"
+            );
+            assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
+            /* The engine is registered, and the once makes a second call a fast path. */
+            assert_eq!(
+                OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC, core::ptr::null()),
+                1
+            );
+            assert_eq!(ERR_peek_error(), 0);
+        });
+    }
+
+    #[test]
     fn unsupported_options_fail_with_init_fail_and_do_not_get_recorded() {
         with_init_lock(|| {
             let cases = [
                 OPENSSL_INIT_ENGINE_RDRAND,
-                OPENSSL_INIT_ENGINE_DYNAMIC,
                 OPENSSL_INIT_ENGINE_OPENSSL,
                 OPENSSL_INIT_ENGINE_CRYPTODEV,
                 OPENSSL_INIT_ENGINE_CAPI,
