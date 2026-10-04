@@ -255,6 +255,16 @@ XLAT_GET = ("not a provider dispatch: the type of `fix_cipher_md`'s two function
             "its own signature rather than as typedefs; the crate names them to parameterise one "
             "function over `EVP_CIPHER` and `EVP_MD`")
 CRATE_LOCAL = "not an authority type: a crate-local callback shape with no header counterpart"
+# `src/runtime/dso_shared.rs` -- the four function-pointer prototypes for the
+# `dlsym(RTLD_DEFAULT, ...)` lookups that make the two DSOs share the crate's `ERR`/`CONF`
+# state. Each names an authority **function** (`ERR_get_state`, `conf_ssl_name_find`,
+# `conf_ssl_get`, `conf_ssl_get_cmd`) rather than a dispatch typedef, so the convention rule has
+# no `OSSL_FUNC_*` name to join on; they are typed call sites, not callback contracts.
+DLSYM_PROTOTYPE = (
+    "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` "
+    "lookup of an authority export, used only to type the resolved address at the call site; "
+    "the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+)
 ENCODE_KEY2ANY_TYPEDEF = (
     "not a provider dispatch: the authority declares this `typedef` inside `encode_key2any.c` "
     "itself (`:67-72`), not in an installed header, so the typedefs atlas has no record of it"
@@ -431,6 +441,11 @@ SSL_CALLBACK = (
 # naming an alias the crate does not declare is a failure.
 # ---------------------------------------------------------------------------------------------
 NOT_A_DISPATCH: dict[str, str] = {
+    # --- the cross-DSO shared-state dlsym prototypes (`src/runtime/dso_shared.rs`) -------------
+    "ErrGetStateFn@src/runtime/dso_shared.rs": DLSYM_PROTOTYPE,
+    "NameFindFn@src/runtime/dso_shared.rs": DLSYM_PROTOTYPE,
+    "GetFn@src/runtime/dso_shared.rs": DLSYM_PROTOTYPE,
+    "GetCmdFn@src/runtime/dso_shared.rs": DLSYM_PROTOTYPE,
     # --- Phase 14: the libssl application callbacks (`ssl.h`/`tls1.h`/`tls_depr.h`) ----------
     "SrpUsernameCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "SrpVerifyParamCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,

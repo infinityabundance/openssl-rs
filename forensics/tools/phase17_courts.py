@@ -127,13 +127,16 @@ through a libssl entry point (`SSL_CTX_new(NULL)` raises the `SSL_CTX_new_ex` NU
 reads the queue through libcrypto's `ERR_peek_error`/`ERR_get_error` (neither of which libssl
 exports, so both resolve to `libcrypto.so.3`), and it stores an `ssl_conf` command set through
 libcrypto's `CONF_modules_load_file` (over the fixed `fixtures/cross_dso.cnf`) and reads it through
-libssl's `SSL_CTX_config`, observing the applied protocol version. A libcrypto-raised control error
-and the structural return values are `CROSS_DSO_COMPARABLE` and must agree between the sides; the
-two cross-DSO reads are `CROSS_DSO_DIVERGENCE` and are recorded with the duplication named. On the
-authority the two views agree -- one queue, one store -- and `_authority_contract_problems` fails
-the court if they do not, so a vacuous pass is impossible; on the candidate they diverge (an empty
-libcrypto queue and a refused `SSL_CTX_config`), which is the receipt
-`docs/PHASE-17-SUBPHASES.md` section 3.3 requires rather than a failure on the architecture.
+libssl's `SSL_CTX_config`, observing the applied protocol version. The court reports **two
+verdicts**. The *measurement verdict* is `pass` when the probe ran on both sides, the libcrypto
+control and the structural return values agree (`CROSS_DSO_COMPARABLE`), and the authority itself
+observed the shared contract -- `_authority_contract_problems` fails the court otherwise, so a
+vacuous pass is impossible. The *compatibility verdict* is `PASS` iff the candidate's two DSOs
+agree with the authority on every cross-DSO read (`CROSS_DSO_STATE`), and `KNOWN_DIVERGENCE`
+otherwise, with the differing observations in `compatibility_residuals`. 17.3 landed with the
+whole-crate duplication, which measured `pass`/`KNOWN_DIVERGENCE`; the runtime now resolves
+libcrypto's exported `ERR_get_state` and `conf_ssl_*` owners (see `src/runtime/dso_shared.rs`), so
+one queue and one store serve both DSOs and the two verdicts are `pass`/`PASS`.
 
 The downstream consumer
 -----------------------
@@ -1479,58 +1482,43 @@ def matrix_court(name: str, peer_src: Path, driver_src: Path, auth, work: Path) 
     }
 
 
-# `RT-CROSS-DSO-STATE`'s comparable observations: the arms the cross-DSO boundary does *not*
-# move. `CROSS_DSO_COMPARABLE` is the libcrypto control error and the structural return values,
-# which must agree between the sides; `CROSS_DSO_DIVERGENCE` is the two cross-DSO reads the
-# candidate's whole-crate archives are expected to move, each named by `_cross_dso_reason`. A
-# residual on a comparable observation is a failure; a residual on a divergence observation is the
-# receipt the plan requires.
+# `RT-CROSS-DSO-STATE`'s comparable observations: the arms the cross-DSO boundary does *not* move --
+# the libcrypto control error and the structural return values. These must agree between the sides
+# for the *measurement* verdict to pass; a residual here means the probe did not drive both sides
+# the same way, which is a failure rather than a recorded divergence.
 CROSS_DSO_COMPARABLE: list[str] = [
     "err.crypto.peek",
     "err.crypto.lib",
     "err.crypto.reason",
     "ctx.nonnull",
     "err.ssl.null_ret",
-    "err.ssl.after_get",
     "conf.load.ret",
     "conf.load.peek",
-    "conf.ctx_config.peek",
-    "conf.ctx_config.lib",
-    "conf.ctx_config.reason",
     "probe.done",
 ]
 
-CROSS_DSO_DIVERGENCE: list[str] = [
+# `RT-CROSS-DSO-STATE`'s cross-DSO observations: every read the shared-state boundary drives -- the
+# error raised through libssl and read through libcrypto (`err.ssl.*`), and the `ssl_conf` store
+# written through libcrypto and read through libssl (`conf.ctx_config.*`, `conf.ctx.min_proto`).
+# The *compatibility* verdict is `PASS` iff the candidate equals the authority on all of them, and
+# `KNOWN_DIVERGENCE` otherwise. With the whole-crate duplication this was exactly the set that
+# moved (an empty libcrypto queue and a refused `SSL_CTX_config`); with one shared `libcrypto.so.3`
+# it is the set both sides read identically.
+CROSS_DSO_STATE: list[str] = [
     "err.ssl.peek",
     "err.ssl.lib",
     "err.ssl.reason",
     "err.ssl.get",
+    "err.ssl.after_get",
     "conf.ctx_config.ret",
+    "conf.ctx_config.peek",
+    "conf.ctx_config.lib",
+    "conf.ctx_config.reason",
     "conf.ctx.min_proto",
 ]
 
 # `TLS1_2_VERSION` — the protocol version the fixture's `MinProtocol = TLSv1.2` applies.
 TLS1_2_VERSION = 0x0303
-
-
-def _cross_dso_reason(key: str) -> str:
-    """The named duplication a non-comparable `RT-CROSS-DSO-STATE` observation records."""
-    if key.startswith("err.ssl"):
-        return (
-            "the candidate's `libssl.so.3` carries its own copy of the crate's `ERR` state "
-            "(the crate archive is linked `--whole-archive` into both DSOs), so `SSL_CTX_new(NULL)` "
-            "writes a libssl-local queue and the probe's `ERR_peek_error`/`ERR_get_error` -- which "
-            "resolve to `libcrypto.so.3`, the only exporting DSO -- reads a separate, empty "
-            "queue; the authority's libssl imports `ERR_*` from its `DT_NEEDED` `libcrypto.so.3`, "
-            "so one queue serves both (docs/DECISIONS.md D530's second)"
-        )
-    return (
-        "the candidate's `libssl.so.3` carries its own copy of the `ssl_conf` store "
-        "(`src/runtime/conf/conf_ssl.rs`'s `SSL_NAMES`), so the `system_default` command set "
-        "`CONF_modules_load_file` stored through libcrypto is not visible to libssl's "
-        "`SSL_CTX_config`; the authority's libssl imports `conf_ssl_name_find`/`conf_ssl_get` "
-        "from `libcrypto.so.3`, so one store serves both"
-    )
 
 
 def _authority_contract_problems(vals: dict[str, str]) -> list[str]:
@@ -1557,13 +1545,15 @@ def cross_dso_court(name: str, src: Path, auth, work: Path) -> dict:
     The probe is compiled twice and run on both sides. On the authority one `libcrypto.so.3` serves
     both DSOs, so a libssl-raised error is visible through libcrypto and a libcrypto-loaded `CONF`
     section reaches libssl; `_authority_contract_problems` fails the court if the authority does
-    not observe that, so the comparison cannot pass vacuously. On the candidate the whole-crate
-    archives duplicate the crate's globals and the two reads diverge; that divergence is recorded
-    (`recorded_divergences`, each with the duplication `_cross_dso_reason` names) rather than
-    failing the architecture (docs/PHASE-17-SUBPHASES.md section 3.3). A residual on a comparable
-    observation is a failure. The verdict is therefore `pass` when the court *measures* the
-    contract -- the authority shares, both sides' behaviour is compared and any candidate
-    divergence is recorded -- not only when the candidate's queues happen to agree.
+    not observe that, so the comparison cannot pass vacuously. The court returns **two verdicts**.
+    `measurement_verdict` is `pass` when the authority shares and the comparable observations agree
+    -- the court *measured* the contract. `compatibility_verdict` is `PASS` iff the candidate's two
+    DSOs reproduce the authority on every cross-DSO read (`CROSS_DSO_STATE`), and
+    `KNOWN_DIVERGENCE` otherwise, with the differing observations in `compatibility_residuals`. The
+    candidate now reaches libcrypto's exported `ERR_get_state`/`conf_ssl_*` owners
+    (`src/runtime/dso_shared.rs`), so one queue and one store serve both DSOs and the two verdicts
+    are `pass` and `PASS`; the separation is kept so a regression reads as a compatibility
+    divergence rather than disappearing behind a measurement pass.
     """
     auth_lib = auth.libdir
     auth_inc = auth.prefix / "include"
@@ -1592,16 +1582,27 @@ def cross_dso_court(name: str, src: Path, auth, work: Path) -> dict:
     c_vals = _keyed(c_out)
     residuals = diff(a_out, c_out)
     comparable = set(CROSS_DSO_COMPARABLE)
-    driven = [r for r in residuals if r["observation"] in comparable]
-    recorded = [r for r in residuals if r["observation"] not in comparable]
-    for r in recorded:
-        r["reason"] = _cross_dso_reason(r["observation"])
+    state = set(CROSS_DSO_STATE)
+    # A residual on a comparable observation means the probe did not drive both sides the same way;
+    # that is a measurement failure, not a compatibility divergence. A residual on a cross-DSO
+    # observation is exactly what the compatibility verdict reports.
+    comparable_residuals = [r for r in residuals if r["observation"] in comparable]
+    compatibility_residuals = [r for r in residuals if r["observation"] in state]
+    other_residuals = [
+        r for r in residuals if r["observation"] not in comparable and r["observation"] not in state
+    ]
 
     contract = _authority_contract_problems(a_vals)
     crashed = a_code is None or a_code < 0 or c_code is None or c_code < 0
+    # The court measured the contract iff the authority drove it, neither side crashed, the exit
+    # codes agree and the comparable observations agree.
+    measurement_ok = not (contract or crashed or c_code != a_code or comparable_residuals)
+    # The candidate is compatible iff it reproduced the authority on every cross-DSO read.
+    compatibility_ok = measurement_ok and not compatibility_residuals
     comparable_present = sum(
         1 for k in CROSS_DSO_COMPARABLE if a_vals.get(k) == c_vals.get(k)
     )
+    state_present = sum(1 for k in CROSS_DSO_STATE if a_vals.get(k) == c_vals.get(k))
 
     staged = {}
     STAGED.mkdir(parents=True, exist_ok=True)
@@ -1619,22 +1620,26 @@ def cross_dso_court(name: str, src: Path, auth, work: Path) -> dict:
         "candidate_exit_code": c_code,
         "crashed": crashed,
         "comparable_keys": CROSS_DSO_COMPARABLE,
-        "divergence_keys": CROSS_DSO_DIVERGENCE,
+        "state_keys": CROSS_DSO_STATE,
         "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
         "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
         "comparable_observations": comparable_present,
-        "residual_count": len(driven),
-        "residuals": driven,
-        "recorded_divergences": recorded,
-        "recorded_count": len(recorded),
+        "state_observations": state_present,
+        # The two verdicts the reviewer asked for: what the court measured, and whether the
+        # candidate's two DSOs agree as the authority's do.
+        "measurement_verdict": "pass" if measurement_ok else "fail",
+        "compatibility_verdict": "PASS" if compatibility_ok else "KNOWN_DIVERGENCE",
+        "compatibility_residuals": compatibility_residuals,
+        "residual_count": len(comparable_residuals) + len(other_residuals),
+        "residuals": comparable_residuals + other_residuals,
+        "recorded_divergences": compatibility_residuals,
+        "recorded_count": len(compatibility_residuals),
         "authority_contract_problems": contract,
         "authority_error_shared": a_vals.get("err.ssl.peek") not in (None, "0x0"),
         "candidate_error_shared": c_vals.get("err.ssl.peek") not in (None, "0x0"),
         "authority_conf_shared": a_vals.get("conf.ctx_config.ret") == "1",
         "candidate_conf_shared": c_vals.get("conf.ctx_config.ret") == "1",
-        "verdict": (
-            "fail" if (driven or contract or crashed or c_code != a_code) else "pass"
-        ),
+        "verdict": "pass" if measurement_ok else "fail",
         "staged_binaries": staged,
         "candidate_stderr_tail": c_err.splitlines()[-3:],
     }
@@ -2144,10 +2149,16 @@ def main(argv: list[str]) -> int:
             "candidate's whole-crate archives break, in both directions -- a libssl-raised error "
             "read through libcrypto's ERR queue, and a `CONF` command set `CONF_modules_load_file` "
             "stored through libcrypto read through libssl's `SSL_CTX_config` (over the fixed "
-            "fixtures/cross_dso.cnf). On the authority one `libcrypto.so.3` is shared via "
-            "`DT_NEEDED`, so both reads succeed; on the candidate each DSO carries its own copy and "
-            "both reads diverge, which the court records (`recorded_divergences`) rather than "
-            "failing on the architecture (section 3.3). `RT-DOWNSTREAM-CONSUMER` is 17.4's: "
+            "fixtures/cross_dso.cnf). It reports two verdicts: a *measurement verdict*, `pass` "
+            "when the authority shares one `libcrypto.so.3` via `DT_NEEDED` and drove both reads "
+            "(so the comparison cannot be vacuous), and a *compatibility verdict*, `PASS` iff the "
+            "candidate's two DSOs reproduce the authority on every cross-DSO read and "
+            "`KNOWN_DIVERGENCE` otherwise. 17.3 landed with the whole-crate duplication "
+            "(`err.ssl.peek=0`, `conf.ctx_config.ret=0`), so the compatibility verdict began as "
+            "`KNOWN_DIVERGENCE`; the runtime now resolves libcrypto's exported "
+            "`ERR_get_state`/`conf_ssl_*` owners (`src/runtime/dso_shared.rs`), so one queue and "
+            "one store serve both DSOs and the verdicts are `pass`/`PASS`. "
+            "`RT-DOWNSTREAM-CONSUMER` is 17.4's: "
             "courts/phase17/rt_downstream_consumer_probe.c is a real downstream consumer linked "
             "only against the shipped install prefix (an EVP digest, an X.509 PEM parse, a "
             "libcrypto ERR round-trip and a TLS 1.3 handshake over memory BIOs exchanging a fixed "
@@ -2183,8 +2194,14 @@ def main(argv: list[str]) -> int:
 
     for r in records:
         if r["verdict"] == "pass":
+            extra = ""
+            if "measurement_verdict" in r:
+                # The cross-DSO court reports two verdicts: what it measured and whether the
+                # candidate's DSOs agree as the authority's do.
+                extra = (f" [measurement={r['measurement_verdict']}, "
+                         f"compatibility={r['compatibility_verdict']}]")
             print(f"  {r['court']:<18} pass   ({r['authority_observations']} observations, "
-                  f"{len(r.get('recorded_divergences', []))} recorded divergence(s))")
+                  f"{len(r.get('recorded_divergences', []))} recorded divergence(s)){extra}")
         elif r["verdict"] == "pending":
             print(f"  {r['court']:<18} PENDING (registered; {r['comparable_observations']} "
                   f"comparable observation(s), full flight not finished) -- "

@@ -3,11 +3,14 @@
  *
  * Compiled twice (authority and candidate), run, and the two transcripts compared line
  * by line, keyed on `key=value`. The subject is the *link shape*: the admitted authority
+ * The subject is the *link shape*: the admitted authority
  * links `libssl.so.3` against one shared `libcrypto.so.3` through `DT_NEEDED`, so the
  * crate's internal globals -- the `ERR` queue and the `ssl_conf` configuration store --
  * have one instance. The candidate distribution shell links the crate's whole archive
- * into *both* `libssl.so.3` and `libcrypto.so.3`, so each DSO carries its own copy and
- * the two views need not agree. The court measures that, rather than asserting it.
+ * into *both* `libssl.so.3` and `libcrypto.so.3`; the runtime therefore resolves
+ * libcrypto's exported `ERR_get_state`/`conf_ssl_*` owners from libssl
+ * (`src/runtime/dso_shared.rs`), so one queue and one store serve both DSOs as they do
+ * on the authority. The court measures that, rather than asserting it.
  *
  * The probe drives the boundary in both directions:
  *
@@ -15,25 +18,25 @@
  *      deterministic libssl entry point that raises `ERR_LIB_SSL` (the `SSL_CTX_new_ex`
  *      NULL-method arm). The probe then reads the queue with `ERR_peek_error`/
  *      `ERR_get_error`, both of which resolve to *libcrypto* on either side (neither
- *      libssl exports them). On the authority the libssl-raised error is a member of the
- *      shared queue and is observed; on the candidate it was written to libssl's own
- *      copy and the libcrypto queue is empty. A libcrypto-raised error (`ERR_raise`) read
- *      through libcrypto is the control: it must be observed on both sides.
+ *      libssl exports them). On both sides the libssl-raised error is a member of the
+ *      shared queue and is observed. A libcrypto-raised error (`ERR_raise`) read through
+ *      libcrypto is the control: it must be observed on both sides.
  *
  *   2. **CONF: store through libcrypto, read through libssl.** `CONF_modules_load_file`
  *      loads `courts/phase17/fixtures/cross_dso.cnf`, whose `ssl_conf` section stores a
  *      `system_default` command set (`MinProtocol = TLSv1.2`) in the library's `ssl_conf`
  *      store. `SSL_CTX_config(ctx, "system_default")` is a libssl entry point that reads
- *      that store. On the authority the store is libcrypto's and libssl reads it, applies
- *      the command and returns 1, so `SSL_CTX_get_min_proto_version` answers TLS1.2; on
- *      the candidate libssl reads its own empty store, refuses with
- *      `SSL_R_INVALID_CONFIGURATION_NAME` and leaves the protocol unset.
+ *      that store. On both sides the store is libcrypto's and libssl reads it, applies the
+ *      command and returns 1, so `SSL_CTX_get_min_proto_version` answers TLS1.2. Before
+ *      the shared-state repair the candidate's libssl read its own empty store, refused
+ *      with `SSL_R_INVALID_CONFIGURATION_NAME` and left the protocol unset; the court's
+ *      compatibility verdict is what distinguishes the two.
  *
  * Every observation printed is a deterministic function of the build: a return value, a
  * packed error code (and its library/reason fields), or an applied protocol version.
- * Nothing reads the clock, the network, an address or a random. The candidate's own
- * answers are the receipt the plan (docs/PHASE-17-SUBPHASES.md section 3.3) requires: the
- * court records the divergence rather than failing on the architecture.
+ * Nothing reads the clock, the network, an address or a random. The candidate's answers
+ * are the receipt the plan (docs/PHASE-17-SUBPHASES.md section 3.3) requires: the court
+ * separates what it measured from whether the two DSOs agree with the authority's.
  *
  * SPDX-License-Identifier: Apache-2.0
  */

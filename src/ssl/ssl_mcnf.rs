@@ -16,9 +16,8 @@
 //!   section applies exactly as the authority applies it.
 //! * **The invalid-name raise carries no `name=%s` data.** The authority's
 //!   `ERR_raise_data(..., "name=%s", name)` attaches formatted text; this crate's raise records the
-//!   library and reason only. Error text is not compared by this stratum's courts (the candidate's
-//!   error state is a documented duplicate, `src/ssl/mod.rs`), so only the reason code is
-//!   meaningful here.
+//!   library and reason only. Error text is not compared by this stratum's courts, so only the reason
+//!   code is meaningful here.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -27,7 +26,10 @@ use core::ptr;
 
 use crate::context::{OSSL_LIB_CTX_get_conf_diagnostics, OSSL_LIB_CTX_set0_default};
 use crate::ffi::guard_ffi;
-use crate::runtime::conf::conf_ssl::{conf_ssl_get, conf_ssl_get_cmd, conf_ssl_name_find};
+// The `ssl_conf` store is libcrypto's, and the authority's libssl imports these three
+// accessors from it (`DT_NEEDED`). Going through `dso_shared` reproduces that binding when
+// the crate is linked into both DSOs, so `CONF_modules_load_file`'s store is visible here.
+use crate::runtime::dso_shared::{conf_ssl_get, conf_ssl_get_cmd, conf_ssl_name_find};
 use crate::runtime::err::raise_with;
 use crate::ssl::ssl_conf::{
     SSL_CONF_CTX_finish, SSL_CONF_CTX_free, SSL_CONF_CTX_new, SSL_CONF_CTX_set_flags,

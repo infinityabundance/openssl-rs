@@ -638,14 +638,20 @@ pub(crate) fn with_state<R>(f: impl FnOnce(&mut ErrState) -> R) -> Option<R> {
             load_crypto_strings();
         }
     });
-    STATE
-        .try_with(|s| {
-            // SAFETY: the `UnsafeCell` is thread-local, so the only way to reach
-            // it is through this closure on this thread. `f` must not retain the
-            // reference; every caller here uses it for the duration of the call.
-            f(unsafe { &mut *s.get() })
-        })
-        .ok()
+    // The state is the **shared** one. Both DSOs link the crate archive `--whole-archive`,
+    // so each carries its own `STATE`; the authority shares one `libcrypto.so.3`. Resolving
+    // libcrypto's exported `ERR_get_state` here makes a libssl-raised error land in the queue
+    // `ERR_peek_error` reads through libcrypto -- the authority's binding, measured by
+    // `RT-CROSS-DSO-STATE`. A static link falls back to this DSO's own `STATE` (see
+    // `runtime::dso_shared`).
+    let state = crate::runtime::dso_shared::err_state_ptr();
+    if state.is_null() {
+        return None;
+    }
+    // SAFETY: `state` is the live per-thread `ERR_STATE` the authority's `ERR_get_state`
+    // returns (or this DSO's, on the fallback path), so the only reachable `&mut` is on this
+    // thread. `f` must not retain the reference; every caller uses it for the call.
+    Some(f(unsafe { &mut *state }))
 }
 
 /// Raise a complete error from inside the library, the way the authority's
