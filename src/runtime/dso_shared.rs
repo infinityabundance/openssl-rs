@@ -28,6 +28,7 @@ use core::ptr;
 use core::sync::atomic::{AtomicPtr, AtomicU8, Ordering};
 
 use crate::runtime::conf::conf_ssl::SslConfCmd;
+use crate::runtime::conf::init_settings::OpenSslInitSettings;
 use crate::runtime::err::ErrState;
 
 extern "C" {
@@ -110,11 +111,14 @@ type NameFindFn = unsafe extern "C" fn(*const c_char, *mut usize) -> c_int;
 type GetFn = unsafe extern "C" fn(usize, *mut *const c_char, *mut usize) -> *const SslConfCmd;
 /// `void (*)(const SSL_CONF_CMD *, size_t, char **, char **)` — `conf_ssl_get_cmd`.
 type GetCmdFn = unsafe extern "C" fn(*const SslConfCmd, usize, *mut *mut c_char, *mut *mut c_char);
+/// `int (*)(uint64_t, const OPENSSL_INIT_SETTINGS *)` — `OPENSSL_init_crypto`.
+type InitCryptoFn = extern "C" fn(u64, *const OpenSslInitSettings) -> c_int;
 
 static ERR_GET_STATE: LazySymbol = LazySymbol::new();
 static CONF_SSL_NAME_FIND: LazySymbol = LazySymbol::new();
 static CONF_SSL_GET: LazySymbol = LazySymbol::new();
 static CONF_SSL_GET_CMD: LazySymbol = LazySymbol::new();
+static OPENSSL_INIT_CRYPTO: LazySymbol = LazySymbol::new();
 
 /// The process's shared `ERR_STATE` for this thread.
 ///
@@ -130,6 +134,21 @@ pub(crate) fn err_state_ptr() -> *mut ErrState {
         // only reading of that answer.
         let f: ErrGetStateFn = unsafe { core::mem::transmute(p) };
         f()
+    }
+}
+
+/// `int OPENSSL_init_crypto(uint64_t opts, const OPENSSL_INIT_SETTINGS *settings)`, routed through
+/// libcrypto's exported owner so an SSL string-table load reaches the copy `ERR_reason_error_string`
+/// reads through libcrypto. `SSL_CTX_new_ex` (`ssl_lib.c:4005`) is the caller.
+pub(crate) fn openssl_init_crypto(opts: u64) -> c_int {
+    let p = OPENSSL_INIT_CRYPTO.resolve(c"OPENSSL_init_crypto");
+    if p.is_null() {
+        crate::runtime::init::OPENSSL_init_crypto(opts, ptr::null())
+    } else {
+        // SAFETY: the symbol is the authority's `OPENSSL_init_crypto`; the settings pointer is a
+        // NULL this function accepts.
+        let f: InitCryptoFn = unsafe { core::mem::transmute(p) };
+        f(opts, ptr::null())
     }
 }
 

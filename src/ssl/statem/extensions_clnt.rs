@@ -70,6 +70,12 @@ const TLSEXT_TYPE_PSK_KEX_MODES: u16 = 45;
 const TLSEXT_TYPE_SUPPORTED_GROUPS: u16 = 10;
 /// `TLSEXT_TYPE_key_share` — `tls1.h:165`.
 const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
+/// `TLSEXT_TYPE_server_name` — `tls1.h:140`.
+const TLSEXT_TYPE_SERVERNAME: u16 = 0;
+/// `TLSEXT_NAMETYPE_host_name` — `tls1.h:171`.
+const TLSEXT_NAMETYPE_HOST_NAME: u8 = 0;
+/// `TLSEXT_TYPE_application_layer_protocol_negotiation` — `tls1.h:116`.
+const TLSEXT_TYPE_ALPN: u16 = 16;
 
 /// `TLS1_3_VERSION` — `ssl3.h`.
 const TLS1_3_VERSION: c_int = 0x0304;
@@ -106,6 +112,65 @@ const EXT_RETURN_NOT_SENT: c_int = 0;
 const EXT_RETURN_SENT: c_int = 1;
 /// `EXT_RETURN_FAIL`.
 const EXT_RETURN_FAIL: c_int = -1;
+
+/// `EXT_RETURN tls_construct_ctos_server_name(SSL_CONNECTION *s, WPACKET *pkt, ...)` —
+/// `extensions_clnt.c:62-88`.
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_ctos_server_name(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // SAFETY: `s` is live.
+    let host = unsafe { (*s).ext_hostname };
+    if host.is_null() {
+        return EXT_RETURN_NOT_SENT;
+    }
+    // SAFETY: `host` is a NUL-terminated name for a set SNI.
+    let nlen = unsafe { core::ffi::CStr::from_ptr(host) }.to_bytes().len();
+    // SAFETY: `pkt` is live; `WPACKET_sub_memcpy_u16` is a 2-byte sub-packet around the name.
+    unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_SERVERNAME) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_put_bytes_u8(pkt, TLSEXT_NAMETYPE_HOST_NAME) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_memcpy(pkt, host.cast(), nlen) == 0
+            || WPACKET_close(pkt) == 0
+            || WPACKET_close(pkt) == 0
+            || WPACKET_close(pkt) == 0
+        {
+            return EXT_RETURN_FAIL;
+        }
+    }
+    EXT_RETURN_SENT
+}
+
+/// `EXT_RETURN tls_construct_ctos_alpn(SSL_CONNECTION *s, WPACKET *pkt, ...)` —
+/// `extensions_clnt.c:451-472`.
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_ctos_alpn(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // SAFETY: `s` is live.
+    let alpn = unsafe { (*s).ext_alpn };
+    if alpn.is_null() {
+        return EXT_RETURN_NOT_SENT;
+    }
+    // SAFETY: `s` is live; `ext_alpn_len` counts the bytes `ext_alpn` holds.
+    let alpn_len = unsafe { (*s).ext_alpn_len } as usize;
+    // SAFETY: `pkt` is live; `WPACKET_sub_memcpy_u16` is a 2-byte sub-packet around the list.
+    unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_ALPN) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_memcpy(pkt, alpn.cast(), alpn_len) == 0
+            || WPACKET_close(pkt) == 0
+            || WPACKET_close(pkt) == 0
+        {
+            return EXT_RETURN_FAIL;
+        }
+    }
+    EXT_RETURN_SENT
+}
 
 /// `EXT_RETURN tls_construct_ctos_supported_versions(...)` — `extensions_clnt.c:570-608`.
 ///
@@ -431,6 +496,12 @@ pub(crate) unsafe fn tls_construct_extensions(s: *mut Ssl, pkt: *mut Wpacket) ->
     // session ticket, encrypt_then_mac, extended_master_secret, supported_versions,
     // psk_kex_modes and key_share.
     let mut ret;
+    // `server_name` is the first `ext_defs[]` row (`extensions.c:155`).
+    // SAFETY: live per the contract.
+    ret = unsafe { tls_construct_ctos_server_name(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
     // SAFETY: live per the contract.
     ret = unsafe { tls_construct_ctos_renegotiate(s, pkt) };
     if ret == EXT_RETURN_FAIL {
@@ -448,6 +519,12 @@ pub(crate) unsafe fn tls_construct_extensions(s: *mut Ssl, pkt: *mut Wpacket) ->
     }
     // SAFETY: live per the contract.
     ret = unsafe { tls_construct_ctos_sig_algs(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
+    // `application_layer_protocol_negotiation` (`extensions.c:240`).
+    // SAFETY: live per the contract.
+    ret = unsafe { tls_construct_ctos_alpn(s, pkt) };
     if ret == EXT_RETURN_FAIL {
         return 0;
     }

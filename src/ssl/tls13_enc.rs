@@ -615,7 +615,15 @@ pub(crate) unsafe fn tls13_derive_handshake_traffic(s: *mut Ssl) -> c_int {
             b"s hs traffic",
             hash.as_ptr(),
             (*s).server_hs_traffic.as_mut_ptr(),
-        )
+        );
+        // `ssl_log_secret` for the two handshake traffic secrets (`tls13_enc.c:718-722`).
+        {
+            let c = core::slice::from_raw_parts((*s).client_hs_traffic.as_ptr(), hash_len);
+            let sv = core::slice::from_raw_parts((*s).server_hs_traffic.as_ptr(), hash_len);
+            ssl_log_secret(s, b"CLIENT_HANDSHAKE_TRAFFIC_SECRET", c);
+            ssl_log_secret(s, b"SERVER_HANDSHAKE_TRAFFIC_SECRET", sv);
+        }
+        1
     }
 }
 
@@ -661,8 +669,88 @@ pub(crate) unsafe fn tls13_derive_application_traffic(s: *mut Ssl) -> c_int {
             b"s ap traffic",
             hash.as_ptr(),
             (*s).server_app_traffic.as_mut_ptr(),
-        )
+        );
+        // `ssl_log_secret` for the two application traffic secrets and the exporter secret
+        // (`tls13_enc.c:712-724`).
+        {
+            let c = core::slice::from_raw_parts((*s).client_app_traffic.as_ptr(), hash_len);
+            let sv = core::slice::from_raw_parts((*s).server_app_traffic.as_ptr(), hash_len);
+            ssl_log_secret(s, b"CLIENT_TRAFFIC_SECRET_0", c);
+            ssl_log_secret(s, b"SERVER_TRAFFIC_SECRET_0", sv);
+            let mut exporter = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+            if derive_secret(
+                md,
+                ms.as_ptr(),
+                hash_len,
+                b"exp master",
+                hash.as_ptr(),
+                exporter.as_mut_ptr(),
+            ) != 0
+            {
+                ssl_log_secret(s, b"EXPORTER_SECRET", &exporter[..hash_len]);
+            }
+        }
+        1
     }
+}
+
+/// `int ssl_log_secret(SSL_CONNECTION *s, const char *label, const uint8_t *secret,`
+/// `size_t secret_len)` — `ssl/ssl_lib.c:7077-7086` -> `nss_keylog_int` (`:7030-7076`).
+///
+/// Formats `LABEL <client_random hex> <secret hex>` and hands it to the context's
+/// `SSL_CTX_set_keylog_callback`. The optional write-to-file path is not modelled; a NULL callback
+/// is a no-op.
+///
+/// # Safety
+/// `s` is live; `secret` is readable for `secret.len()`.
+unsafe fn ssl_log_secret(s: *mut Ssl, label: &[u8], secret: &[u8]) {
+    // SAFETY: `s` is live.
+    let ctx = unsafe { (*s).ctx };
+    if ctx.is_null() {
+        return;
+    }
+    // SAFETY: `ctx` is the live context read above.
+    let Some(cb) = (unsafe { (*ctx).keylog_callback }) else {
+        return;
+    };
+    let mut out = [0u8; 256];
+    let mut n = 0usize;
+    let hex = b"0123456789abcdef";
+    for &b in label {
+        if n < out.len() - 1 {
+            out[n] = b;
+            n += 1;
+        }
+    }
+    if n < out.len() - 1 {
+        out[n] = b' ';
+        n += 1;
+    }
+    // SAFETY: `s` is live; `client_random` is the 32-byte field.
+    for &b in unsafe { &(*s).client_random } {
+        for hi in [b >> 4, b & 0xf] {
+            if n < out.len() - 1 {
+                out[n] = hex[hi as usize];
+                n += 1;
+            }
+        }
+    }
+    if n < out.len() - 1 {
+        out[n] = b' ';
+        n += 1;
+    }
+    for &b in secret {
+        for hi in [b >> 4, b & 0xf] {
+            if n < out.len() - 1 {
+                out[n] = hex[hi as usize];
+                n += 1;
+            }
+        }
+    }
+    out[n] = 0;
+    // SAFETY: the callback is the application's `SSL_CTX_keylog_cb_func`; `s` and the
+    // NUL-terminated buffer are the ones it was installed to receive.
+    unsafe { cb(s, out.as_ptr().cast::<core::ffi::c_char>()) };
 }
 
 /// `size_t tls13_final_finish_mac(...)` — `tls13_enc.c:267-317`: the `"finished"` key over the

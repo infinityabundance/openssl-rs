@@ -34,7 +34,9 @@ use core::ffi::{c_char, c_int};
 use core::ptr;
 
 use crate::runtime::bio::iolib::{BIO_read, BIO_write};
-use crate::runtime::bio::{BIO_ctrl, BIO_CTRL_FLUSH, BIO_FLAGS_IN_EOF, BIO_FLAGS_READ};
+use crate::runtime::bio::{
+    BIO_ctrl, BIO_CTRL_FLUSH, BIO_FLAGS_IN_EOF, BIO_FLAGS_READ, BIO_FLAGS_WRITE,
+};
 use crate::runtime::err::err_reasons::{
     SSL_R_INVALID_ALERT, SSL_R_NO_RENEGOTIATION, SSL_R_TOO_MANY_WARN_ALERTS,
     SSL_R_UNEXPECTED_EOF_WHILE_READING, SSL_R_UNKNOWN_ALERT_TYPE,
@@ -100,6 +102,8 @@ const SSL_RECEIVED_SHUTDOWN: c_int = 2;
 const SSL_NOTHING: c_int = 1;
 /// `SSL_READING` — `ssl.h:934`.
 const SSL_READING: c_int = 3;
+/// `SSL_WRITING` — `ssl.h:933`.
+const SSL_WRITING: c_int = 2;
 /// `ERR_LIB_SSL` — `err.h:121`.
 const ERR_LIB_SSL: c_int = 20;
 
@@ -162,6 +166,16 @@ unsafe fn ssl3_write_all(s: *mut Ssl, p: *const u8, len: usize) -> c_int {
         // SAFETY: `s` is live; `p.add(off)` is `len - off` readable bytes; `wbio` is the caller's.
         let n = unsafe { BIO_write((*s).wbio, p.add(off).cast(), (len - off) as c_int) };
         if n <= 0 {
+            // The authority's `ossl_tls_handle_rlayer_return` sets `rwstate = SSL_WRITING` on a
+            // retryable record write (`rec_layer_s3.c:491-498`), which `SSL_get_error` turns into
+            // `SSL_ERROR_WANT_WRITE`.
+            // SAFETY: `s` is live; `wbio` is its write BIO.
+            let wbio = unsafe { (*s).wbio };
+            // SAFETY: `wbio` is non-NULL here, so its flags word is readable.
+            if !wbio.is_null() && unsafe { (*wbio).flags } & BIO_FLAGS_WRITE != 0 {
+                // SAFETY: `s` is live.
+                unsafe { (*s).rwstate = SSL_WRITING };
+            }
             return -1;
         }
         off += n as usize;
