@@ -1110,3 +1110,106 @@ pub(crate) unsafe fn ssl_cert_add1_chain_cert(
     }
     1
 }
+
+/// `static int ssl_verify_internal(SSL_CONNECTION *s, STACK_OF(X509) *sk, EVP_PKEY *rpk)` —
+/// `ssl/ssl_cert.c:427-553`, reduced to the certificate arm (`ssl_verify_cert_chain`, `:574`).
+///
+/// It builds an `X509_STORE_CTX` over the connection's `cert_store`, inherits the SSL's verify
+/// parameters (which carry the hostname/IP `PYTHON` set through `SSL_get0_param`), runs
+/// `X509_verify_cert`, installs the resulting error in `s->verify_result` and the validated chain
+/// in `s->verified_chain`, and moves the checked hostname (`vpm.peername`) back to the SSL's
+/// parameters. The RPK and DANE arms, the SSL ex-data slot and the OCSP response are not modelled
+/// here (the reduced client presents certificates, not raw public keys).
+///
+/// # Safety
+/// `s` must be a live connection; `sk` must be NULL or a live `STACK_OF(X509)` of live certs.
+pub(crate) unsafe fn ssl_verify_cert_chain(s: *mut Ssl, sk: *mut OpenSslStack) -> c_int {
+    use core::ffi::c_long;
+
+    use crate::ssl::ssl_lib::SSL_get_security_level;
+    use crate::x509::x509_vfy::{
+        X509_STORE_CTX_free, X509_STORE_CTX_get0_chain, X509_STORE_CTX_get0_param,
+        X509_STORE_CTX_get1_chain, X509_STORE_CTX_get_error, X509_STORE_CTX_init,
+        X509_STORE_CTX_new_ex, X509_STORE_CTX_set_default, X509_STORE_CTX_set_verify_cb,
+        X509_verify_cert,
+    };
+    use crate::x509::x509_vpm::{
+        X509_VERIFY_PARAM_move_peername, X509_VERIFY_PARAM_set1, X509_VERIFY_PARAM_set_auth_level,
+    };
+
+    // `if ((sk == NULL || sk_X509_num(sk) == 0) && rpk == NULL) return 0;` — `:440-441`.
+    // SAFETY: `sk` is non-NULL when the right operand runs, and the stack call is total.
+    if sk.is_null() || unsafe { OPENSSL_sk_num(sk) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live per the contract; its context is live.
+    unsafe {
+        let sctx = (*s).ctx;
+        let verify_store = (*sctx).cert_store;
+        // `ctx = X509_STORE_CTX_new_ex(sctx->libctx, sctx->propq)` — `:453-457`.
+        let ctx = X509_STORE_CTX_new_ex((*sctx).libctx, (*sctx).propq);
+        if ctx.is_null() {
+            raise_ssl(ERR_R_X509_LIB, 455);
+            return 0;
+        }
+        // `x = sk_X509_value(sk, 0); X509_STORE_CTX_init(ctx, verify_store, x, sk)` — `:459-464`.
+        let x = OPENSSL_sk_value(sk, 0).cast::<X509>();
+        if X509_STORE_CTX_init(ctx, verify_store, x, sk) == 0 {
+            raise_ssl(ERR_R_X509_LIB, 462);
+            X509_STORE_CTX_free(ctx);
+            return 0;
+        }
+
+        // The `@SECLEVEL` maps onto the verification auth level (`:472-478`).
+        let param = X509_STORE_CTX_get0_param(ctx);
+        X509_VERIFY_PARAM_set_auth_level(param, SSL_get_security_level(s));
+
+        // `X509_STORE_CTX_set_default(ctx, s->server ? "ssl_client" : "ssl_server")` — `:517`.
+        let dflt = if (*s).server != 0 {
+            c"ssl_client".as_ptr()
+        } else {
+            c"ssl_server".as_ptr()
+        };
+        X509_STORE_CTX_set_default(ctx, dflt);
+
+        // `X509_VERIFY_PARAM_set1(param, s->param)` — `:521`: the connection's hostname/IP and
+        // depth override the defaults. NOTE: the authority inits the store context first and then
+        // copies; the order is preserved here.
+        X509_VERIFY_PARAM_set1(param, (*s).param);
+
+        if let Some(cb) = (*s).verify_callback {
+            X509_STORE_CTX_set_verify_cb(ctx, Some(cb));
+        }
+
+        // `i = X509_verify_cert(ctx); if (i < 0) i = 0;` — `:528-533`.
+        let mut i = X509_verify_cert(ctx);
+        if i < 0 {
+            i = 0;
+        }
+
+        // `s->verify_result = X509_STORE_CTX_get_error(ctx)` — `:535`.
+        (*s).verify_result = c_long::from(X509_STORE_CTX_get_error(ctx));
+
+        // `OSSL_STACK_OF_X509_free(s->verified_chain); s->verified_chain = NULL;` — `:536-537`.
+        if !(*s).verified_chain.is_null() {
+            OSSL_STACK_OF_X509_free((*s).verified_chain.cast());
+        }
+        (*s).verified_chain = ptr::null_mut();
+
+        // `if (sk != NULL && X509_STORE_CTX_get0_chain(ctx) != NULL)
+        //      s->verified_chain = X509_STORE_CTX_get1_chain(ctx);` — `:539-545`.
+        if !X509_STORE_CTX_get0_chain(ctx).is_null() {
+            (*s).verified_chain = X509_STORE_CTX_get1_chain(ctx).cast();
+            if (*s).verified_chain.is_null() {
+                raise_ssl(ERR_R_X509_LIB, 542);
+                i = 0;
+            }
+        }
+
+        // `X509_VERIFY_PARAM_move_peername(s->param, param)` — `:548`.
+        X509_VERIFY_PARAM_move_peername((*s).param, param);
+
+        X509_STORE_CTX_free(ctx);
+        i
+    }
+}

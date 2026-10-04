@@ -1565,6 +1565,15 @@ pub struct Ssl {
     /// no such session, so the chain lives on the connection and [`SSL_get_peer_cert_chain`] reads
     /// it when `s->session` is NULL. Owned; freed by `SSL_free`.
     pub peer_chain: *mut OpenSslStack,
+    /// Phase 17: the unread tail of a decrypted application record, the reduction of the
+    /// authority's record-layer record buffers (`s->rlayer.tlsrecs[i].data`/`off`,
+    /// `ssl3_read_bytes`, `rec_layer_s3.c:778-820`): a read smaller than the record leaves the
+    /// remainder here for the next `SSL_read_ex`. Inline; no separate allocation.
+    pub rx_buf: [u8; TLS13_HS_BUF_LEN],
+    /// The number of valid plaintext bytes in [`Self::rx_buf`].
+    pub rx_len: usize,
+    /// The offset of the next unread plaintext byte in [`Self::rx_buf`].
+    pub rx_off: usize,
 }
 
 // -------------------------------------------------------------------------------------------
@@ -5293,11 +5302,40 @@ pub(crate) unsafe fn ssl_read_internal(
         if (*s).in_init != 0 {
             return -1;
         }
+        // Phase 17: first satisfy the caller from the unread tail of the previous record, which
+        // `ssl3_read_bytes` left in `rx_buf` (`ssl3_read_internal`, `s3_lib.c`; the authority's
+        // `ssl_release_record` advances `rr->off` and keeps the rest, `rec_layer_s3.c:778-820`).
+        if (*s).rx_off < (*s).rx_len {
+            let avail = (*s).rx_len - (*s).rx_off;
+            let n = if _num < avail { _num } else { avail };
+            if !_buf.is_null() && n != 0 {
+                ptr::copy_nonoverlapping(
+                    (*s).rx_buf.as_ptr().add((*s).rx_off),
+                    _buf.cast::<u8>(),
+                    n,
+                );
+            }
+            (*s).rx_off += n;
+            if (*s).rx_off >= (*s).rx_len {
+                (*s).rx_off = 0;
+                (*s).rx_len = 0;
+            }
+            if !_readbytes.is_null() {
+                *_readbytes = n;
+            }
+            (*s).rwstate = SSL_NOTHING;
+            return 1;
+        }
         loop {
             let mut rt = 0u8;
-            // SAFETY: `s` is live; `_buf` holds `_num` writable bytes per the contract.
-            let n =
-                crate::ssl::record::rec_layer_s3::ssl3_read_bytes(s, &mut rt, _buf.cast(), _num);
+            // SAFETY: `s` is live; `rx_buf` is the full record-sized scratch the record layer
+            // decrypts into, so no record is lost when the caller's buffer is smaller.
+            let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
+                s,
+                &mut rt,
+                (*s).rx_buf.as_mut_ptr(),
+                (*s).rx_buf.len(),
+            );
             if n <= 0 {
                 // The authority's record layer leaves the read BIO's retry flags set on a
                 // retryable read (`BIO_set_retry_read`, `rec_layer_s3.c:704-707`) and
@@ -5310,13 +5348,24 @@ pub(crate) unsafe fn ssl_read_internal(
                 return -1;
             }
             match rt {
-                // `SSL3_RT_APPLICATION_DATA` (`ssl3.h`, 23): hand back the plaintext the caller
-                // asked for (`rec_layer_s3.c:822-823`).
+                // `SSL3_RT_APPLICATION_DATA` (`ssl3.h`, 23): hand the caller `min(len, available)`
+                // and keep the rest buffered (`ssl3_read_bytes`, `rec_layer_s3.c:786-823`).
                 23 => {
-                    if !_readbytes.is_null() {
-                        // SAFETY: `_readbytes` is writable per the contract.
-                        *_readbytes = n as usize;
+                    let avail = n as usize;
+                    let want = if _num < avail { _num } else { avail };
+                    if !_buf.is_null() && want != 0 {
+                        ptr::copy_nonoverlapping((*s).rx_buf.as_ptr(), _buf.cast::<u8>(), want);
                     }
+                    (*s).rx_off = want;
+                    (*s).rx_len = avail;
+                    if (*s).rx_off >= (*s).rx_len {
+                        (*s).rx_off = 0;
+                        (*s).rx_len = 0;
+                    }
+                    if !_readbytes.is_null() {
+                        *_readbytes = want;
+                    }
+                    (*s).rwstate = SSL_NOTHING;
                     return 1;
                 }
                 // `SSL3_RT_HANDSHAKE` (22): a post-handshake message such as `NewSessionTicket`;
@@ -5325,8 +5374,8 @@ pub(crate) unsafe fn ssl_read_internal(
                 // `SSL3_RT_ALERT` (21): a `close_notify` ends the stream with 0 and leaves
                 // `SSL_RECEIVED_SHUTDOWN` set, matching `ssl3_read_bytes` (`rec_layer_s3.c:864-944`).
                 21 => {
-                    // SAFETY: `_buf` holds the `n` plaintext alert bytes just decrypted.
-                    let bytes = core::slice::from_raw_parts(_buf.cast::<u8>(), n as usize);
+                    // SAFETY: `rx_buf` holds the `n` plaintext alert bytes just decrypted.
+                    let bytes = core::slice::from_raw_parts((*s).rx_buf.as_ptr(), n as usize);
                     if bytes.len() >= 2 && bytes[0] == 1 && bytes[1] == 0 {
                         (*s).shutdown |= SSL_RECEIVED_SHUTDOWN;
                         (*s).rwstate = SSL_NOTHING;
@@ -9187,7 +9236,11 @@ pub unsafe extern "C" fn SSL_get_current_cipher(
                 return unsafe { (*session).cipher };
             }
         }
-        ptr::null()
+        // The authority reads `sc->session->cipher` (`ssl_lib.c:5310-5320`). The reduced path has
+        // no handshake-created session (`ssl_get_new_session` is unlanded), so the negotiated
+        // cipher it stores in `s3.tmp.new_cipher` (`SSL_get_pending_cipher`) is the current one.
+        // SAFETY: `s` is live.
+        unsafe { (*s).pending_cipher }
     })
 }
 

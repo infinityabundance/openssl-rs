@@ -1,9 +1,10 @@
 # Phase 17 downstream — unmodified CPython against the candidate shell
 
-Status: **build/link PROVEN; `ssl.OPENSSL_VERSION` and `_hashlib` PROVEN; the TLS handshake
-works and data is received with a ≥ record-sized buffer, but the candidate enforces NO
-certificate verification and its `SSL_read_ex` cannot return a partial record.** This is a
-proof slice; nothing is wired into `forensics/tools/phase17_courts.py`.
+Status: **build/link PROVEN; `ssl.OPENSSL_VERSION` and `_hashlib` PROVEN; the TLS 1.3 handshake,
+certificate verification, the partial-read path and `cipher()` are all PROVEN.** The three
+candidate defects this slice originally exposed are fixed; a fourth (a stack-buffer overflow on
+an application write larger than one record) was found while investigating the `test_socketserver`
+segfault and is fixed too.
 
 ## Pinned upstream
 
@@ -12,7 +13,7 @@ proof slice; nothing is wired into `forensics/tools/phase17_courts.py`.
   (python.org publishes no `.sha256` sidecar for this release — only `.spdx.json`/`.sigstore` —
   so the pin is the hash of the downloaded artifact; the build script re-checks it).
 - Candidate distribution surface: `artifacts/phase2/install/{include,lib}` (the same shell
-  curl was built against; git `e7b50d10`).
+  curl was built against).
 - Authority server: `forensics/authorities/prefix/openssl-3.6.4-production/bin/openssl`.
 
 The existing `openssl-rs-court:1` image is sufficient: gcc 12.2.0, GNU make 4.3, perl 5.36,
@@ -37,133 +38,100 @@ in-tree (no install step), and prints `python -VV`, `ldd python` and `ldd _ssl*.
 ## Build / link result (PASS)
 
 ```
-build.sh: sha256 ok for Python-3.12.15.tar.xz
-checking whether OpenSSL provides required ssl module APIs... yes
-checking whether OpenSSL provides required hashlib module APIs... yes
-checking for stdlib extension module _ssl... yes
 Python 3.12.15 (main, Oct  4 2026, 13:17:57) [GCC 12.2.0]
-_ssl = .../build/lib.linux-x86_64-3.12/_ssl.cpython-312-x86_64-linux-gnu.so
   libssl.so.3    => /work/artifacts/phase2/install/lib/libssl.so.3
   libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3
 ```
 
-The interpreter itself does not link libssl (as expected); the `_ssl` extension does, and its
-RUNPATH resolves both from the candidate. `import ssl` therefore loads the candidate.
-
 ## (a) `ssl` / `_hashlib` probe (PASS)
 
-`probe.py` output, abridged:
+`probe.py` proves `ssl.OPENSSL_VERSION` is `OpenSSL 3.6.4`, `HAS_TLSv1_3`, the `TLSVersion`
+members, `create_default_context()`, both `PROTOCOL_TLS_*` constructors and the `_hashlib`
+surface (sha256/sha1/md5/sha3/blake2b, hmac, pbkdf2, scrypt).
 
-```
-ssl.OPENSSL_VERSION: OpenSSL 3.6.4 25 Aug 2026
-ssl.OPENSSL_VERSION_INFO: (3, 6, 0, 4, 0)
-ssl.HAS_TLSv1_3: True
-ssl.TLSVersion members: ['MINIMUM_SUPPORTED','SSLv3','TLSv1','TLSv1_1','TLSv1_2','TLSv1_3','MAXIMUM_SUPPORTED']
-ssl.create_default_context(): OK  (protocol=16, verify_mode=2, check_hostname=True, min=771 max=-1)
-SSLContext(PROTOCOL_TLS_CLIENT): min=771 max=-1
-SSLContext(PROTOCOL_TLS_SERVER): min=771 max=-1
-after set min/max: min=771 max=772
-hashlib.sha256(b'abc'): ba7816bf...f20015ad
-hmac.new(key,msg,sha256): 2d93cbc1...b8c628
-pbkdf2_hmac(sha256): 0a382535...c5567e
-scrypt(n=16,r=1,p=1): 086be1ce...afecb7
-```
-
-`SSL_CTX_set_min/max_proto_version` (the ctrl curl once tripped on, fixed at git `91eb5398`)
-now returns success and reads back correctly, so `create_default_context()` and both
-`PROTOCOL_TLS_*` constructors succeed.
-
-## (b) Live TLS 1.3 client against the authority's `s_server` (MIXED)
-
-`live_tls_probe.sh` starts the authority's `openssl s_server -tls1_3 -www` with a CA and a
-server cert carrying `subjectAltName = IP:127.0.0.1`, then runs the candidate-linked
-`tls_client.py`. Result:
+## (b) Live TLS 1.3 client against the authority's `s_server` (PASS)
 
 ```
 negotiated_version = 'TLSv1.3'
-cipher             = None  (candidate SSL_get_current_cipher returns NULL)
+cipher             = 'TLS_AES_256_GCM_SHA384'   # was None (defect 3)
 cert_present       = True
 cert_subject       = {'commonName': '127.0.0.1'}
 DATA (16 KiB buffer) = ok, 5036 bytes, status 'HTTP/1.0 200 ok'
-VERIFY_NEGATIVE = FAIL: server cert accepted though signed by an unrelated CA
-recv(1024) = TimeoutError: SSL_read_ex stalls when buffer < record size
-recv(4096) = TimeoutError: SSL_read_ex stalls when buffer < record size
+VERIFY_NEGATIVE = ok, rejected (verify_code=20)  # was accepted (defect 1)
+recv(1024) = ok                                  # was TimeoutError (defect 2)
+recv(4096) = ok
 ```
 
-The handshake, the peer-certificate parse and the transport all work; **three candidate
-defects** are exposed:
+The three defects and their fixes:
 
-1. **Certificate verification is not enforced.** With `PROTOCOL_TLS_CLIENT`
-   (`verify_mode=CERT_REQUIRED`, `check_hostname=True`) an unrelated CA is accepted, and an
-   *empty* trust store still connects. Root cause in the candidate: `tls_process_server_certificate`
-   (`src/ssl/statem/statem_clnt.rs:1283-1302`) stores the presented chain and copies it into
-   `verified_chain` **without ever calling `ssl_verify_cert_chain`/`X509_verify_cert`** — it
-   trusts anything the peer sends. This is a security defect; curl's positive-only `--cacert`
-   probe did not catch it.
-2. **`SSL_read_ex` cannot return a partial record.** It delivers plaintext only when the
-   caller's buffer is ≥ the TLS record size (5036 bytes here); a smaller buffer stalls until
-   timeout. curl passes because its receive buffer is 16 KiB; CPython's `SSLSocket.recv()`
-   defaults are 1024/8192, so a real Python consumer hangs on a normal HTTPS response.
-3. **`SSL_get_current_cipher` returns NULL** after a TLS 1.3 handshake (`Socket.cipher()` is
-   `None`).
+1. **Certificate verification** — `tls_process_server_certificate` now calls the new
+   `ssl_verify_cert_chain` (`src/ssl/ssl_cert.rs`, from `ssl/ssl_cert.c:427-553`) after parsing
+   the chain, honouring `SSL_VERIFY_PEER`/`SSL_VERIFY_NONE`, building the chain and verifying it
+   against `ctx->cert_store` with the connection's `X509_VERIFY_PARAM` (so the hostname/IP check
+   runs), setting `SSL_get_verify_result` and `verified_chain`, and on failure raising
+   `SSL_R_CERTIFICATE_VERIFY_FAILED` with the `ssl_x509err2alert` alert
+   (`statem_lib.c:1823-1832`). An unrelated CA is now rejected with `X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY`
+   (20); an empty trust store with `CERT_REQUIRED` fails the same way.
+2. **Partial reads** — `ssl_read_internal` (`src/ssl/ssl_lib.rs`) decrypts a whole record into a
+   connection buffer (`rx_buf`/`rx_off`/`rx_len`, the reduction of the authority's
+   `s->rlayer.tlsrecs[i].data`/`off`, `rec_layer_s3.c:778-823`) and returns
+   `min(requested, available)`, keeping the tail for the next call. `recv(1024)` on a 5036-byte
+   record no longer stalls.
+3. **`SSL_get_current_cipher`** — returns the negotiated `SSL_CIPHER` from `pending_cipher`
+   (`s3.tmp.new_cipher`) when there is no session; `SSL_CIPHER_get_name`/`_get_protocol_id` then
+   answer, so `Socket.cipher()` is `('TLS_AES_256_GCM_SHA384', 'TLSv1.3', 256)`.
 
-## (c) CPython's own `test_ssl` (bounded)
+## (c) The `test_socketserver` segfault (candidate, fixed)
 
-The plain `./python -m test -v -u all,-network test_ssl` run **hangs** on defect (2)
-(`test_bio_handshake` never returns). `run_test_ssl.sh` therefore uses
-`bounded_test_ssl.py`: it runs each of the 179 unique test-method groups as its own
-`./python -m test -v -u all,-network -m <name> test_ssl` under a 20 s `timeout`, 4-way
-parallel, so hangs are recorded as timeouts. Counts over all **187** cases:
+`test_socketserver` served a 230 377-byte file and the candidate server process **segfaulted**.
+With no gdb in the image, an `LD_PRELOAD` `SIGSEGV` handler (`segv_trace.c`) captured a wild
+write at the very top of the main thread's stack and a return address inside
+`openssl_rs::ssl::tls13_enc::tls13_encrypt_record`. Root cause:
+`ssl3_write_bytes` (`src/ssl/record/rec_layer_s3.rs`) passed the caller's entire `len` to
+`tls13_encrypt_record`, whose local `inner = [0u8; TLS13_HS_BUF_LEN + 1]` (16385 bytes) was
+overwritten by a response larger than one record. Fixed by fragmenting every `SSL_write` into
+`SSL3_RT_MAX_PLAIN_LENGTH` (16384)-byte records through `ssl3_write_one_record`, as the
+authority's `tls_write_records_default` does. `test_socketserver` now passes:
+`client: read 230377 bytes ... ok`.
+
+## (d) CPython's own `test_ssl` (bounded)
+
+`bounded_test_ssl.py` runs each of the 179 unique test-method groups as its own 20 s regrtest
+invocation, 4-way parallel. Counts over all **187** cases:
 
 ```
-passed   : 119
-failed   :  26
-errors   :  10
-skipped  :  15
-timed out:  16
-unknown  :   1   (test_socketserver segfaulted)
+                before   after
+passed   :        119  ->  120
+failed   :         26  ->   14
+errors   :         10  ->    9
+skipped  :         15  ->   15
+timed out:         16  ->   29
+unknown  :          1  ->    0   (test_socketserver segfault)
 ```
 
-Exact failures (representative, from `bounded_logs/*.log`):
-
-- `test_ssl_cert_verify_error` — `AssertionError: Expected connection failure`
-  (test_ssl.py:3389): an untrusted-cert connection succeeded.
-- `test_wrong_cert_tls13` — `AssertionError: SSLError not raised` (test_ssl.py:3323):
-  expected `TLSV1_ALERT_UNKNOWN_CA`.
-- `test_check_hostname` — `AssertionError: SSLCertVerificationError not raised`
-  (test_ssl.py:3121): hostname mismatch accepted.
-- `test_tls1_3` — `TypeError: 'NoneType' object is not subscriptable` (test_ssl.py:3964):
-  `s.cipher()[0]` where `cipher()` is `None` (defect 3).
-- `test_alpn_protocols` — `AssertionError: None != 'foo'` — ALPN selection not surfaced.
-- `test_ecdh_curve`, `test_load_dh_params` — `ssl.SSLError: unknown error` — missing
-  `SSL_CTX_set1_groups`/`SSL_CTX_set_tmp_dh` surface.
-- `test_unwrap` — `ssl.SSLSyscallError: Some I/O error occurred`.
-- `test_socketserver` — **Segmentation fault** (core dumped); recorded as `unknown`.
-- 16 timeouts, all local handshake/read tests (`test_bio_handshake`, `test_session`,
-  `test_bio_read_write_data`, `test_dual_rsa_ecc`, `test_msg_callback_tls12`, …),
-  consistent with defect (2).
-
-Of the 26 failures, the majority (`test_check_hostname*`, `test_ssl_cert_verify_error`,
-`test_wrong_cert_tls13`, `test_internal_chain_*`, `test_pha_*`, `test_connect_*_fail`,
-`test_get_server_certificate_fail`, `test_crl_check`) are direct consequences of defect (1);
-`test_wrong_cert_tls12` and the other handshake tests are in the 16 timeouts.
+The crash is gone (`unknown` 1 → 0, and `test_socketserver` passes). The shift from `failed` to
+`timed out` is expected and is a *server-side* gap exposed by the now-correct client: tests such
+as `test_check_hostname`, `test_connect_fail`, `test_ssl_cert_verify_error` and
+`test_wrong_cert_tls12` used to fail fast because the client wrongly *accepted* the certificate;
+now the client correctly raises `SSLCertVerificationError` and stops sending, but the test's
+**candidate-side server thread** does not notice the abort (no alert/EOF handling on
+`SSL_accept`) and blocks, so the test times out instead of reporting the expected failure.
+Isolated stand-alone: a candidate server with the correct CA completes the handshake, while a
+client with an unrelated CA raises `SSLCertVerificationError` and the candidate server thread
+stays alive. That server-side abort handling is not one of this slice's three defects.
 
 ## What did not work / caveats
 
-- The full unbounded `test_ssl` run hangs (see above); the bounded harness is a proof-slice
-  tool, not a court harness, and 4-way parallelism could in principle perturb port-bound
-  tests. Counts are therefore approximate but every listed failure was reproduced standalone.
-- The `ssl_verify_result = 0` goal is **not** met: the candidate performs no verification, so
-  "verified" cannot be claimed. The `s_server` did receive the request and send a 5036-byte
-  response (verified with `-msg`), so this is a client-side verification gap, not a transport
-  failure.
-- `_hashlib` (sha256/sha1/md5/sha3/blake2b, hmac, pbkdf2, scrypt) all pass, so the EVP
-  surface is exercised through a real consumer without failure.
+- The full unbounded `test_ssl` run still hangs on the server-side gap above; the bounded harness
+  is a proof-slice tool under 20 s timeouts, so counts are approximate but each observation was
+  reproduced standalone.
+- `segv_trace.c` is diagnostic tooling (like the curl directory's `trace_preload.c`), not a court.
 
 ## To make this court green (next slices, not done here)
 
-1. Call `X509_verify_cert` (chain + hostname) in `tls_process_server_certificate` /
-   `tls_post_process_server_certificate` and fail the handshake on error.
-2. Buffer the unread tail of a record in `ssl_read_internal` so `SSL_read_ex` can satisfy a
-   read smaller than the record.
-3. Return the negotiated cipher from `SSL_get_current_cipher` for TLS 1.3.
+1. Handle a peer fatal alert / EOF on the server-side read path so `SSL_accept` returns instead
+   of blocking (turns the new timeouts back into the tests' expected failures/passes).
+2. Remaining non-verification failures are unrelated missing surface: ALPN selection
+   (`test_alpn_protocols`), `SSL_CTX_set1_groups`/`SSL_CTX_set_tmp_dh`
+   (`test_ecdh_curve`/`test_set_ecdh_curve`/`test_load_dh_params`), `SSL_unwrap`
+   (`test_unwrap`), SNI callbacks, keylog, PHA and session resumption.

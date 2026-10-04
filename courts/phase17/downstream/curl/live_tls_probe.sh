@@ -87,9 +87,29 @@ echo "curl_exit=$RC"
 echo "--- response body (first 3 lines) ---"
 head -3 body.html 2>/dev/null || true
 
+# The negative control: an UNRELATED CA the server certificate is not signed by. Certificate
+# verification must reject it; if curl succeeds here the candidate is not verifying at all.
+echo "=== live HTTPS fetch, UNRELATED CA (must FAIL verification) ==="
+run_ossl req -x509 -newkey rsa:2048 -nodes -keyout other.key -out other-ca.crt -days 7 \
+    -subj "/CN=phase17-curl unrelated CA" -addext "basicConstraints=critical,CA:TRUE" \
+    >/dev/null 2>&1
+set +e
+"$CURL" -sS --cacert other-ca.crt --tlsv1.3 --tls-max 1.3 \
+    -o /dev/null \
+    -w 'neg_http_code=%{http_code}\nneg_ssl_verify_result=%{ssl_verify_result}\n' \
+    "https://127.0.0.1:$PORT/" 2> curl_neg.err
+NEGRC=$?
+set -e
+echo "curl_negative_exit=$NEGRC"
+sed -n '1,3p' curl_neg.err
+
 kill "$SRV" 2>/dev/null || true
 wait "$SRV" 2>/dev/null || true
 trap - EXIT INT TERM
 
 [ "$RC" -eq 0 ] || { echo "live_tls_probe.sh: curl FAILED (exit $RC)" >&2; exit 1; }
+[ "$NEGRC" -ne 0 ] || {
+    echo "live_tls_probe.sh: NEGATIVE FAILED — unrelated CA accepted (no verification)" >&2
+    exit 1
+}
 echo "live_tls_probe.sh: OK"
