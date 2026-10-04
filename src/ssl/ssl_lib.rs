@@ -187,6 +187,8 @@ const DTLS1_BAD_VER: c_int = 0x0100;
 const SSL_SENT_SHUTDOWN: c_int = 1;
 /// `SSL_RECEIVED_SHUTDOWN` — `ssl.h:217`.
 const SSL_RECEIVED_SHUTDOWN: c_int = 2;
+/// `SSL_AD_CLOSE_NOTIFY` — `ssl3.h:240`.
+const SSL_AD_CLOSE_NOTIFY: c_int = 0;
 /// `SSL_EARLY_DATA_CONNECT_RETRY` — `ssl_local.h:592`.
 const SSL_EARLY_DATA_CONNECT_RETRY: c_int = 1;
 /// `SSL_EARLY_DATA_ACCEPT_RETRY` — `ssl_local.h:599`.
@@ -1161,6 +1163,15 @@ pub struct Ssl {
     pub quiet_shutdown: c_int,
     /// `int shutdown` — `SSL_SENT_SHUTDOWN | SSL_RECEIVED_SHUTDOWN`.
     pub shutdown: c_int,
+    /// `int s3.fatal_alert` — the description of a fatal alert received from the peer
+    /// (`ssl3_read_bytes`, `rec_layer_s3.c:917`).
+    pub fatal_alert: c_int,
+    /// `int s3.warn_alert` — the description of the last warning alert received; `close_notify`
+    /// leaves it set (`ssl3_read_bytes`, `rec_layer_s3.c:893`).
+    pub warn_alert: c_int,
+    /// `int rlayer.alert_count` — the consecutive warning-alert counter
+    /// (`ssl3_read_bytes`, `rec_layer_s3.c:897`).
+    pub alert_count: c_int,
     /// `int verify_mode`.
     pub verify_mode: c_int,
     /// `int (*verify_callback)(int, X509_STORE_CTX *)`.
@@ -4211,15 +4222,18 @@ pub unsafe extern "C" fn SSL_get_error(s: *const Ssl, i: c_int) -> c_int {
             return SSL_ERROR_SSL;
         }
         // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
-        let (rwstate, shutdown) = unsafe { ((*s).rwstate, (*s).shutdown) };
+        let (rwstate, shutdown, warn_alert) =
+            unsafe { ((*s).rwstate, (*s).shutdown, (*s).warn_alert) };
         match rwstate {
             SSL_READING => SSL_ERROR_WANT_READ,
             SSL_WRITING => SSL_ERROR_WANT_WRITE,
             // `(sc->shutdown & SSL_RECEIVED_SHUTDOWN) && sc->s3.warn_alert == SSL_AD_CLOSE_NOTIFY`
-            // (`ssl_lib.c:4929-4930`). In this reduced path only the close_notify arm of
-            // `ssl_read_internal` sets `SSL_RECEIVED_SHUTDOWN`, so the flag alone is the
-            // authority's test.
-            _ if shutdown & SSL_RECEIVED_SHUTDOWN != 0 => SSL_ERROR_ZERO_RETURN,
+            // (`ssl_lib.c:4929-4930`). `ssl3_read_bytes`' `close_notify` arm sets both
+            // (`rec_layer_s3.c:913-914`); a fatal alert sets `shutdown` too but never sets
+            // `warn_alert`, so it does not answer `SSL_ERROR_ZERO_RETURN` here.
+            _ if shutdown & SSL_RECEIVED_SHUTDOWN != 0 && warn_alert == SSL_AD_CLOSE_NOTIFY => {
+                SSL_ERROR_ZERO_RETURN
+            }
             _ => SSL_ERROR_SYSCALL,
         }
     })
@@ -5337,15 +5351,16 @@ pub(crate) unsafe fn ssl_read_internal(
                 (*s).rx_buf.len(),
             );
             if n <= 0 {
-                // The authority's record layer leaves the read BIO's retry flags set on a
-                // retryable read (`BIO_set_retry_read`, `rec_layer_s3.c:704-707`) and
-                // `SSL_get_error` reads `BIO_should_read` (`ssl_lib.c:4867-4870`) to answer
-                // `SSL_ERROR_WANT_READ`. Reproduce that: a retryable read BIO sets
-                // `rwstate = SSL_READING`.
-                if read_bio_should_read(s) {
+                // `ssl3_read_bytes` now returns the authority's `ssl3_read_internal` value: `0`
+                // for the terminal cases (`close_notify`, a fatal alert, an unexpected EOF) whose
+                // connection state and error queue it has already set (`rec_layer_s3.c:864-944`,
+                // `:501-524`), and `-1` for a retry, for which it left `rwstate = SSL_READING`
+                // (`rec_layer_s3.c:497`). Propagate it as the authority's `ssl_read_internal`
+                // propagates `ssl_read`'s return.
+                if n < 0 && read_bio_should_read(s) {
                     (*s).rwstate = SSL_READING;
                 }
-                return -1;
+                return n;
             }
             match rt {
                 // `SSL3_RT_APPLICATION_DATA` (`ssl3.h`, 23): hand the caller `min(len, available)`
@@ -5371,18 +5386,10 @@ pub(crate) unsafe fn ssl_read_internal(
                 // `SSL3_RT_HANDSHAKE` (22): a post-handshake message such as `NewSessionTicket`;
                 // the authority processes it and loops, this slice drops it and reads on.
                 22 => continue,
-                // `SSL3_RT_ALERT` (21): a `close_notify` ends the stream with 0 and leaves
-                // `SSL_RECEIVED_SHUTDOWN` set, matching `ssl3_read_bytes` (`rec_layer_s3.c:864-944`).
-                21 => {
-                    // SAFETY: `rx_buf` holds the `n` plaintext alert bytes just decrypted.
-                    let bytes = core::slice::from_raw_parts((*s).rx_buf.as_ptr(), n as usize);
-                    if bytes.len() >= 2 && bytes[0] == 1 && bytes[1] == 0 {
-                        (*s).shutdown |= SSL_RECEIVED_SHUTDOWN;
-                        (*s).rwstate = SSL_NOTHING;
-                        return 0;
-                    }
-                    continue;
-                }
+                // `SSL3_RT_ALERT` (21): the record layer now decodes every alert itself
+                // (`ssl3_read_bytes`, `rec_layer_s3.c:864-944`), so a returned alert record would
+                // be one this reduced matcher already consumed; drop and read on.
+                21 => continue,
                 // Any other record type is not application data; drop it and read again.
                 _ => continue,
             }

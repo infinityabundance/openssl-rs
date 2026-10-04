@@ -60,7 +60,7 @@ use core::ffi::c_int;
 use crate::packet::Wpacket;
 use crate::ssl::ssl_ciph_table as t;
 use crate::ssl::ssl_lib::Ssl;
-use crate::ssl::statem::statem::ossl_statem_fatal;
+use crate::ssl::statem::statem::{ossl_statem_fatal, ossl_statem_in_error};
 
 // --- hand states (`include/openssl/ssl.h`) -----------------------------------
 const TLS_ST_BEFORE: c_int = 0;
@@ -107,6 +107,8 @@ const SSL3_MT_CHANGE_CIPHER_SPEC: c_int = 0x0101;
 const SSL_AD_INTERNAL_ERROR: c_int = 80;
 const SSL_AD_UNEXPECTED_MESSAGE: c_int = 10;
 const SSL_AD_HANDSHAKE_FAILURE: c_int = 40;
+/// `SSL_RECEIVED_SHUTDOWN` — `ssl.h:217` (set by a received `close_notify`, `rec_layer_s3.c:913`).
+const SSL_RECEIVED_SHUTDOWN: c_int = 2;
 const ERR_R_INTERNAL_ERROR: c_int = 1 | (2 << 18) | (1 << 18);
 const SSL_R_UNEXPECTED_MESSAGE: c_int = 245;
 const SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE: c_int = 205;
@@ -1373,6 +1375,13 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
 unsafe fn server_wait(s: *mut Ssl) -> c_int {
     // SAFETY: `s` is live.
     unsafe {
+        // A terminal read already set the connection's error or shutdown state
+        // (`ssl3_read_bytes`' alert/EOF arms, `rec_layer_s3.c:864-944`/`:501-524`); it must not be
+        // turned back into a wait, or `SSL_get_error` would answer `SSL_ERROR_WANT_READ` and the
+        // caller would block on a peer that has gone away.
+        if ossl_statem_in_error(s) != 0 || (*s).shutdown & SSL_RECEIVED_SHUTDOWN != 0 {
+            return -1;
+        }
         (*s).statem_state = MSG_FLOW_READING_13;
         (*s).rwstate = 3; // SSL_READING
     }

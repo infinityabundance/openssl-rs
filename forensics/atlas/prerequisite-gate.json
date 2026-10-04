@@ -4,7 +4,7 @@
     "blocking_dependencies": [],
     "census": {
       "covered_by_a_divergence": 154,
-      "language_surface_not_modelled_by_name": 11731
+      "language_surface_not_modelled_by_name": 11713
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -677,9 +677,9 @@
         "ssl/quic/quic_impl.c": 161,
         "ssl/quic/quic_method.c": 1,
         "ssl/quic/quic_tls_api.c": 9,
-        "ssl/record/rec_layer_s3.c": 89,
+        "ssl/record/rec_layer_s3.c": 83,
         "ssl/rio/poll_immediate.c": 11,
-        "ssl/s3_lib.c": 723,
+        "ssl/s3_lib.c": 721,
         "ssl/ssl_asn1.c": 16,
         "ssl/ssl_cert.c": 79,
         "ssl/ssl_cert_comp.c": 25,
@@ -687,7 +687,7 @@
         "ssl/ssl_conf.c": 32,
         "ssl/ssl_err_legacy.c": 2,
         "ssl/ssl_init.c": 7,
-        "ssl/ssl_lib.c": 251,
+        "ssl/ssl_lib.c": 249,
         "ssl/ssl_mcnf.c": 9,
         "ssl/ssl_rsa.c": 26,
         "ssl/ssl_rsa_legacy.c": 11,
@@ -695,14 +695,14 @@
         "ssl/ssl_stat.c": 3,
         "ssl/ssl_txt.c": 6,
         "ssl/statem/extensions_cust.c": 32,
-        "ssl/statem/statem.c": 58,
-        "ssl/statem/statem_clnt.c": 130,
-        "ssl/statem/statem_lib.c": 113,
-        "ssl/statem/statem_srvr.c": 162,
-        "ssl/t1_lib.c": 223,
+        "ssl/statem/statem.c": 57,
+        "ssl/statem/statem_clnt.c": 128,
+        "ssl/statem/statem_lib.c": 112,
+        "ssl/statem/statem_srvr.c": 160,
+        "ssl/t1_lib.c": 222,
         "ssl/t1_trce.c": 101,
         "ssl/tls_depr.c": 17,
-        "ssl/tls_srp.c": 19
+        "ssl/tls_srp.c": 18
       }
     },
     "census_not_a_failure": "the C language surface is counted and listed, never failed: the crate models C types, macros and reason codes differently on purpose, and a lexical scan cannot tell a rename from a gap",
@@ -1284,7 +1284,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "cd7a6002ed21dfe6e9da2361723857fc265bb1b6e337778b50864766572d7bc6",
+  "body_hash": "56cc38620a3a24bba637ec80171040ecb5c939d9940473d3890ca9037dc4745d",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1320,7 +1320,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4fdc489478f1e8e7f5809833846287e7264a5d8c6b3a58ec59b5a57bcef31135"
+      "sha256": "0ef82edfc45610dfaa497df083731a8abfd352af761847297ef901939dee37d7"
     },
     {
       "name": "phase-state",

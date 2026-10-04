@@ -132,6 +132,8 @@ const SSL_HRR_NONE: c_int = 0;
 const SSL_HRR_PENDING: c_int = 1;
 const SSL_OP_ENABLE_MIDDLEBOX_COMPAT: u64 = 1 << 20;
 const SSL_SENT_SHUTDOWN: c_int = 1;
+/// `SSL_RECEIVED_SHUTDOWN` — `ssl.h:217` (set by a received `close_notify`, `rec_layer_s3.c:913`).
+const SSL_RECEIVED_SHUTDOWN: c_int = 2;
 const TLS1_FLAGS_SKIP_CERT_VERIFY: u64 = 0x0010;
 const SSL_PSK: u64 = 8 | 16;
 
@@ -1708,6 +1710,13 @@ unsafe fn client_read(s: *mut Ssl) -> Option<([u8; 16384], usize)> {
 unsafe fn client_wait(s: *mut Ssl) -> c_int {
     // SAFETY: `s` is live.
     unsafe {
+        // A terminal read already set the connection's error or shutdown state
+        // (`ssl3_read_bytes`' alert/EOF arms, `rec_layer_s3.c:864-944`/`:501-524`); it must not be
+        // turned back into a wait, or `SSL_get_error` would answer `SSL_ERROR_WANT_READ` and the
+        // caller would block on a peer that has gone away.
+        if ossl_statem_in_error(s) != 0 || (*s).shutdown & SSL_RECEIVED_SHUTDOWN != 0 {
+            return -1;
+        }
         (*s).statem_state = MSG_FLOW_READING_13;
         (*s).rwstate = 3; // SSL_READING
     }
