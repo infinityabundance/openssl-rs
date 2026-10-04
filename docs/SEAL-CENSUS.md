@@ -42,7 +42,7 @@ declared owner; this is that assignment.
 | 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
-| 17 | Downstream replacement court | `in-progress` | 0 | 56 | 1 | 0 | 55 |
+| 17 | Downstream replacement court | `in-progress` | 0 | 56 | 2 | 0 | 54 |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
@@ -533,21 +533,22 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 ## Phase 17 — Downstream replacement court
 
 * state: `in-progress`
-* blocking: 55 open obligation(s) of this stratum recorded in forensics/phase17-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase17-obligations.json` publishes `unit: downstream replacement contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the 52 `apps/<name>.c` unit deferrals it owns (D530) and the four downstream replacement contract units. It owns no provider registration row -- it activates no provider -- and no symbol deferral. Its `artifacts/phase17/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; 17.1 registers `RT-CLI-BODIES` over the first landed command body (`apps/errstr.c`), 17.2a registers `RT-TLS13-INTEROP` over the client's first ClientHello flight, and the two courts that follow (`RT-CROSS-DSO-STATE`, `RT-DOWNSTREAM-CONSUMER`) are `pending` with the subphases that land them. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-17-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D530)
+* blocking: 54 open obligation(s) of this stratum recorded in forensics/phase17-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase17-obligations.json` publishes `unit: downstream replacement contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the 52 `apps/<name>.c` unit deferrals it owns (D530) and the four downstream replacement contract units. It owns no provider registration row -- it activates no provider -- and no symbol deferral. Its `artifacts/phase17/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; 17.1 registers `RT-CLI-BODIES` over the first landed command body (`apps/errstr.c`), 17.2a registers `RT-TLS13-INTEROP` over the client's first ClientHello flight, 17.3 registers `RT-CROSS-DSO-STATE` over the cross-DSO ERR/CONF measurement, and the one court that follows (`RT-DOWNSTREAM-CONSUMER`) is `pending` with the subphase that lands it. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-17-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D530)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase17-obligations.json`
 * atlas-owned: 0
 * owned working set: 56
-* implemented: 1
+* implemented: 2
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 55**
+* **open in this stratum: 54**
 
-Courts: `all pass`, 2 court(s), **874** authority observation(s) over 2 transcript court(s).
+Courts: `all pass`, 3 court(s), **892** authority observation(s) over 3 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-CLI-BODIES | `pass` | 805 |
 | RT-TLS13-INTEROP | `pass` | 69 |
+| RT-CROSS-DSO-STATE | `pass` | 18 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

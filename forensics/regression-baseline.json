@@ -247,6 +247,10 @@
       "observations": 138,
       "verdict": "pass"
     },
+    "RT-CROSS-DSO-STATE": {
+      "observations": 18,
+      "verdict": "pass"
+    },
     "RT-DEFAULTS": {
       "observations": 10,
       "verdict": "pass"
@@ -750,7 +754,7 @@
     "phase14": 0,
     "phase15": 0,
     "phase16": 0,
-    "phase17": 55,
+    "phase17": 54,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,

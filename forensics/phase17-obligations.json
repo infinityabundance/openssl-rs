@@ -20,8 +20,8 @@
       },
       {
         "closure": "the `RT-CROSS-DSO-STATE` court passes",
-        "observation": "RT-CROSS-DSO-STATE is pending",
-        "state": "open",
+        "observation": "RT-CROSS-DSO-STATE is pass",
+        "state": "implemented",
         "surface": "artifacts/phase17/COURTS.json",
         "unit": "cross-dso-state",
         "what": "an ERR/`CONF` raised through one DSO and read through another"
@@ -40,8 +40,8 @@
       "contract_units": 4,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 1,
-      "open_in_this_stratum": 55,
+      "implemented": 2,
+      "open_in_this_stratum": 54,
       "owned": 56,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -499,7 +499,7 @@
     {
       "name": "phase-17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "ee1820ff10329708bcd9816e3385afa05bafb535b215cc3993a7808d37cad4a0"
+      "sha256": "4dc666e148fac9a9a1408ef53708911e162f419f8012dc95fcfbfdbbc4709ca7"
     }
   ],
   "kind": "phase17-obligations",

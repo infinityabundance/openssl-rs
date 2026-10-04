@@ -1,0 +1,20 @@
+# openssl-rs RT-CROSS-DSO-STATE fixture.
+#
+# The `ssl_conf` configuration module stores one command set, named `system_default`,
+# holding one command, `MinProtocol = TLSv1.2`. `CONF_modules_load_file` reads it through
+# libcrypto; `SSL_CTX_config(ctx, "system_default")` reads the store through libssl. The
+# candidate's whole-crate archives duplicate the store, so its libssl sees an empty one.
+#
+# The shape is `crypto/conf/conf_ssl.c`'s `ssl_module_init`: the module's value names a
+# section whose *entries* each name a command-set section, and each entry of that section
+# is one command (see src/runtime/conf/conf_ssl.rs).
+openssl_conf = openssl_init
+
+[openssl_init]
+ssl_conf = ssl_sect
+
+[ssl_sect]
+system_default = system_default_sect
+
+[system_default_sect]
+MinProtocol = TLSv1.2
