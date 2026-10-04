@@ -36,8 +36,8 @@
       "rows_judged": 175,
       "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
-      "unit_records": 99,
-      "units_named_by_a_record": 102,
+      "unit_records": 97,
+      "units_named_by_a_record": 106,
       "units_named_by_a_row": 493,
       "units_reached": 491
     },
@@ -2093,11 +2093,13 @@
         "defines": [
           "engine_load_dynamic_int"
         ],
-        "recorded_by": "deferral:engine_load_dynamic_int",
+        "recorded_by": null,
         "subphases": [
           "16:16.2"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/engine/eng_dyn.rs"
+        ]
       },
       "crypto/engine/eng_fat.c": {
         "defines": [],
@@ -6208,7 +6210,7 @@
           "dtls1_start_timer",
           "dtls1_stop_timer"
         ],
-        "recorded_by": null,
+        "recorded_by": "divergence:src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs",
         "subphases": [
           "14:14.8"
         ],
@@ -6632,7 +6634,7 @@
           "ossl_statem_skip_early_data",
           "statem_flush"
         ],
-        "recorded_by": null,
+        "recorded_by": "divergence:src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs",
         "subphases": [
           "14:14.5",
           "14:14.5b",
@@ -6665,12 +6667,14 @@
           "tls_construct_next_proto",
           "tls_post_process_server_certificate"
         ],
-        "recorded_by": "units:ssl/statem/statem_clnt.c",
+        "recorded_by": "divergence:src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs",
         "subphases": [
           "14:14.5b",
           "16:16.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/statem/statem_clnt.rs"
+        ]
       },
       "ssl/statem/statem_lib.c": {
         "defines": [
@@ -6695,7 +6699,7 @@
           "ssl_version_cmp",
           "ssl_version_supported"
         ],
-        "recorded_by": null,
+        "recorded_by": "divergence:src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs",
         "subphases": [
           "14:14.5b",
           "14:14.7b"
@@ -6727,12 +6731,14 @@
           "tls_construct_cert_status_body",
           "tls_construct_certificate_request"
         ],
-        "recorded_by": "units:ssl/statem/statem_srvr.c",
+        "recorded_by": "divergence:src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs",
         "subphases": [
           "14:14.5b",
           "16:16.5"
         ],
-        "transcribed_by": []
+        "transcribed_by": [
+          "src/ssl/statem/statem_srvr.rs"
+        ]
       },
       "ssl/t1_lib.c": {
         "defines": [
@@ -7306,51 +7312,41 @@
         "class": "not_in_this_profile",
         "crate_module": null,
         "owner_phase": null
-      },
-      "ssl/statem/statem_clnt.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 16
-      },
-      "ssl/statem/statem_srvr.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 16
       }
     },
     "universes": {
       "authority_files": 5873,
       "internal_functions": 4547,
-      "transcribed_units": 592
+      "transcribed_units": 596
     }
   },
-  "body_hash": "72834e3b5c7f3e0995f0e94f96d27121cb0d1e6b0bb08056ac59d31664a15753",
+  "body_hash": "443ef5abe159b371741b452c8383d9a1f9c3dd3235eecb195ebebb25ad7e91f9",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
       "name": "internal-symbols",
       "path": "forensics/atlas/internal-symbols.json",
-      "sha256": "6db5644688a778f0dea5d99d53933d880739f4edc1514f88262af990cea88848"
+      "sha256": "41088cba75be3b9e630851b90d4bfe9ab7c98a80b3294e49d9f79c9ba1682534"
     },
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "b9a32440f4d93fd03471d1da570b62349ab29d5bd49c26316f6d5cdb55299cea"
+      "sha256": "a0db7a1940929e3b4e39ccc803fb8e28a9c9b800eb1536e03181a281186c1cd7"
     },
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7c09a4238ff10a7283df5a4dab1b4e735712c26c336feb194feaa8a840581469"
+      "sha256": "801d62355b8e94859faa893a301c40ab0eccbf86d7f5ead2e19cd07760a13949"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "1a3ed82fecf18f9579c366a26412501e4eeef9006884d7ab086480bacde84933"
+      "sha256": "8e2bebdf71d3220e9604a6107867ca7331ae08bfe279e92672ceaa16fd74cb94"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "4dde21f48014bf43bed6b24ab5551f7b93ad27dfb5b7668f5165740d76958282"
+      "sha256": "4db7baa5e2435eaa4504251f8ca7fdd15f95a31175b1914c7164816255707fe1"
     },
     {
       "name": "source-manifest",
@@ -7390,7 +7386,7 @@
     {
       "name": "plan-PHASE-16-SUBPHASES",
       "path": "docs/PHASE-16-SUBPHASES.md",
-      "sha256": "2d32a91872b770e4d15430cbf46c3237141d6de86a79397184fae6fdae2827ae"
+      "sha256": "1125a27838b7bad0586de184babce67a4c6ac589db4b3ef89a8cc6a4a59221fe"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

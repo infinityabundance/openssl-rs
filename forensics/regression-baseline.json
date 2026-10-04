@@ -198,6 +198,10 @@
       "observations": 382,
       "verdict": "pass"
     },
+    "RT-CLI": {
+      "observations": 252,
+      "verdict": "pass"
+    },
     "RT-CMAC": {
       "observations": 26,
       "verdict": "pass"
@@ -228,6 +232,10 @@
     },
     "RT-CONF-MOD": {
       "observations": 247,
+      "verdict": "pass"
+    },
+    "RT-CONFIG": {
+      "observations": 31,
       "verdict": "pass"
     },
     "RT-CRMF": {
@@ -634,6 +642,10 @@
       "observations": 68,
       "verdict": "pass"
     },
+    "RT-STATEM-REMAINDER": {
+      "observations": 20,
+      "verdict": "pass"
+    },
     "RT-STORE": {
       "observations": 1038,
       "verdict": "pass"
@@ -727,7 +739,7 @@
     "phase13": 0,
     "phase14": 0,
     "phase15": 0,
-    "phase16": 4,
+    "phase16": 0,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -744,7 +756,7 @@
     "phase13": 377,
     "phase14": 600,
     "phase15": 3,
-    "phase16": 45,
+    "phase16": 42,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
@@ -780,10 +792,10 @@
     "9": "complete"
   },
   "prerequisites": {
-    "blocking_dependencies": 1,
-    "divergence_names_covered": 50,
+    "blocking_dependencies": 0,
+    "divergence_names_covered": 105,
     "findings": 0,
-    "language_census": 11484,
+    "language_census": 11769,
     "sealed_census": 404
   },
   "provider_implemented": [

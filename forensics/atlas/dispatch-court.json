@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 786,
+      "crate_files_read": 796,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -12,14 +12,14 @@
       "identities_authority_only": 39,
       "identities_checked": 238,
       "identities_mismatches": 0,
-      "links_convention": 297,
+      "links_convention": 302,
       "links_documented": 25,
       "links_explicit": 19,
       "problems": 0,
-      "signatures_authority_only": 291,
-      "signatures_checked": 348,
+      "signatures_authority_only": 286,
+      "signatures_checked": 353,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 258,
+      "signatures_not_a_dispatch": 259,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -1637,11 +1637,6 @@
         "X509V3_EXT_R2I",
         "bio_info_cb",
         "conf_finish_func",
-        "dyn_MEM_free_fn",
-        "dyn_MEM_malloc_fn",
-        "dyn_MEM_realloc_fn",
-        "dynamic_bind_engine",
-        "dynamic_v_check_fn",
         "lh_CONF_VALUE_compfunc",
         "lh_CONF_VALUE_doallfunc",
         "lh_CONF_VALUE_hashfunc",
@@ -2229,6 +2224,46 @@
           "authority_signature": "fptr(void; ptr(opaque))",
           "crate_signature": "fptr(void; ptr(opaque))",
           "how": "explicit"
+        },
+        {
+          "alias": "DynamicVCheckFn",
+          "at": "src/engine/eng_dyn.rs",
+          "authority": "dynamic_v_check_fn",
+          "authority_signature": "fptr(int:8:u; int:8:u)",
+          "crate_signature": "fptr(int:8:u; int:8:u)",
+          "how": "convention"
+        },
+        {
+          "alias": "DynamicBindEngine",
+          "at": "src/engine/eng_dyn.rs",
+          "authority": "dynamic_bind_engine",
+          "authority_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), ptr(const(opaque)))",
+          "crate_signature": "fptr(int:4:s; ptr(opaque), ptr(const(int:1:s)), ptr(const(opaque)))",
+          "how": "convention"
+        },
+        {
+          "alias": "DynMemMallocFn",
+          "at": "src/engine/eng_dyn.rs",
+          "authority": "dyn_MEM_malloc_fn",
+          "authority_signature": "fptr(ptr(opaque); int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "DynMemReallocFn",
+          "at": "src/engine/eng_dyn.rs",
+          "authority": "dyn_MEM_realloc_fn",
+          "authority_signature": "fptr(ptr(opaque); ptr(opaque), int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "crate_signature": "fptr(ptr(opaque); ptr(opaque), int:8:u, ptr(const(int:1:s)), int:4:s)",
+          "how": "convention"
+        },
+        {
+          "alias": "DynMemFreeFn",
+          "at": "src/engine/eng_dyn.rs",
+          "authority": "dyn_MEM_free_fn",
+          "authority_signature": "fptr(void; ptr(opaque), ptr(const(int:1:s)), int:4:s)",
+          "crate_signature": "fptr(void; ptr(opaque), ptr(const(int:1:s)), int:4:s)",
+          "how": "convention"
         },
         {
           "alias": "EngineGenIntFuncPtr",
@@ -5299,6 +5334,11 @@
           "alias": "OsslSm4XtsStreamFn",
           "at": "src/provider/cipher.rs",
           "why": "not a provider dispatch: `prov/ciphercommon.h:30`'s `PROV_CIPHER_FUNC` macro generates it as `typedef type(*OSSL_##name##_fn) args`, so the header carries no `typedef` declaration and the atlas records none"
+        },
+        {
+          "alias": "DesCbcF",
+          "at": "src/provider/cipher.rs",
+          "why": "not a provider dispatch: a function-pointer typedef local to a legacy cipher static's context struct or the TXT_DB codec, which the atlas -- whose universe is the installed public surface -- records no typedef for"
         },
         {
           "alias": "KeyFromPkcs8Fn",

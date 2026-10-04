@@ -7,6 +7,10 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 pub mod extensions_cust;
+// Phase 16.5 lands the client and server halves of the message layer: the read/write
+// transition surface (`statem_clnt.c`/`statem_srvr.c`) Phase 15 sealed without.
+pub mod statem_clnt;
+pub mod statem_srvr;
 // Phase 14.7b lands the protocol-version helpers of `ssl/statem/statem_lib.c` (no exports), so the
 // crate's layout of that unit appears here without the rest of its message layer.
 pub mod statem_lib;
