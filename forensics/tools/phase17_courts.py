@@ -99,15 +99,30 @@ stops at the EncryptedExtensions/key-schedule boundary, the plan's section 3.2 r
 closes automatically once both sides report a finished handshake), and the `tls13-interop` contract
 unit stays open in the ledger.
 
-The remaining pending courts
-----------------------------
-Two of the four courts the plan names are not runnable yet and are named in `PENDING_COURTS` with
-the subphase that lands each:
+`RT-CROSS-DSO-STATE`, and what it compares
+------------------------------------------
+17.3's court, `courts/phase17/rt_cross_dso_state_probe.c`, measures the shared-state contract the
+candidate's whole-crate archives break. The admitted authority links `libssl.so.3` against one
+`libcrypto.so.3` via `DT_NEEDED`, so the crate's internal globals have one instance; the candidate
+links the crate archive into both DSOs, so each carries its own copy and the two views need not
+agree. The probe drives the boundary in **both directions**: it raises a deterministic error
+through a libssl entry point (`SSL_CTX_new(NULL)` raises the `SSL_CTX_new_ex` NULL-method arm) and
+reads the queue through libcrypto's `ERR_peek_error`/`ERR_get_error` (neither of which libssl
+exports, so both resolve to `libcrypto.so.3`), and it stores an `ssl_conf` command set through
+libcrypto's `CONF_modules_load_file` (over the fixed `fixtures/cross_dso.cnf`) and reads it through
+libssl's `SSL_CTX_config`, observing the applied protocol version. A libcrypto-raised control error
+and the structural return values are `CROSS_DSO_COMPARABLE` and must agree between the sides; the
+two cross-DSO reads are `CROSS_DSO_DIVERGENCE` and are recorded with the duplication named. On the
+authority the two views agree -- one queue, one store -- and `_authority_contract_problems` fails
+the court if they do not, so a vacuous pass is impossible; on the candidate they diverge (an empty
+libcrypto queue and a refused `SSL_CTX_config`), which is the receipt
+`docs/PHASE-17-SUBPHASES.md` section 3.3 requires rather than a failure on the architecture.
 
-  * `RT-CROSS-DSO-STATE` (17.3) — an error raised through the libssl path and read through the
-    libcrypto path (and the same for `CONF`), requiring one queue across the candidate's
-    whole-crate archives, where the authority shares one `libcrypto.so.3` via `DT_NEEDED` (D530's
-    second);
+The remaining pending court
+---------------------------
+One of the four courts the plan names is not runnable yet and is named in `PENDING_COURTS` with the
+subphase that lands it:
+
   * `RT-DOWNSTREAM-CONSUMER` (17.4) — a real downstream consumer built against the candidate
     distribution shell the way an out-of-tree package links it.
 
@@ -158,6 +173,7 @@ AUTH_PREFIX = REPO_ROOT / "forensics" / "authorities" / "prefix" / "openssl-3.6.
 COURTS: list[tuple[str, str]] = [
     ("RT-CLI-BODIES", "rt_cli_bodies_probe.sh"),
     ("RT-TLS13-INTEROP", "rt_tls13_interop_probe.c"),
+    ("RT-CROSS-DSO-STATE", "rt_cross_dso_state_probe.c"),
 ]
 
 # The fixed argv `RT-CLI-BODIES` drives on both sides. Every case is build-independent and
@@ -964,10 +980,6 @@ RECORDED_DIVERGENCES: list[dict] = [
 # the probe and what the court will drive, so "nothing registered" is a stated distance rather than
 # a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-CROSS-DSO-STATE": (
-        "17.3 lands the probe; it raises an ERR through the libssl path and reads it through the "
-        "libcrypto path (and the same for CONF), requiring one queue across the whole-crate DSOs"
-    ),
     "RT-DOWNSTREAM-CONSUMER": (
         "17.4 lands the probe; it builds a real downstream consumer against the candidate "
         "distribution shell and compares its transcript with the authority's"
@@ -1291,6 +1303,167 @@ def interop_court(name: str, src: Path, auth, work: Path) -> dict:
     }
 
 
+# `RT-CROSS-DSO-STATE`'s comparable observations: the arms the cross-DSO boundary does *not*
+# move. `CROSS_DSO_COMPARABLE` is the libcrypto control error and the structural return values,
+# which must agree between the sides; `CROSS_DSO_DIVERGENCE` is the two cross-DSO reads the
+# candidate's whole-crate archives are expected to move, each named by `_cross_dso_reason`. A
+# residual on a comparable observation is a failure; a residual on a divergence observation is the
+# receipt the plan requires.
+CROSS_DSO_COMPARABLE: list[str] = [
+    "err.crypto.peek",
+    "err.crypto.lib",
+    "err.crypto.reason",
+    "ctx.nonnull",
+    "err.ssl.null_ret",
+    "err.ssl.after_get",
+    "conf.load.ret",
+    "conf.load.peek",
+    "conf.ctx_config.peek",
+    "conf.ctx_config.lib",
+    "conf.ctx_config.reason",
+    "probe.done",
+]
+
+CROSS_DSO_DIVERGENCE: list[str] = [
+    "err.ssl.peek",
+    "err.ssl.lib",
+    "err.ssl.reason",
+    "err.ssl.get",
+    "conf.ctx_config.ret",
+    "conf.ctx.min_proto",
+]
+
+# `TLS1_2_VERSION` — the protocol version the fixture's `MinProtocol = TLSv1.2` applies.
+TLS1_2_VERSION = 0x0303
+
+
+def _cross_dso_reason(key: str) -> str:
+    """The named duplication a non-comparable `RT-CROSS-DSO-STATE` observation records."""
+    if key.startswith("err.ssl"):
+        return (
+            "the candidate's `libssl.so.3` carries its own copy of the crate's `ERR` state "
+            "(the crate archive is linked `--whole-archive` into both DSOs), so `SSL_CTX_new(NULL)` "
+            "writes a libssl-local queue and the probe's `ERR_peek_error`/`ERR_get_error` -- which "
+            "resolve to `libcrypto.so.3`, the only exporting DSO -- reads a separate, empty "
+            "queue; the authority's libssl imports `ERR_*` from its `DT_NEEDED` `libcrypto.so.3`, "
+            "so one queue serves both (docs/DECISIONS.md D530's second)"
+        )
+    return (
+        "the candidate's `libssl.so.3` carries its own copy of the `ssl_conf` store "
+        "(`src/runtime/conf/conf_ssl.rs`'s `SSL_NAMES`), so the `system_default` command set "
+        "`CONF_modules_load_file` stored through libcrypto is not visible to libssl's "
+        "`SSL_CTX_config`; the authority's libssl imports `conf_ssl_name_find`/`conf_ssl_get` "
+        "from `libcrypto.so.3`, so one store serves both"
+    )
+
+
+def _authority_contract_problems(vals: dict[str, str]) -> list[str]:
+    """The observations the admitted authority must make for this court to measure the contract.
+
+    On the authority both DSOs share one `libcrypto.so.3` via `DT_NEEDED`, so the libssl-raised
+    error must appear in libcrypto's queue, and the libcrypto-loaded `CONF` must reach libssl's
+    `SSL_CTX_config` and be applied. If either is absent the probe did not drive the boundary (the
+    raise or the load failed) and the run is a failure rather than a pass with an empty comparison.
+    """
+    problems: list[str] = []
+    if vals.get("err.ssl.peek") in (None, "0x0"):
+        problems.append("authority's libssl-raised error was not visible through libcrypto")
+    if vals.get("conf.ctx_config.ret") != "1":
+        problems.append("authority's libssl did not read the libcrypto-loaded CONF section")
+    if vals.get("conf.ctx.min_proto") != str(TLS1_2_VERSION):
+        problems.append("authority's libssl did not apply the CONF MinProtocol")
+    return problems
+
+
+def cross_dso_court(name: str, src: Path, auth, work: Path) -> dict:
+    """`RT-CROSS-DSO-STATE`: the cross-DSO shared-state contract, measured in both directions.
+
+    The probe is compiled twice and run on both sides. On the authority one `libcrypto.so.3` serves
+    both DSOs, so a libssl-raised error is visible through libcrypto and a libcrypto-loaded `CONF`
+    section reaches libssl; `_authority_contract_problems` fails the court if the authority does
+    not observe that, so the comparison cannot pass vacuously. On the candidate the whole-crate
+    archives duplicate the crate's globals and the two reads diverge; that divergence is recorded
+    (`recorded_divergences`, each with the duplication `_cross_dso_reason` names) rather than
+    failing the architecture (docs/PHASE-17-SUBPHASES.md section 3.3). A residual on a comparable
+    observation is a failure. The verdict is therefore `pass` when the court *measures* the
+    contract -- the authority shares, both sides' behaviour is compared and any candidate
+    divergence is recorded -- not only when the candidate's queues happen to agree.
+    """
+    auth_lib = auth.libdir
+    auth_inc = auth.prefix / "include"
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+
+    ok, err = compile_probe(src, auth_bin, auth_inc, auth_lib)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    a_out, a_err, a_code = run_probe(
+        auth_bin, side_env(auth_lib, auth_lib / "ossl-modules"))
+    c_out, c_err, c_code = run_probe(
+        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules"))
+
+    if not a_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "authority-run",
+                "detail": {"exit_code": a_code, "stderr": a_err.splitlines()[:12]}}
+
+    a_vals = _keyed(a_out)
+    c_vals = _keyed(c_out)
+    residuals = diff(a_out, c_out)
+    comparable = set(CROSS_DSO_COMPARABLE)
+    driven = [r for r in residuals if r["observation"] in comparable]
+    recorded = [r for r in residuals if r["observation"] not in comparable]
+    for r in recorded:
+        r["reason"] = _cross_dso_reason(r["observation"])
+
+    contract = _authority_contract_problems(a_vals)
+    crashed = a_code is None or a_code < 0 or c_code is None or c_code < 0
+    comparable_present = sum(
+        1 for k in CROSS_DSO_COMPARABLE if a_vals.get(k) == c_vals.get(k)
+    )
+
+    staged = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{src.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    return {
+        "court": name,
+        "probe": rel(src),
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "crashed": crashed,
+        "comparable_keys": CROSS_DSO_COMPARABLE,
+        "divergence_keys": CROSS_DSO_DIVERGENCE,
+        "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
+        "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
+        "comparable_observations": comparable_present,
+        "residual_count": len(driven),
+        "residuals": driven,
+        "recorded_divergences": recorded,
+        "recorded_count": len(recorded),
+        "authority_contract_problems": contract,
+        "authority_error_shared": a_vals.get("err.ssl.peek") not in (None, "0x0"),
+        "candidate_error_shared": c_vals.get("err.ssl.peek") not in (None, "0x0"),
+        "authority_conf_shared": a_vals.get("conf.ctx_config.ret") == "1",
+        "candidate_conf_shared": c_vals.get("conf.ctx_config.ret") == "1",
+        "verdict": (
+            "fail" if (driven or contract or crashed or c_code != a_code) else "pass"
+        ),
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
 def render_probe(cases: list[list[str]]) -> str:
     """The shell probe `RT-CLI-BODIES` runs on each side.
 
@@ -1450,6 +1623,9 @@ def main(argv: list[str]) -> int:
             records.append({"court": name, "verdict": "fail",
                             "stage": "probe-missing", "detail": rel(src)})
             continue
+        if name == "RT-CROSS-DSO-STATE":
+            records.append(cross_dso_court(name, src, auth, work))
+            continue
         records.append(interop_court(name, src, auth, work))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
@@ -1555,15 +1731,21 @@ def main(argv: list[str]) -> int:
             "(signature_algorithms/ec_point_formats/renegotiation_info), the hybrid X25519MLKEM768 "
             "key share, the RSA-PSS CertificateVerify verification and the message bodies D529 "
             "handed forward -- are classified in _interop_reason and recorded. "
-            "`RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it "
-            "through the libcrypto path (and the same for CONF), requiring one queue across the "
-            "candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via "
-            "DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer "
-            "against the candidate distribution shell. This stratum owns no exported symbol, so no "
-            "differential probe over a symbol set is its evidence. No court is registered in "
-            "forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), "
-            "as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md "
-            "sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530)."
+            "`RT-CROSS-DSO-STATE` is 17.3's: it registers the probe "
+            "courts/phase17/rt_cross_dso_state_probe.c and measures the shared-state contract the "
+            "candidate's whole-crate archives break, in both directions -- a libssl-raised error "
+            "read through libcrypto's ERR queue, and a `CONF` command set `CONF_modules_load_file` "
+            "stored through libcrypto read through libssl's `SSL_CTX_config` (over the fixed "
+            "fixtures/cross_dso.cnf). On the authority one `libcrypto.so.3` is shared via "
+            "`DT_NEEDED`, so both reads succeed; on the candidate each DSO carries its own copy and "
+            "both reads diverge, which the court records (`recorded_divergences`) rather than "
+            "failing on the architecture (section 3.3). `RT-DOWNSTREAM-CONSUMER` is 17.4's: it "
+            "builds a real downstream consumer against the candidate distribution shell. This "
+            "stratum owns no exported symbol, so no differential probe over a symbol set is its "
+            "evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry "
+            "is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at "
+            "16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the "
+            "courts (docs/DECISIONS.md D530)."
         ),
     }
 
@@ -1574,6 +1756,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="interop-probe", path=PROBE_DIR / "rt_tls13_interop_probe.c"),
         InputRef(name="interop-cert", path=PROBE_DIR / "fixtures" / "signer.pem"),
         InputRef(name="interop-key", path=PROBE_DIR / "fixtures" / "rsa-key.pem"),
+        InputRef(name="cross-dso-probe", path=PROBE_DIR / "rt_cross_dso_state_probe.c"),
+        InputRef(name="cross-dso-conf", path=PROBE_DIR / "fixtures" / "cross_dso.cnf"),
     ]
     doc = envelope(kind="phase17-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

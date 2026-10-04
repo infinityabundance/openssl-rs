@@ -607,7 +607,7 @@
         "stratum": "CLI / config / filesystem contract"
       },
       {
-        "blocking": "55 open obligation(s) of this stratum recorded in forensics/phase17-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase17-obligations.json` publishes `unit: downstream replacement contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the 52 `apps/<name>.c` unit deferrals it owns (D530) and the four downstream replacement contract units. It owns no provider registration row -- it activates no provider -- and no symbol deferral. Its `artifacts/phase17/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; 17.1 registers `RT-CLI-BODIES` over the first landed command body (`apps/errstr.c`), 17.2a registers `RT-TLS13-INTEROP` over the client's first ClientHello flight, and the two courts that follow (`RT-CROSS-DSO-STATE`, `RT-DOWNSTREAM-CONSUMER`) are `pending` with the subphases that land them. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-17-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D530)",
+        "blocking": "54 open obligation(s) of this stratum recorded in forensics/phase17-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase17-obligations.json` publishes `unit: downstream replacement contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the 52 `apps/<name>.c` unit deferrals it owns (D530) and the four downstream replacement contract units. It owns no provider registration row -- it activates no provider -- and no symbol deferral. Its `artifacts/phase17/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; 17.1 registers `RT-CLI-BODIES` over the first landed command body (`apps/errstr.c`), 17.2a registers `RT-TLS13-INTEROP` over the client's first ClientHello flight, 17.3 registers `RT-CROSS-DSO-STATE` over the cross-DSO ERR/CONF measurement, and the one court that follows (`RT-DOWNSTREAM-CONSUMER`) is `pending` with the subphase that lands it. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-17-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D530)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -699,7 +699,7 @@
       "not_started": 4
     }
   },
-  "body_hash": "5251080450a0ade50ec8fd1d0cf619ff8b8ffe3512787a9f984a4d05752381cc",
+  "body_hash": "b8d7edea8d21db4ed3a346532bc3732780595acdbcc3c5916b8a99598ae2ddaf",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
