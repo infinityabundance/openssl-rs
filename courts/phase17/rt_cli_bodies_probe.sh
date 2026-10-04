@@ -14,9 +14,12 @@
 # `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl`
 # operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam`
 # generation arms, `passwd` without `-salt`, the `engine` listing/`-pre` arms and the
-# 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder,
+`-bogus`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder,
 # `ts` random-nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`,
-# `fipsinstall -module` and `srp` action arms) are deliberately absent: each renders a
+# `fipsinstall -module` and `srp` action arms, and the 17.1g `x509`/`req` generation,
+# `smime`/`cms` `-encrypt`/S/MIME-format, `pkcs12 -info`/ordinary `-export`, the
+# `ca` config/index, the `s_client`/`s_server`/`s_time` network arms and every `cmp`
+# arm) are deliberately absent: each renders a
 # surface this stratum does not own
 # (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command
 # module headers).
@@ -204,4 +207,44 @@ srp
 srp -list -add
 srp -add
 srp -srpvfile x -config y
+x509 -in /work/courts/phase17/fixtures/ca.pem -noout -text
+x509 -in /work/courts/phase17/fixtures/ca.pem -noout -subject
+x509 -in /work/courts/phase17/fixtures/ca.pem -noout -issuer
+x509 -in /work/courts/phase17/fixtures/ca.pem -noout -dates
+x509 -in /work/courts/phase17/fixtures/ca.pem -noout -fingerprint
+x509 -in /work/courts/phase17/fixtures/ca.pem -noout -serial
+x509 -in /work/courts/phase17/fixtures/ca.pem -noout -pubkey
+x509 -in /work/courts/phase17/fixtures/ca.pem -noout -subject_hash
+x509 -in /work/courts/phase17/fixtures/ca.pem
+x509 -in /work/courts/phase17/fixtures/leaf.pem -noout -text
+req -in /work/courts/phase17/fixtures/req.pem -noout -text
+req -in /work/courts/phase17/fixtures/req.pem -noout -verify
+req -in /work/courts/phase17/fixtures/req.pem -noout -subject
+req -in /work/courts/phase17/fixtures/req.pem -noout
+smime -sign -noattr -nodetach -outform PEM -in /work/courts/phase17/fixtures/smime.txt -signer /work/courts/phase17/fixtures/signer.pem -inkey /work/courts/phase17/fixtures/rsa-key.pem
+smime -sign -noattr -nodetach -outform DER -in /work/courts/phase17/fixtures/smime.txt -signer /work/courts/phase17/fixtures/signer.pem -inkey /work/courts/phase17/fixtures/rsa-key.pem
+smime -verify -inform PEM -noverify -in /work/courts/phase17/fixtures/smime-signed.pem
+smime -decrypt -inform PEM -in /work/courts/phase17/fixtures/smime-enc.pem -recip /work/courts/phase17/fixtures/signer.pem -inkey /work/courts/phase17/fixtures/rsa-key.pem
+smime
+smime -encrypt -in /work/courts/phase17/fixtures/smime.txt
+smime -decrypt
+smime -sign -in /work/courts/phase17/fixtures/smime.txt -inkey /work/courts/phase17/fixtures/rsa-key.pem
+smime -sign -in /work/courts/phase17/fixtures/smime.txt
+cms -sign -noattr -nodetach -outform PEM -in /work/courts/phase17/fixtures/smime.txt -signer /work/courts/phase17/fixtures/signer.pem -inkey /work/courts/phase17/fixtures/rsa-key.pem
+cms -sign -noattr -nodetach -outform DER -in /work/courts/phase17/fixtures/smime.txt -signer /work/courts/phase17/fixtures/signer.pem -inkey /work/courts/phase17/fixtures/rsa-key.pem
+cms -verify -inform PEM -noverify -in /work/courts/phase17/fixtures/cms-signed.pem
+cms
+cms -encrypt -in /work/courts/phase17/fixtures/smime.txt
+cms -decrypt
+cms -sign -in /work/courts/phase17/fixtures/smime.txt -inkey /work/courts/phase17/fixtures/rsa-key.pem
+cms -sign -in /work/courts/phase17/fixtures/smime.txt
+pkcs12 -export -nomac -keypbe NONE -certpbe NONE -in /work/courts/phase17/fixtures/signer.pem -inkey /work/courts/phase17/fixtures/rsa-key.pem -passout pass:test
+ca -bogus
+ca -status
+s_client -bogus
+s_client -connect
+s_server -bogus
+s_server -accept
+s_time -bogus
+s_time -connect
 ARGS

@@ -3,15 +3,19 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), `sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), `spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the `-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` (the private-key-required and unknown-option refusals). 17.1e adds ten more bodies over fixed fixtures: `gendsa` (the missing-argument refusal), `rand` (the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal), `storeutl` (the `-noout -keys`/`-noout -certs` type and `Total found` status), `dhparam` (the `-in` text/`-noout`/`-check` arms), `genpkey` (the no-algorithm refusal), `passwd` (the fixed-salt `-1`/`-5`/`-6` and `-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the candidate's engine init fails. 17.1f adds seven more bodies over fixed fixtures: `dgst` (the digest, `-hex`/`-binary`, `-c`/`-r`, `-hmac`, `-sign` and `-verify` arms), `pkcs7` (the re-encode and `-print_certs` arms), `ocsp` (the no-work refusal and the fixed-CA/leaf `-reqout`/`-req_text` request arms), `ts` (the mode refusals and the `-query -no_nonce -data` DER/text arms), `speed` (the `-bogus` refusal), `fipsinstall` (the `-verify`/no-module refusals) and `srp` (the action-count refusals). Each command's `-help` arm is not driven (`opt_help` is unlanded), and the many divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms, and the 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder, `ts` nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`, `fipsinstall -module` and `srp` action arms -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, over the record layer, the extension units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. `RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer against the candidate distribution shell. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
+    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), `sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), `spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the `-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` (the private-key-required and unknown-option refusals). 17.1e adds ten more bodies over fixed fixtures: `gendsa` (the missing-argument refusal), `rand` (the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal), `storeutl` (the `-noout -keys`/`-noout -certs` type and `Total found` status), `dhparam` (the `-in` text/`-noout`/`-check` arms), `genpkey` (the no-algorithm refusal), `passwd` (the fixed-salt `-1`/`-5`/`-6` and `-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the candidate's engine init fails. 17.1f adds seven more bodies over fixed fixtures: `dgst` (the digest, `-hex`/`-binary`, `-c`/`-r`, `-hmac`, `-sign` and `-verify` arms), `pkcs7` (the re-encode and `-print_certs` arms), `ocsp` (the no-work refusal and the fixed-CA/leaf `-reqout`/`-req_text` request arms), `ts` (the mode refusals and the `-query -no_nonce -data` DER/text arms), `speed` (the `-bogus` refusal), `fipsinstall` (the `-verify`/no-module refusals) and `srp` (the action-count refusals). 17.1g, the final slice, lands the last ten bodies over fixed fixtures: `x509` (the text/subject/issuer/dates/fingerprint/serial/pubkey/hash and re-encode arms), `req` (the read-back `-text`/`-verify`/`-subject`/re-encode arms over a fixed CSR), `smime` and `cms` (the `-sign -nodetach -outform PEM|DER` over a fixed content/signer/key, the `-verify -noverify` and `-decrypt` over fixed fixtures, and the operation refusals), `pkcs12` (the deterministic `-export -nomac -keypbe NONE -certpbe NONE`), and the option-parser refusals of `ca`, `s_client`, `s_server`, `s_time` and `cmp`. Each command's `-help` arm is not driven (`opt_help` is unlanded), and the many divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms, and the 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder, `ts` nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`, `fipsinstall -module` and `srp` action arms -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, over the record layer, the extension units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. `RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer against the candidate distribution shell. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
     "courts": [
       {
-        "argv_cases": 158,
+        "argv_cases": 198,
         "authority_exit_code": 0,
-        "authority_observations": 634,
+        "authority_observations": 805,
         "candidate_exit_code": 0,
-        "candidate_observations": 634,
-        "candidate_stderr_tail": [],
+        "candidate_observations": 805,
+        "candidate_stderr_tail": [
+          "/work/courts/phase17/rt_cli_bodies_probe.sh: 1: pkcs7: not found",
+          "/work/courts/phase17/rt_cli_bodies_probe.sh: 1: ocsp: not found",
+          "/work/courts/phase17/rt_cli_bodies_probe.sh: 17: /,: not found"
+        ],
         "court": "RT-CLI-BODIES",
         "probe": "courts/phase17/rt_cli_bodies_probe.sh",
         "recorded_divergences": [
@@ -248,6 +252,54 @@
             "authority": "<the listed users, or a written verifier>",
             "candidate": "<not landed>",
             "reason": "The action arms load a verifier-file index through `load_index`/`index_index` and the `CA_DB` type (`apps/lib/apps.c`), which this stratum does not own. The `srp`/`-add`/`-list -add`/`-srpvfile -config` refusals are driven. Recorded here rather than diffed; see `src/apps/srp.rs`."
+          },
+          {
+            "argv": "x509 <generation/checking arms>",
+            "authority": "<a generated or re-signed certificate, or a check result>",
+            "candidate": "<not landed>",
+            "reason": "`x509 -new`/`-x509toreq`/`-req`/`-CA`/`-set_serial`/`-days`/`-not_before`/`-not_after`/`-force_pubkey`/`-key`/`-extfile` and the trust/alias writers build or mutate a certificate; `-checkend` reads the wall clock and `-purpose`/`-modulus`/`-ocspid`/`-ext`/`-email`/`-ocsp_uri`/`-alias`/`-next_serial` reach the `X509V3`/purpose/`BN_print` surfaces. The print/re-encode arms over the fixed certificate are driven. Recorded here rather than diffed; see `src/apps/x509.rs`."
+          },
+          {
+            "argv": "req <generation arms>",
+            "authority": "<a generated request/certificate, or a key modulus>",
+            "candidate": "<not landed>",
+            "reason": "`req -new`/`-newkey`/`-key`/`-x509`/`-CA`/`-subj`/`-addext`/`-extensions`/`-precert`/`-config` build a request or certificate and `-modulus` reaches `BN_print`. The read-back `-text`/`-verify`/`-subject`/re-encode arms over the fixed CSR are driven. Recorded here rather than diffed; see `src/apps/req.rs`."
+          },
+          {
+            "argv": "smime -encrypt / cms -encrypt / -EncryptedData_encrypt",
+            "authority": "<a fresh S/MIME or CMS envelope>",
+            "candidate": "<the same operation over a fresh random key>",
+            "reason": "The content-encryption key is drawn at random, so the envelope bytes are independent on the two sides; the fixed `smime-enc.pem`/`cms-enc.pem` fixtures are decrypted instead. Recorded here rather than diffed; see `src/apps/smime.rs` and `src/apps/cms.rs`."
+          },
+          {
+            "argv": "smime/-cms <S/MIME output format>",
+            "authority": "<a multipart S/MIME message with a fresh boundary>",
+            "candidate": "<a multipart S/MIME message with a fresh boundary>",
+            "reason": "`SMIME_write_PKCS7`/`SMIME_write_CMS` draw a random MIME boundary, so the `SMIME` output format is not byte-deterministic; the `PEM` and `DER` output formats are driven. Recorded here rather than diffed; see `src/apps/smime.rs` and `src/apps/cms.rs`."
+          },
+          {
+            "argv": "pkcs12 -info / <ordinary -export>",
+            "authority": "MAC: sha256, Iteration 2048|…|Shrouded Keybag: … / <a salted PKCS#12>",
+            "candidate": "<not landed> / <a salted PKCS#12>",
+            "reason": "`-info` needs `alg_print` (the `PBES2`/`PKCS12KDF` algorithm printer) and the `PKCS12_SAFEBAG` walk; the ordinary `-export` draws a random salt/MAC. The `-export -nomac -keypbe NONE -certpbe NONE` arm over the fixed certificate/key is deterministic and is driven. Recorded here rather than diffed; see `src/apps/pkcs12.rs`."
+          },
+          {
+            "argv": "ca <config/index/issuance arms>",
+            "authority": "<the CA database output, or a pointer-bearing config error>",
+            "candidate": "<not landed>",
+            "reason": "`ca` past the option parser reads the `ca` config section and the index database and issues/revokes certificates; its failure path carries a pointer-bearing `NCONF_get_string` `ERR_print_errors` tail. The `-bogus` and missing-value parser refusals are driven. Recorded here rather than diffed; see `src/apps/ca.rs`."
+          },
+          {
+            "argv": "s_client / s_server / s_time <network arms>",
+            "authority": "<a TLS handshake, session or a wall-clock benchmark>",
+            "candidate": "<not landed>",
+            "reason": "The transport, handshake, session cache and application-data loop (and `s_time`'s wall-clock benchmark) need a live peer and are a function of the network and machine. The parser's unknown-option and missing-value refusals (`-bogus`, `-connect`/`-accept`) are driven. Recorded here rather than diffed; see `src/apps/s_client.rs`, `src/apps/s_server.rs` and `src/apps/s_time.rs`."
+          },
+          {
+            "argv": "smime/-cms -sign (default attributes) and -sign -noattr <invalid>",
+            "authority": "<a signature carrying a signing-time attribute>",
+            "candidate": "<a signature carrying its own (later) signing-time attribute>",
+            "reason": "`PKCS7_sign`/`CMS_sign` include the `signingTime` signed attribute from the wall clock unless `-noattr`/`-no_signing_time` is given, so the default `-sign` bytes differ across a second boundary. The driven sign arms pass `-noattr`, which removes the only wall-clock input. Recorded here rather than diffed; see `src/apps/smime.rs` and `src/apps/cms.rs`."
           }
         ],
         "residual_count": 0,
@@ -285,7 +337,7 @@
     {
       "name": "probe",
       "path": "courts/phase17/rt_cli_bodies_probe.sh",
-      "sha256": "cb6b0e5e76cb117248e39bffd0ac4994e71ba9e6be23d850727f0e4e0b34b231"
+      "sha256": "32020af922723b0a82c21e36ed25cb0962bb23ecea0036c50dd09c6600efdf83"
     }
   ],
   "kind": "phase17-courts",

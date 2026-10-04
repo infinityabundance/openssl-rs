@@ -41,7 +41,10 @@
 //! SPDX-License-Identifier: Apache-2.0
 
 use crate::apps::asn1parse;
+use crate::apps::ca;
 use crate::apps::ciphers;
+use crate::apps::cmp;
+use crate::apps::cms;
 use crate::apps::configutl;
 use crate::apps::crl;
 use crate::apps::crl2pkcs7;
@@ -66,6 +69,7 @@ use crate::apps::nseq;
 use crate::apps::ocsp;
 use crate::apps::opt::{progname, OptMatch, Opts};
 use crate::apps::passwd;
+use crate::apps::pkcs12;
 use crate::apps::pkcs7;
 use crate::apps::pkcs8;
 use crate::apps::pkey;
@@ -74,10 +78,15 @@ use crate::apps::pkeyutl;
 use crate::apps::prime;
 use crate::apps::rand;
 use crate::apps::rehash;
+use crate::apps::req;
 use crate::apps::rsa;
 use crate::apps::rsautl;
+use crate::apps::s_client;
+use crate::apps::s_server;
+use crate::apps::s_time;
 use crate::apps::sess_id;
 use crate::apps::skeyutl;
+use crate::apps::smime;
 use crate::apps::speed;
 use crate::apps::spkac;
 use crate::apps::srp;
@@ -86,6 +95,7 @@ use crate::apps::tables::{Func, FuncKind, FUNCTIONS, HELP_OPTIONS};
 use crate::apps::ts;
 use crate::apps::verify;
 use crate::apps::version;
+use crate::apps::x509;
 
 /// A command body this stratum does not own, reached rather than fabricated.
 ///
@@ -202,7 +212,10 @@ fn do_cmd(argv: &[String]) -> i32 {
         }
         return match fp.name {
             "asn1parse" => asn1parse::main(argv),
+            "ca" => ca::main(argv),
             "ciphers" => ciphers::main(argv),
+            "cms" => cms::main(argv),
+            "cmp" => cmp::main(argv),
             "configutl" => configutl::main(argv),
             "crl" => crl::main(argv),
             "crl2pkcs7" => crl2pkcs7::main(argv),
@@ -227,6 +240,7 @@ fn do_cmd(argv: &[String]) -> i32 {
             "nseq" => nseq::main(argv),
             "ocsp" => ocsp::main(argv),
             "passwd" => passwd::main(argv),
+            "pkcs12" => pkcs12::main(argv),
             "pkcs7" => pkcs7::main(argv),
             "pkcs8" => pkcs8::main(argv),
             "pkey" => pkey::main(argv),
@@ -235,10 +249,15 @@ fn do_cmd(argv: &[String]) -> i32 {
             "prime" => prime::main(argv),
             "rand" => rand::main(argv),
             "rehash" => rehash::main(argv),
+            "req" => req::main(argv),
+            "s_client" => s_client::main(argv),
+            "s_server" => s_server::main(argv),
+            "s_time" => s_time::main(argv),
             "rsa" => rsa::main(argv),
             "rsautl" => rsautl::main(argv),
             "sess_id" => sess_id::main(argv),
             "skeyutl" => skeyutl::main(argv),
+            "smime" => smime::main(argv),
             "speed" => speed::main(argv),
             "spkac" => spkac::main(argv),
             "srp" => srp::main(argv),
@@ -246,6 +265,7 @@ fn do_cmd(argv: &[String]) -> i32 {
             "ts" => ts::main(argv),
             "verify" => verify::main(argv),
             "version" => version::main(argv),
+            "x509" => x509::main(argv),
             _ => not_landed(fp.name),
         };
     }

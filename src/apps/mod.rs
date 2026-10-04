@@ -11,7 +11,10 @@
 // `apps/errstr.c` is the first of the 52 command bodies Phase 17.1 lands behind the
 // dispatcher; see its module header for the recorded `-help` divergence.
 pub mod asn1parse;
+pub mod ca;
 pub mod ciphers;
+pub mod cmp;
+pub mod cms;
 pub mod configutl;
 pub mod crl;
 pub mod crl2pkcs7;
@@ -46,6 +49,7 @@ pub mod ocsp;
 pub mod openssl;
 pub mod opt;
 pub mod passwd;
+pub mod pkcs12;
 pub mod pkcs7;
 pub mod pkcs8;
 pub mod pkey;
@@ -69,3 +73,11 @@ pub mod tables;
 pub mod ts;
 pub mod verify;
 pub mod version;
+// 17.1g's ten bodies: ca, cmp, cms, pkcs12, req, s_client, s_server, s_time,
+// smime and x509.
+pub mod req;
+pub mod s_client;
+pub mod s_server;
+pub mod s_time;
+pub mod smime;
+pub mod x509;
