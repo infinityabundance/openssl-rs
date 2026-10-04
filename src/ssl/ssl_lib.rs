@@ -1541,6 +1541,21 @@ pub struct Ssl {
     pub finish_md: [u8; EVP_MAX_MD_SIZE],
     /// `size_t finish_md_len`.
     pub finish_md_len: usize,
+    /// Phase 17.2: the content of the last record read by the reduced TLS 1.3 message reader
+    /// (`tls_get_message_body`), with the byte offset of the next handshake message in it. The
+    /// authority coalesces its flight (EncryptedExtensions/Certificate/CertificateVerify/Finished)
+    /// into one record (`statem_flush`, `statem.c:945`), so the reduced read path buffers the
+    /// record and delivers one handshake message per call.
+    pub rd_msg_buf: [u8; TLS13_HS_BUF_LEN],
+    /// The number of valid bytes in [`Self::rd_msg_buf`].
+    pub rd_msg_len: usize,
+    /// The offset of the next unread handshake message in [`Self::rd_msg_buf`].
+    pub rd_msg_off: usize,
+    /// Phase 17.2: the peer's leaf certificate, parsed from the server's `Certificate` message
+    /// (`tls_process_server_certificate`, `statem_clnt.c:1995`) so `tls_process_cert_verify` can
+    /// verify the `CertificateVerify` signature against its public key. Owned and freed by
+    /// `SSL_free`.
+    pub peer_cert: *mut c_void,
 }
 
 // -------------------------------------------------------------------------------------------
@@ -2376,6 +2391,7 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             crate::evp::cipher::EVP_CIPHER_free((*s).tls13_cipher.cast());
             crate::evp::pkey::EVP_PKEY_free((*s).pkey.cast());
             crate::evp::pkey::EVP_PKEY_free((*s).peer_tmp.cast());
+            X509_free((*s).peer_cert.cast());
             X509_VERIFY_PARAM_free((*s).param);
             cert_free((*s).cert);
             CRYPTO_free((*s).client_cert_type.cast(), FILE, 0);

@@ -1191,27 +1191,163 @@ pub(crate) unsafe fn tls_process_encrypted_extensions(s: *mut Ssl, msg: &[u8]) -
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
 }
 
-/// `MSG_PROCESS_RETURN tls_process_server_certificate(...)` — `statem_clnt.c:1995`, reduced to the
-/// transcript append (the client verifies nothing; `SSL_VERIFY_NONE`).
+/// `MSG_PROCESS_RETURN tls_process_server_certificate(...)` — `statem_clnt.c:1995`: the reduced
+/// client parses the leaf certificate out of the TLS 1.3 `Certificate` message (the first
+/// `CertificateEntry`'s `cert_data`) into an `X509` for `tls_process_cert_verify` to verify against.
+/// The chain beyond the leaf is not walked (the fixtures carry one certificate and the probe sets
+/// `SSL_VERIFY_NONE`; the CertificateVerify signature is still checked).
 ///
 /// # Safety
 /// `s` is live; `msg` is the full handshake message.
 pub(crate) unsafe fn tls_process_server_certificate(s: *mut Ssl, msg: &[u8]) -> c_int {
+    use crate::x509::x_x509::{d2i_X509, X509};
     if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE as u8 {
         return 0;
+    }
+    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
+    if 4 + blen > msg.len() {
+        return 0;
+    }
+    let body = &msg[4..4 + blen];
+    // `certificate_request_context<0..2^8-1> || CertificateEntry certificate_list<0..2^24-1>`.
+    if body.len() < 4 {
+        return 0;
+    }
+    let ctx_len = body[0] as usize;
+    let mut p = 1 + ctx_len;
+    if p + 3 > body.len() {
+        return 0;
+    }
+    let list_len =
+        ((body[p] as usize) << 16) | ((body[p + 1] as usize) << 8) | body[p + 2] as usize;
+    p += 3;
+    if list_len < 3 || p + list_len > body.len() {
+        return 0;
+    }
+    // The first `CertificateEntry`'s `cert_data<1..2^24-1>` (`tls_process_cert_chain`,
+    // `statem_lib.c:1241`).
+    let derlen = ((body[p] as usize) << 16) | ((body[p + 1] as usize) << 8) | body[p + 2] as usize;
+    if derlen == 0 || p + 3 + derlen > body.len() {
+        return 0;
+    }
+    let mut inp = body[p + 3..p + 3 + derlen].as_ptr();
+    let mut x: *mut X509 = core::ptr::null_mut();
+    // SAFETY: `inp` points at `derlen` readable bytes; `x` is this frame's writable slot.
+    let got = unsafe { d2i_X509(&mut x, &mut inp, derlen as core::ffi::c_long) };
+    if got.is_null() || x.is_null() {
+        return 0;
+    }
+    // SAFETY: `s` is live; the previous peer certificate is owned here.
+    unsafe {
+        if !(*s).peer_cert.is_null() {
+            crate::x509::x_x509::X509_free((*s).peer_cert.cast());
+        }
+        (*s).peer_cert = x.cast();
     }
     // SAFETY: `s` is live; `msg` is the full message.
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
 }
 
-/// `MSG_PROCESS_RETURN tls_process_cert_verify(...)` — `statem_lib.c:441`, reduced to the transcript
-/// append. The reduced client carries the signature algorithm and signature but does not run the
-/// RSA-PSS verification (recorded: the probe sets `SSL_VERIFY_NONE` and no sigalg lookup is wired).
+/// `MSG_PROCESS_RETURN tls_process_cert_verify(...)` — `statem_lib.c:441-560`: verify the peer's
+/// `CertificateVerify` signature over the TLS 1.3 `TBS` preamble (`get_cert_verify_tbs_data`) with
+/// the leaf certificate's public key (`tls12_check_peer_sigalg`, `tls1_lib.c:2682`). The reduced
+/// client accepts the RSA SHA-256 schemes `rsa_pss_rsae_sha256` (0x0804) and `rsa_pkcs1_sha256`
+/// (0x0401) -- the two the fixtures' RSA certificate can carry.
 ///
 /// # Safety
 /// `s` is live; `msg` is the full handshake message.
 pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8]) -> c_int {
-    if msg.len() < 4 || msg[0] != SSL3_MT_CERTIFICATE_VERIFY as u8 {
+    use crate::evp::digest::{
+        EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_free, EVP_MD_CTX_new,
+    };
+    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
+    use crate::rsa::ctrl::{
+        EVP_PKEY_CTX_set_rsa_mgf1_md, EVP_PKEY_CTX_set_rsa_padding,
+        EVP_PKEY_CTX_set_rsa_pss_saltlen,
+    };
+    use crate::x509::x509_cmp::X509_get0_pubkey;
+    // `RSA_PKCS1_PSS_PADDING` / `RSA_PSS_SALTLEN_DIGEST` — `include/openssl/rsa.h`.
+    const RSA_PKCS1_PSS_PADDING: c_int = 6;
+    const RSA_PSS_SALTLEN_DIGEST: c_int = -1;
+
+    if msg.len() < 8 || msg[0] != SSL3_MT_CERTIFICATE_VERIFY as u8 {
+        return 0;
+    }
+    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
+    if 4 + blen > msg.len() {
+        return 0;
+    }
+    let body = &msg[4..4 + blen];
+    let sigalg = ((body[0] as u16) << 8) | body[1] as u16;
+    let siglen = ((body[2] as usize) << 8) | body[3] as usize;
+    if 4 + siglen > body.len() {
+        return 0;
+    }
+    let sig = &body[4..4 + siglen];
+    let is_pss = match sigalg {
+        0x0804 => true,
+        0x0401 => false,
+        _ => return 0,
+    };
+
+    // SAFETY: `s` is live.
+    let peer_cert = unsafe { (*s).peer_cert };
+    if peer_cert.is_null() {
+        return 0;
+    }
+    // SAFETY: `peer_cert` is a live certificate.
+    let pkey = unsafe { X509_get0_pubkey(peer_cert.cast()) };
+    if pkey.is_null() {
+        return 0;
+    }
+
+    // TBS = 64 spaces || context string || 0x00 || transcript hash (`get_cert_verify_tbs_data`).
+    // SAFETY: `s` is live.
+    let hash_len = unsafe { (*s).hs_md_len };
+    let ctx_str = b"TLS 1.3, server CertificateVerify";
+    let mut tbs = [0u8; 64 + 33 + 1 + crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
+    for b in tbs[..64].iter_mut() {
+        *b = 0x20;
+    }
+    tbs[64..64 + ctx_str.len()].copy_from_slice(ctx_str);
+    let mut pos = 64 + ctx_str.len();
+    tbs[pos] = 0;
+    pos += 1;
+    // SAFETY: `s` is live; the transcript is `CH || SH || EE || Certificate` (the CertificateVerify
+    // is not yet appended), and `tbs[pos..]` has room for the hash.
+    if unsafe {
+        crate::ssl::tls13_enc::transcript_hash(s, tbs.as_mut_ptr().add(pos), core::ptr::null_mut())
+    } == 0
+    {
+        return 0;
+    }
+    pos += hash_len;
+
+    // SAFETY: no preconditions.
+    let mctx = EVP_MD_CTX_new();
+    if mctx.is_null() {
+        return 0;
+    }
+    let md = EVP_sha256();
+    let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
+    let mut ok = false;
+    // SAFETY: `mctx`/`pkey` are live; `tbs`/`sig` are the caller's.
+    unsafe {
+        if EVP_DigestVerifyInit(mctx, &mut pctx, md, core::ptr::null_mut(), pkey) > 0
+            && !pctx.is_null()
+            && EVP_PKEY_CTX_set_signature_md(pctx, md) > 0
+            && (!is_pss
+                || (EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) > 0
+                    && EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, RSA_PSS_SALTLEN_DIGEST) > 0
+                    && EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, md) > 0))
+            && EVP_DigestVerify(mctx, sig.as_ptr(), siglen, tbs.as_ptr(), pos) == 1
+        {
+            ok = true;
+        }
+        EVP_MD_CTX_free(mctx);
+    }
+    if !ok {
         return 0;
     }
     // SAFETY: `s` is live; `msg` is the full message.
@@ -1367,12 +1503,17 @@ pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
 /// `s` is live.
 unsafe fn client_read(s: *mut Ssl) -> Option<([u8; 16384], usize)> {
     let mut buf = [0u8; 16384];
-    let mut rt = 0u8;
-    // SAFETY: `s` is live; `buf` is writable.
+    // SAFETY: `s` is live; `buf` is writable. The helper splits a record that carries several
+    // handshake messages (the authority coalesces its flight) and skips a middlebox-compat
+    // `ChangeCipherSpec` record.
     let n = unsafe {
-        crate::ssl::record::rec_layer_s3::ssl3_read_bytes(s, &mut rt, buf.as_mut_ptr(), buf.len())
+        crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
+            s,
+            buf.as_mut_ptr(),
+            buf.len(),
+        )
     };
-    if n <= 0 || rt != SSL3_RT_HANDSHAKE {
+    if n <= 0 {
         return None;
     }
     Some((buf, n as usize))

@@ -88,16 +88,33 @@ ClientHello over a reduced plaintext record read and chooses the version/cipher/
 `tls_construct_server_hello` writes a real ServerHello (`supported_versions` + `X25519` key_share)
 through the new `extensions_srvr` framework; the reduced group list and the client
 `supported_groups`/`key_share` constructors ride along, and the `BIO_C_SET_FILENAME` constant fix
-makes the fixed signer fixture load. The court compares the observations that flight makes
-deterministic: the record and handshake headers, the legacy/session/cipher/compression shape
-(including the 30 offered cipher suites), the option-gated extension bodies, and the three
-certificate-load return values. Everything past the ServerHello, the missing extensions
-(`signature_algorithms`, `ec_point_formats`, `renegotiation_info`, the hybrid key share), and the
-application-data exchange are classified by `_interop_reason` and recorded. Because the flight
-stops at the EncryptedExtensions/key-schedule boundary, the plan's section 3.2 requires it to be
-**named pending rather than counted as passing**: the court's row carries `verdict: pending` (it
-closes automatically once both sides report a finished handshake), and the `tls13-interop` contract
-unit stays open in the ledger.
+makes the fixed signer fixture load. 17.2c lands the rest of the flight (the key schedule, the
+client read path and the server's encrypted flight), so both sides reach `TLS_ST_OK` and exchange a
+15-byte application record. The court compares the observations the flight makes deterministic:
+the record and handshake headers, the legacy/session/cipher/compression shape (including the 30
+offered cipher suites), the option-gated extension bodies, the certificate-load return values, the
+terminal handshake states and the application-data exchange. The candidate now also sends the
+`signature_algorithms`/`ec_point_formats`/`renegotiation_info` extensions, the outer `key_share`
+list length, record version `0x0303` on protected records, and a verified/signed RSA-PSS
+`CertificateVerify`, so only the reduced `supported_groups`/hybrid-`key_share` (observed values,
+classified by `_interop_reason`) and the option-gated extension set remain recorded rather than
+diffed. This court proves each build is self-consistent; the interoperability claim is the matrix
+court below.
+
+`RT-TLS13-INTEROP-MATRIX`, and what it proves
+---------------------------------------------
+`RT-TLS13-INTEROP` is **not** an interoperability measurement: it builds the same probe twice and
+each build runs its own client and server, so it proves a self-consistent engine on each side, not
+that the two implementations meet. The interoperability court is `RT-TLS13-INTEROP-MATRIX`: because
+the authority and the candidate both define the libssl/libcrypto symbols, two implementations cannot
+share one process, so the matrix is **cross-process**. `courts/phase17/rt_tls13_matrix_peer.c` is
+compiled twice (authority and candidate) and each peer runs one role over a real socket BIO
+(`BIO_new_socket`); `courts/phase17/rt_tls13_matrix_driver.c` owns a `socketpair(AF_UNIX,
+SOCK_STREAM)`, forks one peer per side and runs the four cells -- `auth-auth`, `cand-auth`,
+`auth-cand`, `cand-cand` (client-server) -- exchanging one fixed 15-byte application record each
+way. The two cross cells are decisive. The court's verdict is `pass` only when all four cells
+complete a handshake **and** exchange application data; a cross cell that still fails leaves the
+court `pending` and records the failing observation and the recorded `alert`/`ERR` stop point.
 
 `RT-CROSS-DSO-STATE`, and what it compares
 ------------------------------------------
@@ -176,9 +193,14 @@ AUTH_PREFIX = REPO_ROOT / "forensics" / "authorities" / "prefix" / "openssl-3.6.
 COURTS: list[tuple[str, str]] = [
     ("RT-CLI-BODIES", "rt_cli_bodies_probe.sh"),
     ("RT-TLS13-INTEROP", "rt_tls13_interop_probe.c"),
+    ("RT-TLS13-INTEROP-MATRIX", "rt_tls13_matrix_peer.c"),
     ("RT-CROSS-DSO-STATE", "rt_cross_dso_state_probe.c"),
     ("RT-DOWNSTREAM-CONSUMER", "rt_downstream_consumer_probe.c"),
 ]
+
+# `RT-TLS13-INTEROP-MATRIX`'s driver source. It is compiled once, without a TLS library, and forks
+# the two per-side peer binaries the matrix court compiles from `rt_tls13_matrix_peer.c`.
+MATRIX_DRIVER = PROBE_DIR / "rt_tls13_matrix_driver.c"
 
 # The candidate's shipped distribution shell -- the install prefix an out-of-tree package links
 # against (`-I .../include -L .../lib -lssl -lcrypto`), not the crate's internal modules. The
@@ -1083,6 +1105,20 @@ def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bo
     return res.ok, res.stderr.strip()
 
 
+def compile_driver(src: Path, out: Path) -> tuple[bool, str]:
+    """Compile the `RT-TLS13-INTEROP-MATRIX` driver, which links no TLS library.
+
+    The driver only owns the `socketpair`, the child lifetimes and the transcript; each peer
+    binary it `exec`s is the one that links exactly one implementation.
+    """
+    res = run([
+        "clang", "-std=c11", "-Wall", "-Werror=implicit-function-declaration", "-O1",
+        "-D_GNU_SOURCE",
+        "-o", str(out), str(src),
+    ])
+    return res.ok, res.stderr.strip()
+
+
 # `RT-TLS13-INTEROP`'s comparable observations: the arms 17.2 drives. Each is a deterministic
 # function of the build -- a message type, a protocol version, a length, a cipher-suite count, an
 # extension body that does not carry a random, a certificate-load return value, or (17.2c) the
@@ -1305,6 +1341,141 @@ def interop_court(name: str, src: Path, auth, work: Path) -> dict:
         "verdict": "fail" if (driven or crashed or c_code != a_code) else verdict,
         "staged_binaries": staged,
         "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
+# `RT-TLS13-INTEROP-MATRIX`'s four cells, in driver order, and the observations that decide a cell.
+MATRIX_CELLS: list[str] = ["auth-auth", "cand-auth", "auth-cand", "cand-cand"]
+
+
+def matrix_court(name: str, peer_src: Path, driver_src: Path, auth, work: Path) -> dict:
+    """`RT-TLS13-INTEROP-MATRIX`: the 2x2 cross-process interoperability matrix.
+
+    Two implementations cannot share one process (the authority and the candidate both define the
+    libssl/libcrypto symbols), so the court is cross-process: `peer_src` compiles twice, once per
+    side, and `driver_src` forks one peer per side over a real `socketpair(AF_UNIX, SOCK_STREAM)`.
+    The driver runs the four cells -- `auth-auth`, `cand-auth`, `auth-cand`, `cand-cand` -- and
+    re-emits each peer's deterministic transcript under a `cell=<name>.<side>.<key>` prefix.
+
+    The verdict is `pass` only when all four cells complete a handshake and exchange the fixed
+    15-byte application record in both directions. A cross cell that still fails leaves the court
+    `pending`; the failing cell's observations (the `alert` line and the `ERR` rendering) name the
+    stop point. A failure in a same-implementation cell (`auth-auth`/`cand-cand`) or a crash is a
+    `fail`, because that is a defect in one side's engine rather than a measured interop gap.
+    """
+    auth_lib = auth.libdir
+    auth_inc = auth.prefix / "include"
+    auth_peer = work / "rt_tls13_matrix_peer.authority"
+    cand_peer = work / "rt_tls13_matrix_peer.candidate"
+    driver = work / "rt_tls13_matrix_driver"
+
+    ok, err = compile_probe(peer_src, auth_peer, auth_inc, auth_lib)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority-peer",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(peer_src, cand_peer, PHASE2 / "include", PHASE2)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate-peer",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_driver(driver_src, driver)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-driver",
+                "detail": err.splitlines()[:12]}
+
+    # The driver unsets `LD_LIBRARY_PATH` in each child (that would load one side's libssl into
+    # the other's process) and sets each child's `OPENSSL_MODULES`; the driver itself links no TLS.
+    env = dict(os.environ)
+    env["OPENSSL_CONF"] = "/dev/null"
+    env.pop("LD_LIBRARY_PATH", None)
+    proc = subprocess.run(
+        ["timeout", RUN_TIMEOUT_S, str(driver),
+         str(auth_peer), str(auth_lib / "ossl-modules"),
+         str(cand_peer), str(PHASE2 / "install" / "lib" / "ossl-modules"),
+         str(PROBE_DIR / "fixtures")],
+        env=env,
+        capture_output=True,
+        check=False,
+    )
+    code = proc.returncode
+    out = proc.stdout.decode("latin-1")
+    errout = proc.stderr.decode("latin-1")
+    # The driver prints `cell=<name>.<side>.<key>=<value>` and a bare `cell=<name>`. Strip the
+    # leading `cell=` and split the remainder at its last `=`, so the peer key (which contains no
+    # `=`) becomes the map key and the value is preserved even when it does.
+    vals: dict[str, str] = {}
+    for line in out.splitlines():
+        if line.startswith("cell="):
+            rest = line[len("cell="):]
+            if "=" in rest:
+                path, _, value = rest.rpartition("=")
+                vals[path] = value
+        elif "=" in line:
+            left, _, value = line.partition("=")
+            vals[left] = value
+    observations = len(vals)
+
+    def peer(cell: str, side: str, key: str) -> str | None:
+        return vals.get(f"{cell}.{side}.{key}")
+
+    cells: list[dict] = []
+    for cell in MATRIX_CELLS:
+        complete = (
+            vals.get(f"{cell}.status") == "complete"
+            and peer(cell, "client", "handshake.ret") == "1"
+            and peer(cell, "server", "handshake.ret") == "1"
+            and peer(cell, "client", "app.match") == "1"
+            and peer(cell, "server", "app.match") == "1"
+        )
+        cells.append({
+            "cell": cell,
+            "client_server": cell.split("-")[0] + " -> " + cell.split("-")[1],
+            "complete": complete,
+            "status": vals.get(f"{cell}.status"),
+            "client_handshake": peer(cell, "client", "handshake.ret"),
+            "server_handshake": peer(cell, "server", "handshake.ret"),
+            "client_app_match": peer(cell, "client", "app.match"),
+            "server_app_match": peer(cell, "server", "app.match"),
+            "client_alert": peer(cell, "client", "alert.write"),
+            "server_alert": peer(cell, "server", "alert.write"),
+            "client_err": peer(cell, "client", "err.0"),
+            "server_err": peer(cell, "server", "err.0"),
+        })
+
+    cross = [c for c in cells if c["cell"] in ("cand-auth", "auth-cand")]
+    same = [c for c in cells if c["cell"] in ("auth-auth", "cand-cand")]
+    crashed = code is None or code < 0 or vals.get("driver.done") != "1"
+    if crashed or any(not c["complete"] for c in same):
+        verdict = "fail"
+    elif all(c["complete"] for c in cells):
+        verdict = "pass"
+    else:
+        verdict = "pending"
+
+    STAGED.mkdir(parents=True, exist_ok=True)
+    staged = {}
+    for side, srcbin in (("authority", auth_peer), ("candidate", cand_peer), ("driver", driver)):
+        dst = STAGED / f"rt_tls13_matrix_peer.{side}" if side != "driver" \
+            else STAGED / "rt_tls13_matrix_driver"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    return {
+        "court": name,
+        "probe": rel(peer_src),
+        "driver": rel(driver_src),
+        "authority_exit_code": code,
+        "crashed": crashed,
+        "observations": observations,
+        "authority_observations": observations,
+        "candidate_observations": observations,
+        "comparable_observations": observations,
+        "cells": cells,
+        "cross_cells_pass": all(c["complete"] for c in cross),
+        "verdict": verdict,
+        "staged_binaries": staged,
+        "candidate_stderr_tail": errout.splitlines()[-3:],
     }
 
 
@@ -1848,6 +2019,9 @@ def main(argv: list[str]) -> int:
         if name == "RT-CROSS-DSO-STATE":
             records.append(cross_dso_court(name, src, auth, work))
             continue
+        if name == "RT-TLS13-INTEROP-MATRIX":
+            records.append(matrix_court(name, src, MATRIX_DRIVER, auth, work))
+            continue
         if name == "RT-DOWNSTREAM-CONSUMER":
             records.append(downstream_court(name, src, auth, work))
             continue
@@ -1952,10 +2126,19 @@ def main(argv: list[str]) -> int:
             "reach TLS_ST_OK, report SSL_is_init_finished, and exchange a 15-byte application "
             "record in each direction, so the court compares the terminal states, the two "
             "carrying rounds and the application-data exchange as well as the first-flight "
-            "structure. The remaining recorded gaps -- the missing ClientHello extensions "
-            "(signature_algorithms/ec_point_formats/renegotiation_info), the hybrid X25519MLKEM768 "
-            "key share, the RSA-PSS CertificateVerify verification and the message bodies D529 "
-            "handed forward -- are classified in _interop_reason and recorded. "
+            "structure. The reduced flight now also sends the three ClientHello extensions it was "
+            "missing (`signature_algorithms`, `ec_point_formats`, `renegotiation_info`) and the "
+            "outer `key_share` list length the authority's parser reads, carries record version "
+            "0x0303 on protected records, validates the peer's RSA-PSS CertificateVerify and signs "
+            "its own with `rsa_pss_rsae_sha256`, and skips the middlebox-compatibility "
+            "ChangeCipherSpec -- so the same-implementation flight and the cross-implementation "
+            "matrix agree. `RT-TLS13-INTEROP-MATRIX` is 17.2's interoperability court: it compiles "
+            "courts/phase17/rt_tls13_matrix_peer.c twice (authority and candidate) and runs "
+            "courts/phase17/rt_tls13_matrix_driver.c, which forks one peer per side over a real "
+            "AF_UNIX socketpair and drives the four cells `auth-auth`/`cand-auth`/`auth-cand`/"
+            "`cand-cand`, exchanging a fixed 15-byte application record each way. The verdict is "
+            "`pass` only when all four cells handshake and exchange application data; the two "
+            "cross cells are the interoperability receipt. "
             "`RT-CROSS-DSO-STATE` is 17.3's: it registers the probe "
             "courts/phase17/rt_cross_dso_state_probe.c and measures the shared-state contract the "
             "candidate's whole-crate archives break, in both directions -- a libssl-raised error "
@@ -1986,6 +2169,8 @@ def main(argv: list[str]) -> int:
         InputRef(name="interop-probe", path=PROBE_DIR / "rt_tls13_interop_probe.c"),
         InputRef(name="interop-cert", path=PROBE_DIR / "fixtures" / "signer.pem"),
         InputRef(name="interop-key", path=PROBE_DIR / "fixtures" / "rsa-key.pem"),
+        InputRef(name="matrix-peer", path=PROBE_DIR / "rt_tls13_matrix_peer.c"),
+        InputRef(name="matrix-driver", path=PROBE_DIR / "rt_tls13_matrix_driver.c"),
         InputRef(name="cross-dso-probe", path=PROBE_DIR / "rt_cross_dso_state_probe.c"),
         InputRef(name="cross-dso-conf", path=PROBE_DIR / "fixtures" / "cross_dso.cnf"),
         InputRef(name="downstream-probe",

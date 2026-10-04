@@ -90,8 +90,9 @@ pub(crate) const SSL3_CHANGE_CIPHER_CLIENT_READ: c_int = SSL3_CC_CLIENT | SSL3_C
 /// `SSL3_CHANGE_CIPHER_SERVER_WRITE` — `ssl3.h:352`.
 pub(crate) const SSL3_CHANGE_CIPHER_SERVER_WRITE: c_int = SSL3_CC_SERVER | SSL3_CC_WRITE;
 
-/// `TLS1_3_VERSION` — `ssl3.h`.
-const TLS1_3_VERSION: c_int = 0x0304;
+/// `TLS1_2_VERSION` — `ssl3.h`. TLS 1.3 protected records carry `0x0303` as `legacy_record_version`
+/// (`rec_layer_s3.c`: *"The record version for TLS1.3 is always TLS1.2"*; RFC 8446 §5.1).
+const TLS1_2_VERSION: c_int = 0x0303;
 /// `SSL3_RT_APPLICATION_DATA` — `ssl3.h` (23): the outer type of every TLS1.3 protected record.
 const SSL3_RT_APPLICATION_DATA: u8 = 23;
 /// `EVP_CTRL_AEAD_SET_IVLEN` — `evp.h:388`.
@@ -918,11 +919,12 @@ pub(crate) unsafe fn tls13_encrypt_record(
         let nonce = make_nonce(&(*s).enc_iv, iv_len, (*s).enc_seq);
         let inner_len = len + 1;
         let rec_len = inner_len + tag_len;
-        // Header: `type || version || length`, the AEAD AAD (`tls13_enc`).
+        // Header: `type || version || length`, the AEAD AAD (`tls13_enc`). The outer record version
+        // is TLS 1.2 (`0x0303`), never TLS 1.3 (`rec_layer_s3.c:395-405`, RFC 8446 §5.1).
         let mut hdr = [0u8; 5];
         hdr[0] = SSL3_RT_APPLICATION_DATA;
-        hdr[1] = (TLS1_3_VERSION >> 8) as u8;
-        hdr[2] = TLS1_3_VERSION as u8;
+        hdr[1] = (TLS1_2_VERSION >> 8) as u8;
+        hdr[2] = TLS1_2_VERSION as u8;
         hdr[3] = (rec_len >> 8) as u8;
         hdr[4] = rec_len as u8;
         ptr::copy_nonoverlapping(hdr.as_ptr(), out, 5);

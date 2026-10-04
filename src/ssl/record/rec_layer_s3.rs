@@ -172,6 +172,24 @@ pub(crate) unsafe fn ssl3_read_bytes(
             return -1;
         }
         let len = ((hdr[3] as usize) << 8) | hdr[4] as usize;
+        // `SSL3_RT_APPLICATION_DATA` (23) is the outer type of every TLS 1.3 protected record; a
+        // middlebox-compatibility `ChangeCipherSpec` (20) or a plaintext alert is *not* protected
+        // and is read straight through (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
+        if hdr[0] != SSL3_RT_APPLICATION_DATA {
+            if len > cap {
+                return -1;
+            }
+            if len != 0 {
+                // SAFETY: `buf` is `cap >= len` writable bytes and `rbio` is the caller's.
+                let n = unsafe { BIO_read((*s).rbio, buf.cast(), len as c_int) };
+                if n != len as c_int {
+                    return -1;
+                }
+            }
+            // SAFETY: `rectype` is writable per the contract.
+            unsafe { *rectype = hdr[0] };
+            return len as c_int;
+        }
         let mut ct = [0u8; 17000];
         if len > ct.len() {
             return -1;
@@ -225,6 +243,75 @@ pub(crate) unsafe fn ssl3_read_bytes(
     len as c_int
 }
 
+/// Read the next TLS 1.3 handshake message into `buf`, returning its length (including the
+/// four-byte handshake header) or `-1` when the peer BIO is empty or the stream is malformed.
+///
+/// The authority's message layer (`tls_get_message_header`/`tls_get_message_body`,
+/// `ssl/statem/statem_lib.c`) reads from a buffer filled by `ssl3_read_bytes`, which may carry
+/// several handshake messages (its server flight is flushed as one record, `statem_flush`,
+/// `ssl/statem/statem.c:945`) and may interleave a middlebox-compatibility `ChangeCipherSpec`
+/// record (type 20). This reduced reader buffers the decrypted record content on the connection
+/// (`rd_msg_buf`) and hands the driver one message per call, skipping bare `ChangeCipherSpec`
+/// records.
+///
+/// # Safety
+/// `s` must be a live connection; `buf` must be writable for `cap` bytes.
+pub(crate) unsafe fn tls13_next_handshake_message(s: *mut Ssl, buf: *mut u8, cap: usize) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
+        // Deliver the next buffered message, if one remains.
+        if (*s).rd_msg_off + 4 <= (*s).rd_msg_len {
+            let p = (*s).rd_msg_off;
+            let blen = (((*s).rd_msg_buf[p + 1] as usize) << 16)
+                | (((*s).rd_msg_buf[p + 2] as usize) << 8)
+                | ((*s).rd_msg_buf[p + 3] as usize);
+            let msg_len = 4 + blen;
+            if p + msg_len <= (*s).rd_msg_len && msg_len <= cap {
+                core::ptr::copy_nonoverlapping((*s).rd_msg_buf.as_ptr().add(p), buf, msg_len);
+                (*s).rd_msg_off = p + msg_len;
+                return msg_len as c_int;
+            }
+            return -1;
+        }
+
+        // Read one record. `SSL3_RT_CHANGE_CIPHER_SPEC` (20) records are interleaved by middleware
+        // compatibility and skipped; any other non-handshake record is not part of the flight.
+        loop {
+            let mut rt = 0u8;
+            let n = ssl3_read_bytes(
+                s,
+                &mut rt,
+                (*s).rd_msg_buf.as_mut_ptr(),
+                (*s).rd_msg_buf.len(),
+            );
+            if n <= 0 {
+                return -1;
+            }
+            (*s).rd_msg_len = n as usize;
+            (*s).rd_msg_off = 0;
+            match rt {
+                22 => break,    // SSL3_RT_HANDSHAKE
+                20 => continue, // SSL3_RT_CHANGE_CIPHER_SPEC
+                _ => return -1,
+            }
+        }
+
+        if (*s).rd_msg_len < 4 {
+            return -1;
+        }
+        let blen = (((*s).rd_msg_buf[1] as usize) << 16)
+            | (((*s).rd_msg_buf[2] as usize) << 8)
+            | ((*s).rd_msg_buf[3] as usize);
+        let msg_len = 4 + blen;
+        if msg_len > (*s).rd_msg_len || msg_len > cap {
+            return -1;
+        }
+        core::ptr::copy_nonoverlapping((*s).rd_msg_buf.as_ptr(), buf, msg_len);
+        (*s).rd_msg_off = msg_len;
+        msg_len as c_int
+    }
+}
+
 /// `RECORD_LAYER_write_pending(const RECORD_LAYER *rl)` — `ssl/record/rec_layer_s3.c:114-117`.
 ///
 /// The authority's macro reads `rl->wpend_tot`, the pending write's byte count; a fresh connection
@@ -249,6 +336,8 @@ pub(crate) unsafe fn record_layer_read_pending(_s: *const Ssl) -> c_int {
     0
 }
 
+/// `SSL3_RT_APPLICATION_DATA` — `ssl3.h` (23): the outer type of every TLS 1.3 protected record.
+const SSL3_RT_APPLICATION_DATA: u8 = 23;
 /// `SSL_ST_READ_HEADER` — `ssl.h:1113`.
 const SSL_ST_READ_HEADER: c_int = 0xF0;
 /// `SSL_ST_READ_BODY` — `ssl.h:1114`.

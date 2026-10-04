@@ -11,12 +11,12 @@
         "what": "the 52 `openssl` command bodies over libcrypto/libssl"
       },
       {
-        "closure": "the `RT-TLS13-INTEROP` court passes",
-        "observation": "RT-TLS13-INTEROP is pass",
+        "closure": "the `RT-TLS13-INTEROP-MATRIX` court passes",
+        "observation": "RT-TLS13-INTEROP-MATRIX is pass",
         "state": "implemented",
         "surface": "artifacts/phase17/COURTS.json",
         "unit": "tls13-interop",
-        "what": "a real TLS 1.3 client/server flight, ClientHello through Finished plus application data"
+        "what": "a real TLS 1.3 client/server flight, ClientHello through Finished plus application data, over all four authority/candidate client-server cells"
       },
       {
         "closure": "the `RT-CROSS-DSO-STATE` court passes",
@@ -82,7 +82,7 @@
     {
       "name": "phase-17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "400f40c27471661108740833659c951caaf8f9a96bb975aa0c85ecb297be0bda"
+      "sha256": "b916509009c5940dbe33fb897cb077153cc23f82ff3113ba2a2b826f5ae07fb0"
     }
   ],
   "kind": "phase17-obligations",

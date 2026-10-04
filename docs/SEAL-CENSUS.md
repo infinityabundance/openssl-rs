@@ -533,7 +533,7 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 ## Phase 17 — Downstream replacement court
 
 * state: `in-progress`
-* blocking: Phase 17's FRF chain entry is incomplete: 4 court(s) that artifacts/phase17/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 4 of 4 required court(s) have no FRF declaration staging their artifacts/phase17/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 4 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 4 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 4 required court(s)
+* blocking: Phase 17's FRF chain entry is incomplete: 5 court(s) that artifacts/phase17/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 5 of 5 required court(s) have no FRF declaration staging their artifacts/phase17/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 5 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 5 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 5 required court(s)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase17-obligations.json`
 * atlas-owned: 0
@@ -542,12 +542,13 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 * deferred to a later stratum with a stated reason: 0
 * **open in this stratum: 0**
 
-Courts: `all pass`, 4 court(s), **951** authority observation(s) over 4 transcript court(s).
+Courts: `all pass`, 5 court(s), **1105** authority observation(s) over 5 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-CLI-BODIES | `pass` | 805 |
 | RT-TLS13-INTEROP | `pass` | 69 |
+| RT-TLS13-INTEROP-MATRIX | `pass` | 154 |
 | RT-CROSS-DSO-STATE | `pass` | 18 |
 | RT-DOWNSTREAM-CONSUMER | `pass` | 59 |
 
