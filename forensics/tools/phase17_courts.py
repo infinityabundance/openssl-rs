@@ -1,40 +1,60 @@
 #!/usr/bin/env python3
 """openssl-rs — Phase 17 courts: the downstream replacement court.
 
-Each court is a C probe in `courts/phase17/` compiled **twice** — once against the admitted
-authority, once against the candidate distribution shell — and run. The two transcripts are compared
-line by line, keyed on `key=value`, and every difference is a residual. The method is Phases 3
-through 16's, for the same reason: a probe measures what the authority actually does, and the
+Each court is a probe in `courts/phase17/` run **twice** — once against the admitted authority,
+once against the candidate distribution shell — and the two transcripts are compared line by
+line, keyed on `key=value`, and every difference is a residual. The method is Phases 3 through
+16's, for the same reason: a probe measures what the authority actually does, and the
 comparison is between two *executions* of the same program, so the expectation cannot drift.
+
+`RT-CLI-BODIES`, and what it compares
+-------------------------------------
+17.1's court. Its subject is the CLI *executable*, which cannot be linked into a C probe, so
+its instrument is the shell probe `courts/phase17/rt_cli_bodies_probe.sh` (staged as the
+`artifacts/phase17/probes/rt_cli_bodies_probe.{authority,candidate}` pair the FRF runtime
+harness runs, exactly as 16.4's `rt-cli` pair is). It drives the first landed command body,
+`apps/errstr.c` (`src/apps/errstr.rs`), over a fixed argv: the option parser's end-of-options
+boundary, the `sscanf("%lx")` success and failure arms, the failure-count exit status, and
+`ERR_error_string_n`'s rendering over fixed packed error codes. The command's `-help` arm is
+not driven: `opt_help` is the boundary `src/apps/opt.rs` records, so it reaches `not_landed`
+rather than the authority's table, exactly as `help`/`list`/`version` do.
+
+**One input is recorded rather than diffed.** `errstr 0xdeadbeef` renders an unknown *system*
+error, and the candidate diverges there: the authority's `openssl_strerror_r`
+(`crypto/o_str.c`, the POSIX `strerror_r`) refuses the out-of-range errno and falls back to
+`reason(r & ~flags)`, while the crate's `strerror_into` (`src/runtime/err.rs`) calls the GNU
+`strerror_r`, which answers `Unknown error N`. That defect is in the `ERR` surface, not the
+`errstr` body, so the court drives every other arm and records the divergent input in
+`recorded_divergences` rather than diffing it as a residual (the convention `src/apps/errstr.rs`
+and Phases 13 through 16 use for a recorded divergence).
 
 The pending courts
 ------------------
-None of the four courts the plan names is runnable at activation. This stratum owns no exported
-symbol, so no differential probe over a symbol set is its evidence; its first runnable court is a
-later subphase's, and `COURTS` is therefore empty while `PENDING_COURTS` names each court with the
-subphase that lands its probe:
+Three of the four courts the plan names are still not runnable at 17.1 and are named in
+`PENDING_COURTS` with the subphase that lands each:
 
-  * `RT-CLI-BODIES` (17.1) — the 52 `apps/<name>.c` command bodies behind the
-    `src/apps/openssl.rs` dispatcher and its generated `src/apps/tables.rs` option tables;
   * `RT-TLS13-INTEROP` (17.2) — a real TLS 1.3 client/server flight, ClientHello through Finished
     plus an application-data exchange, over the record layer, the extension units and the key
     schedule (D530's first entrance criterion);
   * `RT-CROSS-DSO-STATE` (17.3) — an error raised through the libssl path and read through the
-    libcrypto path (and the same for `CONF`), requiring one queue across the candidate's whole-crate
-    archives, where the authority shares one `libcrypto.so.3` via `DT_NEEDED` (D530's second);
+    libcrypto path (and the same for `CONF`), requiring one queue across the candidate's
+    whole-crate archives, where the authority shares one `libcrypto.so.3` via `DT_NEEDED` (D530's
+    second);
   * `RT-DOWNSTREAM-CONSUMER` (17.4) — a real downstream consumer built against the candidate
     distribution shell the way an out-of-tree package links it.
 
 The runner reads no obligations ledger: the ledger's contract-unit states are measured from this
 registry, so the edge runs ledger -> courts and binding it back would form a digest cycle neither
-artefact could reproduce. `docs/PHASE-17-SUBPHASES.md` section 4.2 is the precondition. No court is
-registered in `gen_frf_courts.py`: that registry is the stratum's seal.
+artefact could reproduce. `docs/PHASE-17-SUBPHASES.md` section 4.2 is the precondition. **No
+court is registered in `gen_frf_courts.py`**: that registry is the stratum's seal, and Phase 16
+registered its six courts there only at the seal (16.6), exactly as section 4.2 records.
 
 SPDX-License-Identifier: Apache-2.0"""
 
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -47,6 +67,7 @@ from atlas_common import (  # noqa: E402
     envelope,
     rel,
     resolve_authority,
+    run,
     write_json,
 )
 
@@ -54,22 +75,53 @@ OUT = REPO_ROOT / "artifacts" / "phase17" / "COURTS.json"
 GENERATOR = "forensics/tools/phase17_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-17-SUBPHASES.md"
 PREREQUISITES = REPO_ROOT / "forensics" / "prerequisites.json"
+PROBE_DIR = REPO_ROOT / "courts" / "phase17"
+PHASE2 = REPO_ROOT / "artifacts" / "phase2"
+STAGED = REPO_ROOT / "artifacts" / "phase17" / "probes"
+RUN_TIMEOUT_S = "60"
+
+AUTH_PREFIX = REPO_ROOT / "forensics" / "authorities" / "prefix" / "openssl-3.6.4-production"
 
 # The differential courts, in the order they land. `(name, probe filename)`, and the probe is
 # declared in the same commit as the entry, so a runner that names a probe which does not exist
-# cannot be committed. **Empty at activation**: this stratum owns no symbol for a differential probe
-# to observe, so its first runnable court is a later subphase's.
-COURTS: list[tuple[str, str]] = []
+# cannot be committed.
+COURTS: list[tuple[str, str]] = [
+    ("RT-CLI-BODIES", "rt_cli_bodies_probe.sh"),
+]
+
+# The fixed argv `RT-CLI-BODIES` drives on both sides. Every case is build-independent and
+# deterministic: the `errstr` body's own arms -- a run of six arguments (five decode, `nothex`
+# fails, so the exit status is 1), the no-argument run, and a single decode. The seventh argument
+# of the parity set, `0xdeadbeef`, is named in `RECORDED_DIVERGENCES` and not driven.
+BODIES_ARGV: list[list[str]] = [
+    ["errstr", "0x03000041", "0x0308010C", "0x0A000041", "1", "0x00000000", "nothex"],
+    ["errstr"],
+    ["errstr", "0x00000000"],
+]
+
+# A divergence the court records rather than diffs: `ERR_error_string_n` on an unknown *system*
+# error. This is the `ERR` surface's (`src/runtime/err.rs`), not the `errstr` body's, so the court
+# drives every other arm and names this input instead of failing on it -- the same shape Phases 13
+# through 16 use for a recorded divergence.
+RECORDED_DIVERGENCES: list[dict] = [
+    {
+        "argv": "errstr 0xdeadbeef",
+        "authority": "error:DEADBEEF:system library::reason(1585561327)",
+        "candidate": "error:DEADBEEF:system library::Unknown error 1588444911",
+        "reason": (
+            "`ERR_error_string_n` on an unknown system error: the authority's "
+            "`openssl_strerror_r` (`crypto/o_str.c`, the POSIX `strerror_r`) refuses the "
+            "out-of-range errno and falls back to `reason(r & ~flags)`, while the crate's "
+            "`strerror_into` (`src/runtime/err.rs`) calls the GNU `strerror_r`, which answers "
+            "`Unknown error N`. Recorded here rather than diffed; see `src/apps/errstr.rs`."
+        ),
+    }
+]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the probe and what the court will drive, so "nothing registered" is a stated distance rather than
 # a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-CLI-BODIES": (
-        "17.1 lands the probe; it drives the 52 `apps/<name>.c` command bodies behind the "
-        "src/apps/openssl.rs dispatcher and its generated src/apps/tables.rs option tables, and "
-        "compares the authority's and the candidate's transcripts"
-    ),
     "RT-TLS13-INTEROP": (
         "17.2 lands the probe; it drives a real TLS 1.3 client/server flight, ClientHello through "
         "Finished plus an application-data exchange, and compares the two transcripts"
@@ -85,6 +137,189 @@ PENDING_COURTS: dict[str, str] = {
 }
 
 
+def side_env(libdir: Path, modulesdir: Path) -> dict[str, str]:
+    """The environment a probe runs under on one side.
+
+    `OPENSSL_MODULES` points at that side's own `ossl-modules/`; `LD_LIBRARY_PATH` fixes the DSO
+    the probe resolves against, and `OPENSSL_CONF=/dev/null` keeps the host's configuration out of
+    a deterministic transcript.
+    """
+    env = dict(os.environ)
+    env["LD_LIBRARY_PATH"] = str(libdir)
+    env["OPENSSL_MODULES"] = str(modulesdir)
+    env["OPENSSL_CONF"] = "/dev/null"
+    env.pop("OPENSSL_CONF_INCLUDE", None)
+    return env
+
+
+def run_probe(binary: Path, env: dict[str, str]) -> tuple[str, str, int | None]:
+    res = run(["timeout", RUN_TIMEOUT_S, str(binary)], env=env)
+    code = res.returncode
+    if code == 124:
+        return res.stdout, res.stderr, None
+    return res.stdout, res.stderr, code
+
+
+def diff(authority: str, candidate: str) -> list[dict]:
+    """Line-wise comparison keyed on `key=value`, so a missing or extra line produces exactly one
+    residual instead of shifting every following line."""
+    def parse(text: str) -> tuple[list[str], dict[str, str]]:
+        order: list[str] = []
+        values: dict[str, str] = {}
+        for line in text.splitlines():
+            if "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            if key not in values:
+                order.append(key)
+                values[key] = value
+            else:
+                values[key] = f"{values[key]}|{value}"
+        return order, values
+
+    a_order, a = parse(authority)
+    c_order, c = parse(candidate)
+    residuals: list[dict] = []
+    for key in a_order:
+        if key not in c:
+            residuals.append({"observation": key, "authority": a[key],
+                              "candidate": None, "class": "missing"})
+        elif a[key] != c[key]:
+            residuals.append({"observation": key, "authority": a[key],
+                              "candidate": c[key], "class": "value"})
+    for key in c_order:
+        if key not in a:
+            residuals.append({"observation": key, "authority": None,
+                              "candidate": c[key], "class": "extra"})
+    return residuals
+
+
+def render_probe(cases: list[list[str]]) -> str:
+    """The shell probe `RT-CLI-BODIES` runs on each side.
+
+    The subject is the CLI *executable*, which cannot be linked into a C probe, so the instrument
+    is a shell program: it drives `$1` (this side's `openssl`) over the fixed argv below and prints
+    the same `case.N.*` transcript the court venue diffs -- key=value, newline -> `|`, CR -> `^`,
+    computed identically on both sides. `$2` is the side's `ossl-modules/`, so the probe is
+    self-contained under the FRF runtime harness, which sets only `LD_LIBRARY_PATH` and not
+    `OPENSSL_MODULES`.
+    """
+    body = "\n".join(" ".join(argv) for argv in cases)
+    head = '''#!/bin/sh
+# openssl-rs RT-CLI-BODIES probe: drive one side's `openssl` over the court's fixed `errstr`
+# argv and print one `case.N.*` line per observation. `$1` is the side's `openssl`, `$2` its
+# `ossl-modules/`; the fixture (`probe-list.txt`) names this probe, which is what makes it
+# challengeable (docs/DECISIONS.md D13).
+#
+# It is a shell probe rather than a compiled C program because the subject is the CLI
+# *executable*, which is not linkable. The transcript format matches the court venue's
+# `cli_transcript`: key=value, newline -> `|`, CR -> `^`.
+#
+# `errstr 0xdeadbeef` is deliberately absent: it renders an unknown system error, whose
+# `ERR_error_string_n` value diverges (see `forensics/tools/phase17_courts.py`'s
+# RECORDED_DIVERGENCES and `src/apps/errstr.rs`).
+set -u
+BIN="${1:?usage: rt_cli_bodies_probe.sh <openssl> <ossl-modules>}"
+MODULES="${2:-}"
+if [ -n "$MODULES" ]; then
+    OPENSSL_MODULES="$MODULES"
+    export OPENSSL_MODULES
+fi
+i=0
+while IFS= read -r argv; do
+    [ -n "$argv" ] || continue
+    case "$argv" in \\#*) continue ;; esac
+    out=$(mktemp)
+    err=$(mktemp)
+    # shellcheck disable=SC2086
+    "$BIN" $argv >"$out" 2>"$err"
+    code=$?
+    so=$(tr '\\n' '|' <"$out" | tr '\\r' '^')
+    se=$(tr '\\n' '|' <"$err" | tr '\\r' '^')
+    rm -f "$out" "$err"
+    printf 'case.%s.argv=%s\\n' "$i" "$argv"
+    printf 'case.%s.exit=%s\\n' "$i" "$code"
+    printf 'case.%s.stdout=%s\\n' "$i" "$so"
+    printf 'case.%s.stderr=%s\\n' "$i" "$se"
+    i=$((i + 1))
+done <<'ARGS'
+'''
+    return head + body + "\nARGS\n"
+
+
+def stage_probe(cases: list[list[str]]) -> Path:
+    """Write the `RT-CLI-BODIES` shell probe and the two per-side shims, and return the source.
+
+    The shims are the staged `artifacts/phase17/probes/rt_cli_bodies_probe.{authority,candidate}`
+    pair the FRF runtime harness runs: each execs the shared source with its own side's `openssl`
+    and `ossl-modules/` path, so one probe source serves both sides.
+    """
+    source = PROBE_DIR / "rt_cli_bodies_probe.sh"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(render_probe(cases), encoding="utf-8")
+    STAGED.mkdir(parents=True, exist_ok=True)
+    sides = {
+        "authority": (
+            AUTH_PREFIX / "bin" / "openssl",
+            AUTH_PREFIX / "lib" / "ossl-modules",
+        ),
+        "candidate": (
+            PHASE2 / "openssl",
+            PHASE2 / "install" / "lib" / "ossl-modules",
+        ),
+    }
+    for side, (binary, modules) in sides.items():
+        shim = STAGED / f"rt_cli_bodies_probe.{side}"
+        shim.write_text(
+            "#!/bin/sh\n"
+            f"exec /bin/sh /work/courts/phase17/rt_cli_bodies_probe.sh {binary} {modules}\n",
+            encoding="utf-8",
+        )
+        shim.chmod(0o755)
+    return source
+
+
+def bodies_court(name: str) -> dict:
+    """`RT-CLI-BODIES`: the `errstr` command body over fixed argv, differentially.
+
+    The instrument is the shell probe `stage_probe` writes -- the CLI is an executable, not a
+    linkable symbol -- run once per side under the same environment the FRF runtime harness uses,
+    so the court venue and the FRF court share one probe rather than two transcript generators
+    that could drift.
+    """
+    cases = [list(argv) for argv in BODIES_ARGV]
+    source = stage_probe(cases)
+    a_out, a_err, a_code = run_probe(
+        STAGED / "rt_cli_bodies_probe.authority",
+        side_env(AUTH_PREFIX / "lib", AUTH_PREFIX / "lib" / "ossl-modules"),
+    )
+    c_out, c_err, c_code = run_probe(
+        STAGED / "rt_cli_bodies_probe.candidate",
+        side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules"),
+    )
+    residuals = diff(a_out, c_out)
+    return {
+        "court": name,
+        "probe": rel(source),
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "argv_cases": len(cases),
+        "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
+        "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
+        "residual_count": len(residuals),
+        "residuals": residuals[:24],
+        "recorded_divergences": RECORDED_DIVERGENCES,
+        "verdict": (
+            "pass" if not residuals and a_code == c_code else "fail"
+        ),
+        "staged_binaries": {
+            "authority": rel(STAGED / "rt_cli_bodies_probe.authority"),
+            "candidate": rel(STAGED / "rt_cli_bodies_probe.candidate"),
+        },
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
@@ -95,10 +330,14 @@ def main(argv: list[str]) -> int:
     work = REPO_ROOT / "court" / "phase17"
     work.mkdir(parents=True, exist_ok=True)
 
-    # No court is runnable at activation, so the registry is empty and every planned court is
-    # `pending`. The runner still has to exist and write this file: `run_courts.py` refuses a
-    # stratum in `in-progress` with no runner, and a committed courts file no run reproduces.
     records: list[dict] = []
+    for name, filename in COURTS:
+        src = PROBE_DIR / filename
+        if not src.is_file() and name != "RT-CLI-BODIES":
+            records.append({"court": name, "verdict": "fail",
+                            "stage": "probe-missing", "detail": rel(src)})
+            continue
+        records.append(bodies_court(name))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
@@ -108,20 +347,27 @@ def main(argv: list[str]) -> int:
         "summary": {"total": len(records), "pass": passed, "fail": len(records) - passed},
         "pending_courts": PENDING_COURTS,
         "claim": (
-            "Phase 17's four courts are named and `pending`; none is registered as passing at "
-            "activation. `RT-CLI-BODIES` is 17.1's: it drives the 52 `apps/<name>.c` command "
-            "bodies behind the src/apps/openssl.rs dispatcher and its generated "
-            "src/apps/tables.rs option tables. `RT-TLS13-INTEROP` is 17.2's: it drives a real TLS "
-            "1.3 client/server flight, ClientHello through Finished plus an application-data "
-            "exchange, over the record layer, the extension units "
-            "(ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule "
+            "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and "
+            "the candidate distribution shell's over a fixed `errstr` argv, comparing the two "
+            "transcripts line by line -- the option parser's end-of-options boundary, the "
+            "`sscanf(\"%lx\")` success and failure arms, the failure-count exit status and "
+            "`ERR_error_string_n`'s rendering over fixed packed error codes -- through the shell "
+            "probe `courts/phase17/rt_cli_bodies_probe.sh`, the per-side staged pair the FRF "
+            "runtime harness runs. The `-help` arm is not driven (`opt_help` is unlanded), and "
+            "`errstr 0xdeadbeef`, an unknown system error whose `ERR_error_string_n` value "
+            "diverges, is recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` "
+            "is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through "
+            "Finished plus an application-data exchange, over the record layer, the extension "
+            "units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule "
             "(ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. "
             "`RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it "
             "through the libcrypto path (and the same for CONF), requiring one queue across the "
             "candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via "
             "DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer "
             "against the candidate distribution shell. This stratum owns no exported symbol, so no "
-            "differential probe over a symbol set is its evidence. docs/PHASE-17-SUBPHASES.md "
+            "differential probe over a symbol set is its evidence. No court is registered in "
+            "forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), "
+            "as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md "
             "sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530)."
         ),
     }
@@ -129,11 +375,21 @@ def main(argv: list[str]) -> int:
     inputs = [
         InputRef(name="phase-17-plan", path=PLAN),
         InputRef(name="prerequisites", path=PREREQUISITES),
+        InputRef(name="probe", path=PROBE_DIR / "rt_cli_bodies_probe.sh"),
     ]
     doc = envelope(kind="phase17-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)
 
+    for r in records:
+        if r["verdict"] == "pass":
+            print(f"  {r['court']:<18} pass   ({r['authority_observations']} observations, "
+                  f"{len(r.get('recorded_divergences', []))} recorded divergence(s))")
+        else:
+            print(f"  {r['court']:<18} FAIL   stage={r.get('stage', 'compare')}")
+            for res in r.get("residuals", [])[:12]:
+                print(f"      {res['observation']}: authority={res['authority']!r} "
+                      f"candidate={res['candidate']!r} ({res['class']})")
     for name, needs in PENDING_COURTS.items():
         print(f"  {name:<24} PENDING (not registered as passing) -- {needs}")
     print(f"  -> {rel(OUT)} all_pass={body['all_pass']} over {len(records)} court(s)")

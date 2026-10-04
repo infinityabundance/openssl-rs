@@ -11,10 +11,11 @@
 //! `main`'s global `-help`/`-version` arm, `prog_init`'s table sort, `do_cmd`'s
 //! table lookup, its `no-` "is this feature unsupported" arm, its
 //! `Invalid command` arm and its deprecated-command warning are transcribed
-//! whole. Three command bodies are landed because their output is
-//! build-independent and the court drives them — `help` (this module), `list`
-//! ([`crate::apps::list`]) and `version` ([`crate::apps::version`]). **Every other
-//! command name is present in the table and dispatches, but its body
+//! whole. Four command bodies are landed: `help` (this module), `list`
+//! ([`crate::apps::list`]) and `version` ([`crate::apps::version`]) from Phase
+//! 16.4, whose output is build-independent, and `errstr` ([`crate::apps::errstr`])
+//! from Phase 17.1, the first of the 52 command bodies that stratum lands. **Every
+//! other command name is present in the table and dispatches, but its body
 //! (`apps/<name>.c`) is a unit this stratum does not own**, so it reaches
 //! [`not_landed`] rather than printing a wrong body.
 //!
@@ -34,6 +35,7 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::apps::errstr;
 use crate::apps::list;
 use crate::apps::opt::{progname, OptMatch, Opts};
 use crate::apps::tables::{Func, FuncKind, FUNCTIONS, HELP_OPTIONS};
@@ -153,6 +155,7 @@ fn do_cmd(argv: &[String]) -> i32 {
             warn_deprecated(fp);
         }
         return match fp.name {
+            "errstr" => errstr::main(argv),
             "help" => help_main(argv),
             "list" => list::main(argv),
             "version" => version::main(argv),
