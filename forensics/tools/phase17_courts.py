@@ -59,7 +59,11 @@ prefix on an otherwise identical config error), `genrsa -bogus`
 tail), `rsa`/`dsa -modulus` (the `BN_print` rendering) and the `rsautl` operation arm
 (random/binary output), plus 17.1e's: the `rand` random-stream arms, the `gendsa`/`genpkey`/
 `dhparam` generation arms (not landed; random or pointer-bearing), the `passwd` random-salt arm,
-and the `engine` listing/`-pre` arms (the candidate's engine init fails). They are named in
+and the `engine` listing/`-pre` arms (the candidate's engine init fails), plus 17.1f's: the
+`dgst -bogus`/`-list`/`-mac` arms, `pkcs7 -print`, `ocsp -bogus` and its responder/verification
+arms, a `ts` query without `-no_nonce` and `-reply`/`-verify`, the whole `speed` benchmark (and
+its `-evp`/`-hmac` pointer-bearing refusals), `fipsinstall -module`/`-config` and the `srp`
+action arms. They are named in
 `RECORDED_DIVERGENCES` and every other arm is
 driven, the convention `src/apps/errstr.rs` and Phases 13 through 16 use for a recorded
 divergence.
@@ -281,6 +285,39 @@ BODIES_ARGV: list[list[str]] = [
      "000102030405060708090a0b0c0d0e0f", "-in", f"{_BODIES_FIXTURES}/small.bin", "-nopad"],
     ["enc", "-aes-128-cbc", "-K", "000102030405060708090a0b0c0d0e0f", "-iv",
      "000102030405060708090a0b0c0d0e0f", "-in", f"{_BODIES_FIXTURES}/small.bin", "-P", "-nosalt"],
+    # 17.1f: dgst / pkcs7 / ocsp / ts / speed / fipsinstall / srp.
+    ["dgst", "-sha256", f"{_BODIES_FIXTURES}/small.bin"],
+    ["dgst", "-sha256", "-hex", f"{_BODIES_FIXTURES}/small.bin"],
+    ["dgst", "-sha256", "-binary", f"{_BODIES_FIXTURES}/small.bin"],
+    ["dgst", "-sha256", "-c", f"{_BODIES_FIXTURES}/small.bin"],
+    ["dgst", "-sha256", "-r", f"{_BODIES_FIXTURES}/small.bin"],
+    ["dgst", "-hmac", "secret", f"{_BODIES_FIXTURES}/small.bin"],
+    ["dgst", "-sha256", "-hmac", "secret", f"{_BODIES_FIXTURES}/small.bin"],
+    ["dgst", "-sha256", "-sign", f"{_BODIES_FIXTURES}/rsa-key.pem",
+     f"{_BODIES_FIXTURES}/small.bin"],
+    ["dgst", "-sha256", "-verify", f"{_BODIES_FIXTURES}/rsa-pub.pem", "-signature",
+     f"{_BODIES_FIXTURES}/dgst.sig", f"{_BODIES_FIXTURES}/small.bin"],
+    ["pkcs7", "-in", f"{_BODIES_FIXTURES}/p7.pem"],
+    ["pkcs7", "-print_certs", "-in", f"{_BODIES_FIXTURES}/p7.pem"],
+    ["pkcs7", "-print_certs", "-quiet", "-in", f"{_BODIES_FIXTURES}/p7.pem"],
+    ["pkcs7", "-in", f"{_BODIES_FIXTURES}/p7.pem", "-outform", "DER"],
+    ["ocsp"],
+    ["ocsp", "-issuer", f"{_BODIES_FIXTURES}/ca.pem", "-cert",
+     f"{_BODIES_FIXTURES}/leaf.pem", "-no_nonce", "-reqout", "/dev/stdout"],
+    ["ocsp", "-issuer", f"{_BODIES_FIXTURES}/ca.pem", "-cert",
+     f"{_BODIES_FIXTURES}/leaf.pem", "-no_nonce", "-req_text", "-out", "/dev/stdout"],
+    ["ts"],
+    ["ts", "-query", "-reply"],
+    ["ts", "-bogus"],
+    ["ts", "-query", "-no_nonce", "-data", f"{_BODIES_FIXTURES}/small.bin"],
+    ["ts", "-query", "-no_nonce", "-data", f"{_BODIES_FIXTURES}/small.bin", "-text"],
+    ["speed", "-bogus"],
+    ["fipsinstall"],
+    ["fipsinstall", "-verify"],
+    ["srp"],
+    ["srp", "-list", "-add"],
+    ["srp", "-add"],
+    ["srp", "-srpvfile", "x", "-config", "y"],
 ]
 
 # Divergences the court records rather than diffs: an output decided by a surface this stratum
@@ -615,6 +652,126 @@ RECORDED_DIVERGENCES: list[dict] = [
             "driven. Recorded here rather than diffed; see `src/apps/dhparam.rs`."
         ),
     },
+    {
+        "argv": "dgst -bogus <file>",
+        "authority": "dgst: Unknown option or message digest: bogus|dgst: Use -help for summary.|<ptr>:error:0308010C:...inner_evp_generic_fetch:unsupported...(bogus : 0)",
+        "candidate": "dgst: Unknown option or message digest: bogus|dgst: Use -help for summary.|",
+        "reason": (
+            "The `-bogus` sentinel arm: both sides print the same refusal, but the "
+            "authority's `opt_md_silent` (`apps/lib/opt.c:470-489`) leaves "
+            "`inner_evp_generic_fetch:unsupported` in the queue and `dgst_main`'s "
+            "`end:` label calls `ERR_print_errors`, so its stderr carries a "
+            "pointer-bearing tail the candidate's empty queue does not. The "
+            "`-sha256` fetch resolves, so every digest arm is diffed. Recorded here "
+            "rather than diffed; see `src/apps/dgst.rs`."
+        ),
+    },
+    {
+        "argv": "dgst -list",
+        "authority": "Supported digests:|<the fetched digest names>|",
+        "candidate": "<not landed>",
+        "reason": (
+            "`show_digests` (`apps/dgst.c:521-549`) walks `OBJ_NAME_do_all_sorted` "
+            "and fetches each name through `EVP_MD_fetch`, the fetch/legacy-provider "
+            "surface `ciphers` records. The digest/HMAC/sign arms are driven. "
+            "Recorded here rather than diffed; see `src/apps/dgst.rs`."
+        ),
+    },
+    {
+        "argv": "dgst -mac <name>",
+        "authority": "<the MAC value over the named MAC>",
+        "candidate": "<not landed>",
+        "reason": (
+            "`-mac` builds a MAC through `init_gen_str`/`app_keygen` "
+            "(`apps/dgst.c:327-349`), whose EVP-`MAC` generation path is other "
+            "strata's. The `-hmac` arm, which uses the raw HMAC key, is driven. "
+            "Recorded here rather than diffed; see `src/apps/dgst.rs`."
+        ),
+    },
+    {
+        "argv": "pkcs7 -print <p7>",
+        "authority": "PKCS7:|  type: pkcs7-signedData|...|          issuer: C=AU, ST=QLD, CN=SSLeay rsa test cert|...|          key: X509_PUBKEY:",
+        "candidate": "PKCS7:|  type: pkcs7-signedData|...|          issuer:           validity:|...|          key: X509_PUBKEY_INTERNAL:",
+        "reason": (
+            "`PKCS7_print_ctx` walks `ASN1_item_print` into the certificate's own "
+            "printer, so the issuer/subject name rendering and the public-key "
+            "type line are the `X509_print`/`X509_PUBKEY` surface's (the same "
+            "divergence `sess_id -text -cert` records). The `-print_certs` and "
+            "re-encode arms avoid it and are driven. Recorded here rather than "
+            "diffed; see `src/apps/pkcs7.rs`."
+        ),
+    },
+    {
+        "argv": "ocsp -bogus",
+        "authority": "ocsp: Unknown option or message digest: bogus|ocsp: Use -help for summary.|<ptr>:error:0308010C:...inner_evp_generic_fetch:unsupported...(bogus : 0)",
+        "candidate": "ocsp: Unknown option or message digest: bogus|ocsp: Use -help for summary.|",
+        "reason": (
+            "As `dgst -bogus`: the authority's `opt_md` leaves the pointer-bearing "
+            "`unsupported` fetch error and `ocsp_main`'s `end:` label prints it. The "
+            "no-work refusal and the fixed-CA/leaf request arms are driven. "
+            "Recorded here rather than diffed; see `src/apps/ocsp.rs`."
+        ),
+    },
+    {
+        "argv": "ocsp <responder/verification arms>",
+        "authority": "<a response, printing or verifying status>",
+        "candidate": "<not landed>",
+        "reason": (
+            "`-index`/`-CA` (`load_index`), `-port`/`-url`/`-host` (a live server "
+            "or `OSSL_HTTP`), `-respin`/`-rsigner`/`-rkey`/`-CAfile` verification "
+            "and `-signer`/`-signkey` request signing need a responder or a "
+            "network, so they cannot be diffed deterministically. The fixed "
+            "`-issuer`/`-cert` request arms are driven. Recorded here rather than "
+            "diffed; see `src/apps/ocsp.rs`."
+        ),
+    },
+    {
+        "argv": "ts -query (no -no_nonce) / ts -reply / ts -verify",
+        "authority": "<a query with a random nonce, or a TSA response/verification>",
+        "candidate": "<not landed>",
+        "reason": (
+            "A query without `-no_nonce` draws a random nonce through "
+            "`create_nonce`; `-reply`/`-verify` need the TSA config section, "
+            "`EVP_PKEY` signing and certificate verification. The "
+            "`-query -no_nonce -data <file>` arm (DER and `-text`) is driven. "
+            "Recorded here rather than diffed; see `src/apps/ts.rs`."
+        ),
+    },
+    {
+        "argv": "speed / speed -evp <alg> / speed -hmac <md> / speed -bogus",
+        "authority": "<a wall-clock benchmark>|<ptr>:error:...",
+        "candidate": "speed: Use -help for summary.| or <not landed>",
+        "reason": (
+            "The benchmark is a function of the machine and is never driven; "
+            "`-evp NOPE`/`-hmac NOPE` also carry the pointer-bearing fetch tail "
+            "(`opt_md_silent`) that the candidate's empty queue does not. `speed "
+            "-bogus`, decided before any fetch, is driven. Recorded here rather "
+            "than diffed; see `src/apps/speed.rs`."
+        ),
+    },
+    {
+        "argv": "fipsinstall -module <f> / -config <f>",
+        "authority": "<the module MAC and INSTALL VERIFY PASSED>",
+        "candidate": "<not landed>",
+        "reason": (
+            "`do_mac` over the module BIO, `EVP_MAC_fetch`, the self-test provider "
+            "load and the config writer are the FIPS module's and the provider "
+            "surface's. The `fipsinstall`/`-verify`/`-bogus` refusals are driven. "
+            "Recorded here rather than diffed; see `src/apps/fipsinstall.rs`."
+        ),
+    },
+    {
+        "argv": "srp -list / -add <user> (index file)",
+        "authority": "<the listed users, or a written verifier>",
+        "candidate": "<not landed>",
+        "reason": (
+            "The action arms load a verifier-file index through "
+            "`load_index`/`index_index` and the `CA_DB` type (`apps/lib/apps.c`), "
+            "which this stratum does not own. The `srp`/`-add`/`-list -add`/"
+            "`-srpvfile -config` refusals are driven. Recorded here rather than "
+            "diffed; see `src/apps/srp.rs`."
+        ),
+    },
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
@@ -735,9 +892,13 @@ def render_probe(cases: list[list[str]]) -> str:
 # `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`,
 # `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl`
 # operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam`
-# generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms) are
-# deliberately absent: each renders a surface this stratum does not own
-# (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command module
+# generation arms, `passwd` without `-salt`, the `engine` listing/`-pre` arms and the
+# 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder,
+# `ts` random-nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`,
+# `fipsinstall -module` and `srp` action arms) are deliberately absent: each renders a
+# surface this stratum does not own
+# (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command
+# module headers).
 # headers).
 set -u
 BIN="${1:?usage: rt_cli_bodies_probe.sh <openssl> <ossl-modules>}"
@@ -904,14 +1065,24 @@ def main(argv: list[str]) -> int:
             "`-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` "
             "over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/"
             "`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the "
-            "candidate's engine init fails. Each "
-            "command's `-help` arm is not driven (`opt_help` is unlanded), and the twenty-nine "
+            "candidate's engine init fails. 17.1f adds seven more bodies over fixed "
+            "fixtures: `dgst` (the digest, `-hex`/`-binary`, `-c`/`-r`, `-hmac`, "
+            "`-sign` and `-verify` arms), `pkcs7` (the re-encode and `-print_certs` "
+            "arms), `ocsp` (the no-work refusal and the fixed-CA/leaf `-reqout`/"
+            "`-req_text` request arms), `ts` (the mode refusals and the "
+            "`-query -no_nonce -data` DER/text arms), `speed` (the `-bogus` "
+            "refusal), `fipsinstall` (the `-verify`/no-module refusals) and `srp` "
+            "(the action-count refusals). Each "
+            "command's `-help` arm is not driven (`opt_help` is unlanded), and the many "
             "divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ "
             "`-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, "
             "`sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, "
             "`genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` "
             "operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` "
-            "generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms -- "
+            "generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms, and "
+            "the 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder, "
+            "`ts` nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`, "
+            "`fipsinstall -module` and `srp` action arms -- "
             "are recorded "
             "in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives "
             "a real TLS 1.3 client/server flight, ClientHello through Finished plus an "

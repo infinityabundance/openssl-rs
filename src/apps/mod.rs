@@ -16,6 +16,8 @@ pub mod configutl;
 pub mod crl;
 pub mod crl2pkcs7;
 pub mod dhparam;
+// 17.1f's seven bodies: dgst, pkcs7, ocsp, ts, speed, fipsinstall and srp.
+pub mod dgst;
 pub mod dsa;
 pub mod dsaparam;
 pub mod ec;
@@ -23,6 +25,7 @@ pub mod ecparam;
 pub mod enc;
 pub mod engine;
 pub mod errstr;
+pub mod fipsinstall;
 pub mod gendsa;
 pub mod genpkey;
 pub mod genrsa;
@@ -35,6 +38,7 @@ pub mod keyio;
 pub mod list;
 pub mod mac;
 pub mod nseq;
+pub mod ocsp;
 // The authority's unit is `apps/openssl.c`, so the crate's file is
 // `apps/openssl.rs` and the module path is `apps::openssl`; the inception is the
 // layout, not a naming accident.
@@ -42,6 +46,7 @@ pub mod nseq;
 pub mod openssl;
 pub mod opt;
 pub mod passwd;
+pub mod pkcs7;
 pub mod pkcs8;
 pub mod pkey;
 pub mod pkeyparam;
@@ -53,11 +58,14 @@ pub mod rsa;
 pub mod rsautl;
 pub mod sess_id;
 pub mod skeyutl;
+pub mod speed;
 pub mod spkac;
+pub mod srp;
 pub mod storeutl;
 // `apps/list.c`'s option-list arm (`-options`) and standard-command listing are
 // the surface 16.4's capture measures; `apps/version.c`'s default arm is
 // build-independent. Both are pulled forward; see their module headers.
 pub mod tables;
+pub mod ts;
 pub mod verify;
 pub mod version;

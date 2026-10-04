@@ -542,11 +542,11 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 * deferred to a later stratum with a stated reason: 0
 * **open in this stratum: 56**
 
-Courts: `all pass`, 1 court(s), **522** authority observation(s) over 1 transcript court(s).
+Courts: `all pass`, 1 court(s), **634** authority observation(s) over 1 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
-| RT-CLI-BODIES | `pass` | 522 |
+| RT-CLI-BODIES | `pass` | 634 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

@@ -17,8 +17,9 @@
 //! `skeyutl`, `configutl`, `pkeyparam`, `nseq` from 17.1b; `crl2pkcs7`, `ciphers`,
 //! `sess_id`, `kdf`, `mac`, `spkac`, `genrsa`, `dsaparam` from 17.1c; and
 //! `asn1parse`, `ecparam`, `rsa`, `dsa`, `ec`, `pkey`, `pkcs8`, `verify`, `crl`,
-//! `rsautl` from 17.1d; and `gendsa`, `rand`, `rehash`, `engine`, `storeutl`,
-//! `dhparam`, `genpkey`, `passwd`, `pkeyutl`, `enc` from 17.1e. **Every other
+//! `rsautl` from 17.1d; `gendsa`, `rand`, `rehash`, `engine`, `storeutl`,
+//! `dhparam`, `genpkey`, `passwd`, `pkeyutl`, `enc` from 17.1e; and `dgst`,
+//! `pkcs7`, `ocsp`, `ts`, `speed`, `fipsinstall`, `srp` from 17.1f. **Every other
 //! command name is present in the table and
 //! dispatches, but its body (`apps/<name>.c`) is a unit this stratum does not
 //! own**, so it reaches [`not_landed`] rather than printing a wrong body.
@@ -44,6 +45,7 @@ use crate::apps::ciphers;
 use crate::apps::configutl;
 use crate::apps::crl;
 use crate::apps::crl2pkcs7;
+use crate::apps::dgst;
 use crate::apps::dhparam;
 use crate::apps::dsa;
 use crate::apps::dsaparam;
@@ -52,6 +54,7 @@ use crate::apps::ecparam;
 use crate::apps::enc;
 use crate::apps::engine;
 use crate::apps::errstr;
+use crate::apps::fipsinstall;
 use crate::apps::gendsa;
 use crate::apps::genpkey;
 use crate::apps::genrsa;
@@ -60,8 +63,10 @@ use crate::apps::kdf;
 use crate::apps::list;
 use crate::apps::mac;
 use crate::apps::nseq;
+use crate::apps::ocsp;
 use crate::apps::opt::{progname, OptMatch, Opts};
 use crate::apps::passwd;
+use crate::apps::pkcs7;
 use crate::apps::pkcs8;
 use crate::apps::pkey;
 use crate::apps::pkeyparam;
@@ -73,9 +78,12 @@ use crate::apps::rsa;
 use crate::apps::rsautl;
 use crate::apps::sess_id;
 use crate::apps::skeyutl;
+use crate::apps::speed;
 use crate::apps::spkac;
+use crate::apps::srp;
 use crate::apps::storeutl;
 use crate::apps::tables::{Func, FuncKind, FUNCTIONS, HELP_OPTIONS};
+use crate::apps::ts;
 use crate::apps::verify;
 use crate::apps::version;
 
@@ -198,6 +206,7 @@ fn do_cmd(argv: &[String]) -> i32 {
             "configutl" => configutl::main(argv),
             "crl" => crl::main(argv),
             "crl2pkcs7" => crl2pkcs7::main(argv),
+            "dgst" => dgst::main(argv),
             "dhparam" => dhparam::main(argv),
             "dsa" => dsa::main(argv),
             "dsaparam" => dsaparam::main(argv),
@@ -206,6 +215,7 @@ fn do_cmd(argv: &[String]) -> i32 {
             "enc" => enc::main(argv),
             "engine" => engine::main(argv),
             "errstr" => errstr::main(argv),
+            "fipsinstall" => fipsinstall::main(argv),
             "gendsa" => gendsa::main(argv),
             "genpkey" => genpkey::main(argv),
             "genrsa" => genrsa::main(argv),
@@ -215,7 +225,9 @@ fn do_cmd(argv: &[String]) -> i32 {
             "list" => list::main(argv),
             "mac" => mac::main(argv),
             "nseq" => nseq::main(argv),
+            "ocsp" => ocsp::main(argv),
             "passwd" => passwd::main(argv),
+            "pkcs7" => pkcs7::main(argv),
             "pkcs8" => pkcs8::main(argv),
             "pkey" => pkey::main(argv),
             "pkeyparam" => pkeyparam::main(argv),
@@ -227,8 +239,11 @@ fn do_cmd(argv: &[String]) -> i32 {
             "rsautl" => rsautl::main(argv),
             "sess_id" => sess_id::main(argv),
             "skeyutl" => skeyutl::main(argv),
+            "speed" => speed::main(argv),
             "spkac" => spkac::main(argv),
+            "srp" => srp::main(argv),
             "storeutl" => storeutl::main(argv),
+            "ts" => ts::main(argv),
             "verify" => verify::main(argv),
             "version" => version::main(argv),
             _ => not_landed(fp.name),

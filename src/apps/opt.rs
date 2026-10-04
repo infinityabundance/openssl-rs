@@ -13,9 +13,9 @@
 //! * **The option identity is the option's name, not its `retval`.** The
 //!   authority's `OPTIONS.retval` is a command-local enumerator
 //!   (`apps/list.c:1618-1660` and its siblings); it is not an authority ABI and no
-//!   two commands share it. The generated `crate::apps::tables` carries `name`
+//!   two commands share it. The generated [`crate::apps::tables`] carries `name`
 //!   and `valtype` — exactly what the option-*list* reader reads
-//!   (`apps/list.c:1151-1163`) — so `OptMatch` names the matched flag instead of
+//!   (`apps/list.c:1151-1163`) — so [`OptMatch`] names the matched flag instead of
 //!   returning its enumerator. The dispatcher compares names, so the observed
 //!   behaviour of every landed command is the authority's.
 //! * **Value syntax checking is reduced to the string types.** `opt_next` in the
@@ -29,6 +29,18 @@
 //!   headers and wrapped help text; no landed command calls it, so `-help` on
 //!   `help`/`list`/`version` would reach `command not landed` rather than the
 //!   authority's table. Recorded here rather than stubbed with a wrong body.
+//! * **`opt_set_unknown_name`'s sentinel row is reconstructed, not generated.**
+//!   The authority's `dgst`/`ocsp`/`ts` option tables carry a row whose name is
+//!   `""` and whose `retval` is the command's digest-arm enumerator
+//!   (`apps/dgst.c:102`); `opt_init` records it as the `unknown` slot
+//!   (`apps/lib/opt.c:232-237`) and `opt_next` returns it for any unmatched option
+//!   (`apps/lib/opt.c:1025-1032`). [`crate::apps::tables`] drops empty-name rows,
+//!   so [`Opts::enable_unknown`] reconstructs that one slot: an unmatched option
+//!   becomes [`OptMatch::Value`] with the empty name and the unmatched body as its
+//!   value, exactly the `OPT_*`/`opt_unknown()` pair those three bodies read. A
+//!   second unmatched option answers the authority's `Multiple %s or unknown
+//!   options` refusal. No other landed command enables it, so its behaviour is
+//!   unchanged.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
@@ -57,6 +69,13 @@ pub struct Opts<'a> {
     index: usize,
     arg: Option<String>,
     prog: String,
+    /// `unknown_name` (`apps/lib/opt.c:44`): the argument `opt_set_unknown_name`
+    /// named, or `None` when the command did not call it. `Some` is the authority's
+    /// `unknown != NULL` (its table carried the sentinel row).
+    unknown_name: Option<&'static str>,
+    /// `dunno` (`apps/lib/opt.c:43`): the body of the unmatched option `opt_next`
+    /// last returned, read back through `opt_unknown()`.
+    dunno: Option<String>,
 }
 
 /// `const char *opt_path_end(const char *)` — `apps/lib/opt.c:121-132`, the
@@ -87,7 +106,28 @@ impl<'a> Opts<'a> {
             index: 1,
             arg: None,
             prog,
+            unknown_name: None,
+            dunno: None,
         }
+    }
+
+    /// `opt_set_unknown_name(name)` — `apps/lib/opt.c:257-260`. Enables the
+    /// unmatched-option arm an option table's empty-name sentinel row would have
+    /// selected (see the module header). The three bodies that call the
+    /// authority's function (`dgst`, `ocsp`, `ts`) call this instead.
+    pub fn enable_unknown(&mut self, name: &'static str) {
+        self.unknown_name = Some(name);
+    }
+
+    /// `char *opt_unknown(void)` — `apps/lib/opt.c:1051-1054`.
+    pub fn unknown(&self) -> Option<&str> {
+        self.dunno.as_deref()
+    }
+
+    /// `void reset_unknown(void)` — `apps/lib/opt.c:1057-1060`, which `ocsp` calls
+    /// before each `-cert`/`-serial` so a digest may precede each of them.
+    pub fn reset_unknown(&mut self) {
+        self.dunno = None;
     }
 
     /// The program name `opt_init` derived from `argv[0]`.
@@ -150,6 +190,20 @@ impl<'a> Opts<'a> {
             };
             self.arg = Some(value.clone());
             return OptMatch::Value(o.name, value);
+        }
+        // `if (unknown != NULL) { ... dunno = p; return unknown->retval; }` —
+        // `apps/lib/opt.c:1025-1032`. The sentinel's `retval` is reconstructed as a
+        // `Value` with the empty name, carrying the unmatched body so the command
+        // reads it the way it reads `opt_unknown()`.
+        if let Some(what) = self.unknown_name {
+            if let Some(prev) = &self.dunno {
+                return OptMatch::Error(format!(
+                    "{}: Multiple {} or unknown options: -{} and -{}",
+                    self.prog, what, prev, name
+                ));
+            }
+            self.dunno = Some(name.to_string());
+            return OptMatch::Value("", name.to_string());
         }
         OptMatch::Error(format!("{}: Unknown option: -{}", self.prog, name))
     }
