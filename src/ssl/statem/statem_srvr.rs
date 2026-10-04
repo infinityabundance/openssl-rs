@@ -107,6 +107,14 @@ const SSL3_MT_CHANGE_CIPHER_SPEC: c_int = 0x0101;
 const SSL_AD_INTERNAL_ERROR: c_int = 80;
 const SSL_AD_UNEXPECTED_MESSAGE: c_int = 10;
 const SSL_AD_HANDSHAKE_FAILURE: c_int = 40;
+/// `TLS1_AD_UNRECOGNIZED_NAME` — `tls1.h:76` (the alert `final_server_name` arms with).
+const SSL_AD_UNRECOGNIZED_NAME: c_int = 112;
+/// `TLS1_AD_DECODE_ERROR` — `tls1.h:61`.
+const SSL_AD_DECODE_ERROR: c_int = 50;
+/// `SSL_R_BAD_EXTENSION` — `sslerr.h:38`.
+const SSL_R_BAD_EXTENSION: c_int = 110;
+/// `SSL_R_CALLBACK_FAILED` — `sslerr.h:66`.
+const SSL_R_CALLBACK_FAILED: c_int = 234;
 /// `SSL_RECEIVED_SHUTDOWN` — `ssl.h:217` (set by a received `close_notify`, `rec_layer_s3.c:913`).
 const SSL_RECEIVED_SHUTDOWN: c_int = 2;
 const ERR_R_INTERNAL_ERROR: c_int = 1 | (2 << 18) | (1 << 18);
@@ -132,6 +140,20 @@ const SSL_VERIFY_POST_HANDSHAKE: c_int = 8;
 const WRITE_TRAN_ERROR: c_int = 0;
 const WRITE_TRAN_CONTINUE: c_int = 1;
 const WRITE_TRAN_FINISHED: c_int = 2;
+
+// --- server-name extension (`tls1.h`) ----------------------------------------
+/// `TLSEXT_TYPE_server_name` — `tls1.h:140`.
+const TLSEXT_TYPE_SERVERNAME: u16 = 0;
+/// `TLSEXT_NAMETYPE_host_name` — `tls1.h:171`.
+const TLSEXT_NAMETYPE_HOST_NAME: u8 = 0;
+/// `TLSEXT_MAXLEN_host_name` — `tls1.h:172`.
+const TLSEXT_MAXLEN_HOST_NAME: usize = 255;
+/// `SSL_TLSEXT_ERR_ALERT_WARNING` — `tls1.h:338`.
+const SSL_TLSEXT_ERR_ALERT_WARNING: c_int = 1;
+/// `SSL_TLSEXT_ERR_ALERT_FATAL` — `tls1.h:339`.
+const SSL_TLSEXT_ERR_ALERT_FATAL: c_int = 2;
+/// `SSL_TLSEXT_ERR_NOACK` — `tls1.h:340`.
+const SSL_TLSEXT_ERR_NOACK: c_int = 3;
 
 // --- message length caps (`ssl/statem/statem_local.h`, `statem_srvr.c`) -------
 const CLIENT_HELLO_MAX_LENGTH: usize = 131396;
@@ -699,6 +721,44 @@ pub unsafe fn ossl_statem_server_max_message_size(s: *mut Ssl) -> usize {
 // `tls_construct_server_hello` (`statem_srvr.c:1648-1859`/`2590-2699`), reduced at the key schedule.
 // ---------------------------------------------------------------------------------------------
 
+/// `int final_server_name(SSL_CONNECTION *s, unsigned int context, int sent)` —
+/// `ssl/statem/extensions.c:938-1040`, reduced to the callback dispatch and the fatal arm.
+///
+/// The authority runs this as the `server_name` extension's finalisation at the end of
+/// `tls_parse_all_extensions` (`extensions.c:765-772`), after every ClientHello extension has been
+/// parsed and before the cipher is chosen. It invokes the context's `ext.servername_cb` (falling
+/// back to the session context's), then maps the return code to an alert or a plain success. The
+/// session-hostname copy and the ticket-disable arms need a handshake session this slice does not
+/// allocate, so they are recorded as the boundary rather than fabricated.
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn final_server_name(s: *mut Ssl, sent: bool) -> c_int {
+    let _ = sent;
+    // SAFETY: `s` is live per the caller's contract; `ctx` is its context.
+    let ctx = unsafe { (*s).ctx };
+    let mut altmp = SSL_AD_UNRECOGNIZED_NAME;
+    // SAFETY: `ctx` is the live context read above.
+    let ret = match unsafe { (*ctx).servername_cb } {
+        Some(cb) => {
+            // SAFETY: the callback is the application's `int (*)(SSL *, int *, void *)`; `s`,
+            // `altmp` and the stored argument are the ones it was installed to receive.
+            unsafe { cb(s, &mut altmp, (*ctx).servername_arg) }
+        }
+        None => SSL_TLSEXT_ERR_NOACK,
+    };
+    match ret {
+        SSL_TLSEXT_ERR_ALERT_FATAL => {
+            // `extensions.c:1019-1021`.
+            // SAFETY: `s` is live.
+            unsafe { ossl_statem_fatal(s, altmp, SSL_R_CALLBACK_FAILED) };
+            0
+        }
+        SSL_TLSEXT_ERR_ALERT_WARNING | SSL_TLSEXT_ERR_NOACK => 1,
+        _ => 1,
+    }
+}
+
 /// `SSL3_MT_SERVER_HELLO` — `ssl3.h`.
 const SSL3_MT_SERVER_HELLO: u8 = 2;
 /// `SSL3_MT_CLIENT_HELLO` — `ssl3.h`.
@@ -793,6 +853,7 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     let mut saw_keyshare_group: u16 = 0;
     let mut client_share: &[u8] = &[];
     let mut off = 0usize;
+    let mut sni_sent = false;
     while off + 4 <= exts.len() {
         let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
         let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
@@ -801,6 +862,49 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             return 0;
         }
         let eb = &exts[off..off + elen];
+        if etype == TLSEXT_TYPE_SERVERNAME {
+            // `tls_parse_ctos_server_name` (`extensions_srvr.c:100-175`): a
+            // `ServerNameList` (2-byte length) holding one `host_name` entry
+            // (`type(1) || len(2) || name`). Other name types and a NUL byte are refused; the
+            // accepted name is stored as the connection's temporary SNI, exactly as the authority
+            // stores it before `final_server_name` runs.
+            if eb.len() < 2 {
+                // SAFETY: `s` is live.
+                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                return 0;
+            }
+            let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
+            if list_len == 0 || 2 + list_len > eb.len() || eb.len() < 5 {
+                // SAFETY: `s` is live.
+                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                return 0;
+            }
+            let name_type = eb[2];
+            let nlen = ((eb[3] as usize) << 8) | eb[4] as usize;
+            if name_type != TLSEXT_NAMETYPE_HOST_NAME || 5 + nlen > eb.len() {
+                // SAFETY: `s` is live.
+                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                return 0;
+            }
+            if nlen > TLSEXT_MAXLEN_HOST_NAME || eb[5..5 + nlen].contains(&0) {
+                // SAFETY: `s` is live.
+                unsafe { ossl_statem_fatal(s, SSL_AD_UNRECOGNIZED_NAME, SSL_R_BAD_EXTENSION) };
+                return 0;
+            }
+            // SAFETY: `s` is live; `eb[5..]` holds `nlen` readable bytes with no interior NUL, so
+            // `CRYPTO_strndup` copies exactly `nlen` bytes and appends the terminator.
+            unsafe {
+                use crate::runtime::mem::{CRYPTO_free, CRYPTO_strndup};
+                CRYPTO_free((*s).ext_hostname.cast(), core::ptr::null(), 0);
+                (*s).ext_hostname =
+                    CRYPTO_strndup(eb.as_ptr().add(5).cast(), nlen, core::ptr::null(), 0);
+                if (*s).ext_hostname.is_null() {
+                    ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                    return 0;
+                }
+            }
+            sni_sent = true;
+        }
         if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS && eb.len() >= 3 {
             // The body is `list_len || (version_hi || version_lo)...`.
             let list_len = eb[0] as usize;
@@ -838,6 +942,14 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             }
         }
         off += elen;
+    }
+
+    // `tls_parse_all_extensions(..., fin=1)` runs the `server_name` finalisation before the cipher
+    // is chosen (`statem_srvr.c:2124`, `extensions.c:938-1040`); nginx's `ngx_http_ssl_servername`
+    // is reached from here.
+    // SAFETY: `s` is live.
+    if unsafe { final_server_name(s, sni_sent) } == 0 {
+        return 0;
     }
 
     // `ssl3_choose_cipher` (`ssl3_lib.c`): the first TLSv1.3 cipher in the server's list that the
@@ -1354,6 +1466,13 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     return 1;
                 }
                 TLS_ST_OK => {
+                    // Recorded boundary: the authority's post-handshake write transition may emit
+                    // `NewSessionTicket`s here (`tls_construct_new_session_ticket`,
+                    // `statem_srvr.c:4370`). That path needs a handshake session
+                    // (`ssl_get_new_session`), the resumption-master-secret key schedule, and the
+                    // `construct_stateless_ticket` encryption/HMAC round trip, none of which this
+                    // slice owns; `SSL_CTX_set_tlsext_ticket_key_cb` is stored and returns 1, but no
+                    // ticket is constructed. The boundary is recorded rather than faked.
                     (*s).in_init = 0;
                     (*s).rwstate = 1; // SSL_NOTHING
                     (*s).statem_state = MSG_FLOW_READING_13;
