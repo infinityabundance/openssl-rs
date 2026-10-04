@@ -3,7 +3,7 @@
   "body": {
     "blocking_dependencies": [],
     "census": {
-      "covered_by_a_divergence": 159,
+      "covered_by_a_divergence": 160,
       "language_surface_not_modelled_by_name": 11769
     },
     "census_by_unit": {
@@ -71,6 +71,7 @@
         "ssl_do_client_cert_cb": 1,
         "stderr": 1,
         "stdin": 1,
+        "stdout": 1,
         "tls_client_key_exchange_post_work": 1,
         "tls_construct_cert_status": 1,
         "tls_construct_cert_status_body": 1,
@@ -799,12 +800,12 @@
     },
     "checked": {
       "authority_units": 596,
-      "crate_modules": 797,
+      "crate_modules": 803,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
-      "divergence_names_covered": 105,
+      "divergence_names_covered": 106,
       "divergence_rows": 14,
-      "names_referenced_and_not_built": 20
+      "names_referenced_and_not_built": 21
     },
     "claim": "A structural gate, not a parity claim. It answers whether a dependency has an owner and whether the owner arrives in time; it says nothing about whether the dependency behaves as the authority's does.",
     "counts": {},
@@ -1294,7 +1295,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "671e218402abf449b3155af7b9d27960b5a0bc8e4b29765a62e2cdec3750279b",
+  "body_hash": "4311c02d38c65a8754e60c782a9905a070d6e6a86c9a8b66dce81fcc45b6826e",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1330,7 +1331,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3e0e2101a6f7a90dbaf60801958db41c3badb52f736ce02d6190cf1579494c16"
+      "sha256": "236a6a13b7b05c77201ce06c280a78b4e018c70a19b6dffd8f80d06cdba7b97a"
     },
     {
       "name": "phase-state",
@@ -1340,7 +1341,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "f3cc8cfc5ba2672ffe71317bd41ed905d4add945dc508e0a8b832cfe1b312f36"
+      "sha256": "cae0c4c7092740e71066419974012494000af799262b0ebf8aeab51f94b5892d"
     },
     {
       "name": "crate-source-tree",

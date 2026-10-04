@@ -12,21 +12,30 @@ comparison is between two *executions* of the same program, so the expectation c
 17.1's court. Its subject is the CLI *executable*, which cannot be linked into a C probe, so
 its instrument is the shell probe `courts/phase17/rt_cli_bodies_probe.sh` (staged as the
 `artifacts/phase17/probes/rt_cli_bodies_probe.{authority,candidate}` pair the FRF runtime
-harness runs, exactly as 16.4's `rt-cli` pair is). It drives the first landed command body,
-`apps/errstr.c` (`src/apps/errstr.rs`), over a fixed argv: the option parser's end-of-options
-boundary, the `sscanf("%lx")` success and failure arms, the failure-count exit status, and
-`ERR_error_string_n`'s rendering over fixed packed error codes. The command's `-help` arm is
-not driven: `opt_help` is the boundary `src/apps/opt.rs` records, so it reaches `not_landed`
-rather than the authority's table, exactly as `help`/`list`/`version` do.
+harness runs, exactly as 16.4's `rt-cli` pair is). It drives the landed command bodies over a
+fixed argv and compares the two transcripts.
 
-**One input is recorded rather than diffed.** `errstr 0xdeadbeef` renders an unknown *system*
-error, and the candidate diverges there: the authority's `openssl_strerror_r`
-(`crypto/o_str.c`, the POSIX `strerror_r`) refuses the out-of-range errno and falls back to
-`reason(r & ~flags)`, while the crate's `strerror_into` (`src/runtime/err.rs`) calls the GNU
-`strerror_r`, which answers `Unknown error N`. That defect is in the `ERR` surface, not the
-`errstr` body, so the court drives every other arm and records the divergent input in
-`recorded_divergences` rather than diffing it as a residual (the convention `src/apps/errstr.rs`
-and Phases 13 through 16 use for a recorded divergence).
+17.1a landed `apps/errstr.c` (`src/apps/errstr.rs`): the option parser's end-of-options
+boundary, the `sscanf("%lx")` success and failure arms, the failure-count exit status, and
+`ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five more bodies
+against fixed fixtures -- `info` (the four build-independent selectors and its two refusal
+arms), `prime` (the numeric check, the `-hex`/decimal conversion and the no-number/`-generate`
+refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl`
+(the linearized re-emit of a fixed configuration, with and without the header), `pkeyparam`
+(the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq`
+(`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence). Each
+command's `-help` arm is not driven: `opt_help` is the boundary `src/apps/opt.rs` records, so it
+reaches `not_landed` rather than the authority's table, exactly as `help`/`list`/`version` do.
+
+The fixtures live in `courts/phase17/fixtures/` and are read by absolute `/work` path, so the
+probe is self-contained under the container's mount.
+
+**Seven inputs are recorded rather than diffed**, each a surface this stratum does not own:
+`errstr 0xdeadbeef` (an unknown system errno), `info -seeds`/`-cpusettings`/`-configdir`/
+`-enginesdir`/`-modulesdir` (RAND seed source, CPU dispatch and the configured prefix, which
+are later strata or build-specific) and `prime 2 3 4`/`-hex FF` (the `BN_print` rendering).
+They are named in `RECORDED_DIVERGENCES` and every other arm is driven, the convention
+`src/apps/errstr.rs` and Phases 13 through 16 use for a recorded divergence.
 
 The pending courts
 ------------------
@@ -91,18 +100,44 @@ COURTS: list[tuple[str, str]] = [
 
 # The fixed argv `RT-CLI-BODIES` drives on both sides. Every case is build-independent and
 # deterministic: the `errstr` body's own arms -- a run of six arguments (five decode, `nothex`
-# fails, so the exit status is 1), the no-argument run, and a single decode. The seventh argument
-# of the parity set, `0xdeadbeef`, is named in `RECORDED_DIVERGENCES` and not driven.
+# fails, so the exit status is 1), the no-argument run, and a single decode, then the 17.1b
+# bodies over the fixtures under `courts/phase17/fixtures/` (read by absolute `/work` path).
+# The inputs that diverge are named in `RECORDED_DIVERGENCES` and not driven.
+_BODIES_FIXTURES = "/work/courts/phase17/fixtures"
 BODIES_ARGV: list[list[str]] = [
     ["errstr", "0x03000041", "0x0308010C", "0x0A000041", "1", "0x00000000", "nothex"],
     ["errstr"],
     ["errstr", "0x00000000"],
+    ["info", "-dsoext"],
+    ["info", "-dirnamesep"],
+    ["info", "-listsep"],
+    ["info", "-windowscontext"],
+    ["info"],
+    ["info", "-dsoext", "-listsep"],
+    ["prime", "97"],
+    ["prime", "-hex", "0xFF"],
+    ["prime", "abc"],
+    ["prime"],
+    ["prime", "-generate"],
+    ["skeyutl"],
+    ["skeyutl", "-genkey"],
+    ["skeyutl", "-skeymgmt", "foo"],
+    ["configutl", "-config", f"{_BODIES_FIXTURES}/configutl.cnf", "-noheader"],
+    ["configutl", "-config", f"{_BODIES_FIXTURES}/configutl.cnf"],
+    ["pkeyparam", "-in", f"{_BODIES_FIXTURES}/dhparams.pem"],
+    ["pkeyparam", "-in", f"{_BODIES_FIXTURES}/dhparams.pem", "-noout"],
+    ["pkeyparam", "-in", f"{_BODIES_FIXTURES}/dhparams.pem", "-text"],
+    ["pkeyparam", "-in", f"{_BODIES_FIXTURES}/dhparams.pem", "-check"],
+    ["nseq", "-toseq", "-in", f"{_BODIES_FIXTURES}/certs.pem"],
+    ["nseq", "-in", f"{_BODIES_FIXTURES}/seq.pem"],
 ]
 
-# A divergence the court records rather than diffs: `ERR_error_string_n` on an unknown *system*
-# error. This is the `ERR` surface's (`src/runtime/err.rs`), not the `errstr` body's, so the court
-# drives every other arm and names this input instead of failing on it -- the same shape Phases 13
-# through 16 use for a recorded divergence.
+# Divergences the court records rather than diffs: an output decided by a surface this stratum
+# does not own. `errstr 0xdeadbeef` is the `ERR` surface's (`src/runtime/err.rs`);
+# `info`'s five selectors are the RAND-seed-source (Phase 9), CPU-dispatch (Phase 19) and
+# prefix-configured-directory surfaces; `prime`'s two are the `BN_print` rendering
+# (`src/bn/bignum.rs`). The court drives every other arm and names these inputs instead of
+# failing on them -- the same shape Phases 13 through 16 use for a recorded divergence.
 RECORDED_DIVERGENCES: list[dict] = [
     {
         "argv": "errstr 0xdeadbeef",
@@ -115,7 +150,83 @@ RECORDED_DIVERGENCES: list[dict] = [
             "`strerror_into` (`src/runtime/err.rs`) calls the GNU `strerror_r`, which answers "
             "`Unknown error N`. Recorded here rather than diffed; see `src/apps/errstr.rs`."
         ),
-    }
+    },
+    {
+        "argv": "info -seeds",
+        "authority": "os-specific",
+        "candidate": "Undefined",
+        "reason": (
+            "`OPENSSL_info(OPENSSL_INFO_SEED_SOURCE)` (1007): the authority answers its "
+            "libcrypto seed-source string; the candidate's RAND is a later stratum and the "
+            "canonical `src/runtime/init.rs` `OPENSSL_info` answers NULL, so the body prints "
+            "`Undefined`. Recorded here rather than diffed; see `src/apps/info.rs`."
+        ),
+    },
+    {
+        "argv": "info -cpusettings",
+        "authority": "OPENSSL_ia32cap=0x7ed8320b078bffff:0x19405fdef1bf97ab:0x0000003010000110:0x0000000000000000:0x0000000000000000",
+        "candidate": "Undefined",
+        "reason": (
+            "`OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` (1008): the authority answers its "
+            "captured `OPENSSL_ia32cap=...` line; the candidate's CPU dispatch is Phase 19 and "
+            "`OPENSSL_info(1008)` is NULL, so the body prints `Undefined`. Recorded here "
+            "rather than diffed; see `src/apps/info.rs`."
+        ),
+    },
+    {
+        "argv": "info -configdir",
+        "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/ssl",
+        "candidate": "",
+        "reason": (
+            "`OPENSSL_info(OPENSSL_INFO_CONFIG_DIR)` (1001): the authority answers its own "
+            "configured prefix; the candidate's `crypto/defaults.c` `ossl_get_openssldir` "
+            "answers its own build's (empty) `OPENSSLDIR`, so the body prints an empty line. "
+            "Recorded here rather than diffed; see `src/apps/info.rs`."
+        ),
+    },
+    {
+        "argv": "info -enginesdir",
+        "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/engines-3",
+        "candidate": "Undefined",
+        "reason": (
+            "`OPENSSL_info(OPENSSL_INFO_ENGINES_DIR)` (1002): the authority answers its "
+            "configured engines directory; the candidate configured no prefix and answers "
+            "NULL, so the body prints `Undefined`. Recorded here rather than diffed; see "
+            "`src/apps/info.rs`."
+        ),
+    },
+    {
+        "argv": "info -modulesdir",
+        "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/ossl-modules",
+        "candidate": "Undefined",
+        "reason": (
+            "`OPENSSL_info(OPENSSL_INFO_MODULES_DIR)` (1003): the authority answers its "
+            "configured module directory; the candidate configured no prefix and answers "
+            "NULL, so the body prints `Undefined`. Recorded here rather than diffed; see "
+            "`src/apps/info.rs`."
+        ),
+    },
+    {
+        "argv": "prime 2 3 4",
+        "authority": "2 (2) is prime|3 (3) is prime|4 (4) is not prime|",
+        "candidate": "02 (2) is prime|03 (3) is prime|04 (4) is not prime|",
+        "reason": (
+            "`BN_print` rendering: the authority (`crypto/bn/bn_print.c`) strips leading "
+            "nibbles and writes uppercase; the candidate (`src/bn/bignum.rs:1655`) writes "
+            "lowercase and pads to whole bytes. Recorded here rather than diffed; the "
+            "`prime 97` case avoids both differences. See `src/apps/prime.rs`."
+        ),
+    },
+    {
+        "argv": "prime -hex FF",
+        "authority": "FF (FF) is not prime|",
+        "candidate": "ff (FF) is not prime|",
+        "reason": (
+            "`BN_print` case: the authority writes uppercase, the candidate lowercase "
+            "(`src/bn/bignum.rs:1655`). Recorded here rather than diffed; see "
+            "`src/apps/prime.rs`."
+        ),
+    },
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
@@ -206,8 +317,8 @@ def render_probe(cases: list[list[str]]) -> str:
     """
     body = "\n".join(" ".join(argv) for argv in cases)
     head = '''#!/bin/sh
-# openssl-rs RT-CLI-BODIES probe: drive one side's `openssl` over the court's fixed `errstr`
-# argv and print one `case.N.*` line per observation. `$1` is the side's `openssl`, `$2` its
+# openssl-rs RT-CLI-BODIES probe: drive one side's `openssl` over the court's fixed command argv
+# and print one `case.N.*` line per observation. `$1` is the side's `openssl`, `$2` its
 # `ossl-modules/`; the fixture (`probe-list.txt`) names this probe, which is what makes it
 # challengeable (docs/DECISIONS.md D13).
 #
@@ -215,9 +326,10 @@ def render_probe(cases: list[list[str]]) -> str:
 # *executable*, which is not linkable. The transcript format matches the court venue's
 # `cli_transcript`: key=value, newline -> `|`, CR -> `^`.
 #
-# `errstr 0xdeadbeef` is deliberately absent: it renders an unknown system error, whose
-# `ERR_error_string_n` value diverges (see `forensics/tools/phase17_courts.py`'s
-# RECORDED_DIVERGENCES and `src/apps/errstr.rs`).
+# The divergent inputs (`errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/
+# `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`) are deliberately absent: each renders a
+# surface this stratum does not own (see `forensics/tools/phase17_courts.py`'s
+# RECORDED_DIVERGENCES and the per-command module headers).
 set -u
 BIN="${1:?usage: rt_cli_bodies_probe.sh <openssl> <ossl-modules>}"
 MODULES="${2:-}"
@@ -280,7 +392,7 @@ def stage_probe(cases: list[list[str]]) -> Path:
 
 
 def bodies_court(name: str) -> dict:
-    """`RT-CLI-BODIES`: the `errstr` command body over fixed argv, differentially.
+    """`RT-CLI-BODIES`: the landed command bodies over fixed argv, differentially.
 
     The instrument is the shell probe `stage_probe` writes -- the CLI is an executable, not a
     linkable symbol -- run once per side under the same environment the FRF runtime harness uses,
@@ -348,17 +460,25 @@ def main(argv: list[str]) -> int:
         "pending_courts": PENDING_COURTS,
         "claim": (
             "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and "
-            "the candidate distribution shell's over a fixed `errstr` argv, comparing the two "
-            "transcripts line by line -- the option parser's end-of-options boundary, the "
-            "`sscanf(\"%lx\")` success and failure arms, the failure-count exit status and "
-            "`ERR_error_string_n`'s rendering over fixed packed error codes -- through the shell "
-            "probe `courts/phase17/rt_cli_bodies_probe.sh`, the per-side staged pair the FRF "
-            "runtime harness runs. The `-help` arm is not driven (`opt_help` is unlanded), and "
-            "`errstr 0xdeadbeef`, an unknown system error whose `ERR_error_string_n` value "
-            "diverges, is recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` "
-            "is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through "
-            "Finished plus an application-data exchange, over the record layer, the extension "
-            "units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule "
+            "the candidate distribution shell's over a fixed argv, comparing the two transcripts "
+            "line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, "
+            "the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and "
+            "`ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five "
+            "bodies over fixed fixtures: `info` (four build-independent selectors and two refusal "
+            "arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` "
+            "refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), "
+            "`configutl` (a fixed configuration's linearized re-emit, with and without the "
+            "header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed "
+            "`DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the "
+            "read/dump arm over the fixed sequence), all through the shell probe "
+            "`courts/phase17/rt_cli_bodies_probe.sh`, the per-side staged pair the FRF runtime "
+            "harness runs. Each command's `-help` arm is not driven (`opt_help` is unlanded), and "
+            "the divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/ "
+            "`-configdir`/`-enginesdir`/`-modulesdir` and `prime 2 3 4`/`-hex FF` -- are recorded "
+            "in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives "
+            "a real TLS 1.3 client/server flight, ClientHello through Finished plus an "
+            "application-data exchange, over the record layer, the extension units "
+            "(ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule "
             "(ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. "
             "`RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it "
             "through the libcrypto path (and the same for CONF), requiring one queue across the "

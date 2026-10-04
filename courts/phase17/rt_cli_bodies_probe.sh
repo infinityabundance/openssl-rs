@@ -1,6 +1,6 @@
 #!/bin/sh
-# openssl-rs RT-CLI-BODIES probe: drive one side's `openssl` over the court's fixed `errstr`
-# argv and print one `case.N.*` line per observation. `$1` is the side's `openssl`, `$2` its
+# openssl-rs RT-CLI-BODIES probe: drive one side's `openssl` over the court's fixed command argv
+# and print one `case.N.*` line per observation. `$1` is the side's `openssl`, `$2` its
 # `ossl-modules/`; the fixture (`probe-list.txt`) names this probe, which is what makes it
 # challengeable (docs/DECISIONS.md D13).
 #
@@ -8,9 +8,10 @@
 # *executable*, which is not linkable. The transcript format matches the court venue's
 # `cli_transcript`: key=value, newline -> `|`, CR -> `^`.
 #
-# `errstr 0xdeadbeef` is deliberately absent: it renders an unknown system error, whose
-# `ERR_error_string_n` value diverges (see `forensics/tools/phase17_courts.py`'s
-# RECORDED_DIVERGENCES and `src/apps/errstr.rs`).
+# The divergent inputs (`errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/
+# `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`) are deliberately absent: each renders a
+# surface this stratum does not own (see `forensics/tools/phase17_courts.py`'s
+# RECORDED_DIVERGENCES and the per-command module headers).
 set -u
 BIN="${1:?usage: rt_cli_bodies_probe.sh <openssl> <ossl-modules>}"
 MODULES="${2:-}"
@@ -39,4 +40,26 @@ done <<'ARGS'
 errstr 0x03000041 0x0308010C 0x0A000041 1 0x00000000 nothex
 errstr
 errstr 0x00000000
+info -dsoext
+info -dirnamesep
+info -listsep
+info -windowscontext
+info
+info -dsoext -listsep
+prime 97
+prime -hex 0xFF
+prime abc
+prime
+prime -generate
+skeyutl
+skeyutl -genkey
+skeyutl -skeymgmt foo
+configutl -config /work/courts/phase17/fixtures/configutl.cnf -noheader
+configutl -config /work/courts/phase17/fixtures/configutl.cnf
+pkeyparam -in /work/courts/phase17/fixtures/dhparams.pem
+pkeyparam -in /work/courts/phase17/fixtures/dhparams.pem -noout
+pkeyparam -in /work/courts/phase17/fixtures/dhparams.pem -text
+pkeyparam -in /work/courts/phase17/fixtures/dhparams.pem -check
+nseq -toseq -in /work/courts/phase17/fixtures/certs.pem
+nseq -in /work/courts/phase17/fixtures/seq.pem
 ARGS
