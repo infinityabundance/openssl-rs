@@ -499,7 +499,7 @@
     {
       "name": "phase-17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "b6c01f790770bf2b17910ff76446dcbcfcb7da147f8ca9901c0bef9aa71e8d94"
+      "sha256": "0313ba22c475c3e61ff153174603c44fcd6656865f96faa73808b2a321d24bae"
     }
   ],
   "kind": "phase17-obligations",

@@ -13,9 +13,13 @@
 # `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`,
 # `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl`
 # operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam`
-# generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms) are
-# deliberately absent: each renders a surface this stratum does not own
-# (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command module
+# generation arms, `passwd` without `-salt`, the `engine` listing/`-pre` arms and the
+# 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder,
+# `ts` random-nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`,
+# `fipsinstall -module` and `srp` action arms) are deliberately absent: each renders a
+# surface this stratum does not own
+# (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command
+# module headers).
 # headers).
 set -u
 BIN="${1:?usage: rt_cli_bodies_probe.sh <openssl> <ossl-modules>}"
@@ -172,4 +176,32 @@ enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0
 enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0b0c0d0e0f -in /work/courts/phase17/fixtures/small.bin -a -A
 enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0b0c0d0e0f -in /work/courts/phase17/fixtures/small.bin -nopad
 enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0b0c0d0e0f -in /work/courts/phase17/fixtures/small.bin -P -nosalt
+dgst -sha256 /work/courts/phase17/fixtures/small.bin
+dgst -sha256 -hex /work/courts/phase17/fixtures/small.bin
+dgst -sha256 -binary /work/courts/phase17/fixtures/small.bin
+dgst -sha256 -c /work/courts/phase17/fixtures/small.bin
+dgst -sha256 -r /work/courts/phase17/fixtures/small.bin
+dgst -hmac secret /work/courts/phase17/fixtures/small.bin
+dgst -sha256 -hmac secret /work/courts/phase17/fixtures/small.bin
+dgst -sha256 -sign /work/courts/phase17/fixtures/rsa-key.pem /work/courts/phase17/fixtures/small.bin
+dgst -sha256 -verify /work/courts/phase17/fixtures/rsa-pub.pem -signature /work/courts/phase17/fixtures/dgst.sig /work/courts/phase17/fixtures/small.bin
+pkcs7 -in /work/courts/phase17/fixtures/p7.pem
+pkcs7 -print_certs -in /work/courts/phase17/fixtures/p7.pem
+pkcs7 -print_certs -quiet -in /work/courts/phase17/fixtures/p7.pem
+pkcs7 -in /work/courts/phase17/fixtures/p7.pem -outform DER
+ocsp
+ocsp -issuer /work/courts/phase17/fixtures/ca.pem -cert /work/courts/phase17/fixtures/leaf.pem -no_nonce -reqout /dev/stdout
+ocsp -issuer /work/courts/phase17/fixtures/ca.pem -cert /work/courts/phase17/fixtures/leaf.pem -no_nonce -req_text -out /dev/stdout
+ts
+ts -query -reply
+ts -bogus
+ts -query -no_nonce -data /work/courts/phase17/fixtures/small.bin
+ts -query -no_nonce -data /work/courts/phase17/fixtures/small.bin -text
+speed -bogus
+fipsinstall
+fipsinstall -verify
+srp
+srp -list -add
+srp -add
+srp -srpvfile x -config y
 ARGS
