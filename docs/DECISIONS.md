@@ -35452,3 +35452,5 @@ second run; `evidence_determinism.py --keep` reproduces 45 artefacts; `regressio
 then `--baseline-ref origin/main --require-current` passes with no regression; `docs_consistency.py`
 and its `--self-test`; `phase_state.py` and its `--self-test`; `plan_reconciliation.py`;
 `gen_frf_courts.py --check`; `cargo fmt`; `cargo clippy --all-targets -- -D warnings`.
+
+The push-event comparison reads its `before` from the seal commit's `github.event.before` (`3297fbae`), whose committed gate was stale at **386**, so the same regeneration is recorded a second time as `386 -> 468`; `forensics/ownership-transitions.json` carries both rows (the ref supplying `before` is the only difference) and `regression_guard.py --baseline-ref 3297fbae --require-current` passes.
