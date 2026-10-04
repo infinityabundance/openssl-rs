@@ -280,6 +280,11 @@ pub const SSL3_MAX_SSL_SESSION_ID_LENGTH: usize = 32;
 pub const TLS13_MAX_RESUMPTION_PSK_LENGTH: usize = 512;
 /// `EVP_MAX_MD_SIZE` — `evp.h`.
 pub const EVP_MAX_MD_SIZE: usize = 64;
+/// The reduced transcript buffer's capacity — the authority's `s3.handshake_buffer` (`BUF_MEM`)
+/// holds the handshake bytes seen before the cipher (and so the hash) is known
+/// (`ssl/statem/statem.c`). A fixed 16 KiB covers the reduced flight (`ClientHello` through
+/// `Finished`), so the reduced schedule buffers instead of allocating a `BUF_MEM` (17.2c).
+pub(crate) const TLS13_HS_BUF_LEN: usize = 16384;
 /// `SSL_MAX_MASTER_KEY_LENGTH` — `ssl.h`: the TLS1.2 master-key ceiling.
 pub const SSL_MAX_MASTER_KEY_LENGTH: usize = 48;
 /// `SSL_SESS_FLAG_EXTMS` — `ssl_local.h:567`.
@@ -1463,6 +1468,79 @@ pub struct Ssl {
     pub session_ticket_cb_arg: *mut c_void,
     /// `TLS_SESSION_TICKET_EXT *ext.session_ticket` — `SSL_set_session_ticket_ext`.
     pub session_ticket: *mut TlsSessionTicketExt,
+
+    // --- Phase 17.2c: the reduced TLS 1.3 key schedule and record protection ------------------
+    /// `EVP_MD_CTX *s3.handshake_dgst` — the running transcript hash (`ssl_handshake_hash`,
+    /// `ssl/ssl_lib.c:6094`). NULL until the cipher (and so the hash) is known.
+    pub hs_md_ctx: *mut c_void,
+    /// `s3.handshake_buffer` — the handshake bytes seen before `hs_md_ctx` could be initialised.
+    pub hs_buf: [u8; TLS13_HS_BUF_LEN],
+    /// `size_t hs_buf_len` — the buffered transcript length.
+    pub hs_buf_len: usize,
+    /// `EVP_PKEY *s3.tmp.pkey` — this side's ephemeral key share (`ssl_derive`, `s3_lib.c:5474`).
+    pub pkey: *mut c_void,
+    /// `EVP_PKEY *s3.peer_tmp` — the peer's ephemeral key share.
+    pub peer_tmp: *mut c_void,
+    /// `unsigned char early_secret[EVP_MAX_MD_SIZE]` (`tls13_generate_secret`, `tls13_enc.c:5461`).
+    pub early_secret: [u8; EVP_MAX_MD_SIZE],
+    /// `unsigned char handshake_secret[EVP_MAX_MD_SIZE]` (`tls13_enc.c:236`).
+    pub handshake_secret: [u8; EVP_MAX_MD_SIZE],
+    /// `unsigned char master_secret[EVP_MAX_MD_SIZE]` (`tls13_enc.c:260`).
+    pub master_secret: [u8; EVP_MAX_MD_SIZE],
+    /// `client_handshake_traffic_secret` (`tls13_enc.c:610`).
+    pub client_hs_traffic: [u8; EVP_MAX_MD_SIZE],
+    /// `server_handshake_traffic_secret` (`tls13_enc.c:645`).
+    pub server_hs_traffic: [u8; EVP_MAX_MD_SIZE],
+    /// `client_application_traffic_secret_0` (`tls13_enc.c:631`).
+    pub client_app_traffic: [u8; EVP_MAX_MD_SIZE],
+    /// `server_application_traffic_secret_0` (`tls13_enc.c:657`).
+    pub server_app_traffic: [u8; EVP_MAX_MD_SIZE],
+    /// `unsigned char handshake_traffic_hash[EVP_MAX_MD_SIZE]` (`tls13_enc.c:462`).
+    pub handshake_traffic_hash: [u8; EVP_MAX_MD_SIZE],
+    /// `unsigned char server_finished_hash[EVP_MAX_MD_SIZE]` (`tls13_enc.c:468`).
+    pub server_finished_hash: [u8; EVP_MAX_MD_SIZE],
+    /// `EVP_MD_get_size(ssl_handshake_md(s))` — the negotiated transcript hash length.
+    pub hs_md_len: usize,
+    /// The reduced digest selector: 0 is SHA256, 1 is SHA384 (`ssl_cipher_get_evp`, `t1_enc.c`).
+    pub hs_md_kind: c_int,
+    /// The fetched AEAD cipher (`ssl_cipher_get_evp_cipher`, `tls13_enc.c:558`).
+    pub tls13_cipher: *mut c_void,
+    /// The record-protection contexts (`ssl_set_new_record_layer`, `tls13_enc.c:747`). Unused by
+    /// the reduced per-record AEAD (a fresh context is built per record), retained for the join.
+    pub enc_ctx: *mut c_void,
+    /// The read-protection context companion to [`Self::enc_ctx`].
+    pub dec_ctx: *mut c_void,
+    /// `set_plain_alerts`/protection-level flag — 1 once the handshake write key is installed
+    /// (`tls13_change_cipher_state`, `tls13_enc.c:734`).
+    pub enc_active: c_int,
+    /// The read-protection-level flag companion to [`Self::enc_active`].
+    pub dec_active: c_int,
+    /// `write_key`/`write_iv` and the read pair.
+    pub enc_key: [u8; 32],
+    /// The write IV (`write_iv`).
+    pub enc_iv: [u8; 16],
+    /// The read key (`read_key`).
+    pub dec_key: [u8; 32],
+    /// The read IV (`read_iv`).
+    pub dec_iv: [u8; 16],
+    /// `uint64_t write_sequence`.
+    pub enc_seq: u64,
+    /// `uint64_t read_sequence`.
+    pub dec_seq: u64,
+    /// `EVP_CIPHER_get_key_length(new_sym_enc)`.
+    pub cipher_key_len: usize,
+    /// `EVP_CIPHER_get_iv_length(new_sym_enc)`.
+    pub cipher_iv_len: usize,
+    /// The AEAD tag length (16 for the reduced suites).
+    pub cipher_tag_len: usize,
+    /// `unsigned char peer_finish_md[EVP_MAX_MD_SIZE]` (`ssl3_take_mac`, `statem_lib.c:762`).
+    pub peer_finish_md: [u8; EVP_MAX_MD_SIZE],
+    /// `size_t peer_finish_md_len`.
+    pub peer_finish_md_len: usize,
+    /// `unsigned char finish_md[EVP_MAX_MD_SIZE]` (`tls_construct_finished`, `statem_lib.c:658`).
+    pub finish_md: [u8; EVP_MAX_MD_SIZE],
+    /// `size_t finish_md_len`.
+    pub finish_md_len: usize,
 }
 
 // -------------------------------------------------------------------------------------------
@@ -2291,6 +2369,13 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             dtls1_free(s);
             BIO_free_all((*s).wbio);
             BIO_free_all((*s).rbio);
+            // Phase 17.2c — release the reduced key-schedule and record-protection state.
+            crate::evp::digest::EVP_MD_CTX_free((*s).hs_md_ctx.cast());
+            crate::evp::cipher_ctx::EVP_CIPHER_CTX_free((*s).enc_ctx.cast());
+            crate::evp::cipher_ctx::EVP_CIPHER_CTX_free((*s).dec_ctx.cast());
+            crate::evp::cipher::EVP_CIPHER_free((*s).tls13_cipher.cast());
+            crate::evp::pkey::EVP_PKEY_free((*s).pkey.cast());
+            crate::evp::pkey::EVP_PKEY_free((*s).peer_tmp.cast());
             X509_VERIFY_PARAM_free((*s).param);
             cert_free((*s).cert);
             CRYPTO_free((*s).client_cert_type.cast(), FILE, 0);
@@ -5067,11 +5152,24 @@ pub(crate) unsafe fn ssl_read_internal(
         if ossl_statem_check_finish_init(s, 0) == 0 {
             return -1;
         }
+        // Phase 17.2c: once the handshake has finished, read one protected record through the
+        // reduced record layer (`ssl3_read_bytes`); post-handshake messages are not modelled.
+        if (*s).in_init != 0 {
+            return -1;
+        }
+        let mut rt = 0u8;
+        // SAFETY: `s` is live; `_buf` holds `_num` writable bytes per the contract.
+        let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(s, &mut rt, _buf.cast(), _num);
+        if n <= 0 {
+            return -1;
+        }
+        if !_readbytes.is_null() {
+            // SAFETY: `_readbytes` is writable per the contract.
+            *_readbytes = n as usize;
+        }
+        1
     }
-    -1
 }
-
-/// `ssl_peek_internal` — `ssl/ssl_lib.c:2461-2497`, reduced to the uninitialised guard.
 ///
 /// # Safety
 /// As [`ssl_read_internal`].
@@ -5140,8 +5238,22 @@ pub(crate) unsafe fn ssl_write_internal(
         if ossl_statem_check_finish_init(s, 1) == 0 {
             return -1;
         }
+        // Phase 17.2c: once the handshake has finished, write one protected record through the
+        // reduced record layer (`ssl3_write_bytes`).
+        if (*s).in_init != 0 {
+            return -1;
+        }
+        // `SSL3_RT_APPLICATION_DATA` — `ssl3.h` (23).
+        // SAFETY: `s` is live; `_buf` holds `_num` readable bytes per the contract.
+        if crate::ssl::record::rec_layer_s3::ssl3_write_bytes(s, 23, _buf.cast(), _num) <= 0 {
+            return -1;
+        }
+        if !_written.is_null() {
+            // SAFETY: `_written` is writable per the contract.
+            *_written = _num;
+        }
+        1
     }
-    -1
 }
 
 /// `int SSL_read(SSL *s, void *buf, int num)` — `ssl/ssl_lib.c:2364-2384`.

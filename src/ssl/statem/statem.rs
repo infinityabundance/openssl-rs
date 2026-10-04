@@ -68,12 +68,15 @@ pub const TLS_ST_OK: c_int = 1;
 /// `TLS_ST_CW_CLNT_HELLO` — `ssl.h:1078`, the client's post-ClientHello state.
 const TLS_ST_CW_CLNT_HELLO: c_int = 13;
 /// `TLS_ST_CR_SRVR_HELLO` — `ssl.h:1067`, the client's read-the-ServerHello state (17.2a).
+#[allow(dead_code)] // retained as the 17.2a state-name record
 const TLS_ST_CR_SRVR_HELLO: c_int = 3;
 /// `TLS_ST_SR_CLNT_HELLO` — `ssl.h:1087`, the server's post-ClientHello-read state.
 const TLS_ST_SR_CLNT_HELLO: c_int = 22;
 /// `TLS_ST_SW_SRVR_HELLO` — `ssl.h` (24), the server's write-the-ServerHello state (17.2b).
+#[allow(dead_code)] // retained as the 17.2b state-name record; the 17.2c driver keys on `TLS_ST_BEFORE`
 const TLS_ST_SW_SRVR_HELLO: c_int = 24;
 /// `TLS_ST_SW_ENCRYPTED_EXTENSIONS` — `ssl.h` (41), the state after the ServerHello (17.2b).
+#[allow(dead_code)] // as `TLS_ST_SW_SRVR_HELLO`
 const TLS_ST_SW_ENCRYPTED_EXTENSIONS: c_int = 41;
 /// `TLS_ST_SW_HELLO_REQ` — `ssl.h:1086`, the renegotiation request state.
 const TLS_ST_SW_HELLO_REQ: c_int = 21;
@@ -89,6 +92,7 @@ const MSG_FLOW_UNINITED: c_int = 0;
 /// `MSG_FLOW_ERROR` — `internal/statem.h:55`, "a permanent error with this connection".
 const MSG_FLOW_ERROR: c_int = 1;
 /// `MSG_FLOW_READING` — `internal/statem.h:57`.
+#[allow(dead_code)] // the 17.2c drivers set this state through their own local constant
 const MSG_FLOW_READING: c_int = 2;
 /// `MSG_FLOW_FINISHED` — `internal/statem.h:61`.
 const MSG_FLOW_FINISHED: c_int = 4;
@@ -101,6 +105,7 @@ const SSL_AD_NO_ALERT: c_int = 0;
 /// `SSL_NOTHING` — `ssl.h:932` (the `rwstate` idle value).
 const SSL_NOTHING: c_int = 1;
 /// `SSL_READING` — `ssl.h:934`.
+#[allow(dead_code)] // the 17.2c drivers set this `rwstate` through `statem_clnt.rs`'s driver
 const SSL_READING: c_int = 3;
 /// `SSL_WRITING` — `ssl.h:933`.
 const SSL_WRITING: c_int = 2;
@@ -445,72 +450,19 @@ unsafe fn state_machine(s: *mut Ssl, server: bool) -> c_int {
             }
         }
 
-        // The authority allocates `init_buf`, pushes the write-buffering BIO, calls
-        // `tls_setup_handshake` and constructs its first flight. 17.2a lands the client's first
-        // flight across that boundary -- `ossl_statem_client_write_transition`'s
-        // `TLS_ST_BEFORE -> TLS_ST_CW_CLNT_HELLO`, then `tls_construct_client_hello` over the reduced
-        // record write -- so the peer BIO receives a real ClientHello. 17.2b lands the server's
-        // first flight: the server reads the ClientHello record over the reduced plaintext record
-        // read, `tls_process_client_hello` chooses the version/cipher/group, and
-        // `tls_construct_server_hello` writes a ServerHello. The server then waits for the next
-        // flight, which the client's unlanded read path cannot produce.
-        if !server && (*s).hand_state == TLS_ST_BEFORE {
-            (*s).hand_state = TLS_ST_CW_CLNT_HELLO;
-        }
-        if !server && (*s).hand_state == TLS_ST_CW_CLNT_HELLO {
-            // SAFETY: `s` is live; the write BIO is the caller's to write.
-            if crate::ssl::statem::statem_clnt::write_client_hello(s) <= 0 {
-                ossl_statem_send_fatal(s, SSL_AD_NO_ALERT);
-                (*s).statem_in_handshake -= 1;
-                return -1;
-            }
-            // The read transition that consumes the server's `ServerHello` would move the state to
-            // `TLS_ST_CR_SRVR_HELLO`; the crate advances it here so a second `SSL_connect` does not
-            // rebuild the flight (the authority leaves it at `TLS_ST_CW_CLNT_HELLO` until the read
-            // transition runs, a recorded transient difference).
-            (*s).hand_state = TLS_ST_CR_SRVR_HELLO;
-        }
-
-        // The server's first flight (17.2b). A fresh server at `TLS_ST_BEFORE` reads one plaintext
-        // handshake record; when the ClientHello arrives it processes it and writes the ServerHello.
-        // An empty read BIO leaves the server waiting, exactly as the authority's first read does.
-        if server && (*s).hand_state == TLS_ST_BEFORE {
-            let mut buf = [0u8; 4096];
-            let mut rectype = 0u8;
-            // SAFETY: `s` is live; `buf` is 4096 writable bytes.
-            let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
-                s,
-                &mut rectype,
-                buf.as_mut_ptr(),
-                buf.len(),
-            );
-            if n <= 0 {
-                (*s).statem_state = MSG_FLOW_READING;
-                (*s).rwstate = SSL_READING;
-                (*s).statem_in_handshake -= 1;
-                return -1;
-            }
-            // SAFETY: `s` is live; `buf[..n]` is the handshake message.
-            if crate::ssl::statem::statem_srvr::tls_process_client_hello(s, &buf[..n as usize]) == 0
-            {
-                ossl_statem_send_fatal(s, SSL_AD_NO_ALERT);
-                (*s).statem_in_handshake -= 1;
-                return -1;
-            }
-            (*s).hand_state = TLS_ST_SW_SRVR_HELLO;
-            // SAFETY: `s` is live; the write BIO is the caller's to write.
-            if crate::ssl::statem::statem_srvr::write_server_hello(s) <= 0 {
-                ossl_statem_send_fatal(s, SSL_AD_NO_ALERT);
-                (*s).statem_in_handshake -= 1;
-                return -1;
-            }
-            (*s).hand_state = TLS_ST_SW_ENCRYPTED_EXTENSIONS;
-        }
-
-        (*s).statem_state = MSG_FLOW_READING;
-        (*s).rwstate = SSL_READING;
+        // Phase 17.2c: the reduced flight driver pumps one record per call until the handshake
+        // finishes (`1`) or the peer BIO is empty (`-1`). It spans the authority's
+        // `tls_setup_handshake`, the read/write sub-state machines and the message-construction
+        // boundary the earlier slices stopped at (see `statem_clnt.rs`/`statem_srvr.rs`).
+        let ret = if server {
+            // SAFETY: `s` is live.
+            crate::ssl::statem::statem_srvr::tls13_server_drive(s)
+        } else {
+            // SAFETY: `s` is live.
+            crate::ssl::statem::statem_clnt::tls13_client_drive(s)
+        };
         (*s).statem_in_handshake -= 1;
-        -1
+        ret
     }
 }
 

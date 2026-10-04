@@ -211,7 +211,6 @@
           "tls_construct_end_of_early_data",
           "tls_construct_new_session_ticket",
           "tls_construct_next_proto",
-          "tls_construct_server_certificate",
           "tls_construct_server_done",
           "tls_construct_server_key_exchange",
           "tls_handle_alpn",
@@ -231,9 +230,7 @@
           "tls_process_key_exchange",
           "tls_process_new_session_ticket",
           "tls_process_next_proto",
-          "tls_process_server_certificate",
           "tls_process_server_done",
-          "tls_process_server_hello",
           "tls_process_server_rpk"
         ],
         "evidence": "src/ssl/statem/statem_clnt.rs and src/ssl/statem/statem_srvr.rs module headers (the message-body boundary); docs/PHASE-16-SUBPHASES.md row 16.5 and section 3; forensics/atlas/transcription-edges.json (both modules are statem_clnt.c/statem_srvr.c's)",

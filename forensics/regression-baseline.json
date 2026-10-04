@@ -665,7 +665,7 @@
     },
     "RT-TLS13-INTEROP": {
       "observations": 69,
-      "verdict": "pending"
+      "verdict": "pass"
     },
     "RT-TS": {
       "observations": 275,
@@ -750,7 +750,7 @@
     "phase14": 0,
     "phase15": 0,
     "phase16": 0,
-    "phase17": 56,
+    "phase17": 55,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
@@ -805,9 +805,9 @@
   },
   "prerequisites": {
     "blocking_dependencies": 0,
-    "divergence_names_covered": 103,
+    "divergence_names_covered": 100,
     "findings": 0,
-    "language_census": 11762,
+    "language_census": 11747,
     "sealed_census": 399
   },
   "provider_implemented": [

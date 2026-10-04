@@ -1068,10 +1068,11 @@ def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bo
 
 # `RT-TLS13-INTEROP`'s comparable observations: the arms 17.2 drives. Each is a deterministic
 # function of the build -- a message type, a protocol version, a length, a cipher-suite count, an
-# extension body that does not carry a random, or a certificate-load return value -- so the
-# authority's own two runs agree and the candidate reproducing the first flight produces the same
-# lines. Every other observation the probe prints is a residual classified in `_interop_reason`
-# and recorded rather than diffed.
+# extension body that does not carry a random, a certificate-load return value, or (17.2c) the
+# terminal handshake state, the retry count and the application-data exchange -- so the authority's
+# own two runs agree and the candidate reproducing the flight produces the same lines. Every other
+# observation the probe prints is a residual classified in `_interop_reason` and recorded rather
+# than diffed.
 INTEROP_COMPARABLE: list[str] = [
     "ctx.client.nonnull",
     "ctx.server.nonnull",
@@ -1103,6 +1104,30 @@ INTEROP_COMPARABLE: list[str] = [
     "ch.ext.23.data",
     "ch.ext.45.len",
     "ch.ext.45.data",
+    # 17.2c: the flight now completes on both sides, so the terminal handshake state, the two
+    # rounds that carry it there, and the application-data exchange are deterministic too.
+    "flight.1.client.ret",
+    "flight.1.server.ret",
+    "flight.2.client.ret",
+    "flight.2.server.ret",
+    "flights.used",
+    "client.state",
+    "client.want",
+    "client.in_init",
+    "client.finished",
+    "server.state",
+    "server.want",
+    "server.in_init",
+    "server.finished",
+    "app.skipped",
+    "app.write.client",
+    "app.client.bytes",
+    "app.read.server",
+    "app.server.match",
+    "app.write.server",
+    "app.server.bytes",
+    "app.read.client",
+    "app.client.match",
     "client.err.count",
     "server.err.count",
     "probe.done",
@@ -1167,16 +1192,19 @@ def _interop_reason(key: str) -> str:
 
 
 def interop_court(name: str, src: Path, auth, work: Path) -> dict:
-    """`RT-TLS13-INTEROP`: the TLS 1.3 client/server first flight, differentially.
+    """`RT-TLS13-INTEROP`: the TLS 1.3 client/server flight, differentially.
 
-    17.2b drives as far as the landed message layer reaches: the client builds a real `ClientHello`
-    (with `supported_groups`/`key_share`) and the server reads it and writes a real `ServerHello`
-    over the memory BIOs, and the court compares the observations that flight makes deterministic
-    (record types, versions, session/cipher/compression shape, the option-gated extension bodies and
-    the certificate/key loads). The observations the flight does **not** yet make comparable -- the
-    missing extensions, the hybrid key share, and every step past the ServerHello -- are classified
-    by `_interop_reason` and recorded; the full flight is named in `PENDING_COURTS`'s section of the
-    document. A residual on a comparable observation is a failure.
+    17.2c drives the flight to completion: the client builds a real `ClientHello`, the server
+    reads it and writes a real `ServerHello`, the reduced key schedule derives the handshake and
+    application traffic keys from the X25519 shared secret, the server's encrypted flight
+    (`EncryptedExtensions`/`Certificate`/`CertificateVerify`/`Finished`) and the client's read
+    path carry both sides to `TLS_ST_OK`, and one application-data record is exchanged each way.
+    The court compares every observation that flight makes deterministic: the record and handshake
+    headers, the legacy/session/cipher/compression shape, the option-gated extension bodies, the
+    certificate-load return values, the terminal handshake states and the application-data
+    exchange. A residual on a comparable observation is a failure. The observations the flight
+    does not make comparable -- the missing extensions, the hybrid key share and the
+    CertificateVerify verification -- are classified by `_interop_reason` and recorded.
     """
     auth_lib = auth.libdir
     auth_inc = auth.prefix / "include"
@@ -1513,15 +1541,20 @@ def main(argv: list[str]) -> int:
             "server's first flight -- tls_process_client_hello over a reduced plaintext record read "
             "and tls_construct_server_hello plus the extensions_srvr framework and the reduced "
             "group/key-share infrastructure -- and fixes the BIO_C_SET_FILENAME constant so the "
-            "fixture loads. The court compares the record/handshake headers, the "
-            "legacy/session/cipher/compression shape, the option-gated extension bodies and the "
-            "three certificate-load return values that flight makes deterministic. The remaining "
-            "gaps -- signature_algorithms/ec_point_formats/renegotiation_info, the hybrid key share "
-            "(X25519MLKEM768), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c), the server flight "
-            "past the ServerHello, the client read path and the 56 message bodies D529 handed "
-            "forward -- are classified in _interop_reason and recorded, so the court's verdict is "
-            "pending (section 3.2 names a stalled handshake pending rather than passing) and the "
-            "tls13-interop contract unit stays open. "
+            "fixture loads. 17.2c lands the rest of the flight: the reduced TLS1.3 key schedule "
+            "(src/ssl/tls13_enc.rs -- HKDF-Extract/Expand over SHA256/SHA384, the early/handshake/"
+            "master secrets, the handshake and application traffic secrets, the Finished MAC and "
+            "per-record AES-GCM/ChaCha20-Poly1305 protection), the client's read path "
+            "(tls_process_server_hello and the EncryptedExtensions/Certificate/CertificateVerify/"
+            "Finished handlers) and the server's encrypted flight "
+            "(tls_construct_encrypted_extensions/certificate/cert_verify/finished). Both sides now "
+            "reach TLS_ST_OK, report SSL_is_init_finished, and exchange a 15-byte application "
+            "record in each direction, so the court compares the terminal states, the two "
+            "carrying rounds and the application-data exchange as well as the first-flight "
+            "structure. The remaining recorded gaps -- the missing ClientHello extensions "
+            "(signature_algorithms/ec_point_formats/renegotiation_info), the hybrid X25519MLKEM768 "
+            "key share, the RSA-PSS CertificateVerify verification and the message bodies D529 "
+            "handed forward -- are classified in _interop_reason and recorded. "
             "`RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it "
             "through the libcrypto path (and the same for CONF), requiring one queue across the "
             "candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via "
