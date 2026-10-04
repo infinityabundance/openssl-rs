@@ -3,8 +3,8 @@
   "body": {
     "blocking_dependencies": [],
     "census": {
-      "covered_by_a_divergence": 152,
-      "language_surface_not_modelled_by_name": 11668
+      "covered_by_a_divergence": 155,
+      "language_surface_not_modelled_by_name": 11848
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -36,7 +36,7 @@
         "inlen": 1,
         "libctx": 1,
         "openssl_init_fork_handlers": 1,
-        "ossl_get_ocsp_response": 1,
+        "ossl_get_ocsp_response": 2,
         "ossl_gost18_cke_cipher_nid": 2,
         "ossl_gost_ukm": 2,
         "ossl_lib_ctx_default_deinit": 1,
@@ -74,7 +74,7 @@
         "stdout": 1,
         "tls_client_key_exchange_post_work": 1,
         "tls_construct_cert_status": 1,
-        "tls_construct_cert_status_body": 1,
+        "tls_construct_cert_status_body": 2,
         "tls_construct_certificate_request": 1,
         "tls_construct_client_certificate": 1,
         "tls_construct_client_key_exchange": 1,
@@ -88,7 +88,7 @@
         "tls_post_process_server_certificate": 1,
         "tls_prepare_client_certificate": 1,
         "tls_process_cert_status": 1,
-        "tls_process_cert_status_body": 1,
+        "tls_process_cert_status_body": 2,
         "tls_process_client_certificate": 1,
         "tls_process_client_key_exchange": 1,
         "tls_process_client_rpk": 1,
@@ -692,13 +692,16 @@
         "ssl/ssl_sess.c": 48,
         "ssl/ssl_stat.c": 3,
         "ssl/ssl_txt.c": 6,
+        "ssl/statem/extensions_clnt.c": 62,
         "ssl/statem/extensions_cust.c": 32,
+        "ssl/statem/extensions_srvr.c": 73,
         "ssl/statem/statem.c": 57,
         "ssl/statem/statem_clnt.c": 125,
         "ssl/statem/statem_lib.c": 110,
         "ssl/statem/statem_srvr.c": 149,
         "ssl/t1_lib.c": 222,
         "ssl/t1_trce.c": 101,
+        "ssl/tls13_enc.c": 45,
         "ssl/tls_depr.c": 17,
         "ssl/tls_srp.c": 18
       }
@@ -741,11 +744,11 @@
         "libctx",
         "openssl_init_fork_handlers",
         "ossl_get_ocsp_response",
+        "ossl_get_ocsp_response",
         "ossl_gost18_cke_cipher_nid",
         "ossl_gost18_cke_cipher_nid",
         "ossl_gost_ukm",
-        "ossl_gost_ukm",
-        "ossl_lib_ctx_default_deinit"
+        "ossl_gost_ukm"
       ],
       "language_surface_not_modelled_by_name": [
         "crypto/aria/aria.c:X",
@@ -791,7 +794,7 @@
       ]
     },
     "checked": {
-      "authority_units": 596,
+      "authority_units": 599,
       "crate_modules": 854,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
@@ -1137,12 +1140,88 @@
           "ssl_undefined_void_function",
           "ssl_validate_ct"
         ],
+        "ssl/statem/extensions_clnt.c": [
+          "tls_construct_ctos_client_cert_type",
+          "tls_construct_ctos_cookie",
+          "tls_construct_ctos_early_data",
+          "tls_construct_ctos_maxfragmentlen",
+          "tls_construct_ctos_npn",
+          "tls_construct_ctos_padding",
+          "tls_construct_ctos_psk",
+          "tls_construct_ctos_sct",
+          "tls_construct_ctos_server_cert_type",
+          "tls_construct_ctos_srp",
+          "tls_construct_ctos_status_request",
+          "tls_construct_ctos_use_srtp",
+          "tls_parse_stoc_alpn",
+          "tls_parse_stoc_client_cert_type",
+          "tls_parse_stoc_cookie",
+          "tls_parse_stoc_early_data",
+          "tls_parse_stoc_ec_pt_formats",
+          "tls_parse_stoc_ems",
+          "tls_parse_stoc_etm",
+          "tls_parse_stoc_key_share",
+          "tls_parse_stoc_maxfragmentlen",
+          "tls_parse_stoc_npn",
+          "tls_parse_stoc_psk",
+          "tls_parse_stoc_renegotiate",
+          "tls_parse_stoc_sct",
+          "tls_parse_stoc_server_cert_type",
+          "tls_parse_stoc_server_name",
+          "tls_parse_stoc_session_ticket",
+          "tls_parse_stoc_status_request",
+          "tls_parse_stoc_supported_versions",
+          "tls_parse_stoc_use_srtp"
+        ],
         "ssl/statem/extensions_cust.c": [
           "custom_ext_add",
           "custom_ext_init",
           "custom_ext_parse",
           "custom_exts_free",
           "ossl_tls_add_custom_ext_intern"
+        ],
+        "ssl/statem/extensions_srvr.c": [
+          "tls_construct_stoc_alpn",
+          "tls_construct_stoc_client_cert_type",
+          "tls_construct_stoc_cookie",
+          "tls_construct_stoc_cryptopro_bug",
+          "tls_construct_stoc_early_data",
+          "tls_construct_stoc_ec_pt_formats",
+          "tls_construct_stoc_ems",
+          "tls_construct_stoc_etm",
+          "tls_construct_stoc_maxfragmentlen",
+          "tls_construct_stoc_next_proto_neg",
+          "tls_construct_stoc_psk",
+          "tls_construct_stoc_renegotiate",
+          "tls_construct_stoc_server_cert_type",
+          "tls_construct_stoc_server_name",
+          "tls_construct_stoc_session_ticket",
+          "tls_construct_stoc_status_request",
+          "tls_construct_stoc_supported_groups",
+          "tls_construct_stoc_use_srtp",
+          "tls_parse_ctos_alpn",
+          "tls_parse_ctos_client_cert_type",
+          "tls_parse_ctos_cookie",
+          "tls_parse_ctos_early_data",
+          "tls_parse_ctos_ec_pt_formats",
+          "tls_parse_ctos_ems",
+          "tls_parse_ctos_etm",
+          "tls_parse_ctos_key_share",
+          "tls_parse_ctos_maxfragmentlen",
+          "tls_parse_ctos_npn",
+          "tls_parse_ctos_post_handshake_auth",
+          "tls_parse_ctos_psk",
+          "tls_parse_ctos_psk_kex_modes",
+          "tls_parse_ctos_renegotiate",
+          "tls_parse_ctos_server_cert_type",
+          "tls_parse_ctos_server_name",
+          "tls_parse_ctos_session_ticket",
+          "tls_parse_ctos_sig_algs",
+          "tls_parse_ctos_sig_algs_cert",
+          "tls_parse_ctos_srp",
+          "tls_parse_ctos_status_request",
+          "tls_parse_ctos_supported_groups",
+          "tls_parse_ctos_use_srtp"
         ],
         "ssl/statem/statem_clnt.c": [
           "tls_process_server_certificate"
@@ -1238,6 +1317,18 @@
           "tls_use_ticket",
           "tls_valid_group"
         ],
+        "ssl/tls13_enc.c": [
+          "tls13_alert_code",
+          "tls13_export_keying_material",
+          "tls13_export_keying_material_early",
+          "tls13_final_finish_mac",
+          "tls13_hkdf_expand",
+          "tls13_hkdf_expand_ex",
+          "tls13_setup_key_block",
+          "tls13_store_handshake_traffic_hash",
+          "tls13_store_server_finished_hash",
+          "tls13_update_key"
+        ],
         "ssl/tls_depr.c": [
           "ssl_hmac_get0_HMAC_CTX",
           "ssl_hmac_old_final",
@@ -1261,7 +1352,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 386
+      "names": 468
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -1271,7 +1362,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "0f8e292a81a5e702232bc8cda63c3a40ac12ff05cd37bacc003693fddb29f695",
+  "body_hash": "b28e155522e59d0bc0ad95feec9fe9aec757097b213a9930e024c7d610a54e17",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1292,7 +1383,7 @@
     {
       "name": "transcription-edges",
       "path": "forensics/atlas/transcription-edges.json",
-      "sha256": "a0db7a1940929e3b4e39ccc803fb8e28a9c9b800eb1536e03181a281186c1cd7"
+      "sha256": "47a47286aa6b3ab4e0a5c1e694f1dd32c673eece68d5c8a4ed2f9f99cb69d015"
     },
     {
       "name": "symbol-ownership",
