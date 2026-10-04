@@ -42,7 +42,7 @@ declared owner; this is that assignment.
 | 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
-| 17 | Downstream replacement court | `in-progress` | 0 | 4 | 4 | 0 | 0 |
+| 17 | Downstream replacement court | `in-progress` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
@@ -537,12 +537,12 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase17-obligations.json`
 * atlas-owned: 0
-* owned working set: 4
-* implemented: 4
+* owned working set: 5
+* implemented: 5
 * deferred to a later stratum with a stated reason: 0
 * **open in this stratum: 0**
 
-Courts: `all pass`, 5 court(s), **1105** authority observation(s) over 5 transcript court(s).
+Courts: `all pass`, 6 court(s), **1111** authority observation(s) over 6 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
@@ -551,6 +551,7 @@ Courts: `all pass`, 5 court(s), **1105** authority observation(s) over 5 transcr
 | RT-TLS13-INTEROP-MATRIX | `pass` | 154 |
 | RT-CROSS-DSO-STATE | `pass` | 18 |
 | RT-DOWNSTREAM-CONSUMER | `pass` | 59 |
+| RT-DOWNSTREAM-CORPUS | `pass` | 6 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

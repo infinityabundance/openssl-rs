@@ -149,6 +149,20 @@ must agree; the flight's on-the-wire byte counts are `DOWNSTREAM_DIVERGENCE` and
 the candidate engine's reduction named. A residual on a comparable observation is a failure. No
 court remains in `PENDING_COURTS`.
 
+`RT-DOWNSTREAM-CORPUS`, and what it validates
+--------------------------------------------
+17.4a's court consumes the machine-owned downstream corpus instead of running a harness. Six
+unmodified downstream programs (`courts/phase17/downstream/`) are built against the candidate
+shell and exercised; the driver `courts/phase17/downstream/run_all.sh` writes one measured
+record per program to `courts/phase17/downstream/<program>/result.json` and aggregates them into
+`forensics/atlas/downstream-corpus.json`. The court reads that corpus and fails Phase 17 unless
+every program is present, every required field (including `build`, `link`, `start`, `functional`,
+`concurrency`, `known_residuals` and `historical_failures`) is present, `functional` is true, the
+recorded `candidate` equals the current `Cargo.toml` version (freshness), each corpus record
+still equals its per-program `result.json` (no drift), and every `historical_failures` commit is
+in this history. It deliberately does **not** re-run the multi-hour builds in the gate path: the
+driver is how the corpus is produced, and the court validates what was recorded.
+
 The runner reads no obligations ledger: the ledger's contract-unit states are measured from this
 registry, so the edge runs ledger -> courts and binding it back would form a digest cycle neither
 artefact could reproduce. `docs/PHASE-17-SUBPHASES.md` section 4.2 is the precondition. **No
@@ -160,6 +174,7 @@ SPDX-License-Identifier: Apache-2.0"""
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -178,6 +193,11 @@ from atlas_common import (  # noqa: E402
     run,
     write_json,
 )
+
+# The candidate identity the corpus records must match (one release knob, `Cargo.toml`).
+# `gen_frf_courts.CANDIDATE_VERSION` is that same value; importing the module rather than
+# re-parsing Cargo.toml keeps a single source for "the current candidate".
+import gen_frf_courts  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase17" / "COURTS.json"
 GENERATOR = "forensics/tools/phase17_courts.py"
@@ -199,7 +219,22 @@ COURTS: list[tuple[str, str]] = [
     ("RT-TLS13-INTEROP-MATRIX", "rt_tls13_matrix_peer.c"),
     ("RT-CROSS-DSO-STATE", "rt_cross_dso_state_probe.c"),
     ("RT-DOWNSTREAM-CONSUMER", "rt_downstream_consumer_probe.c"),
+    # The corpus court consumes recorded data rather than running a multi-hour build: its
+    # instrument is `forensics/atlas/downstream-corpus.json`, produced by the driver
+    # `courts/phase17/downstream/run_all.sh` and described by `courts/phase17/downstream/README.md`.
+    ("RT-DOWNSTREAM-CORPUS", "downstream/README.md"),
 ]
+
+# The machine-owned downstream corpus: one measured record per program, aggregated. The court
+# below is the seal's mechanical dependency on it -- Phase 17 cannot be `complete` while a
+# program's `functional` is false or its record names a stale candidate.
+DOWNSTREAM_CORPUS = REPO_ROOT / "forensics" / "atlas" / "downstream-corpus.json"
+DOWNSTREAM_PROGRAMS = ["curl", "git", "haproxy", "nginx", "openssh", "python"]
+DOWNSTREAM_REQUIRED_FIELDS = (
+    "program", "version", "source_url", "source_sha256", "candidate", "authority",
+    "build", "link", "start", "functional", "concurrency", "known_residuals",
+    "historical_failures",
+)
 
 # `RT-TLS13-INTEROP-MATRIX`'s driver source. It is compiled once, without a TLS library, and forks
 # the two per-side peer binaries the matrix court compiles from `rt_tls13_matrix_peer.c`.
@@ -1862,6 +1897,104 @@ def downstream_court(name: str, src: Path, auth, work: Path) -> dict:
     }
 
 
+def _commit_exists(sha: str) -> bool:
+    """Whether `sha` names a commit in the checked-out history.
+
+    The `historical_failures` list is the one authored field in a record, so the court
+    re-verifies every commit it names rather than trusting the prose. `git cat-file -e
+    <sha>^{commit}` is the read; a fabricated or mistyped id fails the court.
+    """
+    if not sha:
+        return False
+    r = subprocess.run(
+        ["git", "cat-file", "-e", f"{sha}^{{commit}}"],
+        cwd=REPO_ROOT, capture_output=True, text=True, check=False,
+    )
+    return r.returncode == 0
+
+
+def corpus_court(name: str) -> dict:
+    """`RT-DOWNSTREAM-CORPUS`: the seal's mechanical dependency on the recorded records.
+
+    The six downstream harnesses include multi-minute builds and live TLS servers, so this
+    court does **not** re-run them: it consumes `forensics/atlas/downstream-corpus.json`,
+    the aggregate of `courts/phase17/downstream/<program>/result.json`, both produced by the
+    driver `courts/phase17/downstream/run_all.sh`. It fails if a program is missing, a
+    required field is absent, `functional` is not true, `candidate` is not the current
+    `Cargo.toml` version, a corpus record has drifted from its per-program `result.json`, the
+    `concurrency` shape is malformed, or a `historical_failures` commit is not in this history.
+    Because `phase_state.py` blocks a stratum on any non-`pass` court in this registry, a
+    broken downstream can no longer coexist with a formal Phase-17 seal.
+    """
+    problems: list[str] = []
+    if not DOWNSTREAM_CORPUS.is_file():
+        return {"court": name, "verdict": "fail", "stage": "corpus-missing",
+                "detail": rel(DOWNSTREAM_CORPUS)}
+
+    doc = json.loads(DOWNSTREAM_CORPUS.read_text(encoding="utf-8"))
+    rows = doc.get("programs") or []
+    records = {r.get("program"): r for r in rows}
+    current = gen_frf_courts.CANDIDATE_VERSION
+
+    for program in DOWNSTREAM_PROGRAMS:
+        r = records.get(program)
+        if r is None:
+            problems.append(f"{program}: missing from the corpus")
+            continue
+        for field in DOWNSTREAM_REQUIRED_FIELDS:
+            if field not in r:
+                problems.append(f"{program}: missing required field {field!r}")
+        per = REPO_ROOT / "courts" / "phase17" / "downstream" / program / "result.json"
+        if not per.is_file():
+            problems.append(f"{program}: {rel(per)} is absent")
+        elif json.loads(per.read_text(encoding="utf-8")) != r:
+            problems.append(f"{program}: corpus record differs from {rel(per)}")
+        if (r.get("functional") or {}).get("ok") is not True:
+            problems.append(
+                f"{program}: functional is not true "
+                f"({(r.get('functional') or {}).get('detail', '')})")
+        if r.get("candidate") != current:
+            problems.append(
+                f"{program}: candidate {r.get('candidate')!r} != current {current!r} (stale record)")
+        conc = r.get("concurrency") or {}
+        if (not isinstance(conc.get("ok"), int) or not isinstance(conc.get("total"), int)
+                or conc["total"] < 1 or conc["ok"] > conc["total"]):
+            problems.append(f"{program}: malformed concurrency {conc!r}")
+        for h in r.get("historical_failures") or []:
+            if not _commit_exists(str(h.get("commit", ""))):
+                problems.append(
+                    f"{program}: historical_failures commit {h.get('commit')!r} is not in this history")
+
+    residuals = sorted({x for r in records.values()
+                        for x in (r.get("known_residuals") or [])})
+    return {
+        "court": name,
+        "probe": rel(DOWNSTREAM_CORPUS),
+        "programs": sorted(records),
+        "candidate": current,
+        "functional": {p: bool((records.get(p, {}).get("functional") or {}).get("ok"))
+                       for p in DOWNSTREAM_PROGRAMS},
+        "concurrency": {p: records.get(p, {}).get("concurrency") for p in DOWNSTREAM_PROGRAMS},
+        "authority_observations": sum(1 for p in DOWNSTREAM_PROGRAMS if records.get(p)),
+        # `atlas_common.court_observations` requires a transcript court to carry both or neither;
+        # the corpus validates the authority-side and per-program candidate records in the same
+        # pass, so the two counts are equal.
+        "candidate_observations": sum(1 for p in DOWNSTREAM_PROGRAMS if records.get(p)),
+        "recorded_divergences": residuals,
+        "problems": problems,
+        # `main` prints failures through `residuals`; shape each problem as one so the reason
+        # is visible rather than only the verdict.
+        "residuals": [{"observation": p, "authority": "", "candidate": "", "class": "corpus"}
+                      for p in problems],
+        "verdict": "fail" if problems else "pass",
+        "stage": "corpus",
+        "frf_declarable": False,
+        "frf_exclusion": (
+            "corpus court: consumes the recorded downstream records, stages no probe pair and "
+            "diffs no authority transcript (D13)"),
+    }
+
+
 def render_probe(cases: list[list[str]]) -> str:
     """The shell probe `RT-CLI-BODIES` runs on each side.
 
@@ -2013,6 +2146,9 @@ def main(argv: list[str]) -> int:
 
     records: list[dict] = []
     for name, filename in COURTS:
+        if name == "RT-DOWNSTREAM-CORPUS":
+            records.append(corpus_court(name))
+            continue
         src = PROBE_DIR / filename
         if name == "RT-CLI-BODIES":
             records.append(bodies_court(name))
@@ -2158,13 +2294,18 @@ def main(argv: list[str]) -> int:
             "`KNOWN_DIVERGENCE`; the runtime now resolves libcrypto's exported "
             "`ERR_get_state`/`conf_ssl_*` owners (`src/runtime/dso_shared.rs`), so one queue and "
             "one store serve both DSOs and the verdicts are `pass`/`PASS`. "
-            "`RT-DOWNSTREAM-CONSUMER` is 17.4's: "
+            "counts. `RT-DOWNSTREAM-CONSUMER` is 17.4's: "
             "courts/phase17/rt_downstream_consumer_probe.c is a real downstream consumer linked "
             "only against the shipped install prefix (an EVP digest, an X.509 PEM parse, a "
             "libcrypto ERR round-trip and a TLS 1.3 handshake over memory BIOs exchanging a fixed "
             "15-byte application record), and the court records the flight's on-the-wire byte "
             "counts the candidate's reduced engine moves rather than asserting wire parity "
-            "(section 3.4). No court remains pending. This "
+            "(section 3.4). `RT-DOWNSTREAM-CORPUS` is 17.4a's: it consumes the machine-owned "
+            "downstream corpus (forensics/atlas/downstream-corpus.json, aggregated from the six "
+            "courts/phase17/downstream/<program>/result.json records the driver run_all.sh writes) "
+            "and fails Phase 17 unless every program is present, every required field is present, "
+            "functional is true, candidate equals the current Cargo.toml version, and each corpus "
+            "record still equals its per-program result.json. No court remains pending. This "
             "stratum owns no exported symbol, so no differential probe over a symbol set is its "
             "evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry "
             "is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at "
@@ -2187,6 +2328,12 @@ def main(argv: list[str]) -> int:
         InputRef(name="downstream-probe",
                  path=PROBE_DIR / "rt_downstream_consumer_probe.c"),
         InputRef(name="downstream-leaf", path=PROBE_DIR / "fixtures" / "leaf.pem"),
+        InputRef(name="downstream-corpus", path=DOWNSTREAM_CORPUS),
+        InputRef(name="downstream-readme",
+                 path=REPO_ROOT / "courts" / "phase17" / "downstream" / "README.md"),
+        *[InputRef(name=f"downstream-{p}-record",
+                   path=REPO_ROOT / "courts" / "phase17" / "downstream" / p / "result.json")
+          for p in DOWNSTREAM_PROGRAMS],
     ]
     doc = envelope(kind="phase17-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

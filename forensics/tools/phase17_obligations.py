@@ -14,10 +14,11 @@ The universe is two atlas-derived row kinds, and nothing is typed:
   * **the CLI command bodies** — the 52 `apps/<name>.c` units D530 handed here from Phase 16.4,
     recorded in `forensics/prerequisites.json` either as `deferred_to_later_stratum` rows with
     `owner_phase` 17 or as the `reached_by_a_named_construct` records that discharge them;
-  * **the downstream replacement contract units** — four authored policy rows naming the surfaces
+  * **the downstream replacement contract units** — five authored policy rows naming the surfaces
     `docs/PHASE-17-SUBPHASES.md` records, each state derived from the atlas that measures it: the
-    command bodies, the `RT-TLS13-INTEROP-MATRIX` court, the `RT-CROSS-DSO-STATE` court and the
-    `RT-DOWNSTREAM-CONSUMER` court.
+    command bodies, the `RT-TLS13-INTEROP-MATRIX` court, the `RT-CROSS-DSO-STATE` court, the
+    `RT-DOWNSTREAM-CONSUMER` court and the `RT-DOWNSTREAM-CORPUS` court (the machine-owned
+    downstream records).
 
 Because the unit is not a symbol, `body.unit` names it in `atlas_common.NON_EXPORT_UNITS`, and the
 two tools that partition the *export* universe — `court_coverage.py` and `ownership_audit.py` — skip
@@ -81,9 +82,9 @@ COURTS = "artifacts/phase17/COURTS.json"
 # those tools know.
 UNIT = "downstream replacement contract"
 
-# The three contract units whose closure is measured by a court this stratum stages. `command-bodies`
-# is measured by the prerequisite plane instead, because the 52 `apps/<name>.c` units are the
-# contract the courts then exercise. `(unit, court, closure, what)`.
+# The four contract units whose closure is measured by a court this stratum stages.
+# `command-bodies` is measured by the prerequisite plane instead, because the 52 `apps/<name>.c`
+# units are the contract the courts then exercise. `(unit, court, closure, what)`.
 COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
     ("tls13-interop", "RT-TLS13-INTEROP-MATRIX",
      "the `RT-TLS13-INTEROP-MATRIX` court passes",
@@ -95,6 +96,10 @@ COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
     ("downstream-consumer", "RT-DOWNSTREAM-CONSUMER",
      "the `RT-DOWNSTREAM-CONSUMER` court passes",
      "a real downstream consumer built against the candidate distribution shell"),
+    ("downstream-corpus", "RT-DOWNSTREAM-CORPUS",
+     "the `RT-DOWNSTREAM-CORPUS` court passes",
+     "the machine-owned per-program downstream records (build/link/start/functional/"
+     "concurrency) the seal consumes, and their freshness"),
 )
 
 # D530 hands this stratum the 52 `apps/<name>.c` command bodies. A body's row is
@@ -166,7 +171,7 @@ def contract_units(prereq: dict, courts_body: dict) -> list[dict]:
 
     The units are policy -- which surfaces are the contract -- but no unit's state is typed:
     `command-bodies` is closed when no `apps/<name>.c` unit remains deferred to this stratum, and
-    each of the three court units is closed when its court passes. Each names the atlas or registry
+    each of the four court units is closed when its court passes. Each names the atlas or registry
     that measures it.
     """
     outstanding = sorted(
@@ -329,10 +334,11 @@ def main(argv: list[str]) -> int:
             "the bodies (D530): each landed body's row is rewritten from `deferred_to_later_stratum` "
             "to the `reached_by_a_named_construct` record `plan_reconciliation.py` requires, so "
             "`unit_deferrals` is empty once all 52 are discharged and the ledger fails closed unless "
-            "the plane still records all 52. The four contract "
+            "the plane still records all 52. The five contract "
             "units are the downstream replacement contract docs/PHASE-17-SUBPHASES.md section 1 "
             "names -- the command bodies, a real TLS 1.3 interoperability handshake, the cross-DSO "
-            "shared state and a real downstream consumer -- and the three courts pass while "
+            "shared state, a real downstream consumer and the machine-owned downstream corpus -- and "
+            "the four courts pass while "
             "`command-bodies` closes with the last landed body. Nothing here is a parity claim: a "
             "published command body or a passing handshake "
             "is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and "
