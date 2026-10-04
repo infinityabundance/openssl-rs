@@ -1288,7 +1288,7 @@
         "class": "not_in_this_profile",
         "evidence": "docs/PHASE-9-SUBPHASES.md sections 2 and 4.1; docs/DECISIONS.md D287, D310; forensics/authorities/src/openssl-3.6.4/providers/implementations/rands/build.info:6-7",
         "guard": "`providers/implementations/rands/build.info:7` puts the unit under `SOURCE[../../libfips.a]` alone -- `:6` sends `seed_src.c` and `seed_src_jitter.c` to `libdefault.a` and this one nowhere else -- and this profile builds no FIPS module.",
-        "reason": "docs/PHASE-9-SUBPHASES.md row 9.5 names it for the same reason as `fipsprov.c`: it is the continuous random number generator test (`RCT_test`/`APT_test`, dispatch symbol `ossl_crng_test_functions`), it is compiled into `libfips.a` alone, and its single authority row is `fipsprov.c:445`'s `CRNG-TEST`, which is not in an admitted provider -- so the provider census has no observable for it. D287 named the wrong file (`crngt.c`) and §4.1 is the correction; that correction is the `does_not_exist_in_this_authority` record above, and this is the record for the unit that really exists.",
+        "reason": "docs/PHASE-9-SUBPHASES.md row 9.5 names it for the same reason as `fipsprov.c`: it is the continuous random number generator test (`RCT_test`/`APT_test`, dispatch symbol `ossl_crng_test_functions`), it is compiled into `libfips.a` alone, and its single authority row is `fipsprov.c:445`'s `CRNG-TEST`, which is not in an admitted provider -- so the provider census has no observable for it. D287 named the wrong file (`crngt.c`) and \u00a74.1 is the correction; that correction is the `does_not_exist_in_this_authority` record above, and this is the record for the unit that really exists.",
         "unit": "providers/implementations/rands/fips_crng_test.c.in"
       },
       {
@@ -1545,367 +1545,662 @@
         "unit": "apps/openssl.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/asn1parse.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/asn1parse.rs",
+        "evidence": "src/apps/asn1parse.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "libc_free",
+          "main",
+          "opt_format_asn1",
+          "strtol_base0"
+        ],
+        "reason": "17.1 lands `apps/asn1parse.c`'s command body in `src/apps/asn1parse.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/asn1parse.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/ca.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ca.rs",
+        "evidence": "src/apps/ca.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main"
+        ],
+        "reason": "17.1 lands `apps/ca.c`'s command body in `src/apps/ca.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/ca.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/ciphers.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ciphers.rs",
+        "evidence": "src/apps/ciphers.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_err",
+          "bio_out",
+          "dummy_psk",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/ciphers.c`'s command body in `src/apps/ciphers.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/ciphers.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/cmp.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/cmp.rs",
+        "evidence": "src/apps/cmp.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main"
+        ],
+        "reason": "17.1 lands `apps/cmp.c`'s command body in `src/apps/cmp.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/cmp.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/cms.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/cms.rs",
+        "evidence": "src/apps/cms.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "load_content_info",
+          "main",
+          "opt_format_pds",
+          "refusal"
+        ],
+        "reason": "17.1 lands `apps/cms.c`'s command body in `src/apps/cms.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/cms.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/configutl.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/configutl.rs",
+        "evidence": "src/apps/configutl.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bytes",
+          "main",
+          "print_escaped_value",
+          "print_section"
+        ],
+        "reason": "17.1 lands `apps/configutl.c`'s command body in `src/apps/configutl.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/configutl.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/crl.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/crl.rs",
+        "evidence": "src/apps/crl.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format_pemder",
+          "print_name"
+        ],
+        "reason": "17.1 lands `apps/crl.c`'s command body in `src/apps/crl.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/crl.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/crl2pkcs7.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/crl2pkcs7.rs",
+        "evidence": "src/apps/crl2pkcs7.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "add_certs_from_file",
+          "bio_open",
+          "main",
+          "opt_format_pemder"
+        ],
+        "reason": "17.1 lands `apps/crl2pkcs7.c`'s command body in `src/apps/crl2pkcs7.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/crl2pkcs7.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/dgst.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/dgst.rs",
+        "evidence": "src/apps/dgst.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_get_md_ctx",
+          "bio_write_all",
+          "do_fp",
+          "main",
+          "opt_format_any",
+          "opt_md",
+          "opt_md_silent",
+          "print_out",
+          "print_verify_result"
+        ],
+        "reason": "17.1 lands `apps/dgst.c`'s command body in `src/apps/dgst.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/dgst.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/dhparam.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/dhparam.rs",
+        "evidence": "src/apps/dhparam.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format",
+          "opt_int",
+          "opt_number_error",
+          "strtol_base0"
+        ],
+        "reason": "17.1 lands `apps/dhparam.c`'s command body in `src/apps/dhparam.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/dhparam.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/dsa.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/dsa.rs",
+        "evidence": "src/apps/dsa.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format_any"
+        ],
+        "reason": "17.1 lands `apps/dsa.c`'s command body in `src/apps/dsa.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/dsa.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/dsaparam.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/dsaparam.rs",
+        "evidence": "src/apps/dsaparam.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format",
+          "opt_int",
+          "opt_number_error",
+          "strtol_base0"
+        ],
+        "reason": "17.1 lands `apps/dsaparam.c`'s command body in `src/apps/dsaparam.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/dsaparam.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/ec.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ec.rs",
+        "evidence": "src/apps/ec.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format_any",
+          "opt_format_pemder"
+        ],
+        "reason": "17.1 lands `apps/ec.c`'s command body in `src/apps/ec.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/ec.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/ecparam.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ecparam.rs",
+        "evidence": "src/apps/ecparam.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "list_builtin_curves",
+          "main",
+          "opt_format_pemder"
+        ],
+        "reason": "17.1 lands `apps/ecparam.c`'s command body in `src/apps/ecparam.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/ecparam.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/enc.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/enc.rs",
+        "evidence": "src/apps/enc.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_eof",
+          "bio_pending",
+          "main",
+          "opt_cipher",
+          "opt_int",
+          "opt_long",
+          "opt_number_error",
+          "render_printkey",
+          "set_hex",
+          "strtol_base0"
+        ],
+        "reason": "17.1 lands `apps/enc.c`'s command body in `src/apps/enc.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/enc.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/engine.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/engine.rs",
+        "evidence": "src/apps/engine.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "append_buf",
+          "bio_err",
+          "bio_out",
+          "engine_id",
+          "engine_name",
+          "main",
+          "puts",
+          "util_do_cmds",
+          "util_verbose"
+        ],
+        "reason": "17.1 lands `apps/engine.c`'s command body in `src/apps/engine.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/engine.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/errstr.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/errstr.rs",
+        "evidence": "src/apps/errstr.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "parse_hex_l"
+        ],
+        "reason": "17.1 lands `apps/errstr.c`'s command body in `src/apps/errstr.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/errstr.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/fipsinstall.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/fipsinstall.rs",
+        "evidence": "src/apps/fipsinstall.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "check_non_pedantic_fips",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/fipsinstall.c`'s command body in `src/apps/fipsinstall.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/fipsinstall.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/gendsa.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/gendsa.rs",
+        "evidence": "src/apps/gendsa.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main"
+        ],
+        "reason": "17.1 lands `apps/gendsa.c`'s command body in `src/apps/gendsa.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/gendsa.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/genpkey.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/genpkey.rs",
+        "evidence": "src/apps/genpkey.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format"
+        ],
+        "reason": "17.1 lands `apps/genpkey.c`'s command body in `src/apps/genpkey.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/genpkey.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/genrsa.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/genrsa.rs",
+        "evidence": "src/apps/genrsa.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_int",
+          "opt_long",
+          "opt_number_error",
+          "strtol_base0"
+        ],
+        "reason": "17.1 lands `apps/genrsa.c`'s command body in `src/apps/genrsa.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/genrsa.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/info.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/info.rs",
+        "evidence": "src/apps/info.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main"
+        ],
+        "reason": "17.1 lands `apps/info.c`'s command body in `src/apps/info.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/info.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/kdf.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/kdf.rs",
+        "evidence": "src/apps/kdf.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "app_malloc",
+          "app_params_free",
+          "app_params_new_from_opts",
+          "atoi",
+          "bio_open",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/kdf.c`'s command body in `src/apps/kdf.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/kdf.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/mac.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/mac.rs",
+        "evidence": "src/apps/mac.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "app_malloc",
+          "app_params_free",
+          "app_params_new_from_opts",
+          "bio_open",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/mac.c`'s command body in `src/apps/mac.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/mac.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/nseq.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/nseq.rs",
+        "evidence": "src/apps/nseq.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_open",
+          "dump_cert_text",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/nseq.c`'s command body in `src/apps/nseq.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/nseq.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/ocsp.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ocsp.rs",
+        "evidence": "src/apps/ocsp.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "add_ocsp_cert",
+          "main",
+          "opt_md"
+        ],
+        "reason": "17.1 lands `apps/ocsp.c`'s command body in `src/apps/ocsp.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/ocsp.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/passwd.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/passwd.rs",
+        "evidence": "src/apps/passwd.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "do_passwd",
+          "drop",
+          "final_into",
+          "main",
+          "md5crypt",
+          "new",
+          "shacrypt",
+          "update"
+        ],
+        "reason": "17.1 lands `apps/passwd.c`'s command body in `src/apps/passwd.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/passwd.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/pkcs12.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkcs12.rs",
+        "evidence": "src/apps/pkcs12.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "app_passwd",
+          "main",
+          "set_pbe"
+        ],
+        "reason": "17.1 lands `apps/pkcs12.c`'s command body in `src/apps/pkcs12.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/pkcs12.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/pkcs7.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkcs7.rs",
+        "evidence": "src/apps/pkcs7.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "dump_cert_text",
+          "main",
+          "opt_format_pemder"
+        ],
+        "reason": "17.1 lands `apps/pkcs7.c`'s command body in `src/apps/pkcs7.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/pkcs7.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/pkcs8.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkcs8.rs",
+        "evidence": "src/apps/pkcs8.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format_pemder"
+        ],
+        "reason": "17.1 lands `apps/pkcs8.c`'s command body in `src/apps/pkcs8.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/pkcs8.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/pkey.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkey.rs",
+        "evidence": "src/apps/pkey.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format_pemder"
+        ],
+        "reason": "17.1 lands `apps/pkey.c`'s command body in `src/apps/pkey.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/pkey.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/pkeyparam.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkeyparam.rs",
+        "evidence": "src/apps/pkeyparam.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_open",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/pkeyparam.c`'s command body in `src/apps/pkeyparam.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/pkeyparam.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/pkeyutl.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkeyutl.rs",
+        "evidence": "src/apps/pkeyutl.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_puts",
+          "bio_to_mem",
+          "do_keyop",
+          "get_pkey",
+          "init_ctx",
+          "main",
+          "opt_format_any"
+        ],
+        "reason": "17.1 lands `apps/pkeyutl.c`'s command body in `src/apps/pkeyutl.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/pkeyutl.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/prime.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/prime.rs",
+        "evidence": "src/apps/prime.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "atoi",
+          "bio_out",
+          "check_num",
+          "hex_digit_prefix",
+          "main",
+          "open_read_quiet",
+          "process_num"
+        ],
+        "reason": "17.1 lands `apps/prime.c`'s command body in `src/apps/prime.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/prime.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/rand.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/rand.rs",
+        "evidence": "src/apps/rand.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_long",
+          "opt_number_error",
+          "strtol_base0"
+        ],
+        "reason": "17.1 lands `apps/rand.c`'s command body in `src/apps/rand.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/rand.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/rehash.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/rehash.rs",
+        "evidence": "src/apps/rehash.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "do_dir",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/rehash.c`'s command body in `src/apps/rehash.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/rehash.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/req.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/req.rs",
+        "evidence": "src/apps/req.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "load_csr",
+          "main",
+          "opt_format_pemder",
+          "print_name"
+        ],
+        "reason": "17.1 lands `apps/req.c`'s command body in `src/apps/req.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/req.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/rsa.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/rsa.rs",
+        "evidence": "src/apps/rsa.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format_any",
+          "try_legacy_encoding"
+        ],
+        "reason": "17.1 lands `apps/rsa.c`'s command body in `src/apps/rsa.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/rsa.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/rsautl.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/rsautl.rs",
+        "evidence": "src/apps/rsautl.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main"
+        ],
+        "reason": "17.1 lands `apps/rsautl.c`'s command body in `src/apps/rsautl.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/rsautl.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/s_client.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/s_client.rs",
+        "evidence": "src/apps/s_client.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main"
+        ],
+        "reason": "17.1 lands `apps/s_client.c`'s command body in `src/apps/s_client.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/s_client.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/s_server.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/s_server.rs",
+        "evidence": "src/apps/s_server.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main"
+        ],
+        "reason": "17.1 lands `apps/s_server.c`'s command body in `src/apps/s_server.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/s_server.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/s_time.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/s_time.rs",
+        "evidence": "src/apps/s_time.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main"
+        ],
+        "reason": "17.1 lands `apps/s_time.c`'s command body in `src/apps/s_time.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/s_time.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/sess_id.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/sess_id.rs",
+        "evidence": "src/apps/sess_id.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_open",
+          "load_sess_id",
+          "main",
+          "opt_format"
+        ],
+        "reason": "17.1 lands `apps/sess_id.c`'s command body in `src/apps/sess_id.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/sess_id.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/skeyutl.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/skeyutl.rs",
+        "evidence": "src/apps/skeyutl.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_err",
+          "cstr",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/skeyutl.c`'s command body in `src/apps/skeyutl.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/skeyutl.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/smime.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/smime.rs",
+        "evidence": "src/apps/smime.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format_pds",
+          "refusal"
+        ],
+        "reason": "17.1 lands `apps/smime.c`'s command body in `src/apps/smime.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/smime.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/speed.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/speed.rs",
+        "evidence": "src/apps/speed.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "have_md",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/speed.c`'s command body in `src/apps/speed.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/speed.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/spkac.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/spkac.rs",
+        "evidence": "src/apps/spkac.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "app_load_config",
+          "bio_err",
+          "bio_open",
+          "main"
+        ],
+        "reason": "17.1 lands `apps/spkac.c`'s command body in `src/apps/spkac.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/spkac.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/srp.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/srp.rs",
+        "evidence": "src/apps/srp.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "only_one"
+        ],
+        "reason": "17.1 lands `apps/srp.c`'s command body in `src/apps/srp.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/srp.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/storeutl.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/storeutl.rs",
+        "evidence": "src/apps/storeutl.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_err",
+          "bio_out",
+          "cstr",
+          "main",
+          "process",
+          "puts"
+        ],
+        "reason": "17.1 lands `apps/storeutl.c`'s command body in `src/apps/storeutl.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/storeutl.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/ts.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ts.rs",
+        "evidence": "src/apps/ts.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "create_digest",
+          "create_query",
+          "default_config_file",
+          "load_config_file",
+          "main",
+          "opt_md",
+          "query_command"
+        ],
+        "reason": "17.1 lands `apps/ts.c`'s command body in `src/apps/ts.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/ts.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/verify.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/verify.rs",
+        "evidence": "src/apps/verify.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "bio_open_default_stderr",
+          "cb",
+          "check",
+          "main",
+          "setup_verify"
+        ],
+        "reason": "17.1 lands `apps/verify.c`'s command body in `src/apps/verify.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/verify.c"
       },
       {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-16-SUBPHASES.md row 16.4a and section 3.8; docs/PHASE-16-CLI-SEAL.md section 5.5; src/apps/openssl.rs (the `not_landed` boundary the dispatcher reaches)",
-        "owner_phase": 17,
-        "reason": "Phase 16.4 lands the CLI dispatcher, the option parser and every command's `OPTIONS[]` table, but not this command body: `apps/x509.c` is a separate authority translation unit the stratum does not own, so `do_cmd` reaches `src/apps/openssl.rs`'s `not_landed` boundary instead. The unit is deferred to Phase 17 (`downstream`, the downstream replacement court), which owns the command bodies.",
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/x509.rs",
+        "evidence": "src/apps/x509.rs (the module 17.1 lands); docs/PHASE-17-SUBPHASES.md section 3.6; docs/DECISIONS.md D530",
+        "names": [
+          "main",
+          "opt_format_pemder",
+          "print_name"
+        ],
+        "reason": "17.1 lands `apps/x509.c`'s command body in `src/apps/x509.rs` behind `src/apps/openssl.rs`'s `do_cmd` dispatch and the `src/apps/tables.rs` `OPTIONS[]` table Phase 16.4 landed. The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
         "unit": "apps/x509.c"
       }
     ]

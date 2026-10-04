@@ -7319,134 +7319,134 @@
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
     "unit_records": {
       "apps/asn1parse.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/asn1parse.rs",
+        "owner_phase": null
       },
       "apps/ca.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ca.rs",
+        "owner_phase": null
       },
       "apps/ciphers.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ciphers.rs",
+        "owner_phase": null
       },
       "apps/cmp.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/cmp.rs",
+        "owner_phase": null
       },
       "apps/cms.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/cms.rs",
+        "owner_phase": null
       },
       "apps/configutl.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/configutl.rs",
+        "owner_phase": null
       },
       "apps/crl.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/crl.rs",
+        "owner_phase": null
       },
       "apps/crl2pkcs7.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/crl2pkcs7.rs",
+        "owner_phase": null
       },
       "apps/dgst.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/dgst.rs",
+        "owner_phase": null
       },
       "apps/dhparam.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/dhparam.rs",
+        "owner_phase": null
       },
       "apps/dsa.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/dsa.rs",
+        "owner_phase": null
       },
       "apps/dsaparam.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/dsaparam.rs",
+        "owner_phase": null
       },
       "apps/ec.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ec.rs",
+        "owner_phase": null
       },
       "apps/ecparam.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ecparam.rs",
+        "owner_phase": null
       },
       "apps/enc.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/enc.rs",
+        "owner_phase": null
       },
       "apps/engine.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/engine.rs",
+        "owner_phase": null
       },
       "apps/errstr.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/errstr.rs",
+        "owner_phase": null
       },
       "apps/fipsinstall.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/fipsinstall.rs",
+        "owner_phase": null
       },
       "apps/gendsa.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/gendsa.rs",
+        "owner_phase": null
       },
       "apps/genpkey.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/genpkey.rs",
+        "owner_phase": null
       },
       "apps/genrsa.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/genrsa.rs",
+        "owner_phase": null
       },
       "apps/info.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/info.rs",
+        "owner_phase": null
       },
       "apps/kdf.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/kdf.rs",
+        "owner_phase": null
       },
       "apps/mac.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/mac.rs",
+        "owner_phase": null
       },
       "apps/nseq.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/nseq.rs",
+        "owner_phase": null
       },
       "apps/ocsp.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ocsp.rs",
+        "owner_phase": null
       },
       "apps/openssl.c": {
         "class": "reached_by_a_named_construct",
@@ -7454,134 +7454,134 @@
         "owner_phase": null
       },
       "apps/passwd.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/passwd.rs",
+        "owner_phase": null
       },
       "apps/pkcs12.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkcs12.rs",
+        "owner_phase": null
       },
       "apps/pkcs7.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkcs7.rs",
+        "owner_phase": null
       },
       "apps/pkcs8.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkcs8.rs",
+        "owner_phase": null
       },
       "apps/pkey.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkey.rs",
+        "owner_phase": null
       },
       "apps/pkeyparam.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkeyparam.rs",
+        "owner_phase": null
       },
       "apps/pkeyutl.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/pkeyutl.rs",
+        "owner_phase": null
       },
       "apps/prime.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/prime.rs",
+        "owner_phase": null
       },
       "apps/rand.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/rand.rs",
+        "owner_phase": null
       },
       "apps/rehash.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/rehash.rs",
+        "owner_phase": null
       },
       "apps/req.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/req.rs",
+        "owner_phase": null
       },
       "apps/rsa.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/rsa.rs",
+        "owner_phase": null
       },
       "apps/rsautl.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/rsautl.rs",
+        "owner_phase": null
       },
       "apps/s_client.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/s_client.rs",
+        "owner_phase": null
       },
       "apps/s_server.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/s_server.rs",
+        "owner_phase": null
       },
       "apps/s_time.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/s_time.rs",
+        "owner_phase": null
       },
       "apps/sess_id.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/sess_id.rs",
+        "owner_phase": null
       },
       "apps/skeyutl.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/skeyutl.rs",
+        "owner_phase": null
       },
       "apps/smime.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/smime.rs",
+        "owner_phase": null
       },
       "apps/speed.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/speed.rs",
+        "owner_phase": null
       },
       "apps/spkac.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/spkac.rs",
+        "owner_phase": null
       },
       "apps/srp.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/srp.rs",
+        "owner_phase": null
       },
       "apps/storeutl.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/storeutl.rs",
+        "owner_phase": null
       },
       "apps/ts.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/ts.rs",
+        "owner_phase": null
       },
       "apps/verify.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/verify.rs",
+        "owner_phase": null
       },
       "apps/x509.c": {
-        "class": "deferred_to_later_stratum",
-        "crate_module": null,
-        "owner_phase": 17
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/x509.rs",
+        "owner_phase": null
       },
       "crypto/asn1/d2i_param.c": {
         "class": "reached_by_a_named_construct",
@@ -8080,7 +8080,7 @@
       "transcribed_units": 596
     }
   },
-  "body_hash": "cb9832481ac4d2b889c793e829c0bcdff6bbc7a8d511742fc2d40b0a6d69c0c0",
+  "body_hash": "3078d122ce8fdda0d61cae76b6ddcfd57f4dbcc29a81d10403bafd857dfb69cb",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -8101,12 +8101,12 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "e4e4fcd65485b76cd05568b627ae6fc1c937c2e3bd5ecb4d174df59e3fe4bc99"
+      "sha256": "ef61bdb69d3f4f6b42e18c43a8590bbdabb328a5dca179ba63703ca869eecf0f"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "a5aa63006086b7ff60e2478cd410cf2c08b3abea4ab170d4e5bffac0d390f93a"
+      "sha256": "83a5420293704a99d69fee9965c59e1dccf7370514adfe64c605380204aa0563"
     },
     {
       "name": "source-manifest",

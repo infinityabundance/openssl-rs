@@ -42,7 +42,7 @@ declared owner; this is that assignment.
 | 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
-| 17 | Downstream replacement court | `in-progress` | 0 | 56 | 3 | 0 | 53 |
+| 17 | Downstream replacement court | `in-progress` | 0 | 4 | 4 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
@@ -533,14 +533,14 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 ## Phase 17 — Downstream replacement court
 
 * state: `in-progress`
-* blocking: 53 open obligation(s) of this stratum recorded in forensics/phase17-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase17-obligations.json` publishes `unit: downstream replacement contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the 52 `apps/<name>.c` unit deferrals it owns (D530) and the four downstream replacement contract units. It owns no provider registration row -- it activates no provider -- and no symbol deferral. Its `artifacts/phase17/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; 17.1 registers `RT-CLI-BODIES` over the first landed command body (`apps/errstr.c`), 17.2a registers `RT-TLS13-INTEROP` over the client's first ClientHello flight, 17.3 registers `RT-CROSS-DSO-STATE` over the cross-DSO ERR/CONF measurement, and 17.4 registers `RT-DOWNSTREAM-CONSUMER`, a real consumer linked only against the shipped install prefix; all four of the plan's courts are registered. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-17-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D530)
+* blocking: Phase 17's FRF chain entry is incomplete: 4 court(s) that artifacts/phase17/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 4 of 4 required court(s) have no FRF declaration staging their artifacts/phase17/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 4 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 4 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 4 required court(s)
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase17-obligations.json`
 * atlas-owned: 0
-* owned working set: 56
-* implemented: 3
+* owned working set: 4
+* implemented: 4
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 53**
+* **open in this stratum: 0**
 
 Courts: `all pass`, 4 court(s), **951** authority observation(s) over 4 transcript court(s).
 
