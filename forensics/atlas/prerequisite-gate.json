@@ -4,7 +4,7 @@
     "blocking_dependencies": [],
     "census": {
       "covered_by_a_divergence": 154,
-      "language_surface_not_modelled_by_name": 11747
+      "language_surface_not_modelled_by_name": 11744
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -670,11 +670,11 @@
         "crypto/x509/x_x509a.c": 14,
         "providers/baseprov.c": 25,
         "providers/prov_running.c": 2,
-        "ssl/bio_ssl.c": 20,
+        "ssl/bio_ssl.c": 19,
         "ssl/d1_lib.c": 56,
         "ssl/d1_srtp.c": 24,
         "ssl/methods.c": 6,
-        "ssl/quic/quic_impl.c": 162,
+        "ssl/quic/quic_impl.c": 161,
         "ssl/quic/quic_method.c": 1,
         "ssl/quic/quic_tls_api.c": 9,
         "ssl/record/rec_layer_s3.c": 89,
@@ -687,7 +687,7 @@
         "ssl/ssl_conf.c": 32,
         "ssl/ssl_err_legacy.c": 2,
         "ssl/ssl_init.c": 7,
-        "ssl/ssl_lib.c": 252,
+        "ssl/ssl_lib.c": 251,
         "ssl/ssl_mcnf.c": 9,
         "ssl/ssl_rsa.c": 26,
         "ssl/ssl_rsa_legacy.c": 11,
@@ -1286,7 +1286,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "75a77747b963472b13b149a3c55b1059774c853de05d572028e99fbacefaa01e",
+  "body_hash": "6425a40570102de4c9a1cdd5a386bbc3b78512f2d1c30efa6c9bc80d117da6a4",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1322,7 +1322,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "8a50964c47ae01c9cd5389cbf149239018fe92d5f5f6249c5c89190b2a60ed54"
+      "sha256": "2915d8dcda0a5d518095bb264853a623f0f5ad3aede3ea8b47109a572cc7bc2a"
     },
     {
       "name": "phase-state",

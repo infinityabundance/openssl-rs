@@ -58,7 +58,9 @@ use crate::packet::{
     WPACKET_start_sub_packet_len__, Wpacket,
 };
 use crate::rand::rand_lib::RAND_bytes;
-use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value};
+use crate::runtime::stack::{
+    OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value,
+};
 use crate::ssl::ssl_ciph_table as t;
 use crate::ssl::ssl_ciph_table::SslCipher;
 use crate::ssl::ssl_lib::{SSL_get_ciphers, Ssl};
@@ -1221,28 +1223,83 @@ pub(crate) unsafe fn tls_process_server_certificate(s: *mut Ssl, msg: &[u8]) -> 
     let list_len =
         ((body[p] as usize) << 16) | ((body[p + 1] as usize) << 8) | body[p + 2] as usize;
     p += 3;
-    if list_len < 3 || p + list_len > body.len() {
+    if list_len == 0 || p + list_len > body.len() {
         return 0;
     }
-    // The first `CertificateEntry`'s `cert_data<1..2^24-1>` (`tls_process_cert_chain`,
-    // `statem_lib.c:1241`).
-    let derlen = ((body[p] as usize) << 16) | ((body[p + 1] as usize) << 8) | body[p + 2] as usize;
-    if derlen == 0 || p + 3 + derlen > body.len() {
+    let list_end = p + list_len;
+
+    // The authority appends every `CertificateEntry` to `s->session->peer_chain`
+    // (`tls_process_server_certificate`, `statem_clnt.c:2026-2077`); the leaf is
+    // `sk_X509_value(peer_chain, 0)` and becomes `session->peer` in
+    // `tls_post_process_server_certificate` (`statem_clnt.c:2137,2165-2172`). The reduced path has
+    // no handshake-created session, so the chain is stored on the connection.
+    // SAFETY: no preconditions; the new stack owns the references pushed into it.
+    let chain = OPENSSL_sk_new_null();
+    if chain.is_null() {
         return 0;
     }
-    let mut inp = body[p + 3..p + 3 + derlen].as_ptr();
-    let mut x: *mut X509 = core::ptr::null_mut();
-    // SAFETY: `inp` points at `derlen` readable bytes; `x` is this frame's writable slot.
-    let got = unsafe { d2i_X509(&mut x, &mut inp, derlen as core::ffi::c_long) };
-    if got.is_null() || x.is_null() {
-        return 0;
+    // Each TLS 1.3 `CertificateEntry` is `cert_data<1..2^24-1> || extensions<0..2^16-1>`.
+    while p + 3 <= list_end {
+        let derlen =
+            ((body[p] as usize) << 16) | ((body[p + 1] as usize) << 8) | body[p + 2] as usize;
+        p += 3;
+        if derlen == 0 || p + derlen > list_end {
+            // SAFETY: `chain` is a live stack of the certs pushed so far.
+            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
+            return 0;
+        }
+        let mut inp = body[p..p + derlen].as_ptr();
+        let mut x: *mut X509 = core::ptr::null_mut();
+        // SAFETY: `inp` points at `derlen` readable bytes; `x` is this frame's writable slot.
+        let got = unsafe { d2i_X509(&mut x, &mut inp, derlen as core::ffi::c_long) };
+        if got.is_null() || x.is_null() {
+            // SAFETY: `chain` is a live stack of the certs pushed so far.
+            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
+            return 0;
+        }
+        // SAFETY: `chain` is live; `x` is a live certificate whose reference moves into it.
+        if unsafe { OPENSSL_sk_push(chain, x.cast()) } == 0 {
+            // SAFETY: `x` has not been pushed, so this frame still owns it.
+            unsafe { crate::x509::x_x509::X509_free(x) };
+            // SAFETY: `chain` is a live stack of the certs pushed so far.
+            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
+            return 0;
+        }
+        p += derlen;
+        if p + 2 > list_end {
+            // SAFETY: `chain` is a live stack of the certs pushed so far.
+            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
+            return 0;
+        }
+        let extlen = ((body[p] as usize) << 8) | body[p + 1] as usize;
+        p += 2 + extlen;
+        if p > list_end {
+            // SAFETY: `chain` is a live stack of the certs pushed so far.
+            unsafe { crate::x509::t_x509::OSSL_STACK_OF_X509_free(chain) };
+            return 0;
+        }
     }
-    // SAFETY: `s` is live; the previous peer certificate is owned here.
+
+    // SAFETY: `s` is live; the previous leaf/chain/verified chain are owned here.
     unsafe {
         if !(*s).peer_cert.is_null() {
             crate::x509::x_x509::X509_free((*s).peer_cert.cast());
         }
-        (*s).peer_cert = x.cast();
+        if !(*s).peer_chain.is_null() {
+            crate::x509::t_x509::OSSL_STACK_OF_X509_free((*s).peer_chain);
+        }
+        if !(*s).verified_chain.is_null() {
+            crate::x509::t_x509::OSSL_STACK_OF_X509_free((*s).verified_chain.cast());
+        }
+        // `session->peer` is an up-ref of the leaf, `peer_chain[0]` (`statem_clnt.c:2137,2165-2172`),
+        // which this crate reads through `peer_cert` in `tls_process_cert_verify`.
+        let leaf = OPENSSL_sk_value(chain, 0).cast::<X509>();
+        crate::x509::x509_set::X509_up_ref(leaf);
+        (*s).peer_cert = leaf.cast();
+        (*s).peer_chain = chain;
+        // `ssl_verify_cert_chain` installs the validated chain in `s->verified_chain`
+        // (`ssl_lib.c:6344-6352`); the reduced path mirrors the presented chain there.
+        (*s).verified_chain = crate::x509::x509_cmp::X509_chain_up_ref(chain).cast();
     }
     // SAFETY: `s` is live; `msg` is the full message.
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
