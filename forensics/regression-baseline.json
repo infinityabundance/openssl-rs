@@ -203,6 +203,10 @@
       "observations": 252,
       "verdict": "pass"
     },
+    "RT-CLI-BODIES": {
+      "observations": 12,
+      "verdict": "pass"
+    },
     "RT-CMAC": {
       "observations": 26,
       "verdict": "pass"

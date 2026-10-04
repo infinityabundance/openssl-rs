@@ -8,6 +8,9 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+// `apps/errstr.c` is the first of the 52 command bodies Phase 17.1 lands behind the
+// dispatcher; see its module header for the recorded `-help` divergence.
+pub mod errstr;
 pub mod list;
 // The authority's unit is `apps/openssl.c`, so the crate's file is
 // `apps/openssl.rs` and the module path is `apps::openssl`; the inception is the
