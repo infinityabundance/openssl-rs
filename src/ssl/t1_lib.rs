@@ -678,3 +678,51 @@ pub(crate) unsafe fn ssl_cipher_disabled(
         c_int::from(ssl_security(s, op, (*c).strength_bits, 0, c.cast_mut().cast()) == 0)
     }
 }
+
+// ---------------------------------------------------------------------------------------------
+// Phase 17.2b — the TLS group list. `ssl_load_groups` (`t1_lib.c:366-372`) drives provider
+// capability discovery and then parses `TLS_DEFAULT_GROUP_LIST` (`t1_lib.c:206-209`); this stratum
+// has no provider-capability walk, so the constructor below installs the list the admitted
+// provider's default resolves to, reduced by the hybrid `X25519MLKEM768` (its key-share KEM is
+// 17.2's key-schedule boundary and is named in `extensions_clnt.rs`).
+// ---------------------------------------------------------------------------------------------
+
+/// `OSSL_TLS_GROUP_ID_x25519` — `tls1.h`.
+pub(crate) const OSSL_TLS_GROUP_ID_x25519: u16 = 29;
+/// `OSSL_TLS_GROUP_ID_secp256r1` — `tls1.h`.
+pub(crate) const OSSL_TLS_GROUP_ID_secp256r1: u16 = 23;
+/// `OSSL_TLS_GROUP_ID_x448` — `tls1.h`.
+pub(crate) const OSSL_TLS_GROUP_ID_x448: u16 = 30;
+/// `OSSL_TLS_GROUP_ID_secp384r1` — `tls1.h`.
+pub(crate) const OSSL_TLS_GROUP_ID_secp384r1: u16 = 24;
+/// `OSSL_TLS_GROUP_ID_secp521r1` — `tls1.h`.
+pub(crate) const OSSL_TLS_GROUP_ID_secp521r1: u16 = 25;
+/// `OSSL_TLS_GROUP_ID_ffdhe2048` — `tls1.h`.
+pub(crate) const OSSL_TLS_GROUP_ID_ffdhe2048: u16 = 256;
+/// `OSSL_TLS_GROUP_ID_ffdhe3072` — `tls1.h`.
+pub(crate) const OSSL_TLS_GROUP_ID_ffdhe3072: u16 = 257;
+
+/// `TLS_DEFAULT_GROUP_LIST` (`t1_lib.c:208-209`) resolved for the admitted provider: `X25519`,
+/// `secp256r1`, `X448`, `secp384r1`, `secp521r1`, `ffdhe2048`, `ffdhe3072`.
+pub(crate) const DEFAULT_GROUPS: [u16; 7] = [
+    OSSL_TLS_GROUP_ID_x25519,
+    OSSL_TLS_GROUP_ID_secp256r1,
+    OSSL_TLS_GROUP_ID_x448,
+    OSSL_TLS_GROUP_ID_secp384r1,
+    OSSL_TLS_GROUP_ID_secp521r1,
+    OSSL_TLS_GROUP_ID_ffdhe2048,
+    OSSL_TLS_GROUP_ID_ffdhe3072,
+];
+
+/// `void tls1_get_supported_groups(SSL_CONNECTION *s, const uint16_t **pgroups,`
+/// `size_t *pgroupslen)` — `t1_lib.c:784-816`, reduced to the built-in default list.
+///
+/// The Suite B arms and the per-connection/context `ext.supportedgroups` override need
+/// `SSL_CTX_set1_groups_list` (`t1_lib.c`), which is not landed; a connection that never called it
+/// reaches exactly the authority's default arm.
+///
+/// # Safety
+/// `s` must be a live connection (unused in this reduction).
+pub(crate) unsafe fn tls1_get_supported_groups(_s: *const Ssl) -> &'static [u16] {
+    &DEFAULT_GROUPS
+}

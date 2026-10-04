@@ -25,7 +25,7 @@ use crate::rsa::object::{RSA_free, RSA_up_ref};
 use crate::rsa::Rsa;
 use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::iolib::BIO_ctrl;
-use crate::runtime::bio::{BIO_free, BIO_new, BIO_CLOSE, BIO_FP_READ};
+use crate::runtime::bio::{BIO_free, BIO_new, BIO_CLOSE, BIO_C_SET_FILENAME, BIO_FP_READ};
 use crate::runtime::err::raise_with;
 use crate::ssl::ssl_lib::{Ssl, SslCtx};
 use crate::ssl::ssl_rsa::{SSL_CTX_use_PrivateKey, SSL_use_PrivateKey};
@@ -53,8 +53,6 @@ const ERR_R_ASN1_LIB: c_int = 13 | ERR_RFLAG_COMMON;
 const ERR_R_SYS_LIB: c_int = 2 | ERR_RFLAG_COMMON;
 /// `SSL_R_BAD_SSL_FILETYPE` — `sslerr.h:59`.
 const SSL_R_BAD_SSL_FILETYPE: c_int = 124;
-/// `BIO_C_SET_FILENAME`.
-const BIO_C_SET_FILENAME: c_int = 104;
 /// `SSL_FILETYPE_PEM`.
 const SSL_FILETYPE_PEM: c_int = 1;
 /// `SSL_FILETYPE_ASN1`.

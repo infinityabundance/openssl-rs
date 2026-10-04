@@ -743,7 +743,7 @@ const SSL3_RT_HANDSHAKE: u8 = 22;
 ///
 /// # Safety
 /// `pkt` must be a live packet.
-unsafe fn ssl3_set_handshake_header(pkt: *mut Wpacket, htype: u8) -> c_int {
+pub(crate) unsafe fn ssl3_set_handshake_header(pkt: *mut Wpacket, htype: u8) -> c_int {
     // SAFETY: `pkt` is live. `WPACKET_start_sub_packet_u24` is `start_sub_packet_len__(pkt, 3)`.
     unsafe {
         if WPACKET_put_bytes_u8(pkt, htype) == 0 || WPACKET_start_sub_packet_len__(pkt, 3) == 0 {
@@ -758,7 +758,7 @@ unsafe fn ssl3_set_handshake_header(pkt: *mut Wpacket, htype: u8) -> c_int {
 ///
 /// # Safety
 /// `pkt` must be a live packet and `msglen` writable.
-unsafe fn tls_close_construct_packet(pkt: *mut Wpacket, msglen: *mut usize) -> c_int {
+pub(crate) unsafe fn tls_close_construct_packet(pkt: *mut Wpacket, msglen: *mut usize) -> c_int {
     // SAFETY: `pkt`/`msglen` are live per the contract.
     unsafe {
         if WPACKET_close(pkt) == 0 || WPACKET_get_length(pkt, msglen) == 0 {

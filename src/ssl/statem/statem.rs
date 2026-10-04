@@ -71,6 +71,10 @@ const TLS_ST_CW_CLNT_HELLO: c_int = 13;
 const TLS_ST_CR_SRVR_HELLO: c_int = 3;
 /// `TLS_ST_SR_CLNT_HELLO` — `ssl.h:1087`, the server's post-ClientHello-read state.
 const TLS_ST_SR_CLNT_HELLO: c_int = 22;
+/// `TLS_ST_SW_SRVR_HELLO` — `ssl.h` (24), the server's write-the-ServerHello state (17.2b).
+const TLS_ST_SW_SRVR_HELLO: c_int = 24;
+/// `TLS_ST_SW_ENCRYPTED_EXTENSIONS` — `ssl.h` (41), the state after the ServerHello (17.2b).
+const TLS_ST_SW_ENCRYPTED_EXTENSIONS: c_int = 41;
 /// `TLS_ST_SW_HELLO_REQ` — `ssl.h:1086`, the renegotiation request state.
 const TLS_ST_SW_HELLO_REQ: c_int = 21;
 /// `TLS_ST_SW_FINISHED` — `ssl.h:1105`, the `ossl_statem_export_allowed` exclusion.
@@ -445,10 +449,11 @@ unsafe fn state_machine(s: *mut Ssl, server: bool) -> c_int {
         // `tls_setup_handshake` and constructs its first flight. 17.2a lands the client's first
         // flight across that boundary -- `ossl_statem_client_write_transition`'s
         // `TLS_ST_BEFORE -> TLS_ST_CW_CLNT_HELLO`, then `tls_construct_client_hello` over the reduced
-        // record write -- so the peer BIO receives a real ClientHello. The server's message layer is
-        // still unlanded, so it stays at `TLS_ST_BEFORE`; the driver then performs the first read,
-        // which an empty peer BIO cannot satisfy, and returns the authority's `-1` with
-        // `rwstate = SSL_READING`.
+        // record write -- so the peer BIO receives a real ClientHello. 17.2b lands the server's
+        // first flight: the server reads the ClientHello record over the reduced plaintext record
+        // read, `tls_process_client_hello` chooses the version/cipher/group, and
+        // `tls_construct_server_hello` writes a ServerHello. The server then waits for the next
+        // flight, which the client's unlanded read path cannot produce.
         if !server && (*s).hand_state == TLS_ST_BEFORE {
             (*s).hand_state = TLS_ST_CW_CLNT_HELLO;
         }
@@ -465,6 +470,43 @@ unsafe fn state_machine(s: *mut Ssl, server: bool) -> c_int {
             // transition runs, a recorded transient difference).
             (*s).hand_state = TLS_ST_CR_SRVR_HELLO;
         }
+
+        // The server's first flight (17.2b). A fresh server at `TLS_ST_BEFORE` reads one plaintext
+        // handshake record; when the ClientHello arrives it processes it and writes the ServerHello.
+        // An empty read BIO leaves the server waiting, exactly as the authority's first read does.
+        if server && (*s).hand_state == TLS_ST_BEFORE {
+            let mut buf = [0u8; 4096];
+            let mut rectype = 0u8;
+            // SAFETY: `s` is live; `buf` is 4096 writable bytes.
+            let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
+                s,
+                &mut rectype,
+                buf.as_mut_ptr(),
+                buf.len(),
+            );
+            if n <= 0 {
+                (*s).statem_state = MSG_FLOW_READING;
+                (*s).rwstate = SSL_READING;
+                (*s).statem_in_handshake -= 1;
+                return -1;
+            }
+            // SAFETY: `s` is live; `buf[..n]` is the handshake message.
+            if crate::ssl::statem::statem_srvr::tls_process_client_hello(s, &buf[..n as usize]) == 0
+            {
+                ossl_statem_send_fatal(s, SSL_AD_NO_ALERT);
+                (*s).statem_in_handshake -= 1;
+                return -1;
+            }
+            (*s).hand_state = TLS_ST_SW_SRVR_HELLO;
+            // SAFETY: `s` is live; the write BIO is the caller's to write.
+            if crate::ssl::statem::statem_srvr::write_server_hello(s) <= 0 {
+                ossl_statem_send_fatal(s, SSL_AD_NO_ALERT);
+                (*s).statem_in_handshake -= 1;
+                return -1;
+            }
+            (*s).hand_state = TLS_ST_SW_ENCRYPTED_EXTENSIONS;
+        }
+
         (*s).statem_state = MSG_FLOW_READING;
         (*s).rwstate = SSL_READING;
         (*s).statem_in_handshake -= 1;

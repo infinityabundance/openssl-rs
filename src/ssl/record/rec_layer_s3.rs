@@ -33,7 +33,7 @@
 use core::ffi::{c_char, c_int};
 use core::ptr;
 
-use crate::runtime::bio::iolib::BIO_write;
+use crate::runtime::bio::iolib::{BIO_read, BIO_write};
 use crate::runtime::bio::{BIO_ctrl, BIO_CTRL_FLUSH};
 use crate::ssl::ssl_lib::{Ssl, SslCtx};
 
@@ -112,6 +112,53 @@ pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, le
         BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());
     }
     1
+}
+
+/// `int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf, size_t len,` —
+/// `ssl/record/rec_layer_s3.c:612-...`, reduced to the plaintext, single-record, no-retry arm the
+/// server's first read needs.
+///
+/// The authority's read pipeline runs the record method's `read_record` and the message layer above
+/// it; this reduced form reads one `type || version || length` header and its body from `rbio` and
+/// reports the body length, which is the ClientHello handshake message. The buffering BIO, the
+/// read-ahead queue, the encryption path and the `SSL3_RT_MAX_PLAIN_LENGTH` fragmentation are not
+/// modelled (recorded in `src/ssl/mod.rs`).
+///
+/// # Safety
+/// `s` must be a live connection whose read BIO is the caller's to read; `buf` must be writable for
+/// `cap` bytes; `rectype` must be writable.
+pub(crate) unsafe fn ssl3_read_bytes(
+    s: *mut Ssl,
+    rectype: *mut u8,
+    buf: *mut u8,
+    cap: usize,
+) -> c_int {
+    let mut hdr = [0u8; SSL3_RT_HEADER_LENGTH];
+    // SAFETY: `s` is live; `hdr` is 5 writable bytes and `rbio` is the caller's.
+    let got = unsafe {
+        BIO_read(
+            (*s).rbio,
+            hdr.as_mut_ptr().cast(),
+            SSL3_RT_HEADER_LENGTH as c_int,
+        )
+    };
+    if got != SSL3_RT_HEADER_LENGTH as c_int {
+        return -1;
+    }
+    let len = ((hdr[3] as usize) << 8) | hdr[4] as usize;
+    if len > cap {
+        return -1;
+    }
+    if len != 0 {
+        // SAFETY: `buf` is `cap >= len` writable bytes and `rbio` is the caller's.
+        let n = unsafe { BIO_read((*s).rbio, buf.cast(), len as c_int) };
+        if n != len as c_int {
+            return -1;
+        }
+    }
+    // SAFETY: `rectype` is writable per the contract.
+    unsafe { *rectype = hdr[0] };
+    len as c_int
 }
 
 /// `RECORD_LAYER_write_pending(const RECORD_LAYER *rl)` — `ssl/record/rec_layer_s3.c:114-117`.
