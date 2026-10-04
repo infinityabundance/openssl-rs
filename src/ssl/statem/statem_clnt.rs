@@ -1273,7 +1273,7 @@ pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
     unsafe {
         loop {
             match (*s).hand_state {
-                TLS_ST_BEFORE | TLS_ST_CW_CLNT_HELLO => {
+                TLS_ST_BEFORE => {
                     // The write transition moves to `TLS_ST_CW_CLNT_HELLO` before constructing the
                     // ClientHello, which is the state `ssl3_write_bytes`'s TLS1.0 record-version
                     // rule reads (`rec_layer_s3.c:395-405`).
@@ -1282,12 +1282,19 @@ pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
-                    (*s).hand_state = TLS_ST_CR_SRVR_HELLO;
+                    // The read transition (`client13_read_transition`'s `TLS_ST_CW_CLNT_HELLO ->
+                    // TLS_ST_CR_SRVR_HELLO`) is applied by the authority's `READ_STATE_HEADER` only
+                    // after `tls_get_message_header` has read a message. The hand state is therefore
+                    // left at `TLS_ST_CW_CLNT_HELLO` (13) here, and an empty peer BIO leaves it there
+                    // -- the value the fresh-connection `SSL_connect` observers compare.
                 }
-                TLS_ST_CR_SRVR_HELLO => {
+                TLS_ST_CW_CLNT_HELLO | TLS_ST_CR_SRVR_HELLO => {
                     let Some((buf, n)) = client_read(s) else {
                         return client_wait(s);
                     };
+                    // The ServerHello header has now been read, so the read transition advances the
+                    // hand state before the body is processed (the authority's `read_state_machine`).
+                    (*s).hand_state = TLS_ST_CR_SRVR_HELLO;
                     if tls_process_server_hello(s, &buf[..n]) == 0 {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
