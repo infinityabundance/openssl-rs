@@ -421,7 +421,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "4db7baa5e2435eaa4504251f8ca7fdd15f95a31175b1914c7164816255707fe1"
+      "sha256": "d24483526784c0c8f1497ce45d173bf316f5a072c7eec20cbb22848b63cb047a"
     },
     {
       "name": "cli-capture",

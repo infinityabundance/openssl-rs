@@ -92,13 +92,21 @@
       },
       {
         "argv_cases": 63,
+        "authority_exit_code": 0,
         "authority_observations": 252,
+        "candidate_exit_code": 0,
         "candidate_observations": 252,
+        "candidate_stderr_tail": [],
         "court": "RT-CLI",
         "parser_checks": 55,
         "parser_failures": [],
+        "probe": "courts/phase16/rt_cli_probe.sh",
         "residual_count": 0,
         "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase16/probes/rt_cli_probe.authority",
+          "candidate": "artifacts/phase16/probes/rt_cli_probe.candidate"
+        },
         "verdict": "pass"
       }
     ],
@@ -129,7 +137,7 @@
     {
       "name": "probe",
       "path": "courts/phase16/rt_legacy_module_probe.c",
-      "sha256": "ee9c31c72cae60ce6f117b4f4960314eccb353ed645bfc7be0ade69cb45dcad1"
+      "sha256": "46ec07c74a3bf6a558c1207abf381b419e20fe5cb64661af6e2baf023d47aba7"
     },
     {
       "name": "probe",
@@ -150,6 +158,11 @@
       "name": "probe",
       "path": "courts/phase16/rt_statem_remainder_probe.c",
       "sha256": "592e3e0d8fe3ed0aae891bc5f33cc8d6a345064f104749f782452fb8a6908647"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase16/rt_cli_probe.sh",
+      "sha256": "da0ce9cfa9f93594fbdb704a8719d0a103490ad193e14579eca5b14357fb7660"
     }
   ],
   "kind": "phase16-courts",

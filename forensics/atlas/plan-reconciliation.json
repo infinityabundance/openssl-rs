@@ -4,19 +4,10 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "units_not_reached": 2
-    },
-    "census_by_stratum": {
-      "16": 2
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "units_not_reached": [
-        "apps/openssl.c",
-        "providers/legacyprov.c"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -36,10 +27,10 @@
       "rows_judged": 175,
       "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
-      "unit_records": 97,
-      "units_named_by_a_record": 106,
+      "unit_records": 99,
+      "units_named_by_a_record": 108,
       "units_named_by_a_row": 493,
-      "units_reached": 491
+      "units_reached": 493
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -50,7 +41,7 @@
     "promised_units": {
       "apps/openssl.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:apps/openssl.c",
         "subphases": [
           "16:16.4"
         ],
@@ -6173,7 +6164,7 @@
       },
       "providers/legacyprov.c": {
         "defines": [],
-        "recorded_by": null,
+        "recorded_by": "units:providers/legacyprov.c",
         "subphases": [
           "16:16.1"
         ],
@@ -6828,6 +6819,11 @@
     },
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
     "unit_records": {
+      "apps/openssl.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/openssl.rs",
+        "owner_phase": null
+      },
       "crypto/asn1/d2i_param.c": {
         "class": "reached_by_a_named_construct",
         "crate_module": "src/asn1/d2i_param.rs",
@@ -7312,6 +7308,11 @@
         "class": "not_in_this_profile",
         "crate_module": null,
         "owner_phase": null
+      },
+      "providers/legacyprov.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/legacyprov.rs",
+        "owner_phase": null
       }
     },
     "universes": {
@@ -7320,7 +7321,7 @@
       "transcribed_units": 596
     }
   },
-  "body_hash": "443ef5abe159b371741b452c8383d9a1f9c3dd3235eecb195ebebb25ad7e91f9",
+  "body_hash": "11fb98f2b5422147ef472343829a195eda013474fbd21b727a4b28314a51a349",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -7341,12 +7342,12 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "8e2bebdf71d3220e9604a6107867ca7331ae08bfe279e92672ceaa16fd74cb94"
+      "sha256": "24367e4e98d9fe86040b3fe3a23fea84f36418187782d343a04af14934017a21"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "4db7baa5e2435eaa4504251f8ca7fdd15f95a31175b1914c7164816255707fe1"
+      "sha256": "d24483526784c0c8f1497ce45d173bf316f5a072c7eec20cbb22848b63cb047a"
     },
     {
       "name": "source-manifest",
