@@ -39,15 +39,23 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::apps::ciphers;
 use crate::apps::configutl;
+use crate::apps::crl2pkcs7;
+use crate::apps::dsaparam;
 use crate::apps::errstr;
+use crate::apps::genrsa;
 use crate::apps::info;
+use crate::apps::kdf;
 use crate::apps::list;
+use crate::apps::mac;
 use crate::apps::nseq;
 use crate::apps::opt::{progname, OptMatch, Opts};
 use crate::apps::pkeyparam;
 use crate::apps::prime;
+use crate::apps::sess_id;
 use crate::apps::skeyutl;
+use crate::apps::spkac;
 use crate::apps::tables::{Func, FuncKind, FUNCTIONS, HELP_OPTIONS};
 use crate::apps::version;
 
@@ -165,15 +173,23 @@ fn do_cmd(argv: &[String]) -> i32 {
             warn_deprecated(fp);
         }
         return match fp.name {
+            "ciphers" => ciphers::main(argv),
             "configutl" => configutl::main(argv),
+            "crl2pkcs7" => crl2pkcs7::main(argv),
+            "dsaparam" => dsaparam::main(argv),
             "errstr" => errstr::main(argv),
+            "genrsa" => genrsa::main(argv),
             "help" => help_main(argv),
             "info" => info::main(argv),
+            "kdf" => kdf::main(argv),
             "list" => list::main(argv),
+            "mac" => mac::main(argv),
             "nseq" => nseq::main(argv),
             "pkeyparam" => pkeyparam::main(argv),
             "prime" => prime::main(argv),
+            "sess_id" => sess_id::main(argv),
             "skeyutl" => skeyutl::main(argv),
+            "spkac" => spkac::main(argv),
             "version" => version::main(argv),
             _ => not_landed(fp.name),
         };

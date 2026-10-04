@@ -9,9 +9,11 @@
 # `cli_transcript`: key=value, newline -> `|`, CR -> `^`.
 #
 # The divergent inputs (`errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/
-# `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`) are deliberately absent: each renders a
-# surface this stratum does not own (see `forensics/tools/phase17_courts.py`'s
-# RECORDED_DIVERGENCES and the per-command module headers).
+# `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms,
+# `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE` and
+# `genrsa -bogus`) are deliberately absent: each renders a surface this stratum does not own
+# (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command module
+# headers).
 set -u
 BIN="${1:?usage: rt_cli_bodies_probe.sh <openssl> <ossl-modules>}"
 MODULES="${2:-}"
@@ -62,4 +64,36 @@ pkeyparam -in /work/courts/phase17/fixtures/dhparams.pem -text
 pkeyparam -in /work/courts/phase17/fixtures/dhparams.pem -check
 nseq -toseq -in /work/courts/phase17/fixtures/certs.pem
 nseq -in /work/courts/phase17/fixtures/seq.pem
+crl2pkcs7 -nocrl -certfile /work/courts/phase17/fixtures/certs.pem
+ciphers -convert TLS_AES_256_GCM_SHA384
+ciphers -convert ECDHE-RSA-AES256-GCM-SHA384
+ciphers -convert NOPE
+sess_id -in /work/courts/phase17/fixtures/session.pem
+sess_id -in /work/courts/phase17/fixtures/session.pem -text
+sess_id -in /work/courts/phase17/fixtures/session.pem -cert
+sess_id -in /work/courts/phase17/fixtures/session.pem -noout
+sess_id -in /work/courts/phase17/fixtures/session.pem -text -noout
+sess_id -in /work/courts/phase17/fixtures/session.pem -context abc
+sess_id -in /work/courts/phase17/fixtures/session.pem -context 123456789012345678901234567890123
+kdf -keylen 16 -kdfopt pass:password -kdfopt salt:NaCl -kdfopt iter:1 PBKDF2
+kdf -keylen 0 PBKDF2
+kdf -keylen -1 PBKDF2
+kdf -keylen 16 -kdfopt pass:p -kdfopt salt:s -kdfopt iter:1 -kdfopt digest:SHA256 PBKDF2
+kdf PBKDF2
+kdf
+mac -macopt key:secret HMAC -in /work/courts/phase17/fixtures/certs.pem
+mac -macopt key:secret -macopt digest:SHA1 HMAC -in /work/courts/phase17/fixtures/certs.pem
+mac HMAC -in /work/courts/phase17/fixtures/certs.pem
+mac
+spkac -in /work/courts/phase17/fixtures/spkac.cnf
+spkac -in /work/courts/phase17/fixtures/spkac.cnf -noout
+spkac -in /work/courts/phase17/fixtures/spkac.cnf -verify
+spkac -in /work/courts/phase17/fixtures/spkac.cnf -pubkey
+spkac -in /work/courts/phase17/fixtures/spkac.cnf -verify -pubkey
+genrsa abc
+genrsa 0
+genrsa 99999999999999999999
+dsaparam abc
+dsaparam 1 2 3
+dsaparam -text abc
 ARGS

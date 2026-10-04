@@ -23,19 +23,30 @@ arms), `prime` (the numeric check, the `-hex`/decimal conversion and the no-numb
 refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl`
 (the linearized re-emit of a fixed configuration, with and without the header), `pkeyparam`
 (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq`
-(`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence). Each
-command's `-help` arm is not driven: `opt_help` is the boundary `src/apps/opt.rs` records, so it
-reaches `not_landed` rather than the authority's table, exactly as `help`/`list`/`version` do.
+(`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence). 17.1c adds
+eight more: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the
+`-convert` name lookup), `sess_id` (the default/text/cert/noout/context arms over a fixed
+session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, and the refusal arms), `mac`
+(HMAC over a fixed file, hex and binary, and the refusal arms), `spkac` (print/noout/verify/
+pubkey over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and
+refusal arms). Each command's `-help` arm is not driven: `opt_help` is the boundary
+`src/apps/opt.rs` records, so it reaches `not_landed` rather than the authority's table,
+exactly as `help`/`list`/`version` do.
 
 The fixtures live in `courts/phase17/fixtures/` and are read by absolute `/work` path, so the
 probe is self-contained under the container's mount.
 
-**Seven inputs are recorded rather than diffed**, each a surface this stratum does not own:
+**Sixteen inputs are recorded rather than diffed**, each a surface this stratum does not own:
 `errstr 0xdeadbeef` (an unknown system errno), `info -seeds`/`-cpusettings`/`-configdir`/
 `-enginesdir`/`-modulesdir` (RAND seed source, CPU dispatch and the configured prefix, which
-are later strata or build-specific) and `prime 2 3 4`/`-hex FF` (the `BN_print` rendering).
-They are named in `RECORDED_DIVERGENCES` and every other arm is driven, the convention
-`src/apps/errstr.rs` and Phases 13 through 16 use for a recorded divergence.
+are later strata or build-specific), `prime 2 3 4`/`-hex FF` (the `BN_print` rendering),
+`ciphers`/`-v`/`-stdname`/`-tls1_2` (the `EVP`-fetch/legacy-provider surface),
+`sess_id -text -cert` (the `X509_print` basicConstraints rendering), `kdf nonexistent` and
+`mac NOPE` (the pointer-bearing `ERR_print_errors` tail), `spkac -spkac NOPE` (the pointer
+prefix on an otherwise identical config error) and `genrsa -bogus`
+(`opt_set_unknown_name`). They are named in `RECORDED_DIVERGENCES` and every other arm is
+driven, the convention `src/apps/errstr.rs` and Phases 13 through 16 use for a recorded
+divergence.
 
 The pending courts
 ------------------
@@ -130,6 +141,43 @@ BODIES_ARGV: list[list[str]] = [
     ["pkeyparam", "-in", f"{_BODIES_FIXTURES}/dhparams.pem", "-check"],
     ["nseq", "-toseq", "-in", f"{_BODIES_FIXTURES}/certs.pem"],
     ["nseq", "-in", f"{_BODIES_FIXTURES}/seq.pem"],
+    # 17.1c: crl2pkcs7 / ciphers / sess_id / kdf / mac / spkac / genrsa / dsaparam.
+    ["crl2pkcs7", "-nocrl", "-certfile", f"{_BODIES_FIXTURES}/certs.pem"],
+    ["ciphers", "-convert", "TLS_AES_256_GCM_SHA384"],
+    ["ciphers", "-convert", "ECDHE-RSA-AES256-GCM-SHA384"],
+    ["ciphers", "-convert", "NOPE"],
+    ["sess_id", "-in", f"{_BODIES_FIXTURES}/session.pem"],
+    ["sess_id", "-in", f"{_BODIES_FIXTURES}/session.pem", "-text"],
+    ["sess_id", "-in", f"{_BODIES_FIXTURES}/session.pem", "-cert"],
+    ["sess_id", "-in", f"{_BODIES_FIXTURES}/session.pem", "-noout"],
+    ["sess_id", "-in", f"{_BODIES_FIXTURES}/session.pem", "-text", "-noout"],
+    ["sess_id", "-in", f"{_BODIES_FIXTURES}/session.pem", "-context", "abc"],
+    ["sess_id", "-in", f"{_BODIES_FIXTURES}/session.pem", "-context",
+     "123456789012345678901234567890123"],
+    ["kdf", "-keylen", "16", "-kdfopt", "pass:password", "-kdfopt", "salt:NaCl",
+     "-kdfopt", "iter:1", "PBKDF2"],
+    ["kdf", "-keylen", "0", "PBKDF2"],
+    ["kdf", "-keylen", "-1", "PBKDF2"],
+    ["kdf", "-keylen", "16", "-kdfopt", "pass:p", "-kdfopt", "salt:s", "-kdfopt",
+     "iter:1", "-kdfopt", "digest:SHA256", "PBKDF2"],
+    ["kdf", "PBKDF2"],
+    ["kdf"],
+    ["mac", "-macopt", "key:secret", "HMAC", "-in", f"{_BODIES_FIXTURES}/certs.pem"],
+    ["mac", "-macopt", "key:secret", "-macopt", "digest:SHA1", "HMAC", "-in",
+     f"{_BODIES_FIXTURES}/certs.pem"],
+    ["mac", "HMAC", "-in", f"{_BODIES_FIXTURES}/certs.pem"],
+    ["mac"],
+    ["spkac", "-in", f"{_BODIES_FIXTURES}/spkac.cnf"],
+    ["spkac", "-in", f"{_BODIES_FIXTURES}/spkac.cnf", "-noout"],
+    ["spkac", "-in", f"{_BODIES_FIXTURES}/spkac.cnf", "-verify"],
+    ["spkac", "-in", f"{_BODIES_FIXTURES}/spkac.cnf", "-pubkey"],
+    ["spkac", "-in", f"{_BODIES_FIXTURES}/spkac.cnf", "-verify", "-pubkey"],
+    ["genrsa", "abc"],
+    ["genrsa", "0"],
+    ["genrsa", "99999999999999999999"],
+    ["dsaparam", "abc"],
+    ["dsaparam", "1", "2", "3"],
+    ["dsaparam", "-text", "abc"],
 ]
 
 # Divergences the court records rather than diffs: an output decided by a surface this stratum
@@ -225,6 +273,108 @@ RECORDED_DIVERGENCES: list[dict] = [
             "`BN_print` case: the authority writes uppercase, the candidate lowercase "
             "(`src/bn/bignum.rs:1655`). Recorded here rather than diffed; see "
             "`src/apps/prime.rs`."
+        ),
+    },
+    {
+        "argv": "ciphers",
+        "authority": "<the default TLS cipher list, TLS_AES_256_GCM_SHA384:...:PSK-AES128-CBC-SHA>",
+        "candidate": "",
+        "reason": (
+            "`ciphers`' default-list arms build a TLS context and walk "
+            "`SSL_get_ciphers`. The candidate's default-list construction raises "
+            "`inner_evp_generic_fetch:unsupported` for the legacy ciphers (RC4, RC2, "
+            "IDEA, SEED, the GOST family), so `SSL_new` fails: exit 1, empty stdout, "
+            "and those `ERR_print_errors` lines, where the authority serves the full "
+            "list. The divergence is the `EVP`-fetch/legacy-provider surface's, not "
+            "the body's. Recorded here rather than diffed; see `src/apps/ciphers.rs`."
+        ),
+    },
+    {
+        "argv": "ciphers -v",
+        "authority": "<the default TLS cipher list, verbose>",
+        "candidate": "",
+        "reason": (
+            "As `ciphers`: the verbose list diverges at the same default-list "
+            "construction. Recorded here rather than diffed; see `src/apps/ciphers.rs`."
+        ),
+    },
+    {
+        "argv": "ciphers -stdname",
+        "authority": "<the default TLS cipher list, with standard names>",
+        "candidate": "",
+        "reason": (
+            "As `ciphers`: the standard-name list diverges at the same default-list "
+            "construction. Recorded here rather than diffed; see `src/apps/ciphers.rs`."
+        ),
+    },
+    {
+        "argv": "ciphers -tls1_2",
+        "authority": "<the TLS 1.2 default cipher list>",
+        "candidate": "",
+        "reason": (
+            "As `ciphers`: pinning the protocol bound still builds the default list, "
+            "so it diverges the same way. Recorded here rather than diffed; see "
+            "`src/apps/ciphers.rs`."
+        ),
+    },
+    {
+        "argv": "sess_id -in <session.pem> -text -cert",
+        "authority": "...|                CA:FALSE|",
+        "candidate": "...|                CA:TRUE|",
+        "reason": (
+            "`X509_print`'s basicConstraints rendering: the authority prints "
+            "`CA:FALSE` for the fixture peer certificate and the crate prints "
+            "`CA:TRUE`. That is the `X509_print` extension surface's divergence, not "
+            "the body's. `sess_id -cert` and `-outform DER -cert` are byte-identical "
+            "and are driven. Recorded here rather than diffed; see `src/apps/sess_id.rs`."
+        ),
+    },
+    {
+        "argv": "kdf nonexistent",
+        "authority": "Invalid KDF name nonexistent|kdf: Use -help for summary.|<ptr>:error:...unsupported...(nonexistent : 0)|",
+        "candidate": "Invalid KDF name nonexistent|kdf: Use -help for summary.|",
+        "reason": (
+            "An unknown KDF name: the authority's `EVP_KDF_fetch` raises "
+            "`inner_evp_generic_fetch:unsupported` and the `err:`-label "
+            "`ERR_print_errors` emits that pointer-bearing line; the crate's fetch "
+            "returns NULL without raising, so the candidate's queue is empty. The "
+            "line begins with a per-run pointer in any case. Recorded here rather "
+            "than diffed; see `src/apps/kdf.rs`."
+        ),
+    },
+    {
+        "argv": "mac NOPE",
+        "authority": "Invalid MAC name NOPE|mac: Use -help for summary.|<ptr>:error:...unsupported...(NOPE : 0)|",
+        "candidate": "Invalid MAC name NOPE|mac: Use -help for summary.|",
+        "reason": (
+            "An unknown MAC name: as `kdf nonexistent`, the authority's "
+            "`EVP_MAC_fetch` raises the pointer-bearing `unsupported` line and the "
+            "crate's fetch does not. Recorded here rather than diffed; see "
+            "`src/apps/mac.rs`."
+        ),
+    },
+    {
+        "argv": "spkac -in <spkac.cnf> -spkac NOPE",
+        "authority": "Can't find SPKAC called \"NOPE\"|<ptr>:error:0700006C:configuration file routines:NCONF_get_string:no value:...group=default name=NOPE|",
+        "candidate": "Can't find SPKAC called \"NOPE\"|<ptr>:error:0700006C:configuration file routines:NCONF_get_string:no value:...group=default name=NOPE|",
+        "reason": (
+            "A missing SPKAC name: both sides print the same message and raise the "
+            "same `NCONF_get_string:no value` error, but the rendered error line "
+            "begins with a per-run pointer and cannot be diffed. Recorded here "
+            "rather than diffed; see `src/apps/spkac.rs`."
+        ),
+    },
+    {
+        "argv": "genrsa -bogus",
+        "authority": "genrsa: Unknown option or cipher: bogus|<ptr>:error:...unsupported...(bogus : 0)|",
+        "candidate": "genrsa: Unknown option: -bogus|genrsa: Use -help for summary.|",
+        "reason": (
+            "`opt_set_unknown_name('cipher')` (`apps/genrsa.c:103`) makes an "
+            "otherwise-unknown option a cipher name; the authority answers "
+            "`Unknown option or cipher: bogus` and then the pointer-bearing fetch "
+            "error. The crate's parser has no unknown-name mode, so it answers its "
+            "`Unknown option: -bogus` refusal. Recorded here rather than diffed; see "
+            "`src/apps/genrsa.rs`."
         ),
     },
 ]
@@ -327,9 +477,11 @@ def render_probe(cases: list[list[str]]) -> str:
 # `cli_transcript`: key=value, newline -> `|`, CR -> `^`.
 #
 # The divergent inputs (`errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/
-# `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`) are deliberately absent: each renders a
-# surface this stratum does not own (see `forensics/tools/phase17_courts.py`'s
-# RECORDED_DIVERGENCES and the per-command module headers).
+# `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms,
+# `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE` and
+# `genrsa -bogus`) are deliberately absent: each renders a surface this stratum does not own
+# (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command module
+# headers).
 set -u
 BIN="${1:?usage: rt_cli_bodies_probe.sh <openssl> <ossl-modules>}"
 MODULES="${2:-}"
@@ -471,10 +623,19 @@ def main(argv: list[str]) -> int:
             "header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed "
             "`DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the "
             "read/dump arm over the fixed sequence), all through the shell probe "
-            "`courts/phase17/rt_cli_bodies_probe.sh`, the per-side staged pair the FRF runtime "
-            "harness runs. Each command's `-help` arm is not driven (`opt_help` is unlanded), and "
-            "the divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/ "
-            "`-configdir`/`-enginesdir`/`-modulesdir` and `prime 2 3 4`/`-hex FF` -- are recorded "
+            "courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime "
+            "harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the "
+            "`-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), "
+            "`sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed "
+            "session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal "
+            "arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), "
+            "`spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), "
+            "`genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). Each "
+            "command's `-help` arm is not driven (`opt_help` is unlanded), and the sixteen "
+            "divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ "
+            "`-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, "
+            "`sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE` "
+            "and `genrsa -bogus` -- are recorded "
             "in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives "
             "a real TLS 1.3 client/server flight, ClientHello through Finished plus an "
             "application-data exchange, over the record layer, the extension units "

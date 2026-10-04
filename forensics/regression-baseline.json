@@ -204,7 +204,7 @@
       "verdict": "pass"
     },
     "RT-CLI-BODIES": {
-      "observations": 100,
+      "observations": 228,
       "verdict": "pass"
     },
     "RT-CMAC": {
