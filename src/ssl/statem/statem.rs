@@ -67,6 +67,8 @@ pub const TLS_ST_BEFORE: c_int = 0;
 pub const TLS_ST_OK: c_int = 1;
 /// `TLS_ST_CW_CLNT_HELLO` — `ssl.h:1078`, the client's post-ClientHello state.
 const TLS_ST_CW_CLNT_HELLO: c_int = 13;
+/// `TLS_ST_CR_SRVR_HELLO` — `ssl.h:1067`, the client's read-the-ServerHello state (17.2a).
+const TLS_ST_CR_SRVR_HELLO: c_int = 3;
 /// `TLS_ST_SR_CLNT_HELLO` — `ssl.h:1087`, the server's post-ClientHello-read state.
 const TLS_ST_SR_CLNT_HELLO: c_int = 22;
 /// `TLS_ST_SW_HELLO_REQ` — `ssl.h:1086`, the renegotiation request state.
@@ -439,15 +441,31 @@ unsafe fn state_machine(s: *mut Ssl, server: bool) -> c_int {
             }
         }
 
-        // The authority now allocates `init_buf`, pushes the write-buffering BIO, calls
-        // `tls_setup_handshake` and builds its first flight. Those units and the message layer they
-        // reach are unlanded, so the driver stops here and reproduces the state the authority's
-        // first read leaves: `MSG_FLOW_READING` with the peer waiting, the client having reached
-        // `TLS_ST_CW_CLNT_HELLO` and the server still at `TLS_ST_BEFORE` (module header).
-        (*s).statem_state = MSG_FLOW_READING;
-        if !server {
+        // The authority allocates `init_buf`, pushes the write-buffering BIO, calls
+        // `tls_setup_handshake` and constructs its first flight. 17.2a lands the client's first
+        // flight across that boundary -- `ossl_statem_client_write_transition`'s
+        // `TLS_ST_BEFORE -> TLS_ST_CW_CLNT_HELLO`, then `tls_construct_client_hello` over the reduced
+        // record write -- so the peer BIO receives a real ClientHello. The server's message layer is
+        // still unlanded, so it stays at `TLS_ST_BEFORE`; the driver then performs the first read,
+        // which an empty peer BIO cannot satisfy, and returns the authority's `-1` with
+        // `rwstate = SSL_READING`.
+        if !server && (*s).hand_state == TLS_ST_BEFORE {
             (*s).hand_state = TLS_ST_CW_CLNT_HELLO;
         }
+        if !server && (*s).hand_state == TLS_ST_CW_CLNT_HELLO {
+            // SAFETY: `s` is live; the write BIO is the caller's to write.
+            if crate::ssl::statem::statem_clnt::write_client_hello(s) <= 0 {
+                ossl_statem_send_fatal(s, SSL_AD_NO_ALERT);
+                (*s).statem_in_handshake -= 1;
+                return -1;
+            }
+            // The read transition that consumes the server's `ServerHello` would move the state to
+            // `TLS_ST_CR_SRVR_HELLO`; the crate advances it here so a second `SSL_connect` does not
+            // rebuild the flight (the authority leaves it at `TLS_ST_CW_CLNT_HELLO` until the read
+            // transition runs, a recorded transient difference).
+            (*s).hand_state = TLS_ST_CR_SRVR_HELLO;
+        }
+        (*s).statem_state = MSG_FLOW_READING;
         (*s).rwstate = SSL_READING;
         (*s).statem_in_handshake -= 1;
         -1

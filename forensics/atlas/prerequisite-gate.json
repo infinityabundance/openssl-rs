@@ -3,8 +3,8 @@
   "body": {
     "blocking_dependencies": [],
     "census": {
-      "covered_by_a_divergence": 160,
-      "language_surface_not_modelled_by_name": 11769
+      "covered_by_a_divergence": 159,
+      "language_surface_not_modelled_by_name": 11767
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -77,7 +77,6 @@
         "tls_construct_cert_status_body": 1,
         "tls_construct_certificate_request": 1,
         "tls_construct_client_certificate": 1,
-        "tls_construct_client_hello": 1,
         "tls_construct_client_key_exchange": 1,
         "tls_construct_end_of_early_data": 1,
         "tls_construct_new_session_ticket": 1,
@@ -702,7 +701,7 @@
         "ssl/ssl_txt.c": 6,
         "ssl/statem/extensions_cust.c": 33,
         "ssl/statem/statem.c": 58,
-        "ssl/statem/statem_clnt.c": 140,
+        "ssl/statem/statem_clnt.c": 138,
         "ssl/statem/statem_lib.c": 126,
         "ssl/statem/statem_srvr.c": 170,
         "ssl/t1_lib.c": 223,
@@ -800,10 +799,10 @@
     },
     "checked": {
       "authority_units": 596,
-      "crate_modules": 849,
+      "crate_modules": 850,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
-      "divergence_names_covered": 106,
+      "divergence_names_covered": 105,
       "divergence_rows": 14,
       "names_referenced_and_not_built": 21
     },
@@ -1045,7 +1044,6 @@
           "ossl_tls_handle_rlayer_return",
           "ssl3_pending",
           "ssl3_read_bytes",
-          "ssl3_write_bytes",
           "ssl_release_record",
           "ssl_set_new_record_layer",
           "ssl_set_record_protocol_version"
@@ -1069,7 +1067,6 @@
           "ssl3_peek",
           "ssl3_put_cipher_by_char",
           "ssl3_read",
-          "ssl3_set_handshake_header",
           "ssl3_shutdown",
           "ssl3_write",
           "ssl_decapsulate",
@@ -1186,7 +1183,6 @@
           "ssl_x509err2alert",
           "tls13_restore_handshake_digest_for_pha",
           "tls13_save_handshake_digest_for_pha",
-          "tls_close_construct_packet",
           "tls_construct_cert_verify",
           "tls_construct_change_cipher_spec",
           "tls_construct_finished",
@@ -1285,7 +1281,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 404
+      "names": 401
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -1295,7 +1291,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "df5cadc5e6396ec1a5321bab006504ebb825e76bf1c4066b56de9cad01ddc261",
+  "body_hash": "40c8d8c84a5aa524f48b197ffdcecf577682e92d3b61bca7a7bf26acceee62a7",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1331,17 +1327,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "61380a725e00e053de146f245969073ee94c5ce025b285fe405ae4cb7de3df6b"
+      "sha256": "79a905075430e51750211a79123980b015495bd01970562d6317f44a66c2fe80"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "2d77c19bf099f0ad146f7bad7815bf99213b614dc1556fb32c32ac69d8859eff"
+      "sha256": "027c5e7b171f55db63397e8696a57c78b6d1ddf38bb242f3849d3c2a31579e41"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "cae0c4c7092740e71066419974012494000af799262b0ebf8aeab51f94b5892d"
+      "sha256": "bb34f51c8a439ebb5a1cc3ac26b71417542d3e8a551f695d3efed9c3ec7d35d2"
     },
     {
       "name": "crate-source-tree",

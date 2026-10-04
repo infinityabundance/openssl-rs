@@ -1,9 +1,9 @@
 {
   "authority": "openssl-3.6.4-production",
   "body": {
-    "all_pass": true,
+    "all_pass": false,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), `sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), `spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the `-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` (the private-key-required and unknown-option refusals). 17.1e adds ten more bodies over fixed fixtures: `gendsa` (the missing-argument refusal), `rand` (the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal), `storeutl` (the `-noout -keys`/`-noout -certs` type and `Total found` status), `dhparam` (the `-in` text/`-noout`/`-check` arms), `genpkey` (the no-algorithm refusal), `passwd` (the fixed-salt `-1`/`-5`/`-6` and `-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the candidate's engine init fails. 17.1f adds seven more bodies over fixed fixtures: `dgst` (the digest, `-hex`/`-binary`, `-c`/`-r`, `-hmac`, `-sign` and `-verify` arms), `pkcs7` (the re-encode and `-print_certs` arms), `ocsp` (the no-work refusal and the fixed-CA/leaf `-reqout`/`-req_text` request arms), `ts` (the mode refusals and the `-query -no_nonce -data` DER/text arms), `speed` (the `-bogus` refusal), `fipsinstall` (the `-verify`/no-module refusals) and `srp` (the action-count refusals). 17.1g, the final slice, lands the last ten bodies over fixed fixtures: `x509` (the text/subject/issuer/dates/fingerprint/serial/pubkey/hash and re-encode arms), `req` (the read-back `-text`/`-verify`/`-subject`/re-encode arms over a fixed CSR), `smime` and `cms` (the `-sign -nodetach -outform PEM|DER` over a fixed content/signer/key, the `-verify -noverify` and `-decrypt` over fixed fixtures, and the operation refusals), `pkcs12` (the deterministic `-export -nomac -keypbe NONE -certpbe NONE`), and the option-parser refusals of `ca`, `s_client`, `s_server`, `s_time` and `cmp`. Each command's `-help` arm is not driven (`opt_help` is unlanded), and the many divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms, and the 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder, `ts` nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`, `fipsinstall -module` and `srp` action arms -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, over the record layer, the extension units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. `RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer against the candidate distribution shell. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
+    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), `sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), `spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the `-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` (the private-key-required and unknown-option refusals). 17.1e adds ten more bodies over fixed fixtures: `gendsa` (the missing-argument refusal), `rand` (the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal), `storeutl` (the `-noout -keys`/`-noout -certs` type and `Total found` status), `dhparam` (the `-in` text/`-noout`/`-check` arms), `genpkey` (the no-algorithm refusal), `passwd` (the fixed-salt `-1`/`-5`/`-6` and `-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the candidate's engine init fails. 17.1f adds seven more bodies over fixed fixtures: `dgst` (the digest, `-hex`/`-binary`, `-c`/`-r`, `-hmac`, `-sign` and `-verify` arms), `pkcs7` (the re-encode and `-print_certs` arms), `ocsp` (the no-work refusal and the fixed-CA/leaf `-reqout`/`-req_text` request arms), `ts` (the mode refusals and the `-query -no_nonce -data` DER/text arms), `speed` (the `-bogus` refusal), `fipsinstall` (the `-verify`/no-module refusals) and `srp` (the action-count refusals). 17.1g, the final slice, lands the last ten bodies over fixed fixtures: `x509` (the text/subject/issuer/dates/fingerprint/serial/pubkey/hash and re-encode arms), `req` (the read-back `-text`/`-verify`/`-subject`/re-encode arms over a fixed CSR), `smime` and `cms` (the `-sign -nodetach -outform PEM|DER` over a fixed content/signer/key, the `-verify -noverify` and `-decrypt` over fixed fixtures, and the operation refusals), `pkcs12` (the deterministic `-export -nomac -keypbe NONE -certpbe NONE`), and the option-parser refusals of `ca`, `s_client`, `s_server`, `s_time` and `cmp`. Each command's `-help` arm is not driven (`opt_help` is unlanded), and the many divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms, and the 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder, `ts` nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`, `fipsinstall -module` and `srp` action arms -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: 17.2a registers it over the probe courts/phase17/rt_tls13_interop_probe.c, which connects a client and a server over memory BIOs and drives the client's first flight. 17.2a lands tls_construct_client_hello over a reduced plaintext record write, so the court compares the record/handshake headers, the legacy/session/cipher/compression shape and the option-gated extension bodies that flight makes deterministic; the missing extensions (supported_groups, signature_algorithms, key_share, ec_point_formats, renegotiation_info), the certificate load, and every step past the first read -- the server's message layer, the extension units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward -- are classified in _interop_reason and recorded, so the court's verdict is pending (section 3.2 names a stalled handshake pending rather than passing) and the tls13-interop contract unit stays open. `RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer against the candidate distribution shell. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
     "courts": [
       {
         "argv_cases": 198,
@@ -309,17 +309,323 @@
           "candidate": "artifacts/phase17/probes/rt_cli_bodies_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 69,
+        "candidate_exit_code": 0,
+        "candidate_observations": 69,
+        "candidate_stderr_tail": [],
+        "comparable_keys": [
+          "ctx.client.nonnull",
+          "ctx.server.nonnull",
+          "server.cert.err.count",
+          "client.nonnull",
+          "server.nonnull",
+          "client.ciphers.count",
+          "flight.0.client.ret",
+          "flight.0.server.ret",
+          "ch.present",
+          "ch.rectype",
+          "ch.recversion",
+          "ch.hs_type",
+          "ch.legacy_version",
+          "ch.random_len",
+          "ch.session_id_len",
+          "ch.cipher_len",
+          "ch.cipher_count",
+          "ch.comp_len",
+          "ch.ext_count.present",
+          "ch.ext.35.len",
+          "ch.ext.35.data",
+          "ch.ext.22.len",
+          "ch.ext.22.data",
+          "ch.ext.23.len",
+          "ch.ext.23.data",
+          "ch.ext.45.len",
+          "ch.ext.45.data",
+          "client.err.count",
+          "server.err.count",
+          "probe.done"
+        ],
+        "comparable_observations": 30,
+        "court": "RT-TLS13-INTEROP",
+        "crashed": false,
+        "flight_finished": false,
+        "probe": "courts/phase17/rt_tls13_interop_probe.c",
+        "recorded_count": 36,
+        "recorded_divergences": [
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "server.cert.load",
+            "reason": "certificate/key plumbing: the candidate's `SSL_CTX_use_certificate_chain_file` refuses the fixed signer fixture (recorded divergence; 14.7 / the decoder boundary)"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "server.key.load",
+            "reason": "certificate/key plumbing: the candidate's `SSL_CTX_use_certificate_chain_file` refuses the fixed signer fixture (recorded divergence; 14.7 / the decoder boundary)"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "server.key.check",
+            "reason": "certificate/key plumbing: the candidate's `SSL_CTX_use_certificate_chain_file` refuses the fixed signer fixture (recorded divergence; 14.7 / the decoder boundary)"
+          },
+          {
+            "authority": "1522",
+            "candidate": "175",
+            "class": "value",
+            "observation": "flight.0.client.out",
+            "reason": "the extension set is partial, so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "1517",
+            "candidate": "170",
+            "class": "value",
+            "observation": "ch.reclen",
+            "reason": "the extension set is partial, so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "1522",
+            "candidate": "175",
+            "class": "value",
+            "observation": "ch.recbytes",
+            "reason": "the extension set is partial, so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "1513",
+            "candidate": "166",
+            "class": "value",
+            "observation": "ch.hs_len",
+            "reason": "the extension set is partial, so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "1380",
+            "candidate": "33",
+            "class": "value",
+            "observation": "ch.ext_total_len",
+            "reason": "the extension set is partial, so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "65281,11,10,35,22,23,13,43,45,51",
+            "candidate": "35,22,23,43,45",
+            "class": "value",
+            "observation": "ch.ext.types",
+            "reason": "the extension set is partial, so the ClientHello is smaller than the authority's"
+          },
+          {
+            "authority": "5",
+            "candidate": "11",
+            "class": "value",
+            "observation": "ch.ext.43.len",
+            "reason": "supported_versions body: the candidate's reduced security callback admits SSL3 through TLS1.2, so the offered list is longer than the authority's"
+          },
+          {
+            "authority": "04,03,04,03,03",
+            "candidate": "0a,03,04,03,03,03,02,03,01,03,00",
+            "class": "value",
+            "observation": "ch.ext.43.data",
+            "reason": "supported_versions body: the candidate's reduced security callback admits SSL3 through TLS1.2, so the offered list is longer than the authority's"
+          },
+          {
+            "authority": "1258",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "ch.ext.51.len",
+            "reason": "key_share is not constructed (the group list and ephemeral key share are unlanded)"
+          },
+          {
+            "authority": "2410",
+            "candidate": "0",
+            "class": "value",
+            "observation": "flight.0.server.out",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "flight.1.client.ret",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "80",
+            "candidate": "0",
+            "class": "value",
+            "observation": "flight.1.client.out",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "flight.1.server.ret",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "510",
+            "candidate": "0",
+            "class": "value",
+            "observation": "flight.1.server.out",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "flight.2.client.ret",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "flight.2.server.ret",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "3",
+            "class": "value",
+            "observation": "client.state",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "3",
+            "class": "value",
+            "observation": "client.want",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "0",
+            "candidate": "1",
+            "class": "value",
+            "observation": "client.in_init",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "client.finished",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "server.state",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "3",
+            "class": "value",
+            "observation": "server.want",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "0",
+            "candidate": "1",
+            "class": "value",
+            "observation": "server.in_init",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "1",
+            "candidate": "0",
+            "class": "value",
+            "observation": "server.finished",
+            "reason": "the flight stops at the first read: the server's message layer is unlanded, so no ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+          },
+          {
+            "authority": "0",
+            "candidate": "1",
+            "class": "value",
+            "observation": "app.skipped",
+            "reason": "application data is not reached: the handshake does not complete"
+          },
+          {
+            "authority": "15",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "app.write.client",
+            "reason": "application data is not reached: the handshake does not complete"
+          },
+          {
+            "authority": "37",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "app.client.bytes",
+            "reason": "application data is not reached: the handshake does not complete"
+          },
+          {
+            "authority": "15",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "app.read.server",
+            "reason": "application data is not reached: the handshake does not complete"
+          },
+          {
+            "authority": "1",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "app.server.match",
+            "reason": "application data is not reached: the handshake does not complete"
+          },
+          {
+            "authority": "15",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "app.write.server",
+            "reason": "application data is not reached: the handshake does not complete"
+          },
+          {
+            "authority": "37",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "app.server.bytes",
+            "reason": "application data is not reached: the handshake does not complete"
+          },
+          {
+            "authority": "15",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "app.read.client",
+            "reason": "application data is not reached: the handshake does not complete"
+          },
+          {
+            "authority": "1",
+            "candidate": "-1",
+            "class": "value",
+            "observation": "app.client.match",
+            "reason": "application data is not reached: the handshake does not complete"
+          }
+        ],
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase17/probes/rt_tls13_interop_probe.authority",
+          "candidate": "artifacts/phase17/probes/rt_tls13_interop_probe.candidate"
+        },
+        "verdict": "pending"
       }
     ],
     "pending_courts": {
       "RT-CROSS-DSO-STATE": "17.3 lands the probe; it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the whole-crate DSOs",
-      "RT-DOWNSTREAM-CONSUMER": "17.4 lands the probe; it builds a real downstream consumer against the candidate distribution shell and compares its transcript with the authority's",
-      "RT-TLS13-INTEROP": "17.2 lands the probe; it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, and compares the two transcripts"
+      "RT-DOWNSTREAM-CONSUMER": "17.4 lands the probe; it builds a real downstream consumer against the candidate distribution shell and compares its transcript with the authority's"
     },
     "summary": {
       "fail": 0,
       "pass": 1,
-      "total": 1
+      "pending": 1,
+      "total": 2
     }
   },
   "generator": "forensics/tools/phase17_courts.py",
@@ -332,12 +638,27 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "cae0c4c7092740e71066419974012494000af799262b0ebf8aeab51f94b5892d"
+      "sha256": "bb34f51c8a439ebb5a1cc3ac26b71417542d3e8a551f695d3efed9c3ec7d35d2"
     },
     {
       "name": "probe",
       "path": "courts/phase17/rt_cli_bodies_probe.sh",
       "sha256": "32020af922723b0a82c21e36ed25cb0962bb23ecea0036c50dd09c6600efdf83"
+    },
+    {
+      "name": "interop-probe",
+      "path": "courts/phase17/rt_tls13_interop_probe.c",
+      "sha256": "3ad05305d847b00e57baca03ee1f4b01fd73c69729815a76a0dfa98004ea1ec8"
+    },
+    {
+      "name": "interop-cert",
+      "path": "courts/phase17/fixtures/signer.pem",
+      "sha256": "c07bb2be720860e61d8498ff2978195bff963a308adb3bfade5effe087c1bab2"
+    },
+    {
+      "name": "interop-key",
+      "path": "courts/phase17/fixtures/rsa-key.pem",
+      "sha256": "160668f021d13c0be038675dccdbb0e9666d9d2babd825b6c81b6375831efa5a"
     }
   ],
   "kind": "phase17-courts",

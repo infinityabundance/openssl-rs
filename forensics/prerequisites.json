@@ -207,7 +207,6 @@
           "tls_construct_cert_status_body",
           "tls_construct_certificate_request",
           "tls_construct_client_certificate",
-          "tls_construct_client_hello",
           "tls_construct_client_key_exchange",
           "tls_construct_end_of_early_data",
           "tls_construct_new_session_ticket",
@@ -240,7 +239,7 @@
           "tls_process_server_rpk"
         ],
         "evidence": "src/ssl/statem/statem_clnt.rs and src/ssl/statem/statem_srvr.rs module headers (the message-body boundary); docs/PHASE-16-SUBPHASES.md row 16.5 and section 3; forensics/atlas/transcription-edges.json (both modules are statem_clnt.c/statem_srvr.c's)",
-        "note": "Phase 16.5 transcribes the read/write *transition* surface of ssl/statem/statem_clnt.c and statem_srvr.c -- the parser's decision that a message type can follow the current hand state, and the constructor's decision what to build next -- but not the message bodies those transitions select. The bodies (tls_construct_client_hello, tls_process_server_hello and their siblings, the GOST/RPK/DTLS message helpers, and the five ossl_statem_{client,server}_* entry points the state machine calls) build and parse bytes through the record layer (ssl3_write_bytes/ssl3_read_bytes), the extension units (extensions_clnt.c/extensions_srvr.c) and the key schedule (t1_enc.c/tls13_enc.c), none of which is landed, so a full flight cannot be driven without a shared engine. The names are recorded here so the omitted bodies are a stated boundary rather than a silent gap; the landed transitions and the fresh-connection state they leave are compared by RT-STATEM-REMAINDER. This is the 'record the boundary rather than fabricate' disposition docs/PHASE-16-SUBPHASES.md section 4 names.",
+        "note": "Phase 16.5 transcribes the read/write *transition* surface of ssl/statem/statem_clnt.c and statem_srvr.c -- the parser's decision that a message type can follow the current hand state, and the constructor's decision what to build next -- but not the message bodies those transitions select. The bodies (tls_process_server_hello and its siblings, the GOST/RPK/DTLS message helpers, and the five ossl_statem_{client,server}_* entry points the state machine calls) build and parse bytes through the record layer (ssl3_write_bytes/ssl3_read_bytes), the extension units (extensions_clnt.c/extensions_srvr.c) and the key schedule (t1_enc.c/tls13_enc.c), none of which is landed, so a full flight cannot be driven without a shared engine. The names are recorded here so the omitted bodies are a stated boundary rather than a silent gap; the landed transitions and the fresh-connection state they leave are compared by RT-STATEM-REMAINDER. This is the 'record the boundary rather than fabricate' disposition docs/PHASE-16-SUBPHASES.md section 4 names.",
         "owner_module": "src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs"
       }
     ],

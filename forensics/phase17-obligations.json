@@ -489,7 +489,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "cae0c4c7092740e71066419974012494000af799262b0ebf8aeab51f94b5892d"
+      "sha256": "bb34f51c8a439ebb5a1cc3ac26b71417542d3e8a551f695d3efed9c3ec7d35d2"
     },
     {
       "name": "phase-17-plan",
@@ -499,7 +499,7 @@
     {
       "name": "phase-17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "38782db909787728db22862f5f4d60bab0d3fe56f28e2c4afd7b751ceead85e6"
+      "sha256": "6cf012eb39d96fe333033e66fd161d6082fbac54043698c03ffcb3c99ad7afe3"
     }
   ],
   "kind": "phase17-obligations",

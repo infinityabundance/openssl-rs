@@ -663,6 +663,10 @@
       "observations": 54,
       "verdict": "pass"
     },
+    "RT-TLS13-INTEROP": {
+      "observations": 69,
+      "verdict": "pending"
+    },
     "RT-TS": {
       "observations": 275,
       "verdict": "pass"
@@ -801,10 +805,10 @@
   },
   "prerequisites": {
     "blocking_dependencies": 0,
-    "divergence_names_covered": 106,
+    "divergence_names_covered": 105,
     "findings": 0,
-    "language_census": 11769,
-    "sealed_census": 404
+    "language_census": 11767,
+    "sealed_census": 401
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",
