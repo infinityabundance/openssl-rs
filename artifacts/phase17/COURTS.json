@@ -3,14 +3,14 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed `errstr` argv, comparing the two transcripts line by line -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes -- through the shell probe `courts/phase17/rt_cli_bodies_probe.sh`, the per-side staged pair the FRF runtime harness runs. The `-help` arm is not driven (`opt_help` is unlanded), and `errstr 0xdeadbeef`, an unknown system error whose `ERR_error_string_n` value diverges, is recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, over the record layer, the extension units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. `RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer against the candidate distribution shell. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
+    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe `courts/phase17/rt_cli_bodies_probe.sh`, the per-side staged pair the FRF runtime harness runs. Each command's `-help` arm is not driven (`opt_help` is unlanded), and the divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/ `-configdir`/`-enginesdir`/`-modulesdir` and `prime 2 3 4`/`-hex FF` -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, over the record layer, the extension units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. `RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer against the candidate distribution shell. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
     "courts": [
       {
-        "argv_cases": 3,
+        "argv_cases": 25,
         "authority_exit_code": 0,
-        "authority_observations": 12,
+        "authority_observations": 100,
         "candidate_exit_code": 0,
-        "candidate_observations": 12,
+        "candidate_observations": 100,
         "candidate_stderr_tail": [],
         "court": "RT-CLI-BODIES",
         "probe": "courts/phase17/rt_cli_bodies_probe.sh",
@@ -20,6 +20,48 @@
             "authority": "error:DEADBEEF:system library::reason(1585561327)",
             "candidate": "error:DEADBEEF:system library::Unknown error 1588444911",
             "reason": "`ERR_error_string_n` on an unknown system error: the authority's `openssl_strerror_r` (`crypto/o_str.c`, the POSIX `strerror_r`) refuses the out-of-range errno and falls back to `reason(r & ~flags)`, while the crate's `strerror_into` (`src/runtime/err.rs`) calls the GNU `strerror_r`, which answers `Unknown error N`. Recorded here rather than diffed; see `src/apps/errstr.rs`."
+          },
+          {
+            "argv": "info -seeds",
+            "authority": "os-specific",
+            "candidate": "Undefined",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_SEED_SOURCE)` (1007): the authority answers its libcrypto seed-source string; the candidate's RAND is a later stratum and the canonical `src/runtime/init.rs` `OPENSSL_info` answers NULL, so the body prints `Undefined`. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "info -cpusettings",
+            "authority": "OPENSSL_ia32cap=0x7ed8320b078bffff:0x19405fdef1bf97ab:0x0000003010000110:0x0000000000000000:0x0000000000000000",
+            "candidate": "Undefined",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` (1008): the authority answers its captured `OPENSSL_ia32cap=...` line; the candidate's CPU dispatch is Phase 19 and `OPENSSL_info(1008)` is NULL, so the body prints `Undefined`. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "info -configdir",
+            "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/ssl",
+            "candidate": "",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_CONFIG_DIR)` (1001): the authority answers its own configured prefix; the candidate's `crypto/defaults.c` `ossl_get_openssldir` answers its own build's (empty) `OPENSSLDIR`, so the body prints an empty line. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "info -enginesdir",
+            "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/engines-3",
+            "candidate": "Undefined",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_ENGINES_DIR)` (1002): the authority answers its configured engines directory; the candidate configured no prefix and answers NULL, so the body prints `Undefined`. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "info -modulesdir",
+            "authority": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/ossl-modules",
+            "candidate": "Undefined",
+            "reason": "`OPENSSL_info(OPENSSL_INFO_MODULES_DIR)` (1003): the authority answers its configured module directory; the candidate configured no prefix and answers NULL, so the body prints `Undefined`. Recorded here rather than diffed; see `src/apps/info.rs`."
+          },
+          {
+            "argv": "prime 2 3 4",
+            "authority": "2 (2) is prime|3 (3) is prime|4 (4) is not prime|",
+            "candidate": "02 (2) is prime|03 (3) is prime|04 (4) is not prime|",
+            "reason": "`BN_print` rendering: the authority (`crypto/bn/bn_print.c`) strips leading nibbles and writes uppercase; the candidate (`src/bn/bignum.rs:1655`) writes lowercase and pads to whole bytes. Recorded here rather than diffed; the `prime 97` case avoids both differences. See `src/apps/prime.rs`."
+          },
+          {
+            "argv": "prime -hex FF",
+            "authority": "FF (FF) is not prime|",
+            "candidate": "ff (FF) is not prime|",
+            "reason": "`BN_print` case: the authority writes uppercase, the candidate lowercase (`src/bn/bignum.rs:1655`). Recorded here rather than diffed; see `src/apps/prime.rs`."
           }
         ],
         "residual_count": 0,
@@ -52,12 +94,12 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "f3cc8cfc5ba2672ffe71317bd41ed905d4add945dc508e0a8b832cfe1b312f36"
+      "sha256": "cae0c4c7092740e71066419974012494000af799262b0ebf8aeab51f94b5892d"
     },
     {
       "name": "probe",
       "path": "courts/phase17/rt_cli_bodies_probe.sh",
-      "sha256": "9f9a5019dc30e32e13fc428e5e22b04f68dbcd2a9884d0802bd504b50584e1f7"
+      "sha256": "b90002b886ef6df6bea486f7d6206c0b954f0e67ca8a9b3b13cf5efe0943626d"
     }
   ],
   "kind": "phase17-courts",

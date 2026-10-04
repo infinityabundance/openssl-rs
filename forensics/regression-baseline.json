@@ -204,7 +204,7 @@
       "verdict": "pass"
     },
     "RT-CLI-BODIES": {
-      "observations": 12,
+      "observations": 100,
       "verdict": "pass"
     },
     "RT-CMAC": {
@@ -801,7 +801,7 @@
   },
   "prerequisites": {
     "blocking_dependencies": 0,
-    "divergence_names_covered": 105,
+    "divergence_names_covered": 106,
     "findings": 0,
     "language_census": 11769,
     "sealed_census": 404

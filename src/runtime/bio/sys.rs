@@ -56,6 +56,20 @@ extern "C" {
     /// the BIO has no callback argument BIO. Reading it through a shared
     /// reference would be incorrect: another thread may reassign it.
     pub static mut stderr: *mut FILE;
+
+    /// `stdout` — the C library's standard output `FILE *`.
+    ///
+    /// The `apps` command bodies open their `bio_out`/`bio_err` on these
+    /// (`apps/lib/apps.c`'s `dup_bio_out`/`dup_bio_err`), so their output is a
+    /// `BIO` write rather than a Rust `println!`. Declared `static mut` for the
+    /// same reason as `stderr`: glibc exposes it as a variable, not a macro.
+    pub static mut stdout: *mut FILE;
+
+    /// `stdin` — the C library's standard input `FILE *`.
+    ///
+    /// The `-in`/`-out` defaults of the `apps` bodies (`bio_open_default` with a
+    /// NULL or `-` filename) resolve to these.
+    pub static mut stdin: *mut FILE;
 }
 
 extern "C" {

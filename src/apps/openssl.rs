@@ -14,10 +14,14 @@
 //! whole. Four command bodies are landed: `help` (this module), `list`
 //! ([`crate::apps::list`]) and `version` ([`crate::apps::version`]) from Phase
 //! 16.4, whose output is build-independent, and `errstr` ([`crate::apps::errstr`])
-//! from Phase 17.1, the first of the 52 command bodies that stratum lands. **Every
-//! other command name is present in the table and dispatches, but its body
-//! (`apps/<name>.c`) is a unit this stratum does not own**, so it reaches
-//! [`not_landed`] rather than printing a wrong body.
+//! from Phase 17.1, the first of the 52 command bodies that stratum lands. Phase
+//! 17.1b adds the next six: `info`, `prime`, `skeyutl`, `configutl`, `pkeyparam`
+//! and `nseq` ([`crate::apps::info`], [`crate::apps::prime`],
+//! [`crate::apps::skeyutl`], [`crate::apps::configutl`],
+//! [`crate::apps::pkeyparam`], [`crate::apps::nseq`]). **Every other command name
+//! is present in the table and dispatches, but its body (`apps/<name>.c`) is a
+//! unit this stratum does not own**, so it reaches [`not_landed`] rather than
+//! printing a wrong body.
 //!
 //! ## Recorded divergences (module header)
 //!
@@ -35,9 +39,15 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::apps::configutl;
 use crate::apps::errstr;
+use crate::apps::info;
 use crate::apps::list;
+use crate::apps::nseq;
 use crate::apps::opt::{progname, OptMatch, Opts};
+use crate::apps::pkeyparam;
+use crate::apps::prime;
+use crate::apps::skeyutl;
 use crate::apps::tables::{Func, FuncKind, FUNCTIONS, HELP_OPTIONS};
 use crate::apps::version;
 
@@ -155,9 +165,15 @@ fn do_cmd(argv: &[String]) -> i32 {
             warn_deprecated(fp);
         }
         return match fp.name {
+            "configutl" => configutl::main(argv),
             "errstr" => errstr::main(argv),
             "help" => help_main(argv),
+            "info" => info::main(argv),
             "list" => list::main(argv),
+            "nseq" => nseq::main(argv),
+            "pkeyparam" => pkeyparam::main(argv),
+            "prime" => prime::main(argv),
+            "skeyutl" => skeyutl::main(argv),
             "version" => version::main(argv),
             _ => not_landed(fp.name),
         };
