@@ -42,12 +42,18 @@ found` status over fixed fixtures), `dhparam` (the `-in` text/`-noout`/`-check` 
 hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt`) and `enc` (the raw-key AES-CBC
 `-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms). Each command's `-help` arm is not driven: `opt_help` is the boundary
 `src/apps/opt.rs` records, so it reaches `not_landed` rather than the authority's table,
-exactly as `help`/`list`/`version` do.
+exactly as `help`/`list`/`version` do. 17.1g, the final slice, adds the ten remaining
+bodies: `x509` (the text/subject/issuer/dates/fingerprint/serial/pubkey/hash/re-encode
+arms over fixed certificates), `req` (the read-back text/verify/subject/re-encode arms
+over a fixed CSR), `smime` and `cms` (the `-sign`/`-verify` and fixed-fixture
+`-decrypt` arms, plus the operation refusals), `pkcs12` (the deterministic
+`-export -nomac -keypbe NONE -certpbe NONE`), and the parser refusals of `ca`,
+`s_client`, `s_server`, `s_time` and `cmp`.
 
 The fixtures live in `courts/phase17/fixtures/` and are read by absolute `/work` path, so the
 probe is self-contained under the container's mount.
 
-**Twenty-nine inputs are recorded rather than diffed**, each a surface this stratum does not own:
+**Forty-seven inputs are recorded rather than diffed**, each a surface this stratum does not own:
 `errstr 0xdeadbeef` (an unknown system errno), `info -seeds`/`-cpusettings`/`-configdir`/
 `-enginesdir`/`-modulesdir` (RAND seed source, CPU dispatch and the configured prefix, which
 are later strata or build-specific), `prime 2 3 4`/`-hex FF` (the `BN_print` rendering),
@@ -63,7 +69,10 @@ and the `engine` listing/`-pre` arms (the candidate's engine init fails), plus 1
 `dgst -bogus`/`-list`/`-mac` arms, `pkcs7 -print`, `ocsp -bogus` and its responder/verification
 arms, a `ts` query without `-no_nonce` and `-reply`/`-verify`, the whole `speed` benchmark (and
 its `-evp`/`-hmac` pointer-bearing refusals), `fipsinstall -module`/`-config` and the `srp`
-action arms. They are named in
+action arms, plus 17.1g's: the `x509`/`req` generation and checking arms, the
+`smime`/`cms` `-encrypt` and default (`signingTime`) `-sign` arms (and their `SMIME`
+output boundary), `pkcs12 -info`/ordinary `-export`, the `ca` config/index arms, the
+`s_client`/`s_server`/`s_time` network arms and every `cmp` arm. They are named in
 `RECORDED_DIVERGENCES` and every other arm is
 driven, the convention `src/apps/errstr.rs` and Phases 13 through 16 use for a recorded
 divergence.
@@ -318,6 +327,62 @@ BODIES_ARGV: list[list[str]] = [
     ["srp", "-list", "-add"],
     ["srp", "-add"],
     ["srp", "-srpvfile", "x", "-config", "y"],
+    # 17.1g: ca / cmp / cms / pkcs12 / req / s_client / s_server / s_time / smime / x509.
+    ["x509", "-in", f"{_BODIES_FIXTURES}/ca.pem", "-noout", "-text"],
+    ["x509", "-in", f"{_BODIES_FIXTURES}/ca.pem", "-noout", "-subject"],
+    ["x509", "-in", f"{_BODIES_FIXTURES}/ca.pem", "-noout", "-issuer"],
+    ["x509", "-in", f"{_BODIES_FIXTURES}/ca.pem", "-noout", "-dates"],
+    ["x509", "-in", f"{_BODIES_FIXTURES}/ca.pem", "-noout", "-fingerprint"],
+    ["x509", "-in", f"{_BODIES_FIXTURES}/ca.pem", "-noout", "-serial"],
+    ["x509", "-in", f"{_BODIES_FIXTURES}/ca.pem", "-noout", "-pubkey"],
+    ["x509", "-in", f"{_BODIES_FIXTURES}/ca.pem", "-noout", "-subject_hash"],
+    ["x509", "-in", f"{_BODIES_FIXTURES}/ca.pem"],
+    ["x509", "-in", f"{_BODIES_FIXTURES}/leaf.pem", "-noout", "-text"],
+    ["req", "-in", f"{_BODIES_FIXTURES}/req.pem", "-noout", "-text"],
+    ["req", "-in", f"{_BODIES_FIXTURES}/req.pem", "-noout", "-verify"],
+    ["req", "-in", f"{_BODIES_FIXTURES}/req.pem", "-noout", "-subject"],
+    ["req", "-in", f"{_BODIES_FIXTURES}/req.pem", "-noout"],
+    ["smime", "-sign", "-noattr", "-nodetach", "-outform", "PEM", "-in",
+     f"{_BODIES_FIXTURES}/smime.txt", "-signer", f"{_BODIES_FIXTURES}/signer.pem",
+     "-inkey", f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["smime", "-sign", "-noattr", "-nodetach", "-outform", "DER", "-in",
+     f"{_BODIES_FIXTURES}/smime.txt", "-signer", f"{_BODIES_FIXTURES}/signer.pem",
+     "-inkey", f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["smime", "-verify", "-inform", "PEM", "-noverify", "-in",
+     f"{_BODIES_FIXTURES}/smime-signed.pem"],
+    ["smime", "-decrypt", "-inform", "PEM", "-in", f"{_BODIES_FIXTURES}/smime-enc.pem",
+     "-recip", f"{_BODIES_FIXTURES}/signer.pem", "-inkey", f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["smime"],
+    ["smime", "-encrypt", "-in", f"{_BODIES_FIXTURES}/smime.txt"],
+    ["smime", "-decrypt"],
+    ["smime", "-sign", "-in", f"{_BODIES_FIXTURES}/smime.txt", "-inkey",
+     f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["smime", "-sign", "-in", f"{_BODIES_FIXTURES}/smime.txt"],
+    ["cms", "-sign", "-noattr", "-nodetach", "-outform", "PEM", "-in",
+     f"{_BODIES_FIXTURES}/smime.txt", "-signer", f"{_BODIES_FIXTURES}/signer.pem",
+     "-inkey", f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["cms", "-sign", "-noattr", "-nodetach", "-outform", "DER", "-in",
+     f"{_BODIES_FIXTURES}/smime.txt", "-signer", f"{_BODIES_FIXTURES}/signer.pem",
+     "-inkey", f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["cms", "-verify", "-inform", "PEM", "-noverify", "-in",
+     f"{_BODIES_FIXTURES}/cms-signed.pem"],
+    ["cms"],
+    ["cms", "-encrypt", "-in", f"{_BODIES_FIXTURES}/smime.txt"],
+    ["cms", "-decrypt"],
+    ["cms", "-sign", "-in", f"{_BODIES_FIXTURES}/smime.txt", "-inkey",
+     f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["cms", "-sign", "-in", f"{_BODIES_FIXTURES}/smime.txt"],
+    ["pkcs12", "-export", "-nomac", "-keypbe", "NONE", "-certpbe", "NONE",
+     "-in", f"{_BODIES_FIXTURES}/signer.pem", "-inkey", f"{_BODIES_FIXTURES}/rsa-key.pem",
+     "-passout", "pass:test"],
+    ["ca", "-bogus"],
+    ["ca", "-status"],
+    ["s_client", "-bogus"],
+    ["s_client", "-connect"],
+    ["s_server", "-bogus"],
+    ["s_server", "-accept"],
+    ["s_time", "-bogus"],
+    ["s_time", "-connect"],
 ]
 
 # Divergences the court records rather than diffs: an output decided by a surface this stratum
@@ -772,6 +837,105 @@ RECORDED_DIVERGENCES: list[dict] = [
             "diffed; see `src/apps/srp.rs`."
         ),
     },
+    {
+        "argv": "x509 <generation/checking arms>",
+        "authority": "<a generated or re-signed certificate, or a check result>",
+        "candidate": "<not landed>",
+        "reason": (
+            "`x509 -new`/`-x509toreq`/`-req`/`-CA`/`-set_serial`/`-days`/"
+            "`-not_before`/`-not_after`/`-force_pubkey`/`-key`/`-extfile` and the "
+            "trust/alias writers build or mutate a certificate; `-checkend` reads "
+            "the wall clock and `-purpose`/`-modulus`/`-ocspid`/`-ext`/`-email`/"
+            "`-ocsp_uri`/`-alias`/`-next_serial` reach the `X509V3`/purpose/"
+            "`BN_print` surfaces. The print/re-encode arms over the fixed "
+            "certificate are driven. Recorded here rather than diffed; see "
+            "`src/apps/x509.rs`."
+        ),
+    },
+    {
+        "argv": "req <generation arms>",
+        "authority": "<a generated request/certificate, or a key modulus>",
+        "candidate": "<not landed>",
+        "reason": (
+            "`req -new`/`-newkey`/`-key`/`-x509`/`-CA`/`-subj`/`-addext`/"
+            "`-extensions`/`-precert`/`-config` build a request or certificate and "
+            "`-modulus` reaches `BN_print`. The read-back `-text`/`-verify`/"
+            "`-subject`/re-encode arms over the fixed CSR are driven. Recorded here "
+            "rather than diffed; see `src/apps/req.rs`."
+        ),
+    },
+    {
+        "argv": "smime -encrypt / cms -encrypt / -EncryptedData_encrypt",
+        "authority": "<a fresh S/MIME or CMS envelope>",
+        "candidate": "<the same operation over a fresh random key>",
+        "reason": (
+            "The content-encryption key is drawn at random, so the envelope bytes "
+            "are independent on the two sides; the fixed `smime-enc.pem`/"
+            "`cms-enc.pem` fixtures are decrypted instead. Recorded here rather "
+            "than diffed; see `src/apps/smime.rs` and `src/apps/cms.rs`."
+        ),
+    },
+    {
+        "argv": "smime/-cms <S/MIME output format>",
+        "authority": "<a multipart S/MIME message with a fresh boundary>",
+        "candidate": "<a multipart S/MIME message with a fresh boundary>",
+        "reason": (
+            "`SMIME_write_PKCS7`/`SMIME_write_CMS` draw a random MIME boundary, so "
+            "the `SMIME` output format is not byte-deterministic; the `PEM` and "
+            "`DER` output formats are driven. Recorded here rather than diffed; "
+            "see `src/apps/smime.rs` and `src/apps/cms.rs`."
+        ),
+    },
+    {
+        "argv": "pkcs12 -info / <ordinary -export>",
+        "authority": "MAC: sha256, Iteration 2048|…|Shrouded Keybag: … / <a salted PKCS#12>",
+        "candidate": "<not landed> / <a salted PKCS#12>",
+        "reason": (
+            "`-info` needs `alg_print` (the `PBES2`/`PKCS12KDF` algorithm printer) "
+            "and the `PKCS12_SAFEBAG` walk; the ordinary `-export` draws a random "
+            "salt/MAC. The `-export -nomac -keypbe NONE -certpbe NONE` arm over the "
+            "fixed certificate/key is deterministic and is driven. Recorded here "
+            "rather than diffed; see `src/apps/pkcs12.rs`."
+        ),
+    },
+    {
+        "argv": "ca <config/index/issuance arms>",
+        "authority": "<the CA database output, or a pointer-bearing config error>",
+        "candidate": "<not landed>",
+        "reason": (
+            "`ca` past the option parser reads the `ca` config section and the "
+            "index database and issues/revokes certificates; its failure path "
+            "carries a pointer-bearing `NCONF_get_string` `ERR_print_errors` tail. "
+            "The `-bogus` and missing-value parser refusals are driven. Recorded "
+            "here rather than diffed; see `src/apps/ca.rs`."
+        ),
+    },
+    {
+        "argv": "s_client / s_server / s_time <network arms>",
+        "authority": "<a TLS handshake, session or a wall-clock benchmark>",
+        "candidate": "<not landed>",
+        "reason": (
+            "The transport, handshake, session cache and application-data loop (and "
+            "`s_time`'s wall-clock benchmark) need a live peer and are a function of "
+            "the network and machine. The parser's unknown-option and missing-value "
+            "refusals (`-bogus`, `-connect`/`-accept`) are driven. Recorded here "
+            "rather than diffed; see `src/apps/s_client.rs`, `src/apps/s_server.rs` "
+            "and `src/apps/s_time.rs`."
+        ),
+    },
+    {
+        "argv": "smime/-cms -sign (default attributes) and -sign -noattr <invalid>",
+        "authority": "<a signature carrying a signing-time attribute>",
+        "candidate": "<a signature carrying its own (later) signing-time attribute>",
+        "reason": (
+            "`PKCS7_sign`/`CMS_sign` include the `signingTime` signed attribute from "
+            "the wall clock unless `-noattr`/`-no_signing_time` is given, so the "
+            "default `-sign` bytes differ across a second boundary. The driven "
+            "sign arms pass `-noattr`, which removes the only wall-clock input. "
+            "Recorded here rather than diffed; see `src/apps/smime.rs` and "
+            "`src/apps/cms.rs`."
+        ),
+    },
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
@@ -893,9 +1057,12 @@ def render_probe(cases: list[list[str]]) -> str:
 # `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl`
 # operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam`
 # generation arms, `passwd` without `-salt`, the `engine` listing/`-pre` arms and the
-# 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder,
+`-bogus`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder,
 # `ts` random-nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`,
-# `fipsinstall -module` and `srp` action arms) are deliberately absent: each renders a
+# `fipsinstall -module` and `srp` action arms, and the 17.1g `x509`/`req` generation,
+# `smime`/`cms` `-encrypt`/S/MIME-format, `pkcs12 -info`/ordinary `-export`, the
+# `ca` config/index, the `s_client`/`s_server`/`s_time` network arms and every `cmp`
+# arm) are deliberately absent: each renders a
 # surface this stratum does not own
 # (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command
 # module headers).
@@ -1072,7 +1239,15 @@ def main(argv: list[str]) -> int:
             "`-req_text` request arms), `ts` (the mode refusals and the "
             "`-query -no_nonce -data` DER/text arms), `speed` (the `-bogus` "
             "refusal), `fipsinstall` (the `-verify`/no-module refusals) and `srp` "
-            "(the action-count refusals). Each "
+            "(the action-count refusals). 17.1g, the final slice, lands the last ten "
+            "bodies over fixed fixtures: `x509` (the "
+            "text/subject/issuer/dates/fingerprint/serial/pubkey/hash and re-encode arms), "
+            "`req` (the read-back `-text`/`-verify`/`-subject`/re-encode arms over a fixed "
+            "CSR), `smime` and `cms` (the `-sign -nodetach -outform PEM|DER` over a fixed "
+            "content/signer/key, the `-verify -noverify` and `-decrypt` over fixed "
+            "fixtures, and the operation refusals), `pkcs12` (the deterministic "
+            "`-export -nomac -keypbe NONE -certpbe NONE`), and the option-parser refusals "
+            "of `ca`, `s_client`, `s_server`, `s_time` and `cmp`. Each "
             "command's `-help` arm is not driven (`opt_help` is unlanded), and the many "
             "divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ "
             "`-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, "
