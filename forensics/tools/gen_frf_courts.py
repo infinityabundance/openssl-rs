@@ -626,11 +626,53 @@ COURTS: list[tuple[str, int, str, str]] = [
     # stages an `artifacts/phase15/probes/<probe>.{authority,candidate}` pair, so it is declarable.
     ("rt-quic", 15, "rt_quic_probe",
      "the three OSSL_QUIC_*_method constructors and the context each installs, driven"),
+    #
+    # Phase 16 -- the CLI / config / filesystem contract stratum. Six differential courts.
+    # The stratum owns no exported symbol, so its courts are not a symbol projection: each
+    # diffs a real transcript and stages an `artifacts/phase16/probes/<probe>.{authority,
+    # candidate}` pair, so all six are declarable. There is no reference basis (`RT-*`
+    # reference court) here -- every court is behavioural. `rt-cli`'s subject is the CLI
+    # *executable*, which is not linkable, so its instrument is the shell probe
+    # `courts/phase16/rt_cli_probe.sh` (see `PROBE_SOURCES`) rather than a compiled C probe,
+    # but its execution context, fixture and observables are the runtime harness's.
+    #
+    ("rt-legacy-module", 16, "rt_legacy_module_probe",
+     "the `legacy` provider module loaded through `OSSL_PROVIDER_load`: the provider name, "
+     "the four operation tables' row counts and first-row alias sequences, the digest and "
+     "KDF rows driven by name and by OID, the 32 cipher rows and the refusal arms"),
+    ("rt-engine-dyn", 16, "rt_engine_dyn_probe",
+     "the dynamic ENGINE loader: the `OPENSSL_INIT_ENGINE_DYNAMIC` bit, the `dynamic` "
+     "engine's id and name, the `ENGINE_by_id` fallback's control chain and the "
+     "NULL/absent/empty-id refusals"),
+    ("rt-defaults", 16, "rt_defaults_probe",
+     "the `OPENSSLDIR` / install-context plane: `OPENSSL_info(OPENSSL_INFO_CONFIG_DIR)` "
+     "against `X509_get_default_cert_area`, the four `X509_get_default_*` paths and the "
+     "unrecognised-code refusal"),
+    ("rt-config", 16, "rt_config_probe",
+     "the config loader over a fixed in-memory configuration and the CLI's default "
+     "configuration file"),
+    ("rt-statem-remainder", 16, "rt_statem_remainder_probe",
+     "the TLS message-layer transitions 16.5 lands: `SSL_connect`/`SSL_accept` over an "
+     "empty memory-BIO peer and the state a fresh connection is left in"),
+    ("rt-cli", 16, "rt_cli_probe",
+     "the `openssl` CLI dispatcher and every command's option table, run over a fixed "
+     "argv through a per-side shell probe"),
 ]
 
 
 def court_dir(court_id: str) -> Path:
     return REPO_ROOT / "forensics" / "frf" / "courts" / f"openssl-rs-{court_id}"
+
+
+# Courts whose declared probe source is not a C file. The `rt-cli` court's subject is the
+# CLI *executable*, which cannot be linked into a C probe, so its instrument is the shell
+# probe `courts/phase16/rt_cli_probe.sh` (staged as `artifacts/phase16/probes/rt_cli_probe.
+# {authority,candidate}` shims) rather than `courts/phase16/rt_cli_probe.c`. Everything else
+# -- the runtime harness refs, the fixture list, the observables -- is the runtime
+# harness's, so the declaration is otherwise identical to the compiled-probe courts'.
+PROBE_SOURCES: dict[str, str] = {
+    "rt_cli_probe": "rt_cli_probe.sh",
+}
 
 
 def preamble(court_id: str, phase: int, description: str) -> str:
@@ -655,10 +697,37 @@ def preamble(court_id: str, phase: int, description: str) -> str:
     )
 
 
+def preamble_cli(court_id: str, phase: int, description: str) -> str:
+    # The `rt-cli` variant: the instrument is a shell probe, not a compiled C program, so
+    # the preamble names it honestly rather than reusing the compiled-probe wording.
+    described = "\n".join(f"#     {line}" for line in description.splitlines())
+    return (
+        f"# openssl-rs court: the Phase {phase} `{court_id}` runtime surface.\n"
+        "#\n"
+        "# The subject is the transcript of a differential probe: a shell probe that\n"
+        "# drives this side's `openssl` over a fixed argv and prints one `key=value`\n"
+        "# line per observation while exercising\n"
+        "#\n"
+        f"{described}\n"
+        "#\n"
+        "# The same probe runs on each side -- the admitted authority's own `openssl`\n"
+        "# and the candidate distribution shell's -- and FRF compares the transcripts.\n"
+        "#\n"
+        "# Scope: the observations the probe makes. It is NOT a claim about surface the\n"
+        "# probe does not touch, and not a cryptographic or security claim.\n"
+    )
+
+
 def manifest(court_id: str, phase: int, probe: str, description: str) -> str:
     stem = f"openssl-rs-{court_id}"
+    source = PROBE_SOURCES.get(probe, f"{probe}.c")
+    head = (
+        preamble_cli(court_id, phase, description)
+        if probe in PROBE_SOURCES
+        else preamble(court_id, phase, description)
+    )
     return (
-        preamble(court_id, phase, description)
+        head
         + "\n"
         "court:\n"
         f"  id: {stem}\n"
@@ -696,7 +765,7 @@ def manifest(court_id: str, phase: int, probe: str, description: str) -> str:
         "        role: child-executable\n"
         f"      - path: artifacts/phase{phase}/probes/{probe}.candidate\n"
         "        role: child-executable\n"
-        f"      - path: courts/phase{phase}/{probe}.c\n"
+        f"      - path: courts/phase{phase}/{source}\n"
         "        role: data\n"
         f"      - path: {AUTHORITY_LIB}\n"
         "        role: runtime-library\n"

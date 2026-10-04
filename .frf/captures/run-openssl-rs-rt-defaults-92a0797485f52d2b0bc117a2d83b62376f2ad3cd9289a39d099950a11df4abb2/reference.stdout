@@ -1,0 +1,11 @@
+transcript.sha256=4d48d4a0476e4a9d2509280906e96331a650cdcb39599a958fde2dd9e102a418
+info.config_dir_nonnull=1
+info.config_dir_stable=1
+info.config_dir_eq_cert_area=1
+info.windows_context=Undefined
+info.windows_context_stable=1
+x509.cert_dir_suffix=1
+x509.cert_file_suffix=1
+x509.private_dir_suffix=1
+info.unknown_null=1
+done=1

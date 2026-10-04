@@ -45862,6 +45862,146 @@ pub(crate) const ENG_CTRL_308: ErrSite = ErrSite {
     dynamic_reason: false,
 };
 
+/// `dynamic_set_data_ctx` at `crypto/engine/eng_dyn.c:166` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_DYN_166: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 166,
+    func: c"dynamic_set_data_ctx",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `dynamic_get_data_ctx` at `crypto/engine/eng_dyn.c:213` (ENGINE_R_NO_INDEX).
+pub(crate) const ENG_DYN_213: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 213,
+    func: c"dynamic_get_data_ctx",
+    lib: 38,
+    reason: 144,
+    dynamic_reason: false,
+};
+
+/// `dynamic_ctrl` at `crypto/engine/eng_dyn.c:295` (ENGINE_R_NOT_LOADED).
+pub(crate) const ENG_DYN_295: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 295,
+    func: c"dynamic_ctrl",
+    lib: 38,
+    reason: 112,
+    dynamic_reason: false,
+};
+
+/// `dynamic_ctrl` at `crypto/engine/eng_dyn.c:301` (ENGINE_R_ALREADY_LOADED).
+pub(crate) const ENG_DYN_301: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 301,
+    func: c"dynamic_ctrl",
+    lib: 38,
+    reason: 100,
+    dynamic_reason: false,
+};
+
+/// `dynamic_ctrl` at `crypto/engine/eng_dyn.c:330` (ENGINE_R_INVALID_ARGUMENT).
+pub(crate) const ENG_DYN_330: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 330,
+    func: c"dynamic_ctrl",
+    lib: 38,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `dynamic_ctrl` at `crypto/engine/eng_dyn.c:339` (ENGINE_R_INVALID_ARGUMENT).
+pub(crate) const ENG_DYN_339: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 339,
+    func: c"dynamic_ctrl",
+    lib: 38,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `dynamic_ctrl` at `crypto/engine/eng_dyn.c:347` (ENGINE_R_INVALID_ARGUMENT).
+pub(crate) const ENG_DYN_347: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 347,
+    func: c"dynamic_ctrl",
+    lib: 38,
+    reason: 143,
+    dynamic_reason: false,
+};
+
+/// `dynamic_ctrl` at `crypto/engine/eng_dyn.c:356` (ERR_R_CRYPTO_LIB).
+pub(crate) const ENG_DYN_356: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 356,
+    func: c"dynamic_ctrl",
+    lib: 38,
+    reason: 524303,
+    dynamic_reason: false,
+};
+
+/// `dynamic_ctrl` at `crypto/engine/eng_dyn.c:364` (ENGINE_R_CTRL_COMMAND_NOT_IMPLEMENTED).
+pub(crate) const ENG_DYN_364: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 364,
+    func: c"dynamic_ctrl",
+    lib: 38,
+    reason: 119,
+    dynamic_reason: false,
+};
+
+/// `dynamic_load` at `crypto/engine/eng_dyn.c:429` (ENGINE_R_DSO_NOT_FOUND).
+pub(crate) const ENG_DYN_429: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 429,
+    func: c"dynamic_load",
+    lib: 38,
+    reason: 132,
+    dynamic_reason: false,
+};
+
+/// `dynamic_load` at `crypto/engine/eng_dyn.c:440` (ENGINE_R_DSO_FAILURE).
+pub(crate) const ENG_DYN_440: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 440,
+    func: c"dynamic_load",
+    lib: 38,
+    reason: 104,
+    dynamic_reason: false,
+};
+
+/// `dynamic_load` at `crypto/engine/eng_dyn.c:465` (ENGINE_R_VERSION_INCOMPATIBILITY).
+pub(crate) const ENG_DYN_465: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 465,
+    func: c"dynamic_load",
+    lib: 38,
+    reason: 145,
+    dynamic_reason: false,
+};
+
+/// `dynamic_load` at `crypto/engine/eng_dyn.c:498` (ENGINE_R_INIT_FAILED).
+pub(crate) const ENG_DYN_498: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 498,
+    func: c"dynamic_load",
+    lib: 38,
+    reason: 109,
+    dynamic_reason: false,
+};
+
+/// `dynamic_load` at `crypto/engine/eng_dyn.c:514` (ENGINE_R_CONFLICTING_ENGINE_ID).
+pub(crate) const ENG_DYN_514: ErrSite = ErrSite {
+    file: c"../../src/openssl-3.6.4/crypto/engine/eng_dyn.c",
+    line: 514,
+    func: c"dynamic_load",
+    lib: 38,
+    reason: 103,
+    dynamic_reason: false,
+};
+
 /// `int_engine_configure` at `crypto/engine/eng_cnf.c:60` (ENGINE_R_ENGINE_SECTION_ERROR).
 pub(crate) const ENG_CNF_60: ErrSite = ErrSite {
     file: c"../../src/openssl-3.6.4/crypto/engine/eng_cnf.c",
@@ -51276,6 +51416,20 @@ pub(crate) static ALL: &[ErrSite] = &[
     ENG_CTRL_286,
     ENG_CTRL_303,
     ENG_CTRL_308,
+    ENG_DYN_166,
+    ENG_DYN_213,
+    ENG_DYN_295,
+    ENG_DYN_301,
+    ENG_DYN_330,
+    ENG_DYN_339,
+    ENG_DYN_347,
+    ENG_DYN_356,
+    ENG_DYN_364,
+    ENG_DYN_429,
+    ENG_DYN_440,
+    ENG_DYN_465,
+    ENG_DYN_498,
+    ENG_DYN_514,
     ENG_CNF_60,
     ENG_CNF_118,
     ENG_CNF_136,

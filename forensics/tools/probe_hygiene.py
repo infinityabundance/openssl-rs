@@ -60,6 +60,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -157,20 +158,27 @@ def compile_probe(src: Path, out: Path, include: Path, libdir: Path,
     return res.ok, res.stderr.strip()
 
 
-def run_probe(binary: Path, libdir: Path) -> tuple[str, str, int | None]:
+def run_probe(binary: Path, libdir: Path,
+              modules: Path | None = None) -> tuple[str, str, int | None]:
     """One execution, with the library under test bound for this invocation only.
 
     The binding is per invocation and never exported: Debian's `sha256sum` links
     libcrypto, so an exported binding would make the harness's own tools load the
     library under test (measured, and recorded in `forensics/frf/README.md`).
+
+    `modules` is the side's `ossl-modules/` directory, exported as
+    `OPENSSL_MODULES` so a probe that loads a provider module finds the *side's*
+    module; without it a loadable-module probe would answer its refusal arm on
+    both sides and the check would be stable but empty.
     """
-    env = {
-        "LD_LIBRARY_PATH": str(libdir),
-        "OPENSSL_CONF": "/dev/null",
-        "LC_ALL": "C",
-        "TZ": "UTC",
-    }
-    res = run(["timeout", RUN_TIMEOUT_S, str(binary)])
+    env = dict(os.environ)
+    env["LD_LIBRARY_PATH"] = str(libdir)
+    env["OPENSSL_CONF"] = "/dev/null"
+    env["LC_ALL"] = "C"
+    env["TZ"] = "UTC"
+    if modules is not None and modules.is_dir():
+        env["OPENSSL_MODULES"] = str(modules)
+    res = run(["timeout", RUN_TIMEOUT_S, str(binary)], env=env)
     code = res.returncode
     if code == 124:
         return res.stdout, res.stderr, None
@@ -208,7 +216,7 @@ def first_difference(a: dict[str, str], b: dict[str, str]) -> list[dict]:
 
 
 def side_record(src: Path, include: Path, libdir: Path, work: Path,
-                side: str) -> dict:
+                side: str, modules: Path | None = None) -> dict:
     defs = discover_court_defs(src, libdir)
     transcripts: dict[str, list[tuple[int | None, dict[str, str], str]]] = {}
     for level in LEVELS:
@@ -219,7 +227,7 @@ def side_record(src: Path, include: Path, libdir: Path, work: Path,
                     "detail": err.splitlines()[:12]}
         runs = []
         for _ in range(RUNS_PER_LEVEL):
-            out, _err, code = run_probe(binary, libdir)
+            out, _err, code = run_probe(binary, libdir, modules)
             runs.append((code, observations(out), out))
         transcripts[level] = runs
 
@@ -308,10 +316,12 @@ def main(argv: list[str]) -> int:
         for side in want:
             if side == "authority":
                 entry["sides"][side] = side_record(
-                    src, auth_include, auth_lib, work, "authority")
+                    src, auth_include, auth_lib, work, "authority",
+                    auth_lib / "ossl-modules")
             else:
                 entry["sides"][side] = side_record(
-                    src, PHASE2 / "include", PHASE2, work, "candidate")
+                    src, PHASE2 / "include", PHASE2, work, "candidate",
+                    PHASE2 / "install" / "lib" / "ossl-modules")
         entry["verdict"] = (
             "clean" if all(s["verdict"] == "clean" for s in entry["sides"].values())
             else "unstable"

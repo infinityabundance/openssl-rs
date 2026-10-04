@@ -1275,7 +1275,7 @@
     {
       "name": "provider-algorithms",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "49798d9f9eb936aee03e1b62046a8979823756112021cf10e4ad1ac94d8e2aa7"
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
     },
     {
       "name": "implemented-surface",
@@ -1290,7 +1290,7 @@
     {
       "name": "phase11-obligations",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "8b0915aaec3f5e46cedfef5f1e3e2ab19e4a6a85dff0326117d70cf6c8e37e3b"
+      "sha256": "90c85d42c0bef90d2a15889f67afaa9bbf9c75f5f1d3094086e7007e46bb6179"
     }
   ],
   "kind": "phase12-obligations",

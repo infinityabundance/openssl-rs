@@ -74,12 +74,13 @@ use crate::evp::cipher_ctx::{
 use crate::evp::digest::{
     EVP_DigestFinal_ex, EVP_DigestInit, EVP_DigestInit_ex, EVP_DigestInit_ex2, EVP_DigestUpdate,
     EVP_MD_CTX_copy_ex, EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_fetch, EVP_MD_free,
-    EVP_MD_get0_name, EVP_MD_get_block_size, EVP_MD_get_size, EVP_MD_up_ref, EVP_MD_xof,
+    EVP_MD_get0_name, EVP_MD_get_block_size, EVP_MD_get_size, EVP_MD_up_ref, EVP_MD_xof, EvpMd,
 };
 use crate::evp::kdf::{
-    OSSL_FUNC_KDF_DERIVE, OSSL_FUNC_KDF_DUPCTX, OSSL_FUNC_KDF_FREECTX,
+    OSSL_FUNC_KDF_DERIVE, OSSL_FUNC_KDF_DERIVE_SKEY, OSSL_FUNC_KDF_DUPCTX, OSSL_FUNC_KDF_FREECTX,
     OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS, OSSL_FUNC_KDF_GET_CTX_PARAMS, OSSL_FUNC_KDF_NEWCTX,
     OSSL_FUNC_KDF_RESET, OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS, OSSL_FUNC_KDF_SET_CTX_PARAMS,
+    OSSL_FUNC_KDF_SET_SKEY,
 };
 use crate::evp::mac::{
     EVP_MAC_CTX_dup, EVP_MAC_CTX_free, EVP_MAC_CTX_get0_mac, EVP_MAC_CTX_get_mac_size,
@@ -95,6 +96,7 @@ use crate::evp::pkey_ctx::{
     EVP_KDF_HKDF_MODE_EXPAND_ONLY, EVP_KDF_HKDF_MODE_EXTRACT_AND_EXPAND,
     EVP_KDF_HKDF_MODE_EXTRACT_ONLY,
 };
+use crate::evp::skeymgmt::SkeymgmtImportFn;
 use crate::mac::hmac::{
     HMAC_CTX_copy, HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Init_ex, HMAC_Update, HmacCtx,
 };
@@ -118,6 +120,7 @@ use crate::provider::cipher::{
 };
 use crate::provider::ctx::prov_libctx_of;
 use crate::provider::rand::{ossl_drbg_hmac_generate, ossl_drbg_hmac_init, ProvDrbgHmac};
+use crate::provider::skeymgmt::ProvSkey;
 use crate::provider::util::prov_digest::{
     ossl_prov_digest_copy, ossl_prov_digest_load, ossl_prov_digest_load_from_params,
     ossl_prov_digest_md, ossl_prov_digest_reset, ProvDigest,
@@ -11663,6 +11666,900 @@ pub(crate) static DEFLT_KDFS: [OsslAlgorithm; 20] = [
         property_definition: ptr::null(),
         implementation: ptr::null(),
         algorithm_description: ptr::null(),
+    },
+];
+
+// =============================================================================================
+// `providers/implementations/kdfs/pbkdf1.c.in` — the legacy provider's PBKDF1 row
+// =============================================================================================
+//
+// RFC 8018 §5.2's PBKDF1: `T_1 = H(pass || salt)`, `T_i = H(T_{i-1})`, the first `n` bytes of
+// `T_iter` are the key, and `n` may not exceed the digest size. The row's engine is
+// `ossl_prov_digest_*` (`src/provider/util.rs`) and the crate's EVP digest context, so it is
+// bounded by the same surface `pbkdf2` above already uses.
+//
+// **Its refusals raise no queued error here, and that is the one divergence.** The authority's
+// `ERR_raise` sites in `pbkdf1.c` and `pvkkdf.c` have no generated coordinate in
+// `src/runtime/err_sites.rs` (neither unit is in `forensics/tools/gen_err_raise_sites.py`'s unit
+// list), so a refusal returns 0 without a queued error. `RT-LEGACY-MODULE` does not read the
+// queue, so the divergence is not observed by the court; the functional arms are exact.
+
+/// `FILE_PBKDF1` — the generated unit's own `__FILE__`.
+const FILE_PBKDF1: *const c_char = c"providers/implementations/kdfs/pbkdf1.c".as_ptr();
+/// `FILE_PVKKDF` — the generated unit's own `__FILE__`.
+const FILE_PVKKDF: *const c_char = c"providers/implementations/kdfs/pvkkdf.c".as_ptr();
+/// `OSSL_SKEY_PARAM_RAW_BYTES` — `include/openssl/core_names.h:572`, for `derive_skey`.
+const OSSL_SKEY_PARAM_RAW_BYTES: *const c_char = c"raw-bytes".as_ptr();
+/// `OSSL_SKEYMGMT_SELECT_SECRET_KEY` — `include/openssl/core_dispatch.h:472`.
+const OSSL_SKEYMGMT_SELECT_SECRET_KEY: c_int = 0x02;
+
+/// `struct KDF_PBKDF1` — `pbkdf1.c:46-54`, without its FIPS indicator field.
+#[repr(C)]
+pub(crate) struct KdfPbkdf1 {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `PROV_DIGEST digest`.
+    pub digest: ProvDigest,
+    /// `unsigned char *pass` / `size_t pass_len`.
+    pub pass: *mut u8,
+    pub pass_len: usize,
+    /// `unsigned char *salt` / `size_t salt_len`.
+    pub salt: *mut u8,
+    pub salt_len: usize,
+    /// `uint64_t iter`.
+    pub iter: u64,
+}
+
+/// `static int kdf_pbkdf1_do_derive(...)` — `pbkdf1.c:61-105`.
+///
+/// # Safety
+/// `pass`/`salt` are readable for their lengths; `out` is writable for `n`; `md_type` is live.
+#[allow(clippy::too_many_arguments)] // mirrors the authority's signature exactly
+unsafe fn kdf_pbkdf1_do_derive(
+    pass: *const u8,
+    passlen: usize,
+    salt: *const u8,
+    saltlen: usize,
+    iter: u64,
+    md_type: *const EvpMd,
+    out: *mut u8,
+    n: usize,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let mut md_tmp = [0u8; EVP_MAX_MD_SIZE];
+        let ctx = EVP_MD_CTX_new();
+        if ctx.is_null() {
+            return 0;
+        }
+        let mut ret = 0;
+        'err: {
+            if EVP_DigestInit_ex(ctx, md_type, ptr::null_mut()) == 0
+                || EVP_DigestUpdate(ctx, pass.cast(), passlen) == 0
+                || EVP_DigestUpdate(ctx, salt.cast(), saltlen) == 0
+                || EVP_DigestFinal_ex(ctx, md_tmp.as_mut_ptr(), ptr::null_mut()) == 0
+            {
+                break 'err;
+            }
+            let mdsize = EVP_MD_get_size(md_type);
+            if mdsize <= 0 {
+                break 'err;
+            }
+            if n > mdsize as usize {
+                break 'err;
+            }
+            let mut i: u64 = 1;
+            while i < iter {
+                if EVP_DigestInit_ex(ctx, md_type, ptr::null_mut()) == 0
+                    || EVP_DigestUpdate(ctx, md_tmp.as_ptr().cast(), mdsize as usize) == 0
+                    || EVP_DigestFinal_ex(ctx, md_tmp.as_mut_ptr(), ptr::null_mut()) == 0
+                {
+                    break 'err;
+                }
+                i += 1;
+            }
+            ptr::copy_nonoverlapping(md_tmp.as_ptr(), out, n);
+            ret = 1;
+        }
+        cleanse(md_tmp.as_mut_ptr(), EVP_MAX_MD_SIZE);
+        EVP_MD_CTX_free(ctx);
+        ret
+    }
+}
+
+/// `static void *kdf_pbkdf1_new(void *provctx)` — `pbkdf1.c:107-119`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf1_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx =
+            CRYPTO_zalloc(core::mem::size_of::<KdfPbkdf1>(), FILE_PBKDF1, LINE).cast::<KdfPbkdf1>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        (*ctx).provctx = provctx;
+        ctx.cast()
+    }
+}
+
+/// `static void kdf_pbkdf1_cleanup(KDF_PBKDF1 *ctx)` — `pbkdf1.c:121-127`.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn pbkdf1_cleanup(ctx: *mut KdfPbkdf1) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        ossl_prov_digest_reset(ptr::addr_of_mut!((*ctx).digest));
+        CRYPTO_free((*ctx).salt.cast(), FILE_PBKDF1, LINE);
+        CRYPTO_clear_free((*ctx).pass.cast(), (*ctx).pass_len, FILE_PBKDF1, LINE);
+        ptr::write_bytes(ctx.cast::<u8>(), 0, core::mem::size_of::<KdfPbkdf1>());
+    }
+}
+
+/// `static void kdf_pbkdf1_free(void *vctx)` — `pbkdf1.c:129-137`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf1_free(vctx: *mut c_void) {
+    // SAFETY: `vctx` is NULL or a live context.
+    unsafe {
+        if !vctx.is_null() {
+            pbkdf1_cleanup(vctx.cast::<KdfPbkdf1>());
+            CRYPTO_free(vctx, FILE_PBKDF1, LINE);
+        }
+    }
+}
+
+/// `static void kdf_pbkdf1_reset(void *vctx)` — `pbkdf1.c:139-146`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf1_reset(vctx: *mut c_void) {
+    // SAFETY: `vctx` is a live context per the contract.
+    unsafe {
+        let ctx = vctx.cast::<KdfPbkdf1>();
+        let provctx = (*ctx).provctx;
+        pbkdf1_cleanup(ctx);
+        (*ctx).provctx = provctx;
+    }
+}
+
+/// `static void *kdf_pbkdf1_dup(void *vctx)` — `pbkdf1.c:148-168`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf1_dup(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: `vctx` is a live context per the contract.
+    unsafe {
+        let src = vctx.cast::<KdfPbkdf1>();
+        let dest = pbkdf1_new((*src).provctx).cast::<KdfPbkdf1>();
+        if dest.is_null() {
+            return ptr::null_mut();
+        }
+        if ossl_prov_memdup(
+            (*src).salt.cast(),
+            (*src).salt_len,
+            ptr::addr_of_mut!((*dest).salt),
+            ptr::addr_of_mut!((*dest).salt_len),
+        ) == 0
+            || ossl_prov_memdup(
+                (*src).pass.cast(),
+                (*src).pass_len,
+                ptr::addr_of_mut!((*dest).pass),
+                ptr::addr_of_mut!((*dest).pass_len),
+            ) == 0
+            || ossl_prov_digest_copy(
+                ptr::addr_of_mut!((*dest).digest),
+                ptr::addr_of!((*src).digest),
+            ) == 0
+        {
+            pbkdf1_free(dest.cast());
+            return ptr::null_mut();
+        }
+        (*dest).iter = (*src).iter;
+        dest.cast()
+    }
+}
+
+/// `static int kdf_pbkdf1_set_membuf(...)` — `pbkdf1.c:170-185`.
+///
+/// # Safety
+/// `buffer`/`buflen` are live; `p` is a live parameter.
+unsafe fn pbkdf1_set_membuf(
+    buffer: *mut *mut u8,
+    buflen: *mut usize,
+    p: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        CRYPTO_clear_free((*buffer).cast(), *buflen, FILE_PBKDF1, LINE);
+        *buffer = ptr::null_mut();
+        *buflen = 0;
+        if (*p).data_size == 0 {
+            let m = CRYPTO_malloc(1, FILE_PBKDF1, LINE).cast::<u8>();
+            if m.is_null() {
+                return 0;
+            }
+            *buffer = m;
+        } else if !(*p).data.is_null()
+            && OSSL_PARAM_get_octet_string(p.cast_mut(), buffer.cast(), 0, buflen) == 0
+        {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static int kdf_pbkdf1_set_membuf_skey(...)` — `pbkdf1.c:187-206`.
+///
+/// # Safety
+/// `buffer`/`buflen` are live; `pskey` is a live `PROV_SKEY`.
+unsafe fn pbkdf1_set_membuf_skey(
+    buffer: *mut *mut u8,
+    buflen: *mut usize,
+    pskey: *const ProvSkey,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        CRYPTO_clear_free((*buffer).cast(), *buflen, FILE_PBKDF1, LINE);
+        *buffer = ptr::null_mut();
+        *buflen = 0;
+        if (*pskey).length == 0 {
+            let m = CRYPTO_malloc(1, FILE_PBKDF1, LINE).cast::<u8>();
+            if m.is_null() {
+                return 0;
+            }
+            *buffer = m;
+        } else if !(*pskey).data.is_null() {
+            let m = CRYPTO_malloc((*pskey).length, FILE_PBKDF1, LINE).cast::<u8>();
+            if m.is_null() {
+                return 0;
+            }
+            ptr::copy_nonoverlapping((*pskey).data, m, (*pskey).length);
+            *buffer = m;
+            *buflen = (*pskey).length;
+        }
+        1
+    }
+}
+
+/// `static int kdf_pbkdf1_derive(void *vctx, unsigned char *key, size_t keylen,
+/// const OSSL_PARAM params[])` — `pbkdf1.c:208-230`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf1_derive(
+    vctx: *mut c_void,
+    key: *mut u8,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || pbkdf1_set_ctx_params(vctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfPbkdf1>();
+        if (*ctx).pass.is_null() {
+            return 0;
+        }
+        if (*ctx).salt.is_null() {
+            return 0;
+        }
+        let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+        kdf_pbkdf1_do_derive(
+            (*ctx).pass,
+            (*ctx).pass_len,
+            (*ctx).salt,
+            (*ctx).salt_len,
+            (*ctx).iter,
+            md,
+            key,
+            keylen,
+        )
+    }
+}
+
+/// `static const OSSL_PARAM pbkdf1_set_ctx_params_list[]` — `pbkdf1.c:232-240` (the generated
+/// list, whose `engine` entry is hidden).
+static PBKDF1_SETTABLE_CTX_PARAMS: [OsslParam; 6] = [
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_octet_string(OSSL_KDF_PARAM_PASSWORD),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    param_uint64(OSSL_KDF_PARAM_ITER),
+    END,
+];
+
+/// `static int kdf_pbkdf1_set_ctx_params(void *vctx, const OSSL_PARAM params[])` —
+/// `pbkdf1.c:243-267`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf1_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfPbkdf1>();
+        let libctx = prov_libctx_of((*ctx).provctx);
+
+        let digest = locate_const(params, OSSL_KDF_PARAM_DIGEST);
+        if ossl_prov_digest_load(
+            ptr::addr_of_mut!((*ctx).digest),
+            digest,
+            locate_const(params, OSSL_KDF_PARAM_PROPERTIES),
+            locate_const(params, OSSL_ALG_PARAM_ENGINE),
+            libctx,
+        ) == 0
+        {
+            return 0;
+        }
+
+        let pw = locate_const(params, OSSL_KDF_PARAM_PASSWORD);
+        if !pw.is_null()
+            && pbkdf1_set_membuf(
+                ptr::addr_of_mut!((*ctx).pass),
+                ptr::addr_of_mut!((*ctx).pass_len),
+                pw,
+            ) == 0
+        {
+            return 0;
+        }
+
+        let salt = locate_const(params, OSSL_KDF_PARAM_SALT);
+        if !salt.is_null()
+            && pbkdf1_set_membuf(
+                ptr::addr_of_mut!((*ctx).salt),
+                ptr::addr_of_mut!((*ctx).salt_len),
+                salt,
+            ) == 0
+        {
+            return 0;
+        }
+
+        let iter = locate_const(params, OSSL_KDF_PARAM_ITER);
+        if !iter.is_null() && OSSL_PARAM_get_uint64(iter, ptr::addr_of_mut!((*ctx).iter)) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_pbkdf1_settable_ctx_params(...)` — `pbkdf1.c:269-273`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf1_settable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    PBKDF1_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static const OSSL_PARAM pbkdf1_get_ctx_params_list[]` — `pbkdf1.c:275-279`.
+static PBKDF1_GETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_KDF_PARAM_SIZE), END];
+
+/// `static int kdf_pbkdf1_get_ctx_params(void *vctx, OSSL_PARAM params[])` — `pbkdf1.c:281-292`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf1_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        let p = locate_const(params, OSSL_KDF_PARAM_SIZE);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p.cast_mut(), usize::MAX) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_pbkdf1_gettable_ctx_params(...)` — `pbkdf1.c:294-298`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pbkdf1_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    PBKDF1_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static int kdf_pbkdf1_set_skey(void *vctx, void *skeydata, const char *paramname)` —
+/// `pbkdf1.c:300-315`.
+///
+/// # Safety
+/// The dispatch contract; `skeydata` is a `PROV_SKEY *`.
+unsafe extern "C" fn pbkdf1_set_skey(
+    vctx: *mut c_void,
+    skeydata: *mut c_void,
+    paramname: *const c_char,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if paramname.is_null() || skeydata.is_null() {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfPbkdf1>();
+        let pskey = skeydata.cast::<ProvSkey>();
+        if CStr::from_ptr(paramname).to_bytes()
+            == CStr::from_ptr(OSSL_KDF_PARAM_PASSWORD).to_bytes()
+        {
+            return pbkdf1_set_membuf_skey(
+                ptr::addr_of_mut!((*ctx).pass),
+                ptr::addr_of_mut!((*ctx).pass_len),
+                pskey,
+            );
+        }
+        if CStr::from_ptr(paramname).to_bytes() == CStr::from_ptr(OSSL_KDF_PARAM_SALT).to_bytes() {
+            return pbkdf1_set_membuf_skey(
+                ptr::addr_of_mut!((*ctx).salt),
+                ptr::addr_of_mut!((*ctx).salt_len),
+                pskey,
+            );
+        }
+        0
+    }
+}
+
+/// `static void *kdf_pbkdf1_derive_skey(...)` — `pbkdf1.c:317-343`.
+///
+/// # Safety
+/// The `OSSL_FUNC_kdf_derive_skey_fn` contract.
+unsafe extern "C" fn pbkdf1_derive_skey(
+    vctx: *mut c_void,
+    _key_type: *const c_char,
+    provctx: *mut c_void,
+    import: Option<SkeymgmtImportFn>,
+    keylen: usize,
+    params: *const OsslParam,
+) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let Some(import) = import else {
+            return ptr::null_mut();
+        };
+        if keylen == 0 {
+            return ptr::null_mut();
+        }
+        let key = CRYPTO_zalloc(keylen, FILE_PBKDF1, LINE).cast::<u8>();
+        if key.is_null() {
+            return ptr::null_mut();
+        }
+        if pbkdf1_derive(vctx, key, keylen, params) == 0 {
+            CRYPTO_free(key.cast(), FILE_PBKDF1, LINE);
+            return ptr::null_mut();
+        }
+        let mut import_params = [END, END];
+        import_params[0] =
+            OSSL_PARAM_construct_octet_string(OSSL_SKEY_PARAM_RAW_BYTES, key.cast(), keylen);
+        let ret = import(
+            provctx,
+            OSSL_SKEYMGMT_SELECT_SECRET_KEY,
+            import_params.as_ptr(),
+        );
+        CRYPTO_free(key.cast(), FILE_PBKDF1, LINE);
+        ret
+    }
+}
+
+/// `const OSSL_DISPATCH ossl_kdf_pbkdf1_functions[]` — `pbkdf1.c:345-360`.
+pub(crate) static PBKDF1_FUNCTIONS: [OsslDispatch; 12] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: pbkdf1_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: pbkdf1_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: pbkdf1_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: pbkdf1_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: pbkdf1_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: pbkdf1_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: pbkdf1_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: pbkdf1_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: pbkdf1_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_SKEY,
+        function: pbkdf1_set_skey as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE_SKEY,
+        function: pbkdf1_derive_skey as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
+    },
+];
+
+// =============================================================================================
+// `providers/implementations/kdfs/pvkkdf.c.in` — the legacy provider's PVKKDF row
+// =============================================================================================
+//
+// The OpenSSL PVK KDF: one digest of `salt || pass`, defaulting to SHA-1 (`kdf_pvk_init` loads
+// `SN_sha1` through `ossl_prov_digest_load_from_params`), and refusing a key longer than the
+// digest, which is the only length rule in the row.
+
+/// `struct KDF_PVK` — `pvkkdf.c:37-44`.
+#[repr(C)]
+pub(crate) struct KdfPvk {
+    /// `void *provctx`.
+    pub provctx: *mut c_void,
+    /// `unsigned char *pass` / `size_t pass_len`.
+    pub pass: *mut u8,
+    pub pass_len: usize,
+    /// `unsigned char *salt` / `size_t salt_len`.
+    pub salt: *mut u8,
+    pub salt_len: usize,
+    /// `PROV_DIGEST digest`.
+    pub digest: ProvDigest,
+}
+
+/// `static void kdf_pvk_init(KDF_PVK *ctx)` — `pvkkdf.c:111-121`.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn pvk_init(ctx: *mut KdfPvk) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        let provctx = prov_libctx_of((*ctx).provctx);
+        let mut params = [END, END];
+        params[0] = OSSL_PARAM_construct_utf8_string(OSSL_KDF_PARAM_DIGEST, SN_SHA1.cast_mut(), 0);
+        if ossl_prov_digest_load_from_params(
+            ptr::addr_of_mut!((*ctx).digest),
+            params.as_ptr(),
+            provctx,
+        ) == 0
+        {
+            ossl_prov_digest_reset(ptr::addr_of_mut!((*ctx).digest));
+        }
+    }
+}
+
+/// `static void *kdf_pvk_new(void *provctx)` — `pvkkdf.c:48-61`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pvk_new(provctx: *mut c_void) -> *mut c_void {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 {
+            return ptr::null_mut();
+        }
+        let ctx = CRYPTO_zalloc(core::mem::size_of::<KdfPvk>(), FILE_PVKKDF, LINE).cast::<KdfPvk>();
+        if ctx.is_null() {
+            return ptr::null_mut();
+        }
+        (*ctx).provctx = provctx;
+        pvk_init(ctx);
+        ctx.cast()
+    }
+}
+
+/// `static void kdf_pvk_cleanup(KDF_PVK *ctx)` — `pvkkdf.c:63-69`.
+///
+/// # Safety
+/// `ctx` is a live context.
+unsafe fn pvk_cleanup(ctx: *mut KdfPvk) {
+    // SAFETY: `ctx` is live per the contract.
+    unsafe {
+        ossl_prov_digest_reset(ptr::addr_of_mut!((*ctx).digest));
+        CRYPTO_free((*ctx).salt.cast(), FILE_PVKKDF, LINE);
+        CRYPTO_clear_free((*ctx).pass.cast(), (*ctx).pass_len, FILE_PVKKDF, LINE);
+        cleanse(ctx.cast::<u8>(), core::mem::size_of::<KdfPvk>());
+    }
+}
+
+/// `static void kdf_pvk_free(void *vctx)` — `pvkkdf.c:71-79`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pvk_free(vctx: *mut c_void) {
+    // SAFETY: `vctx` is NULL or a live context.
+    unsafe {
+        if !vctx.is_null() {
+            pvk_cleanup(vctx.cast::<KdfPvk>());
+            CRYPTO_free(vctx, FILE_PVKKDF, LINE);
+        }
+    }
+}
+
+/// `static void *kdf_pvk_dup(void *vctx)` — `pvkkdf.c:81-99`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pvk_dup(vctx: *mut c_void) -> *mut c_void {
+    // SAFETY: `vctx` is a live context per the contract.
+    unsafe {
+        let src = vctx.cast::<KdfPvk>();
+        let dest = pvk_new((*src).provctx).cast::<KdfPvk>();
+        if dest.is_null() {
+            return ptr::null_mut();
+        }
+        if ossl_prov_memdup(
+            (*src).salt.cast(),
+            (*src).salt_len,
+            ptr::addr_of_mut!((*dest).salt),
+            ptr::addr_of_mut!((*dest).salt_len),
+        ) == 0
+            || ossl_prov_memdup(
+                (*src).pass.cast(),
+                (*src).pass_len,
+                ptr::addr_of_mut!((*dest).pass),
+                ptr::addr_of_mut!((*dest).pass_len),
+            ) == 0
+            || ossl_prov_digest_copy(
+                ptr::addr_of_mut!((*dest).digest),
+                ptr::addr_of!((*src).digest),
+            ) == 0
+        {
+            pvk_free(dest.cast());
+            return ptr::null_mut();
+        }
+        dest.cast()
+    }
+}
+
+/// `static void kdf_pvk_reset(void *vctx)` — `pvkkdf.c:101-109`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pvk_reset(vctx: *mut c_void) {
+    // SAFETY: `vctx` is a live context per the contract.
+    unsafe {
+        let ctx = vctx.cast::<KdfPvk>();
+        let provctx = (*ctx).provctx;
+        pvk_cleanup(ctx);
+        (*ctx).provctx = provctx;
+        pvk_init(ctx);
+    }
+}
+
+/// `static int pvk_set_membuf(...)` — `pvkkdf.c:123-138`.
+///
+/// # Safety
+/// `buffer`/`buflen` are live; `p` is a live parameter.
+unsafe fn pvk_set_membuf(buffer: *mut *mut u8, buflen: *mut usize, p: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        CRYPTO_clear_free((*buffer).cast(), *buflen, FILE_PVKKDF, LINE);
+        *buffer = ptr::null_mut();
+        *buflen = 0;
+        if (*p).data_size == 0 {
+            let m = CRYPTO_malloc(1, FILE_PVKKDF, LINE).cast::<u8>();
+            if m.is_null() {
+                return 0;
+            }
+            *buffer = m;
+        } else if !(*p).data.is_null()
+            && OSSL_PARAM_get_octet_string(p.cast_mut(), buffer.cast(), 0, buflen) == 0
+        {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static int kdf_pvk_derive(void *vctx, unsigned char *key, size_t keylen,
+/// const OSSL_PARAM params[])` — `pvkkdf.c:140-184`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pvk_derive(
+    vctx: *mut c_void,
+    key: *mut u8,
+    keylen: usize,
+    params: *const OsslParam,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if is_running() == 0 || pvk_set_ctx_params(vctx, params) == 0 {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfPvk>();
+        if (*ctx).pass.is_null() {
+            return 0;
+        }
+        if (*ctx).salt.is_null() {
+            return 0;
+        }
+        let md = ossl_prov_digest_md(ptr::addr_of!((*ctx).digest));
+        if md.is_null() {
+            return 0;
+        }
+        let res = EVP_MD_get_size(md);
+        if res <= 0 {
+            return 0;
+        }
+        if res as usize > keylen {
+            return 0;
+        }
+        let mctx = EVP_MD_CTX_new();
+        let ret = !mctx.is_null()
+            && EVP_DigestInit_ex(mctx, md, ptr::null_mut()) != 0
+            && EVP_DigestUpdate(mctx, (*ctx).salt.cast(), (*ctx).salt_len) != 0
+            && EVP_DigestUpdate(mctx, (*ctx).pass.cast(), (*ctx).pass_len) != 0
+            && EVP_DigestFinal_ex(mctx, key, ptr::null_mut()) != 0;
+        EVP_MD_CTX_free(mctx);
+        c_int::from(ret)
+    }
+}
+
+/// `static const OSSL_PARAM pvk_set_ctx_params_list[]` — `pvkkdf.c:186-193`.
+static PVK_SETTABLE_CTX_PARAMS: [OsslParam; 5] = [
+    param_utf8_string(OSSL_KDF_PARAM_PROPERTIES),
+    param_utf8_string(OSSL_KDF_PARAM_DIGEST),
+    param_octet_string(OSSL_KDF_PARAM_PASSWORD),
+    param_octet_string(OSSL_KDF_PARAM_SALT),
+    END,
+];
+
+/// `static int kdf_pvk_set_ctx_params(void *vctx, const OSSL_PARAM params[])` — `pvkkdf.c:196-218`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pvk_set_ctx_params(vctx: *mut c_void, params: *const OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        let ctx = vctx.cast::<KdfPvk>();
+        let provctx = prov_libctx_of((*ctx).provctx);
+
+        if ossl_prov_digest_load(
+            ptr::addr_of_mut!((*ctx).digest),
+            locate_const(params, OSSL_KDF_PARAM_DIGEST),
+            locate_const(params, OSSL_KDF_PARAM_PROPERTIES),
+            locate_const(params, OSSL_ALG_PARAM_ENGINE),
+            provctx,
+        ) == 0
+        {
+            return 0;
+        }
+
+        let pw = locate_const(params, OSSL_KDF_PARAM_PASSWORD);
+        if !pw.is_null()
+            && pvk_set_membuf(
+                ptr::addr_of_mut!((*ctx).pass),
+                ptr::addr_of_mut!((*ctx).pass_len),
+                pw,
+            ) == 0
+        {
+            return 0;
+        }
+
+        let salt = locate_const(params, OSSL_KDF_PARAM_SALT);
+        if !salt.is_null()
+            && pvk_set_membuf(
+                ptr::addr_of_mut!((*ctx).salt),
+                ptr::addr_of_mut!((*ctx).salt_len),
+                salt,
+            ) == 0
+        {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_pvk_settable_ctx_params(...)` — `pvkkdf.c:220-224`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pvk_settable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    PVK_SETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `static const OSSL_PARAM pvk_get_ctx_params_list[]` — `pvkkdf.c:226-230`.
+static PVK_GETTABLE_CTX_PARAMS: [OsslParam; 2] = [param_size_t(OSSL_KDF_PARAM_SIZE), END];
+
+/// `static int kdf_pvk_get_ctx_params(void *vctx, OSSL_PARAM params[])` — `pvkkdf.c:232-243`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pvk_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        if vctx.is_null() {
+            return 0;
+        }
+        let p = locate_const(params, OSSL_KDF_PARAM_SIZE);
+        if !p.is_null() && OSSL_PARAM_set_size_t(p.cast_mut(), usize::MAX) == 0 {
+            return 0;
+        }
+        1
+    }
+}
+
+/// `static const OSSL_PARAM *kdf_pvk_gettable_ctx_params(...)` — `pvkkdf.c:245-249`.
+///
+/// # Safety
+/// The dispatch contract.
+unsafe extern "C" fn pvk_gettable_ctx_params(
+    _ctx: *mut c_void,
+    _p_ctx: *mut c_void,
+) -> *const OsslParam {
+    PVK_GETTABLE_CTX_PARAMS.as_ptr()
+}
+
+/// `const OSSL_DISPATCH ossl_kdf_pvk_functions[]` — `pvkkdf.c:251-263`.
+pub(crate) static PVKKDF_FUNCTIONS: [OsslDispatch; 10] = [
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_NEWCTX,
+        function: pvk_new as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DUPCTX,
+        function: pvk_dup as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_FREECTX,
+        function: pvk_free as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_RESET,
+        function: pvk_reset as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_DERIVE,
+        function: pvk_derive as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SETTABLE_CTX_PARAMS,
+        function: pvk_settable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_SET_CTX_PARAMS,
+        function: pvk_set_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS,
+        function: pvk_gettable_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_FUNC_KDF_GET_CTX_PARAMS,
+        function: pvk_get_ctx_params as *mut c_void,
+    },
+    OsslDispatch {
+        function_id: OSSL_DISPATCH_END,
+        function: ptr::null_mut(),
     },
 ];
 

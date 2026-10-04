@@ -220,7 +220,11 @@ def observe() -> dict:
     if providers:
         rows = providers["body"]["rows"]
         projection = providers["body"].get("projection", {})
-        by_state: dict[str, int] = {}
+        # The state universe is exactly `implemented`/`unimplemented` (the row carries one
+        # or the other). Both keys are seeded so that a state reaching zero is reported as
+        # a movement to 0 rather than as an absent field, which is what the completion of a
+        # table looks like: `unimplemented` 39 -> 0, not `unimplemented` -> gone.
+        by_state: dict[str, int] = {"implemented": 0, "unimplemented": 0}
         for row in rows:
             key = row["implementation_state"]
             by_state[key] = by_state.get(key, 0) + 1
