@@ -96,14 +96,15 @@ use crate::evp::digest::{
     EVP_DigestSignInit_ex, EVP_MD_CTX_free, EVP_MD_CTX_new, EVP_MD_fetch, EVP_MD_free,
 };
 use crate::evp::keymgmt::{
-    evp_keymgmt_dup, evp_keymgmt_export, EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name,
-    EVP_KEYMGMT_get0_provider, EVP_KEYMGMT_is_a, EVP_KEYMGMT_names_do_all, EVP_KEYMGMT_up_ref,
-    EvpKeyMgmt,
+    evp_keymgmt_dup, evp_keymgmt_export, evp_keymgmt_freedata, evp_keymgmt_match,
+    evp_keymgmt_newdata, EVP_KEYMGMT_free, EVP_KEYMGMT_get0_name, EVP_KEYMGMT_get0_provider,
+    EVP_KEYMGMT_is_a, EVP_KEYMGMT_names_do_all, EVP_KEYMGMT_up_ref, EvpKeyMgmt,
 };
 use crate::evp::keymgmt_lib::{
-    evp_keymgmt_util_clear_operation_cache, evp_keymgmt_util_copy, evp_keymgmt_util_export,
-    evp_keymgmt_util_get_deflt_digest_name, evp_keymgmt_util_has,
-    evp_keymgmt_util_query_operation_name,
+    evp_keymgmt_util_cache_keydata, evp_keymgmt_util_clear_operation_cache, evp_keymgmt_util_copy,
+    evp_keymgmt_util_export, evp_keymgmt_util_export_to_provider,
+    evp_keymgmt_util_find_operation_cache, evp_keymgmt_util_get_deflt_digest_name,
+    evp_keymgmt_util_has, evp_keymgmt_util_query_operation_name,
 };
 use crate::evp::pkey_asn1::{EVP_PKEY_type, Engine, EvpPkeyAsn1Method};
 use crate::evp::pkey_ctx::{
@@ -1599,7 +1600,8 @@ pub unsafe extern "C" fn EVP_PKEY_get_params(
 /// The **outer** half of the export/import protocol whose inner half is
 /// `evp_keymgmt_util_export_to_provider`. The two differ in what they do about *finding* a destination:
 /// the inner one is handed a method and exports into it, and this one can find one when the caller has
-/// none, caches what it found nowhere, and has a **legacy-origin arm** that this crate cannot reach.
+/// none, caches what it found nowhere, and carries the legacy-origin arm that exports a legacy key
+/// through its own method.
 ///
 /// The `*keymgmt` argument is an **in/out** parameter and the nulling is the contract: the caller's
 /// method is taken and cleared on entry, and written back only if something was exported. The reason is
@@ -1608,17 +1610,17 @@ pub unsafe extern "C" fn EVP_PKEY_get_params(
 /// distinguishable to the caller: `*keymgmt == NULL` on return means "this call could not use your
 /// method", and a non-NULL `*keymgmt` with a non-NULL return means it did.
 ///
-/// **What is absent: the default-method lookup and the legacy-origin arm, and they are different
-/// kinds of absence.** The legacy arm — `pk->pkey.ptr != NULL`, `pk->ameth->dirty_cnt`, and the
-/// `ameth->export_to` call with its own cache dance — needs a legacy origin key, which this crate
-/// cannot construct. The default-method lookup is reachable in principle and is **7.4c's**: it is
-/// `EVP_PKEY_CTX_new_from_pkey`, which `pmeth_lib.c` owns, and the authority uses it to let the
-/// construction path find a method, steal it from the context, and let the context be freed. Until
-/// 7.4c a caller must supply one, which every caller in the crate does.
+/// Two arms sit here, and both are now live. The **default-method lookup** (`EVP_PKEY_CTX_new_from_pkey`
+/// stealing a method when the caller supplied none) lets a caller with no destination still export.
+/// The **legacy-origin arm** — `pk->pkey.ptr != NULL`, `pk->ameth->dirty_cnt`, and the `ameth->export_to`
+/// call — is what makes a legacy `EVP_PKEY` (`EVP_PKEY_new` + `EVP_PKEY_set1_RSA`/`set1_EC_KEY`, the
+/// shape OpenSSH's native key parser builds) usable through a provider signature method. Until it was
+/// ported, the early `pk->keydata == NULL` test returned NULL for every legacy key, so
+/// `do_sigver_init` reached `provkey == NULL` and raised `EVP_R_INITIALIZATION_ERROR` (`m_sigver.c:187`).
+/// It is `crypto/evp/p_lib.c:1927-2038` and lives in [`evp_pkey_export_legacy`].
 ///
 /// # Safety
 /// `pk` NULL or live; `keymgmt` NULL or a live `EVP_KEYMGMT **`; `propquery` NULL or NUL-terminated.
-#[allow(dead_code)] // first live caller is 7.4b's method classes and `EVP_PKEY_dup`'s cross-method arm
 pub(crate) unsafe fn evp_pkey_export_to_provider(
     pk: *mut EvpPkey,
     libctx: *mut c_void,
@@ -1626,55 +1628,222 @@ pub(crate) unsafe fn evp_pkey_export_to_provider(
     propquery: *const c_char,
 ) -> *mut c_void {
     let selection = OSSL_KEYMGMT_SELECT_ALL;
+    let mut allocated_keymgmt: *mut EvpKeyMgmt = ptr::null_mut();
     let mut tmp_keymgmt: *mut EvpKeyMgmt = ptr::null_mut();
 
     if pk.is_null() {
         return ptr::null_mut();
     }
 
-    /* No key data => nothing to export. The authority's `check` is two clauses with the legacy one
-     * compiled in and always true here; with no legacy origin it reduces to this. */
+    /* The authority's `check = (pk->pkey.ptr == NULL) && (pk->keydata == NULL)`, with the legacy clause
+     * compiled in. A legacy origin has no `keydata`, so the old `keydata.is_null()` test alone returned
+     * NULL for every one of them. */
     // SAFETY: `pk` is live.
-    if unsafe { (*pk).keydata.is_null() } {
+    let legacy_origin = unsafe { !(*pk).pkey.is_null() };
+    // SAFETY: `pk` is live.
+    if !legacy_origin && unsafe { (*pk).keydata.is_null() } {
         return ptr::null_mut();
     }
 
+    if legacy_origin {
+        /* "If the legacy key doesn't have an dirty counter or export function, give up" — the guard the
+         * authority runs before it will look for a method. */
+        // SAFETY: `pk` is a legacy origin, so `ameth` was installed by `pkey_set_type`.
+        let ameth = unsafe { (*pk).ameth };
+        if ameth.is_null() {
+            return ptr::null_mut();
+        }
+        // SAFETY: `ameth` is live on this branch.
+        if unsafe { (*ameth).dirty_cnt.is_none() || (*ameth).export_to.is_none() } {
+            return ptr::null_mut();
+        }
+    }
+
     if !keymgmt.is_null() {
-        // SAFETY: `keymgmt` is a live out-parameter per the contract.
+        // SAFETY: `keymgmt` is a live in/out parameter.
         tmp_keymgmt = unsafe { *keymgmt };
         // SAFETY: as above.
         unsafe { *keymgmt = ptr::null_mut() };
     }
 
-    /* Phase 7.4c: when no method was given, the authority calls `EVP_PKEY_CTX_new_from_pkey(libctx,
-     * pk, propquery)` -- which `pmeth_lib.c` owns -- takes `ctx->keymgmt`, clears the context's copy
-     * and frees the context. `libctx` and `propquery` are read only by that call, which is why they
-     * are named here and unused: the parameters are part of the contract even where the call is not
-     * yet written. */
-    let _ = (libctx, propquery);
+    /*
+     * If no keymgmt was given or found, get a default keymgmt.  We do so by letting
+     * EVP_PKEY_CTX_new_from_pkey() do it for us, then we steal it.
+     */
     if tmp_keymgmt.is_null() {
-        return ptr::null_mut();
+        // SAFETY: `libctx` NULL or live, `pk` live, `propquery` NULL or NUL-terminated.
+        let ctx = unsafe { EVP_PKEY_CTX_new_from_pkey(libctx, pk, propquery) };
+        if !ctx.is_null() {
+            // SAFETY: `ctx` is live.
+            allocated_keymgmt = unsafe { (*ctx).keymgmt };
+            tmp_keymgmt = allocated_keymgmt;
+            // SAFETY: `ctx` is live and this steals its reference before it is freed.
+            unsafe { (*ctx).keymgmt = ptr::null_mut() };
+            // SAFETY: `ctx` is live.
+            unsafe { EVP_PKEY_CTX_free(ctx) };
+        }
     }
 
-    /* The legacy-origin arm -- `pk->pkey.ptr != NULL` and the whole `ameth->export_to` cache dance --
-     * is absent for the reason `evp_pkey_cmp_any`'s is: a legacy origin cannot be constructed here. */
-
-    // SAFETY: `pk` is live and `tmp_keymgmt` is live.
-    let keydata = unsafe {
-        crate::evp::keymgmt_lib::evp_keymgmt_util_export_to_provider(pk, tmp_keymgmt, selection)
+    /* The two arms; both leave the `end:` cleanup below to run. */
+    let keydata = if tmp_keymgmt.is_null() {
+        ptr::null_mut()
+    } else if legacy_origin {
+        // SAFETY: `pk` is a legacy origin and `tmp_keymgmt` is live.
+        unsafe { evp_pkey_export_legacy(pk, tmp_keymgmt, libctx, propquery, selection) }
+    } else {
+        // SAFETY: `pk` is live and provider-side and `tmp_keymgmt` is live.
+        unsafe { evp_keymgmt_util_export_to_provider(pk, tmp_keymgmt, selection) }
     };
 
-    /* `end:` -- the temporary is cleared when nothing was exported, because the caller must not be
-     * handed a method this call could not use. `allocated_keymgmt` is always NULL here: it is set
-     * only by the 7.4c lookup above. */
+    /* `end:` — the temporary is cleared when nothing was exported, because the caller must not be
+     * handed a method this call could not use. */
     if keydata.is_null() {
         tmp_keymgmt = ptr::null_mut();
     }
 
     if !keymgmt.is_null() && !tmp_keymgmt.is_null() {
-        // SAFETY: `keymgmt` is a live out-parameter per the contract.
+        // SAFETY: `keymgmt` is a live out-parameter.
         unsafe { *keymgmt = tmp_keymgmt };
+        allocated_keymgmt = ptr::null_mut();
     }
+
+    // SAFETY: `allocated_keymgmt` is NULL or a method fetched by the default lookup, owned here.
+    unsafe { EVP_KEYMGMT_free(allocated_keymgmt) };
+    keydata
+}
+
+/// The legacy-origin arm of [`evp_pkey_export_to_provider`] — `crypto/evp/p_lib.c:1927-2038`.
+///
+/// A legacy `EVP_PKEY` has no provider keydata, so the key is exported by calling the method's own
+/// `export_to` callback into a freshly created destination keydata, then cached on the key in the
+/// operation cache so a second use costs nothing. The `dirty_cnt` guard is the whole reason the cache
+/// is safe: the cached copy is reused only while the low-level key has not changed.
+///
+/// The `EVP_KEYMGMT_free(tmp_keymgmt)` before the cache lookup balances the `up_ref` above it; the
+/// caller's own reference (the one that arrived in `*keymgmt`) keeps the method alive across it.
+///
+/// # Safety
+/// `pk` live and a legacy origin whose `ameth` has both `dirty_cnt` and `export_to`; `tmp_keymgmt` live.
+unsafe fn evp_pkey_export_legacy(
+    pk: *mut EvpPkey,
+    tmp_keymgmt: *mut EvpKeyMgmt,
+    libctx: *mut c_void,
+    propquery: *const c_char,
+    selection: c_int,
+) -> *mut c_void {
+    let mut keydata: *mut c_void = ptr::null_mut();
+
+    // SAFETY: `pk` is a legacy origin and the caller tested that its method has both callbacks.
+    let ameth = unsafe { (*pk).ameth };
+    // SAFETY: `ameth` is live.
+    let (dirty_cnt, export_to) = unsafe { ((*ameth).dirty_cnt, (*ameth).export_to) };
+    let (Some(dirty_cnt), Some(export_to)) = (dirty_cnt, export_to) else {
+        return ptr::null_mut();
+    };
+
+    /* If the legacy "origin" hasn't changed since last time, try to find our keymgmt in the
+     * operation cache. */
+    // SAFETY: `pk` is live.
+    if unsafe { dirty_cnt(pk) } == unsafe { (*pk).dirty_cnt_copy } {
+        // SAFETY: `pk` is live.
+        let lock = unsafe { (*pk).lock };
+        // SAFETY: `lock` is the key's own lock.
+        if unsafe { CRYPTO_THREAD_read_lock(lock) } == 0 {
+            return keydata;
+        }
+        // SAFETY: `pk` live, `tmp_keymgmt` live, lock held.
+        let op = unsafe { evp_keymgmt_util_find_operation_cache(pk, tmp_keymgmt, selection) };
+        // SAFETY: `op` is NULL or a live cache element; the NULL case short-circuits the read.
+        if !op.is_null() && !unsafe { (*op).keymgmt }.is_null() {
+            // SAFETY: `op` is non-NULL and cached under the lock.
+            keydata = unsafe { (*op).keydata };
+            // SAFETY: the read lock is held.
+            unsafe { CRYPTO_THREAD_unlock(lock) };
+            return keydata;
+        }
+        // SAFETY: the read lock is held.
+        unsafe { CRYPTO_THREAD_unlock(lock) };
+    }
+
+    /* Make sure that the keymgmt key type matches the legacy NID. */
+    // SAFETY: `pk` is live and `tmp_keymgmt` is live.
+    if unsafe { EVP_KEYMGMT_is_a(tmp_keymgmt, OBJ_nid2sn((*pk).type_)) } == 0 {
+        return keydata;
+    }
+
+    // SAFETY: `tmp_keymgmt` is live.
+    keydata = unsafe { evp_keymgmt_newdata(tmp_keymgmt) };
+    if keydata.is_null() {
+        return keydata;
+    }
+
+    // SAFETY: `export_to` is the method's own callback, `pk`/`keydata` are live,
+    // `(*tmp_keymgmt).import` is the destination's importer, and `libctx`/`propquery` are the caller's.
+    if unsafe { export_to(pk, keydata, (*tmp_keymgmt).import, libctx, propquery) } == 0 {
+        // SAFETY: `tmp_keymgmt` is live and `keydata` is its own new data.
+        unsafe { evp_keymgmt_freedata(tmp_keymgmt, keydata) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `tmp_keymgmt` is live.
+    if unsafe { EVP_KEYMGMT_up_ref(tmp_keymgmt) } == 0 {
+        // SAFETY: `tmp_keymgmt` is live and `keydata` is its own.
+        unsafe { evp_keymgmt_freedata(tmp_keymgmt, keydata) };
+        return ptr::null_mut();
+    }
+
+    // SAFETY: `pk` is live.
+    let lock = unsafe { (*pk).lock };
+    // SAFETY: `lock` is the key's own lock.
+    if unsafe { CRYPTO_THREAD_write_lock(lock) } == 0 {
+        return keydata;
+    }
+    // SAFETY: `pk` is live.
+    if unsafe { dirty_cnt(pk) } != unsafe { (*pk).dirty_cnt_copy }
+        // SAFETY: `pk` is live and the write lock is held.
+        && unsafe { evp_keymgmt_util_clear_operation_cache(pk) } == 0
+    {
+        // SAFETY: the write lock is held.
+        unsafe { CRYPTO_THREAD_unlock(lock) };
+        // SAFETY: `tmp_keymgmt` is live and `keydata` is its own.
+        unsafe { evp_keymgmt_freedata(tmp_keymgmt, keydata) };
+        // SAFETY: `tmp_keymgmt` is live; the `up_ref` above is returned here.
+        unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+        return ptr::null_mut();
+    }
+    // SAFETY: `tmp_keymgmt` is live; the `up_ref` above is returned here. The caller's own reference
+    // keeps the method alive for the lookup below.
+    unsafe { EVP_KEYMGMT_free(tmp_keymgmt) };
+
+    /* Check to make sure some other thread didn't get there first. */
+    // SAFETY: `pk` live, `tmp_keymgmt` live, write lock held.
+    let op = unsafe { evp_keymgmt_util_find_operation_cache(pk, tmp_keymgmt, selection) };
+    // SAFETY: `op` is NULL or a live cache element; the NULL case short-circuits the read.
+    if !op.is_null() && !unsafe { (*op).keymgmt }.is_null() {
+        // SAFETY: `op` is non-NULL and cached under the lock.
+        let tmp_keydata = unsafe { (*op).keydata };
+        // SAFETY: the write lock is held.
+        unsafe { CRYPTO_THREAD_unlock(lock) };
+        // SAFETY: `tmp_keymgmt` is live and `keydata` is its own.
+        unsafe { evp_keymgmt_freedata(tmp_keymgmt, keydata) };
+        return tmp_keydata;
+    }
+
+    /* Add the new export to the operation cache. */
+    // SAFETY: the write lock is held and all three arguments are live.
+    if unsafe { evp_keymgmt_util_cache_keydata(pk, tmp_keymgmt, keydata, selection) } == 0 {
+        // SAFETY: the write lock is held.
+        unsafe { CRYPTO_THREAD_unlock(lock) };
+        // SAFETY: `tmp_keymgmt` is live and `keydata` is its own.
+        unsafe { evp_keymgmt_freedata(tmp_keymgmt, keydata) };
+        return ptr::null_mut();
+    }
+
+    /* Synchronize the dirty count. */
+    // SAFETY: `pk` is live.
+    unsafe { (*pk).dirty_cnt_copy = dirty_cnt(pk) };
+    // SAFETY: the write lock is held.
+    unsafe { CRYPTO_THREAD_unlock(lock) };
 
     keydata
 }
@@ -1721,13 +1890,12 @@ const EVP_PKEY_KEYPAIR: c_int = 0x04 | 0x80 | 0x01 | 0x02;
 
 /// `static int evp_pkey_cmp_any(const EVP_PKEY *a, const EVP_PKEY *b, int selection)`.
 ///
-/// The mixed-legacy-path function, and in this crate it has exactly two arms: the assertion that at
-/// least one key is provider-side, and the case where both are. Everything past that — comparing a
-/// legacy NID against a provider method's names, then cross-exporting with
-/// `evp_pkey_export_to_provider` — needs a legacy origin key, which is a state this crate cannot
-/// build, and `evp_pkey_export_to_provider` besides, which is 7.4c's. The authority's own comment on
-/// the `#ifdef FIPS_MODULE` arm says the whole function "will just call
-/// `evp_keymgmt_util_match` when legacy support is gone", which is precisely the crate's situation.
+/// The mixed-legacy-path function. Two provided keys go straight to `evp_keymgmt_util_match`; the
+/// **mixed** arm — one key legacy, one provider — compares the legacy NID against the provider
+/// method's names and then **cross-exports** the legacy key into the other's method with
+/// [`evp_pkey_export_to_provider`], which is what makes `EVP_PKEY_eq` answer 1 for a provider key and
+/// a demoted (legacy) copy of the same key. OpenSSH reaches this: `sshkey_generate` builds a provider
+/// `RSA` key while `sshkey_from_private` builds a legacy public copy, and `sshkey_equal` compares them.
 ///
 /// # Safety
 /// `a` and `b` must be live.
@@ -1749,9 +1917,89 @@ unsafe fn evp_pkey_cmp_any(a: *const EvpPkey, b: *const EvpPkey, selection: c_in
         };
     }
 
-    /* Phase 8: one key is provider-side and the other is a legacy origin, which this crate cannot
-     * construct. See this function's doc comment. */
-    -2
+    /* At this point, one of them is provided, the other not.  This allows us to compare types using
+     * legacy NIDs. */
+    // SAFETY: both keys are live.
+    let a_legacy = unsafe { (*a).type_ != EVP_PKEY_NONE && (*a).keymgmt.is_null() };
+    // SAFETY: both keys are live.
+    let b_legacy = unsafe { (*b).type_ != EVP_PKEY_NONE && (*b).keymgmt.is_null() };
+
+    if a_legacy
+        // SAFETY: `b` is provided on this arm, so its keymgmt is live.
+        && unsafe { EVP_KEYMGMT_is_a((*b).keymgmt, OBJ_nid2sn((*a).type_)) } == 0
+    {
+        return -1; /* not the same key type */
+    }
+    if b_legacy
+        // SAFETY: `a` is provided on this arm, so its keymgmt is live.
+        && unsafe { EVP_KEYMGMT_is_a((*a).keymgmt, OBJ_nid2sn((*b).type_)) } == 0
+    {
+        return -1; /* not the same key type */
+    }
+
+    /*
+     * We've determined that they both are the same keytype, so the next step is to do a bit of cross
+     * export to ensure we have keydata for both keys in the same keymgmt.
+     */
+    // SAFETY: both keys are live.
+    let (mut keymgmt1, mut keydata1) = unsafe { ((*a).keymgmt, (*a).keydata) };
+    // SAFETY: both keys are live.
+    let (mut keymgmt2, mut keydata2) = unsafe { ((*b).keymgmt, (*b).keydata) };
+    let mut tmp_keydata: *mut c_void = ptr::null_mut();
+
+    if !keymgmt2.is_null()
+        // SAFETY: `keymgmt2` is live.
+        && unsafe { (*keymgmt2).match_.is_some() }
+    {
+        // SAFETY: `a` is live, `keymgmt2`'s address is valid for the call, and the libctx/propquery
+        // are the authority's NULLs.
+        tmp_keydata = unsafe {
+            evp_pkey_export_to_provider(
+                a.cast_mut(),
+                ptr::null_mut(),
+                ptr::addr_of_mut!(keymgmt2),
+                ptr::null(),
+            )
+        };
+        if !tmp_keydata.is_null() {
+            keymgmt1 = keymgmt2;
+            keydata1 = tmp_keydata;
+        }
+    }
+    if tmp_keydata.is_null()
+        && !keymgmt1.is_null()
+        // SAFETY: `keymgmt1` is live.
+        && unsafe { (*keymgmt1).match_.is_some() }
+    {
+        // SAFETY: `b` is live, `keymgmt1`'s address is valid for the call, and the libctx/propquery
+        // are the authority's NULLs.
+        tmp_keydata = unsafe {
+            evp_pkey_export_to_provider(
+                b.cast_mut(),
+                ptr::null_mut(),
+                ptr::addr_of_mut!(keymgmt1),
+                ptr::null(),
+            )
+        };
+        if !tmp_keydata.is_null() {
+            keymgmt2 = keymgmt1;
+            keydata2 = tmp_keydata;
+        }
+    }
+
+    /* If we still don't have matching keymgmt implementations, we give up. */
+    if keymgmt1 != keymgmt2 {
+        return -2;
+    }
+
+    /* If the keymgmt implementations are NULL, the export failed. */
+    if keymgmt1.is_null() {
+        return -2;
+    }
+
+    // SAFETY: `keymgmt1` is live and both keydata pointers belong to it (or to `a`/`b` when it is
+    // their own method).
+    unsafe { evp_keymgmt_match(keymgmt1, keydata1, keydata2, selection) }
 }
 
 /// `int EVP_PKEY_parameters_eq(const EVP_PKEY *a, const EVP_PKEY *b)`.
@@ -1809,6 +2057,13 @@ pub unsafe extern "C" fn EVP_PKEY_cmp_parameters(a: *const EvpPkey, b: *const Ev
 /// Then the selection, and then `evp_pkey_cmp_any`. The `has` questions are asked **both ways**: a
 /// pair where only one key reports a public key takes the `KEYPAIR` arm, not a one-sided comparison.
 ///
+/// **All-legacy keys take the method's own comparisons**, and this arm is live: OpenSSH builds legacy
+/// `EVP_PKEY`s (`EVP_PKEY_new` + `EVP_PKEY_set1_RSA`/`set1_EC_KEY`) for every key it parses from the
+/// wire, so `ssh_rsa_equal`'s `EVP_PKEY_cmp(...) == 1` reaches it. The order is the authority's: the
+/// type NIDs must agree, then `param_cmp` (which may answer **-1** for a mismatch or **0** to defer),
+/// then `pub_cmp`. The earlier transcription stopped at the type test and returned **-2**, which is
+/// how `sshkey_equal` answered 0 for two identical keys.
+///
 /// # Safety
 /// `a` and `b` must be NULL or live.
 #[no_mangle]
@@ -1844,11 +2099,29 @@ pub unsafe extern "C" fn EVP_PKEY_eq(a: *const EvpPkey, b: *const EvpPkey) -> c_
         return unsafe { evp_pkey_cmp_any(a, b, selection) };
     }
 
-    /* All legacy keys: Phase 8's `a->ameth->param_cmp` then `pub_cmp`, unreachable here. */
+    /* All legacy keys. */
     // SAFETY: both keys are live.
     if unsafe { (*a).type_ != (*b).type_ } {
         return -1;
     }
+
+    // SAFETY: `a` is live.
+    if let Some(method) = unsafe { (*a).ameth.as_ref() } {
+        /* Compare parameters if the algorithm has them. */
+        if let Some(param_cmp) = method.param_cmp {
+            // SAFETY: `param_cmp` is the method's own callback and both keys are live.
+            let ret = unsafe { param_cmp(a, b) };
+            if ret <= 0 {
+                return ret;
+            }
+        }
+
+        if let Some(pub_cmp) = method.pub_cmp {
+            // SAFETY: `pub_cmp` is the method's own callback and both keys are live.
+            return unsafe { pub_cmp(a, b) };
+        }
+    }
+
     -2
 }
 
