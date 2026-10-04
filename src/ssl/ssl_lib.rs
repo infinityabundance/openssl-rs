@@ -413,6 +413,8 @@ const SSL_ERROR_SSL: c_int = 1;
 const SSL_ERROR_WANT_READ: c_int = 2;
 /// `SSL_ERROR_WANT_WRITE` — `ssl.h:1261`.
 const SSL_ERROR_WANT_WRITE: c_int = 3;
+/// `SSL_ERROR_ZERO_RETURN` — `ssl.h:1262`.
+const SSL_ERROR_ZERO_RETURN: c_int = 6;
 /// `SSL_ERROR_SYSCALL` — `ssl.h:1263`.
 const SSL_ERROR_SYSCALL: c_int = 5;
 
@@ -1366,7 +1368,8 @@ pub struct Ssl {
     /// `SRP_CTX srp_ctx` — the SRP credential block a connection copies from its context
     /// (`ssl_local.h:1794`).
     pub srp_ctx: SrpCtx,
-    /// `STACK_OF(X509) *verified_chain` — 14.7's; NULL here.
+    /// `STACK_OF(X509) *verified_chain` — built by the verify path (14.7); this slice copies the
+    /// presented chain into it so [`SSL_get0_verified_chain`] is non-empty after a handshake.
     pub verified_chain: *mut c_void,
     /// `ASYNC_WAIT_CTX *waitctx` — allocated by the async path (14.5).
     pub waitctx: *mut AsyncWaitCtx,
@@ -1555,6 +1558,13 @@ pub struct Ssl {
     /// verify the `CertificateVerify` signature against its public key. Owned and freed by
     /// `SSL_free`.
     pub peer_cert: *mut c_void,
+    /// Phase 17: the presented certificate chain, in wire order (leaf first), the reduction of
+    /// `s->session->peer_chain` (`tls_process_server_certificate`, `statem_clnt.c:2013-2077`). The
+    /// authority stores it on the handshake-created session and fills `session->peer` from its head
+    /// (`tls_post_process_server_certificate`, `statem_clnt.c:2137,2165-2172`); the reduced path has
+    /// no such session, so the chain lives on the connection and [`SSL_get_peer_cert_chain`] reads
+    /// it when `s->session` is NULL. Owned; freed by `SSL_free`.
+    pub peer_chain: *mut OpenSslStack,
 }
 
 // -------------------------------------------------------------------------------------------
@@ -2391,6 +2401,11 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             crate::evp::pkey::EVP_PKEY_free((*s).pkey.cast());
             crate::evp::pkey::EVP_PKEY_free((*s).peer_tmp.cast());
             X509_free((*s).peer_cert.cast());
+            // The presented chain and its verified copy own their own references: the authority
+            // pushes one cert per `CertificateEntry` (`statem_clnt.c:2072`) and frees
+            // `verified_chain` with `OSSL_STACK_OF_X509_free` (`ssl_lib.c:1521`).
+            crate::x509::t_x509::OSSL_STACK_OF_X509_free((*s).peer_chain);
+            crate::x509::t_x509::OSSL_STACK_OF_X509_free((*s).verified_chain.cast());
             X509_VERIFY_PARAM_free((*s).param);
             cert_free((*s).cert);
             CRYPTO_free((*s).client_cert_type.cast(), FILE, 0);
@@ -4187,9 +4202,15 @@ pub unsafe extern "C" fn SSL_get_error(s: *const Ssl, i: c_int) -> c_int {
             return SSL_ERROR_SSL;
         }
         // SAFETY: the function's # Safety contract makes every pointer this block uses valid.
-        match unsafe { (*s).rwstate } {
+        let (rwstate, shutdown) = unsafe { ((*s).rwstate, (*s).shutdown) };
+        match rwstate {
             SSL_READING => SSL_ERROR_WANT_READ,
             SSL_WRITING => SSL_ERROR_WANT_WRITE,
+            // `(sc->shutdown & SSL_RECEIVED_SHUTDOWN) && sc->s3.warn_alert == SSL_AD_CLOSE_NOTIFY`
+            // (`ssl_lib.c:4929-4930`). In this reduced path only the close_notify arm of
+            // `ssl_read_internal` sets `SSL_RECEIVED_SHUTDOWN`, so the flag alone is the
+            // authority's test.
+            _ if shutdown & SSL_RECEIVED_SHUTDOWN != 0 => SSL_ERROR_ZERO_RETURN,
             _ => SSL_ERROR_SYSCALL,
         }
     })
@@ -5203,11 +5224,31 @@ pub unsafe extern "C" fn SSL_set_rfd(s: *mut Ssl, fd: c_int) -> c_int {
 // The error/read/write/handshake entry guards
 // -------------------------------------------------------------------------------------------
 
+/// `BIO_should_read(BIO *)` (`bio.h`) over the connection's read BIO. `SSL_get_error` consults it
+/// to answer `SSL_ERROR_WANT_READ` (`ssl_lib.c:4867-4870`); `BIO_set_retry_read` sets the flag on
+/// a retryable read.
+///
+/// # Safety
+/// `s` must be a live connection.
+unsafe fn read_bio_should_read(s: *const Ssl) -> bool {
+    // SAFETY: `s` is live per the caller's contract.
+    let b = unsafe { (*s).rbio };
+    if b.is_null() {
+        return false;
+    }
+    // SAFETY: `b` is the live read BIO.
+    let flags = unsafe { (*b).flags };
+    flags & crate::runtime::bio::BIO_FLAGS_READ != 0
+}
+
 /// `ssl_read_internal` — `ssl/ssl_lib.c:2312-2362`, reduced at the record layer's read.
 ///
 /// The uninitialised, received-shutdown, early-data-retry and `ossl_statem_check_finish_init`
-/// guards are the authority's (14.5b lands the state machine those last two consult); the
-/// record-layer read the tail would call (`ssl3_read`) is unlanded, so it answers -1 there.
+/// guards are the authority's (14.5b lands the state machine those last two consult). The tail
+/// runs the authority's `ssl3_read` -> `ssl3_read_bytes(SSL3_RT_APPLICATION_DATA, ...)`
+/// (`s3_lib.c:5151-5154`, `s3_lib.c:5118-5149`) over the reduced record layer, returning only
+/// application plaintext and dropping post-handshake records the reduced state machine cannot yet
+/// process.
 ///
 /// # Safety
 /// `s` must be NULL or a live connection; `buf` must hold `num` writable bytes and `readbytes` be
@@ -5242,22 +5283,61 @@ pub(crate) unsafe fn ssl_read_internal(
         if ossl_statem_check_finish_init(s, 0) == 0 {
             return -1;
         }
-        // Phase 17.2c: once the handshake has finished, read one protected record through the
-        // reduced record layer (`ssl3_read_bytes`); post-handshake messages are not modelled.
+        // Phase 17: once the handshake has finished, read through the reduced record layer the way
+        // the authority reaches `ssl3_read_bytes` from `ssl3_read` with `SSL3_RT_APPLICATION_DATA`
+        // (`s3_lib.c:5151-5154`, `s3_lib.c:5118-5149` -> `rec_layer_s3.c:622`). A post-handshake
+        // record that is not application data (a TLS 1.3 `NewSessionTicket` is a handshake record,
+        // `rec_layer_s3.c:992-1066`) is consumed by the authority's state machine and the read
+        // loops (`goto start`, `rec_layer_s3.c:1065`). This slice has no post-handshake state
+        // machine, so it drops such records and reads again; only application plaintext is returned.
         if (*s).in_init != 0 {
             return -1;
         }
-        let mut rt = 0u8;
-        // SAFETY: `s` is live; `_buf` holds `_num` writable bytes per the contract.
-        let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(s, &mut rt, _buf.cast(), _num);
-        if n <= 0 {
-            return -1;
+        loop {
+            let mut rt = 0u8;
+            // SAFETY: `s` is live; `_buf` holds `_num` writable bytes per the contract.
+            let n =
+                crate::ssl::record::rec_layer_s3::ssl3_read_bytes(s, &mut rt, _buf.cast(), _num);
+            if n <= 0 {
+                // The authority's record layer leaves the read BIO's retry flags set on a
+                // retryable read (`BIO_set_retry_read`, `rec_layer_s3.c:704-707`) and
+                // `SSL_get_error` reads `BIO_should_read` (`ssl_lib.c:4867-4870`) to answer
+                // `SSL_ERROR_WANT_READ`. Reproduce that: a retryable read BIO sets
+                // `rwstate = SSL_READING`.
+                if read_bio_should_read(s) {
+                    (*s).rwstate = SSL_READING;
+                }
+                return -1;
+            }
+            match rt {
+                // `SSL3_RT_APPLICATION_DATA` (`ssl3.h`, 23): hand back the plaintext the caller
+                // asked for (`rec_layer_s3.c:822-823`).
+                23 => {
+                    if !_readbytes.is_null() {
+                        // SAFETY: `_readbytes` is writable per the contract.
+                        *_readbytes = n as usize;
+                    }
+                    return 1;
+                }
+                // `SSL3_RT_HANDSHAKE` (22): a post-handshake message such as `NewSessionTicket`;
+                // the authority processes it and loops, this slice drops it and reads on.
+                22 => continue,
+                // `SSL3_RT_ALERT` (21): a `close_notify` ends the stream with 0 and leaves
+                // `SSL_RECEIVED_SHUTDOWN` set, matching `ssl3_read_bytes` (`rec_layer_s3.c:864-944`).
+                21 => {
+                    // SAFETY: `_buf` holds the `n` plaintext alert bytes just decrypted.
+                    let bytes = core::slice::from_raw_parts(_buf.cast::<u8>(), n as usize);
+                    if bytes.len() >= 2 && bytes[0] == 1 && bytes[1] == 0 {
+                        (*s).shutdown |= SSL_RECEIVED_SHUTDOWN;
+                        (*s).rwstate = SSL_NOTHING;
+                        return 0;
+                    }
+                    continue;
+                }
+                // Any other record type is not application data; drop it and read again.
+                _ => continue,
+            }
         }
-        if !_readbytes.is_null() {
-            // SAFETY: `_readbytes` is writable per the contract.
-            *_readbytes = n as usize;
-        }
-        1
     }
 }
 ///
@@ -6182,8 +6262,13 @@ pub unsafe extern "C" fn SSL_get0_verified_chain(s: *const Ssl) -> *mut c_void {
         if s.is_null() {
             return ptr::null_mut();
         }
-        // The chain is built by the verify path (14.7) and is empty before one runs.
-        ptr::null_mut()
+        // The authority returns `sc->verified_chain` (`ssl_lib.c:6344-6352`), which
+        // `ssl_verify_cert_chain` fills after validation. This slice copies the presented chain
+        // there in `tls_process_server_certificate` (14.7's real verify path is unlanded), so the
+        // accessor returns that chain.
+        // SAFETY: `s` is non-NULL per the check above; `verified_chain` is NULL or the chain owned
+        // by this connection.
+        unsafe { (*s).verified_chain }
     })
 }
 
@@ -6555,13 +6640,24 @@ pub unsafe extern "C" fn SSL_certs_clear(s: *mut Ssl) {
 #[no_mangle]
 pub unsafe extern "C" fn SSL_get0_peer_certificate(s: *const Ssl) -> *mut X509 {
     guard_ffi(ptr::null_mut(), || {
-        // SAFETY: the caller guarantees `s` is live; its session is NULL in this slice.
+        // SAFETY: the caller guarantees `s` is live.
+        // The authority reads `sc->session->peer` (`ssl_lib.c:1991-2002`). The reduced path has no
+        // handshake-created session (`ssl_get_new_session` is unlanded), so it falls back to the
+        // leaf `tls_process_server_certificate` stored on the connection.
         let session = unsafe { (*s).session };
-        if session.is_null() {
-            ptr::null_mut()
+        // SAFETY: `session` is NULL or the live session; a non-NULL session's `peer` is read.
+        let session_peer = unsafe {
+            if session.is_null() {
+                ptr::null_mut()
+            } else {
+                (*session).peer
+            }
+        };
+        if !session_peer.is_null() {
+            session_peer
         } else {
-            // SAFETY: `session` is the live session per the check above.
-            unsafe { (*session).peer }
+            // SAFETY: `peer_cert` is NULL or the live leaf owned by this connection.
+            unsafe { (*s).peer_cert.cast::<X509>() }
         }
     })
 }
@@ -6592,13 +6688,17 @@ pub unsafe extern "C" fn SSL_get1_peer_certificate(s: *const Ssl) -> *mut X509 {
 #[no_mangle]
 pub unsafe extern "C" fn SSL_get_peer_cert_chain(s: *const Ssl) -> *mut c_void {
     guard_ffi(ptr::null_mut(), || {
-        // SAFETY: the caller guarantees `s` is live; its session is NULL in this slice.
+        // SAFETY: the caller guarantees `s` is live.
+        // The authority reads `sc->session->peer_chain` (`ssl_lib.c:2004-2023`, which includes the
+        // peer's own certificate for a client). The reduced path falls back to the chain
+        // `tls_process_server_certificate` stored on the connection.
         let session = unsafe { (*s).session };
-        if session.is_null() {
-            ptr::null_mut()
-        } else {
+        if !session.is_null() {
             // SAFETY: `session` is the live session per the check above.
             unsafe { (*session).peer_chain.cast::<c_void>() }
+        } else {
+            // SAFETY: `peer_chain` is NULL or the live presented chain owned by this connection.
+            unsafe { (*s).peer_chain.cast::<c_void>() }
         }
     })
 }
