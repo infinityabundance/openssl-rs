@@ -1521,6 +1521,33 @@
         ],
         "reason": "Phase 11's 11.1e lands the whole hashed-directory lookup in `src/x509/by_dir.rs`. The unit's only export is the method constructor and every other function is `static` (local linkage, so `internal-symbols.json` records none), which is why the three mechanical signals cannot see it and it needs a record.",
         "unit": "crypto/x509/by_dir.c"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/provider/legacyprov.rs",
+        "evidence": "src/provider/legacyprov.rs (the module 16.1 lands); forensics/phase16-obligations.json (the 39 legacy provider rows are all `implemented`); docs/PHASE-16-SUBPHASES.md section 3.5",
+        "names": [
+          "ossl_legacy_provider_init",
+          "legacy_query",
+          "legacy_gettable_params",
+          "legacy_get_params",
+          "legacy_teardown"
+        ],
+        "reason": "16.1 lands the `legacy` provider module in `src/provider/legacyprov.rs`: `OSSL_provider_init` (the module's one exported symbol, written `ossl_legacy_provider_init` under `#[no_mangle]`), the `legacy_query`/`legacy_get_params`/`legacy_gettable_params`/`legacy_teardown` core dispatch, and the four `LEGACY_*` tables the 39 rows publish. The unit's entry point is a macro-generated export and its content is the registration tables, so no internal function of it anchors a transcription edge -- the crate module maps to `providers/prov_running.c` through `ossl_prov_is_running` -- and the record is what says the unit is reached.",
+        "unit": "providers/legacyprov.c"
+      },
+      {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/apps/openssl.rs",
+        "evidence": "src/apps/openssl.rs (the module 16.4 lands); forensics/phase16-obligations.json (the `cli` contract unit); docs/PHASE-16-SUBPHASES.md section 3.8",
+        "names": [
+          "main_from_env",
+          "run",
+          "do_cmd",
+          "help_main"
+        ],
+        "reason": "16.4 lands `apps/openssl.c`'s dispatcher in `src/apps/openssl.rs`: `main_from_env` (the global `-help`/`-version` arm and the call into the generated command table), `run` (the argument walk into `do_cmd`), `do_cmd` (the lookup, the `no-` arm and the `Invalid command` arm) and `help_main` (a build-independent command body). The unit is a `main`-bearing program rather than a library translation unit, so no internal symbol of it anchors a transcription edge; the record is what says the unit is reached.",
+        "unit": "apps/openssl.c"
       }
     ]
   },

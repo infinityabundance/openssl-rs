@@ -76,8 +76,10 @@ layer, the extension units and the key schedule, none of which is landed, so a f
 driven; the state the fresh connection is left in is, and the boundary is recorded. See
 `courts/phase16/rt_statem_remainder_probe.c`.
 
-None is declared in `gen_frf_courts.py`: that registry is the stratum's seal, and a court
-with no probe cannot carry a declaration.
+The seal (16.6) declares all six in `gen_frf_courts.py`. `RT-CLI`'s instrument is the
+shell probe `courts/phase16/rt_cli_probe.sh`, staged as the
+`artifacts/phase16/probes/rt_cli_probe.{authority,candidate}` pair the FRF runtime
+harness runs; the other five are the compiled C probes above.
 
 `RT-CLI`, and what it compares
 -------------------------------
@@ -86,10 +88,11 @@ binary and the candidate distribution shell's — over a fixed argv and compares
 transcripts keyed on `key=value`: the dispatcher's global-`help`/`version`, unknown-command
 and `no-<cmd>` arms, the three command bodies whose output is build-independent (`help`,
 `list`, `version`), and every command's option table through `list -options <cmd>` (the
-fixed option tables the regenerated Phase-1 capture structures). It then drives
-`atlas_runtime.parse_option_list` over each captured `option_listing` and requires the
-structured rows to round-trip. No wall clock and no network: every case is a pure function
-of the two tables.
+fixed option tables the regenerated Phase-1 capture structures). The instrument is the
+shell probe `courts/phase16/rt_cli_probe.sh`, run once per side, because the subject is an
+executable rather than a linkable symbol. It then drives `atlas_runtime.parse_option_list`
+over each captured `option_listing` and requires the structured rows to round-trip. No wall
+clock and no network: every case is a pure function of the two tables.
 
 `RT-CONFIG`, and what it compares
 ---------------------------------
@@ -158,6 +161,16 @@ CLI_ARGV: list[list[str]] = [
 ]
 
 CLI_CAPTURE = REPO_ROOT / "forensics" / "atlas" / "openssl-3.6.4-production" / "cli-commands.json"
+
+# The RT-CLI probe. The subject is the CLI *executable*, which cannot be linked into a C
+# probe, so this court's instrument is a shell program rather than a compiled C file:
+# `rt_cli_probe.sh` drives one side's `openssl` over the fixed argv and prints the same
+# `case.N.*` transcript the Python path once produced. The fixture (`probe-list.txt`) names
+# it, which is what makes the court challengeable (D13), and the two shims
+# `rt_cli_probe.{authority,candidate}` are what the FRF runtime harness stages (D529's
+# declaration rule requires a staged pair for every declarable court).
+CLI_SOURCE = PROBE_DIR / "rt_cli_probe.sh"
+AUTH_PREFIX = REPO_ROOT / "forensics" / "authorities" / "prefix" / "openssl-3.6.4-production"
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that
 # lands the probe and what the court will drive, so "nothing registered" is a stated distance
@@ -235,11 +248,6 @@ def diff(authority: str, candidate: str) -> list[dict]:
     return residuals
 
 
-def escape(text: str) -> str:
-    """One transcript line per observation: newline becomes `|`, CR becomes `^`."""
-    return text.replace("\n", "|").replace("\r", "^")
-
-
 def cli_argv_cases() -> list[list[str]]:
     """The fixed argv `RT-CLI` drives: the build-independent arms plus every captured
     command's option table (`list -options <cmd>`)."""
@@ -248,19 +256,6 @@ def cli_argv_cases() -> list[list[str]]:
     for c in body["commands"]:
         cases.append(["list", "-options", c["name"]])
     return cases
-
-
-def cli_transcript(binary: Path, env: dict[str, str], cases: list[list[str]]) -> str:
-    """Run `binary` over every fixed argv case and render the transcripts keyed on
-    `case.N.*`. Exit codes and both streams are observations."""
-    lines: list[str] = []
-    for i, argv in enumerate(cases):
-        res = run([str(binary), *argv], env=env)
-        lines.append(f"case.{i}.argv={' '.join(argv)}")
-        lines.append(f"case.{i}.exit={res.returncode}")
-        lines.append(f"case.{i}.stdout={escape(res.stdout)}")
-        lines.append(f"case.{i}.stderr={escape(res.stderr)}")
-    return "\n".join(lines) + "\n"
 
 
 def cli_parser_checks() -> list[dict]:
@@ -280,20 +275,113 @@ def cli_parser_checks() -> list[dict]:
     return checks
 
 
+def render_cli_probe(cases: list[list[str]]) -> str:
+    """The shell probe `RT-CLI` runs on each side.
+
+    The subject is the CLI *executable*, which cannot be linked into a C probe, so the
+    instrument is a shell program: it drives `$1` (this side's `openssl`) over the fixed
+    argv below and prints the same `case.N.*` transcript the court venue diffs -- key=value,
+    newline -> `|`, CR -> `^`, computed identically on both sides. `$2` is the side's
+    `ossl-modules/`, so the probe is self-contained under the FRF runtime harness, which
+    sets only `LD_LIBRARY_PATH` and not `OPENSSL_MODULES`.
+    """
+    body = "\n".join(" ".join(argv) for argv in cases)
+    head = '''#!/bin/sh
+# openssl-rs RT-CLI probe: drive one side's `openssl` over the court's fixed argv and
+# print one `case.N.*` line per observation. `$1` is the side's `openssl`, `$2` its
+# `ossl-modules/`; the fixture (`probe-list.txt`) names this probe, which is what makes
+# it challengeable (docs/DECISIONS.md D13).
+#
+# It is a shell probe rather than a compiled C program because the subject is the CLI
+# *executable*, which is not linkable. The transcript format matches the court venue's
+# `cli_transcript`: key=value, newline -> `|`, CR -> `^`.
+set -u
+BIN="${1:?usage: rt_cli_probe.sh <openssl> <ossl-modules>}"
+MODULES="${2:-}"
+if [ -n "$MODULES" ]; then
+    OPENSSL_MODULES="$MODULES"
+    export OPENSSL_MODULES
+fi
+i=0
+while IFS= read -r argv; do
+    [ -n "$argv" ] || continue
+    case "$argv" in \\#*) continue ;; esac
+    out=$(mktemp)
+    err=$(mktemp)
+    # shellcheck disable=SC2086
+    "$BIN" $argv >"$out" 2>"$err"
+    code=$?
+    so=$(tr '\\n' '|' <"$out" | tr '\\r' '^')
+    se=$(tr '\\n' '|' <"$err" | tr '\\r' '^')
+    rm -f "$out" "$err"
+    printf 'case.%s.argv=%s\\n' "$i" "$argv"
+    printf 'case.%s.exit=%s\\n' "$i" "$code"
+    printf 'case.%s.stdout=%s\\n' "$i" "$so"
+    printf 'case.%s.stderr=%s\\n' "$i" "$se"
+    i=$((i + 1))
+done <<'ARGS'
+'''
+    return head + body + "\nARGS\n"
+
+
+def stage_cli_probe(cases: list[list[str]]) -> Path:
+    """Write the `RT-CLI` shell probe and the two per-side shims, and return the source.
+
+    The shims are the staged `artifacts/phase16/probes/rt_cli_probe.{authority,candidate}`
+    pair the FRF runtime harness runs: each execs the shared source with its own side's
+    `openssl` and `ossl-modules/` path, so one probe source serves both sides and the
+    venue and the FRF court run the same instrument.
+    """
+    CLI_SOURCE.write_text(render_cli_probe(cases), encoding="utf-8")
+    STAGED.mkdir(parents=True, exist_ok=True)
+    sides = {
+        "authority": (
+            AUTH_PREFIX / "bin" / "openssl",
+            AUTH_PREFIX / "lib" / "ossl-modules",
+        ),
+        "candidate": (
+            PHASE2 / "openssl",
+            PHASE2 / "install" / "lib" / "ossl-modules",
+        ),
+    }
+    for side, (binary, modules) in sides.items():
+        shim = STAGED / f"rt_cli_probe.{side}"
+        shim.write_text(
+            "#!/bin/sh\n"
+            f"exec /bin/sh /work/courts/phase16/rt_cli_probe.sh {binary} {modules}\n",
+            encoding="utf-8",
+        )
+        shim.chmod(0o755)
+    return CLI_SOURCE
+
+
 def cli_court(name: str, auth, work: Path) -> dict:
-    """`RT-CLI`: the CLI dispatch over fixed argv and the option tables, differentially."""
-    auth_bin = auth.prefix / "bin" / "openssl"
-    cand_bin = PHASE2 / "openssl"
+    """`RT-CLI`: the CLI dispatch over fixed argv and the option tables, differentially.
+
+    The instrument is the shell probe `stage_cli_probe` writes -- the CLI is an executable,
+    not a linkable symbol -- run once per side under the same environment the FRF runtime
+    harness uses, so the court venue and the FRF court share one probe rather than two
+    transcript generators that could drift.
+    """
+    del auth, work
     cases = cli_argv_cases()
-    a_out = cli_transcript(auth_bin, side_env(auth.libdir, auth.libdir / "ossl-modules"), cases)
-    c_out = cli_transcript(
-        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules"), cases
+    source = stage_cli_probe(cases)
+    a_out, a_err, a_code = run_probe(
+        STAGED / "rt_cli_probe.authority",
+        side_env(AUTH_PREFIX / "lib", AUTH_PREFIX / "lib" / "ossl-modules"),
+    )
+    c_out, c_err, c_code = run_probe(
+        STAGED / "rt_cli_probe.candidate",
+        side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules"),
     )
     residuals = diff(a_out, c_out)
     checks = cli_parser_checks()
     failures = [c for c in checks if not c["round_trip"]]
     return {
         "court": name,
+        "probe": rel(source),
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
         "argv_cases": len(cases),
         "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
         "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
@@ -302,6 +390,11 @@ def cli_court(name: str, auth, work: Path) -> dict:
         "parser_checks": len(checks),
         "parser_failures": failures,
         "verdict": "pass" if not residuals and not failures else "fail",
+        "staged_binaries": {
+            "authority": rel(STAGED / "rt_cli_probe.authority"),
+            "candidate": rel(STAGED / "rt_cli_probe.candidate"),
+        },
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
     }
 
 
@@ -449,6 +542,7 @@ def main(argv: list[str]) -> int:
     ]
     for _name, filename in COURTS:
         inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))
+    inputs.append(InputRef(name="probe", path=CLI_SOURCE))
     doc = envelope(kind="phase16-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
     write_json(OUT, doc)

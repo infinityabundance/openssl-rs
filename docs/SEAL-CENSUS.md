@@ -41,7 +41,7 @@ declared owner; this is that assignment.
 | 13 | Legacy / deprecated compatibility | `complete` | 189 | 377 | 377 | 0 | 0 |
 | 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
-| 16 | CLI / config / filesystem contract | `in-progress` | 0 | 42 | 42 | 0 | 0 |
+| 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `not-started` | 0 | — | — | — | — |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
@@ -510,9 +510,8 @@ Courts: `all pass`, 2 court(s), **33** authority observation(s) over 2 transcrip
 
 ## Phase 16 — CLI / config / filesystem contract
 
-* state: `in-progress`
-* blocking: phase 16 has no row in forensics/atlas/court-coverage.json; the court coverage join has not been performed for it
-* seal: none written yet (`unnamed`)
+* state: `complete`
+* seal: `docs/PHASE-16-CLI-SEAL.md`
 * ledger: `forensics/phase16-obligations.json`
 * atlas-owned: 0
 * owned working set: 42

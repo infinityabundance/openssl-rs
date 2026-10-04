@@ -31,6 +31,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <openssl/core_dispatch.h>
@@ -241,11 +242,35 @@ static void print_kdf(const char *label, const char *name)
     }
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     OSSL_PROVIDER *legacy;
     char *prov_name = NULL;
     OSSL_PARAM params[2];
+
+    /* The module search path is a distribution fact, and the two sides answer it
+     * differently: the authority is installed, so its compiled-in MODULESDIR
+     * resolves `legacy.so`; the candidate distribution shell is not installed, so its
+     * `ossl-modules/` directory is empty and the module must be named explicitly. The
+     * court venue sets `OPENSSL_MODULES` per side (its `side_env`); the FRF runtime
+     * harness sets only `LD_LIBRARY_PATH`. So the probe names its own side's directory
+     * when the variable is unset, deriving the side from `argv[0]` (the staged
+     * `<probe>.{authority,candidate}` name) so one source serves both and the court is
+     * reproducible under either harness. When the venue already set it, this is a no-op. */
+    {
+        const char *mods = getenv("OPENSSL_MODULES");
+        const char *self = (argc > 0 && argv[0] != NULL) ? argv[0] : "";
+
+        if (mods == NULL || mods[0] == '\0') {
+            if (strstr(self, "candidate") != NULL)
+                setenv("OPENSSL_MODULES",
+                       "/work/artifacts/phase2/install/lib/ossl-modules", 1);
+            else
+                setenv("OPENSSL_MODULES",
+                       "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/"
+                       "ossl-modules", 1);
+        }
+    }
 
     legacy = OSSL_PROVIDER_load(NULL, "legacy");
     printf("load.legacy=%d\n", legacy != NULL);

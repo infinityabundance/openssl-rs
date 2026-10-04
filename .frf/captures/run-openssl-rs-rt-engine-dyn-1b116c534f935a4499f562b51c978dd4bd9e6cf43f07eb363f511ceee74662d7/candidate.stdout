@@ -1,0 +1,11 @@
+FRF-MUTANT:stdout-first-line:transcript.sha256=67173164b74972b966d7560c9100fdef91be5b5a59ca3a8af74c916240b59c78
+by_id.null_nonnull=0
+init.dynamic.ret=1
+by_id.dynamic_nonnull=1
+by_id.dynamic_id=dynamic
+by_id.dynamic_name=Dynamic engine loading support
+by_id.dynamic_second_nonnull=1
+fallback.absent_nonnull=0
+fallback.absent2_nonnull=0
+by_id.empty_nonnull=0
+done=1

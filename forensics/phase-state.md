@@ -24,7 +24,7 @@ enforced here:
 | 13 | Legacy / deprecated compatibility | `complete` |  |
 | 14 | TLS / DTLS (libssl) | `complete` |  |
 | 15 | QUIC / ECH and modern SSL surface | `complete` |  |
-| 16 | CLI / config / filesystem contract | `in-progress` | phase 16 has no row in forensics/atlas/court-coverage.json; the court coverage join has not been performed for it |
+| 16 | CLI / config / filesystem contract | `complete` |  |
 | 17 | Downstream replacement court | `not-started` | not started |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | not started |
 | 19 | Performance / CPU dispatch | `not-started` | not started |

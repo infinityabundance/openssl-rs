@@ -34,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from atlas_common import (  # noqa: E402
     ATLAS,
+    NON_EXPORT_UNITS,
     SEAL_DOCS,
     content_hash,
     envelope,
@@ -349,15 +350,24 @@ def evidence_for(phase: int) -> tuple[list[str], list[str], str]:
     coverage = read_json(COVERAGE)
     if coverage:
         present.append(COVERAGE)
-        row = next((s for s in coverage["body"]["strata"] if s["phase"] == phase), None)
-        if row is None:
-            blocking = blocking or (
-                f"phase {phase} has no row in {COVERAGE}; the court coverage join has not "
-                f"been performed for it")
-        elif row["counts"]["unmatched"]:
-            blocking = blocking or (
-                f"{row['counts']['unmatched']} implemented export(s) of this stratum are "
-                f"in no court coverage set ({COVERAGE})")
+        # **A stratum whose ledger's unit is not an export universe is outside this join by
+        # the join's own definition.** `court_coverage.py` skips a non-export ledger
+        # (`atlas_common.NON_EXPORT_UNITS`) because it has no symbol set to partition, so it
+        # has no row here -- and, owning no export, no unmatched export either. Phase 16's
+        # `cli-config contract` is the case; Phase 22 is scoped out earlier by its own
+        # evidence branch. Demanding a row here would demand one the join cannot produce
+        # (D199/D236, D485).
+        unit = (ledger or {}).get("body", {}).get("unit")
+        if unit not in NON_EXPORT_UNITS:
+            row = next((s for s in coverage["body"]["strata"] if s["phase"] == phase), None)
+            if row is None:
+                blocking = blocking or (
+                    f"phase {phase} has no row in {COVERAGE}; the court coverage join has not "
+                    f"been performed for it")
+            elif row["counts"]["unmatched"]:
+                blocking = blocking or (
+                    f"{row['counts']['unmatched']} implemented export(s) of this stratum are "
+                    f"in no court coverage set ({COVERAGE})")
     else:
         absent.append(COVERAGE)
 

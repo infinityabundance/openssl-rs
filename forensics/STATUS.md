@@ -36,7 +36,7 @@ renderer does not know any phase status.
 | 13 | Legacy / deprecated compatibility | `complete` |  |
 | 14 | TLS / DTLS (libssl) | `complete` |  |
 | 15 | QUIC / ECH and modern SSL surface | `complete` |  |
-| 16 | CLI / config / filesystem contract | `in-progress` | phase 16 has no row in forensics/atlas/court-coverage.json; the court coverage join has not been performed for it |
+| 16 | CLI / config / filesystem contract | `complete` |  |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 17-21 (5 total).
