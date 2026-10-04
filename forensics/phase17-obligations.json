@@ -28,8 +28,8 @@
       },
       {
         "closure": "the `RT-DOWNSTREAM-CONSUMER` court passes",
-        "observation": "RT-DOWNSTREAM-CONSUMER is pending",
-        "state": "open",
+        "observation": "RT-DOWNSTREAM-CONSUMER is pass",
+        "state": "implemented",
         "surface": "artifacts/phase17/COURTS.json",
         "unit": "downstream-consumer",
         "what": "a real downstream consumer built against the candidate distribution shell"
@@ -40,8 +40,8 @@
       "contract_units": 4,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 2,
-      "open_in_this_stratum": 54,
+      "implemented": 3,
+      "open_in_this_stratum": 53,
       "owned": 56,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -499,7 +499,7 @@
     {
       "name": "phase-17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "4dc666e148fac9a9a1408ef53708911e162f419f8012dc95fcfbfdbbc4709ca7"
+      "sha256": "df13d3e76f12f3658bcc27390e2aae5dc280461636b6d027c5eb29e9966a6c59"
     }
   ],
   "kind": "phase17-obligations",
