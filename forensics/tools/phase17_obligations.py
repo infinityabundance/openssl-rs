@@ -11,11 +11,12 @@ This ledger does not decide its own universe
 --------------------------------------------
 The universe is two atlas-derived row kinds, and nothing is typed:
 
-  * **the CLI command unit deferrals** — every `units` row of `forensics/prerequisites.json` whose
-    `owner_phase` is 17 (the 52 `apps/<name>.c` command bodies D530 handed here from Phase 16.4);
+  * **the CLI command bodies** — the 52 `apps/<name>.c` units D530 handed here from Phase 16.4,
+    recorded in `forensics/prerequisites.json` either as `deferred_to_later_stratum` rows with
+    `owner_phase` 17 or as the `reached_by_a_named_construct` records that discharge them;
   * **the downstream replacement contract units** — four authored policy rows naming the surfaces
-    `docs/PHASE-17-SUBPHASES.md` records, each state derived from the atlas that measures it: the 52
-    unit deferrals, the `RT-TLS13-INTEROP` court, the `RT-CROSS-DSO-STATE` court and the
+    `docs/PHASE-17-SUBPHASES.md` records, each state derived from the atlas that measures it: the
+    command bodies, the `RT-TLS13-INTEROP` court, the `RT-CROSS-DSO-STATE` court and the
     `RT-DOWNSTREAM-CONSUMER` court.
 
 Because the unit is not a symbol, `body.unit` names it in `atlas_common.NON_EXPORT_UNITS`, and the
@@ -95,6 +96,16 @@ COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
      "a real downstream consumer built against the candidate distribution shell"),
 )
 
+# D530 hands this stratum the 52 `apps/<name>.c` command bodies. A body's row is
+# `deferred_to_later_stratum` with `owner_phase: 17` until 17.1 lands it, at which point the row is
+# rewritten to the `reached_by_a_named_construct` record `plan_reconciliation.py` requires for a unit
+# the three mechanical signals cannot see (the same shape `apps/openssl.c` already carries). The
+# ledger's command-body universe is therefore those units **in either state**, and it fails closed
+# unless all 52 are still recorded. The dispatcher unit is Phase 16.4's, not one of the 52, and is
+# excluded.
+COMMAND_BODIES = 52
+DISPATCHER_UNIT = "apps/openssl.c"
+
 
 def load(relpath: str) -> dict:
     """Read an atlas, failing closed when it is absent.
@@ -126,16 +137,41 @@ def court_state(courts_body: dict, court: str) -> tuple[bool, str]:
     return False, "not registered"
 
 
+def command_body_rows(prereq: dict) -> list[dict]:
+    """The 52 `apps/<name>.c` command-body rows, in either the deferred or the discharged state.
+
+    D530 handed this stratum 52 command bodies. Before 17.1 lands one, its row is
+    `deferred_to_later_stratum` with `owner_phase: 17`; once landed, the row is rewritten to
+    `reached_by_a_named_construct` -- the disposition `plan_reconciliation.py` defines for a unit the
+    three mechanical signals cannot see. Both states record the unit, so this is the universe the
+    ledger holds itself to. The dispatcher `apps/openssl.c` is Phase 16.4's and is not one of the 52.
+    """
+    rows: list[dict] = []
+    for r in prereq["units"]:
+        unit = str(r.get("unit", ""))
+        if not unit.startswith("apps/") or unit == DISPATCHER_UNIT:
+            continue
+        cls = r.get("class")
+        if cls == "deferred_to_later_stratum":
+            if int(r.get("owner_phase", -1)) == PHASE:
+                rows.append(r)
+        elif cls == "reached_by_a_named_construct":
+            rows.append(r)
+    return rows
+
+
 def contract_units(prereq: dict, courts_body: dict) -> list[dict]:
     """The downstream replacement contract, each unit's state derived from its own surface.
 
     The units are policy -- which surfaces are the contract -- but no unit's state is typed:
-    `command-bodies` is closed when every `apps/<name>.c` unit this stratum owns is discharged, and
+    `command-bodies` is closed when no `apps/<name>.c` unit remains deferred to this stratum, and
     each of the three court units is closed when its court passes. Each names the atlas or registry
     that measures it.
     """
     outstanding = sorted(
-        r["unit"] for r in prereq["units"] if int(r.get("owner_phase", -1)) == PHASE
+        r["unit"] for r in prereq["units"]
+        if r.get("class") == "deferred_to_later_stratum"
+        and int(r.get("owner_phase", -1)) == PHASE
     )
     units = [
         {
@@ -208,6 +244,22 @@ def main(argv: list[str]) -> int:
         for r in prereq["deferrals"]
         if int(r.get("owner_phase", -1)) == PHASE
     ]
+    # D530's 52 command bodies are the universe, recorded either as a `deferred_to_later_stratum`
+    # row (owner_phase 17) or as the `reached_by_a_named_construct` record that discharges it. The
+    # fail-closed check is that the plane still records all 52: a universe that emptied because the
+    # records were dropped -- rather than discharged -- is fatal rather than an
+    # `open_in_this_stratum` of zero.
+    command_bodies = command_body_rows(prereq)
+    if len(command_bodies) < COMMAND_BODIES:
+        raise SystemExit(
+            f"phase17-obligations: forensics/prerequisites.json records only "
+            f"{len(command_bodies)} of the {COMMAND_BODIES} `apps/<name>.c` command bodies D530 "
+            f"hands this stratum, whether as `deferred_to_later_stratum` with `owner_phase` 17 or "
+            f"as the `reached_by_a_named_construct` record that discharges one; the prerequisite "
+            f"plane or this ledger's plan is wrong"
+        )
+    # A unit row is owed while it is still a deferral; discharging one rewrites it to a reached
+    # record, so a *present deferred* row counts as open here rather than as a second, typed state.
     unit_deferrals = [
         {
             "kind": "unit",
@@ -217,21 +269,12 @@ def main(argv: list[str]) -> int:
             "evidence": r.get("evidence"),
             "reason": r.get("reason"),
         }
-        for r in prereq["units"]
-        if int(r.get("owner_phase", -1)) == PHASE
+        for r in command_bodies
+        if r.get("class") == "deferred_to_later_stratum"
     ]
-    if not unit_deferrals:
-        raise SystemExit(
-            "phase17-obligations: forensics/prerequisites.json records no unit with owner_phase 17, "
-            "but D530 hands this stratum the 52 `apps/<name>.c` command bodies; the prerequisite "
-            "plane or this ledger's plan is wrong"
-        )
 
     contracts = contract_units(prereq, courts_body)
 
-    # A unit row is owed while it is recorded; discharging one means removing it from
-    # `forensics/prerequisites.json`, which the prerequisite plane enforces as `stale_deferral`.
-    # So a present row counts as open here rather than as a second, typed state.
     owned = len(provider_rows) + len(deferrals) + len(unit_deferrals) + len(contracts)
     implemented_count = len([u for u in contracts if u["state"] == "implemented"])
     open_count = owned - implemented_count
@@ -255,12 +298,14 @@ def main(argv: list[str]) -> int:
 
     body = {
         "rule": (
-            "this stratum's working set is not a set of exported symbols: it is (a) every unit row "
-            "forensics/prerequisites.json records with owner_phase 17 (the 52 `apps/<name>.c` "
-            "command bodies), and (b) the downstream replacement contract units "
-            "docs/PHASE-17-SUBPHASES.md names, each measured by the prerequisite plane or by the "
-            "Phase-17 courts registry. Every row is read from those atlases; the ledger types none "
-            "of them, and `main` fails closed if the ownership atlas assigns this stratum an export"
+            "this stratum's working set is not a set of exported symbols: it is (a) the 52 "
+            "`apps/<name>.c` command bodies D530 hands it, which forensics/prerequisites.json "
+            "records either as `deferred_to_later_stratum` rows with owner_phase 17 or as the "
+            "`reached_by_a_named_construct` records that discharge them, and (b) the downstream "
+            "replacement contract units docs/PHASE-17-SUBPHASES.md names, each measured by the "
+            "prerequisite plane or by the Phase-17 courts registry. Every row is read from those "
+            "atlases; the ledger types none of them, and `main` fails closed if the ownership atlas "
+            "assigns this stratum an export or the prerequisite plane drops a command body"
         ),
         "unit": UNIT,
         "counts": counts,
@@ -279,14 +324,16 @@ def main(argv: list[str]) -> int:
             "`open` *export* lists are empty by measurement and `open_in_this_stratum` is the live "
             "count. Phase 17 owns no provider registration row: it activates no provider, and the "
             "39 legacy rows the census assigns are the loadable module Phase 16 owns (D525). The 52 "
-            "unit deferrals are the `apps/<name>.c` command bodies Phase 16.4 landed a dispatcher "
-            "for but not the bodies (D530): they reach `src/apps/openssl.rs`'s `not_landed` "
-            "boundary, and plan_reconciliation.py holds this stratum to them. The four contract "
+            "command bodies are the `apps/<name>.c` units Phase 16.4 landed a dispatcher for but not "
+            "the bodies (D530): each landed body's row is rewritten from `deferred_to_later_stratum` "
+            "to the `reached_by_a_named_construct` record `plan_reconciliation.py` requires, so "
+            "`unit_deferrals` is empty once all 52 are discharged and the ledger fails closed unless "
+            "the plane still records all 52. The four contract "
             "units are the downstream replacement contract docs/PHASE-17-SUBPHASES.md section 1 "
             "names -- the command bodies, a real TLS 1.3 interoperability handshake, the cross-DSO "
-            "shared state and a real downstream consumer -- and at activation all four are open, so "
-            "this stratum's working set is exactly its 52 unit deferrals and its four contract "
-            "units. Nothing here is a parity claim: a published command body or a passing handshake "
+            "shared state and a real downstream consumer -- and the three courts pass while "
+            "`command-bodies` closes with the last landed body. Nothing here is a parity claim: a "
+            "published command body or a passing handshake "
             "is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and "
             "docs/PHASE-17-SUBPHASES.md section 4 decides when the stratum may be called complete."
         ),
