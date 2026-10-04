@@ -812,14 +812,27 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 q += 2;
             }
         }
-        if etype == TLSEXT_TYPE_KEY_SHARE && eb.len() >= 4 {
-            // The first ClientHello key share's group. The reduced client writes
-            // `group || key_exchange_len || key` (17.2b's `tls_construct_ctos_key_share`), so the
-            // key bytes follow the 4-byte prefix.
-            saw_keyshare_group = ((eb[0] as u16) << 8) | eb[1] as u16;
-            let klen = ((eb[2] as usize) << 8) | eb[3] as usize;
-            if 4 + klen <= eb.len() {
-                client_share = &eb[4..4 + klen];
+        if etype == TLSEXT_TYPE_KEY_SHARE && eb.len() >= 2 {
+            // `KeyShareClientHello { KeyShareEntry client_shares<0..2^16-1>; }` — the body begins
+            // with a two-byte list length (`extensions_srvr.c:857`, RFC 8446 §4.2.8). The reduced
+            // server can only complete an `X25519` exchange, so it selects the `X25519` entry
+            // wherever it appears in the list (the authority sends X25519MLKEM768 first, then
+            // X25519).
+            let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
+            let end = (2 + list_len).min(eb.len());
+            let mut q = 2usize;
+            while q + 4 <= end {
+                let g = ((eb[q] as u16) << 8) | eb[q + 1] as u16;
+                let klen = ((eb[q + 2] as usize) << 8) | eb[q + 3] as usize;
+                if q + 4 + klen > eb.len() {
+                    break;
+                }
+                if g == crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519 && klen == 32 {
+                    saw_keyshare_group = g;
+                    client_share = &eb[q + 4..q + 4 + klen];
+                    break;
+                }
+                q += 4 + klen;
             }
         }
         off += elen;
@@ -1010,8 +1023,14 @@ const MSG_FLOW_READING_13: c_int = 2;
 /// # Safety
 /// `s` is live.
 unsafe fn tls13_construct_encrypted_extensions(s: *mut Ssl) -> c_int {
-    // SAFETY: `s` is live; a zero-length body.
-    unsafe { crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_EE, core::ptr::null(), 0) }
+    // The `EncryptedExtensions` body is an `Extension extensions<0..2^16-1>` vector even when empty,
+    // so the reduced flight writes the two-byte zero-length prefix (`tls_construct_encrypted_
+    // extensions`, `statem_srvr.c:4591`; RFC 8446 §4.3.1).
+    let body = [0u8, 0u8];
+    // SAFETY: `s` is live; `body` is two initialised bytes.
+    unsafe {
+        crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_EE, body.as_ptr(), body.len())
+    }
 }
 
 /// `CON_FUNC_RETURN tls_construct_server_certificate(...)` — `statem_srvr.c:4019-4055` over
@@ -1042,7 +1061,10 @@ unsafe fn tls13_construct_certificate(s: *mut Ssl) -> c_int {
     if derlen > der.len() {
         return 0;
     }
-    let clen = 3 + derlen;
+    // `CertificateEntry` is `cert_data<1..2^24-1> || extensions<0..2^16-1>` (`ssl3.h`,
+    // RFC 8446 §4.4.2): the six-byte entry prefix plus the empty two-byte extension block.
+    let entry_len = 3 + derlen + 2;
+    let clen = entry_len;
     let body_len = 4 + clen;
     let mut body = [0u8; 8200];
     if body_len > body.len() {
@@ -1057,6 +1079,9 @@ unsafe fn tls13_construct_certificate(s: *mut Ssl) -> c_int {
     body[6] = derlen as u8;
     // SAFETY: `body[7..]` has room for `derlen` bytes.
     unsafe { core::ptr::copy_nonoverlapping(der.as_ptr(), body.as_mut_ptr().add(7), derlen) };
+    // The per-certificate extension block is empty: `extensions<0..2^16-1>` = `00 00`.
+    body[7 + derlen] = 0;
+    body[8 + derlen] = 0;
     // SAFETY: `s` is live; `body` is `body_len` initialised bytes.
     unsafe {
         crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body.as_ptr(), body_len)
@@ -1074,6 +1099,16 @@ unsafe fn tls13_construct_cert_verify(s: *mut Ssl) -> c_int {
     use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_free, EVP_MD_CTX_new};
     use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey::EvpPkey;
+    use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
+    use crate::rsa::ctrl::{
+        EVP_PKEY_CTX_set_rsa_mgf1_md, EVP_PKEY_CTX_set_rsa_padding,
+        EVP_PKEY_CTX_set_rsa_pss_saltlen,
+    };
+    // `RSA_PKCS1_PSS_PADDING` — `include/openssl/rsa.h:321`.
+    const RSA_PKCS1_PSS_PADDING: c_int = 6;
+    // `RSA_PSS_SALTLEN_DIGEST` — `include/openssl/rsa.h`: salt length equals the digest length,
+    // which RFC 8446 §4.2.3 requires for `rsa_pss_rsae_sha256`.
+    const RSA_PSS_SALTLEN_DIGEST: c_int = -1;
     // SAFETY: `s` is live.
     let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
     if cpk.is_null() {
@@ -1114,20 +1149,23 @@ unsafe fn tls13_construct_cert_verify(s: *mut Ssl) -> c_int {
     // SAFETY: `mctx`/`pkey` are live; `tbs` is `pos` initialised bytes.
     unsafe {
         let mut siglen = 0usize;
-        if EVP_DigestSignInit(
-            mctx,
-            core::ptr::null_mut(),
-            EVP_sha256(),
-            core::ptr::null_mut(),
-            pkey,
-        ) > 0
+        let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
+        let md = EVP_sha256();
+        if EVP_DigestSignInit(mctx, &mut pctx, md, core::ptr::null_mut(), pkey) > 0
+            && !pctx.is_null()
+            && EVP_PKEY_CTX_set_signature_md(pctx, md) > 0
+            && EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PSS_PADDING) > 0
+            && EVP_PKEY_CTX_set_rsa_pss_saltlen(pctx, RSA_PSS_SALTLEN_DIGEST) > 0
+            && EVP_PKEY_CTX_set_rsa_mgf1_md(pctx, md) > 0
             && EVP_DigestSign(mctx, core::ptr::null_mut(), &mut siglen, tbs.as_ptr(), pos) > 0
             && siglen <= 1024
         {
             let mut sig = [0u8; 1024];
             if EVP_DigestSign(mctx, sig.as_mut_ptr(), &mut siglen, tbs.as_ptr(), pos) > 0 {
                 let mut body = [0u8; 1030];
-                // rsa_pss_rsae_sha256 — `tls13.h`/`t1_lib.c` sigalg table (0x0804).
+                // `rsa_pss_rsae_sha256` — `tls13.h`/`t1_lib.c` sigalg table (0x0804). TLS 1.3
+                // requires an RSASSA-PSS scheme for an RSA key (`tls12_check_peer_sigalg`,
+                // `tls1_lib.c:2700-2739`; RFC 8446 §4.2.3).
                 body[0] = 0x08;
                 body[1] = 0x04;
                 body[2] = (siglen >> 8) as u8;
@@ -1261,14 +1299,12 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
             match (*s).hand_state {
                 TLS_ST_BEFORE => {
                     let mut buf = [0u8; 16384];
-                    let mut rt = 0u8;
-                    let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
+                    let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        &mut rt,
                         buf.as_mut_ptr(),
                         buf.len(),
                     );
-                    if n <= 0 || rt != SSL3_RT_HANDSHAKE || buf[0] != SSL3_MT_CLIENT_HELLO_BODY {
+                    if n <= 0 || buf[0] != SSL3_MT_CLIENT_HELLO_BODY {
                         return server_wait(s);
                     }
                     if tls_process_client_hello(s, &buf[..n as usize]) == 0 {
@@ -1286,14 +1322,12 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                 }
                 TLS_ST_SR_FINISHED => {
                     let mut buf = [0u8; 16384];
-                    let mut rt = 0u8;
-                    let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
+                    let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
                         s,
-                        &mut rt,
                         buf.as_mut_ptr(),
                         buf.len(),
                     );
-                    if n <= 0 || rt != SSL3_RT_HANDSHAKE || buf[0] != SSL3_MT_FIN {
+                    if n <= 0 || buf[0] != SSL3_MT_FIN {
                         return server_wait(s);
                     }
                     let secret = (*s).client_hs_traffic.as_ptr();

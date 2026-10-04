@@ -675,6 +675,10 @@
       "observations": 69,
       "verdict": "pass"
     },
+    "RT-TLS13-INTEROP-MATRIX": {
+      "observations": 154,
+      "verdict": "pass"
+    },
     "RT-TS": {
       "observations": 275,
       "verdict": "pass"

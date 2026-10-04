@@ -607,7 +607,7 @@
         "stratum": "CLI / config / filesystem contract"
       },
       {
-        "blocking": "Phase 17's FRF chain entry is incomplete: 4 court(s) that artifacts/phase17/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 4 of 4 required court(s) have no FRF declaration staging their artifacts/phase17/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 4 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 4 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 4 required court(s)",
+        "blocking": "Phase 17's FRF chain entry is incomplete: 5 court(s) that artifacts/phase17/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 5 of 5 required court(s) have no FRF declaration staging their artifacts/phase17/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 5 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 5 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 5 required court(s)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -699,7 +699,7 @@
       "not_started": 4
     }
   },
-  "body_hash": "d517f87bf6c202416f374963ac9f315f8e9305e5365193705e49b27e661d82cb",
+  "body_hash": "f9bb03c16f8a25f1a61382e207c409c106c06234c45592271cc17e3186a17ef6",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

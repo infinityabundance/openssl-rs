@@ -16,7 +16,7 @@ The universe is two atlas-derived row kinds, and nothing is typed:
     `owner_phase` 17 or as the `reached_by_a_named_construct` records that discharge them;
   * **the downstream replacement contract units** — four authored policy rows naming the surfaces
     `docs/PHASE-17-SUBPHASES.md` records, each state derived from the atlas that measures it: the
-    command bodies, the `RT-TLS13-INTEROP` court, the `RT-CROSS-DSO-STATE` court and the
+    command bodies, the `RT-TLS13-INTEROP-MATRIX` court, the `RT-CROSS-DSO-STATE` court and the
     `RT-DOWNSTREAM-CONSUMER` court.
 
 Because the unit is not a symbol, `body.unit` names it in `atlas_common.NON_EXPORT_UNITS`, and the
@@ -85,9 +85,10 @@ UNIT = "downstream replacement contract"
 # is measured by the prerequisite plane instead, because the 52 `apps/<name>.c` units are the
 # contract the courts then exercise. `(unit, court, closure, what)`.
 COURT_UNITS: tuple[tuple[str, str, str, str], ...] = (
-    ("tls13-interop", "RT-TLS13-INTEROP",
-     "the `RT-TLS13-INTEROP` court passes",
-     "a real TLS 1.3 client/server flight, ClientHello through Finished plus application data"),
+    ("tls13-interop", "RT-TLS13-INTEROP-MATRIX",
+     "the `RT-TLS13-INTEROP-MATRIX` court passes",
+     "a real TLS 1.3 client/server flight, ClientHello through Finished plus application data, "
+     "over all four authority/candidate client-server cells"),
     ("cross-dso-state", "RT-CROSS-DSO-STATE",
      "the `RT-CROSS-DSO-STATE` court passes",
      "an ERR/`CONF` raised through one DSO and read through another"),

@@ -12,23 +12,26 @@
 //!
 //! Landed: `tls_construct_extensions`'s `WPACKET_start_sub_packet_u16`/`WPACKET_close` shell with
 //! the `WPACKET_FLAGS_ABANDON_ON_ZERO_LENGTH` flag the authority sets for a ClientHello, and the
-//! constructors for `supported_versions`, `psk_kex_modes`, `encrypt_then_mac`,
-//! `extended_master_secret` and `session_ticket`, each transcribed from its `extensions_clnt.c`
-//! body. **17.2b** adds `supported_groups` and `key_share` (the `X25519` share, generated through
-//! the crate's EVP) over the reduced built-in default group list (`ssl/t1_lib.rs`).
+//! constructors for `renegotiation_info`, `ec_point_formats`, `supported_groups`,
+//! `signature_algorithms`, `session_ticket`, `encrypt_then_mac`, `extended_master_secret`,
+//! `supported_versions`, `psk_kex_modes` and `key_share` (the `X25519` share, generated through
+//! the crate's EVP) over the reduced built-in default group list (`ssl/t1_lib.rs`). **17.2**
+//! (the interop fix) adds `renegotiation_info`, `ec_point_formats` and `signature_algorithms`, each
+//! over a fixed table: the sigalg list is the authority's own wire ordering transcribed into
+//! `CLIENT_SIGALGS`, and the key share carries the outer two-byte `client_shares` list length the
+//! authority's `tls_parse_ctos_key_share` reads (`extensions_srvr.c:857`).
 //!
 //! Named boundaries (not fabricated):
 //!
-//! * **`renegotiation_info` and `ec_point_formats` are not constructed.** Their constructors need
-//!   the effective security level's version arm (`ssl_security(s, SSL_SECOP_VERSION, ...)`, whose
-//!   candidate callback `ssl_lib.rs` reduces to `1`) and the supported-group list's policy walk, so
-//!   a faithful body cannot be produced yet. They are named here rather than guessed.
-//! * **`signature_algorithms` is not constructed.** It needs the client sigalg list
-//!   (`tls12_get_psigalgs`), which is unlanded; the flight cannot reach `Finished` without it.
-//! * **The `key_share` body is reduced.** The authority's default group list marks `X25519MLKEM768`
-//!   and `X25519` for a key share; the hybrid KEM is the key-schedule boundary, so only the `X25519`
-//!   share is built. The `ssl_derive`/key-schedule step the authority's constructor ends with is
-//!   not called.
+//! * **`supported_groups` is reduced.** The authority's default group list marks `X25519MLKEM768`
+//!   and `X25519` for a key share; the hybrid KEM is a later stratum, so the reduced list carries
+//!   `X25519` (plus the other named curves) and only the `X25519` share is built.
+//! * **`renegotiation_info`/`ec_point_formats` are the authority's non-renegotiating arms.** The
+//!   authority's `ssl_security`/`use_ecc` guards are reduced to "not renegotiating" and "the
+//!   default group list is non-empty", so the empty RI extension and the single uncompressed point
+//!   format are written directly.
+//! * **`signature_algorithms` uses the fixed list.** `tls12_get_psigalgs`'s policy walk is the
+//!   boundary [`CLIENT_SIGALGS`] substitutes for.
 //! * **`session_ticket` is reduced.** `tls_use_ticket` (`ssl/statem/statem_lib.c`) is unlanded; the
 //!   constructor keeps the authority's `SSL_OP_NO_TICKET` guard and the empty-ticket body a fresh
 //!   connection without a resumption ticket produces.
@@ -48,11 +51,11 @@ use crate::ssl::statem::statem_lib::ssl_get_min_max_version;
 use crate::ssl::t1_lib::{tls1_get_supported_groups, OSSL_TLS_GROUP_ID_x25519};
 
 /// `TLSEXT_TYPE_renegotiate` — `tls1.h:110`.
-#[allow(dead_code)]
 const TLSEXT_TYPE_RENEGOTIATE: u16 = 0xff01;
 /// `TLSEXT_TYPE_ec_point_formats` — `tls1.h:104`.
-#[allow(dead_code)]
 const TLSEXT_TYPE_EC_POINT_FORMATS: u16 = 11;
+/// `TLSEXT_TYPE_signature_algorithms` — `tls1.h:96`.
+const TLSEXT_TYPE_SIGNATURE_ALGORITHMS: u16 = 13;
 /// `TLSEXT_TYPE_session_ticket` — `tls1.h` (35).
 const TLSEXT_TYPE_SESSION_TICKET: u16 = 35;
 /// `TLSEXT_TYPE_encrypt_then_mac` — `tls1.h:106`.
@@ -76,6 +79,16 @@ const TLS1_VERSION: c_int = 0x0301;
 /// `SSL_SECOP_VERSION` — `ssl.h:2718`.
 #[allow(dead_code)]
 const SSL_SECOP_VERSION: c_int = 1;
+
+/// The authority's default client signature-algorithm list (`tls12_get_psigalgs`,
+/// `ssl/t1_lib.c`): the byte sequence the authority's own ClientHello carries, in order --
+/// ECDSA/EdDSA pairs then the RSA-PSS and RSA-PKCS1 families. The reduced client has no sigalg
+/// table, so the wire list is transcribed verbatim from the authority's ClientHello.
+const CLIENT_SIGALGS: [u16; 26] = [
+    0x0905, 0x0906, 0x0904, 0x0403, 0x0503, 0x0603, 0x0807, 0x0808, 0x081a, 0x081b, 0x081c, 0x0809,
+    0x080a, 0x080b, 0x0804, 0x0805, 0x0806, 0x0401, 0x0501, 0x0601, 0x0303, 0x0301, 0x0302, 0x0402,
+    0x0502, 0x0602,
+];
 
 /// `TLSEXT_KEX_MODE_KE_DHE` — `tls1.h` (the `psk_dhe_ke` mode).
 const TLSEXT_KEX_MODE_KE_DHE: u8 = 1;
@@ -160,6 +173,75 @@ unsafe fn tls_construct_ctos_psk_kex_modes(s: *mut Ssl, pkt: *mut Wpacket) -> c_
     EXT_RETURN_SENT
 }
 
+/// `EXT_RETURN tls_construct_ctos_renegotiate(...)` — `extensions_clnt.c:16-60`, the
+/// non-renegotiating arm: an empty `renegotiated_connection` vector advertises secure
+/// renegotiation. The authority's guard sends it whenever the connection is not pinned to TLS 1.3,
+/// which the reduced client's default (TLS 1.2 minimum) is.
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_ctos_renegotiate(_s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // SAFETY: `pkt` is live.
+    unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_RENEGOTIATE) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_put_bytes_u8(pkt, 0) == 0
+            || WPACKET_close(pkt) == 0
+        {
+            return EXT_RETURN_FAIL;
+        }
+    }
+    EXT_RETURN_SENT
+}
+
+/// `EXT_RETURN tls_construct_ctos_ec_pt_formats(...)` — `extensions_clnt.c:183-212`: the default
+/// format list is the single uncompressed point format (`tls1_get_formatlist`, `tls1.h`).
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_ctos_ec_pt_formats(_s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // SAFETY: `pkt` is live. The body is `ec_point_format_list<1..2^8-1>` = `{0}`.
+    unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_EC_POINT_FORMATS) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 1) == 0
+            || WPACKET_put_bytes_u8(pkt, 0) == 0
+            || WPACKET_close(pkt) == 0
+            || WPACKET_close(pkt) == 0
+        {
+            return EXT_RETURN_FAIL;
+        }
+    }
+    EXT_RETURN_SENT
+}
+
+/// `EXT_RETURN tls_construct_ctos_sig_algs(...)` — `extensions_clnt.c:323-360`. The reduced
+/// client's sigalg list is the fixed [`CLIENT_SIGALGS`] table (the authority's own wire ordering);
+/// `tls12_get_psigalgs`'s policy walk is the boundary this substitutes for.
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_ctos_sig_algs(_s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // SAFETY: `pkt` is live.
+    unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_SIGNATURE_ALGORITHMS) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+        {
+            return EXT_RETURN_FAIL;
+        }
+        for a in CLIENT_SIGALGS {
+            if WPACKET_put_bytes_u16(pkt, a) == 0 {
+                return EXT_RETURN_FAIL;
+            }
+        }
+        if WPACKET_close(pkt) == 0 || WPACKET_close(pkt) == 0 {
+            return EXT_RETURN_FAIL;
+        }
+    }
+    EXT_RETURN_SENT
+}
+
 /// `EXT_RETURN tls_construct_ctos_supported_groups(...)` — `extensions_clnt.c:214-281`.
 ///
 /// The `use_ecc` gate is reduced to "the default group list is non-empty" (this stratum has no
@@ -228,13 +310,17 @@ unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
         return EXT_RETURN_FAIL;
     }
 
-    // SAFETY: `pkt` is live and `pub_` is `publen` readable bytes.
+    // SAFETY: `pkt` is live and `pub_` is `publen` readable bytes. The body is
+    // `KeyShareClientHello { KeyShareEntry client_shares<0..2^16-1>; }`: the outer two-byte list
+    // length the authority's `tls_parse_ctos_key_share` reads (`extensions_srvr.c:857`).
     let ret = unsafe {
         if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_KEY_SHARE) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
             || WPACKET_start_sub_packet_len__(pkt, 2) == 0
             || WPACKET_put_bytes_u16(pkt, group) == 0
             || WPACKET_start_sub_packet_len__(pkt, 2) == 0
             || WPACKET_memcpy(pkt, pub_.cast(), publen) == 0
+            || WPACKET_close(pkt) == 0
             || WPACKET_close(pkt) == 0
             || WPACKET_close(pkt) == 0
         {
@@ -340,12 +426,28 @@ pub(crate) unsafe fn tls_construct_extensions(s: *mut Ssl, pkt: *mut Wpacket) ->
         }
     }
 
-    // `tls_construct_ctos_renegotiate`, `tls_construct_ctos_ec_pt_formats` and
-    // `tls_construct_ctos_sig_algs` are named boundaries (module header). The remaining rows, in
-    // `ext_defs[]` order.
+    // The remaining rows, in `ext_defs[]` order, matching the authority's ClientHello: the
+    // renegotiation info, the EC point formats, supported_groups, signature_algorithms, the
+    // session ticket, encrypt_then_mac, extended_master_secret, supported_versions,
+    // psk_kex_modes and key_share.
     let mut ret;
     // SAFETY: live per the contract.
+    ret = unsafe { tls_construct_ctos_renegotiate(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
+    // SAFETY: live per the contract.
+    ret = unsafe { tls_construct_ctos_ec_pt_formats(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
+    // SAFETY: live per the contract.
     ret = unsafe { tls_construct_ctos_supported_groups(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
+    // SAFETY: live per the contract.
+    ret = unsafe { tls_construct_ctos_sig_algs(s, pkt) };
     if ret == EXT_RETURN_FAIL {
         return 0;
     }
