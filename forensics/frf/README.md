@@ -157,11 +157,12 @@ requires each mutation to be seen on its targeted axis **and on no other**.
 | `openssl-cli-dgst` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-inventory` | seen on stdout only | seen on exit only | **has** sensitivity evidence |
 | `openssl-cli-version` | refused | refused | observations only |
-| `openssl-rs-rt-*` (all 132 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
+| `openssl-rs-rt-*` (all 137 runtime courts) | seen on stdout only | seen on exit only | **have** sensitivity evidence |
 
-The runtime count is 132 as of this revision: ten Phase 3 courts, seventeen Phase 4, nine
+The runtime count is 137 as of this revision: ten Phase 3 courts, seventeen Phase 4, nine
 Phase 5, nine Phase 6, nineteen Phase 7, fifteen Phase 8, four Phase 9, five Phase 10, nine
-Phase 11, ten Phase 12, eight Phase 13, ten Phase 14, one Phase 15, and six Phase 16. The
+Phase 11, ten Phase 12, eight Phase 13, ten Phase 14, one Phase 15, six Phase 16, and five
+Phase 17. The
 Phase 7 nineteen
 arrived with D200, the Phase 8 fifteen with D413, and the Phase 9 four with the FRF chain entry this
 revision adds; the Phase 10 five arrived with the stratum's seal, and the Phase 11 nine with its own.

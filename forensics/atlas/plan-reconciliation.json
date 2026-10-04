@@ -4,22 +4,10 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {
-      "names_a_file_the_authority_does_not_have": 1,
-      "units_not_reached": 1
-    },
-    "census_by_stratum": {
-      "17": 2
-    },
+    "census": {},
+    "census_by_stratum": {},
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {
-      "names_a_file_the_authority_does_not_have": [
-        "docs/PHASE-17-SUBPHASES.md:17:17.2:ssl/extensions_clnt.c"
-      ],
-      "units_not_reached": [
-        "ssl/t1_enc.c"
-      ]
-    },
+    "census_samples": {},
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -40,10 +28,10 @@
       "rows_judged": 183,
       "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
-      "unit_records": 151,
-      "units_named_by_a_record": 160,
-      "units_named_by_a_row": 548,
-      "units_reached": 547
+      "unit_records": 152,
+      "units_named_by_a_record": 161,
+      "units_named_by_a_row": 549,
+      "units_reached": 549
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -7013,6 +7001,35 @@
           "src/ssl/ssl_txt.rs"
         ]
       },
+      "ssl/statem/extensions_clnt.c": {
+        "defines": [
+          "tls_construct_ctos_alpn",
+          "tls_construct_ctos_client_cert_type",
+          "tls_construct_ctos_cookie",
+          "tls_construct_ctos_early_data",
+          "tls_construct_ctos_ec_pt_formats",
+          "tls_construct_ctos_ems",
+          "tls_construct_ctos_etm",
+          "tls_construct_ctos_key_share",
+          "tls_construct_ctos_maxfragmentlen",
+          "tls_construct_ctos_npn",
+          "tls_construct_ctos_padding",
+          "tls_construct_ctos_post_handshake_auth",
+          "tls_construct_ctos_psk",
+          "tls_construct_ctos_psk_kex_modes",
+          "tls_construct_ctos_renegotiate",
+          "tls_construct_ctos_sct",
+          "tls_construct_ctos_server_cert_type",
+          "tls_construct_ctos_server_name",
+          "tls_construct_ctos_session_ticket",
+          "tls_construct_ctos_sig_algs"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "17:17.2"
+        ],
+        "transcribed_by": []
+      },
       "ssl/statem/extensions_cust.c": {
         "defines": [
           "custom_ext_add",
@@ -7198,7 +7215,7 @@
           "tls1_generate_master_secret",
           "tls1_setup_key_block"
         ],
-        "recorded_by": null,
+        "recorded_by": "units:ssl/t1_enc.c",
         "subphases": [
           "17:17.2"
         ],
@@ -8072,6 +8089,11 @@
         "class": "reached_by_a_named_construct",
         "crate_module": "src/provider/legacyprov.rs",
         "owner_phase": null
+      },
+      "ssl/t1_enc.c": {
+        "class": "reached_by_a_named_construct",
+        "crate_module": "src/ssl/t1_enc.rs",
+        "owner_phase": null
       }
     },
     "universes": {
@@ -8080,7 +8102,7 @@
       "transcribed_units": 596
     }
   },
-  "body_hash": "56e0897fdb0bc5ee5a08d08012029a01307a9002154afd918080525398be3247",
+  "body_hash": "e24835c47ca23b3e46fb6464c8cb58bd451dd70105b2000b964c3e6f6ede0530",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -8101,12 +8123,12 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "dcd7266c3931ec5e3cf4ff5989956961778f3c1a3cf6e283ffd9f6ecf1d8a16e"
+      "sha256": "20dd3fc891be2b1e13cc1381594de0d92487fbf3c8b5dba9e7419897c0218d62"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "cde9ccd7156ba430f72536e8784d56a14722fa3179ed7512f384fb935eb2cc5b"
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
     },
     {
       "name": "source-manifest",
@@ -8151,7 +8173,7 @@
     {
       "name": "plan-PHASE-17-SUBPHASES",
       "path": "docs/PHASE-17-SUBPHASES.md",
-      "sha256": "b4016f838f5316104588e0ea19c132114bfc21b7900177d636c57d00f1c694c4"
+      "sha256": "39993c520778e80fa01a4db3ca384924785003d5ddabc3537b5eb08f06554eaf"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

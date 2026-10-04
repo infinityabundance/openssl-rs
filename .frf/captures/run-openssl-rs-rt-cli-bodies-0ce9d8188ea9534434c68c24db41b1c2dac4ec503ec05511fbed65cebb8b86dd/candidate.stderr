@@ -1,0 +1,5 @@
+/work/courts/phase17/rt_cli_bodies_probe.sh: 1: -bogus: not found
+/work/courts/phase17/rt_cli_bodies_probe.sh: 1: -mac: not found
+/work/courts/phase17/rt_cli_bodies_probe.sh: 1: pkcs7: not found
+/work/courts/phase17/rt_cli_bodies_probe.sh: 1: ocsp: not found
+/work/courts/phase17/rt_cli_bodies_probe.sh: 17: /,: not found

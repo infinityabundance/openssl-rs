@@ -657,6 +657,31 @@ COURTS: list[tuple[str, int, str, str]] = [
     ("rt-cli", 16, "rt_cli_probe",
      "the `openssl` CLI dispatcher and every command's option table, run over a fixed "
      "argv through a per-side shell probe"),
+    #
+    # Phase 17 -- the downstream replacement contract stratum. Five differential courts. Like
+    # Phase 16 the stratum owns no exported symbol, so its courts are not a symbol projection:
+    # each diffs a real transcript and stages an `artifacts/phase17/probes/<probe>.{authority,
+    # candidate}` pair, so all five are declarable. `rt-cli-bodies`'s subject is the CLI
+    # *executable*, which is not linkable, so its instrument is the shell probe
+    # `courts/phase17/rt_cli_bodies_probe.sh` (see `PROBE_SOURCES`) rather than a compiled C
+    # probe, exactly as Phase 16's `rt-cli` is. The sixth court, `RT-DOWNSTREAM-CORPUS`, is a
+    # data-validation court: its `artifacts/phase17/COURTS.json` row is marked
+    # `frf_declarable: false` because it consumes the recorded downstream records and stages no
+    # probe pair, so no row here names it.
+    #
+    ("rt-cli-bodies", 17, "rt_cli_bodies_probe",
+     "the 52 landed CLI command bodies over a fixed argv, run through a per-side shell probe"),
+    ("rt-tls13-interop", 17, "rt_tls13_interop_probe",
+     "the TLS 1.3 interoperability flight over memory BIOs: ClientHello through Finished and "
+     "the application-data exchange"),
+    ("rt-tls13-interop-matrix", 17, "rt_tls13_matrix_peer",
+     "the 2x2 cross-implementation TLS 1.3 interoperability matrix, one peer per side over a "
+     "real socket BIO"),
+    ("rt-cross-dso-state", 17, "rt_cross_dso_state_probe",
+     "the cross-DSO ERR and CONF shared-state contract the whole-crate archives break, in "
+     "both directions"),
+    ("rt-downstream-consumer", 17, "rt_downstream_consumer_probe",
+     "a real downstream consumer linked only against the shipped install prefix"),
 ]
 
 
@@ -664,14 +689,16 @@ def court_dir(court_id: str) -> Path:
     return REPO_ROOT / "forensics" / "frf" / "courts" / f"openssl-rs-{court_id}"
 
 
-# Courts whose declared probe source is not a C file. The `rt-cli` court's subject is the
-# CLI *executable*, which cannot be linked into a C probe, so its instrument is the shell
-# probe `courts/phase16/rt_cli_probe.sh` (staged as `artifacts/phase16/probes/rt_cli_probe.
-# {authority,candidate}` shims) rather than `courts/phase16/rt_cli_probe.c`. Everything else
-# -- the runtime harness refs, the fixture list, the observables -- is the runtime
-# harness's, so the declaration is otherwise identical to the compiled-probe courts'.
+# Courts whose declared probe source is not a C file. The `rt-cli` and `rt-cli-bodies` courts'
+# subject is the CLI *executable*, which cannot be linked into a C probe, so their instrument
+# is the shell probe `courts/phase16/rt_cli_probe.sh` (resp. `courts/phase17/
+# rt_cli_bodies_probe.sh`), staged as `artifacts/phase{16,17}/probes/rt_cli*_probe.
+# {authority,candidate}` shims, rather than a `.c` file. Everything else -- the runtime harness
+# refs, the fixture list, the observables -- is the runtime harness's, so the declaration is
+# otherwise identical to the compiled-probe courts'.
 PROBE_SOURCES: dict[str, str] = {
     "rt_cli_probe": "rt_cli_probe.sh",
+    "rt_cli_bodies_probe": "rt_cli_bodies_probe.sh",
 }
 
 

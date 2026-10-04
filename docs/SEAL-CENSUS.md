@@ -42,7 +42,7 @@ declared owner; this is that assignment.
 | 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
-| 17 | Downstream replacement court | `in-progress` | 0 | 5 | 5 | 0 | 0 |
+| 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
@@ -532,9 +532,8 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 
 ## Phase 17 — Downstream replacement court
 
-* state: `in-progress`
-* blocking: Phase 17's FRF chain entry is incomplete: 5 court(s) that artifacts/phase17/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 5 of 5 required court(s) have no FRF declaration staging their artifacts/phase17/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 5 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; 5 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-cli-bodies, openssl-rs-rt-tls13-interop, openssl-rs-rt-tls13-interop-matrix, openssl-rs-rt-cross-dso-state, openssl-rs-rt-downstream-consumer; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 5 required court(s)
-* seal: none written yet (`unnamed`)
+* state: `complete`
+* seal: `docs/PHASE-17-DOWNSTREAM-SEAL.md`
 * ledger: `forensics/phase17-obligations.json`
 * atlas-owned: 0
 * owned working set: 5

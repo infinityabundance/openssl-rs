@@ -791,12 +791,12 @@
     {
       "name": "phase-17-plan",
       "path": "docs/PHASE-17-SUBPHASES.md",
-      "sha256": "b4016f838f5316104588e0ea19c132114bfc21b7900177d636c57d00f1c694c4"
+      "sha256": "39993c520778e80fa01a4db3ca384924785003d5ddabc3537b5eb08f06554eaf"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "cde9ccd7156ba430f72536e8784d56a14722fa3179ed7512f384fb935eb2cc5b"
+      "sha256": "bdf4bd3525f3d509560152677d3c763153d9b00d1de025f4cc2c4e755b3973a1"
     },
     {
       "name": "probe",
