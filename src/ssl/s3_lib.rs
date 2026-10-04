@@ -55,8 +55,8 @@ const ERR_LIB_SSL: c_int = 20;
 const TLSEXT_NAMETYPE_HOST_NAME: c_int = 0;
 /// `TLSEXT_MAXLEN_host_name` — `tls1.h:172`.
 const TLSEXT_MAXLEN_HOST_NAME: usize = 255;
-/// `ERR_R_INTERNAL_ERROR` — `err.h` (`1 | ERR_RFLAG_COMMON | ERR_RFLAG_FATAL`).
-const ERR_R_INTERNAL_ERROR: c_int = 1 | (2 << 18) | (1 << 18);
+/// `ERR_R_INTERNAL_ERROR` — `err.h` (`259 | ERR_RFLAG_COMMON | ERR_RFLAG_FATAL`).
+const ERR_R_INTERNAL_ERROR: c_int = 259 | (2 << 18) | (1 << 18);
 
 /// `ERR_raise(ERR_LIB_SSL, reason)` at `ssl/s3_lib.c:line`.
 fn raise_ssl(reason: c_int, line: c_int) {

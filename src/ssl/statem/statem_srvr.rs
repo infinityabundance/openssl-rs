@@ -55,7 +55,7 @@
 // collapsing an arm into a match guard would obscure the correspondence.
 #![allow(clippy::collapsible_match)]
 
-use core::ffi::c_int;
+use core::ffi::{c_int, c_uint};
 
 use crate::packet::Wpacket;
 use crate::ssl::ssl_ciph_table as t;
@@ -117,9 +117,15 @@ const SSL_R_BAD_EXTENSION: c_int = 110;
 const SSL_R_CALLBACK_FAILED: c_int = 234;
 /// `SSL_RECEIVED_SHUTDOWN` — `ssl.h:217` (set by a received `close_notify`, `rec_layer_s3.c:913`).
 const SSL_RECEIVED_SHUTDOWN: c_int = 2;
-const ERR_R_INTERNAL_ERROR: c_int = 1 | (2 << 18) | (1 << 18);
+const ERR_R_INTERNAL_ERROR: c_int = 259 | (2 << 18) | (1 << 18);
 const SSL_R_UNEXPECTED_MESSAGE: c_int = 245;
 const SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE: c_int = 205;
+/// `SSL_CLIENT_HELLO_SUCCESS` — `ssl.h:1914`.
+const SSL_CLIENT_HELLO_SUCCESS: c_int = 1;
+/// `SSL_CLIENT_HELLO_RETRY` — `ssl.h:1916`.
+const SSL_CLIENT_HELLO_RETRY: c_int = -1;
+/// `SSL_CLIENT_HELLO_CB` — `ssl.h:915` (the `SSL_CLIENT_HELLO_CB` want value).
+const SSL_CLIENT_HELLO_CB: c_int = 7;
 
 // --- connection flags --------------------------------------------------------
 const SSL3_VERSION: c_int = 0x0300;
@@ -783,6 +789,13 @@ const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
 /// (`SSL_R_MISSING_SUPPORTED_GROUPS_EXTENSION`, `extensions_srvr.c:867`); the reduced form does not
 /// check that here, and the module header names it.
 ///
+/// The application's `SSL_CTX_set_client_hello_cb` callback is invoked after the extension walk and
+/// before `final_server_name`/the cipher choice, with a reduced `CLIENTHELLO_MSG` published on
+/// `s->clienthello` for its duration (`statem_srvr.c:1881-1893`). This is the path HAProxy uses to
+/// switch the connection to the certificate's `SSL_CTX` (`SSL_set_SSL_CTX`); a `SSL_CLIENT_HELLO_RETRY`
+/// return is a recorded boundary (the reduced synchronous driver cannot resume a half-processed
+/// hello).
+///
 /// # Safety
 /// `s` must be a live connection; `hs` must be the handshake message (`type || len || body`).
 pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
@@ -813,6 +826,7 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     if p + sid_len > body.len() {
         return 0;
     }
+    let session_id = &body[p..p + sid_len];
     // SAFETY: `s` is live; the length is bounded by `SSL_MAX_SSL_SESSION_ID_LENGTH` by the client.
     unsafe {
         let n = sid_len.min(crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH);
@@ -836,7 +850,13 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         return 0;
     }
     let comp_len = body[p] as usize;
-    p += 1 + comp_len;
+    p += 1;
+    let compressions: &[u8] = if p + comp_len <= body.len() {
+        &body[p..p + comp_len]
+    } else {
+        &[]
+    };
+    p += comp_len;
     // extensions (2 + n), if present.
     let exts: &[u8] = if p + 2 <= body.len() {
         let ext_len = ((body[p] as usize) << 8) | body[p + 1] as usize;
@@ -942,6 +962,69 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             }
         }
         off += elen;
+    }
+
+    // `tls_early_post_process_client_hello`'s ClientHello callback (`statem_srvr.c:1881-1893`):
+    // give the application's `SSL_CTX_set_client_hello_cb` a chance to inspect the message and
+    // switch the connection's context before the version/cipher choice. The authority publishes
+    // `s->clienthello` (with the parsed extension array) for the duration; the reduced readers walk
+    // the raw block in place.
+    {
+        // SAFETY: `s` is live; `body` holds the parsed ClientHello for the duration of this call.
+        let ctx = unsafe { (*s).ctx };
+        let cb = if ctx.is_null() {
+            None
+        } else {
+            // SAFETY: `ctx` is the live context read above.
+            unsafe { (*ctx).client_hello_cb }
+        };
+        if let Some(cb) = cb {
+            let mut chmsg = crate::ssl::ssl_lib::ClientHelloMsg {
+                isv2: 0,
+                legacy_version: ((body[0] as c_uint) << 8) | body[1] as c_uint,
+                random: [0u8; 32],
+                session_id_len: session_id.len(),
+                session_id: [0u8; crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH],
+                ciphersuites: clnt_ciphers.as_ptr(),
+                ciphersuites_len: clnt_ciphers.len(),
+                compressions_len: compressions.len(),
+                compressions: compressions.as_ptr(),
+                extensions: exts.as_ptr(),
+                extensions_len: exts.len(),
+            };
+            // SAFETY: `body` holds at least 34 bytes (checked above).
+            chmsg.random.copy_from_slice(&body[2..34]);
+            let n = session_id.len().min(chmsg.session_id.len());
+            chmsg.session_id[..n].copy_from_slice(&session_id[..n]);
+            // SAFETY: `ctx` is live; the argument is the one the setter stored.
+            let cb_arg = unsafe { (*ctx).client_hello_cb_arg };
+            // SAFETY: `s` is live; `chmsg` outlives the callback call below.
+            unsafe {
+                (*s).clienthello = (&mut chmsg as *mut crate::ssl::ssl_lib::ClientHelloMsg).cast();
+            }
+            let mut altmp = SSL_AD_INTERNAL_ERROR;
+            // SAFETY: the callback is the application's `int (*)(SSL *, int *, void *)`.
+            let r = unsafe { cb(s, &mut altmp, cb_arg) };
+            // SAFETY: `s` is live.
+            unsafe { (*s).clienthello = core::ptr::null_mut() };
+            match r {
+                SSL_CLIENT_HELLO_SUCCESS => {}
+                SSL_CLIENT_HELLO_RETRY => {
+                    // The authority returns control to the state machine with
+                    // `s->rwstate = SSL_CLIENT_HELLO_CB`; the reduced synchronous driver cannot
+                    // resume a half-processed ClientHello, so it reports the wait. Recorded
+                    // boundary.
+                    // SAFETY: `s` is live.
+                    unsafe { (*s).rwstate = SSL_CLIENT_HELLO_CB };
+                    return -1;
+                }
+                _ => {
+                    // SAFETY: `s` is live.
+                    unsafe { ossl_statem_fatal(s, altmp, SSL_R_CALLBACK_FAILED) };
+                    return 0;
+                }
+            }
+        }
     }
 
     // `tls_parse_all_extensions(..., fin=1)` runs the `server_name` finalisation before the cipher
@@ -1421,8 +1504,14 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     if n <= 0 || buf[0] != SSL3_MT_CLIENT_HELLO_BODY {
                         return server_wait(s);
                     }
-                    if tls_process_client_hello(s, &buf[..n as usize]) == 0 {
+                    let pr = tls_process_client_hello(s, &buf[..n as usize]);
+                    if pr == 0 {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    if pr < 0 {
+                        // The ClientHello callback asked to be re-entered
+                        // (`s->rwstate == SSL_CLIENT_HELLO_CB`); report the wait.
                         return -1;
                     }
                     (*s).hand_state = TLS_ST_SW_SRVR_HELLO;

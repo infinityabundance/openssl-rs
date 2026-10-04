@@ -350,6 +350,10 @@ const SSL_CTRL_SET_NOT_RESUMABLE_SESS_CB: c_int = 79;
 /// `SSL_CTRL_SET_TLSEXT_SERVERNAME_CB` — `ssl.h:1266` (the `SSL_CTX_set_tlsext_servername_callback`
 /// macro's control code).
 const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB: c_int = 53;
+/// `SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG` — `ssl.h:1267` (the `SSL_CTX_set_tlsext_servername_arg`
+/// macro's control code). It is dispatched by `ssl3_ctx_ctrl` (`s3_lib.c:4463-4465`), the
+/// `SSL_CTX_ctrl` fall-through, not by `SSL_CTX_callback_ctrl`.
+const SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG: c_int = 54;
 /// `SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB` — `ssl.h:1286` (the deprecated
 /// `SSL_CTX_set_tlsext_ticket_key_cb` macro's control code).
 const SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB: c_int = 72;
@@ -967,12 +971,10 @@ pub struct SslCtx {
     pub msg_callback: Option<MsgCb>,
     /// `void *msg_callback_arg`.
     pub msg_callback_arg: *mut c_void,
-    /// `SSL_client_hello_cb_fn client_hello_cb`.
-    #[allow(dead_code)]
-    // stored for the setter's contract; read by the ClientHello path (14.5)
+    /// `SSL_client_hello_cb_fn client_hello_cb` — read by `tls_process_client_hello` when it
+    /// publishes the message and invokes the callback (`statem_srvr.c:1881`).
     pub client_hello_cb: Option<ClientHelloCb>,
     /// `void *client_hello_cb_arg`.
-    #[allow(dead_code)] // as `client_hello_cb`
     pub client_hello_cb_arg: *mut c_void,
     /// `SSL_CTX_keylog_cb_func keylog_callback`.
     pub keylog_callback: Option<KeylogCb>,
@@ -3688,6 +3690,13 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
     // SAFETY: `ctx` is live per the caller's contract.
     let c = unsafe { &mut *ctx };
     match cmd {
+        SSL_CTRL_SET_TLSEXT_SERVERNAME_ARG => {
+            // `s3_lib.c:4463-4465`: store the servername callback argument, then `break` to the
+            // function's trailing `return 1`. HAProxy's `ssl_sock_switchctx_err_cbk` is invoked
+            // through `final_server_name` with this pointer as its `priv`.
+            c.servername_arg = parg;
+            1
+        }
         SSL_CTRL_SET_TLS_EXT_SRP_USERNAME => {
             c.srp_ctx.srp_mask |= SSL_KSRP;
             // SAFETY: `c` is live; `login` is NULL or an owned string.
@@ -8917,20 +8926,82 @@ pub unsafe extern "C" fn SSL_SESSION_set1_master_key(
     })
 }
 
-/// `int SSL_client_hello_isv2(SSL *s)` — `ssl/ssl_lib.c:6777-6787`. The ClientHello message is
-/// only non-NULL inside a ClientHello callback (14.5), so this slice takes the NULL arm.
+/// The candidate's reduction of the authority's `CLIENTHELLO_MSG` (`ssl/ssl_local.h:642-655`),
+/// published on `SSL.clienthello` only while a `SSL_CTX_set_client_hello_cb` callback runs. The
+/// authority parses the extension block into an ordered `RAW_EXTENSION` array; the reduced readers
+/// walk the raw block in place, which is the same received order.
+#[repr(C)]
+pub(crate) struct ClientHelloMsg {
+    /// `unsigned int isv2`.
+    pub isv2: c_uint,
+    /// `unsigned int legacy_version`.
+    pub legacy_version: c_uint,
+    /// `unsigned char random[SSL3_RANDOM_SIZE]`.
+    pub random: [u8; SSL3_RANDOM_SIZE],
+    /// `size_t session_id_len`.
+    pub session_id_len: usize,
+    /// `unsigned char session_id[SSL_MAX_SSL_SESSION_ID_LENGTH]`.
+    pub session_id: [u8; SSL_MAX_SSL_SESSION_ID_LENGTH],
+    /// `PACKET ciphersuites` — borrowed from the received handshake message.
+    pub ciphersuites: *const u8,
+    /// `PACKET_remaining(&ciphersuites)`.
+    pub ciphersuites_len: usize,
+    /// `size_t compressions_len`.
+    pub compressions_len: usize,
+    /// `unsigned char compressions[MAX_COMPRESSIONS_SIZE]` — borrowed.
+    pub compressions: *const u8,
+    /// `PACKET extensions` — the raw `Extension extensions<2..>` block, borrowed.
+    pub extensions: *const u8,
+    /// `PACKET_remaining(&extensions)`.
+    pub extensions_len: usize,
+}
+
+/// The connection's `SSL.clienthello` as the reduced [`ClientHelloMsg`], or NULL outside a
+/// ClientHello callback.
+///
+/// # Safety
+/// `s` must be NULL or a live connection.
+unsafe fn client_hello_msg(s: *mut Ssl) -> *const ClientHelloMsg {
+    if s.is_null() {
+        return ptr::null();
+    }
+    // SAFETY: `s` is live per the caller's contract; `clienthello` is NULL or the message the
+    // ClientHello path published for the duration of the callback.
+    unsafe { (*s).clienthello as *const ClientHelloMsg }
+}
+
+/// Count the well-formed entries of a raw `Extension extensions<2..>` block. The authority counts
+/// the `present` rows of its parsed `pre_proc_exts`; walking the raw block yields the same number
+/// and the same received order.
+fn count_raw_extensions(exts: &[u8]) -> usize {
+    let mut num = 0usize;
+    let mut off = 0usize;
+    while off + 4 <= exts.len() {
+        let el = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
+        off += 4;
+        if off + el > exts.len() {
+            break;
+        }
+        num += 1;
+        off += el;
+    }
+    num
+}
+
+/// `int SSL_client_hello_isv2(SSL *s)` — `ssl/ssl_lib.c:6777-6787`.
 ///
 /// # Safety
 /// `s` must point to a live connection.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_client_hello_isv2(s: *mut Ssl) -> c_int {
     guard_ffi(0, || {
-        // SAFETY: `s` is live per the caller's contract; `clienthello` is NULL in this slice.
-        if unsafe { (*s).clienthello }.is_null() {
+        // SAFETY: the caller guarantees `s` is live, so the connection is dereferenceable.
+        let ch = unsafe { client_hello_msg(s) };
+        if ch.is_null() {
             0
         } else {
-            // A live `CLIENTHELLO_MSG` is 14.5's; unreachable here.
-            0
+            // SAFETY: `ch` is the live message read above.
+            unsafe { (*ch).isv2 as c_int }
         }
     })
 }
@@ -8942,8 +9013,14 @@ pub unsafe extern "C" fn SSL_client_hello_isv2(s: *mut Ssl) -> c_int {
 #[no_mangle]
 pub unsafe extern "C" fn SSL_client_hello_get0_legacy_version(s: *mut Ssl) -> c_uint {
     guard_ffi(0, || {
-        let _ = s;
-        0
+        // SAFETY: the caller guarantees `s` is live, so the connection is dereferenceable.
+        let ch = unsafe { client_hello_msg(s) };
+        if ch.is_null() {
+            0
+        } else {
+            // SAFETY: `ch` is the live message read above.
+            unsafe { (*ch).legacy_version }
+        }
     })
 }
 
@@ -8955,8 +9032,16 @@ pub unsafe extern "C" fn SSL_client_hello_get0_legacy_version(s: *mut Ssl) -> c_
 #[no_mangle]
 pub unsafe extern "C" fn SSL_client_hello_get0_random(s: *mut Ssl, out: *mut *const u8) -> usize {
     guard_ffi(0, || {
-        let _ = (s, out);
-        0
+        // SAFETY: the caller guarantees `s` is live, so the connection is dereferenceable.
+        let ch = unsafe { client_hello_msg(s) };
+        if ch.is_null() {
+            return 0;
+        }
+        if !out.is_null() {
+            // SAFETY: `ch` is the live message; `random` is a 32-byte array.
+            unsafe { *out = (*ch).random.as_ptr() };
+        }
+        SSL3_RANDOM_SIZE
     })
 }
 
@@ -8971,8 +9056,17 @@ pub unsafe extern "C" fn SSL_client_hello_get0_session_id(
     out: *mut *const u8,
 ) -> usize {
     guard_ffi(0, || {
-        let _ = (s, out);
-        0
+        // SAFETY: the caller guarantees `s` is live, so the connection is dereferenceable.
+        let ch = unsafe { client_hello_msg(s) };
+        if ch.is_null() {
+            return 0;
+        }
+        if !out.is_null() {
+            // SAFETY: `ch` is the live message; `session_id` is a 32-byte array.
+            unsafe { *out = (*ch).session_id.as_ptr() };
+        }
+        // SAFETY: `ch` is the live message read above.
+        unsafe { (*ch).session_id_len }
     })
 }
 
@@ -8984,8 +9078,18 @@ pub unsafe extern "C" fn SSL_client_hello_get0_session_id(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_client_hello_get0_ciphers(s: *mut Ssl, out: *mut *const u8) -> usize {
     guard_ffi(0, || {
-        let _ = (s, out);
-        0
+        // SAFETY: the caller guarantees `s` is live, so the connection is dereferenceable.
+        let ch = unsafe { client_hello_msg(s) };
+        if ch.is_null() {
+            return 0;
+        }
+        if !out.is_null() {
+            // SAFETY: `ch` is the live message; `ciphersuites` borrows the received handshake
+            // message, which outlives the callback this accessor serves.
+            unsafe { *out = (*ch).ciphersuites };
+        }
+        // SAFETY: `ch` is the live message read above.
+        unsafe { (*ch).ciphersuites_len }
     })
 }
 
@@ -9000,8 +9104,18 @@ pub unsafe extern "C" fn SSL_client_hello_get0_compression_methods(
     out: *mut *const u8,
 ) -> usize {
     guard_ffi(0, || {
-        let _ = (s, out);
-        0
+        // SAFETY: the caller guarantees `s` is live, so the connection is dereferenceable.
+        let ch = unsafe { client_hello_msg(s) };
+        if ch.is_null() {
+            return 0;
+        }
+        if !out.is_null() {
+            // SAFETY: `ch` is the live message; `compressions` borrows the received handshake
+            // message, which outlives the callback this accessor serves.
+            unsafe { *out = (*ch).compressions };
+        }
+        // SAFETY: `ch` is the live message read above.
+        unsafe { (*ch).compressions_len }
     })
 }
 
@@ -9017,8 +9131,48 @@ pub unsafe extern "C" fn SSL_client_hello_get1_extensions_present(
     outlen: *mut usize,
 ) -> c_int {
     guard_ffi(0, || {
-        let _ = (s, out, outlen);
-        0
+        // SAFETY: the caller guarantees `s` is live, so the connection is dereferenceable.
+        let ch = unsafe { client_hello_msg(s) };
+        if ch.is_null() || out.is_null() || outlen.is_null() {
+            return 0;
+        }
+        // SAFETY: `ch` is the live message; the raw extension block outlives the callback.
+        let exts = unsafe { core::slice::from_raw_parts((*ch).extensions, (*ch).extensions_len) };
+        let num = count_raw_extensions(exts);
+        if num == 0 {
+            // SAFETY: `out`/`outlen` are writable per the checks above.
+            unsafe {
+                *out = ptr::null_mut();
+                *outlen = 0;
+            }
+            return 1;
+        }
+        // `OPENSSL_malloc_array(num, sizeof(*present))` (`ssl_lib.c:6874`), exercised through the
+        // same allocator `OPENSSL_free` releases.
+        let present = CRYPTO_calloc(num, core::mem::size_of::<c_int>(), FILE, 6874).cast::<c_int>();
+        if present.is_null() {
+            return 0;
+        }
+        let mut i = 0usize;
+        let mut off = 0usize;
+        while off + 4 <= exts.len() {
+            let et = ((exts[off] as c_int) << 8) | exts[off + 1] as c_int;
+            let el = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
+            off += 4;
+            if off + el > exts.len() {
+                break;
+            }
+            // SAFETY: `i < num`, and `present` holds `num` `c_int`s.
+            unsafe { *present.add(i) = et };
+            i += 1;
+            off += el;
+        }
+        // SAFETY: `out`/`outlen` are writable; `present` is owned by the caller now.
+        unsafe {
+            *out = present;
+            *outlen = num;
+        }
+        1
     })
 }
 
@@ -9034,8 +9188,45 @@ pub unsafe extern "C" fn SSL_client_hello_get_extension_order(
     num_exts: *mut usize,
 ) -> c_int {
     guard_ffi(0, || {
-        let _ = (s, exts, num_exts);
-        0
+        // SAFETY: the caller guarantees `s` is live, so the connection is dereferenceable.
+        let ch = unsafe { client_hello_msg(s) };
+        if ch.is_null() || num_exts.is_null() {
+            return 0;
+        }
+        // SAFETY: `ch` is the live message; the raw extension block outlives the callback.
+        let raw = unsafe { core::slice::from_raw_parts((*ch).extensions, (*ch).extensions_len) };
+        let num = count_raw_extensions(raw);
+        if num == 0 {
+            // SAFETY: `num_exts` is writable per the check above.
+            unsafe { *num_exts = 0 };
+            return 1;
+        }
+        if exts.is_null() {
+            // SAFETY: `num_exts` is writable.
+            unsafe { *num_exts = num };
+            return 1;
+        }
+        // SAFETY: `num_exts` is writable.
+        if unsafe { *num_exts } < num {
+            return 0;
+        }
+        let mut i = 0usize;
+        let mut off = 0usize;
+        while off + 4 <= raw.len() {
+            let et = ((raw[off] as u16) << 8) | raw[off + 1] as u16;
+            let el = ((raw[off + 2] as usize) << 8) | raw[off + 3] as usize;
+            off += 4;
+            if off + el > raw.len() {
+                break;
+            }
+            // SAFETY: `i < num <= *num_exts`, and `exts` holds at least `*num_exts` `u16`s.
+            unsafe { *exts.add(i) = et };
+            i += 1;
+            off += el;
+        }
+        // SAFETY: `num_exts` is writable.
+        unsafe { *num_exts = num };
+        1
     })
 }
 
@@ -9052,7 +9243,35 @@ pub unsafe extern "C" fn SSL_client_hello_get0_ext(
     outlen: *mut usize,
 ) -> c_int {
     guard_ffi(0, || {
-        let _ = (s, type_, out, outlen);
+        // SAFETY: the caller guarantees `s` is live, so the connection is dereferenceable.
+        let ch = unsafe { client_hello_msg(s) };
+        if ch.is_null() {
+            return 0;
+        }
+        // SAFETY: `ch` is the live message; `extensions`/`extensions_len` describe the received
+        // `Extension extensions<2..>` block, which outlives the callback this accessor serves.
+        let exts = unsafe { core::slice::from_raw_parts((*ch).extensions, (*ch).extensions_len) };
+        let mut off = 0usize;
+        while off + 4 <= exts.len() {
+            let et = ((exts[off] as c_uint) << 8) | exts[off + 1] as c_uint;
+            let el = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
+            off += 4;
+            if off + el > exts.len() {
+                return 0;
+            }
+            if et == type_ {
+                if !out.is_null() {
+                    // SAFETY: `off` indexes a body of `el` readable bytes inside `exts`.
+                    unsafe { *out = exts.as_ptr().add(off) };
+                }
+                if !outlen.is_null() {
+                    // SAFETY: `outlen` is writable per the caller's contract.
+                    unsafe { *outlen = el };
+                }
+                return 1;
+            }
+            off += el;
+        }
         0
     })
 }
