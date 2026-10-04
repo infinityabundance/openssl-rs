@@ -3,8 +3,8 @@
   "body": {
     "blocking_dependencies": [],
     "census": {
-      "covered_by_a_divergence": 154,
-      "language_surface_not_modelled_by_name": 11703
+      "covered_by_a_divergence": 152,
+      "language_surface_not_modelled_by_name": 11689
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -83,14 +83,12 @@
         "tls_construct_next_proto": 1,
         "tls_construct_server_done": 1,
         "tls_construct_server_key_exchange": 1,
-        "tls_handle_alpn": 1,
         "tls_post_process_client_hello": 1,
         "tls_post_process_client_key_exchange": 1,
         "tls_post_process_server_certificate": 1,
         "tls_prepare_client_certificate": 1,
         "tls_process_cert_status": 1,
         "tls_process_cert_status_body": 1,
-        "tls_process_certificate_request": 1,
         "tls_process_client_certificate": 1,
         "tls_process_client_key_exchange": 1,
         "tls_process_client_rpk": 1,
@@ -267,7 +265,7 @@
         "crypto/defaults.c": 9,
         "crypto/der_writer.c": 4,
         "crypto/des/set_key.c": 9,
-        "crypto/dh/dh_ameth.c": 20,
+        "crypto/dh/dh_ameth.c": 19,
         "crypto/dh/dh_asn1.c": 16,
         "crypto/dh/dh_backend.c": 12,
         "crypto/dh/dh_check.c": 8,
@@ -347,7 +345,7 @@
         "crypto/engine/tb_pkmeth.c": 9,
         "crypto/engine/tb_rand.c": 7,
         "crypto/engine/tb_rsa.c": 7,
-        "crypto/err/err.c": 58,
+        "crypto/err/err.c": 57,
         "crypto/err/err_all_legacy.c": 10,
         "crypto/err/err_save.c": 2,
         "crypto/ess/ess_asn1.c": 17,
@@ -679,7 +677,7 @@
         "ssl/quic/quic_tls_api.c": 9,
         "ssl/record/rec_layer_s3.c": 83,
         "ssl/rio/poll_immediate.c": 11,
-        "ssl/s3_lib.c": 718,
+        "ssl/s3_lib.c": 714,
         "ssl/ssl_asn1.c": 16,
         "ssl/ssl_cert.c": 79,
         "ssl/ssl_cert_comp.c": 25,
@@ -687,7 +685,7 @@
         "ssl/ssl_conf.c": 32,
         "ssl/ssl_err_legacy.c": 2,
         "ssl/ssl_init.c": 7,
-        "ssl/ssl_lib.c": 249,
+        "ssl/ssl_lib.c": 247,
         "ssl/ssl_mcnf.c": 9,
         "ssl/ssl_rsa.c": 26,
         "ssl/ssl_rsa_legacy.c": 11,
@@ -696,9 +694,9 @@
         "ssl/ssl_txt.c": 6,
         "ssl/statem/extensions_cust.c": 32,
         "ssl/statem/statem.c": 57,
-        "ssl/statem/statem_clnt.c": 128,
-        "ssl/statem/statem_lib.c": 112,
-        "ssl/statem/statem_srvr.c": 154,
+        "ssl/statem/statem_clnt.c": 127,
+        "ssl/statem/statem_lib.c": 111,
+        "ssl/statem/statem_srvr.c": 150,
         "ssl/t1_lib.c": 222,
         "ssl/t1_trce.c": 101,
         "ssl/tls_depr.c": 17,
@@ -797,7 +795,7 @@
       "crate_modules": 853,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
-      "divergence_names_covered": 100,
+      "divergence_names_covered": 98,
       "divergence_rows": 14,
       "names_referenced_and_not_built": 21
     },
@@ -1134,7 +1132,6 @@
           "ssl_handshake_hash",
           "ssl_init_wbio_buffer",
           "ssl_log_rsa_client_key_exchange",
-          "ssl_log_secret",
           "ssl_set_masks",
           "ssl_undefined_function",
           "ssl_undefined_void_function",
@@ -1154,6 +1151,9 @@
           "custom_exts_free",
           "ossl_tls_add_custom_ext_intern"
         ],
+        "ssl/statem/statem_clnt.c": [
+          "tls_process_server_certificate"
+        ],
         "ssl/statem/statem_lib.c": [
           "check_in_list",
           "construct_ca_names",
@@ -1172,8 +1172,6 @@
           "ssl_choose_server_version",
           "ssl_set_client_hello_version",
           "ssl_version_supported",
-          "tls13_restore_handshake_digest_for_pha",
-          "tls13_save_handshake_digest_for_pha",
           "tls_construct_cert_verify",
           "tls_construct_change_cipher_spec",
           "tls_construct_finished",
@@ -1228,12 +1226,10 @@
           "tls1_group_id_lookup",
           "tls1_lookup_md",
           "tls1_new",
-          "tls1_nid2group_id",
           "tls1_process_sigalgs",
           "tls1_save_sigalgs",
           "tls1_save_u16",
           "tls1_set_cert_validity",
-          "tls1_set_groups",
           "tls1_set_groups_list",
           "tls1_set_peer_legacy_sigalg",
           "tls1_set_raw_sigalgs",
@@ -1250,7 +1246,6 @@
           "tls_valid_group"
         ],
         "ssl/tls_depr.c": [
-          "ssl_dh_to_pkey",
           "ssl_hmac_get0_HMAC_CTX",
           "ssl_hmac_old_final",
           "ssl_hmac_old_free",
@@ -1273,7 +1268,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 396
+      "names": 391
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -1283,7 +1278,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "a135f834237f3025d845afa25002ca6ed133bdb53cc13e1b1c47cb618dd54dc0",
+  "body_hash": "8157654474e4c1ce2e4367cbb6f0f552f3effc064bf2f59d16a3a06da30548d3",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1319,7 +1314,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "c89ec715b268ec506efe3297ca57f0333c6f8168b8ce6c65ff6aa0cb4a3efab0"
+      "sha256": "05a969d98ac2ba888169b6e531ea3ce993fc9934db60c3d4602b0023cfd56478"
     },
     {
       "name": "phase-state",
@@ -1329,7 +1324,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "83a5420293704a99d69fee9965c59e1dccf7370514adfe64c605380204aa0563"
+      "sha256": "cde9ccd7156ba430f72536e8784d56a14722fa3179ed7512f384fb935eb2cc5b"
     },
     {
       "name": "crate-source-tree",

@@ -19,8 +19,8 @@
       "signatures_authority_only": 286,
       "signatures_checked": 353,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 265,
-      "signatures_unlinked": 1,
+      "signatures_not_a_dispatch": 266,
+      "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
     "identities": {
@@ -5606,6 +5606,11 @@
           "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
         },
         {
+          "alias": "InitCryptoFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
           "alias": "ErrPrintCb",
           "at": "src/runtime/err.rs",
           "why": "not a provider dispatch: the type of a parameter of `ERR_print_errors_cb`, spelled `int (*cb)(const char *, size_t, void *)` inline in the header rather than as a typedef"
@@ -5986,12 +5991,7 @@
           "why": "not a provider dispatch: `struct x509_trust_st`'s `check_trust` member and `X509_TRUST_set_default`'s argument (`include/openssl/x509_vfy.h.in:83-88,145`), declared inline as plain function pointers rather than through `OSSL_CORE_MAKE_FUNC`"
         }
       ],
-      "unlinked": [
-        {
-          "alias": "InitCryptoFn",
-          "at": "src/runtime/dso_shared.rs"
-        }
-      ],
+      "unlinked": [],
       "unmapped": []
     },
     "what": "every `OSSL_FUNC_*` dispatch identity the crate declares agrees with the authority's recorded macro value, and every Rust function-type alias the crate declares agrees with the canonical form of the authority function-type typedef it implements",

@@ -94,6 +94,7 @@ const TLS_ST_SW_CERT_VRFY: c_int = 44;
 // --- message types (`include/openssl/ssl3.h`) --------------------------------
 const SSL3_MT_CLIENT_HELLO: c_int = 1;
 const SSL3_MT_CERTIFICATE: c_int = 11;
+const SSL3_MT_CERTIFICATE_REQUEST: c_int = 13;
 const SSL3_MT_CLIENT_KEY_EXCHANGE: c_int = 16;
 const SSL3_MT_CERTIFICATE_VERIFY: c_int = 15;
 const SSL3_MT_END_OF_EARLY_DATA: c_int = 5;
@@ -164,6 +165,10 @@ const SSL_TLSEXT_ERR_NOACK: c_int = 3;
 const SSL_TLSEXT_ERR_OK: c_int = 0;
 /// `TLSEXT_TYPE_application_layer_protocol_negotiation` — `tls1.h:116`.
 const TLSEXT_TYPE_ALPN: u16 = 16;
+/// `TLSEXT_TYPE_post_handshake_auth` — `tls1.h:157`.
+const TLSEXT_TYPE_POST_HANDSHAKE_AUTH: u16 = 49;
+/// `SSL_PHA_EXT_RECEIVED` — `ssl_local.h:373`.
+const SSL_PHA_EXT_RECEIVED: c_int = 2;
 /// `TLS1_AD_NO_APPLICATION_PROTOCOL` — `tls1.h:80`.
 const SSL_AD_NO_APPLICATION_PROTOCOL: c_int = 120;
 /// `SSL_R_NO_APPLICATION_PROTOCOL` — `sslerr.h:190`.
@@ -211,7 +216,7 @@ fn do_compressed_cert(s: *mut Ssl) -> bool {
 }
 
 /// `int send_certificate_request(SSL_CONNECTION *s)` — `statem_srvr.c:416-456`.
-fn send_certificate_request(s: *mut Ssl) -> bool {
+pub(crate) fn send_certificate_request(s: *mut Ssl) -> bool {
     // SAFETY: the caller passes a live connection.
     unsafe {
         let c = (*s).pending_cipher;
@@ -1061,6 +1066,18 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
                 (*s).s3_alpn_proposed_len = list.len();
             }
         }
+        if etype == TLSEXT_TYPE_POST_HANDSHAKE_AUTH {
+            // `tls_parse_ctos_post_handshake_auth` (`extensions_srvr.c:1565-1579`): the extension
+            // body must be empty, and its presence records that the client will answer a
+            // post-handshake CertificateRequest (`s->post_handshake_auth = SSL_PHA_EXT_RECEIVED`).
+            if elen != 0 {
+                // SAFETY: `s` is live.
+                unsafe { ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_BAD_EXTENSION) };
+                return 0;
+            }
+            // SAFETY: `s` is live.
+            unsafe { (*s).post_handshake_auth = SSL_PHA_EXT_RECEIVED };
+        }
         if etype == TLSEXT_TYPE_KEY_SHARE && eb.len() >= 2 {
             // `KeyShareClientHello { KeyShareEntry client_shares<0..2^16-1>; }` — the body begins
             // with a two-byte list length (`extensions_srvr.c:857`, RFC 8446 §4.2.8). The reduced
@@ -1195,8 +1212,17 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         }
     }
     if chosen.is_null() {
+        // `ssl3_choose_cipher` returning NULL is `SSL_R_NO_SHARED_CIPHER`
+        // (`tls_early_post_process_client_hello`, `statem_srvr.c:2002`); the reduced server only
+        // walks the TLS1.3 suites, so a TLS1.2-only ClientHello lands here too.
         // SAFETY: `s` is live.
-        unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_UNEXPECTED_MESSAGE) };
+        unsafe {
+            ossl_statem_fatal(
+                s,
+                SSL_AD_HANDSHAKE_FAILURE,
+                crate::runtime::err::err_reasons::SSL_R_NO_SHARED_CIPHER,
+            )
+        };
         return 0;
     }
     // SAFETY: `s` is live and `chosen` a table row.
@@ -1407,16 +1433,118 @@ unsafe fn tls13_construct_encrypted_extensions(s: *mut Ssl) -> c_int {
     }
 }
 
-/// `CON_FUNC_RETURN tls_construct_server_certificate(...)` — `statem_srvr.c:4019-4055` over
-/// `ssl3_output_cert_chain`: the TLS1.3 `context<0> || certificate_list<3>`, with the loaded leaf's
-/// DER (`i2d_X509`). The extra chain is empty in the fixture.
+/// `CON_FUNC_RETURN tls_construct_certificate_request(...)` — `statem_srvr.c:3023-3094`, reduced to
+/// the TLS1.3 arm: `certificate_request_context<0..2^8-1> || Extension extensions<2>`, the
+/// `signature_algorithms` extension being the only one the reduced client needs to pick its scheme
+/// (`tls_construct_stoc_signature_algorithms`, `extensions.c:304-308`). `context` is empty for an
+/// in-handshake request and a 32-byte random for post-handshake auth
+/// (`statem_srvr.c:3027-3054`).
 ///
 /// # Safety
 /// `s` is live.
-unsafe fn tls13_construct_certificate(s: *mut Ssl) -> c_int {
+pub(crate) unsafe fn tls13_construct_certificate_request(s: *mut Ssl, context: &[u8]) -> c_int {
+    // The authority's default signature-algorithm list (`tls12_get_psigalgs`, `ssl/t1_lib.c`); the
+    // reduced server has no configured list, so it sends the same default the reduced client offers.
+    const SIGALGS: [u16; 26] = [
+        0x0905, 0x0906, 0x0904, 0x0403, 0x0503, 0x0603, 0x0807, 0x0808, 0x081a, 0x081b, 0x081c,
+        0x0809, 0x080a, 0x080b, 0x0804, 0x0805, 0x0806, 0x0401, 0x0501, 0x0601, 0x0303, 0x0301,
+        0x0302, 0x0402, 0x0502, 0x0602,
+    ];
+    // `TLSEXT_TYPE_signature_algorithms` — `tls1.h` (13).
+    const TLSEXT_TYPE_SIG_ALGS: u16 = 13;
+    if context.len() > 255 {
+        return 0;
+    }
+    let mut ext = [0u8; 64];
+    ext[0] = (TLSEXT_TYPE_SIG_ALGS >> 8) as u8;
+    ext[1] = (TLSEXT_TYPE_SIG_ALGS & 0xff) as u8;
+    let list_len = SIGALGS.len() * 2;
+    let body_len = 2 + list_len;
+    ext[2] = (body_len >> 8) as u8;
+    ext[3] = (body_len & 0xff) as u8;
+    ext[4] = (list_len >> 8) as u8;
+    ext[5] = (list_len & 0xff) as u8;
+    let mut p = 6usize;
+    for a in SIGALGS {
+        ext[p] = (a >> 8) as u8;
+        ext[p + 1] = (a & 0xff) as u8;
+        p += 2;
+    }
+    let ext_total = p;
+    let ctx_len = context.len();
+    let total = 1 + ctx_len + 2 + ext_total;
+    let mut msg = [0u8; 256];
+    if total > msg.len() {
+        return 0;
+    }
+    msg[0] = ctx_len as u8;
+    msg[1..1 + ctx_len].copy_from_slice(context);
+    let mut q = 1 + ctx_len;
+    msg[q] = (ext_total >> 8) as u8;
+    msg[q + 1] = (ext_total & 0xff) as u8;
+    q += 2;
+    msg[q..q + ext_total].copy_from_slice(&ext[..ext_total]);
+    // `s->certreqs_sent++; s->s3.tmp.cert_request = 1;` (`statem_srvr.c:3091-3092`).
+    // SAFETY: `s` is live.
+    unsafe {
+        (*s).certreqs_sent += 1;
+        (*s).s3_tmp_cert_request = 1;
+    }
+    // SAFETY: `s` is live; `msg` is `total` initialised bytes.
+    unsafe {
+        crate::ssl::tls13_enc::write_handshake_message(
+            s,
+            SSL3_MT_CERTIFICATE_REQUEST as u8,
+            msg.as_ptr(),
+            total,
+        )
+    }
+}
+
+/// Whether this connection has an active certificate to send (`s->cert->key->x509`), the reduced
+/// `cpk != NULL` test of `ssl3_output_cert_chain`.
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn cert_active_present(s: *mut Ssl) -> bool {
+    // SAFETY: `s` is live; `cert` is its certificate container.
+    let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
+    // SAFETY: `cpk` is non-NULL per the left operand; its `x509` slot is read.
+    !cpk.is_null() && unsafe { !(*cpk).x509.is_null() }
+}
+
+/// `CON_FUNC_RETURN tls_construct_server_certificate(...)` — `statem_srvr.c:4019-4055` over
+/// `ssl3_output_cert_chain`: the TLS1.3 `context<0..2^8-1> || certificate_list<3>`, with the
+/// loaded leaf's DER (`i2d_X509`). The extra chain is empty in the fixture. The same construction
+/// serves `tls_construct_client_certificate` (`statem_clnt.c:3851-3910`), where `context` is the
+/// `pha_context` echoed from the CertificateRequest.
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls13_construct_certificate(s: *mut Ssl, context: &[u8]) -> c_int {
     use crate::x509::x_x509::i2d_X509;
+    if context.len() > 255 {
+        return 0;
+    }
     // SAFETY: `s` is live; `cert` is the connection's active certificate container.
     let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
+    let ctx_len = context.len();
+    // No certificate to send (`ssl3_output_cert_chain` with a NULL `cpk`): the TLS1.3
+    // `certificate_list` is empty (`statem_clnt.c:3869-3882`).
+    // SAFETY: `cpk` is non-NULL per the left operand; its `x509` slot is read.
+    if cpk.is_null() || unsafe { (*cpk).x509 }.is_null() {
+        let mut body = [0u8; 300];
+        body[0] = ctx_len as u8;
+        body[1..1 + ctx_len].copy_from_slice(context);
+        let q = 1 + ctx_len;
+        body[q] = 0;
+        body[q + 1] = 0;
+        body[q + 2] = 0;
+        // SAFETY: `s` is live; `body` is `q + 3` initialised bytes.
+        return unsafe {
+            crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body.as_ptr(), q + 3)
+        };
+    }
     if cpk.is_null() {
         return 0;
     }
@@ -1439,23 +1567,28 @@ unsafe fn tls13_construct_certificate(s: *mut Ssl) -> c_int {
     // RFC 8446 §4.4.2): the six-byte entry prefix plus the empty two-byte extension block.
     let entry_len = 3 + derlen + 2;
     let clen = entry_len;
-    let body_len = 4 + clen;
+    let body_len = 1 + ctx_len + 3 + clen;
     let mut body = [0u8; 8200];
     if body_len > body.len() {
         return 0;
     }
-    body[0] = 0; // opaque certificate_request_context<0..2^8-1>
-    body[1] = (clen >> 16) as u8;
-    body[2] = (clen >> 8) as u8;
-    body[3] = clen as u8;
-    body[4] = (derlen >> 16) as u8;
-    body[5] = (derlen >> 8) as u8;
-    body[6] = derlen as u8;
-    // SAFETY: `body[7..]` has room for `derlen` bytes.
-    unsafe { core::ptr::copy_nonoverlapping(der.as_ptr(), body.as_mut_ptr().add(7), derlen) };
+    body[0] = ctx_len as u8; // opaque certificate_request_context<0..2^8-1>
+    body[1..1 + ctx_len].copy_from_slice(context);
+    let mut p = 1 + ctx_len;
+    body[p] = (clen >> 16) as u8;
+    body[p + 1] = (clen >> 8) as u8;
+    body[p + 2] = clen as u8;
+    p += 3;
+    body[p] = (derlen >> 16) as u8;
+    body[p + 1] = (derlen >> 8) as u8;
+    body[p + 2] = derlen as u8;
+    p += 3;
+    // SAFETY: `body[p..]` has room for `derlen` bytes.
+    unsafe { core::ptr::copy_nonoverlapping(der.as_ptr(), body.as_mut_ptr().add(p), derlen) };
+    p += derlen;
     // The per-certificate extension block is empty: `extensions<0..2^16-1>` = `00 00`.
-    body[7 + derlen] = 0;
-    body[8 + derlen] = 0;
+    body[p] = 0;
+    body[p + 1] = 0;
     // SAFETY: `s` is live; `body` is `body_len` initialised bytes.
     unsafe {
         crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body.as_ptr(), body_len)
@@ -1463,13 +1596,14 @@ unsafe fn tls13_construct_certificate(s: *mut Ssl) -> c_int {
 }
 
 /// `CON_FUNC_RETURN tls_construct_cert_verify(...)` — `statem_lib.c:313-439`, reduced to a real RSA
-/// signature produced with the crate's `EVP_DigestSign` over the TLS1.3 TBS preamble
-/// (`get_cert_verify_tbs_data`) and the `rsa_pss_rsae_sha256` algorithm id. The reduced client does
-/// not verify it (recorded in `statem_clnt.rs`).
+/// or ECDSA signature produced with the crate's `EVP_DigestSign` over the TLS1.3 TBS preamble
+/// (`get_cert_verify_tbs_data`, `statem_lib.c:258-311`) and the scheme id picked by the signer's key
+/// type. `is_server` selects the server context string; the client uses
+/// `"TLS 1.3, client CertificateVerify"` (`statem_lib.c:264-266`). The reduced peer verifies it.
 ///
 /// # Safety
 /// `s` is live.
-unsafe fn tls13_construct_cert_verify(s: *mut Ssl) -> c_int {
+pub(crate) unsafe fn tls13_construct_cert_verify(s: *mut Ssl, is_server: bool) -> c_int {
     use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_free, EVP_MD_CTX_new};
     use crate::evp::legacy_sha::EVP_sha256;
     use crate::evp::pkey::EvpPkey;
@@ -1492,7 +1626,11 @@ unsafe fn tls13_construct_cert_verify(s: *mut Ssl) -> c_int {
     if unsafe { (*cpk).privatekey }.is_null() {
         return 0;
     }
-    let ctx_str = b"TLS 1.3, server CertificateVerify";
+    let ctx_str: &[u8] = if is_server {
+        b"TLS 1.3, server CertificateVerify"
+    } else {
+        b"TLS 1.3, client CertificateVerify"
+    };
     // SAFETY: `s` is live; `hs_md_len` is the negotiated hash length.
     let hl = unsafe { (*s).hs_md_len };
     let mut tbs = [0u8; 64 + 33 + 1 + 64];
@@ -1661,12 +1799,23 @@ unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
     if unsafe { tls13_construct_encrypted_extensions(s) } == 0 {
         return 0;
     }
+    // The TLS1.3 write transition's `SW_ENCRYPTED_EXTENSIONS` arm
+    // (`statem_srvr.c:664-674`): an in-handshake CertificateRequest precedes the server Certificate.
     // SAFETY: `s` is live.
-    if unsafe { tls13_construct_certificate(s) } == 0 {
+    if send_certificate_request(s) {
+        // In-handshake requests carry an empty `certificate_request_context`
+        // (`statem_srvr.c:3049-3054`).
+        // SAFETY: `s` is live.
+        if unsafe { tls13_construct_certificate_request(s, &[]) } == 0 {
+            return 0;
+        }
+    }
+    // SAFETY: `s` is live.
+    if unsafe { tls13_construct_certificate(s, &[]) } == 0 {
         return 0;
     }
     // SAFETY: `s` is live.
-    if unsafe { tls13_construct_cert_verify(s) } == 0 {
+    if unsafe { tls13_construct_cert_verify(s, true) } == 0 {
         return 0;
     }
     // SAFETY: `s` is live.
@@ -1674,6 +1823,118 @@ unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
         return 0;
     }
     1
+}
+
+/// The server's TLS1.3 post-handshake-authentication request: `tls_construct_certificate_request`
+/// for the `SSL_PHA_REQUEST_PENDING` arm (`statem_srvr.c:3027-3054`). A fresh 32-byte
+/// `certificate_request_context` is generated, the transcript is rewound to the saved PHA digest
+/// (`tls13_restore_handshake_digest_for_pha`), and the request is written (which appends it to the
+/// transcript).
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls13_server_send_pha_cert_request(s: *mut Ssl) -> c_int {
+    use crate::rand::rand_lib::RAND_bytes;
+    let mut ctx = [0u8; 32];
+    // SAFETY: `s` is live; `ctx` is writable.
+    if unsafe { RAND_bytes(ctx.as_mut_ptr(), ctx.len() as c_int) } <= 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live; the previous context (if any) is owned here.
+    unsafe {
+        crate::runtime::mem::CRYPTO_free((*s).pha_context.cast(), core::ptr::null(), 0);
+        (*s).pha_context = crate::runtime::mem::CRYPTO_memdup(
+            ctx.as_ptr().cast(),
+            ctx.len(),
+            core::ptr::null(),
+            0,
+        )
+        .cast::<u8>();
+        if (*s).pha_context.is_null() {
+            (*s).pha_context_len = 0;
+            return 0;
+        }
+        (*s).pha_context_len = ctx.len();
+    }
+    // SAFETY: `s` is live; rewinding happens before the request is added to the transcript
+    // (`statem_srvr.c:3044-3048`).
+    if unsafe { crate::ssl::tls13_enc::tls13_restore_handshake_digest_for_pha(s) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    unsafe { tls13_construct_certificate_request(s, &ctx) }
+}
+
+/// Process one client message of a TLS1.3 post-handshake-authentication flight
+/// (`ossl_statem_server13_read_transition`'s `TLS_ST_OK` -> `TLS_ST_SR_CERT` arm,
+/// `statem_srvr.c:144-170`, and the `SR_CERT`/`SR_CERT_VRFY` steps at `:122-142`). The hand state
+/// tracks the flight's progress.
+///
+/// # Safety
+/// `s` is live; `msg` is the full handshake message.
+pub(crate) unsafe fn tls13_server_process_post_handshake(s: *mut Ssl, msg: &[u8]) -> c_int {
+    use crate::ssl::tls13_enc as k;
+    if msg.is_empty() {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    match unsafe { (*s).hand_state } {
+        TLS_ST_OK => {
+            if msg[0] != SSL3_MT_CERT {
+                return 0;
+            }
+            // SAFETY: `s` is live.
+            if unsafe {
+                crate::ssl::statem::statem_clnt::tls13_process_peer_certificate(s, msg, true)
+            } == 0
+            {
+                return 0;
+            }
+            // SAFETY: `s` is live.
+            unsafe {
+                (*s).hand_state = if (*s).peer_cert.is_null() {
+                    TLS_ST_SR_FINISHED
+                } else {
+                    TLS_ST_SR_CERT_VRFY
+                };
+            }
+            1
+        }
+        TLS_ST_SR_CERT_VRFY => {
+            if msg[0] != SSL3_MT_CERTIFICATE_VERIFY as u8 {
+                return 0;
+            }
+            // SAFETY: `s` is live.
+            if unsafe { crate::ssl::statem::statem_clnt::tls_process_cert_verify(s, msg, true) }
+                == 0
+            {
+                return 0;
+            }
+            // SAFETY: `s` is live.
+            unsafe { (*s).hand_state = TLS_ST_SR_FINISHED };
+            1
+        }
+        TLS_ST_SR_FINISHED => {
+            if msg[0] != SSL3_MT_FIN {
+                return 0;
+            }
+            // PHA's Finished is not the first handshake's, so it is keyed by the client
+            // application traffic secret (`tls13_final_finish_mac`, `tls13_enc.c:267-305`).
+            // SAFETY: `s` is live.
+            if unsafe { k::tls13_process_finished(s, msg, (*s).client_app_traffic.as_ptr()) } == 0 {
+                return 0;
+            }
+            // `SR_FINISHED` sets `post_handshake_auth = SSL_PHA_EXT_RECEIVED`
+            // (`statem_srvr.c:704-712`).
+            // SAFETY: `s` is live.
+            unsafe {
+                (*s).post_handshake_auth = SSL_PHA_EXT_RECEIVED;
+                (*s).hand_state = TLS_ST_OK;
+            }
+            1
+        }
+        _ => 0,
+    }
 }
 
 /// The server read/write driver: reads the ClientHello, writes the whole server flight, then reads
@@ -1700,7 +1961,12 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     }
                     let pr = tls_process_client_hello(s, &buf[..n as usize]);
                     if pr == 0 {
-                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        // `tls_process_client_hello` raises its own alert/reason (for example
+                        // `SSL_R_NO_SHARED_CIPHER`); only a parse failure with no reason queued gets
+                        // the generic alert.
+                        if ossl_statem_in_error(s) == 0 {
+                            ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        }
                         return -1;
                     }
                     if pr < 0 {
@@ -1712,6 +1978,70 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                 }
                 TLS_ST_SW_SRVR_HELLO => {
                     if write_server_hello(s) <= 0 || tls13_server_post_server_hello(s) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    // The read transition after the server Finished (`statem_srvr.c:100-142`): with
+                    // `s3.tmp.cert_request` set the client's Certificate comes first.
+                    (*s).hand_state = if (*s).s3_tmp_cert_request != 0 {
+                        TLS_ST_SR_CERT
+                    } else {
+                        TLS_ST_SR_FINISHED
+                    };
+                }
+                TLS_ST_SR_CERT => {
+                    let mut buf = [0u8; 16384];
+                    let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
+                        s,
+                        buf.as_mut_ptr(),
+                        buf.len(),
+                    );
+                    if n <= 0 {
+                        return server_wait(s);
+                    }
+                    if buf[0] == SSL3_MT_CERTIFICATE_VERIFY as u8 {
+                        // The client sent an empty Certificate, so per `received_client_cert`
+                        // (`statem_srvr.c:122-135`) a CertificateVerify cannot follow; reject it.
+                        ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
+                        return -1;
+                    }
+                    if buf[0] != SSL3_MT_CERT {
+                        ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
+                        return -1;
+                    }
+                    if crate::ssl::statem::statem_clnt::tls13_process_peer_certificate(
+                        s,
+                        &buf[..n as usize],
+                        true,
+                    ) == 0
+                    {
+                        if ossl_statem_in_error(s) == 0 {
+                            ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        }
+                        return -1;
+                    }
+                    (*s).hand_state = if (*s).peer_cert.is_null() {
+                        TLS_ST_SR_FINISHED
+                    } else {
+                        TLS_ST_SR_CERT_VRFY
+                    };
+                }
+                TLS_ST_SR_CERT_VRFY => {
+                    let mut buf = [0u8; 16384];
+                    let n = crate::ssl::record::rec_layer_s3::tls13_next_handshake_message(
+                        s,
+                        buf.as_mut_ptr(),
+                        buf.len(),
+                    );
+                    if n <= 0 || buf[0] != SSL3_MT_CERTIFICATE_VERIFY as u8 {
+                        return server_wait(s);
+                    }
+                    if crate::ssl::statem::statem_clnt::tls_process_cert_verify(
+                        s,
+                        &buf[..n as usize],
+                        true,
+                    ) == 0
+                    {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
@@ -1732,6 +2062,13 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
+                    // `tls13_save_handshake_digest_for_pha` (`statem_lib.c:859-865`): snapshot the
+                    // transcript through the client Finished for a later PHA exchange.
+                    // SAFETY: `s` is live.
+                    if k::tls13_save_handshake_digest_for_pha(s) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
                     let cid = (*(*s).pending_cipher).id as u16;
                     if k::tls13_change_cipher_state(
                         s,
@@ -1749,6 +2086,19 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                     return 1;
                 }
                 TLS_ST_OK => {
+                    // Post-handshake write transition (`statem_srvr.c:627-641`): a pending
+                    // `SSL_verify_client_post_handshake` sends the CertificateRequest here, before
+                    // any application data.
+                    // SAFETY: `s` is live.
+                    if (*s).post_handshake_auth == SSL_PHA_REQUEST_PENDING {
+                        // SAFETY: `s` is live.
+                        if tls13_server_send_pha_cert_request(s) == 0 {
+                            ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                            return -1;
+                        }
+                        // `SW_CERT_REQ` -> `SSL_PHA_REQUESTED` (`statem_srvr.c:676-679`).
+                        (*s).post_handshake_auth = SSL_PHA_REQUESTED;
+                    }
                     // Recorded boundary: the authority's post-handshake write transition may emit
                     // `NewSessionTicket`s here (`tls_construct_new_session_ticket`,
                     // `statem_srvr.c:4370`). That path needs a handshake session

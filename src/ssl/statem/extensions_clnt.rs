@@ -64,6 +64,8 @@ const TLSEXT_TYPE_ENCRYPT_THEN_MAC: u16 = 22;
 const TLSEXT_TYPE_EXTENDED_MASTER_SECRET: u16 = 23;
 /// `TLSEXT_TYPE_supported_versions` — `tls1.h:161`.
 const TLSEXT_TYPE_SUPPORTED_VERSIONS: u16 = 43;
+/// `TLSEXT_TYPE_post_handshake_auth` — `tls1.h:157`.
+const TLSEXT_TYPE_POST_HANDSHAKE_AUTH: u16 = 49;
 /// `TLSEXT_TYPE_psk_kex_modes` — `tls1.h:165`.
 const TLSEXT_TYPE_PSK_KEX_MODES: u16 = 45;
 /// `TLSEXT_TYPE_supported_groups` — `tls1.h:143`.
@@ -408,6 +410,31 @@ unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
     ret
 }
 
+/// `EXT_RETURN tls_construct_ctos_post_handshake_auth(SSL_CONNECTION *s, WPACKET *pkt, ...)` —
+/// `extensions_clnt.c:1273-1296`: sent only when `s->pha_enabled`, as an empty extension, and it
+/// records that this side advertised support (`s->post_handshake_auth = SSL_PHA_EXT_SENT`).
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_ctos_post_handshake_auth(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // SAFETY: `s` is live.
+    if unsafe { (*s).pha_enabled } == 0 {
+        return EXT_RETURN_NOT_SENT;
+    }
+    // SAFETY: `pkt` is live; the body is empty.
+    unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_POST_HANDSHAKE_AUTH) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_close(pkt) == 0
+        {
+            return EXT_RETURN_FAIL;
+        }
+        // `SSL_PHA_EXT_SENT` (`ssl_local.h:372`).
+        (*s).post_handshake_auth = 1;
+    }
+    EXT_RETURN_SENT
+}
+
 /// `EXT_RETURN tls_construct_ctos_etm(...)` — `extensions_clnt.c:516-532`.
 ///
 /// # Safety
@@ -555,6 +582,12 @@ pub(crate) unsafe fn tls_construct_extensions(s: *mut Ssl, pkt: *mut Wpacket) ->
     }
     // SAFETY: live per the contract.
     ret = unsafe { tls_construct_ctos_key_share(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
+    // `post_handshake_auth` (`extensions.c:280`).
+    // SAFETY: live per the contract.
+    ret = unsafe { tls_construct_ctos_post_handshake_auth(s, pkt) };
     if ret == EXT_RETURN_FAIL {
         return 0;
     }

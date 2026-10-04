@@ -817,10 +817,10 @@
   },
   "prerequisites": {
     "blocking_dependencies": 0,
-    "divergence_names_covered": 100,
+    "divergence_names_covered": 98,
     "findings": 0,
-    "language_census": 11703,
-    "sealed_census": 396
+    "language_census": 11689,
+    "sealed_census": 391
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",
