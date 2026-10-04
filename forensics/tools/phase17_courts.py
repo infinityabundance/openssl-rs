@@ -118,13 +118,16 @@ the court if they do not, so a vacuous pass is impossible; on the candidate they
 libcrypto queue and a refused `SSL_CTX_config`), which is the receipt
 `docs/PHASE-17-SUBPHASES.md` section 3.3 requires rather than a failure on the architecture.
 
-The remaining pending court
----------------------------
-One of the four courts the plan names is not runnable yet and is named in `PENDING_COURTS` with the
-subphase that lands it:
-
-  * `RT-DOWNSTREAM-CONSUMER` (17.4) — a real downstream consumer built against the candidate
-    distribution shell the way an out-of-tree package links it.
+The downstream consumer
+-----------------------
+`RT-DOWNSTREAM-CONSUMER` (17.4) is no longer pending: the probe builds a real consumer against the
+candidate's *install prefix* (`artifacts/phase2/install/`) with the out-of-tree link shape
+(`-I .../include -L .../lib -lssl -lcrypto -rpath`), exercises an EVP digest, an X.509 PEM parse, a
+libcrypto `ERR` round-trip and a TLS 1.3 handshake over memory BIOs exchanging a fixed 15-byte
+application record, and compares its transcript with the authority's. Its comparable observations
+must agree; the flight's on-the-wire byte counts are `DOWNSTREAM_DIVERGENCE` and are recorded with
+the candidate engine's reduction named. A residual on a comparable observation is a failure. No
+court remains in `PENDING_COURTS`.
 
 The runner reads no obligations ledger: the ledger's contract-unit states are measured from this
 registry, so the edge runs ledger -> courts and binding it back would form a digest cycle neither
@@ -174,7 +177,14 @@ COURTS: list[tuple[str, str]] = [
     ("RT-CLI-BODIES", "rt_cli_bodies_probe.sh"),
     ("RT-TLS13-INTEROP", "rt_tls13_interop_probe.c"),
     ("RT-CROSS-DSO-STATE", "rt_cross_dso_state_probe.c"),
+    ("RT-DOWNSTREAM-CONSUMER", "rt_downstream_consumer_probe.c"),
 ]
+
+# The candidate's shipped distribution shell -- the install prefix an out-of-tree package links
+# against (`-I .../include -L .../lib -lssl -lcrypto`), not the crate's internal modules. The
+# downstream-consumer court is the only one that compiles against this prefix rather than the
+# shell root `artifacts/phase2`.
+CANDIDATE_SHELL = PHASE2 / "install"
 
 # The fixed argv `RT-CLI-BODIES` drives on both sides. Every case is build-independent and
 # deterministic: the `errstr` body's own arms -- a run of six arguments (five decode, `nothex`
@@ -978,13 +988,8 @@ RECORDED_DIVERGENCES: list[dict] = [
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
 # the probe and what the court will drive, so "nothing registered" is a stated distance rather than
-# a court quietly dropped.
-PENDING_COURTS: dict[str, str] = {
-    "RT-DOWNSTREAM-CONSUMER": (
-        "17.4 lands the probe; it builds a real downstream consumer against the candidate "
-        "distribution shell and compares its transcript with the authority's"
-    ),
-}
+# a court quietly dropped. 17.4 landed `RT-DOWNSTREAM-CONSUMER`, so no pending court remains.
+PENDING_COURTS: dict[str, str] = {}
 
 
 def side_env(libdir: Path, modulesdir: Path) -> dict[str, str]:
@@ -1464,6 +1469,223 @@ def cross_dso_court(name: str, src: Path, auth, work: Path) -> dict:
     }
 
 
+# `RT-DOWNSTREAM-CONSUMER`'s comparable observations: the slice of the exported surface that must
+# behave identically for a real consumer. `DOWNSTREAM_COMPARABLE` is the EVP digest, the X.509
+# parse, the libcrypto `ERR` round-trip and the TLS 1.3 flight's *semantic* results -- return
+# values, digest bytes, object shape, the terminal handshake states and the application-data
+# exchange. `DOWNSTREAM_DIVERGENCE` is the flight's on-the-wire byte counts, which the candidate's
+# reduced engine moves (it emits smaller records than the authority's full stack); each is named by
+# `_downstream_reason`. A residual on a comparable observation is a failure; a residual on a
+# divergence observation is the receipt section 3.4 requires.
+DOWNSTREAM_COMPARABLE: list[str] = [
+    # 17.4a: EVP, a SHA-256 digest over a fixed input.
+    "evp.ctx.nonnull",
+    "evp.digest.init",
+    "evp.digest.update",
+    "evp.digest.final",
+    "evp.digest.len",
+    "evp.digest.hex",
+    # 17.4b: X.509, a PEM parse of the fixed leaf certificate.
+    "x509.bio.nonnull",
+    "x509.load.nonnull",
+    "x509.version",
+    "x509.pubkey.nonnull",
+    "x509.subject.entries",
+    "x509.digest.ret",
+    "x509.digest.len",
+    "x509.digest.hex",
+    # 17.4c: ERR, a libcrypto raise/read round-trip.
+    "err.user.peek",
+    "err.user.lib",
+    "err.user.reason",
+    "err.user.text",
+    "err.user.get",
+    "err.user.after_get",
+    # 17.4d: TLS 1.3, the handshake's structure and its terminal state.
+    "tls.ctx.client.nonnull",
+    "tls.ctx.server.nonnull",
+    "tls.server.cert.load",
+    "tls.server.key.load",
+    "tls.server.key.check",
+    "tls.client.nonnull",
+    "tls.server.nonnull",
+    "tls.ciphers.count",
+    "tls.flight.0.client.ret",
+    "tls.flight.0.server.ret",
+    "tls.flight.1.client.ret",
+    "tls.flight.1.server.ret",
+    "tls.flight.2.client.ret",
+    "tls.flight.2.server.ret",
+    "tls.flights.used",
+    "tls.client.state",
+    "tls.client.want",
+    "tls.client.in_init",
+    "tls.client.finished",
+    "tls.server.state",
+    "tls.server.want",
+    "tls.server.in_init",
+    "tls.server.finished",
+    # the fixed 15-byte application record, exchanged each way.
+    "app.skipped",
+    "app.write.client",
+    "app.client.bytes",
+    "app.read.server",
+    "app.server.match",
+    "app.write.server",
+    "app.server.bytes",
+    "app.read.client",
+    "app.client.match",
+    "probe.done",
+]
+
+DOWNSTREAM_DIVERGENCE: list[str] = [
+    "tls.flight.0.client.out",
+    "tls.flight.0.server.out",
+    "tls.flight.1.client.out",
+    "tls.flight.1.server.out",
+    "tls.flight.2.client.out",
+    "tls.flight.2.server.out",
+]
+
+
+def _downstream_reason(key: str) -> str:
+    """The named reduction a non-comparable `RT-DOWNSTREAM-CONSUMER` observation records."""
+    if key.startswith("tls.flight") and key.endswith(".server.out"):
+        return (
+            "the candidate's reduced TLS 1.3 engine emits a smaller server flight than the "
+            "authority's full stack -- it carries the handshake to `SSL_is_init_finished` without "
+            "the authority's extra records (the post-handshake `NewSessionTicket` flight is one, "
+            "`tls.flight.1.server.out` being 0 where the authority writes it) -- so the server's "
+            "on-the-wire byte counts differ even though the terminal state and the application "
+            "data agree (docs/PHASE-17-SUBPHASES.md section 3.4)"
+        )
+    return (
+        "the candidate's reduced TLS 1.3 engine builds a smaller ClientHello than the "
+        "authority's full stack (fewer optional extensions), so the client's on-the-wire byte "
+        "counts differ even though the handshake completes and the application data matches "
+        "(docs/PHASE-17-SUBPHASES.md section 3.4)"
+    )
+
+
+def _downstream_contract_problems(vals: dict[str, str]) -> list[str]:
+    """The observations the admitted authority must make for this court to measure the contract.
+
+    The authority is the full stack, so its consumer must actually drive every slice: the digest
+    must complete, the certificate must parse, the error must round-trip, and the handshake must
+    finish and carry a 15-byte application record each way. If any is absent the probe did not
+    drive the exported surface and the run is a failure rather than a pass with an empty
+    comparison.
+    """
+    problems: list[str] = []
+    if vals.get("evp.digest.final") != "1" or not vals.get("evp.digest.hex"):
+        problems.append("authority's EVP digest did not complete")
+    if vals.get("x509.load.nonnull") != "1" or vals.get("x509.digest.ret") != "1":
+        problems.append("authority's X.509 PEM parse did not succeed")
+    if vals.get("err.user.reason") != "100" or vals.get("err.user.after_get") != "0x0":
+        problems.append("authority's ERR round-trip did not raise and drain the fixed reason")
+    if vals.get("tls.client.finished") != "1" or vals.get("tls.server.finished") != "1":
+        problems.append("authority's TLS 1.3 handshake did not finish")
+    if (vals.get("app.write.client") != "15" or vals.get("app.read.server") != "15"
+            or vals.get("app.server.match") != "1" or vals.get("app.read.client") != "15"
+            or vals.get("app.client.match") != "1"):
+        problems.append("authority's 15-byte application record did not round-trip both ways")
+    return problems
+
+
+def downstream_court(name: str, src: Path, auth, work: Path) -> dict:
+    """`RT-DOWNSTREAM-CONSUMER`: a real consumer built against the shipped distribution shell.
+
+    The probe is compiled twice and run on both sides, but the candidate side links the *install
+    prefix* (`artifacts/phase2/install/`) exactly as an out-of-tree package does -- `-I .../include`,
+    `-L .../lib`, `-lssl -lcrypto`, `-rpath` -- rather than the crate's internal modules. The court
+    compares the two transcripts' comparable observations (the EVP digest, the X.509 parse, the ERR
+    round-trip and the TLS 1.3 flight's semantic results); a residual there is a failure. The
+    candidate's reduced engine moves only the flight's on-the-wire byte counts, which are recorded
+    (`recorded_divergences`, each with the reduction `_downstream_reason` names) rather than
+    failing the architecture (docs/PHASE-17-SUBPHASES.md section 3.4). `_downstream_contract_problems`
+    fails the court if the authority does not drive every slice, so the comparison cannot pass
+    vacuously. The verdict is `pass` when the consumer works -- it links the shipped surface, runs,
+    and its comparable observations match the authority's -- not only when its wires happen to
+    agree.
+    """
+    auth_lib = auth.libdir
+    auth_inc = auth.prefix / "include"
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+
+    ok, err = compile_probe(src, auth_bin, auth_inc, auth_lib)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(src, cand_bin, CANDIDATE_SHELL / "include",
+                            CANDIDATE_SHELL / "lib")
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    a_out, a_err, a_code = run_probe(
+        auth_bin, side_env(auth_lib, auth_lib / "ossl-modules"))
+    c_out, c_err, c_code = run_probe(
+        cand_bin, side_env(CANDIDATE_SHELL / "lib",
+                           CANDIDATE_SHELL / "lib" / "ossl-modules"))
+
+    if not a_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "authority-run",
+                "detail": {"exit_code": a_code, "stderr": a_err.splitlines()[:12]}}
+
+    a_vals = _keyed(a_out)
+    c_vals = _keyed(c_out)
+    residuals = diff(a_out, c_out)
+    comparable = set(DOWNSTREAM_COMPARABLE)
+    driven = [r for r in residuals if r["observation"] in comparable]
+    recorded = [r for r in residuals if r["observation"] not in comparable]
+    for r in recorded:
+        r["reason"] = _downstream_reason(r["observation"])
+
+    contract = _downstream_contract_problems(a_vals)
+    crashed = a_code is None or a_code < 0 or c_code is None or c_code < 0
+    comparable_present = sum(
+        1 for k in DOWNSTREAM_COMPARABLE if a_vals.get(k) == c_vals.get(k)
+    )
+
+    staged = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{src.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    return {
+        "court": name,
+        "probe": rel(src),
+        "link_prefix": rel(CANDIDATE_SHELL),
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "crashed": crashed,
+        "comparable_keys": DOWNSTREAM_COMPARABLE,
+        "divergence_keys": DOWNSTREAM_DIVERGENCE,
+        "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
+        "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
+        "comparable_observations": comparable_present,
+        "residual_count": len(driven),
+        "residuals": driven,
+        "recorded_divergences": recorded,
+        "recorded_count": len(recorded),
+        "authority_contract_problems": contract,
+        "authority_handshake_finished": a_vals.get("tls.client.finished") == "1"
+                                        and a_vals.get("tls.server.finished") == "1",
+        "candidate_handshake_finished": c_vals.get("tls.client.finished") == "1"
+                                        and c_vals.get("tls.server.finished") == "1",
+        "verdict": (
+            "fail" if (driven or contract or crashed or c_code != a_code) else "pass"
+        ),
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
+
+
 def render_probe(cases: list[list[str]]) -> str:
     """The shell probe `RT-CLI-BODIES` runs on each side.
 
@@ -1626,6 +1848,9 @@ def main(argv: list[str]) -> int:
         if name == "RT-CROSS-DSO-STATE":
             records.append(cross_dso_court(name, src, auth, work))
             continue
+        if name == "RT-DOWNSTREAM-CONSUMER":
+            records.append(downstream_court(name, src, auth, work))
+            continue
         records.append(interop_court(name, src, auth, work))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
@@ -1739,8 +1964,13 @@ def main(argv: list[str]) -> int:
             "fixtures/cross_dso.cnf). On the authority one `libcrypto.so.3` is shared via "
             "`DT_NEEDED`, so both reads succeed; on the candidate each DSO carries its own copy and "
             "both reads diverge, which the court records (`recorded_divergences`) rather than "
-            "failing on the architecture (section 3.3). `RT-DOWNSTREAM-CONSUMER` is 17.4's: it "
-            "builds a real downstream consumer against the candidate distribution shell. This "
+            "failing on the architecture (section 3.3). `RT-DOWNSTREAM-CONSUMER` is 17.4's: "
+            "courts/phase17/rt_downstream_consumer_probe.c is a real downstream consumer linked "
+            "only against the shipped install prefix (an EVP digest, an X.509 PEM parse, a "
+            "libcrypto ERR round-trip and a TLS 1.3 handshake over memory BIOs exchanging a fixed "
+            "15-byte application record), and the court records the flight's on-the-wire byte "
+            "counts the candidate's reduced engine moves rather than asserting wire parity "
+            "(section 3.4). No court remains pending. This "
             "stratum owns no exported symbol, so no differential probe over a symbol set is its "
             "evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry "
             "is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at "
@@ -1758,6 +1988,9 @@ def main(argv: list[str]) -> int:
         InputRef(name="interop-key", path=PROBE_DIR / "fixtures" / "rsa-key.pem"),
         InputRef(name="cross-dso-probe", path=PROBE_DIR / "rt_cross_dso_state_probe.c"),
         InputRef(name="cross-dso-conf", path=PROBE_DIR / "fixtures" / "cross_dso.cnf"),
+        InputRef(name="downstream-probe",
+                 path=PROBE_DIR / "rt_downstream_consumer_probe.c"),
+        InputRef(name="downstream-leaf", path=PROBE_DIR / "fixtures" / "leaf.pem"),
     ]
     doc = envelope(kind="phase17-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)

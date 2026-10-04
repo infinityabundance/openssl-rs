@@ -263,6 +263,10 @@
       "observations": 670,
       "verdict": "pass"
     },
+    "RT-DOWNSTREAM-CONSUMER": {
+      "observations": 59,
+      "verdict": "pass"
+    },
     "RT-DRBG": {
       "observations": 361,
       "verdict": "pass"
@@ -754,7 +758,7 @@
     "phase14": 0,
     "phase15": 0,
     "phase16": 0,
-    "phase17": 54,
+    "phase17": 53,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
