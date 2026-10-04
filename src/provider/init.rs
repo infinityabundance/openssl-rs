@@ -225,9 +225,12 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
             let mut module_path: *const c_char = unsafe { (*prov).path };
             let mut allocated_path: *mut c_char = ptr::null_mut();
             if module_path.is_null() {
-                // SAFETY: `dso` is live and a NULL filename means "translate the one I have",
-                // which is `prov->name`; the answer is a fresh allocation.
-                allocated_path = unsafe { DSO_convert_filename(dso, ptr::null()) };
+                // `provider_core.c:1009` passes the provider's **name**, not NULL: the DSO's own
+                // `filename` is unset for a provider constructed by name, so a NULL here would
+                // raise `DSO_R_NO_FILENAME` and the module could never load.
+                // SAFETY: `dso` is live and `name` is the provider's NUL-terminated name; the
+                // answer is a fresh allocation.
+                allocated_path = unsafe { DSO_convert_filename(dso, (*prov).name) };
                 module_path = allocated_path;
             }
             let mut merged_path: *mut c_char = ptr::null_mut();

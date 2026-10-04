@@ -420,6 +420,7 @@
         "ossl_kdf_data_free",
         "ossl_kdf_data_new",
         "ossl_kdf_data_up_ref",
+        "ossl_legacy_provider_init",
         "ossl_mac_key_free",
         "ossl_mac_key_new",
         "ossl_mac_key_up_ref",
@@ -454,6 +455,12 @@
         "ossl_pw_set_pem_password_cb",
         "ossl_pw_set_ui_method",
         "ossl_sk_ASN1_UTF8STRING2text",
+        "ossl_statem_client_max_message_size",
+        "ossl_statem_client_read_transition",
+        "ossl_statem_client_write_transition",
+        "ossl_statem_server_max_message_size",
+        "ossl_statem_server_read_transition",
+        "ossl_statem_server_write_transition",
         "ossl_v3_name_cmp",
         "ossl_x25519",
         "ossl_x25519_public_from_private",
@@ -508,7 +515,7 @@
         "x25519_fe64_tobytes",
         "x509v3_add_len_value_uchar"
       ],
-      "compiler_emitted_count": 16984,
+      "compiler_emitted_count": 18073,
       "definition": "global symbols defined by the crate's static archive that are not authority exports; the version script's `local: *;` hides them from the DSO, so they are not part of the ABI",
       "note": "`c_style` is compared exactly: these are the names a consumer's own symbols could collide with. `compiler_emitted_count` is a property of the toolchain (its codegen), not of the source, so it is recorded as a count and evidence_determinism.py normalises and reports it. It is excluded from body_hash for the same reason. The symbol tables are read by elf_symbols.py rather than by `nm`, so the set does not depend on the host's binutils.",
       "status": "build-product observation, not contract evidence"
@@ -7041,7 +7048,7 @@
     {
       "name": "crate-archive",
       "path": "target/release/libopenssl_rs.a",
-      "sha256": "77df4bfe28500059485ed80b298cedcdf73a0e075d62aaac55ebdaf546f20c04"
+      "sha256": "37928e6f844e14936f9fe071f3d7df1b0c19207d0484d17b3bf5efc5f5e0f030"
     },
     {
       "name": "authority-exports",

@@ -125,25 +125,37 @@ ar_quiet rcs "$OBJ/libssl.a" "$OBJ/libssl.shell.o"
 
 # --- provider module (legacy.so) ---------------------------------------------
 # The authority's module exports exactly OSSL_provider_init and declares
-# NEEDED libcrypto.so.3. The module is a separate Rust program with its own
-# runtime, so a staticlib IS correct here (nothing else is in its link), and the
-# version script keeps that runtime from being exported.
+# NEEDED libcrypto.so.3. Since 16.1 the provider engine is the crate's own
+# legacy provider (`src/provider/legacyprov.rs`), and `shell/legacy.shell.rs`
+# defines the module's one exported symbol and forwards to the crate's
+# `ossl_legacy_provider_init`. The shell is compiled to an object (not a
+# staticlib) so it contributes no second `std`, exactly as the libssl scaffold
+# is; the crate archive supplies the engine. The version script keeps every other
+# crate symbol from being exported, so the module's ABI is the authority's one
+# symbol.
 #
 # --no-as-needed plus -lcrypto is what creates the dependency: without it the
 # linker drops the library (nothing is referenced) and the module would load
 # WITHOUT the dependency the authority declares, which a provider-loading court
 # would catch.
 echo "--- legacy.so ---"
-rustc --edition 2021 --crate-type staticlib -O --crate-name legacy_shell \
-  -o legacy.shell.a shell/legacy.shell.rs
+rustc --edition 2021 --emit=obj --crate-type lib -O -C panic=abort \
+  --crate-name legacy_shell -o "$OBJ/legacy.shell.o" shell/legacy.shell.rs
 printf '%s\n' '{' '    global: OSSL_provider_init;' '    local: *;' '};' > legacy.ld
-cc -shared -o legacy.so -Wl,--whole-archive legacy.shell.a -Wl,--no-whole-archive \
+cc -shared -o legacy.so \
+  -Wl,--whole-archive "$CRATE" -Wl,--no-whole-archive "$OBJ/legacy.shell.o" \
   -Wl,--version-script="$PWD/legacy.ld" \
   -Wl,--no-as-needed -L"$PWD" -lcrypto -lpthread -ldl -lm -lrt -lutil
 
 # --- executables --------------------------------------------------------------
+# Since 16.4 the CLI is the crate's (`src/apps/`), so the `openssl` executable
+# links the crate rlib rather than a standalone std scaffold. rustc resolves the
+# crate by `--extern`, and `-L dependency` carries any transitive crates (there
+# are none: Cargo.toml has no [dependencies]).
 echo "--- openssl executable ---"
-rustc --edition 2021 -O --crate-name openssl_shell -o openssl shell/openssl.shell.rs
+rustc --edition 2021 -O --crate-name openssl_shell -o openssl shell/openssl.shell.rs \
+  --extern openssl_rs=/work/target/release/libopenssl_rs.rlib \
+  -L dependency=/work/target/release/deps
 cp shell/c_rehash.sh c_rehash && chmod +x c_rehash
 
 # --- install layout -----------------------------------------------------------

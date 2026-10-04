@@ -260,6 +260,7 @@
       "src/x509/x_all.rs: {11: 91, 12: 5}"
     ],
     "modules_without_a_stratum": [
+      "src/apps/tables.rs",
       "src/bn/dh_data.rs",
       "src/bn/prime_data.rs",
       "src/cmp/cmp_protect.rs",

@@ -154,6 +154,13 @@ DIVERGENCE_CLASSES = (
     # named `F` is the worked example. Recorded rather than filtered, because a filter
     # would also hide the next real collision.
     "shadowed_by_a_crate_identifier",
+    # The unit is transcribed, but not whole: the names below are functions the unit
+    # defines that its own reduced transcription omits, because their bodies reach an
+    # engine unit this stratum has not landed (the record layer, the extension units,
+    # the key schedule). The record names the module and the boundary. Phase 16.5's
+    # `ssl/statem/statem_clnt.c` and `statem_srvr.c` use it for the message bodies
+    # whose transition surface is landed but whose construction/parsing is not.
+    "reduced_transcription",
 )
 
 

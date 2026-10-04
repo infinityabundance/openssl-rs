@@ -21,11 +21,10 @@
 //!   and letting the crate claim the cleanup ran would be false. It waits for the init
 //!   sequence to name it, exactly as the authority's own comment "must be called before
 //!   engine_cleanup_int()" (`src/runtime/init.rs:935`) records.
-//! * `engine_set_all_null` **is** landed, but nothing calls it: its only caller is
-//!   `crypto/engine/eng_dyn.c:488`, the dynamic-engine unit this stratum does not carry.
-//!   It is kept because it is the compile-time inventory of the structure's fields — the
-//!   authority's own comment says it is placed beside `ENGINE_new` so a new field is
-//!   caught — and is marked `#[allow(dead_code)]` naming that blocker rather than removed.
+//! * `engine_set_all_null` **is** landed and is now called: Phase 16.2 landed
+//!   `crypto/engine/eng_dyn.c:488` (`src/engine/eng_dyn.rs`), its only caller. It is the
+//!   compile-time inventory of the structure's fields — the authority's own comment says it
+//!   is placed beside `ENGINE_new` so a new field is caught.
 //!
 //! **Not this module's, and not this stratum's.** The five legacy method slots' accessors
 //! (`ENGINE_set_RSA`/`_DSA`/`_DH`/`_EC`/`_RAND` and the getters) are `tb_rsa.c`,
@@ -364,13 +363,11 @@ pub extern "C" fn ENGINE_new() -> *mut Engine {
 
 /// `void engine_set_all_null(ENGINE *e)` — `crypto/engine/eng_lib.c:56-75`.
 ///
-/// Unreachable in this crate: its only authority caller is `crypto/engine/eng_dyn.c:488`,
-/// the dynamic-engine unit this stratum does not carry. Kept as the structure's field
-/// inventory, which is why the authority places it beside `ENGINE_new`.
+/// Its only authority caller is `crypto/engine/eng_dyn.c:488`, the dynamic-engine
+/// roll-back `dynamic_load` performs after the version check and before `bind_engine`.
 ///
 /// # Safety
 /// `e` must be NULL or a live `ENGINE`.
-#[allow(dead_code)] // unreachable until `crypto/engine/eng_dyn.c` lands with the dynamic engine
 pub(crate) unsafe fn engine_set_all_null(e: *mut Engine) {
     if e.is_null() {
         return;

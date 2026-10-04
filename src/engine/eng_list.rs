@@ -11,12 +11,14 @@
 //! `ENGINE_by_id` (`:408-473`) loads the built-ins, walks the list for the id, and — on a
 //! miss that is not the id `"dynamic"` itself — recurses into `ENGINE_by_id("dynamic")` and
 //! drives the dynamic engine with `ENGINE_ctrl_cmd_string` to load a shared object from
-//! `OPENSSL_ENGINES` (or the compiled-in engines directory). In this crate no dynamic engine
-//! is registered (`engine_load_dynamic_int` is `crypto/engine/eng_dyn.c`'s, a unit no
-//! subphase owns yet), so the recursion answers NULL and the miss path takes the authority's
-//! own `goto notfound`. The `<id>`-in-list half is transcribed whole, so a caller that
-//! registered an engine with `ENGINE_add` finds it exactly as the authority would; the
-//! fallback's failure coordinate (`ENGINE_R_NO_SUCH_ENGINE`, `id=%s`) is the authority's too.
+//! `OPENSSL_ENGINES` (or the compiled-in engines directory). Phase 16.2 landed
+//! `crypto/engine/eng_dyn.c` (`src/engine/eng_dyn.rs`), so the dynamic engine is registered
+//! when a caller sets `OPENSSL_INIT_ENGINE_DYNAMIC`: the recursion now finds it and the miss
+//! path drives the loader rather than taking `goto notfound` immediately. When the loader's
+//! `LOAD` itself refuses (no shared object) the fallback still ends at the authority's own
+//! `notfound` arm. The `<id>`-in-list half is transcribed whole, so a caller that registered
+//! an engine with `ENGINE_add` finds it exactly as the authority would; the fallback's
+//! failure coordinate (`ENGINE_R_NO_SUCH_ENGINE`, `id=%s`) is the authority's too.
 //!
 //! ## The list owns one structural reference per member
 //!

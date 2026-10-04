@@ -1230,6 +1230,25 @@ pub struct Ssl {
     pub min_ver: c_int,
     /// `int s3.tmp.max_ver` — the connection's maximum supported version; 0 disables every cipher.
     pub max_ver: c_int,
+    /// `int s3.tmp.cert_req` — the client's pending CertificateRequest flag (`statem_clnt.c`, 16.5).
+    pub s3_tmp_cert_req: c_int,
+    /// `int s3.tmp.cert_request` — the server's CertificateRequest-sent flag (`statem_srvr.c`, 16.5).
+    pub s3_tmp_cert_request: c_int,
+    /// `int s3.npn_seen` — the NPN extension seen flag (`statem_clnt.c`/`statem_srvr.c`, 16.5).
+    pub s3_npn_seen: c_int,
+    /// `int ext.ticket_expected` — the session-ticket extension flag (`statem_*.c`, 16.5).
+    pub ext_ticket_expected: c_int,
+    /// `int ext.status_expected` — the OCSP status-request extension flag (`statem_*.c`, 16.5).
+    pub ext_status_expected: c_int,
+    /// `int ext.compress_certificate_sent` — the certificate-compression flag (`statem_*.c`, 16.5).
+    pub ext_compress_certificate_sent: c_int,
+    /// `uint8_t ext.compress_certificate_from_peer[0]` — the peer's first compression
+    /// algorithm byte (`statem_clnt.c`/`statem_srvr.c`, 16.5).
+    pub ext_compress_certificate_from_peer_0: u8,
+    /// `int certreqs_sent` — CertificateRequests sent, for `send_certificate_request` (16.5).
+    pub certreqs_sent: c_int,
+    /// `uint32_t sent_tickets` — session tickets sent (`statem_srvr.c`, 16.5).
+    pub sent_tickets: usize,
     /// `size_t rlayer.wpend_tot` — the pending-write counter (`RECORD_LAYER_write_pending`, 14.5b).
     pub wpend_tot: usize,
     /// `int ext.extra_tickets_expected` — `SSL_new_session_ticket`'s counter (14.5b).

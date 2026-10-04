@@ -1,0 +1,439 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "contract_units": [
+      {
+        "closure": "every command the Phase-1 capture lists carries a structured option count",
+        "observation": "55/55 command(s) carry a structured option count",
+        "state": "implemented",
+        "surface": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+        "unit": "cli",
+        "what": "the `openssl` CLI and its command dispatch over libcrypto/libssl"
+      },
+      {
+        "closure": "the default-path deferrals are discharged",
+        "observation": "0 default-path deferral(s) outstanding",
+        "state": "implemented",
+        "surface": "forensics/prerequisites.json",
+        "unit": "config",
+        "what": "config loading and the default-path / directory plane"
+      },
+      {
+        "closure": "every provider registration row this stratum owns is published",
+        "observation": "39/39 provider row(s) implemented",
+        "state": "implemented",
+        "surface": "forensics/atlas/provider-algorithms.json",
+        "unit": "filesystem",
+        "what": "the installed distribution layout, including the `ossl-modules/` module contract"
+      }
+    ],
+    "counts": {
+      "atlas_owned": 0,
+      "contract_units": 3,
+      "deferrals_received": 0,
+      "deferred_to_later_phase": 0,
+      "implemented": 42,
+      "open_in_this_stratum": 0,
+      "owned": 42,
+      "provider_rows_open": 0,
+      "provider_rows_owned": 39,
+      "unit_deferrals_received": 0
+    },
+    "deferrals": [],
+    "deferred": [],
+    "implemented": [],
+    "note": "`open` is the only list that blocks this stratum, and its count is over provider registration rows, prerequisite deferrals and contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. A provider row is a registration row, not an export: the provider-row rule in `phase_state.py` and the provider-row census remain the arbiter of its state, and `handed on` is the census's `projection`, not a state a row carries (D237, D295). The 39 legacy rows belong to the loadable module the candidate ships as a scaffold `ossl-modules/legacy.so`, which Phase 13's subphases do not activate and which this stratum owns as the installed-module contract (D525). Phase 16.2 retired the absent dynamic ENGINE loader (`engine_load_dynamic_int`, D528), Phase 16.3 the `OPENSSLDIR` directory plane and the install context (`ossl_get_openssldir`, `ossl_get_wininstallcontext`), Phase 16.4 the CLI capture defect (`cli_option_list_parse`, D490), and Phase 16.5 the two TLS message-layer units Phase 15 sealed without; all six received deferrals are discharged, so this stratum's working set is exactly its provider rows and its three contract units. Nothing here is a parity claim: a published provider row or a landed CLI is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-16-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "open": [],
+    "provider_rows": [
+      {
+        "algorithm_names": "MD4",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_DIGEST",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_digests"
+      },
+      {
+        "algorithm_names": "MDC2",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_DIGEST",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_digests"
+      },
+      {
+        "algorithm_names": "WHIRLPOOL",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_DIGEST",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_digests"
+      },
+      {
+        "algorithm_names": "RIPEMD-160",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_DIGEST",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_digests"
+      },
+      {
+        "algorithm_names": "CAST5-ECB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "CAST5-CBC",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "CAST5-OFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "CAST5-CFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "BF-ECB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "BF-CBC",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "BF-OFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "BF-CFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "IDEA-ECB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "IDEA-CBC",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "IDEA-OFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "IDEA-CFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "SEED-ECB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "SEED-CBC",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "SEED-OFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "SEED-CFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "RC2-ECB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "RC2-CBC",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "RC2-40-CBC",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "RC2-64-CBC",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "RC2-CFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "RC2-OFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "RC4",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "RC4-40",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "RC4-HMAC-MD5",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "DESX-CBC",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "DES-ECB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "DES-CBC",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "DES-OFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "DES-CFB",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "DES-CFB1",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "DES-CFB8",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_CIPHER",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_ciphers"
+      },
+      {
+        "algorithm_names": "PBKDF1",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_KDF",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_kdfs"
+      },
+      {
+        "algorithm_names": "PVKKDF",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_KDF",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_kdfs"
+      },
+      {
+        "algorithm_names": "GENERIC-SECRET",
+        "implementation_state": "implemented",
+        "operation": "OSSL_OP_SKEYMGMT",
+        "planned_by": "crate-table",
+        "provider": "legacy",
+        "source": "providers/legacyprov.c",
+        "table_symbol": "legacy_skeymgmt"
+      }
+    ],
+    "rule": "this stratum's working set is not a set of exported symbols: it is (a) every provider registration row forensics/atlas/provider-algorithms.json assigns phase 16, (b) every deferral forensics/prerequisites.json records with owner_phase 16, and (c) the CLI / config / filesystem contract units docs/PHASE-16-SUBPHASES.md names. Every row is read from those atlases; the ledger types none of them, and `main` fails closed if the ownership atlas assigns this stratum an export",
+    "unit": "cli-config contract",
+    "unit_deferrals": []
+  },
+  "generator": "forensics/tools/phase16_obligations.py",
+  "inputs": [
+    {
+      "name": "symbol-ownership",
+      "path": "forensics/atlas/symbol-ownership.json",
+      "sha256": "d42d2ba4f459b729139149f7343cb36357959272a38fecce8f20e6e4aa29a137"
+    },
+    {
+      "name": "provider-algorithms",
+      "path": "forensics/atlas/provider-algorithms.json",
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
+    },
+    {
+      "name": "provider-algorithm-plans",
+      "path": "forensics/atlas/provider-algorithm-plans.json",
+      "sha256": "1892549b5cdaa58decbb5f64cfdb7bdc9c3394df585dc5977e9d3ea34f48970a"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "d24483526784c0c8f1497ce45d173bf316f5a072c7eec20cbb22848b63cb047a"
+    },
+    {
+      "name": "cli-capture",
+      "path": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+      "sha256": "874e4ef400b33871c7d282fac76210394de39e465f5c6b5d276cd88d9b05149d"
+    },
+    {
+      "name": "phase-16-plan",
+      "path": "docs/PHASE-16-SUBPHASES.md",
+      "sha256": "1125a27838b7bad0586de184babce67a4c6ac589db4b3ef89a8cc6a4a59221fe"
+    }
+  ],
+  "kind": "phase16-obligations",
+  "schema": "openssl-rs/atlas/phase16-obligations/v1"
+}

@@ -482,6 +482,7 @@ NOT_A_DISPATCH: dict[str, str] = {
     # to link to. Landed with 13.5 and 13.6.
     "XtsStreamF@src/evp/e_aes.rs": LEGACY_CTX_CALLBACK,
     "DesCbcF@src/evp/e_des.rs": LEGACY_CTX_CALLBACK,
+    "DesCbcF@src/provider/cipher.rs": LEGACY_CTX_CALLBACK,
     "DesEdeCbcF@src/evp/e_des3.rs": LEGACY_CTX_CALLBACK,
     "QualFn@src/txt_db/txt_db.rs": LEGACY_CTX_CALLBACK,
     "HashFn@src/txt_db/txt_db.rs": LHASH_MACRO,

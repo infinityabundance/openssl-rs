@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /bin/sh /work/courts/phase16/rt_cli_probe.sh /work/artifacts/phase2/openssl /work/artifacts/phase2/install/lib/ossl-modules

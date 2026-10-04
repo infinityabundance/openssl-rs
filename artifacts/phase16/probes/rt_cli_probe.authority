@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /bin/sh /work/courts/phase16/rt_cli_probe.sh /work/forensics/authorities/prefix/openssl-3.6.4-production/bin/openssl /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/ossl-modules

@@ -45,9 +45,13 @@ PRODUCTION_AUTHORITY = "openssl-3.6.4-production"
 # A ledger whose obligations are not exports declares its `body.unit` here, and the tools that
 # partition the *export* universe (`court_coverage.py`, `ownership_audit.py`) skip it. Phase 22
 # owns no `libcrypto` symbol -- its unit is a *compatibility plane* and its `implemented` list
-# names subphases -- so a ledger that counted symbols would count zero. The marker is a property of
-# the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485).
-NON_EXPORT_UNITS = {"compatibility plane"}
+# names subphases -- so a ledger that counted symbols would count zero. **Phase 16 owns no export
+# either**: the ownership atlas assigns `owner_phase == 16` no row, and its unit is the CLI /
+# config / filesystem contract over 39 provider registration rows, six prerequisite deferrals and
+# three contract units, which a symbol-counting ledger would count zero. The marker is a property
+# of the document rather than a phase number those tools know (`docs/PHASE-22-SUBPHASES.md`, D485;
+# `docs/PHASE-16-SUBPHASES.md`, section 1).
+NON_EXPORT_UNITS = {"compatibility plane", "cli-config contract"}
 HISTORICAL_AUTHORITY = "openssl-3.6.3-historical"
 
 # Which seal document belongs to which stratum, where one exists. **One table, because two tools
@@ -81,6 +85,7 @@ SEAL_DOCS: dict[int, str] = {
     13: "docs/PHASE-13-LEGACY-SEAL.md",
     14: "docs/PHASE-14-TLS-SEAL.md",
     15: "docs/PHASE-15-QUIC-SEAL.md",
+    16: "docs/PHASE-16-CLI-SEAL.md",
     # Phase 22 is an atlas stratum rather than an export stratum, but its seal is the same kind of
     # document and `phase_state.py` records its sha256 the same way. Its `evidence_for` branch is
     # its own because its ledger's unit is a compatibility plane, not a symbol (D485).
@@ -253,17 +258,27 @@ class CmdResult:
         return self.returncode == 0
 
 
-def run(argv: list[str], *, cwd: Optional[Path] = None) -> CmdResult:
+def run(
+    argv: list[str],
+    *,
+    cwd: Optional[Path] = None,
+    env: Optional[dict[str, str]] = None,
+) -> CmdResult:
     proc = subprocess.run(
-        argv, cwd=str(cwd) if cwd else None,
+        argv, cwd=str(cwd) if cwd else None, env=env,
         capture_output=True, text=True, check=False,
     )
     return CmdResult(argv=argv, returncode=proc.returncode,
                      stdout=proc.stdout, stderr=proc.stderr)
 
 
-def must_run(argv: list[str], *, cwd: Optional[Path] = None) -> CmdResult:
-    res = run(argv, cwd=cwd)
+def must_run(
+    argv: list[str],
+    *,
+    cwd: Optional[Path] = None,
+    env: Optional[dict[str, str]] = None,
+) -> CmdResult:
+    res = run(argv, cwd=cwd, env=env)
     if not res.ok:
         raise AtlasError(
             f"command failed ({res.returncode}): {' '.join(argv)}\n{res.stderr.strip()}"

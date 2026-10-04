@@ -6,6 +6,10 @@
         "implemented": 636,
         "unmatched": 0
       },
+      "16": {
+        "implemented": 39,
+        "unmatched": 0
+      },
       "8": {
         "implemented": 306,
         "unmatched": 0
@@ -74,10 +78,17 @@
         "probes": [
           "courts/phase10/rt_store_probe.c"
         ]
+      },
+      {
+        "court": "RT-LEGACY-MODULE",
+        "phase": 16,
+        "probes": [
+          "courts/phase16/rt_legacy_module_probe.c"
+        ]
       }
     ],
-    "directly_courted": 957,
-    "implemented_rows": 957,
+    "directly_courted": 996,
+    "implemented_rows": 996,
     "rows": [
       {
         "algorithm_names": "DER",
@@ -8075,7 +8086,8 @@
           "1.3.36.3.2.1"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_DIGEST",
@@ -8128,7 +8140,8 @@
           "RT-DIGEST",
           "RT-CIPHER",
           "RT-DRBG",
-          "RT-ASYM-CIPHER"
+          "RT-ASYM-CIPHER",
+          "RT-LEGACY-MODULE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_DIGEST",
@@ -14255,7 +14268,8 @@
           "GENERIC-SECRET"
         ],
         "courts": [
-          "RT-DIGEST"
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
         ],
         "coverage": "direct",
         "operation": "OSSL_OP_SKEYMGMT",
@@ -14274,6 +14288,559 @@
         "operation": "OSSL_OP_STORE",
         "owning_phase": 10,
         "provider": "default"
+      },
+      {
+        "algorithm_names": "BF-CBC",
+        "aliases": [
+          "BF-CBC",
+          "BF",
+          "BLOWFISH",
+          "1.3.6.1.4.1.3029.1.2"
+        ],
+        "courts": [
+          "RT-CIPHER",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "BF-CFB",
+        "aliases": [
+          "BF-CFB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "BF-ECB",
+        "aliases": [
+          "BF-ECB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "BF-OFB",
+        "aliases": [
+          "BF-OFB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "CAST5-CBC",
+        "aliases": [
+          "CAST5-CBC",
+          "CAST-CBC",
+          "CAST",
+          "1.2.840.113533.7.66.10"
+        ],
+        "courts": [
+          "RT-CIPHER",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "CAST5-CFB",
+        "aliases": [
+          "CAST5-CFB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "CAST5-ECB",
+        "aliases": [
+          "CAST5-ECB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "CAST5-OFB",
+        "aliases": [
+          "CAST5-OFB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "DES-CBC",
+        "aliases": [
+          "DES-CBC",
+          "DES",
+          "1.3.14.3.2.7"
+        ],
+        "courts": [
+          "RT-CIPHER",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "DES-CFB",
+        "aliases": [
+          "DES-CFB",
+          "1.3.14.3.2.9"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "DES-CFB1",
+        "aliases": [
+          "DES-CFB1"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "DES-CFB8",
+        "aliases": [
+          "DES-CFB8"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "DES-ECB",
+        "aliases": [
+          "DES-ECB",
+          "1.3.14.3.2.6"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "DES-OFB",
+        "aliases": [
+          "DES-OFB",
+          "1.3.14.3.2.8"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "DESX-CBC",
+        "aliases": [
+          "DESX-CBC",
+          "DESX"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "IDEA-CBC",
+        "aliases": [
+          "IDEA-CBC",
+          "IDEA",
+          "1.3.6.1.4.1.188.7.1.1.2"
+        ],
+        "courts": [
+          "RT-CIPHER",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "IDEA-CFB",
+        "aliases": [
+          "IDEA-CFB",
+          "IDEA-CFB64"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "IDEA-ECB",
+        "aliases": [
+          "IDEA-ECB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "IDEA-OFB",
+        "aliases": [
+          "IDEA-OFB",
+          "IDEA-OFB64"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RC2-40-CBC",
+        "aliases": [
+          "RC2-40-CBC",
+          "RC2-40"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RC2-64-CBC",
+        "aliases": [
+          "RC2-64-CBC",
+          "RC2-64"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RC2-CBC",
+        "aliases": [
+          "RC2-CBC",
+          "RC2",
+          "RC2-128",
+          "1.2.840.113549.3.2"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RC2-CFB",
+        "aliases": [
+          "RC2-CFB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RC2-ECB",
+        "aliases": [
+          "RC2-ECB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RC2-OFB",
+        "aliases": [
+          "RC2-OFB"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RC4",
+        "aliases": [
+          "RC4",
+          "1.2.840.113549.3.4"
+        ],
+        "courts": [
+          "RT-CIPHER",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RC4-40",
+        "aliases": [
+          "RC4-40"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RC4-HMAC-MD5",
+        "aliases": [
+          "RC4-HMAC-MD5"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "SEED-CBC",
+        "aliases": [
+          "SEED-CBC",
+          "SEED",
+          "1.2.410.200004.1.4"
+        ],
+        "courts": [
+          "RT-CIPHER",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "SEED-CFB",
+        "aliases": [
+          "SEED-CFB",
+          "SEED-CFB128",
+          "1.2.410.200004.1.5"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "SEED-ECB",
+        "aliases": [
+          "SEED-ECB",
+          "1.2.410.200004.1.3"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "SEED-OFB",
+        "aliases": [
+          "SEED-OFB",
+          "SEED-OFB128",
+          "1.2.410.200004.1.6"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_CIPHER",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "MD4",
+        "aliases": [
+          "MD4",
+          "1.2.840.113549.2.4"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DIGEST",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "MDC2",
+        "aliases": [
+          "MDC2",
+          "2.5.8.3.101"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DIGEST",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "RIPEMD-160",
+        "aliases": [
+          "RIPEMD-160",
+          "RIPEMD160",
+          "RIPEMD",
+          "RMD160",
+          "1.3.36.3.2.1"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DIGEST",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "WHIRLPOOL",
+        "aliases": [
+          "WHIRLPOOL",
+          "1.0.10118.3.0.55"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_DIGEST",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "PBKDF1",
+        "aliases": [
+          "PBKDF1"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "PVKKDF",
+        "aliases": [
+          "PVKKDF"
+        ],
+        "courts": [
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_KDF",
+        "owning_phase": 16,
+        "provider": "legacy"
+      },
+      {
+        "algorithm_names": "GENERIC-SECRET",
+        "aliases": [
+          "GENERIC-SECRET"
+        ],
+        "courts": [
+          "RT-DIGEST",
+          "RT-LEGACY-MODULE"
+        ],
+        "coverage": "direct",
+        "operation": "OSSL_OP_SKEYMGMT",
+        "owning_phase": 16,
+        "provider": "legacy"
       }
     ],
     "unmatched": 0
@@ -14283,7 +14850,7 @@
     {
       "name": "census",
       "path": "forensics/atlas/provider-algorithms.json",
-      "sha256": "49798d9f9eb936aee03e1b62046a8979823756112021cf10e4ad1ac94d8e2aa7"
+      "sha256": "8a767c9f5c456e1b3b8e2d01a88f0b17f2184313d421c0a9e513c1dd2d118589"
     },
     {
       "name": "court:RT-DIGEST:rt_digest_probe.c",
@@ -14334,6 +14901,11 @@
       "name": "court:RT-STORE:rt_store_probe.c",
       "path": "courts/phase10/rt_store_probe.c",
       "sha256": "c8ccc7b9438428bd5326d076e8295367242995d20adc8c41c63b8075fe1c4db7"
+    },
+    {
+      "name": "court:RT-LEGACY-MODULE:rt_legacy_module_probe.c",
+      "path": "courts/phase16/rt_legacy_module_probe.c",
+      "sha256": "46ec07c74a3bf6a558c1207abf381b419e20fe5cb64661af6e2baf023d47aba7"
     }
   ],
   "kind": "provider-court-coverage",

@@ -111,10 +111,21 @@ COURT_PROBES: list[tuple[str, list[str], int]] = [
     # drives `OSSL_STORE_LOADER_fetch` and `OSSL_STORE_LOADER_do_all_provided` for real rather
     # than reference-taking them -- see courts/phase10/rt_store_probe.c).
     ("RT-STORE", ["courts/phase10/rt_store_probe.c"], 10),
+    # Phase 16.1's legacy-provider-module court. It is registered in the same commit as the five
+    # `providers/legacyprov.c` rows slice 1 publishes (the four `OSSL_OP_DIGEST` rows and the one
+    # `OSSL_OP_SKEYMGMT` row), which keeps this join preventive where it was preventive for the
+    # earlier provider strata: a landed legacy row with no observation is a finding on the commit
+    # that lands it, not at the stratum's seal. Slices 2 and 3 add the 32 `OSSL_OP_CIPHER` and two
+    # `OSSL_OP_KDF` rows, every one of which the probe names, so the join stays complete.
+    ("RT-LEGACY-MODULE", ["courts/phase16/rt_legacy_module_probe.c"], 16),
 ]
 
-# The arm whose name list must equal the census's implemented cipher rows. A static list in a probe
-# is the one place a hand-kept set can go stale, so it is checked rather than trusted.
+# The arm whose name list must equal the census's implemented **default-provider** cipher rows. A
+# static list in a probe is the one place a hand-kept set can go stale, so it is checked rather than
+# trusted. The arm is `rt_deflt_row_census`, which fetches through the `default` provider
+# (`EVP_CIPHER_fetch(NULL, name, NULL)`); the 32 legacy cipher rows `providers/legacyprov.c`
+# publishes are another provider's and are named by `RT-LEGACY-MODULE`, so scoping the required set
+# to `provider == "default"` keeps this check about the table the arm actually drives.
 ROW_CENSUS_ARM = "courts/phase8/rt_cipher_probe.c"
 ROW_CENSUS_ANCHOR = "static void rt_deflt_row_census(void)"
 
@@ -200,7 +211,7 @@ def main(argv: list[str]) -> int:
     expected = [
         r["algorithm_names"]
         for r in implemented
-        if r["operation"] == "OSSL_OP_CIPHER"
+        if r["operation"] == "OSSL_OP_CIPHER" and r["provider"] == "default"
     ]
     problems: list[str] = []
     if listed != expected:

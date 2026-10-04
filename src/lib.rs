@@ -60,6 +60,9 @@
 #![deny(missing_docs)]
 
 pub mod aes;
+// Phase 16.4's `apps/`: the `openssl` CLI dispatcher, its option parser and its
+// generated tables. The Phase-2 shell's `openssl` executable is built from it.
+pub mod apps;
 pub mod aria;
 pub mod asn1;
 // Phase 8's `crypto/asn1_dsa.c`: the DER `DSA-Sig-Value` codec. It has no stratum's plan row and

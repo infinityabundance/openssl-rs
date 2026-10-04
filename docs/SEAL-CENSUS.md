@@ -41,7 +41,7 @@ declared owner; this is that assignment.
 | 13 | Legacy / deprecated compatibility | `complete` | 189 | 377 | 377 | 0 | 0 |
 | 14 | TLS / DTLS (libssl) | `complete` | 600 | 600 | 600 | 0 | 0 |
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
-| 16 | CLI / config / filesystem contract | `not-started` | 0 | — | — | — | — |
+| 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `not-started` | 0 | — | — | — | — |
 | 18 | Hostile fuzz / security / side-channel hardening | `not-started` | 0 | — | — | — | — |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
@@ -507,6 +507,28 @@ Courts: `all pass`, 2 court(s), **33** authority observation(s) over 2 transcrip
 |---|---|---|
 | RT-PHASE15-REF | `pass` | 3 |
 | RT-QUIC | `pass` | 30 |
+
+## Phase 16 — CLI / config / filesystem contract
+
+* state: `complete`
+* seal: `docs/PHASE-16-CLI-SEAL.md`
+* ledger: `forensics/phase16-obligations.json`
+* atlas-owned: 0
+* owned working set: 42
+* implemented: 42
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 0**
+
+Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcript court(s).
+
+| court | verdict | observations |
+|---|---|---|
+| RT-LEGACY-MODULE | `pass` | 344 |
+| RT-ENGINE-DYN | `pass` | 10 |
+| RT-DEFAULTS | `pass` | 10 |
+| RT-CONFIG | `pass` | 31 |
+| RT-STATEM-REMAINDER | `pass` | 20 |
+| RT-CLI | `pass` | 252 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
