@@ -1,0 +1,59 @@
+# openssl-rs court: the Phase 17 `rt-tls13-interop-matrix` runtime surface.
+#
+# The subject is the transcript of a differential probe: one C program that
+# prints one `key=value` line per observation while exercising
+#
+#     the 2x2 cross-implementation TLS 1.3 interoperability matrix, one peer per side over a real socket BIO
+#
+# The same source is compiled against the admitted authority and against the
+# candidate, each side executes its own binary, and FRF compares the
+# transcripts.
+#
+# Scope: the observations the probe makes. It is NOT a claim about surface the
+# probe does not touch, and not a cryptographic or security claim.
+
+court:
+  id: openssl-rs-rt-tls13-interop-matrix
+  question: >-
+    For the rt-tls13-interop-matrix runtime surface in fixture family rt-tls13-interop-matrix, does
+    the candidate produce the same observable transcript as the admitted
+    authority OpenSSL 3.6.4 when both run the same probe over the same
+    fixture?
+  falsifier: >-
+    Any observation line differs between the two transcripts, or either
+    side's exit class differs.
+  authority: openssl-rt-3.6.4-r2
+  candidate:
+    name: openssl-rs
+    version_or_commit: "0.0.21"
+    build_profile: linux-x86_64-default-shared-legacy-notests
+    path: forensics/frf/refs/candidate-runtime-probe.sh
+  fixture:
+    id: probe-list.txt
+    path: forensics/frf/courts/openssl-rs-rt-tls13-interop-matrix/fixtures/probe-list.txt
+    arguments: ["{fixture}", "phase17"]
+  admissibility_envelope:
+    fixture_family: rt-tls13-interop-matrix
+    platforms: ["x86_64-linux"]
+    observables: [stdout, exit]
+    normalizers: []
+    replay_scope: single-run
+  execution_context:
+    artifacts:
+      - path: forensics/frf/refs/authority-runtime-probe.sh
+        role: child-executable
+      - path: forensics/frf/refs/candidate-runtime-probe.sh
+        role: child-executable
+      - path: artifacts/phase17/probes/rt_tls13_matrix_peer.authority
+        role: child-executable
+      - path: artifacts/phase17/probes/rt_tls13_matrix_peer.candidate
+        role: child-executable
+      - path: courts/phase17/rt_tls13_matrix_peer.c
+        role: data
+      - path: forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+        role: runtime-library
+      - path: artifacts/phase2/libcrypto.so.3
+        role: runtime-library
+  environment:
+    LC_ALL: C
+    TZ: UTC

@@ -244,6 +244,29 @@
     "units": [
       {
         "class": "reached_by_a_named_construct",
+        "crate_module": "src/ssl/t1_enc.rs",
+        "evidence": "src/ssl/t1_enc.rs (the TLS1.2 key block, PRF, Finished MAC and record protection the 17.2 session work lands); docs/PHASE-17-SUBPHASES.md row 17.2",
+        "names": [
+          "cipher_for_id",
+          "p_hash",
+          "prf_md",
+          "tls12_aad",
+          "tls12_decrypt_record",
+          "tls12_derive_key_block",
+          "tls12_derive_master_secret",
+          "tls12_encrypt_record",
+          "tls12_finished_mac",
+          "tls12_install_read",
+          "tls12_install_write",
+          "tls12_nonce",
+          "tls12_prf",
+          "tls12_setup_cipher"
+        ],
+        "reason": "Phase 17 lands the TLS1.2 half of ssl/t1_enc.c in src/ssl/t1_enc.rs; the module defines no C export and builds no authority-internal function under the unit's own name, so no transcription edge and no built internal function sees it, and the unit is reached by the crate's own constructs there.",
+        "unit": "ssl/t1_enc.c"
+      },
+      {
+        "class": "reached_by_a_named_construct",
         "crate_module": "src/evp/e_aes.rs",
         "evidence": "forensics/phase13-obligations.json (the implemented rows the 13.5-13.7 slices landed); src/evp/e_aes.rs",
         "names": [
