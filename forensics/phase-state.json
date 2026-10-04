@@ -60,7 +60,7 @@
         "stratum": "Distribution / ABI shell"
       },
       {
-        "blocking": "Phase 3's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 10 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): 4c76f3f64d0b73d5ab8178ec6b0cc4c83af43c55d72554dc15f2fe3e6cceeea1 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [
           "ASYNC_WAIT_CTX_clear_fd -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
           "ASYNC_WAIT_CTX_free -> phase 13 (the async job framework; its in-tree callers are the async engines (engines/e_dasync.c, engines/e_afalg.c) and the SSL async API, and the engines are Phase 13)",
@@ -154,11 +154,11 @@
         "phase": 3,
         "provider_rows": null,
         "seal_sha256": "67b6e7eea69046b9ce2223dedc4ab0728f6c8147678c6c20b29dafd012559b70",
-        "state": "in-progress",
+        "state": "complete",
         "stratum": "Core runtime: allocation, threads, ERR, refcounts, ex_data, stacks, objects"
       },
       {
-        "blocking": "Phase 4's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 17 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): 9a5155a8f0dbdc5be6e212348a9d3bb6949bcc3a61e358b586be836d442115a7 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -242,11 +242,11 @@
         "phase": 4,
         "provider_rows": null,
         "seal_sha256": "69bd62cf735d8f915003818a7e29bade4f2f2d469312877b70f0266d65fa5494",
-        "state": "in-progress",
+        "state": "complete",
         "stratum": "BIO + CONF + object database"
       },
       {
-        "blocking": "Phase 5's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 9 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): a603346028e462268b3ab995eb1e47a2b5c6843228cd999252889dcf6e4ede87 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -270,11 +270,11 @@
         "phase": 5,
         "provider_rows": null,
         "seal_sha256": "d8d3eaebe58b853cafed71119c37a88fdde07c686c896c46b5aff4f47ff93104",
-        "state": "in-progress",
+        "state": "complete",
         "stratum": "BN + ASN.1 + DER/PEM"
       },
       {
-        "blocking": "Phase 6's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 9 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): cb77864909372ce14c10108f6939f131b26d58226ac4079684444cee5edd3d00 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -338,11 +338,11 @@
         "phase": 6,
         "provider_rows": null,
         "seal_sha256": "090e0695899a5a7f4e901923e0b1f8fe6b2029953b8f862dd1c7de20f7d9aaf5",
-        "state": "in-progress",
+        "state": "complete",
         "stratum": "OSSL_LIB_CTX + provider core"
       },
       {
-        "blocking": "Phase 7's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 18 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): d0f305ff065e6d01fd4206da6f29d34287824865adfeeb98fb4eb7c437ca25ba records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -394,12 +394,12 @@
         "name": "evp",
         "phase": 7,
         "provider_rows": null,
-        "seal_sha256": "14f51d4512724e7ca882592b6a4b5112e7048287145a367df189841c809b0ca1",
-        "state": "in-progress",
+        "seal_sha256": "641fb1df3eff8f20f850a8bef390086a8c413fca5a4cc5cadf43fc3c95cc0083",
+        "state": "complete",
         "stratum": "EVP framework"
       },
       {
-        "blocking": "Phase 8's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 15 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): 5acce3ac5f3ac7ec668b200b9c9d2281191f0694e43007a189724b6350b8fd2c records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -422,11 +422,11 @@
           "owned": 306
         },
         "seal_sha256": "f74d262edfb4e2e8be37ae06b6e1f6f81e33c584979a24e114b95bd818345cfb",
-        "state": "in-progress",
+        "state": "complete",
         "stratum": "Native cryptographic primitives"
       },
       {
-        "blocking": "Phase 9's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 4 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): d8a5017d8f18b43f19f573af23620cfde8c09770b0c448f9d649517ffc8a88f8 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -453,12 +453,12 @@
           "implemented": 15,
           "owned": 15
         },
-        "seal_sha256": "a2a1f55d752e3a293acd61bf774e37ce2a939b2b3bd2597e920f692149148710",
-        "state": "in-progress",
+        "seal_sha256": "5ebf4d9e9f9eedacf77f4da3ed3fabe68b2f56f5ce37792e8636b14235858ec1",
+        "state": "complete",
         "stratum": "RAND / DRBG + entropy"
       },
       {
-        "blocking": "Phase 10's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 4 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): b448e1a2ec3e5586401ea6265fe95b9757ea50c6eb67b1d651620fd2fbb4bd5a records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -478,12 +478,12 @@
           "implemented": 636,
           "owned": 636
         },
-        "seal_sha256": "5851ddc135632aa158842e1102ba9a33f98b88045a90c08f97bce97f3c45782e",
-        "state": "in-progress",
+        "seal_sha256": "edb139377e03fb25003a2c5cc252ee85bddc314903ed59827ac254d24fa3b74b",
+        "state": "complete",
         "stratum": "Key formats + PKCS + STORE"
       },
       {
-        "blocking": "Phase 11's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 8 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): 78d181f76db5409c584718478fd83d5dad7ced5352bf89ceb72f0c5e326c3a2a records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -498,12 +498,12 @@
         "name": "x509",
         "phase": 11,
         "provider_rows": null,
-        "seal_sha256": "870c4ba54f070e12543aa87f6d21a51a4e9a60121636a00aeed5a85b1d671462",
-        "state": "in-progress",
+        "seal_sha256": "4ffee3b666406e3869817b78243ac7b11a9770e358fac6e78af2fe1403371889",
+        "state": "complete",
         "stratum": "X.509 + verification"
       },
       {
-        "blocking": "Phase 12's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 10 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): 5d2bef5cc763119b0d90a5c648ff01d2e464fd6f626a900db08ecd0685e3aa74 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -518,12 +518,12 @@
         "name": "protocol-families",
         "phase": 12,
         "provider_rows": null,
-        "seal_sha256": "b709bec682520f742a6dfe070b4307a8e22dd6df359cc0c5524d8f89de65b2cc",
-        "state": "in-progress",
+        "seal_sha256": "30a5c8e73d4a2847112457b4e81e541068025b10707478e1fec32face6489779",
+        "state": "complete",
         "stratum": "CMS / OCSP / CMP / CT / TS and remaining libcrypto families"
       },
       {
-        "blocking": "Phase 13's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 8 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): 72eae609df13ae6b8fc5cf2a23ad56a9e0944d76f7d9dd754ee60c11e6bd0e98 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -538,12 +538,12 @@
         "name": "legacy",
         "phase": 13,
         "provider_rows": null,
-        "seal_sha256": "f0b40c4b94b3aace0e06d9d1f42657625070b5da943ddcaacbedc83e077ce276",
-        "state": "in-progress",
+        "seal_sha256": "b33d942e4624f8fd6b02e3569ad47ab3195c1dc9887423c4b5d64f3694113401",
+        "state": "complete",
         "stratum": "Legacy / deprecated compatibility"
       },
       {
-        "blocking": "Phase 14's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 10 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): 941783f26350f7eefe020b0c7e4499855dcc73c85bf73aa22f70a5f6adfe9759 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -558,12 +558,12 @@
         "name": "tls-dtls",
         "phase": 14,
         "provider_rows": null,
-        "seal_sha256": "7a349eb942f2445979069117fef42311197e3871f7bd6fd6f987c1e146450ef5",
-        "state": "in-progress",
+        "seal_sha256": "0cf01ca0ea8d8fe0ffb926f3b29f68dbda6cbd7ee1b3712c704cdeb24d3a0171",
+        "state": "complete",
         "stratum": "TLS / DTLS (libssl)"
       },
       {
-        "blocking": "Phase 15's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 1 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): 1f12999533fcd79db534c4622fae56e5fe5d54588d67884646d8b30994458060 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -578,12 +578,12 @@
         "name": "quic-ech",
         "phase": 15,
         "provider_rows": null,
-        "seal_sha256": "65b416893eb2a1382688b78d9c6062991d4f5be7b8b56f358e22ac16b62136ec",
-        "state": "in-progress",
+        "seal_sha256": "d9ea2fe7a234b13b208a97b6e8701e879683697752d334782e5eafc4663c8537",
+        "state": "complete",
         "stratum": "QUIC / ECH and modern SSL surface"
       },
       {
-        "blocking": "Phase 16's FRF chain entry is incomplete: 1 `sensitivity-backed` claim(s) with zero blockers in .frf/claims cover every one of the 6 required court(s) but none records the current candidate identity (version_or_commit='0.0.21', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'): cf6b15cff547947cc2e5185f91580866247fb183db4d7b3fff151d94ec327a70 records candidate version_or_commit='0.0.20', identity_hash='e4f60d8b9d69ce277f0fe3463b61f26e3afd4ad9422867a2a062efe2c17d5685'",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -602,8 +602,8 @@
           "implemented": 39,
           "owned": 39
         },
-        "seal_sha256": "706101ada67ab7d7cb743f705a1d28df8aedf12cf304568120d01653836d516e",
-        "state": "in-progress",
+        "seal_sha256": "ec591e60654799c95605c4af7d421f91675b1afac8046c967ff8d8f6538ac9b7",
+        "state": "complete",
         "stratum": "CLI / config / filesystem contract"
       },
       {
@@ -667,7 +667,7 @@
         "stratum": "Maintenance delta machinery"
       },
       {
-        "blocking": "blocked by the dependency invariant: phase 10 is not complete",
+        "blocking": "",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -680,18 +680,18 @@
         "phase": 22,
         "provider_rows": null,
         "seal_sha256": "1503b5ae2e719d08854be9b32a41e59eccde4b52f911e4347c7249a836417e91",
-        "state": "in-progress",
+        "state": "complete",
         "stratum": "Authority exhaustiveness and the whole-program compatibility atlas"
       }
     ],
     "rule": "a phase may be complete only if every phase it requires is complete (forensics/tools/phase_state.py REQUIRES; docs/PHASE-22-SUBPHASES.md section 8)",
     "summary": {
-      "complete": 3,
-      "in_progress": 15,
+      "complete": 18,
+      "in_progress": 0,
       "not_started": 5
     }
   },
-  "body_hash": "51bf5c83f2227f82d5dfc200c3aa32938b0dc02486923d96670fc266d3b692c2",
+  "body_hash": "9a55a9f3b72c5627fa4bde34e8cf97a0371acde984c94dee56f09da4290a86d2",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
