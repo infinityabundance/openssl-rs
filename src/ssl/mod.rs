@@ -469,8 +469,10 @@
 //!   order; no court arm depends on the eviction order. See `src/ssl/ssl_sess.rs`.
 //! * **The session's `time`/`timeout`/`calc_timeout` are seconds, not `OSSL_TIME` nanoseconds.**
 //!   Every reader converts to `time_t`, so the codec and the accessors agree.
-//! * **`ssl_generate_session_id`/`ssl_get_new_session` are not landed.** They are internal to
-//!   `ssl_sess.c` and drive the handshake; no exported row names them.
+//! * **`ssl_generate_session_id`/`ssl_get_new_session`/`ssl_get_prev_session`/`ssl_update_cache`
+//!   are landed** (Phase 17) and drive the TLS1.2 handshake session. The TLS1.2 NewSessionTicket
+//!   is stateful (`SHA256(ticket)`-keyed cache) rather than the authority's encrypted stateless
+//!   blob; the client-observable session shape matches. See `src/ssl/ssl_sess.rs`.
 //! * **The certificate security check reduces to the crate's default callback.**
 //!   `ssl_security_cert` calls the `Cert`'s `sec_cb`, which `ssl_lib.rs` initialises to a callback
 //!   that answers 1 for every operation (14.1's recorded reduction), so a weak-key rejection the

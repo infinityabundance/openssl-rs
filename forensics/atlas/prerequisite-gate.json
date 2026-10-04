@@ -4,7 +4,7 @@
     "blocking_dependencies": [],
     "census": {
       "covered_by_a_divergence": 152,
-      "language_surface_not_modelled_by_name": 11687
+      "language_surface_not_modelled_by_name": 11668
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -685,17 +685,17 @@
         "ssl/ssl_conf.c": 32,
         "ssl/ssl_err_legacy.c": 2,
         "ssl/ssl_init.c": 7,
-        "ssl/ssl_lib.c": 247,
+        "ssl/ssl_lib.c": 233,
         "ssl/ssl_mcnf.c": 9,
         "ssl/ssl_rsa.c": 26,
         "ssl/ssl_rsa_legacy.c": 11,
-        "ssl/ssl_sess.c": 51,
+        "ssl/ssl_sess.c": 48,
         "ssl/ssl_stat.c": 3,
         "ssl/ssl_txt.c": 6,
         "ssl/statem/extensions_cust.c": 32,
         "ssl/statem/statem.c": 57,
-        "ssl/statem/statem_clnt.c": 126,
-        "ssl/statem/statem_lib.c": 111,
+        "ssl/statem/statem_clnt.c": 125,
+        "ssl/statem/statem_lib.c": 110,
         "ssl/statem/statem_srvr.c": 149,
         "ssl/t1_lib.c": 222,
         "ssl/t1_trce.c": 101,
@@ -1135,14 +1135,7 @@
           "ssl_set_masks",
           "ssl_undefined_function",
           "ssl_undefined_void_function",
-          "ssl_update_cache",
           "ssl_validate_ct"
-        ],
-        "ssl/ssl_sess.c": [
-          "lookup_sess_in_cache",
-          "ssl_generate_session_id",
-          "ssl_get_new_session",
-          "ssl_get_prev_session"
         ],
         "ssl/statem/extensions_cust.c": [
           "custom_ext_add",
@@ -1268,7 +1261,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 391
+      "names": 386
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -1278,7 +1271,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "17f135722f8239cce4af7c2741731a4e5cae477b69aca01d180777b2a4a654e2",
+  "body_hash": "0f8e292a81a5e702232bc8cda63c3a40ac12ff05cd37bacc003693fddb29f695",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1314,7 +1307,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "4cd6934729552d8f524b27c23b48a7b09ff5e2c41e15a3fc1bcfc7a486dcc775"
+      "sha256": "11d0b30bbd6fc1d133c4c416ff84dea01a8788e29bd9f7f56f6498e925c68010"
     },
     {
       "name": "phase-state",

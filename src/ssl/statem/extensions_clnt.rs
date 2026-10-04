@@ -507,16 +507,27 @@ unsafe fn tls_construct_ctos_ems(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
 /// # Safety
 /// `s` must be a live connection and `pkt` a live packet.
 unsafe fn tls_construct_ctos_session_ticket(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
-    // `tls_use_ticket(s)` is unlanded; the reachable fresh-connection arm (no resumption ticket,
-    // no renegotiation) sends an empty extension unless `SSL_OP_NO_TICKET` is set.
+    // `tls_use_ticket(s)` (`t1_lib.c:2921`) is reduced to the `SSL_OP_NO_TICKET` check.
     // SAFETY: `s` is live.
     if unsafe { (*s).options } & SSL_OP_NO_TICKET != 0 {
         return EXT_RETURN_NOT_SENT;
     }
-    // SAFETY: `pkt` is live. An empty ticket is the extension's 2-byte zero length.
+    // `tls_construct_ctos_session_ticket` (`extensions_clnt.c:283-321`): a resumption offers the
+    // session's stored ticket; otherwise the extension is sent empty to solicit one.
+    // SAFETY: `s` is live.
+    let (tick, ticklen) = unsafe {
+        let sess = (*s).session;
+        if !sess.is_null() && !(*sess).ext_tick.is_null() && (*sess).ext_ticklen > 0 {
+            ((*sess).ext_tick, (*sess).ext_ticklen)
+        } else {
+            (core::ptr::null_mut::<u8>(), 0usize)
+        }
+    };
+    // SAFETY: `pkt` is live; `tick` names `ticklen` readable bytes (or is NULL).
     unsafe {
         if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_SESSION_TICKET) == 0
             || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || (ticklen != 0 && crate::packet::WPACKET_memcpy(pkt, tick.cast(), ticklen) == 0)
             || WPACKET_close(pkt) == 0
         {
             return EXT_RETURN_FAIL;

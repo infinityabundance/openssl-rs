@@ -259,7 +259,7 @@ pub(crate) unsafe fn tls12_derive_master_secret(
         seed[32..].copy_from_slice(&(*s).server_random);
     }
     // SAFETY: `s` is live; `pms`/`seed` readable; the master buffer is 48 writable bytes.
-    unsafe {
+    let r = unsafe {
         tls12_prf(
             md_kind,
             pms,
@@ -269,7 +269,23 @@ pub(crate) unsafe fn tls12_derive_master_secret(
             (*s).tls12_master_secret.as_mut_ptr(),
             SSL_MAX_MASTER_KEY_LENGTH,
         )
+    };
+    // `ssl_generate_master_secret` (`s3_lib.c:5327`) writes into `s->session->master_key`; the
+    // handshake session carries the secret so a TLS1.2 ticket can resume from it.
+    if r != 0 {
+        // SAFETY: `s` is live; `session` is the handshake session created for this connection.
+        unsafe {
+            if !(*s).session.is_null() {
+                core::ptr::copy_nonoverlapping(
+                    (*s).tls12_master_secret.as_ptr(),
+                    (*(*s).session).master_key.as_mut_ptr(),
+                    SSL_MAX_MASTER_KEY_LENGTH,
+                );
+                (*(*s).session).master_key_length = SSL_MAX_MASTER_KEY_LENGTH;
+            }
+        }
     }
+    r
 }
 
 /// `tls1_setup_key_block(SSL_CONNECTION *s)` — `ssl/t1_enc.c:315-370`, the AEAD half:

@@ -13,7 +13,7 @@
 
 use core::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void};
 use core::ptr;
-use core::sync::atomic::{AtomicI32, Ordering};
+use core::sync::atomic::{AtomicI32, AtomicU64, Ordering};
 
 use crate::asn1::string::ASN1_STRING_free;
 use crate::bn::bignum::BigNum;
@@ -914,6 +914,61 @@ pub struct SrpCtx {
     pub srp_mask: c_ulong,
 }
 
+/// `struct ssl_ctx_st.stats` — the `SSL_CTX_sess_*` counters (`ssl.h:701-724`,
+/// `ssl/ssl_lib.c:3150-3173`). The authority uses `TSAN_QUALIFIER int` fields; this crate uses
+/// atomics so a server thread's increments are visible to the application thread that reads
+/// `SSL_CTX_sess_*` after the connection closes. `number` is not a counter: it is
+/// `lh_SSL_SESSION_num_items(ctx->sessions)`, read live from the cache.
+pub struct SessionStats {
+    /// `int sess_connect` — `SSL_CTX_sess_connect`.
+    pub sess_connect: AtomicU64,
+    /// `int sess_connect_good` — `SSL_CTX_sess_connect_good`.
+    pub sess_connect_good: AtomicU64,
+    /// `int sess_connect_renegotiate` — `SSL_CTX_sess_connect_renegotiate`.
+    pub sess_connect_renegotiate: AtomicU64,
+    /// `int sess_accept` — `SSL_CTX_sess_accept`.
+    pub sess_accept: AtomicU64,
+    /// `int sess_accept_good` — `SSL_CTX_sess_accept_good`.
+    pub sess_accept_good: AtomicU64,
+    /// `int sess_accept_renegotiate` — `SSL_CTX_sess_accept_renegotiate`.
+    pub sess_accept_renegotiate: AtomicU64,
+    /// `int sess_hit` — `SSL_CTX_sess_hits`.
+    pub sess_hit: AtomicU64,
+    /// `int sess_cb_hit` — `SSL_CTX_sess_cb_hits`.
+    pub sess_cb_hit: AtomicU64,
+    /// `int sess_miss` — `SSL_CTX_sess_misses`.
+    pub sess_miss: AtomicU64,
+    /// `int sess_timeout` — `SSL_CTX_sess_timeouts`.
+    pub sess_timeout: AtomicU64,
+    /// `int sess_cache_full` — `SSL_CTX_sess_cache_full`.
+    pub sess_cache_full: AtomicU64,
+}
+
+/// The `SSL_CTX_sess_*` command numbers (`ssl.h.in:1243-1254`), passed to [`SSL_CTX_ctrl`].
+const SSL_CTRL_SESS_NUMBER: c_int = 20;
+/// `SSL_CTRL_SESS_CONNECT` — `ssl.h.in:1244`.
+const SSL_CTRL_SESS_CONNECT: c_int = 21;
+/// `SSL_CTRL_SESS_CONNECT_GOOD` — `ssl.h.in:1245`.
+const SSL_CTRL_SESS_CONNECT_GOOD: c_int = 22;
+/// `SSL_CTRL_SESS_CONNECT_RENEGOTIATE` — `ssl.h.in:1246`.
+const SSL_CTRL_SESS_CONNECT_RENEGOTIATE: c_int = 23;
+/// `SSL_CTRL_SESS_ACCEPT` — `ssl.h.in:1247`.
+const SSL_CTRL_SESS_ACCEPT: c_int = 24;
+/// `SSL_CTRL_SESS_ACCEPT_GOOD` — `ssl.h.in:1248`.
+const SSL_CTRL_SESS_ACCEPT_GOOD: c_int = 25;
+/// `SSL_CTRL_SESS_ACCEPT_RENEGOTIATE` — `ssl.h.in:1249`.
+const SSL_CTRL_SESS_ACCEPT_RENEGOTIATE: c_int = 26;
+/// `SSL_CTRL_SESS_HIT` — `ssl.h.in:1250`.
+const SSL_CTRL_SESS_HIT: c_int = 27;
+/// `SSL_CTRL_SESS_CB_HIT` — `ssl.h.in:1251`.
+const SSL_CTRL_SESS_CB_HIT: c_int = 28;
+/// `SSL_CTRL_SESS_MISSES` — `ssl.h.in:1252`.
+const SSL_CTRL_SESS_MISSES: c_int = 29;
+/// `SSL_CTRL_SESS_TIMEOUTS` — `ssl.h.in:1253`.
+const SSL_CTRL_SESS_TIMEOUTS: c_int = 30;
+/// `SSL_CTRL_SESS_CACHE_FULL` — `ssl.h.in:1254`.
+const SSL_CTRL_SESS_CACHE_FULL: c_int = 31;
+
 /// `struct ssl_cert_st` — `ssl_local.h:2008-2145`.
 #[repr(C)]
 pub struct SslCtx {
@@ -1162,6 +1217,8 @@ pub struct SslCtx {
     pub verify_stateless_cookie_cb: Option<VerifyStatelessCookieCb>,
     /// `void (*info_callback)(const SSL *, int, int)` — `SSL_CTX_set_info_callback`.
     pub info_callback: Option<InfoCb>,
+    /// `struct { TSAN_QUALIFIER int sess_*; } stats` — the `SSL_CTX_sess_*` counters.
+    pub stats: SessionStats,
 }
 
 /// `struct ssl_st` — `ssl_local.h`, carrying the `SSL_CONNECTION` fields Slice 1 reads.
@@ -1452,6 +1509,9 @@ pub struct Ssl {
     pub renegotiate: c_int,
     /// `int new_session`.
     pub new_session: c_int,
+    /// Set once the connection has selected the separate TLS1.2 flight driver, so a wait and
+    /// re-entry dispatch back to it rather than the default TLS1.3 driver.
+    pub tls12_driver: c_int,
     /// `OSSL_TIME ts_msg_write` — nanoseconds; 0 means "not available".
     pub ts_msg_write: u64,
     /// `OSSL_TIME ts_msg_read` — nanoseconds; 0 means "not available".
@@ -3672,6 +3732,34 @@ pub unsafe extern "C" fn SSL_CTX_ctrl(
                 old
             }
             SSL_CTRL_GET_SESS_CACHE_MODE => c.session_cache_mode,
+            // `ssl/ssl_lib.c:3150-3173`: the `SSL_CTX_sess_*` counters. `number` is read live from
+            // the cache; every other row is a relaxed atomic load.
+            SSL_CTRL_SESS_NUMBER => {
+                // `c.sessions` is the context's own cache (or NULL).
+                if c.sessions.is_null() {
+                    0
+                } else {
+                    // SAFETY: `c.sessions` is non-NULL and the context's live cache.
+                    unsafe { crate::runtime::stack::OPENSSL_sk_num(c.sessions) as c_long }
+                }
+            }
+            SSL_CTRL_SESS_CONNECT => c.stats.sess_connect.load(Ordering::Relaxed) as c_long,
+            SSL_CTRL_SESS_CONNECT_GOOD => {
+                c.stats.sess_connect_good.load(Ordering::Relaxed) as c_long
+            }
+            SSL_CTRL_SESS_CONNECT_RENEGOTIATE => {
+                c.stats.sess_connect_renegotiate.load(Ordering::Relaxed) as c_long
+            }
+            SSL_CTRL_SESS_ACCEPT => c.stats.sess_accept.load(Ordering::Relaxed) as c_long,
+            SSL_CTRL_SESS_ACCEPT_GOOD => c.stats.sess_accept_good.load(Ordering::Relaxed) as c_long,
+            SSL_CTRL_SESS_ACCEPT_RENEGOTIATE => {
+                c.stats.sess_accept_renegotiate.load(Ordering::Relaxed) as c_long
+            }
+            SSL_CTRL_SESS_HIT => c.stats.sess_hit.load(Ordering::Relaxed) as c_long,
+            SSL_CTRL_SESS_CB_HIT => c.stats.sess_cb_hit.load(Ordering::Relaxed) as c_long,
+            SSL_CTRL_SESS_MISSES => c.stats.sess_miss.load(Ordering::Relaxed) as c_long,
+            SSL_CTRL_SESS_TIMEOUTS => c.stats.sess_timeout.load(Ordering::Relaxed) as c_long,
+            SSL_CTRL_SESS_CACHE_FULL => c.stats.sess_cache_full.load(Ordering::Relaxed) as c_long,
             SSL_CTRL_MODE => {
                 c.mode |= larg as c_uint;
                 c.mode as c_long

@@ -850,16 +850,41 @@ unsafe fn ssl_cipher_list_to_bytes(
 /// `ssl/statem/statem_clnt.c:1176-1361`.
 ///
 /// The handshake header is written by the caller (`ssl3_set_handshake_header`), as in the
-/// authority's `state_machine`. The session object (`ssl_get_new_session`) is 14.7's and unlanded;
-/// this slice fills `client_random` and the middlebox-compatibility session id directly from
-/// `RAND_bytes`, which is the reachable fresh-connection arm, and records the reduction.
+/// authority's `state_machine`. The session object is created by `tls12_process_server_hello` once
+/// the version is known (a pre-loaded resumable session is kept); this function fills
+/// `client_random`, the session id from the loaded session, and the middlebox-compatibility random
+/// id for a TLS1.3-capable connection.
 ///
 /// # Safety
 /// `s` must be a live connection; `pkt` must be a live packet.
 pub(crate) unsafe fn tls_construct_client_hello(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
-    // `ssl_set_client_hello_version`: for a TLS1.3-capable connection the legacy version is 1.2.
+    // `ssl_set_client_hello_version` (`statem_lib.c:2586-2623`): install the connection's maximum
+    // supported version (which the session-id / middlebox logic reads), then the legacy version
+    // (`TLS1.2` for a TLS1.3-capable connection).
+    let mut ver_min: c_int = 0;
+    let mut ver_max: c_int = 0;
+    // SAFETY: `s` is live; the out-pointers are live locals.
+    if unsafe {
+        crate::ssl::statem::statem_lib::ssl_get_min_max_version(
+            s,
+            &mut ver_min,
+            &mut ver_max,
+            core::ptr::null_mut(),
+        )
+    } != 0
+    {
+        return 0;
+    }
+    let client_version = if ver_max > TLS1_2_VERSION {
+        TLS1_2_VERSION
+    } else {
+        ver_max
+    };
     // SAFETY: `s` is live.
-    unsafe { (*s).client_version = TLS1_2_VERSION };
+    unsafe {
+        (*s).version = ver_max;
+        (*s).client_version = client_version;
+    }
 
     // `ssl_fill_hello_random` (`ssl/statem/statem_lib.c`): the fresh-connection arm is RAND.
     // SAFETY: `s` is live; `client_random` is a 32-byte array.
@@ -880,19 +905,36 @@ pub(crate) unsafe fn tls_construct_client_hello(s: *mut Ssl, pkt: *mut Wpacket) 
         }
     }
 
-    // Session ID. `ssl_get_new_session` is 14.7's and unlanded; the reachable arm for a TLS1.3
-    // connection with `SSL_OP_ENABLE_MIDDLEBOX_COMPAT` is `s->tmp_session_id`, 32 random bytes.
+    // The fresh handshake session is created once the ServerHello fixes the version (TLS1.2),
+    // in `tls12_process_server_hello`; a pre-loaded (resumed) session is kept. TLS1.3 keeps its
+    // end-of-handshake `tls13_client_create_session` arm.
+    //
+    // Session ID (`statem_clnt.c:1270-1300`): an empty id on a fresh handshake, a random one for
+    // TLS1.3 middlebox compatibility, or the session's own id when resuming.
     let mut sess_id = [0u8; SSL3_RANDOM_SIZE];
-    // SAFETY: `s` is live; the condition is the authority's (`statem_clnt.c:1271-1286`).
+    // SAFETY: `s` is live; the condition is the authority's.
     let sess_id_len = unsafe {
-        if ((*s).new_session != 0 || (*s).version == TLS1_3_VERSION)
-            && (*s).version == TLS1_3_VERSION
-            && ((*s).options & SSL_OP_ENABLE_MIDDLEBOX_COMPAT) != 0
-        {
-            if RAND_bytes(sess_id.as_mut_ptr(), SSL3_RANDOM_SIZE as c_int) <= 0 {
-                return 0;
+        if (*s).new_session != 0 || (*s).version == TLS1_3_VERSION {
+            if (*s).version == TLS1_3_VERSION
+                && ((*s).options & SSL_OP_ENABLE_MIDDLEBOX_COMPAT) != 0
+            {
+                if RAND_bytes(sess_id.as_mut_ptr(), SSL3_RANDOM_SIZE as c_int) <= 0 {
+                    return 0;
+                }
+                SSL3_RANDOM_SIZE
+            } else {
+                0
             }
-            SSL3_RANDOM_SIZE
+        } else if (*s).version != TLS1_3_VERSION && !(*s).session.is_null() {
+            let sl = (*(*s).session).session_id_length.min(SSL3_RANDOM_SIZE);
+            if sl > 0 {
+                core::ptr::copy_nonoverlapping(
+                    (*(*s).session).session_id.as_ptr(),
+                    sess_id.as_mut_ptr(),
+                    sl,
+                );
+            }
+            sl
         } else {
             0
         }
@@ -2007,6 +2049,7 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
     if p + sid_len + 2 + 1 > b.len() {
         return 0;
     }
+    let session_id = &b[p..p + sid_len];
     p += sid_len;
     let cipher = &b[p..p + 2];
     p += 2;
@@ -2025,6 +2068,61 @@ unsafe fn tls12_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int {
         (*s).pending_cipher = chosen;
         (*s).version = TLS1_2_VERSION;
         (*s).method = crate::ssl::methods::tls12_method(false);
+        (*s).tls12_driver = 1;
+    }
+    // The resumption check (`statem_clnt.c:1653-1699`): a server session-id echo that matches the
+    // offered one is a hit; otherwise the client records the server's id on a fresh session.
+    // SAFETY: `s` is live; `session_id` is the ServerHello's slice.
+    unsafe {
+        // `ssl_get_new_session` (`statem_clnt.c:1195-1203`/`:1669-1683`): a fresh client has no
+        // session yet; create one now that the version is known.
+        // SAFETY: `s` is live.
+        if (*s).session.is_null() && crate::ssl::ssl_sess::ssl_get_new_session(s, 0) == 0 {
+            return 0;
+        }
+        let sess = (*s).session;
+        if !sess.is_null() {
+            let offered = (*sess).session_id_length;
+            let is_hit = sid_len != 0
+                && sid_len == offered
+                && core::slice::from_raw_parts(
+                    core::ptr::addr_of!((*sess).session_id).cast::<u8>(),
+                    sid_len,
+                ) == session_id;
+            if is_hit {
+                (*s).hit = 1;
+                // `tls12_setup_key_block` reads the resumed master secret on the abbreviated
+                // flight; the session already carries it.
+                core::ptr::copy_nonoverlapping(
+                    (*sess).master_key.as_ptr(),
+                    (*s).tls12_master_secret.as_mut_ptr(),
+                    48,
+                );
+                (*s).tls12_key_block_len = 0;
+            } else {
+                if offered > 0 {
+                    let sc = (*s).session_ctx;
+                    if !sc.is_null() {
+                        (*sc)
+                            .stats
+                            .sess_miss
+                            .fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+                    }
+                    if crate::ssl::ssl_sess::ssl_get_new_session(s, 0) == 0 {
+                        return 0;
+                    }
+                }
+                let sess = (*s).session;
+                (*sess).session_id_length = sid_len;
+                if sid_len > 0 {
+                    core::ptr::copy_nonoverlapping(
+                        session_id.as_ptr(),
+                        (*sess).session_id.as_mut_ptr(),
+                        sid_len,
+                    );
+                }
+            }
+        }
     }
     // The `session_ticket` extension in the ServerHello announces a following ticket
     // (`tls_parse_stoc_session_ticket`, `extensions_clnt.c`).
@@ -2468,8 +2566,8 @@ unsafe fn tls12_construct_cert_verify(s: *mut Ssl) -> c_int {
 /// `s` is live.
 unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
     use crate::ssl::statem::statem_srvr::{
-        tls12_construct_certificate, tls12_construct_finished, tls12_read_change_cipher_spec,
-        tls12_read_handshake, tls12_write_change_cipher_spec,
+        tls12_construct_certificate, tls12_construct_finished, tls12_read_handshake,
+        tls12_write_change_cipher_spec,
     };
     // SAFETY: `s` is live.
     unsafe {
@@ -2579,14 +2677,28 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
+                    if (*s).hit != 0 {
+                        // The abbreviated flight ends here: the client spoke last.
+                        tls12_client_finish(s);
+                        return 1;
+                    }
                     (*s).hand_state = TLS_ST_CR_CHANGE;
                 }
                 TLS_ST_CR_CHANGE => {
-                    if !tls12_read_change_cipher_spec(s) {
-                        if ossl_statem_in_error(s) != 0 {
-                            return -1;
-                        }
+                    let r = tls12_client_read_ccs(s);
+                    if r < 0 {
+                        return -1;
+                    }
+                    if r == 0 {
                         return tls12_client_wait(s);
+                    }
+                    // The abbreviated flight derives the key block here (the full flight derived it
+                    // in `tls12_construct_client_key_exchange`).
+                    if (*s).tls12_key_block_len == 0
+                        && crate::ssl::t1_enc::tls12_derive_key_block(s) == 0
+                    {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
                     }
                     if crate::ssl::t1_enc::tls12_install_read(s, true) == 0 {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
@@ -2606,10 +2718,12 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
                         ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
                         return -1;
                     }
-                    (*s).hand_state = TLS_ST_OK;
-                    (*s).in_init = 0;
-                    (*s).rwstate = 1; // SSL_NOTHING
-                    (*s).statem_state = MSG_FLOW_READING_13;
+                    if (*s).hit != 0 {
+                        // Abbreviated: the client now sends its own CCS+Finished.
+                        (*s).hand_state = TLS_ST_CW_CHANGE;
+                        continue;
+                    }
+                    tls12_client_finish(s);
                     return 1;
                 }
                 _ => {
@@ -2619,6 +2733,164 @@ unsafe fn tls12_client_drive(s: *mut Ssl) -> c_int {
             }
         }
     }
+}
+
+/// `SSL3_RT_CHANGE_CIPHER_SPEC` — `ssl3.h` (20).
+const SSL3_RT_CHANGE_CIPHER_SPEC: u8 = 20;
+
+/// Finish the client's TLS1.2 handshake (`tls_finish_handshake`, `statem_lib.c:1431-1518`, client
+/// arm): update the client cache and counters, and move to `TLS_ST_OK`.
+///
+/// # Safety
+/// `s` is live and its handshake is complete.
+unsafe fn tls12_client_finish(s: *mut Ssl) {
+    // SAFETY: `s` is live per the contract.
+    unsafe {
+        crate::ssl::ssl_sess::ssl_update_cache(s, crate::ssl::ssl_sess::SSL_SESS_CACHE_CLIENT);
+        let sc = (*s).session_ctx;
+        if !sc.is_null() {
+            if (*s).hit != 0 {
+                (*sc)
+                    .stats
+                    .sess_hit
+                    .fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+            }
+            (*sc)
+                .stats
+                .sess_connect_good
+                .fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+        }
+        (*s).hand_state = TLS_ST_OK;
+        (*s).in_init = 0;
+        (*s).rwstate = 1; // SSL_NOTHING
+        (*s).statem_state = MSG_FLOW_READING_13;
+    }
+}
+
+/// Read the server's ChangeCipherSpec on the TLS1.2 client, consuming any `NewSessionTicket`
+/// that precedes it (`statem_clnt.c`'s `TLS_ST_CR_CHANGE`/`TLS_ST_CR_SESSION_TICKET` states).
+/// Returns 1 on CCS, 0 when the peer BIO is empty, -1 on error.
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls12_client_read_ccs(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live per the contract.
+    unsafe {
+        loop {
+            let mut buf = [0u8; 16384];
+            let mut rt = 0u8;
+            let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
+                s,
+                &mut rt,
+                buf.as_mut_ptr(),
+                buf.len(),
+            );
+            if n <= 0 {
+                if ossl_statem_in_error(s) != 0 {
+                    return -1;
+                }
+                return 0;
+            }
+            if rt == SSL3_RT_CHANGE_CIPHER_SPEC {
+                if let Some(cb) = (*s).msg_callback {
+                    cb(
+                        0,
+                        (*s).version,
+                        SSL3_RT_CHANGE_CIPHER_SPEC as c_int,
+                        buf.as_ptr().cast(),
+                        n as usize,
+                        s,
+                        (*s).msg_callback_arg,
+                    );
+                }
+                return 1;
+            }
+            if rt == SSL3_RT_HANDSHAKE && buf[0] == SSL3_MT_NEWSESSION_TICKET as u8 {
+                // The generic read path feeds every TLS1.2 handshake message into the transcript
+                // (`tls_get_message_body`, `statem_lib.c:1759`), including the NewSessionTicket;
+                // the server's Finished covers it.
+                if crate::ssl::tls13_enc::transcript_update(s, buf.as_ptr(), n as usize) == 0 {
+                    ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                    return -1;
+                }
+                if tls12_process_new_session_ticket(s, &buf[..n as usize]) == 0 {
+                    ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                    return -1;
+                }
+                continue;
+            }
+            ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
+            return -1;
+        }
+    }
+}
+
+/// `MSG_PROCESS_RETURN tls_process_new_session_ticket(...)` (`statem_clnt.c:2730-2940`) for the
+/// TLS1.2 shape: store the ticket and lifetime hint on the session and set the client's resume id
+/// to `SHA256(ticket)` (`statem_clnt.c:2851-2872`).
+///
+/// # Safety
+/// `s` is live; `msg` is the full NewSessionTicket message.
+unsafe fn tls12_process_new_session_ticket(s: *mut Ssl, msg: &[u8]) -> c_int {
+    use crate::runtime::mem::{CRYPTO_free, CRYPTO_malloc};
+    if msg.len() < 4 || msg[0] != SSL3_MT_NEWSESSION_TICKET as u8 {
+        return 0;
+    }
+    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
+    if 4 + blen > msg.len() {
+        return 0;
+    }
+    let body = &msg[4..4 + blen];
+    if body.len() < 6 {
+        return 0;
+    }
+    // SAFETY: `body` has at least 6 bytes; the 4-byte prefix is the lifetime hint.
+    let lifetime = u32::from_be_bytes([body[0], body[1], body[2], body[3]]);
+    let ticklen = ((body[4] as usize) << 8) | body[5] as usize;
+    if 6 + ticklen > body.len() {
+        return 0;
+    }
+    if ticklen == 0 {
+        // `statem_clnt.c:2757`: the server changed its mind; nothing to store.
+        return 1;
+    }
+    let ticket = &body[6..6 + ticklen];
+    // SAFETY: `s` is live.
+    unsafe {
+        let mut sess = (*s).session;
+        if sess.is_null() {
+            return 0;
+        }
+        // A session that was already resumable is replaced by a duplicate, so the cached copy is
+        // immutable (`statem_clnt.c:2768-2792`).
+        if (*sess).session_id_length > 0 {
+            let dup = crate::ssl::ssl_sess::ssl_session_dup(sess, 0);
+            if dup.is_null() {
+                return 0;
+            }
+            crate::ssl::ssl_sess::SSL_SESSION_free(sess);
+            (*s).session = dup;
+            sess = dup;
+        }
+        (*sess).time = crate::ssl::ssl_sess::time_now_secs();
+        crate::ssl::ssl_sess::ssl_session_calculate_timeout(sess);
+        CRYPTO_free((*sess).ext_tick.cast(), core::ptr::null(), 0);
+        let tp = CRYPTO_malloc(ticklen, core::ptr::null(), 0).cast::<u8>();
+        if tp.is_null() {
+            return 0;
+        }
+        core::ptr::copy_nonoverlapping(ticket.as_ptr(), tp, ticklen);
+        (*sess).ext_tick = tp;
+        (*sess).ext_ticklen = ticklen;
+        (*sess).ext_tick_lifetime_hint = lifetime as core::ffi::c_ulong;
+        (*sess).ext_tick_age_add = 0;
+        let mut digest = [0u8; 32];
+        crate::digest::sha2::SHA256(ticket.as_ptr(), ticklen, digest.as_mut_ptr());
+        (*sess).session_id_length = 32;
+        core::ptr::copy_nonoverlapping(digest.as_ptr(), (*sess).session_id.as_mut_ptr(), 32);
+        (*sess).not_resumable = 0;
+    }
+    1
 }
 
 /// `tls_process_finished`'s client half (`statem_lib.c:843-960`) for TLS1.2.
@@ -2679,6 +2951,10 @@ unsafe fn tls12_client_wait(s: *mut Ssl) -> c_int {
 pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
     // SAFETY: `s` is live.
     unsafe {
+        // A TLS1.2 handshake that returned a wait must resume in its own driver on re-entry.
+        if (*s).tls12_driver != 0 {
+            return tls12_client_drive(s);
+        }
         loop {
             match (*s).hand_state {
                 TLS_ST_BEFORE => {
@@ -2710,7 +2986,14 @@ pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
                     // A ServerHello without a TLS1.3 `supported_versions` extension selects the
                     // TLS1.2 flight (`tls_process_server_hello` installs the version).
                     if (*s).version == TLS1_2_VERSION {
-                        (*s).hand_state = TLS_ST_CR_CERT;
+                        // A resumed TLS1.2 session has an abbreviated flight (`statem_clnt.c`'s
+                        // read transition from `TLS_ST_CR_SRVR_HELLO`): the server's CCS+Finished
+                        // follow the ServerHello directly.
+                        (*s).hand_state = if (*s).hit != 0 {
+                            TLS_ST_CR_CHANGE
+                        } else {
+                            TLS_ST_CR_CERT
+                        };
                         return tls12_client_drive(s);
                     }
                     (*s).hand_state = TLS_ST_CR_ENCRYPTED_EXTENSIONS;
