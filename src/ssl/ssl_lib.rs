@@ -70,6 +70,7 @@ use crate::ssl::s3_lib::ssl3_ctrl_set_tlsext_host_name;
 use crate::ssl::ssl_cert::{ssl_ctx_security, ssl_security};
 use crate::ssl::ssl_ciph::ssl3_get_cipher_by_char;
 use crate::ssl::ssl_ciph_table::SslCipher;
+use crate::ssl::ssl_conf::ssl_set_version_bound;
 use crate::ssl::ssl_sess::{
     ssl_ctx_session_cache_free, SSL_SESSION_free, SSL_get_session, SSL_set_session,
 };
@@ -253,8 +254,8 @@ pub const TLS_ANY_VERSION: c_int = 0x10000;
 pub const TLS1_3_VERSION: c_int = 0x0304;
 /// `TLS_MAX_VERSION_INTERNAL` — `ssl_local.h:50`: `tls1_clear` installs it for an any-version method.
 const TLS_MAX_VERSION_INTERNAL: c_int = TLS1_3_VERSION;
-/// `DTLS1_VERSION_MAJOR` — `include/openssl/dtls1.h`.
-#[allow(dead_code)] // retained for the version-family readers a later slice adds
+/// `DTLS1_VERSION_MAJOR` — `include/openssl/dtls1.h`; the `ssl_check_allowed_versions`
+/// family test (`ssl/ssl_lib.c:452`) shifts a version by 8 and compares to it.
 const DTLS1_VERSION_MAJOR: c_int = 0xFE;
 /// `DTLS1_2_VERSION` — `include/openssl/prov_ssl.h:29`; the max a DTLS method negotiates.
 const DTLS1_2_VERSION: c_int = 0xFEFD;
@@ -348,14 +349,12 @@ const SSL_CTRL_CLEAR_CERT_FLAGS: c_int = 100;
 const SSL_CTRL_SET_SPLIT_SEND_FRAGMENT: c_int = 125;
 /// `SSL_CTRL_SET_MAX_PIPELINES` — `ssl.h:1380`.
 const SSL_CTRL_SET_MAX_PIPELINES: c_int = 126;
-/// `SSL_CTRL_SET_MIN_PROTO_VERSION` — `ssl.h:1377` (the setter is `ssl_set_version_bound`,
-/// 14.5's, so it stays on this switch's fall-through).
-#[allow(dead_code)]
+/// `SSL_CTRL_SET_MIN_PROTO_VERSION` — `ssl.h:1377`; setters are `ssl_set_version_bound`
+/// (`ssl/ssl_lib.c:3199-3202`).
 const SSL_CTRL_SET_MIN_PROTO_VERSION: c_int = 123;
 /// `SSL_CTRL_GET_MIN_PROTO_VERSION` — `ssl.h:1384`.
 const SSL_CTRL_GET_MIN_PROTO_VERSION: c_int = 130;
 /// `SSL_CTRL_SET_MAX_PROTO_VERSION` — `ssl.h:1378` (as the min setter).
-#[allow(dead_code)]
 const SSL_CTRL_SET_MAX_PROTO_VERSION: c_int = 124;
 /// `SSL_CTRL_GET_MAX_PROTO_VERSION` — `ssl.h:1385`.
 const SSL_CTRL_GET_MAX_PROTO_VERSION: c_int = 131;
@@ -3245,6 +3244,31 @@ pub unsafe extern "C" fn SSL_get_verify_result(ssl: *const Ssl) -> c_long {
 // The control surface
 // -------------------------------------------------------------------------------------------
 
+/// `ssl_check_allowed_versions` — `ssl/ssl_lib.c:449-554`.
+///
+/// The authority ORs an `OPENSSL_NO_*` disjunct into each family guard and applies a version
+/// "massaging" step (`0` -> the family's min/max) ahead of it. This build enables every protocol
+/// (`src/ssl/statem/statem_lib.rs`'s `TLS_VERSION_TABLE`/`DTLS_VERSION_TABLE` carry `present: true`
+/// on every row, and no `OPENSSL_NO_TLS*`/`OPENSSL_NO_SSL3`/`OPENSSL_NO_DTLS1*` is defined), so
+/// every `#ifdef` disjunct is preprocessed out, the guards reduce to the source's literal
+/// `if (0 ...)`, and only the DTLS/TLS family-mixing rejection can return 0. The observable result
+/// is therefore the mixing test below followed by success.
+fn ssl_check_allowed_versions(min_version: c_int, max_version: c_int) -> bool {
+    // Figure out if we're doing DTLS versions or TLS versions (`ssl/ssl_lib.c:451-456`).
+    let minisdtls = min_version == DTLS1_BAD_VER || min_version >> 8 == DTLS1_VERSION_MAJOR;
+    let maxisdtls = max_version == DTLS1_BAD_VER || max_version >> 8 == DTLS1_VERSION_MAJOR;
+    // A wildcard version of 0 could be DTLS or TLS (`ssl/ssl_lib.c:458-462`); mixing the two
+    // families "will lead to sadness", so deny it.
+    if (minisdtls && !maxisdtls && max_version != 0)
+        || (maxisdtls && !minisdtls && min_version != 0)
+    {
+        return false;
+    }
+    // Both families' `if (0 ...)` guards have every disjunct compiled out (all protocols enabled),
+    // so neither rejects; the authority returns 1 (`ssl/ssl_lib.c:554`).
+    true
+}
+
 /// `long SSL_ctrl(SSL *s, int cmd, long larg, void *parg)` — `ssl/ssl_lib.c:2943-2946`, via
 /// `ossl_ctrl_internal` (`:2948-3074`).
 ///
@@ -3350,7 +3374,33 @@ pub unsafe extern "C" fn SSL_ctrl(
                 // SAFETY: `sc` is live; `parg` is NULL or a NUL-terminated name per the contract.
                 unsafe { ssl3_ctrl_set_tlsext_host_name(s, larg, parg) }
             }
+            // `ssl/ssl_lib.c:3056-3067` (`ossl_ctrl_internal`). The bound is checked against the
+            // other bound first, then committed through `ssl_set_version_bound` for the method's
+            // family; `&&` preserves the authority's short-circuit, so a rejected check does not
+            // write the field.
+            SSL_CTRL_SET_MIN_PROTO_VERSION => {
+                // SAFETY: `sc` is live; `defltmeth` is the connection's method pointer.
+                let method_version = unsafe { (*sc.defltmeth).version };
+                let ok = ssl_check_allowed_versions(larg as c_int, sc.max_proto_version)
+                    && ssl_set_version_bound(
+                        method_version,
+                        larg as c_int,
+                        &mut sc.min_proto_version,
+                    );
+                c_long::from(ok)
+            }
             SSL_CTRL_GET_MIN_PROTO_VERSION => sc.min_proto_version as c_long,
+            SSL_CTRL_SET_MAX_PROTO_VERSION => {
+                // SAFETY: `sc` is live; `defltmeth` is the connection's method pointer.
+                let method_version = unsafe { (*sc.defltmeth).version };
+                let ok = ssl_check_allowed_versions(sc.min_proto_version, larg as c_int)
+                    && ssl_set_version_bound(
+                        method_version,
+                        larg as c_int,
+                        &mut sc.max_proto_version,
+                    );
+                c_long::from(ok)
+            }
             SSL_CTRL_GET_MAX_PROTO_VERSION => sc.max_proto_version as c_long,
             _ => 0,
         }
@@ -3508,7 +3558,31 @@ pub unsafe extern "C" fn SSL_CTX_ctrl(
                 cert.cert_flags &= !larg;
                 cert.cert_flags
             }
+            // `ssl/ssl_lib.c:3199-3209`. As in `SSL_ctrl`, the cross-bound check runs before
+            // `ssl_set_version_bound` commits, and the `&&` short-circuit matches the authority's.
+            SSL_CTRL_SET_MIN_PROTO_VERSION => {
+                // SAFETY: `c` is live; `method` is the context's method pointer.
+                let method_version = unsafe { (*c.method).version };
+                let ok = ssl_check_allowed_versions(larg as c_int, c.max_proto_version)
+                    && ssl_set_version_bound(
+                        method_version,
+                        larg as c_int,
+                        &mut c.min_proto_version,
+                    );
+                c_long::from(ok)
+            }
             SSL_CTRL_GET_MIN_PROTO_VERSION => c.min_proto_version as c_long,
+            SSL_CTRL_SET_MAX_PROTO_VERSION => {
+                // SAFETY: `c` is live; `method` is the context's method pointer.
+                let method_version = unsafe { (*c.method).version };
+                let ok = ssl_check_allowed_versions(c.min_proto_version, larg as c_int)
+                    && ssl_set_version_bound(
+                        method_version,
+                        larg as c_int,
+                        &mut c.max_proto_version,
+                    );
+                c_long::from(ok)
+            }
             SSL_CTRL_GET_MAX_PROTO_VERSION => c.max_proto_version as c_long,
             // The authority's fall-through is `ctx->method->ssl_ctx_ctrl` (`ssl3_ctx_ctrl`); the
             // crate's reduced method carries the SRP credential arms there.
