@@ -819,7 +819,7 @@
     "blocking_dependencies": 0,
     "divergence_names_covered": 98,
     "findings": 0,
-    "language_census": 11689,
+    "language_census": 11687,
     "sealed_census": 391
   },
   "provider_implemented": [

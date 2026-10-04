@@ -616,6 +616,7 @@ pub mod ssl_sess;
 pub mod ssl_stat;
 pub mod ssl_txt;
 pub mod statem;
+pub mod t1_enc;
 pub mod t1_lib;
 pub mod t1_trce;
 pub mod tls13_enc;

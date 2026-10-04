@@ -4,7 +4,7 @@
     "blocking_dependencies": [],
     "census": {
       "covered_by_a_divergence": 152,
-      "language_surface_not_modelled_by_name": 11689
+      "language_surface_not_modelled_by_name": 11687
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -694,9 +694,9 @@
         "ssl/ssl_txt.c": 6,
         "ssl/statem/extensions_cust.c": 32,
         "ssl/statem/statem.c": 57,
-        "ssl/statem/statem_clnt.c": 127,
+        "ssl/statem/statem_clnt.c": 126,
         "ssl/statem/statem_lib.c": 111,
-        "ssl/statem/statem_srvr.c": 150,
+        "ssl/statem/statem_srvr.c": 149,
         "ssl/t1_lib.c": 222,
         "ssl/t1_trce.c": 101,
         "ssl/tls_depr.c": 17,
@@ -792,7 +792,7 @@
     },
     "checked": {
       "authority_units": 596,
-      "crate_modules": 853,
+      "crate_modules": 854,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
       "divergence_names_covered": 98,
@@ -1278,7 +1278,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "8157654474e4c1ce2e4367cbb6f0f552f3effc064bf2f59d16a3a06da30548d3",
+  "body_hash": "17f135722f8239cce4af7c2741731a4e5cae477b69aca01d180777b2a4a654e2",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1314,7 +1314,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "05a969d98ac2ba888169b6e531ea3ce993fc9934db60c3d4602b0023cfd56478"
+      "sha256": "4cd6934729552d8f524b27c23b48a7b09ff5e2c41e15a3fc1bcfc7a486dcc775"
     },
     {
       "name": "phase-state",

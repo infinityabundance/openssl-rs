@@ -152,6 +152,18 @@ pub(crate) fn tls13_method(server: bool) -> *const SslMethod {
     }
 }
 
+/// The version-specific method a connection switches to once TLS1.2 is negotiated.
+///
+/// # Safety
+/// The returned pointer is to a process-lifetime static.
+pub(crate) fn tls12_method(server: bool) -> *const SslMethod {
+    if server {
+        &TLSV1_2_SERVER_METHOD_DATA
+    } else {
+        &TLSV1_2_CLIENT_METHOD_DATA
+    }
+}
+
 /// `const SSL_METHOD *TLS_method(void)` — `ssl/methods.c:19-22`.
 ///
 /// # Safety

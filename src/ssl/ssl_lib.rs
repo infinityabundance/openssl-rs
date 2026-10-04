@@ -1598,6 +1598,20 @@ pub struct Ssl {
     pub dec_key: [u8; 32],
     /// The read IV (`read_iv`).
     pub dec_iv: [u8; 16],
+
+    // --- Phase 17: the reduced TLS 1.2 key schedule and record protection ---------------------
+    /// `unsigned char master_secret[SSL_MAX_MASTER_KEY_LENGTH]` — the TLS1.2 master secret
+    /// (`tls1_generate_master_secret`, `t1_enc.c:267-275`). A connection is either TLS1.2 or
+    /// TLS1.3, so this never coexists with the TLS1.3 schedule's [`Self::master_secret`].
+    pub tls12_master_secret: [u8; SSL_MAX_MASTER_KEY_LENGTH],
+    /// The TLS1.2 key block (`tls1_setup_key_block`, `t1_enc.c:315-370`):
+    /// `client_write_key || server_write_key || client_write_IV || server_write_IV` for the reduced
+    /// AEAD suites (no MAC keys).
+    pub tls12_key_block: [u8; 128],
+    /// The number of valid bytes in [`Self::tls12_key_block`].
+    pub tls12_key_block_len: usize,
+    /// The TLS1.2 PRF hash selector: 0 is SHA256, 1 is SHA384 (`ssl_cipher_get_evp`, `t1_enc.c`).
+    pub tls12_md_kind: c_int,
     /// `uint64_t write_sequence`.
     pub enc_seq: u64,
     /// `uint64_t read_sequence`.
@@ -2317,12 +2331,11 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             }
             X509_VERIFY_PARAM_inherit((*s).param, (*ctx).param);
 
-            (*s).cert = cert_new();
+            (*s).cert = ssl_cert_dup((*ctx).cert);
             if (*s).cert.is_null() {
                 SSL_free(s);
                 return ptr::null_mut();
             }
-            cert_copy_security((*s).cert, (*ctx).cert);
 
             // `ssl3_new` (`s3_lib.c:3808-3824`) runs `ssl_srp_ctx_init_intern`, copying the
             // context's SRP credentials and callbacks onto the connection. The crate's `SSL_new`
@@ -4485,16 +4498,21 @@ pub unsafe extern "C" fn SSL_has_pending(s: *const Ssl) -> c_int {
 /// # Safety
 /// `s` must be NULL or a live connection; `buf` must hold `count` writable bytes.
 #[no_mangle]
-pub unsafe extern "C" fn SSL_get_finished(
-    s: *const Ssl,
-    _buf: *mut c_void,
-    _count: usize,
-) -> usize {
+pub unsafe extern "C" fn SSL_get_finished(s: *const Ssl, buf: *mut c_void, count: usize) -> usize {
     guard_ffi(0, || {
-        if s.is_null() {
+        if s.is_null() || buf.is_null() {
             return 0;
         }
-        0
+        // `ssl3_take_mac`/`tls_construct_finished` store this side's `verify_data` in
+        // `s3.tmp.finish_md` (`ssl/ssl_lib.c:1804-1809`).
+        // SAFETY: `s` is live; `buf` holds `count` writable bytes.
+        unsafe {
+            let n = (*s).finish_md_len.min(count);
+            if n != 0 {
+                ptr::copy_nonoverlapping((*s).finish_md.as_ptr(), buf.cast::<u8>(), n);
+            }
+            n
+        }
     })
 }
 
@@ -4505,14 +4523,23 @@ pub unsafe extern "C" fn SSL_get_finished(
 #[no_mangle]
 pub unsafe extern "C" fn SSL_get_peer_finished(
     s: *const Ssl,
-    _buf: *mut c_void,
-    _count: usize,
+    buf: *mut c_void,
+    count: usize,
 ) -> usize {
     guard_ffi(0, || {
-        if s.is_null() {
+        if s.is_null() || buf.is_null() {
             return 0;
         }
-        0
+        // The peer's `verify_data` is stored on receipt (`ssl3_take_mac`,
+        // `ssl/ssl_lib.c:1820-1825`).
+        // SAFETY: `s` is live; `buf` holds `count` writable bytes.
+        unsafe {
+            let n = (*s).peer_finish_md_len.min(count);
+            if n != 0 {
+                ptr::copy_nonoverlapping((*s).peer_finish_md.as_ptr(), buf.cast::<u8>(), n);
+            }
+            n
+        }
     })
 }
 
