@@ -1348,6 +1348,14 @@ pub struct Ssl {
     /// `const SSL_CIPHER *s3.tmp.new_cipher` — the pending cipher (`SSL_get_pending_cipher`). Set
     /// by the handshake; NULL before one.
     pub pending_cipher: *const crate::ssl::ssl_ciph_table::SslCipher,
+    /// `unsigned char tmp_session_id[SSL_MAX_SSL_SESSION_ID_LENGTH]` — the TLSv1.3 session id the
+    /// server echoes from the ClientHello (`statem_srvr.c`, 17.2b).
+    pub tmp_session_id: [u8; SSL_MAX_SSL_SESSION_ID_LENGTH],
+    /// `size_t tmp_session_id_len`.
+    pub tmp_session_id_len: usize,
+    /// `uint16_t s3.group_id` — the key-exchange group the server selected
+    /// (`tls_parse_ctos_key_share`/`tls1_setup_key_share`, `statem_srvr.c`, 17.2b).
+    pub group_id: u16,
     /// `SSL_DANE dane` — the DANE per-connection state (`ssl_local.h:1493`).
     #[allow(dead_code)] // read by the DANE setters/getters landed in 14.7b
     pub(crate) dane: SslDane,

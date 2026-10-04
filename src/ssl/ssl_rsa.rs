@@ -45,7 +45,7 @@ use crate::pem::pem_x509::PEM_read_bio_X509;
 use crate::pem::pem_xaux::PEM_read_bio_X509_AUX;
 use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::iolib::BIO_ctrl;
-use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_CLOSE, BIO_FP_READ};
+use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_CLOSE, BIO_C_SET_FILENAME, BIO_FP_READ};
 use crate::runtime::err::{raise_with, ERR_clear_error, ERR_peek_error};
 use crate::runtime::mem::{CRYPTO_free, CRYPTO_realloc};
 use crate::runtime::stack::{OPENSSL_sk_num, OPENSSL_sk_value, OpenSslStack};
@@ -121,8 +121,6 @@ const SSL_R_PEM_NAME_BAD_PREFIX: c_int = 391;
 /// `SSL_R_BAD_DATA` — `sslerr.h:30`; the file loader's length check.
 #[allow(dead_code)]
 const SSL_R_BAD_DATA: c_int = 390;
-/// `BIO_C_SET_FILENAME`.
-const BIO_C_SET_FILENAME: c_int = 104;
 /// `SSL_PKEY_ECC` — `ssl_local.h:322`.
 const SSL_PKEY_ECC: usize = 3;
 /// `SSL_FILETYPE_PEM`.

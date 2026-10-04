@@ -79,19 +79,25 @@ divergence.
 
 `RT-TLS13-INTEROP`, and what it compares
 ----------------------------------------
-17.2a's court, `courts/phase17/rt_tls13_interop_probe.c`, is 17.2's differential instrument: it
+17.2's court, `courts/phase17/rt_tls13_interop_probe.c`, is 17.2's differential instrument: it
 stands up a client and a server `SSL_CTX` (the server's carrying the fixed `signer.pem`/`rsa-key.pem`
 fixture), connects them over two pairs of memory BIOs and pumps the flight. 17.2a lands the client's
 first flight -- `tls_construct_client_hello` builds a real ClientHello over the reduced plaintext
-record write -- so the court compares the observations that flight makes deterministic: the record
-and handshake headers, the legacy/session/cipher/compression shape (including the 30 offered cipher
-suites), and the option-gated extension bodies. Everything past the first read, the missing
-extensions (`supported_groups`, `signature_algorithms`, `key_share`, `ec_point_formats`,
-`renegotiation_info`), the certificate load and the application-data exchange are classified by
-`_interop_reason` and recorded. Because the flight stops at the extension boundary, the plan's
-section 3.2 requires it to be **named pending rather than counted as passing**: the court's row
-carries `verdict: pending` (it closes automatically once both sides report a finished handshake),
-and the `tls13-interop` contract unit stays open in the ledger.
+record write. 17.2b lands the server's first flight: `tls_process_client_hello` reads the
+ClientHello over a reduced plaintext record read and chooses the version/cipher/group, and
+`tls_construct_server_hello` writes a real ServerHello (`supported_versions` + `X25519` key_share)
+through the new `extensions_srvr` framework; the reduced group list and the client
+`supported_groups`/`key_share` constructors ride along, and the `BIO_C_SET_FILENAME` constant fix
+makes the fixed signer fixture load. The court compares the observations that flight makes
+deterministic: the record and handshake headers, the legacy/session/cipher/compression shape
+(including the 30 offered cipher suites), the option-gated extension bodies, and the three
+certificate-load return values. Everything past the ServerHello, the missing extensions
+(`signature_algorithms`, `ec_point_formats`, `renegotiation_info`, the hybrid key share), and the
+application-data exchange are classified by `_interop_reason` and recorded. Because the flight
+stops at the EncryptedExtensions/key-schedule boundary, the plan's section 3.2 requires it to be
+**named pending rather than counted as passing**: the court's row carries `verdict: pending` (it
+closes automatically once both sides report a finished handshake), and the `tls13-interop` contract
+unit stays open in the ledger.
 
 The remaining pending courts
 ----------------------------
@@ -1060,14 +1066,18 @@ def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bo
     return res.ok, res.stderr.strip()
 
 
-# `RT-TLS13-INTEROP`'s comparable observations: the arms 17.2a drives. Each is a deterministic
-# function of the build -- a message type, a protocol version, a length, a cipher-suite count or an
-# extension body that does not carry a random -- so the authority's own two runs agree and the
-# candidate reproducing the client's first flight produces the same lines. Every other observation
-# the probe prints is a residual classified in `_interop_reason` and recorded rather than diffed.
+# `RT-TLS13-INTEROP`'s comparable observations: the arms 17.2 drives. Each is a deterministic
+# function of the build -- a message type, a protocol version, a length, a cipher-suite count, an
+# extension body that does not carry a random, or a certificate-load return value -- so the
+# authority's own two runs agree and the candidate reproducing the first flight produces the same
+# lines. Every other observation the probe prints is a residual classified in `_interop_reason`
+# and recorded rather than diffed.
 INTEROP_COMPARABLE: list[str] = [
     "ctx.client.nonnull",
     "ctx.server.nonnull",
+    "server.cert.load",
+    "server.key.load",
+    "server.key.check",
     "server.cert.err.count",
     "client.nonnull",
     "server.nonnull",
@@ -1111,17 +1121,16 @@ def _keyed(text: str) -> dict[str, str]:
 
 def _interop_reason(key: str) -> str:
     """The named boundary a non-comparable `RT-TLS13-INTEROP` observation sits on."""
-    if key in ("server.cert.load", "server.key.load", "server.key.check"):
-        return (
-            "certificate/key plumbing: the candidate's `SSL_CTX_use_certificate_chain_file` refuses "
-            "the fixed signer fixture (recorded divergence; 14.7 / the decoder boundary)"
-        )
     if key.startswith("ch.ext.10"):
-        return "supported_groups is not constructed (`ssl_load_groups` unlanded)"
+        return "supported_groups is constructed from the reduced built-in default list"
     if key.startswith("ch.ext.13"):
         return "signature_algorithms is not constructed (the client sigalg list is unlanded)"
     if key.startswith("ch.ext.51"):
-        return "key_share is not constructed (the group list and ephemeral key share are unlanded)"
+        return (
+            "key_share: the reduced default group list drops the hybrid `X25519MLKEM768`, so the "
+            "candidate sends the `X25519` share (36 bytes) where the authority sends the hybrid one "
+            "(1258); the hybrid share is the key-schedule boundary"
+        )
     if key.startswith("ch.ext.11"):
         return "ec_point_formats is not constructed (`use_ecc` needs the group list)"
     if key.startswith("ch.ext.65281"):
@@ -1136,28 +1145,37 @@ def _interop_reason(key: str) -> str:
         )
     if key in ("ch.ext.types", "ch.ext_total_len", "ch.hs_len", "ch.reclen", "ch.recbytes",
                "flight.0.client.out"):
-        return "the extension set is partial, so the ClientHello is smaller than the authority's"
+        return (
+            "the extension set is partial (renegotiation_info/ec_point_formats/signature_algorithms "
+            "and the hybrid key share are unlanded), so the ClientHello is smaller than the "
+            "authority's"
+        )
     if key.startswith("app."):
         return "application data is not reached: the handshake does not complete"
     if key in ("flights.used", "client.state", "client.want", "client.in_init",
                "client.finished", "server.state", "server.want", "server.in_init",
                "server.finished", "flight.0.server.out") or key.startswith("flight."):
         return (
-            "the flight stops at the first read: the server's message layer is unlanded, so no "
-            "ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+            "the flight now exchanges ClientHello and ServerHello (17.2b): the server reads the "
+            "ClientHello, `tls_process_client_hello` chooses TLS1.3/cipher/group and "
+            "`tls_construct_server_hello` writes a ServerHello (record type 22, message type 2, "
+            "supported_versions + X25519 key_share); it stops before EncryptedExtensions because "
+            "the key schedule (`tls13_enc.c`) and the certificate flight are unlanded, and the "
+            "client's read path cannot consume the ServerHello"
         )
     return "recorded rather than diffed"
 
 
 def interop_court(name: str, src: Path, auth, work: Path) -> dict:
-    """`RT-TLS13-INTEROP`: the client's first TLS 1.3 flight, differentially.
+    """`RT-TLS13-INTEROP`: the TLS 1.3 client/server first flight, differentially.
 
-    17.2a drives as far as the landed message layer reaches: the client builds and writes a real
-    `ClientHello` over the memory BIO, and the court compares the observations that flight makes
-    deterministic (record types, versions, session/cipher/compression shape, and the option-gated
-    extension bodies). The observations the flight does **not** yet make comparable -- the missing
-    extensions, the certificate load, and every step past the first read -- are classified by
-    `_interop_reason` and recorded; the full flight is named in `PENDING_COURTS`'s section of the
+    17.2b drives as far as the landed message layer reaches: the client builds a real `ClientHello`
+    (with `supported_groups`/`key_share`) and the server reads it and writes a real `ServerHello`
+    over the memory BIOs, and the court compares the observations that flight makes deterministic
+    (record types, versions, session/cipher/compression shape, the option-gated extension bodies and
+    the certificate/key loads). The observations the flight does **not** yet make comparable -- the
+    missing extensions, the hybrid key share, and every step past the ServerHello -- are classified
+    by `_interop_reason` and recorded; the full flight is named in `PENDING_COURTS`'s section of the
     document. A residual on a comparable observation is a failure.
     """
     auth_lib = auth.libdir
@@ -1490,17 +1508,20 @@ def main(argv: list[str]) -> int:
             "are recorded "
             "in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: 17.2a "
             "registers it over the probe courts/phase17/rt_tls13_interop_probe.c, which connects a "
-            "client and a server over memory BIOs and drives the client's first flight. 17.2a lands "
-            "tls_construct_client_hello over a reduced plaintext record write, so the court compares "
-            "the record/handshake headers, the legacy/session/cipher/compression shape and the "
-            "option-gated extension bodies that flight makes deterministic; the missing extensions "
-            "(supported_groups, signature_algorithms, key_share, ec_point_formats, "
-            "renegotiation_info), the certificate load, and every step past the first read -- the "
-            "server's message layer, the extension units (ssl/extensions_clnt.c/"
-            "ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 "
-            "message bodies D529 handed forward -- are classified in _interop_reason and recorded, "
-            "so the court's verdict is pending (section 3.2 names a stalled handshake pending "
-            "rather than passing) and the tls13-interop contract unit stays open. "
+            "client and a server over memory BIOs and drives the flight. 17.2a lands "
+            "tls_construct_client_hello over a reduced plaintext record write; 17.2b lands the "
+            "server's first flight -- tls_process_client_hello over a reduced plaintext record read "
+            "and tls_construct_server_hello plus the extensions_srvr framework and the reduced "
+            "group/key-share infrastructure -- and fixes the BIO_C_SET_FILENAME constant so the "
+            "fixture loads. The court compares the record/handshake headers, the "
+            "legacy/session/cipher/compression shape, the option-gated extension bodies and the "
+            "three certificate-load return values that flight makes deterministic. The remaining "
+            "gaps -- signature_algorithms/ec_point_formats/renegotiation_info, the hybrid key share "
+            "(X25519MLKEM768), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c), the server flight "
+            "past the ServerHello, the client read path and the 56 message bodies D529 handed "
+            "forward -- are classified in _interop_reason and recorded, so the court's verdict is "
+            "pending (section 3.2 names a stalled handshake pending rather than passing) and the "
+            "tls13-interop contract unit stays open. "
             "`RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it "
             "through the libcrypto path (and the same for CONF), requiring one queue across the "
             "candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via "

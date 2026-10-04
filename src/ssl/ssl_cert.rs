@@ -39,7 +39,7 @@ use core::ptr;
 use crate::ffi::guard_ffi;
 use crate::runtime::bio::bss_file::BIO_s_file;
 use crate::runtime::bio::iolib::BIO_ctrl;
-use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_CLOSE, BIO_FP_READ};
+use crate::runtime::bio::{BIO_free, BIO_new, Bio, BIO_CLOSE, BIO_C_SET_FILENAME, BIO_FP_READ};
 use crate::runtime::dir::{OPENSSL_DIR_end, OPENSSL_DIR_read, OpenSslDirCtx};
 use crate::runtime::err::raise_with;
 use crate::runtime::ex_data::{CRYPTO_get_ex_new_index, CRYPTO_EX_INDEX_X509_STORE_CTX};
@@ -70,8 +70,6 @@ const ERR_R_CRYPTO_LIB: c_int = 15 | ERR_RFLAG_COMMON;
 const ERR_R_X509_LIB: c_int = 11 | ERR_RFLAG_COMMON;
 /// `ERR_R_BIO_LIB`.
 const ERR_R_BIO_LIB: c_int = 32 | ERR_RFLAG_COMMON;
-/// `BIO_C_SET_FILENAME`.
-const BIO_C_SET_FILENAME: c_int = 104;
 /// `SSL_R_PATH_TOO_LONG` — `sslerr.h:228`.
 const SSL_R_PATH_TOO_LONG: c_int = 270;
 

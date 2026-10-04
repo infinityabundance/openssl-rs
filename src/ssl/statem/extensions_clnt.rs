@@ -14,19 +14,21 @@
 //! the `WPACKET_FLAGS_ABANDON_ON_ZERO_LENGTH` flag the authority sets for a ClientHello, and the
 //! constructors for `supported_versions`, `psk_kex_modes`, `encrypt_then_mac`,
 //! `extended_master_secret` and `session_ticket`, each transcribed from its `extensions_clnt.c`
-//! body.
+//! body. **17.2b** adds `supported_groups` and `key_share` (the `X25519` share, generated through
+//! the crate's EVP) over the reduced built-in default group list (`ssl/t1_lib.rs`).
 //!
 //! Named boundaries (not fabricated):
 //!
 //! * **`renegotiation_info` and `ec_point_formats` are not constructed.** Their constructors need
 //!   the effective security level's version arm (`ssl_security(s, SSL_SECOP_VERSION, ...)`, whose
-//!   candidate callback `ssl_lib.rs` reduces to `1`) and the supported-group list
-//!   (`ssl_load_groups`, unlanded), so a faithful body cannot be produced yet. They are named here
-//!   rather than guessed.
-//! * **`supported_groups`, `signature_algorithms` and `key_share` are not constructed.** They are
-//!   the group list (`ssl/t1_lib.c` `ssl_load_groups`), the signature-algorithm list and the
-//!   ephemeral key share, none of which is landed; `key_share` in particular needs the hybrid group
-//!   the admitted build offers. The flight cannot reach `Finished` without them.
+//!   candidate callback `ssl_lib.rs` reduces to `1`) and the supported-group list's policy walk, so
+//!   a faithful body cannot be produced yet. They are named here rather than guessed.
+//! * **`signature_algorithms` is not constructed.** It needs the client sigalg list
+//!   (`tls12_get_psigalgs`), which is unlanded; the flight cannot reach `Finished` without it.
+//! * **The `key_share` body is reduced.** The authority's default group list marks `X25519MLKEM768`
+//!   and `X25519` for a key share; the hybrid KEM is the key-schedule boundary, so only the `X25519`
+//!   share is built. The `ssl_derive`/key-schedule step the authority's constructor ends with is
+//!   not called.
 //! * **`session_ticket` is reduced.** `tls_use_ticket` (`ssl/statem/statem_lib.c`) is unlanded; the
 //!   constructor keeps the authority's `SSL_OP_NO_TICKET` guard and the empty-ticket body a fresh
 //!   connection without a resumption ticket produces.
@@ -37,11 +39,13 @@ use core::ffi::c_int;
 use core::ptr;
 
 use crate::packet::{
-    WPACKET_close, WPACKET_put_bytes_u16, WPACKET_put_bytes_u8, WPACKET_set_flags,
+    WPACKET_close, WPACKET_memcpy, WPACKET_put_bytes_u16, WPACKET_put_bytes_u8, WPACKET_set_flags,
     WPACKET_start_sub_packet_len__, Wpacket, WPACKET_FLAGS_ABANDON_ON_ZERO_LENGTH,
+    WPACKET_FLAGS_NON_ZERO_LENGTH,
 };
 use crate::ssl::ssl_lib::Ssl;
 use crate::ssl::statem::statem_lib::ssl_get_min_max_version;
+use crate::ssl::t1_lib::{tls1_get_supported_groups, OSSL_TLS_GROUP_ID_x25519};
 
 /// `TLSEXT_TYPE_renegotiate` — `tls1.h:110`.
 #[allow(dead_code)]
@@ -59,6 +63,10 @@ const TLSEXT_TYPE_EXTENDED_MASTER_SECRET: u16 = 23;
 const TLSEXT_TYPE_SUPPORTED_VERSIONS: u16 = 43;
 /// `TLSEXT_TYPE_psk_kex_modes` — `tls1.h:165`.
 const TLSEXT_TYPE_PSK_KEX_MODES: u16 = 45;
+/// `TLSEXT_TYPE_supported_groups` — `tls1.h:143`.
+const TLSEXT_TYPE_SUPPORTED_GROUPS: u16 = 10;
+/// `TLSEXT_TYPE_key_share` — `tls1.h:165`.
+const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
 
 /// `TLS1_3_VERSION` — `ssl3.h`.
 const TLS1_3_VERSION: c_int = 0x0304;
@@ -152,6 +160,97 @@ unsafe fn tls_construct_ctos_psk_kex_modes(s: *mut Ssl, pkt: *mut Wpacket) -> c_
     EXT_RETURN_SENT
 }
 
+/// `EXT_RETURN tls_construct_ctos_supported_groups(...)` — `extensions_clnt.c:214-281`.
+///
+/// The `use_ecc` gate is reduced to "the default group list is non-empty" (this stratum has no
+/// `tls_valid_group`/`SSL_get1_supported_ciphers` walk).
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_ctos_supported_groups(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // SAFETY: `s` is live.
+    let groups = unsafe { tls1_get_supported_groups(s) };
+    if groups.is_empty() {
+        return EXT_RETURN_NOT_SENT;
+    }
+
+    // SAFETY: `pkt` is live. `start_sub_packet_u16` is `start_sub_packet_len__(pkt, 2)`.
+    unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_SUPPORTED_GROUPS) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_set_flags(pkt, WPACKET_FLAGS_NON_ZERO_LENGTH) == 0
+        {
+            return EXT_RETURN_FAIL;
+        }
+        for g in groups {
+            if WPACKET_put_bytes_u16(pkt, *g) == 0 {
+                return EXT_RETURN_FAIL;
+            }
+        }
+        if WPACKET_close(pkt) == 0 || WPACKET_close(pkt) == 0 {
+            return EXT_RETURN_FAIL;
+        }
+    }
+    EXT_RETURN_SENT
+}
+
+/// `EXT_RETURN tls_construct_ctos_key_share(...)` — `extensions_clnt.c:701-...`, reduced to the
+/// single `X25519` share the reduced default group list requests.
+///
+/// The authority sends a share for every group marked `*` in the group list (`X25519MLKEM768` and
+/// `X25519`); the hybrid share is the key-schedule boundary named in the module header, so only the
+/// `X25519` share is built. The key is generated through the crate's EVP (`evp_pkey_keygen`), which
+/// is what `ssl_generate_pkey` (`ssl/ssl_rsa.c`/`t1_lib.c`) does.
+///
+/// # Safety
+/// `s` must be a live connection and `pkt` a live packet.
+unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
+    use crate::runtime::mem::CRYPTO_free;
+
+    let group = OSSL_TLS_GROUP_ID_x25519;
+    // SAFETY: `s` is live; `ctx` is the connection's context.
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let mut params = [crate::params::END; 1];
+    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated; `params` is a
+    // terminated array.
+    let pkey = unsafe { evp_pkey_keygen(libctx, c"X25519".as_ptr(), propq, params.as_mut_ptr()) };
+    if pkey.is_null() {
+        return EXT_RETURN_FAIL;
+    }
+    let mut pub_ = core::ptr::null_mut::<u8>();
+    // SAFETY: `pkey` is live; `pub_` is this frame's writable slot.
+    let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey, &mut pub_) };
+    if publen == 0 {
+        // SAFETY: `pkey` is live and this call owns it.
+        unsafe { EVP_PKEY_free(pkey) };
+        return EXT_RETURN_FAIL;
+    }
+
+    // SAFETY: `pkt` is live and `pub_` is `publen` readable bytes.
+    let ret = unsafe {
+        if WPACKET_put_bytes_u16(pkt, TLSEXT_TYPE_KEY_SHARE) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_put_bytes_u16(pkt, group) == 0
+            || WPACKET_start_sub_packet_len__(pkt, 2) == 0
+            || WPACKET_memcpy(pkt, pub_.cast(), publen) == 0
+            || WPACKET_close(pkt) == 0
+            || WPACKET_close(pkt) == 0
+        {
+            EXT_RETURN_FAIL
+        } else {
+            EXT_RETURN_SENT
+        }
+    };
+    // SAFETY: `pub_` is the block `get1` allocated; `pkey` is this frame's.
+    unsafe {
+        CRYPTO_free(pub_.cast(), core::ptr::null(), 0);
+        EVP_PKEY_free(pkey);
+    }
+    ret
+}
+
 /// `EXT_RETURN tls_construct_ctos_etm(...)` — `extensions_clnt.c:516-532`.
 ///
 /// # Safety
@@ -235,9 +334,15 @@ pub(crate) unsafe fn tls_construct_extensions(s: *mut Ssl, pkt: *mut Wpacket) ->
         }
     }
 
-    // `tls_construct_ctos_renegotiate` and `tls_construct_ctos_ec_pt_formats` are named boundaries
-    // (module header). The remaining rows, in `ext_defs[]` order.
+    // `tls_construct_ctos_renegotiate`, `tls_construct_ctos_ec_pt_formats` and
+    // `tls_construct_ctos_sig_algs` are named boundaries (module header). The remaining rows, in
+    // `ext_defs[]` order.
     let mut ret;
+    // SAFETY: live per the contract.
+    ret = unsafe { tls_construct_ctos_supported_groups(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
     // SAFETY: live per the contract.
     ret = unsafe { tls_construct_ctos_session_ticket(s, pkt) };
     if ret == EXT_RETURN_FAIL {
@@ -260,6 +365,11 @@ pub(crate) unsafe fn tls_construct_extensions(s: *mut Ssl, pkt: *mut Wpacket) ->
     }
     // SAFETY: live per the contract.
     ret = unsafe { tls_construct_ctos_psk_kex_modes(s, pkt) };
+    if ret == EXT_RETURN_FAIL {
+        return 0;
+    }
+    // SAFETY: live per the contract.
+    ret = unsafe { tls_construct_ctos_key_share(s, pkt) };
     if ret == EXT_RETURN_FAIL {
         return 0;
     }

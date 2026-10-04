@@ -15,17 +15,24 @@
 //!
 //! Every read/write transition arm that reads only the connection's own state is
 //! transcribed, and so are the two selection predicates the TLS1.2 write
-//! transition reads. The **message bodies** the transitions select —
-//! `tls_construct_server_hello`, `tls_process_client_hello` and their 40 siblings
-//! — are not landed: they build and parse bytes through the record layer, the
-//! extension units (`extensions_srvr.c`) and the key schedule, none of which is
-//! landed. The dispatch stops at the transition and the body selection is the
-//! boundary, recorded rather than fabricated. See `docs/PHASE-16-SUBPHASES.md` §3.
+//! transition reads. **17.2b** lands the server's first-flight message bodies: the
+//! reduced `tls_process_client_hello` (the version/cipher/group selection over a
+//! reduced plaintext record read) and `tls_construct_server_hello` (the
+//! `supported_versions` + `X25519` key share block), plus `write_server_hello`.
+//! The **remaining message bodies** -- `tls_construct_encrypted_extensions`,
+//! `tls_construct_certificate`, the key schedule and their siblings -- are still
+//! not landed: they build bytes through the key schedule (`ssl/t1_enc.c`/
+//! `tls13_enc.c`) and the certificate flight, neither of which is landed. See
+//! `docs/PHASE-17-SUBPHASES.md`.
 //!
 //! ## Measured divergences, recorded rather than hidden
 //!
-//! * **The message bodies are the boundary.** No `tls_construct_*`/`tls_process_*`
-//!   body is transcribed; the transitions name the states, not the bytes.
+//! * **The message bodies past the ServerHello are the boundary.**
+//!   `tls_process_client_hello` is reduced to the fresh-connection fields the
+//!   ServerHello reads (the session cache, resumption, the `CLIENTHELLO_MSG`
+//!   extension framework and the `SSL_R_MISSING_SUPPORTED_GROUPS_EXTENSION` check
+//!   are not modelled), and `tls_construct_server_hello` stops before `ssl_derive`
+//!   (the key schedule).
 //! * **The DTLS arms are unreachable.** Every object this crate builds is a TLS
 //!   method, so `SSL_CONNECTION_IS_DTLS` is false at every reachable entry and the
 //!   `d1->cookie_verified` / `DTLS_ST_SW_HELLO_VERIFY_REQUEST` arm is not taken.
@@ -50,6 +57,7 @@
 
 use core::ffi::c_int;
 
+use crate::packet::Wpacket;
 use crate::ssl::ssl_ciph_table as t;
 use crate::ssl::ssl_lib::Ssl;
 use crate::ssl::statem::statem::ossl_statem_fatal;
@@ -681,5 +689,258 @@ pub unsafe fn ossl_statem_server_max_message_size(s: *mut Ssl) -> usize {
             TLS_ST_SR_KEY_UPDATE => KEY_UPDATE_MAX_LENGTH,
             _ => 0,
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 17.2b — the server's first flight: `tls_process_client_hello` and
+// `tls_construct_server_hello` (`statem_srvr.c:1648-1859`/`2590-2699`), reduced at the key schedule.
+// ---------------------------------------------------------------------------------------------
+
+/// `SSL3_MT_SERVER_HELLO` — `ssl3.h`.
+const SSL3_MT_SERVER_HELLO: u8 = 2;
+/// `SSL3_MT_CLIENT_HELLO` — `ssl3.h`.
+const SSL3_MT_CLIENT_HELLO_BODY: u8 = 1;
+/// `TLS1_2_VERSION` — `ssl3.h` (the legacy ServerHello version, `statem_srvr.c:2599`).
+const TLS1_2_VERSION: c_int = 0x0303;
+/// `SSL3_RT_HANDSHAKE` — `ssl3.h` (22).
+const SSL3_RT_HANDSHAKE: u8 = 22;
+/// `TLSEXT_TYPE_supported_versions` — `tls1.h`.
+const TLSEXT_TYPE_SUPPORTED_VERSIONS: u16 = 43;
+/// `TLSEXT_TYPE_key_share` — `tls1.h`.
+const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
+
+/// `static MSG_PROCESS_RETURN tls_process_client_hello(...)` — `statem_srvr.c:1648-1859`, reduced to
+/// the fields the ServerHello reads: the client random and session id, the offered cipher list
+/// (`ssl3_choose_cipher`), and the `supported_versions`/`key_share` extensions.
+///
+/// The extension framework's `tls_collect_extensions`/`tls_parse_all_extensions` walk, the session
+/// cache, the resumption path and the `OPENSSL_zalloc`'d `CLIENTHELLO_MSG` are not modelled; the
+/// reachable fresh-connection fields are read directly from the handshake message. A ClientHello
+/// that omits `supported_groups` would be a fatal error in the authority
+/// (`SSL_R_MISSING_SUPPORTED_GROUPS_EXTENSION`, `extensions_srvr.c:867`); the reduced form does not
+/// check that here, and the module header names it.
+///
+/// # Safety
+/// `s` must be a live connection; `hs` must be the handshake message (`type || len || body`).
+pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
+    if hs.len() < 4 || hs[0] != SSL3_MT_CLIENT_HELLO_BODY {
+        return 0;
+    }
+    let hs_len = ((hs[1] as usize) << 16) | ((hs[2] as usize) << 8) | hs[3] as usize;
+    if 4 + hs_len > hs.len() {
+        return 0;
+    }
+    let body = &hs[4..4 + hs_len];
+
+    let mut p = 0usize;
+    // legacy_version (2) + random (32).
+    if body.len() < 2 + 32 {
+        return 0;
+    }
+    p += 2;
+    // SAFETY: the slice is 32 bytes; `client_random` is a 32-byte array.
+    unsafe { (*s).client_random.copy_from_slice(&body[p..p + 32]) };
+    p += 32;
+    // session_id (1 + n): the TLSv1.3 ServerHello echoes it (`statem_srvr.c:2064-2068`).
+    if p >= body.len() {
+        return 0;
+    }
+    let sid_len = body[p] as usize;
+    p += 1;
+    if p + sid_len > body.len() {
+        return 0;
+    }
+    // SAFETY: `s` is live; the length is bounded by `SSL_MAX_SSL_SESSION_ID_LENGTH` by the client.
+    unsafe {
+        let n = sid_len.min(crate::ssl::ssl_lib::SSL_MAX_SSL_SESSION_ID_LENGTH);
+        core::ptr::copy_nonoverlapping(body.as_ptr().add(p), (*s).tmp_session_id.as_mut_ptr(), n);
+        (*s).tmp_session_id_len = n;
+    }
+    p += sid_len;
+    // cipher_suites (2 + n).
+    if p + 2 > body.len() {
+        return 0;
+    }
+    let cip_len = ((body[p] as usize) << 8) | body[p + 1] as usize;
+    p += 2;
+    if p + cip_len > body.len() {
+        return 0;
+    }
+    let clnt_ciphers = &body[p..p + cip_len];
+    p += cip_len;
+    // compression_methods (1 + n).
+    if p >= body.len() {
+        return 0;
+    }
+    let comp_len = body[p] as usize;
+    p += 1 + comp_len;
+    // extensions (2 + n), if present.
+    let exts: &[u8] = if p + 2 <= body.len() {
+        let ext_len = ((body[p] as usize) << 8) | body[p + 1] as usize;
+        p += 2;
+        if p + ext_len > body.len() {
+            return 0;
+        }
+        &body[p..p + ext_len]
+    } else {
+        &[]
+    };
+
+    // Choose the server version and the key-exchange group from the extensions.
+    let mut saw_keyshare_group: u16 = 0;
+    let mut off = 0usize;
+    while off + 4 <= exts.len() {
+        let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
+        let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
+        off += 4;
+        if off + elen > exts.len() {
+            return 0;
+        }
+        let eb = &exts[off..off + elen];
+        if etype == TLSEXT_TYPE_SUPPORTED_VERSIONS && eb.len() >= 3 {
+            // The body is `list_len || (version_hi || version_lo)...`.
+            let list_len = eb[0] as usize;
+            let mut q = 1usize;
+            while q + 2 <= 1 + list_len.min(eb.len() - 1) {
+                let v = ((eb[q] as c_int) << 8) | eb[q + 1] as c_int;
+                if v == TLS1_3_VERSION {
+                    // SAFETY: `s` is live.
+                    unsafe { (*s).version = TLS1_3_VERSION };
+                }
+                q += 2;
+            }
+        }
+        if etype == TLSEXT_TYPE_KEY_SHARE && eb.len() >= 4 {
+            // The first ClientHello key share's group.
+            saw_keyshare_group = ((eb[0] as u16) << 8) | eb[1] as u16;
+        }
+        off += elen;
+    }
+
+    // `ssl3_choose_cipher` (`ssl3_lib.c`): the first TLSv1.3 cipher in the server's list that the
+    // client also offered. The server-preference/list walk is reduced to that first match.
+    // SAFETY: `s` is live; `SSL_get_ciphers` returns the connection's own stack.
+    let ciphers = unsafe { crate::ssl::ssl_lib::SSL_get_ciphers(s) };
+    if ciphers.is_null() {
+        return 0;
+    }
+    let mut chosen: *const t::SslCipher = core::ptr::null();
+    // SAFETY: `ciphers` is a live stack of `const SSL_CIPHER *`.
+    let n = unsafe { crate::runtime::stack::OPENSSL_sk_num(ciphers) };
+    for i in 0..n {
+        // SAFETY: `i` is in range.
+        let c =
+            unsafe { crate::runtime::stack::OPENSSL_sk_value(ciphers, i) as *const t::SslCipher };
+        if c.is_null() {
+            continue;
+        }
+        // SAFETY: `c` is a live table row.
+        let (min_tls, id) = unsafe { ((*c).min_tls, (*c).id) };
+        if min_tls < TLS1_3_VERSION {
+            continue;
+        }
+        let mut q = 0usize;
+        while q + 2 <= clnt_ciphers.len() {
+            // The wire id is big-endian.
+            let w = ((clnt_ciphers[q] as u16) << 8) | clnt_ciphers[q + 1] as u16;
+            if w == id as u16 {
+                chosen = c;
+                break;
+            }
+            q += 2;
+        }
+        if !chosen.is_null() {
+            break;
+        }
+    }
+    if chosen.is_null() {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_UNEXPECTED_MESSAGE) };
+        return 0;
+    }
+    // SAFETY: `s` is live and `chosen` a table row.
+    unsafe {
+        (*s).pending_cipher = chosen;
+        (*s).group_id = saw_keyshare_group;
+    }
+
+    // `ssl_fill_hello_random` (`statem_lib.c`): the fresh-connection arm is RAND.
+    // SAFETY: `s` is live; `server_random` is a 32-byte array.
+    if unsafe { crate::rand::rand_lib::RAND_bytes((*s).server_random.as_mut_ptr(), 32) } <= 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    unsafe { (*s).hand_state = TLS_ST_SR_CLNT_HELLO };
+    1
+}
+
+/// `CON_FUNC_RETURN tls_construct_server_hello(SSL_CONNECTION *s, WPACKET *pkt)` —
+/// `statem_srvr.c:2590-2699`, reduced at the key schedule.
+///
+/// # Safety
+/// `s` must be a live connection; `pkt` a live packet.
+unsafe fn tls_construct_server_hello(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    use crate::packet::{WPACKET_memcpy, WPACKET_put_bytes_u16, WPACKET_put_bytes_u8};
+
+    // SAFETY: `s`/`pkt` are live.
+    unsafe {
+        let cipher = (*s).pending_cipher;
+        if cipher.is_null() {
+            return 0;
+        }
+        if WPACKET_put_bytes_u16(pkt, TLS1_2_VERSION as u16) == 0
+            || WPACKET_memcpy(pkt, (*s).server_random.as_ptr().cast(), 32) == 0
+            || crate::packet::WPACKET_start_sub_packet_len__(pkt, 1) == 0
+            || ((*s).tmp_session_id_len != 0
+                && WPACKET_memcpy(
+                    pkt,
+                    (*s).tmp_session_id.as_ptr().cast(),
+                    (*s).tmp_session_id_len,
+                ) == 0)
+            || crate::packet::WPACKET_close(pkt) == 0
+            || WPACKET_put_bytes_u16(pkt, (*cipher).id as u16) == 0
+            || WPACKET_put_bytes_u8(pkt, 0) == 0
+            || crate::ssl::statem::extensions_srvr::tls_construct_extensions(s, pkt) == 0
+        {
+            return 0;
+        }
+    }
+    1
+}
+
+/// Write the server's first flight: build the ServerHello into `buf`, frame it as one plaintext
+/// handshake record and write it to the connection's write BIO. The reduced transcription of
+/// `statem.c`'s construct-and-send arm for `TLS_ST_SW_SRVR_HELLO` (mirrors
+/// `write_client_hello`, `statem_clnt.rs`).
+///
+/// # Safety
+/// `s` must be a live connection whose write BIO is the caller's to write.
+pub(crate) unsafe fn write_server_hello(s: *mut Ssl) -> c_int {
+    use crate::ssl::statem::statem_clnt::{ssl3_set_handshake_header, tls_close_construct_packet};
+
+    let mut buf = [0u8; 4096];
+    // SAFETY: a zeroed `WPACKET` is a valid starting state for `WPACKET_init_static_len`.
+    let mut pkt: Wpacket = unsafe { core::mem::zeroed() };
+    let mut msglen: usize = 0;
+    // SAFETY: `pkt`/`buf` are live locals; the buffer outlives the packet.
+    unsafe {
+        if crate::packet::WPACKET_init_static_len(&mut pkt, buf.as_mut_ptr(), buf.len(), 0) == 0 {
+            return 0;
+        }
+        if ssl3_set_handshake_header(&mut pkt, SSL3_MT_SERVER_HELLO) == 0
+            || tls_construct_server_hello(s, &mut pkt) == 0
+            || tls_close_construct_packet(&mut pkt, &mut msglen) == 0
+            || crate::packet::WPACKET_finish(&mut pkt) == 0
+        {
+            crate::packet::WPACKET_cleanup(&mut pkt);
+            return 0;
+        }
+        crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
+            s,
+            SSL3_RT_HANDSHAKE,
+            buf.as_ptr(),
+            msglen,
+        )
     }
 }
