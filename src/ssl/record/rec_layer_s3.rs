@@ -40,6 +40,7 @@ use crate::runtime::err::err_reasons::{
     SSL_R_UNEXPECTED_EOF_WHILE_READING, SSL_R_UNKNOWN_ALERT_TYPE,
 };
 use crate::runtime::err::{openssl_rs_err_set_error, ERR_new, ERR_set_debug};
+use crate::ssl::ssl_ciph_table::SSL_OP_IGNORE_UNEXPECTED_EOF;
 use crate::ssl::ssl_lib::{Ssl, SslCtx};
 use crate::ssl::statem::statem::ossl_statem_fatal;
 
@@ -144,6 +145,30 @@ pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, le
     1
 }
 
+/// Write `len` bytes from `p` to the connection's write BIO, resuming a short `BIO_write`.
+///
+/// The authority's `ssl3_write_bytes` keeps `rlayer.wpend_tot` and re-enters the write method when
+/// the BIO accepts only part of a record (`rec_layer_s3.c:459-488`); this reduced form loops until
+/// every byte is accepted, so a short `write(2)` cannot silently truncate a record. An `EAGAIN`
+/// still surfaces as -1 with `BIO_FLAGS_WRITE` (the pending-write resumption is a recorded
+/// boundary).
+///
+/// # Safety
+/// `s` must be a live connection whose write BIO is the caller's to write; `p` must be readable for
+/// `len` bytes.
+unsafe fn ssl3_write_all(s: *mut Ssl, p: *const u8, len: usize) -> c_int {
+    let mut off = 0usize;
+    while off < len {
+        // SAFETY: `s` is live; `p.add(off)` is `len - off` readable bytes; `wbio` is the caller's.
+        let n = unsafe { BIO_write((*s).wbio, p.add(off).cast(), (len - off) as c_int) };
+        if n <= 0 {
+            return -1;
+        }
+        off += n as usize;
+    }
+    1
+}
+
 /// Write exactly one record of at most `SSL3_RT_MAX_PLAIN_LENGTH` plaintext bytes.
 ///
 /// # Safety
@@ -174,7 +199,7 @@ unsafe fn ssl3_write_one_record(s: *mut Ssl, type_: u8, buf: *const u8, len: usi
         }
         // SAFETY: `s` is live; `wbio` is the caller's BIO.
         unsafe {
-            if BIO_write((*s).wbio, rec.as_ptr().cast(), n as c_int) <= 0 {
+            if ssl3_write_all(s, rec.as_ptr(), n as usize) <= 0 {
                 return -1;
             }
             BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());
@@ -204,15 +229,10 @@ unsafe fn ssl3_write_one_record(s: *mut Ssl, type_: u8, buf: *const u8, len: usi
 
     // SAFETY: `s` is live; `wbio` is the caller's BIO.
     unsafe {
-        if BIO_write(
-            (*s).wbio,
-            hdr.as_ptr().cast(),
-            SSL3_RT_HEADER_LENGTH as c_int,
-        ) <= 0
-        {
+        if ssl3_write_all(s, hdr.as_ptr(), SSL3_RT_HEADER_LENGTH) <= 0 {
             return -1;
         }
-        if len != 0 && BIO_write((*s).wbio, buf.cast(), len as c_int) <= 0 {
+        if len != 0 && ssl3_write_all(s, buf, len) <= 0 {
             return -1;
         }
         // `ssl3_do_write` returns through `statem_flush`; a memory BIO needs no flush, but the
@@ -375,11 +395,13 @@ unsafe fn raise_alert_received(s: *mut Ssl, alert_descr: c_int) {
 /// The `ossl_tls_handle_rlayer_return` verdict for a short or failed record read
 /// (`ssl/record/rec_layer_s3.c:491-553`).
 ///
-/// A zero-length read (or a BIO already flagged `BIO_FLAGS_IN_EOF`) is an unexpected EOF without
-/// `SSL_OP_IGNORE_UNEXPECTED_EOF`, so it raises `SSL_R_UNEXPECTED_EOF_WHILE_READING` and makes the
-/// connection fatal. A read the BIO flagged retryable leaves `rwstate = SSL_READING` and answers
-/// -1, the arm `SSL_get_error` turns into `SSL_ERROR_WANT_READ`. Any other failure answers -1 with
-/// no error queued, which `SSL_get_error` reports as `SSL_ERROR_SYSCALL`.
+/// A zero-length read (or a BIO already flagged `BIO_FLAGS_IN_EOF`) with
+/// `SSL_OP_IGNORE_UNEXPECTED_EOF` set is a clean EOF: the connection records a received shutdown
+/// and the alert description `close_notify`, so `SSL_get_error` answers `SSL_ERROR_ZERO_RETURN`
+/// (`rec_layer_s3.c:512-514`). Without the option it raises `SSL_R_UNEXPECTED_EOF_WHILE_READING`
+/// and makes the connection fatal. A read the BIO flagged retryable leaves `rwstate = SSL_READING`
+/// and answers -1, the arm `SSL_get_error` turns into `SSL_ERROR_WANT_READ`. Any other failure
+/// answers -1 with no error queued, which `SSL_get_error` reports as `SSL_ERROR_SYSCALL`.
 ///
 /// # Safety
 /// `s` is a live connection.
@@ -392,8 +414,16 @@ unsafe fn ssl3_read_bytes_rlayer_return(s: *mut Ssl, got: c_int) -> c_int {
             (*(*s).rbio).flags
         };
         if got == 0 || flags & BIO_FLAGS_IN_EOF != 0 {
-            // `rec_layer_s3.c:515-524`.
+            // `rec_layer_s3.c:501-524`: `rwstate = SSL_NOTHING` first, then the EOF arm. With
+            // `SSL_OP_IGNORE_UNEXPECTED_EOF` the EOF is graceful — record the shutdown and the
+            // `close_notify` description so the read terminates with 0 and `SSL_get_error`
+            // answers `SSL_ERROR_ZERO_RETURN` (`ssl_lib.c:4929-4930`).
             (*s).rwstate = SSL_NOTHING;
+            if (*s).options & SSL_OP_IGNORE_UNEXPECTED_EOF != 0 {
+                (*s).shutdown |= SSL_RECEIVED_SHUTDOWN;
+                (*s).warn_alert = SSL_AD_CLOSE_NOTIFY;
+                return 0;
+            }
             ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_UNEXPECTED_EOF_WHILE_READING);
             return 0;
         }
@@ -412,32 +442,84 @@ unsafe fn ssl3_read_bytes_rlayer_return(s: *mut Ssl, got: c_int) -> c_int {
 /// [`ssl3_read_bytes`].
 ///
 /// The authority's read pipeline runs the record method's `read_record` and the message layer above
-/// it; this reduced form reads one header and its body from `rbio`. The buffering BIO, the
-/// read-ahead queue and the `SSL3_RT_MAX_PLAIN_LENGTH` fragmentation are not modelled (recorded in
-/// `src/ssl/mod.rs`).
+/// it; this reduced form reads one header and its body from `rbio`, **resuming a short
+/// `BIO_read` across calls** the way the authority's `RECORD_LAYER` retains `rlayer.rrec`
+/// (`rec_layer_s3.c:161-...`). A non-blocking socket BIO returns fewer bytes than requested
+/// whenever the peer's record is split across TCP segments; reading into a fresh local each call
+/// would drop the partial and desynchronise the stream, which is what the authority avoids. The
+/// buffering BIO, the read-ahead queue and the `SSL3_RT_MAX_PLAIN_LENGTH` fragmentation are still
+/// not modelled (recorded in `src/ssl/mod.rs`).
 ///
 /// # Safety
 /// `s` must be a live connection whose read BIO is the caller's to read; `buf` must be writable for
 /// `cap` bytes; `rectype` must be writable.
 unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap: usize) -> c_int {
+    // Accumulate the five-byte header, resuming after a short read.
+    // SAFETY: `s` is live per the caller's contract.
+    while unsafe { (*s).rec_hdr_len } < SSL3_RT_HEADER_LENGTH {
+        // SAFETY: `s` is live.
+        let off = unsafe { (*s).rec_hdr_len };
+        let want = SSL3_RT_HEADER_LENGTH - off;
+        // SAFETY: `s` is live; `rec_hdr[off..]` is `want` writable bytes; `rbio` is the caller's.
+        let got = unsafe {
+            BIO_read(
+                (*s).rbio,
+                (*s).rec_hdr.as_mut_ptr().add(off).cast(),
+                want as c_int,
+            )
+        };
+        if got <= 0 {
+            // SAFETY: `s` is live; the partial header stays in `rec_hdr` for the next call.
+            return unsafe { ssl3_read_bytes_rlayer_return(s, got) };
+        }
+        // SAFETY: `got` is a positive count no larger than `want`.
+        unsafe { (*s).rec_hdr_len = off + got as usize };
+    }
+    // SAFETY: the header is complete (five valid bytes).
+    let hdr = unsafe { (*s).rec_hdr };
+    let len = ((hdr[3] as usize) << 8) | hdr[4] as usize;
+
+    // SAFETY: `s` is live per the caller's contract.
+    if len > unsafe { (*s).rec_body.len() } {
+        // Over-long record: the authority treats it as fatal (`SSL3_RT_MAX_ENCRYPTED_LENGTH`).
+        // Reset the accumulator so a retry does not re-hit this arm.
+        // SAFETY: `s` is live.
+        unsafe { (*s).rec_hdr_len = 0 };
+        return -1;
+    }
+    // Accumulate the body, resuming after a short read.
+    // SAFETY: `s` is live per the caller's contract.
+    while unsafe { (*s).rec_body_len } < len {
+        // SAFETY: `s` is live.
+        let off = unsafe { (*s).rec_body_len };
+        let want = len - off;
+        // SAFETY: `s` is live; `rec_body[off..]` is `want` writable bytes; `rbio` is the caller's.
+        let got = unsafe {
+            BIO_read(
+                (*s).rbio,
+                (*s).rec_body.as_mut_ptr().add(off).cast(),
+                want as c_int,
+            )
+        };
+        if got <= 0 {
+            // SAFETY: `s` is live; the partial body stays in `rec_body` for the next call.
+            return unsafe { ssl3_read_bytes_rlayer_return(s, got) };
+        }
+        // SAFETY: `got` is a positive count no larger than `want`.
+        unsafe { (*s).rec_body_len = off + got as usize };
+    }
+
+    // The record is complete; reset the accumulator before processing it.
+    // SAFETY: `s` is live.
+    unsafe {
+        (*s).rec_hdr_len = 0;
+        (*s).rec_body_len = 0;
+    }
+
     // Phase 17.2c: once the TLS 1.3 read key is installed the record is AEAD-protected
     // (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
     // SAFETY: `s` is live per the caller's contract.
     if unsafe { (*s).dec_active } != 0 {
-        let mut hdr = [0u8; SSL3_RT_HEADER_LENGTH];
-        // SAFETY: `s` is live; `hdr` is 5 writable bytes and `rbio` is the caller's.
-        let got = unsafe {
-            BIO_read(
-                (*s).rbio,
-                hdr.as_mut_ptr().cast(),
-                SSL3_RT_HEADER_LENGTH as c_int,
-            )
-        };
-        if got != SSL3_RT_HEADER_LENGTH as c_int {
-            // SAFETY: `s` is live.
-            return unsafe { ssl3_read_bytes_rlayer_return(s, got) };
-        }
-        let len = ((hdr[3] as usize) << 8) | hdr[4] as usize;
         // `SSL3_RT_APPLICATION_DATA` (23) is the outer type of every TLS 1.3 protected record; a
         // middlebox-compatibility `ChangeCipherSpec` (20) or a plaintext alert is *not* protected
         // and is read straight through (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
@@ -446,35 +528,19 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
                 return -1;
             }
             if len != 0 {
-                // SAFETY: `buf` is `cap >= len` writable bytes and `rbio` is the caller's.
-                let n = unsafe { BIO_read((*s).rbio, buf.cast(), len as c_int) };
-                if n != len as c_int {
-                    // SAFETY: `s` is live.
-                    return unsafe { ssl3_read_bytes_rlayer_return(s, n) };
-                }
+                // SAFETY: `buf` is `cap >= len` writable bytes; `rec_body` holds `len` bytes.
+                unsafe { ptr::copy_nonoverlapping((*s).rec_body.as_ptr(), buf, len) };
             }
             // SAFETY: `rectype` is writable per the contract.
             unsafe { *rectype = hdr[0] };
             return len as c_int;
         }
-        let mut ct = [0u8; 17000];
-        if len > ct.len() {
-            return -1;
-        }
-        if len != 0 {
-            // SAFETY: `ct` is `len` writable bytes and `rbio` is the caller's.
-            let n = unsafe { BIO_read((*s).rbio, ct.as_mut_ptr().cast(), len as c_int) };
-            if n != len as c_int {
-                // SAFETY: `s` is live.
-                return unsafe { ssl3_read_bytes_rlayer_return(s, n) };
-            }
-        }
-        // SAFETY: `s` is live; the buffers are this frame's; `rectype` is writable.
+        // SAFETY: `s` is live; `rec_body` holds `len` bytes; `rectype` is writable.
         return unsafe {
             crate::ssl::tls13_enc::tls13_decrypt_record(
                 s,
                 &hdr,
-                ct.as_ptr(),
+                (*s).rec_body.as_ptr(),
                 len,
                 buf,
                 cap,
@@ -483,30 +549,12 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
         };
     }
 
-    let mut hdr = [0u8; SSL3_RT_HEADER_LENGTH];
-    // SAFETY: `s` is live; `hdr` is 5 writable bytes and `rbio` is the caller's.
-    let got = unsafe {
-        BIO_read(
-            (*s).rbio,
-            hdr.as_mut_ptr().cast(),
-            SSL3_RT_HEADER_LENGTH as c_int,
-        )
-    };
-    if got != SSL3_RT_HEADER_LENGTH as c_int {
-        // SAFETY: `s` is live.
-        return unsafe { ssl3_read_bytes_rlayer_return(s, got) };
-    }
-    let len = ((hdr[3] as usize) << 8) | hdr[4] as usize;
     if len > cap {
         return -1;
     }
     if len != 0 {
-        // SAFETY: `buf` is `cap >= len` writable bytes and `rbio` is the caller's.
-        let n = unsafe { BIO_read((*s).rbio, buf.cast(), len as c_int) };
-        if n != len as c_int {
-            // SAFETY: `s` is live.
-            return unsafe { ssl3_read_bytes_rlayer_return(s, n) };
-        }
+        // SAFETY: `buf` is `cap >= len` writable bytes; `rec_body` holds `len` bytes.
+        unsafe { ptr::copy_nonoverlapping((*s).rec_body.as_ptr(), buf, len) };
     }
     // SAFETY: `rectype` is writable per the contract.
     unsafe { *rectype = hdr[0] };

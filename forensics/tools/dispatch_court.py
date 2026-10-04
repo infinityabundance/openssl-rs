@@ -457,6 +457,8 @@ NOT_A_DISPATCH: dict[str, str] = {
     "ClientHelloCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "CertCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "TicketKeyEvpCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "ServernameCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
+    "TicketKeyCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "KeylogCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "AsyncCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,
     "NotResumableCb@src/ssl/ssl_lib.rs": SSL_CALLBACK,

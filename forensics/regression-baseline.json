@@ -819,8 +819,8 @@
     "blocking_dependencies": 0,
     "divergence_names_covered": 100,
     "findings": 0,
-    "language_census": 11713,
-    "sealed_census": 397
+    "language_census": 11708,
+    "sealed_census": 396
   },
   "provider_implemented": [
     "base/OSSL_OP_DECODER/DER",

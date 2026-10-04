@@ -189,6 +189,10 @@ const SSL_SENT_SHUTDOWN: c_int = 1;
 const SSL_RECEIVED_SHUTDOWN: c_int = 2;
 /// `SSL_AD_CLOSE_NOTIFY` — `ssl3.h:240`.
 const SSL_AD_CLOSE_NOTIFY: c_int = 0;
+/// `SSL3_AL_WARNING` — `ssl3.h:252`.
+const SSL3_AL_WARNING: c_int = 1;
+/// `SSL_R_SHUTDOWN_WHILE_IN_INIT` — `sslerr.h:262`.
+const SSL_R_SHUTDOWN_WHILE_IN_INIT: c_int = 407;
 /// `SSL_EARLY_DATA_CONNECT_RETRY` — `ssl_local.h:592`.
 const SSL_EARLY_DATA_CONNECT_RETRY: c_int = 1;
 /// `SSL_EARLY_DATA_ACCEPT_RETRY` — `ssl_local.h:599`.
@@ -343,6 +347,12 @@ const SSL_CTRL_SET_MAX_SEND_FRAGMENT: c_int = 52;
 const SSL_CTRL_CLEAR_MODE: c_int = 78;
 /// `SSL_CTRL_SET_NOT_RESUMABLE_SESS_CB` — `ssl.h:1346`.
 const SSL_CTRL_SET_NOT_RESUMABLE_SESS_CB: c_int = 79;
+/// `SSL_CTRL_SET_TLSEXT_SERVERNAME_CB` — `ssl.h:1266` (the `SSL_CTX_set_tlsext_servername_callback`
+/// macro's control code).
+const SSL_CTRL_SET_TLSEXT_SERVERNAME_CB: c_int = 53;
+/// `SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB` — `ssl.h:1286` (the deprecated
+/// `SSL_CTX_set_tlsext_ticket_key_cb` macro's control code).
+const SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB: c_int = 72;
 /// `SSL_CTRL_CERT_FLAGS` — `ssl.h:1357`.
 const SSL_CTRL_CERT_FLAGS: c_int = 99;
 /// `SSL_CTRL_CLEAR_CERT_FLAGS` — `ssl.h:1358`.
@@ -969,6 +979,16 @@ pub struct SslCtx {
     /// `int (*ext.ticket_key_evp_cb)(...)` — the callback `SSL_CTX_set_tlsext_ticket_key_evp_cb`
     /// installs (`s3_lib.c:4711`).
     pub ticket_key_evp_cb: Option<TicketKeyEvpCb>,
+    /// `int (*ext.ticket_key_cb)(...)` — the deprecated callback
+    /// `SSL_CTX_set_tlsext_ticket_key_cb` installs through `SSL_CTX_callback_ctrl`
+    /// (`s3_lib.c:4678-4683`).
+    pub ticket_key_cb: Option<TicketKeyCb>,
+    /// `int (*ext.servername_cb)(SSL *, int *, void *)` — the SNI callback
+    /// `SSL_CTX_set_tlsext_servername_callback` installs (`s3_lib.c:4669-4671`).
+    pub servername_cb: Option<ServernameCb>,
+    /// `void *ext.servername_arg` — the callback's argument (NULL for nginx, which uses the
+    /// two-argument macro).
+    pub servername_arg: *mut c_void,
     /// `SSL_async_callback_fn async_cb`.
     #[allow(dead_code)] // stored for the setter's contract; read by the async path (14.5)
     pub async_cb: Option<AsyncCb>,
@@ -1585,6 +1605,19 @@ pub struct Ssl {
     pub rx_len: usize,
     /// The offset of the next unread plaintext byte in [`Self::rx_buf`].
     pub rx_off: usize,
+    /// Phase 17 — the record-layer read accumulator: the partially-read five-byte record header.
+    /// The authority's `RECORD_LAYER` keeps the record it is assembling in `rlayer.rrec` between
+    /// `ssl3_read_bytes` calls (`rec_layer_s3.c:161-...`), so a `BIO_read` that returns fewer than
+    /// five header bytes is resumed rather than lost; `rec_hdr_len` bytes are valid.
+    pub rec_hdr: [u8; 5],
+    /// The number of valid bytes in [`Self::rec_hdr`].
+    pub rec_hdr_len: usize,
+    /// The body of the record being accumulated: ciphertext for a TLS 1.3 protected record,
+    /// plaintext otherwise. `rec_body_len` bytes are valid; the record is processed only once the
+    /// body length encoded in the header has arrived.
+    pub rec_body: [u8; 17000],
+    /// The number of valid bytes in [`Self::rec_body`].
+    pub rec_body_len: usize,
 }
 
 // -------------------------------------------------------------------------------------------
@@ -1643,6 +1676,14 @@ pub type AlpnSelectCb = unsafe extern "C" fn(
 /// `SSL_session_ticket_key_cb` — `ssl.h`.
 pub type SessionTicketCb =
     unsafe extern "C" fn(*mut Ssl, *mut c_void, *mut c_void, *mut c_void) -> c_int;
+/// `int (*)(SSL *, int *, void *)` — the server-name callback
+/// `SSL_CTX_set_tlsext_servername_callback` installs (`ssl_local.h:994`).
+pub type ServernameCb = unsafe extern "C" fn(*mut Ssl, *mut c_int, *mut c_void) -> c_int;
+/// `int (*)(SSL *, unsigned char *, unsigned char *, EVP_CIPHER_CTX *, HMAC_CTX *, int)` — the
+/// deprecated ticket-key callback `SSL_CTX_set_tlsext_ticket_key_cb` installs (`ssl_local.h:1001`).
+/// The cipher and MAC contexts are opaque here, as they are for [`TicketKeyEvpCb`].
+pub type TicketKeyCb =
+    unsafe extern "C" fn(*mut Ssl, *mut u8, *mut u8, *mut c_void, *mut c_void, c_int) -> c_int;
 /// `SSL_allow_early_data_cb_fn` — `ssl.h:2892`.
 pub type AllowEarlyDataCb = unsafe extern "C" fn(*mut Ssl, *mut c_void) -> c_int;
 /// `SSL_new_pending_conn_cb` — `ssl.h`.
@@ -3802,6 +3843,23 @@ pub unsafe extern "C" fn SSL_CTX_callback_ctrl(
             }
             1
         }
+        SSL_CTRL_SET_TLSEXT_SERVERNAME_CB => {
+            // `ssl3_ctx_callback_ctrl`, `s3_lib.c:4669-4671`: the SNI callback. `fp` is the
+            // `int (*)(SSL *, int *, void *)` argument nginx's `ngx_http_ssl_servername` has.
+            // SAFETY: `ctx` is live; the pointer bits are stored as the callback.
+            unsafe {
+                (*ctx).servername_cb = fp.map(|f| core::mem::transmute::<_, ServernameCb>(f));
+            }
+            1
+        }
+        SSL_CTRL_SET_TLSEXT_TICKET_KEY_CB => {
+            // `ssl3_ctx_callback_ctrl`, `s3_lib.c:4678-4683`: the deprecated ticket-key callback.
+            // SAFETY: `ctx` is live; the pointer bits are stored as the callback.
+            unsafe {
+                (*ctx).ticket_key_cb = fp.map(|f| core::mem::transmute::<_, TicketKeyCb>(f));
+            }
+            1
+        }
         _ => 0,
     })
 }
@@ -5849,7 +5907,91 @@ pub unsafe extern "C" fn SSL_write_early_data(
     })
 }
 
-/// `int SSL_shutdown(SSL *s)` — `ssl/ssl_lib.c:2767-2807`, reduced to the uninitialised guard.
+/// `SSL3_RT_ALERT` — `ssl3.h` (21).
+const SSL3_RT_ALERT: u8 = 21;
+
+/// `int ssl3_send_alert(SSL_CONNECTION *s, int level, int desc)` — `ssl/s3_msg.c:45-77`, reduced to
+/// the synchronous dispatch arm.
+///
+/// The authority queues the two alert bytes and calls `ssl_dispatch_alert` when no write is pending;
+/// this crate's record writer ([`crate::ssl::record::rec_layer_s3::ssl3_write_bytes`]) writes one
+/// record synchronously, so the dispatch is performed inline and the queued-dispatch return arm is
+/// unreachable. `tls13_alert_code` (`statem_lib.c`) is the identity for `close_notify`.
+///
+/// # Safety
+/// `s` must be a live connection whose write BIO is the caller's to write.
+unsafe fn ssl3_send_alert(s: *mut Ssl, level: c_int, desc: c_int) -> c_int {
+    // `s3_msg.c:59-60`: a second alert other than `close_notify` is refused once shutdown is sent.
+    // SAFETY: `s` is live per the caller's contract.
+    if unsafe { (*s).shutdown } & SSL_SENT_SHUTDOWN != 0 && desc != SSL_AD_CLOSE_NOTIFY {
+        return -1;
+    }
+    let body = [level as u8, desc as u8];
+    // SAFETY: `s` is live; `body` is two readable bytes.
+    if unsafe {
+        crate::ssl::record::rec_layer_s3::ssl3_write_bytes(s, SSL3_RT_ALERT, body.as_ptr(), 2)
+    } <= 0
+    {
+        return -1;
+    }
+    1
+}
+
+/// `int ssl3_shutdown(SSL *s)` — `ssl/s3_lib.c:5048-5101`.
+///
+/// The authority's two-call protocol: the first call sends `close_notify` and (unless the peer has
+/// already been marked shut down) waits for the peer's `close_notify`; the second call reaps it. A
+/// `quiet_shutdown` connection, or one still before the handshake, is shut down silently. This
+/// reduced form dispatches the alert synchronously, so `s3.alert_dispatch` never stays pending.
+///
+/// # Safety
+/// `s` must be a live connection whose write BIO is the caller's to write.
+unsafe fn ssl3_shutdown(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    let (quiet, before, mut shutdown) =
+        unsafe { ((*s).quiet_shutdown, SSL_in_before(s), (*s).shutdown) };
+    if quiet != 0 || before != 0 {
+        // SAFETY: `s` is live.
+        unsafe { (*s).shutdown = SSL_SENT_SHUTDOWN | SSL_RECEIVED_SHUTDOWN };
+        return 1;
+    }
+
+    if shutdown & SSL_SENT_SHUTDOWN == 0 {
+        shutdown |= SSL_SENT_SHUTDOWN;
+        // SAFETY: `s` is live.
+        unsafe {
+            (*s).shutdown = shutdown;
+            ssl3_send_alert(s, SSL3_AL_WARNING, SSL_AD_CLOSE_NOTIFY);
+        }
+    } else if shutdown & SSL_RECEIVED_SHUTDOWN == 0 {
+        // `ssl3_lib.c:5085-5093`: wait for the peer's `close_notify`, discarding whatever record
+        // arrives. A retry leaves `rwstate = SSL_READING` and this call answers -1 (WANT_READ).
+        let mut rt = 0u8;
+        let mut buf = [0u8; 2048];
+        // SAFETY: `s` is live; the buffers are this frame's.
+        let _ = unsafe {
+            crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
+                s,
+                &mut rt,
+                buf.as_mut_ptr(),
+                buf.len(),
+            )
+        };
+        // SAFETY: `s` is live; the read may have set `SSL_RECEIVED_SHUTDOWN`.
+        shutdown = unsafe { (*s).shutdown };
+        if shutdown & SSL_RECEIVED_SHUTDOWN == 0 {
+            return -1;
+        }
+    }
+
+    if shutdown == (SSL_SENT_SHUTDOWN | SSL_RECEIVED_SHUTDOWN) {
+        1
+    } else {
+        0
+    }
+}
+
+/// `int SSL_shutdown(SSL *s)` — `ssl/ssl_lib.c:2767-2807`.
 ///
 /// # Safety
 /// `s` must point to a live connection.
@@ -5866,7 +6008,16 @@ pub unsafe extern "C" fn SSL_shutdown(s: *mut Ssl) -> c_int {
             unsafe { raise_ssl(SSL_R_UNINITIALIZED, 2786) };
             return -1;
         }
-        -1
+        // SAFETY: `s` is live.
+        if unsafe { SSL_in_init(s) } == 0 {
+            // SAFETY: `s` is live; this is the authority's `method->ssl_shutdown`.
+            unsafe { ssl3_shutdown(s) }
+        } else {
+            // `ssl_lib.c:2799-2801`.
+            // SAFETY: a constant site.
+            unsafe { raise_ssl(SSL_R_SHUTDOWN_WHILE_IN_INIT, 2800) };
+            -1
+        }
     })
 }
 

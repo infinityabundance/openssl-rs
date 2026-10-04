@@ -19,7 +19,7 @@
       "signatures_authority_only": 286,
       "signatures_checked": 353,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 263,
+      "signatures_not_a_dispatch": 265,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -5787,6 +5787,16 @@
         },
         {
           "alias": "SessionTicketCb",
+          "at": "src/ssl/ssl_lib.rs",
+          "why": "not a provider dispatch: a libssl callback typedef (`ssl.h`/`tls1.h`/`tls_depr.h`), an application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef name, so the convention rule has no name to join on"
+        },
+        {
+          "alias": "ServernameCb",
+          "at": "src/ssl/ssl_lib.rs",
+          "why": "not a provider dispatch: a libssl callback typedef (`ssl.h`/`tls1.h`/`tls_depr.h`), an application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef name, so the convention rule has no name to join on"
+        },
+        {
+          "alias": "TicketKeyCb",
           "at": "src/ssl/ssl_lib.rs",
           "why": "not a provider dispatch: a libssl callback typedef (`ssl.h`/`tls1.h`/`tls_depr.h`), an application callback the `SSL_CTX`/`SSL` setters take rather than a provider dispatch function; the crate's alias name does not squash to the authority's `SSL_*`/`TLS_*` typedef name, so the convention rule has no name to join on"
         },
