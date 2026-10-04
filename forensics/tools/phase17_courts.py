@@ -77,14 +77,27 @@ output boundary), `pkcs12 -info`/ordinary `-export`, the `ca` config/index arms,
 driven, the convention `src/apps/errstr.rs` and Phases 13 through 16 use for a recorded
 divergence.
 
-The pending courts
-------------------
-Three of the four courts the plan names are still not runnable at 17.1 and are named in
-`PENDING_COURTS` with the subphase that lands each:
+`RT-TLS13-INTEROP`, and what it compares
+----------------------------------------
+17.2a's court, `courts/phase17/rt_tls13_interop_probe.c`, is 17.2's differential instrument: it
+stands up a client and a server `SSL_CTX` (the server's carrying the fixed `signer.pem`/`rsa-key.pem`
+fixture), connects them over two pairs of memory BIOs and pumps the flight. 17.2a lands the client's
+first flight -- `tls_construct_client_hello` builds a real ClientHello over the reduced plaintext
+record write -- so the court compares the observations that flight makes deterministic: the record
+and handshake headers, the legacy/session/cipher/compression shape (including the 30 offered cipher
+suites), and the option-gated extension bodies. Everything past the first read, the missing
+extensions (`supported_groups`, `signature_algorithms`, `key_share`, `ec_point_formats`,
+`renegotiation_info`), the certificate load and the application-data exchange are classified by
+`_interop_reason` and recorded. Because the flight stops at the extension boundary, the plan's
+section 3.2 requires it to be **named pending rather than counted as passing**: the court's row
+carries `verdict: pending` (it closes automatically once both sides report a finished handshake),
+and the `tls13-interop` contract unit stays open in the ledger.
 
-  * `RT-TLS13-INTEROP` (17.2) — a real TLS 1.3 client/server flight, ClientHello through Finished
-    plus an application-data exchange, over the record layer, the extension units and the key
-    schedule (D530's first entrance criterion);
+The remaining pending courts
+----------------------------
+Two of the four courts the plan names are not runnable yet and are named in `PENDING_COURTS` with
+the subphase that lands each:
+
   * `RT-CROSS-DSO-STATE` (17.3) — an error raised through the libssl path and read through the
     libcrypto path (and the same for `CONF`), requiring one queue across the candidate's
     whole-crate archives, where the authority shares one `libcrypto.so.3` via `DT_NEEDED` (D530's
@@ -104,6 +117,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -117,6 +131,7 @@ from atlas_common import (  # noqa: E402
     envelope,
     rel,
     resolve_authority,
+    run,
     write_json,
 )
 
@@ -136,6 +151,7 @@ AUTH_PREFIX = REPO_ROOT / "forensics" / "authorities" / "prefix" / "openssl-3.6.
 # cannot be committed.
 COURTS: list[tuple[str, str]] = [
     ("RT-CLI-BODIES", "rt_cli_bodies_probe.sh"),
+    ("RT-TLS13-INTEROP", "rt_tls13_interop_probe.c"),
 ]
 
 # The fixed argv `RT-CLI-BODIES` drives on both sides. Every case is build-independent and
@@ -942,10 +958,6 @@ RECORDED_DIVERGENCES: list[dict] = [
 # the probe and what the court will drive, so "nothing registered" is a stated distance rather than
 # a court quietly dropped.
 PENDING_COURTS: dict[str, str] = {
-    "RT-TLS13-INTEROP": (
-        "17.2 lands the probe; it drives a real TLS 1.3 client/server flight, ClientHello through "
-        "Finished plus an application-data exchange, and compares the two transcripts"
-    ),
     "RT-CROSS-DSO-STATE": (
         "17.3 lands the probe; it raises an ERR through the libssl path and reads it through the "
         "libcrypto path (and the same for CONF), requiring one queue across the whole-crate DSOs"
@@ -1028,6 +1040,209 @@ def diff(authority: str, candidate: str) -> list[dict]:
             residuals.append({"observation": key, "authority": None,
                               "candidate": c[key], "class": "extra"})
     return residuals
+
+
+def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bool, str]:
+    """Compile one side's C probe against that side's headers and shared objects.
+
+    The method is Phase 16's (`forensics/tools/phase16_courts.py`): the same source compiles twice,
+    once against the admitted authority's prefix and once against the candidate distribution shell,
+    so the comparison is between two executions of one program.
+    """
+    res = run([
+        "clang", "-std=c11", "-Wall", "-Werror=implicit-function-declaration", "-O1",
+        "-D_GNU_SOURCE",
+        "-I", str(include),
+        "-o", str(out), str(src),
+        "-L", str(libdir), "-lssl", "-lcrypto",
+        f"-Wl,-rpath,{libdir}",
+    ])
+    return res.ok, res.stderr.strip()
+
+
+# `RT-TLS13-INTEROP`'s comparable observations: the arms 17.2a drives. Each is a deterministic
+# function of the build -- a message type, a protocol version, a length, a cipher-suite count or an
+# extension body that does not carry a random -- so the authority's own two runs agree and the
+# candidate reproducing the client's first flight produces the same lines. Every other observation
+# the probe prints is a residual classified in `_interop_reason` and recorded rather than diffed.
+INTEROP_COMPARABLE: list[str] = [
+    "ctx.client.nonnull",
+    "ctx.server.nonnull",
+    "server.cert.err.count",
+    "client.nonnull",
+    "server.nonnull",
+    "client.ciphers.count",
+    "flight.0.client.ret",
+    "flight.0.server.ret",
+    "ch.present",
+    "ch.rectype",
+    "ch.recversion",
+    "ch.hs_type",
+    "ch.legacy_version",
+    "ch.random_len",
+    "ch.session_id_len",
+    "ch.cipher_len",
+    "ch.cipher_count",
+    "ch.comp_len",
+    "ch.ext_count.present",
+    "ch.ext.35.len",
+    "ch.ext.35.data",
+    "ch.ext.22.len",
+    "ch.ext.22.data",
+    "ch.ext.23.len",
+    "ch.ext.23.data",
+    "ch.ext.45.len",
+    "ch.ext.45.data",
+    "client.err.count",
+    "server.err.count",
+    "probe.done",
+]
+
+
+def _keyed(text: str) -> dict[str, str]:
+    """A transcript's `key=value` map, the same parse `diff` uses (last value wins)."""
+    values: dict[str, str] = {}
+    for line in text.splitlines():
+        if "=" in line:
+            k, _, v = line.partition("=")
+            values[k] = v
+    return values
+
+
+def _interop_reason(key: str) -> str:
+    """The named boundary a non-comparable `RT-TLS13-INTEROP` observation sits on."""
+    if key in ("server.cert.load", "server.key.load", "server.key.check"):
+        return (
+            "certificate/key plumbing: the candidate's `SSL_CTX_use_certificate_chain_file` refuses "
+            "the fixed signer fixture (recorded divergence; 14.7 / the decoder boundary)"
+        )
+    if key.startswith("ch.ext.10"):
+        return "supported_groups is not constructed (`ssl_load_groups` unlanded)"
+    if key.startswith("ch.ext.13"):
+        return "signature_algorithms is not constructed (the client sigalg list is unlanded)"
+    if key.startswith("ch.ext.51"):
+        return "key_share is not constructed (the group list and ephemeral key share are unlanded)"
+    if key.startswith("ch.ext.11"):
+        return "ec_point_formats is not constructed (`use_ecc` needs the group list)"
+    if key.startswith("ch.ext.65281"):
+        return (
+            "renegotiation_info is not constructed: its guard reads the security callback's version "
+            "arm, which `ssl_lib.rs` reduces to `1`"
+        )
+    if key.startswith("ch.ext.43"):
+        return (
+            "supported_versions body: the candidate's reduced security callback admits SSL3 through "
+            "TLS1.2, so the offered list is longer than the authority's"
+        )
+    if key in ("ch.ext.types", "ch.ext_total_len", "ch.hs_len", "ch.reclen", "ch.recbytes",
+               "flight.0.client.out"):
+        return "the extension set is partial, so the ClientHello is smaller than the authority's"
+    if key.startswith("app."):
+        return "application data is not reached: the handshake does not complete"
+    if key in ("flights.used", "client.state", "client.want", "client.in_init",
+               "client.finished", "server.state", "server.want", "server.in_init",
+               "server.finished", "flight.0.server.out") or key.startswith("flight."):
+        return (
+            "the flight stops at the first read: the server's message layer is unlanded, so no "
+            "ServerHello is produced (the `RT-TLS13-INTEROP` flight stays pending)"
+        )
+    return "recorded rather than diffed"
+
+
+def interop_court(name: str, src: Path, auth, work: Path) -> dict:
+    """`RT-TLS13-INTEROP`: the client's first TLS 1.3 flight, differentially.
+
+    17.2a drives as far as the landed message layer reaches: the client builds and writes a real
+    `ClientHello` over the memory BIO, and the court compares the observations that flight makes
+    deterministic (record types, versions, session/cipher/compression shape, and the option-gated
+    extension bodies). The observations the flight does **not** yet make comparable -- the missing
+    extensions, the certificate load, and every step past the first read -- are classified by
+    `_interop_reason` and recorded; the full flight is named in `PENDING_COURTS`'s section of the
+    document. A residual on a comparable observation is a failure.
+    """
+    auth_lib = auth.libdir
+    auth_inc = auth.prefix / "include"
+    auth_bin = work / f"{src.stem}.authority"
+    cand_bin = work / f"{src.stem}.candidate"
+
+    ok, err = compile_probe(src, auth_bin, auth_inc, auth_lib)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-authority",
+                "detail": err.splitlines()[:12]}
+    ok, err = compile_probe(src, cand_bin, PHASE2 / "include", PHASE2)
+    if not ok:
+        return {"court": name, "verdict": "fail", "stage": "compile-candidate",
+                "detail": err.splitlines()[:12]}
+
+    a_out, a_err, a_code = run_probe(
+        auth_bin, side_env(auth_lib, auth_lib / "ossl-modules"))
+    c_out, c_err, c_code = run_probe(
+        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules"))
+
+    if not a_out.strip():
+        return {"court": name, "verdict": "fail", "stage": "authority-run",
+                "detail": {"exit_code": a_code, "stderr": a_err.splitlines()[:12]}}
+
+    residuals = diff(a_out, c_out)
+    comparable = set(INTEROP_COMPARABLE)
+    driven = [r for r in residuals if r["observation"] in comparable]
+    recorded = [r for r in residuals if r["observation"] not in comparable]
+    for r in recorded:
+        r["reason"] = _interop_reason(r["observation"])
+
+    a_vals = _keyed(a_out)
+    c_vals = _keyed(c_out)
+    a_obs = len([l for l in a_out.splitlines() if "=" in l])
+    c_obs = len([l for l in c_out.splitlines() if "=" in l])
+    crashed = a_code is None or a_code < 0 or c_code is None or c_code < 0
+    comparable_present = sum(
+        1 for k in INTEROP_COMPARABLE if a_vals.get(k) == c_vals.get(k)
+    )
+
+    # The plan (`docs/PHASE-17-SUBPHASES.md` section 3.2): a handshake that stops at the extension
+    # or key-schedule boundary is **named pending rather than counted as passing**. The court is
+    # registered and drives the arms that work, but it closes only once *both* sides report a
+    # finished handshake; until then its verdict is `pending` and the `tls13-interop` contract unit
+    # stays open. A residual on a comparable observation is a failure either way.
+    finished = (
+        a_vals.get("client.finished") == "1" and a_vals.get("server.finished") == "1"
+        and c_vals.get("client.finished") == "1" and c_vals.get("server.finished") == "1"
+    )
+    if driven:
+        verdict = "fail"
+    elif finished:
+        verdict = "pass"
+    else:
+        verdict = "pending"
+
+    staged = {}
+    STAGED.mkdir(parents=True, exist_ok=True)
+    for side, srcbin in (("authority", auth_bin), ("candidate", cand_bin)):
+        dst = STAGED / f"{src.stem}.{side}"
+        if srcbin.is_file():
+            shutil.copyfile(srcbin, dst)
+            dst.chmod(0o755)
+            staged[side] = rel(dst)
+
+    return {
+        "court": name,
+        "probe": rel(src),
+        "authority_exit_code": a_code,
+        "candidate_exit_code": c_code,
+        "crashed": crashed,
+        "comparable_keys": INTEROP_COMPARABLE,
+        "authority_observations": a_obs,
+        "candidate_observations": c_obs,
+        "comparable_observations": comparable_present,
+        "residual_count": len(driven),
+        "residuals": driven,
+        "recorded_divergences": recorded,
+        "recorded_count": len(recorded),
+        "flight_finished": finished,
+        "verdict": "fail" if (driven or crashed or c_code != a_code) else verdict,
+        "staged_binaries": staged,
+        "candidate_stderr_tail": c_err.splitlines()[-3:],
+    }
 
 
 def render_probe(cases: list[list[str]]) -> str:
@@ -1182,18 +1397,32 @@ def main(argv: list[str]) -> int:
     records: list[dict] = []
     for name, filename in COURTS:
         src = PROBE_DIR / filename
-        if not src.is_file() and name != "RT-CLI-BODIES":
+        if name == "RT-CLI-BODIES":
+            records.append(bodies_court(name))
+            continue
+        if not src.is_file():
             records.append({"court": name, "verdict": "fail",
                             "stage": "probe-missing", "detail": rel(src)})
             continue
-        records.append(bodies_court(name))
+        records.append(interop_court(name, src, auth, work))
 
     passed = sum(1 for r in records if r["verdict"] == "pass")
+    pending = sum(1 for r in records if r["verdict"] == "pending")
+    failed = sum(1 for r in records if r["verdict"] == "fail")
     body = {
-        "all_pass": passed == len(records),
+        # `all_pass` is true only when every registered court is *closed*; a registered-but-pending
+        # court (the flight that stops at the extension boundary, section 3.2) makes it false while
+        # the runner's exit status stays 0, because a pending distance is the stratum's expected
+        # in-progress state rather than a failure.
+        "all_pass": failed == 0 and pending == 0,
         "authority": auth.id,
         "courts": records,
-        "summary": {"total": len(records), "pass": passed, "fail": len(records) - passed},
+        "summary": {
+            "total": len(records),
+            "pass": passed,
+            "pending": pending,
+            "fail": failed,
+        },
         "pending_courts": PENDING_COURTS,
         "claim": (
             "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and "
@@ -1259,11 +1488,19 @@ def main(argv: list[str]) -> int:
             "`ts` nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`, "
             "`fipsinstall -module` and `srp` action arms -- "
             "are recorded "
-            "in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives "
-            "a real TLS 1.3 client/server flight, ClientHello through Finished plus an "
-            "application-data exchange, over the record layer, the extension units "
-            "(ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule "
-            "(ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. "
+            "in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: 17.2a "
+            "registers it over the probe courts/phase17/rt_tls13_interop_probe.c, which connects a "
+            "client and a server over memory BIOs and drives the client's first flight. 17.2a lands "
+            "tls_construct_client_hello over a reduced plaintext record write, so the court compares "
+            "the record/handshake headers, the legacy/session/cipher/compression shape and the "
+            "option-gated extension bodies that flight makes deterministic; the missing extensions "
+            "(supported_groups, signature_algorithms, key_share, ec_point_formats, "
+            "renegotiation_info), the certificate load, and every step past the first read -- the "
+            "server's message layer, the extension units (ssl/extensions_clnt.c/"
+            "ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 "
+            "message bodies D529 handed forward -- are classified in _interop_reason and recorded, "
+            "so the court's verdict is pending (section 3.2 names a stalled handshake pending "
+            "rather than passing) and the tls13-interop contract unit stays open. "
             "`RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it "
             "through the libcrypto path (and the same for CONF), requiring one queue across the "
             "candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via "
@@ -1280,6 +1517,9 @@ def main(argv: list[str]) -> int:
         InputRef(name="phase-17-plan", path=PLAN),
         InputRef(name="prerequisites", path=PREREQUISITES),
         InputRef(name="probe", path=PROBE_DIR / "rt_cli_bodies_probe.sh"),
+        InputRef(name="interop-probe", path=PROBE_DIR / "rt_tls13_interop_probe.c"),
+        InputRef(name="interop-cert", path=PROBE_DIR / "fixtures" / "signer.pem"),
+        InputRef(name="interop-key", path=PROBE_DIR / "fixtures" / "rsa-key.pem"),
     ]
     doc = envelope(kind="phase17-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -1289,15 +1529,20 @@ def main(argv: list[str]) -> int:
         if r["verdict"] == "pass":
             print(f"  {r['court']:<18} pass   ({r['authority_observations']} observations, "
                   f"{len(r.get('recorded_divergences', []))} recorded divergence(s))")
+        elif r["verdict"] == "pending":
+            print(f"  {r['court']:<18} PENDING (registered; {r['comparable_observations']} "
+                  f"comparable observation(s), full flight not finished) -- "
+                  f"{r.get('recorded_count', 0)} recorded divergence(s)")
         else:
             print(f"  {r['court']:<18} FAIL   stage={r.get('stage', 'compare')}")
             for res in r.get("residuals", [])[:12]:
                 print(f"      {res['observation']}: authority={res['authority']!r} "
                       f"candidate={res['candidate']!r} ({res['class']})")
     for name, needs in PENDING_COURTS.items():
-        print(f"  {name:<24} PENDING (not registered as passing) -- {needs}")
-    print(f"  -> {rel(OUT)} all_pass={body['all_pass']} over {len(records)} court(s)")
-    return 0 if body["all_pass"] else 1
+        print(f"  {name:<24} PENDING (not registered) -- {needs}")
+    print(f"  -> {rel(OUT)} all_pass={body['all_pass']} over {len(records)} court(s) "
+          f"(pass={passed} pending={pending} fail={failed})")
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

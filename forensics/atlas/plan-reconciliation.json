@@ -8098,17 +8098,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "61380a725e00e053de146f245969073ee94c5ce025b285fe405ae4cb7de3df6b"
+      "sha256": "79a905075430e51750211a79123980b015495bd01970562d6317f44a66c2fe80"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "2d77c19bf099f0ad146f7bad7815bf99213b614dc1556fb32c32ac69d8859eff"
+      "sha256": "027c5e7b171f55db63397e8696a57c78b6d1ddf38bb242f3849d3c2a31579e41"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "cae0c4c7092740e71066419974012494000af799262b0ebf8aeab51f94b5892d"
+      "sha256": "bb34f51c8a439ebb5a1cc3ac26b71417542d3e8a551f695d3efed9c3ec7d35d2"
     },
     {
       "name": "source-manifest",

@@ -33,7 +33,86 @@
 use core::ffi::{c_char, c_int};
 use core::ptr;
 
+use crate::runtime::bio::iolib::BIO_write;
+use crate::runtime::bio::{BIO_ctrl, BIO_CTRL_FLUSH};
 use crate::ssl::ssl_lib::{Ssl, SslCtx};
+
+/// `TLS1_VERSION` — `ssl3.h`.
+const TLS1_VERSION: c_int = 0x0301;
+/// `TLS1_2_VERSION` — `ssl3.h`.
+const TLS1_2_VERSION: c_int = 0x0303;
+/// `TLS1_3_VERSION` — `ssl3.h`.
+const TLS1_3_VERSION: c_int = 0x0304;
+/// `TLS_ST_CW_CLNT_HELLO` — `ssl.h:1135`.
+const TLS_ST_CW_CLNT_HELLO: c_int = 13;
+/// `SSL_HRR_NONE` — `ssl_local.h`.
+const SSL_HRR_NONE: c_int = 0;
+/// `SSL3_RT_HEADER_LENGTH` — `ssl3.h` (5).
+const SSL3_RT_HEADER_LENGTH: usize = 5;
+
+/// `int ssl3_write_bytes(SSL *ssl, uint8_t type, const void *buf_, size_t len, size_t *written)` —
+/// `ssl/record/rec_layer_s3.c:273-489`, reduced to the plaintext, single-record, no-retry arm.
+///
+/// The record version rule is `rec_layer_s3.c:395-405`: a TLS1.3 connection writes TLS1.2 records,
+/// but an initial `ClientHello` (`TLS_ST_CW_CLNT_HELLO`, not a renegotiation, no HelloRetryRequest)
+/// is versioned TLS1.0 for the middlebox-compatibility reason the authority's comment names. The
+/// record header is the five-byte `type || version || length` of `tls_write_records_default`
+/// (`ssl/record/methods/tls_common.c:1759-1896`); the buffering BIO, the write pipeline and the
+/// encryption path are not modelled (recorded in `src/ssl/mod.rs`).
+///
+/// # Safety
+/// `s` must be a live connection whose write BIO is the caller's to write; `buf` must be readable
+/// for `len` bytes.
+pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, len: usize) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    let (version, hand_state, renegotiate, hrr) = unsafe {
+        (
+            (*s).version,
+            (*s).hand_state,
+            (*s).renegotiate,
+            (*s).hello_retry_request,
+        )
+    };
+
+    let mut recversion: c_int = if version == TLS1_3_VERSION {
+        TLS1_2_VERSION
+    } else {
+        version
+    };
+    if hand_state == TLS_ST_CW_CLNT_HELLO
+        && renegotiate == 0
+        && version > TLS1_VERSION
+        && hrr == SSL_HRR_NONE
+    {
+        recversion = TLS1_VERSION;
+    }
+
+    let mut hdr = [0u8; SSL3_RT_HEADER_LENGTH];
+    hdr[0] = type_;
+    hdr[1] = (recversion >> 8) as u8;
+    hdr[2] = recversion as u8;
+    hdr[3] = (len >> 8) as u8;
+    hdr[4] = len as u8;
+
+    // SAFETY: `s` is live; `wbio` is the caller's BIO.
+    unsafe {
+        if BIO_write(
+            (*s).wbio,
+            hdr.as_ptr().cast(),
+            SSL3_RT_HEADER_LENGTH as c_int,
+        ) <= 0
+        {
+            return -1;
+        }
+        if len != 0 && BIO_write((*s).wbio, buf.cast(), len as c_int) <= 0 {
+            return -1;
+        }
+        // `ssl3_do_write` returns through `statem_flush`; a memory BIO needs no flush, but the
+        // authority's `BIO_flush` on the write path is performed so a flush-requiring BIO is served.
+        BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());
+    }
+    1
+}
 
 /// `RECORD_LAYER_write_pending(const RECORD_LAYER *rl)` — `ssl/record/rec_layer_s3.c:114-117`.
 ///

@@ -533,7 +533,7 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 ## Phase 17 — Downstream replacement court
 
 * state: `in-progress`
-* blocking: 56 open obligation(s) of this stratum recorded in forensics/phase17-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase17-obligations.json` publishes `unit: downstream replacement contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the 52 `apps/<name>.c` unit deferrals it owns (D530) and the four downstream replacement contract units. It owns no provider registration row -- it activates no provider -- and no symbol deferral. Its `artifacts/phase17/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; 17.1 registers `RT-CLI-BODIES` over the first landed command body (`apps/errstr.c`), and the three courts that follow (`RT-TLS13-INTEROP`, `RT-CROSS-DSO-STATE`, `RT-DOWNSTREAM-CONSUMER`) are `pending` with the subphases that land them. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-17-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D530)
+* blocking: Phase 17 courts not passing: ['RT-TLS13-INTEROP']
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase17-obligations.json`
 * atlas-owned: 0
@@ -542,11 +542,12 @@ Courts: `all pass`, 6 court(s), **667** authority observation(s) over 6 transcri
 * deferred to a later stratum with a stated reason: 0
 * **open in this stratum: 56**
 
-Courts: `all pass`, 1 court(s), **805** authority observation(s) over 1 transcript court(s).
+Courts: `NOT ALL PASS`, 2 court(s), **874** authority observation(s) over 2 transcript court(s).
 
 | court | verdict | observations |
 |---|---|---|
 | RT-CLI-BODIES | `pass` | 805 |
+| RT-TLS13-INTEROP | `pending` | 69 |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
