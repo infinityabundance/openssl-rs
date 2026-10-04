@@ -8096,7 +8096,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "7ecc3a2cab5d89f2a19988f0d9d7d73503b125147630f10dd98abba3b28c202f"
+      "sha256": "05a969d98ac2ba888169b6e531ea3ce993fc9934db60c3d4602b0023cfd56478"
     },
     {
       "name": "phase-state",
@@ -8106,7 +8106,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "83a5420293704a99d69fee9965c59e1dccf7370514adfe64c605380204aa0563"
+      "sha256": "cde9ccd7156ba430f72536e8784d56a14722fa3179ed7512f384fb935eb2cc5b"
     },
     {
       "name": "source-manifest",

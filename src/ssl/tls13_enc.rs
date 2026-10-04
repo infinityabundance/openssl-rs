@@ -543,6 +543,49 @@ pub(crate) unsafe fn tls13_init_transcript(s: *mut Ssl, md_kind: c_int) -> c_int
     1
 }
 
+/// `int tls13_save_handshake_digest_for_pha(SSL_CONNECTION *s)` — `statem_lib.c:2846-2867`:
+/// snapshot the running handshake digest (which is then through the client Finished) so the PHA
+/// exchange can restart the transcript from it.
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls13_save_handshake_digest_for_pha(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live.
+    unsafe {
+        if !(*s).pha_dgst.is_null() {
+            return 1;
+        }
+        if (*s).hs_md_ctx.is_null() {
+            return 0;
+        }
+        let ctx = EVP_MD_CTX_new();
+        if ctx.is_null() {
+            return 0;
+        }
+        if EVP_MD_CTX_copy_ex(ctx, (*s).hs_md_ctx.cast()) <= 0 {
+            EVP_MD_CTX_free(ctx);
+            return 0;
+        }
+        (*s).pha_dgst = ctx.cast();
+    }
+    1
+}
+
+/// `int tls13_restore_handshake_digest_for_pha(SSL_CONNECTION *s)` — `statem_lib.c:2873-2885`:
+/// restore the saved PHA digest into the running transcript.
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls13_restore_handshake_digest_for_pha(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live.
+    unsafe {
+        if (*s).pha_dgst.is_null() || (*s).hs_md_ctx.is_null() {
+            return 0;
+        }
+        EVP_MD_CTX_copy_ex((*s).hs_md_ctx.cast(), (*s).pha_dgst.cast())
+    }
+}
+
 /// `int ssl_handshake_hash(SSL_CONNECTION *s, ...)` — `ssl/ssl_lib.c:6094`: the current transcript
 /// hash, without disturbing the running context (`EVP_MD_CTX_copy_ex`).
 ///

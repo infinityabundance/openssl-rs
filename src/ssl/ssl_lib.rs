@@ -189,6 +189,8 @@ const SSL_SENT_SHUTDOWN: c_int = 1;
 const SSL_RECEIVED_SHUTDOWN: c_int = 2;
 /// `SSL_AD_CLOSE_NOTIFY` — `ssl3.h:240`.
 const SSL_AD_CLOSE_NOTIFY: c_int = 0;
+/// `SSL_AD_INTERNAL_ERROR` — `ssl3.h` (80).
+const SSL_AD_INTERNAL_ERROR: c_int = 80;
 /// `SSL3_AL_WARNING` — `ssl3.h:252`.
 const SSL3_AL_WARNING: c_int = 1;
 /// `SSL_R_SHUTDOWN_WHILE_IN_INIT` — `sslerr.h:262`.
@@ -219,6 +221,10 @@ const SSL_READ_EARLY_DATA_ERROR: c_int = 0;
 const SSL_READ_EARLY_DATA_FINISH: c_int = 2;
 /// `SSL_PHA_NONE` — `ssl_local.h:371`.
 const SSL_PHA_NONE: c_int = 0;
+/// `SSL_PHA_EXT_SENT` — `ssl_local.h:372`.
+const SSL_PHA_EXT_SENT: c_int = 1;
+/// `SSL_PHA_EXT_RECEIVED` — `ssl_local.h:373`.
+const SSL_PHA_EXT_RECEIVED: c_int = 2;
 /// `SSL_PHA_REQUEST_PENDING` — `ssl_local.h:374`.
 const SSL_PHA_REQUEST_PENDING: c_int = 3;
 /// `SSL_PHA_REQUESTED` — `ssl_local.h:375`.
@@ -1316,6 +1322,14 @@ pub struct Ssl {
     pub cookieok: c_int,
     /// `int post_handshake_auth` — the connection's `SSL_PHA_*` state (14.5b).
     pub post_handshake_auth: c_int,
+    /// `unsigned char *pha_context` — the request context echoed from a TLS1.3 CertificateRequest
+    /// (`tls_construct_certificate_request`, `statem_srvr.c:3028-3048`). Owned; freed by `SSL_free`.
+    pub pha_context: *mut u8,
+    /// `size_t pha_context_len`.
+    pub pha_context_len: usize,
+    /// `EVP_MD_CTX *pha_dgst` — the handshake digest through the client Finished, saved for PHA
+    /// (`tls13_save_handshake_digest_for_pha`, `statem_lib.c:2846-2867`). Owned; freed by `SSL_free`.
+    pub pha_dgst: *mut c_void,
     /// `uint16_t *s3.tmp.peer_sigalgs` — the peer's signature-algorithm list (always NULL here).
     pub peer_sigalgs: *mut u16,
     /// `size_t s3.tmp.peer_sigalgslen`.
@@ -2533,6 +2547,8 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             CRYPTO_free((*s).s3_alpn_selected.cast(), FILE, 0);
             CRYPTO_free((*s).s3_alpn_proposed.cast(), FILE, 0);
             CRYPTO_free((*s).supportedgroups.cast(), FILE, 0);
+            CRYPTO_free((*s).pha_context.cast(), FILE, 0);
+            crate::evp::digest::EVP_MD_CTX_free((*s).pha_dgst.cast());
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data);
             SSL_CTX_free((*s).ctx);
             CRYPTO_THREAD_lock_free((*s).lock);
@@ -5571,9 +5587,66 @@ pub(crate) unsafe fn ssl_read_internal(
                     (*s).rwstate = SSL_NOTHING;
                     return 1;
                 }
-                // `SSL3_RT_HANDSHAKE` (22): a post-handshake message such as `NewSessionTicket`;
-                // the authority processes it and loops, this slice drops it and reads on.
-                22 => continue,
+                // `SSL3_RT_HANDSHAKE` (22): a post-handshake message. `NewSessionTicket` and
+                // `KeyUpdate` are dropped and read on; a TLS1.3 post-handshake-authentication
+                // exchange is driven here (`ssl3_read_bytes`'s `handshake_fragment` dispatch,
+                // `rec_layer_s3.c:1026-1066`, and `ossl_statem_*_read_transition`'s `TLS_ST_OK`
+                // arms).
+                22 => {
+                    // Copy the message out before dispatching: the handlers may write the
+                    // connection (they send the client's response), so `rx_buf` must not be
+                    // aliased by `msg`.
+                    let mlen = n as usize;
+                    let mut scratch = [0u8; 16384];
+                    if mlen > scratch.len() {
+                        return -1;
+                    }
+                    ptr::copy_nonoverlapping((*s).rx_buf.as_ptr(), scratch.as_mut_ptr(), mlen);
+                    let msg = &scratch[..mlen];
+                    let handled = if (*s).server == 0 {
+                        // The client: a post-handshake `CertificateRequest` (`SSL_PHA_EXT_SENT`).
+                        if (*s).post_handshake_auth == SSL_PHA_EXT_SENT {
+                            if crate::ssl::statem::statem_clnt::tls13_client_process_post_handshake(
+                                s, msg,
+                            ) == 0
+                            {
+                                if crate::ssl::statem::statem::ossl_statem_in_error(s) == 0 {
+                                    crate::ssl::statem::statem::ossl_statem_fatal(
+                                        s,
+                                        SSL_AD_INTERNAL_ERROR,
+                                        ERR_R_INTERNAL_ERROR,
+                                    );
+                                }
+                                return -1;
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    } else {
+                        // The server: the response to its own `verify_client_post_handshake`.
+                        if (*s).post_handshake_auth == SSL_PHA_REQUESTED {
+                            if crate::ssl::statem::statem_srvr::tls13_server_process_post_handshake(
+                                s, msg,
+                            ) == 0
+                            {
+                                if crate::ssl::statem::statem::ossl_statem_in_error(s) == 0 {
+                                    crate::ssl::statem::statem::ossl_statem_fatal(
+                                        s,
+                                        SSL_AD_INTERNAL_ERROR,
+                                        ERR_R_INTERNAL_ERROR,
+                                    );
+                                }
+                                return -1;
+                            }
+                            true
+                        } else {
+                            false
+                        }
+                    };
+                    let _ = handled;
+                    continue;
+                }
                 // `SSL3_RT_ALERT` (21): the record layer now decodes every alert itself
                 // (`ssl3_read_bytes`, `rec_layer_s3.c:864-944`), so a returned alert record would
                 // be one this reduced matcher already consumed; drop and read on.
@@ -5652,10 +5725,19 @@ pub(crate) unsafe fn ssl_write_internal(
         if ossl_statem_check_finish_init(s, 1) == 0 {
             return -1;
         }
-        // Phase 17.2c: once the handshake has finished, write one protected record through the
-        // reduced record layer (`ssl3_write_bytes`).
+        // `ssl3_write_bytes`'s in-init dispatch (`rec_layer_s3.c:313-335`): while a handshake is in
+        // progress (a TLS1.3 post-handshake `CertificateRequest` queued by
+        // `SSL_verify_client_post_handshake`) the connection's `handshake_func` runs before the
+        // application record. `-1` surfaces the authority's `i == 0`/-1 arms.
         if (*s).in_init != 0 {
-            return -1;
+            // SAFETY: `s` is live; `handshake_func` is non-NULL (checked above).
+            let func = (*s).handshake_func;
+            if let Some(f) = func {
+                let r = f(s);
+                if r <= 0 {
+                    return -1;
+                }
+            }
         }
         // `SSL3_RT_APPLICATION_DATA` — `ssl3.h` (23).
         // SAFETY: `s` is live; `_buf` holds `_num` readable bytes per the contract.
@@ -6514,13 +6596,35 @@ pub unsafe extern "C" fn SSL_verify_client_post_handshake(ssl: *mut Ssl) -> c_in
                 return 0;
             }
             match (*ssl).post_handshake_auth {
-                SSL_PHA_NONE => raise_ssl(SSL_R_EXTENSION_NOT_RECEIVED, 7422),
-                SSL_PHA_REQUEST_PENDING => raise_ssl(SSL_R_REQUEST_PENDING, 7431),
-                SSL_PHA_REQUESTED => raise_ssl(SSL_R_REQUEST_SENT, 7434),
-                _ => raise_ssl(SSL_R_INVALID_CONFIG, 7443),
+                SSL_PHA_NONE => {
+                    raise_ssl(SSL_R_EXTENSION_NOT_RECEIVED, 7422);
+                    return 0;
+                }
+                SSL_PHA_REQUEST_PENDING => {
+                    raise_ssl(SSL_R_REQUEST_PENDING, 7431);
+                    return 0;
+                }
+                SSL_PHA_REQUESTED => {
+                    raise_ssl(SSL_R_REQUEST_SENT, 7434);
+                    return 0;
+                }
+                SSL_PHA_EXT_RECEIVED => {}
+                _ => {
+                    raise_ssl(SSL_R_INVALID_CONFIG, 7443);
+                    return 0;
+                }
             }
+            // `ssl_lib.c:7438-7447`: mark the request pending, refuse an unusable configuration,
+            // then re-enter the state machine so the next read/write emits the CertificateRequest.
+            (*ssl).post_handshake_auth = SSL_PHA_REQUEST_PENDING;
+            if !crate::ssl::statem::statem_srvr::send_certificate_request(ssl) {
+                (*ssl).post_handshake_auth = SSL_PHA_EXT_RECEIVED;
+                raise_ssl(SSL_R_INVALID_CONFIG, 7443);
+                return 0;
+            }
+            ossl_statem_set_in_init(ssl, 1);
         }
-        0
+        1
     })
 }
 
@@ -7031,9 +7135,11 @@ pub unsafe extern "C" fn SSL_get_peer_cert_chain(s: *const Ssl) -> *mut c_void {
         // SAFETY: the caller guarantees `s` is live.
         // The authority reads `sc->session->peer_chain` (`ssl_lib.c:2004-2023`, which includes the
         // peer's own certificate for a client). The reduced path falls back to the chain
-        // `tls_process_server_certificate` stored on the connection.
+        // `tls_process_server_certificate` stored on the connection, including when a reduced
+        // handshake-created session carries no chain of its own.
         let session = unsafe { (*s).session };
-        if !session.is_null() {
+        // SAFETY: `session` is NULL or the live session; a non-NULL session's `peer_chain` is read.
+        if !session.is_null() && unsafe { !(*session).peer_chain.is_null() } {
             // SAFETY: `session` is the live session per the check above.
             unsafe { (*session).peer_chain.cast::<c_void>() }
         } else {
