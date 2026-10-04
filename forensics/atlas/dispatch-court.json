@@ -2,7 +2,7 @@
   "authority": "openssl-3.6.4-production",
   "body": {
     "authority_census": {
-      "crate_files_read": 852,
+      "crate_files_read": 853,
       "function_type_typedefs": 631,
       "identity_macros": 277,
       "identity_macros_non_numeric": 0
@@ -19,7 +19,7 @@
       "signatures_authority_only": 286,
       "signatures_checked": 353,
       "signatures_mismatches": 0,
-      "signatures_not_a_dispatch": 259,
+      "signatures_not_a_dispatch": 263,
       "signatures_unlinked": 0,
       "signatures_unmapped": 0
     },
@@ -5584,6 +5584,26 @@
           "alias": "ConfFinishFn",
           "at": "src/runtime/confmod/mod.rs",
           "why": "not a provider dispatch: the crate's `conf_finish_func` equivalent for the `CONF_METHOD` vtable; the authority declares the module finish callback only as a local typedef in `conf.h`, which the atlas does not record"
+        },
+        {
+          "alias": "ErrGetStateFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "NameFindFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "GetFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
+        },
+        {
+          "alias": "GetCmdFn",
+          "at": "src/runtime/dso_shared.rs",
+          "why": "not a provider dispatch: a function-pointer prototype for a `dlsym(RTLD_DEFAULT, ...)` lookup of an authority export, used only to type the resolved address at the call site; the authority declares the function directly rather than through `OSSL_CORE_MAKE_FUNC`"
         },
         {
           "alias": "ErrPrintCb",

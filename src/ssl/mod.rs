@@ -177,16 +177,17 @@
 //!   know, but a command `ssl3_*_ctrl` *does* implement (the DH/ECDH temp-key and ticket-key setters,
 //!   for example) would diverge. The differential court drives only commands the explicit switch
 //!   answers.
-//! * **The candidate DSO duplicates the crate's error state, so a libssl `ERR` raise is invisible to
-//!   the distribution's error queue.** `forensics/tools/build_phase2.sh` links the crate archive into
-//!   `libssl.so.3` with `--whole-archive` (the `#[no_mangle]` entry points are referenced by nothing,
-//!   so the linker would otherwise discard them), and `libcrypto.so.3` links its own copy of the same
-//!   archive. The version script's `local: *;` hides the duplicate symbols, but the *state* is
-//!   duplicated: `ERR_raise` from this unit writes the archive copy inside `libssl.so.3`, while a
-//!   consumer's `ERR_peek_error`/`ERR_clear_error` resolve to `libcrypto.so.3`. The raises here are
-//!   still the authority's coordinates and are kept; the divergence is the link, and it is recorded
-//!   here (the WIP link is preserved in `d181e440` and the manifest's own comment says so) rather
-//!   than hidden. The `RT-SSL-OBJECT` court therefore does not compare an error-observing arm.
+//! * **The candidate DSOs share one error queue (the whole-archive duplication is repaired).**
+//!   `forensics/tools/build_phase2.sh` links the crate archive into `libssl.so.3` with
+//!   `--whole-archive` (the `#[no_mangle]` entry points are referenced by nothing, so the linker
+//!   would otherwise discard them), and `libcrypto.so.3` links its own copy of the same archive. The
+//!   version script's `local: *;` hides the duplicate symbols, but the *state* would otherwise be
+//!   duplicated: `ERR_raise` from this unit would write the archive copy inside `libssl.so.3`, while
+//!   a consumer's `ERR_peek_error`/`ERR_clear_error` resolve to `libcrypto.so.3`. `src/runtime/dso_shared.rs`
+//!   removes the divergence by resolving libcrypto's exported `ERR_get_state` -- the authority's own
+//!   owner of the queue -- from libssl at first use, so one per-thread queue serves both DSOs exactly
+//!   as one `libcrypto.so.3` serves the authority's two. The raises here are still the authority's
+//!   coordinates and are kept, and the removed WIP link is preserved in `d181e440`.
 //!
 //! **Slice 2's measured divergences, recorded rather than hidden.**
 //!
@@ -510,13 +511,13 @@
 //!
 //! **14.9's measured divergences, recorded rather than hidden.**
 //!
-//! * **The candidate's libssl carries its own copy of the `ssl_conf` store.** The whole-archive
-//!   link duplicates the crate's globals across `libssl.so.3` and `libcrypto.so.3` (the same
-//!   duplication the error-state note above records), so a command set loaded through libcrypto's
-//!   `CONF_modules_load_file` is not visible to libssl's `SSL_CTX_config`. The authority's libssl
-//!   imports `conf_ssl_name_find`/`conf_ssl_get`/`conf_ssl_get_cmd` from libcrypto; the candidate
-//!   binds its own local copies. `RT-SSL-EXT` therefore compares `SSL_CTX_config`'s refusal arms,
-//!   which read the same (empty) store on both sides, and names the success arm `pending`.
+//! * **`SSL_CTX_config` reads libcrypto's `ssl_conf` store, as the authority's libssl does.** The
+//!   whole-archive link puts a copy of `src/runtime/conf/conf_ssl.rs` in both DSOs, so a command set
+//!   loaded through libcrypto's `CONF_modules_load_file` would not be visible to libssl's
+//!   `SSL_CTX_config`. `src/runtime/dso_shared.rs` routes `conf_ssl_name_find`/`conf_ssl_get`/
+//!   `conf_ssl_get_cmd` through libcrypto's exported copies -- the names the authority's libssl
+//!   imports from its `DT_NEEDED` libcrypto -- so one store serves both DSOs. `RT-CROSS-DSO-STATE`
+//!   measures that sharing; `RT-SSL-EXT` keeps comparing `SSL_CTX_config`'s refusal arms.
 //! * **`SSL_trace`'s key-exchange arm answers `UNKNOWN`.** `ssl_get_keyex` reads
 //!   `sc->s3.tmp.new_cipher`, which is NULL before a handshake; the authority would fault, so the
 //!   court never hands `SSL_trace` a `ClientKeyExchange`/`ServerKeyExchange`, and the transcribed
