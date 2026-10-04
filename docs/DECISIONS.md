@@ -35371,3 +35371,34 @@ After them, `evidence_determinism.py --keep` reproduces 34 artefacts.
 `evidence_determinism.py --keep`; `gen_frf_courts.py --check` (250 files / 125 courts);
 `regression_guard.py --update` then `--baseline-ref origin/main --require-current`; `probe_hygiene.py`.
 `src/runtime/init.rs`s
+## D530 -- the 52 unlanded CLI command bodies become Phase-17 obligations, and the Phase-17 entrance criteria are fixed
+
+The Phase-16 stratum sealed the `openssl` CLI dispatcher, the `opt.c` parser, all 55 commands' option
+tables and the help/list/version bodies, and recorded the other 52 `apps/<name>.c` bodies as a
+boundary in prose only (PHASE-16 seal section 5.5; PHASE-16 SUBPHASES section 3.8). Unlike the 56 TLS
+message bodies, which the prerequisites plane carries as a `reduced_transcription` divergence, the 52
+command units were owned by no stratum, so a later phase could not be held to them. They are now
+recorded in `forensics/prerequisites.json`'s `units` block as `deferred_to_later_stratum` with
+`owner_phase` 17 (the `downstream` stratum), and the Phase-16 plan gained row 16.4a naming each
+unlanded unit -- the same disposition D529 gave the two TLS message-layer units. The records are
+fail-closed: `plan_reconciliation.py` reports a unit stale when its owner stratum seals without
+reaching it, so Phase 17 sealing without the bodies fails rather than passing silently. The `units`
+row is the vehicle rather than a `deferrals` row because only it carries a machine `owner_phase`; the
+`deferrals` list is for a name the crate references or an authority unit calls, which the 52 command
+bodies are not (they are executable translation units no symbol atlas carries).
+
+Two entrance criteria for Phase 17 are fixed here so the downstream stratum is measured against the
+real compatibility frontier rather than a symbol census. First, **a real TLS 1.3 interoperability
+handshake**: client and server must complete ClientHello through Finished and exchange application
+data, which needs the 56 message bodies D529 handed forward, the extension units
+(`ssl/extensions_clnt.c`/`ssl/extensions_srvr.c`), the key schedule (`ssl/t1_enc.c`/`ssl/tls13_enc.c`)
+and record I/O. Second, **a cross-DSO shared-state court**: because the crate links libcrypto, libssl
+and `legacy.so` as whole-crate archives, each carries its own copy of the crate's internal globals, so
+`ERR` (and `CONF`/provider) state raised through one DSO may not be observable through another, where
+the admitted authority shares one `libcrypto.so.3` via `DT_NEEDED`. The court raises an error through
+the libssl path and reads it through the libcrypto path (and the same for `CONF`) and requires one
+queue, so the divergence is a receipt rather than an architectural intuition.
+
+Verified (container): `plan_reconciliation.py` reads 151 unit records with 545 plan-named units
+reached and 0 not; `prerequisite_gate.py` passes; `phase_state.py --self-test` passes. The 52 records
+name only `apps/<name>.c` units and a single shared evidence citation.
