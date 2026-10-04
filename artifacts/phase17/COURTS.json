@@ -1,0 +1,35 @@
+{
+  "authority": "openssl-3.6.4-production",
+  "body": {
+    "all_pass": true,
+    "authority": "openssl-3.6.4-production",
+    "claim": "Phase 17's four courts are named and `pending`; none is registered as passing at activation. `RT-CLI-BODIES` is 17.1's: it drives the 52 `apps/<name>.c` command bodies behind the src/apps/openssl.rs dispatcher and its generated src/apps/tables.rs option tables. `RT-TLS13-INTEROP` is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, over the record layer, the extension units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. `RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer against the candidate distribution shell. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
+    "courts": [],
+    "pending_courts": {
+      "RT-CLI-BODIES": "17.1 lands the probe; it drives the 52 `apps/<name>.c` command bodies behind the src/apps/openssl.rs dispatcher and its generated src/apps/tables.rs option tables, and compares the authority's and the candidate's transcripts",
+      "RT-CROSS-DSO-STATE": "17.3 lands the probe; it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the whole-crate DSOs",
+      "RT-DOWNSTREAM-CONSUMER": "17.4 lands the probe; it builds a real downstream consumer against the candidate distribution shell and compares its transcript with the authority's",
+      "RT-TLS13-INTEROP": "17.2 lands the probe; it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, and compares the two transcripts"
+    },
+    "summary": {
+      "fail": 0,
+      "pass": 0,
+      "total": 0
+    }
+  },
+  "generator": "forensics/tools/phase17_courts.py",
+  "inputs": [
+    {
+      "name": "phase-17-plan",
+      "path": "docs/PHASE-17-SUBPHASES.md",
+      "sha256": "9830ed614d0536065d1a6a6ba2b880d094d5deca0162f5b0fae9e70e6409dbe6"
+    },
+    {
+      "name": "prerequisites",
+      "path": "forensics/prerequisites.json",
+      "sha256": "f3cc8cfc5ba2672ffe71317bd41ed905d4add945dc508e0a8b832cfe1b312f36"
+    }
+  ],
+  "kind": "phase17-courts",
+  "schema": "openssl-rs/atlas/phase17-courts/v1"
+}
