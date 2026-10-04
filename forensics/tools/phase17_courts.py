@@ -34,14 +34,20 @@ refusal arms). 17.1d adds ten more: `asn1parse` (the PEM and raw-DER readers), `
 text/re-encode/check arms over fixed keys), `pkey` (`noout`/`check`/`pubout`/`pubin`),
 `pkcs8` (`topk8 -nocrypt` and the read-back arm), `verify` (the fixed CA/leaf pair),
 `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and
-`rsautl` (the refusal arms). Each command's `-help` arm is not driven: `opt_help` is the boundary
+`rsautl` (the refusal arms). 17.1e adds ten more: `gendsa` (the missing-argument refusal), `rand`
+(the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal),
+`engine` (recorded: the candidate's engine init fails), `storeutl` (the `-noout` type/`Total
+found` status over fixed fixtures), `dhparam` (the `-in` text/`-noout`/`-check` arms),
+`genpkey` (the no-algorithm refusal), `passwd` (the `-1`/`-5`/`-6`-`-salt` and `-table`/`-reverse`
+hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt`) and `enc` (the raw-key AES-CBC
+`-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms). Each command's `-help` arm is not driven: `opt_help` is the boundary
 `src/apps/opt.rs` records, so it reaches `not_landed` rather than the authority's table,
 exactly as `help`/`list`/`version` do.
 
 The fixtures live in `courts/phase17/fixtures/` and are read by absolute `/work` path, so the
 probe is self-contained under the container's mount.
 
-**Twenty inputs are recorded rather than diffed**, each a surface this stratum does not own:
+**Twenty-nine inputs are recorded rather than diffed**, each a surface this stratum does not own:
 `errstr 0xdeadbeef` (an unknown system errno), `info -seeds`/`-cpusettings`/`-configdir`/
 `-enginesdir`/`-modulesdir` (RAND seed source, CPU dispatch and the configured prefix, which
 are later strata or build-specific), `prime 2 3 4`/`-hex FF` (the `BN_print` rendering),
@@ -51,7 +57,10 @@ are later strata or build-specific), `prime 2 3 4`/`-hex FF` (the `BN_print` ren
 prefix on an otherwise identical config error), `genrsa -bogus`
 (`opt_set_unknown_name`), `ecparam -name <invalid>` (the pointer-bearing `ERR_print_errors`
 tail), `rsa`/`dsa -modulus` (the `BN_print` rendering) and the `rsautl` operation arm
-(random/binary output). They are named in `RECORDED_DIVERGENCES` and every other arm is
+(random/binary output), plus 17.1e's: the `rand` random-stream arms, the `gendsa`/`genpkey`/
+`dhparam` generation arms (not landed; random or pointer-bearing), the `passwd` random-salt arm,
+and the `engine` listing/`-pre` arms (the candidate's engine init fails). They are named in
+`RECORDED_DIVERGENCES` and every other arm is
 driven, the convention `src/apps/errstr.rs` and Phases 13 through 16 use for a recorded
 divergence.
 
@@ -82,6 +91,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -94,7 +104,6 @@ from atlas_common import (  # noqa: E402
     envelope,
     rel,
     resolve_authority,
-    run,
     write_json,
 )
 
@@ -231,6 +240,47 @@ BODIES_ARGV: list[list[str]] = [
     ["rsautl", "-sign", "-pubin"],
     ["rsautl", "-decrypt", "-certin"],
     ["rsautl", "-bogus"],
+    # 17.1e: gendsa / rand / rehash / engine / storeutl / dhparam / genpkey / passwd /
+    # pkeyutl / enc.
+    ["gendsa"],
+    ["rand"],
+    ["rand", "0"],
+    ["rand", "abc"],
+    ["rand", "-hex", "abc"],
+    ["rehash", "/nonexistent-phase17e"],
+    ["rehash", "-v", "/nonexistent-phase17e"],
+    ["storeutl", "-noout", "-keys", f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["storeutl", "-noout", "-certs", f"{_BODIES_FIXTURES}/certs.pem"],
+    ["dhparam", "-in", f"{_BODIES_FIXTURES}/dhparams.pem", "-text", "-noout"],
+    ["dhparam", "-in", f"{_BODIES_FIXTURES}/dhparams.pem", "-noout"],
+    ["dhparam", "-in", f"{_BODIES_FIXTURES}/dhparams.pem", "-check"],
+    ["genpkey"],
+    ["passwd", "-1", "-salt", "abcdefgh", "secret"],
+    ["passwd", "-5", "-salt", "abcdefgh01234567", "secret"],
+    ["passwd", "-6", "-salt", "abcdefgh01234567", "secret"],
+    ["passwd", "-1", "-salt", "abcdefgh", "-in", f"{_BODIES_FIXTURES}/pwfile.txt"],
+    ["passwd", "-1", "-salt", "abcdefgh", "-table", "secret"],
+    ["passwd", "-1", "-salt", "abcdefgh", "-table", "-reverse", "secret"],
+    ["pkeyutl", "-sign", "-inkey", f"{_BODIES_FIXTURES}/rsa-key.pem", "-in",
+     f"{_BODIES_FIXTURES}/small.bin"],
+    ["pkeyutl", "-verify", "-pubin", "-inkey", f"{_BODIES_FIXTURES}/rsa-pub.pem",
+     "-in", f"{_BODIES_FIXTURES}/small.bin", "-sigfile", f"{_BODIES_FIXTURES}/small.sig"],
+    ["pkeyutl", "-encrypt", "-pubin", "-inkey", f"{_BODIES_FIXTURES}/rsa-pub.pem",
+     "-in", f"{_BODIES_FIXTURES}/rsa256.bin", "-pkeyopt", "rsa_padding_mode:none"],
+    ["pkeyutl", "-decrypt", "-inkey", f"{_BODIES_FIXTURES}/rsa-key.pem", "-in",
+     f"{_BODIES_FIXTURES}/rsa256.ct", "-pkeyopt", "rsa_padding_mode:none"],
+    ["enc", "-aes-128-cbc", "-K", "000102030405060708090a0b0c0d0e0f", "-iv",
+     "000102030405060708090a0b0c0d0e0f", "-in", f"{_BODIES_FIXTURES}/small.bin"],
+    ["enc", "-aes-128-cbc", "-K", "000102030405060708090a0b0c0d0e0f", "-iv",
+     "000102030405060708090a0b0c0d0e0f", "-in", f"{_BODIES_FIXTURES}/small.enc", "-d"],
+    ["enc", "-aes-128-cbc", "-K", "000102030405060708090a0b0c0d0e0f", "-iv",
+     "000102030405060708090a0b0c0d0e0f", "-in", f"{_BODIES_FIXTURES}/small.bin", "-a"],
+    ["enc", "-aes-128-cbc", "-K", "000102030405060708090a0b0c0d0e0f", "-iv",
+     "000102030405060708090a0b0c0d0e0f", "-in", f"{_BODIES_FIXTURES}/small.bin", "-a", "-A"],
+    ["enc", "-aes-128-cbc", "-K", "000102030405060708090a0b0c0d0e0f", "-iv",
+     "000102030405060708090a0b0c0d0e0f", "-in", f"{_BODIES_FIXTURES}/small.bin", "-nopad"],
+    ["enc", "-aes-128-cbc", "-K", "000102030405060708090a0b0c0d0e0f", "-iv",
+     "000102030405060708090a0b0c0d0e0f", "-in", f"{_BODIES_FIXTURES}/small.bin", "-P", "-nosalt"],
 ]
 
 # Divergences the court records rather than diffs: an output decided by a surface this stratum
@@ -465,6 +515,106 @@ RECORDED_DIVERGENCES: list[dict] = [
             "diffed; see `src/apps/rsautl.rs`."
         ),
     },
+    {
+        "argv": "rand 1K",
+        "authority": "<1024 fresh DRBG bytes>",
+        "candidate": "<1024 fresh DRBG bytes>",
+        "reason": (
+            "The random stream itself: both sides write a fresh DRBG output, so the "
+            "bytes are independent and cannot be diffed. The zero-length and "
+            "suffix-refusal arms (`rand`, `rand 0`, `rand abc`, `rand -hex abc`) are "
+            "driven. Recorded here rather than diffed; see `src/apps/rand.rs`."
+        ),
+    },
+    {
+        "argv": "rand -hex 8",
+        "authority": "<16 hex chars from fresh DRBG bytes>",
+        "candidate": "<16 hex chars from fresh DRBG bytes>",
+        "reason": (
+            "As `rand 1K`: the `-hex` stream is a fresh DRBG output. Recorded here "
+            "rather than diffed; see `src/apps/rand.rs`."
+        ),
+    },
+    {
+        "argv": "gendsa <missing-file>",
+        "authority": "Could not open file or uri for loading key parameters of DSA parameters from ...|<ptr>:error:...",
+        "candidate": "openssl-rs: command 'gendsa' is a Phase 16 boundary: its apps/gendsa.c body is not landed.",
+        "reason": (
+            "Key generation is not landed (the generated key is random besides); "
+            "the parameter-load failure carries the pointer-bearing "
+            "`ERR_print_errors` tail. The missing-argument refusal (`gendsa`) is "
+            "driven. Recorded here rather than diffed; see `src/apps/gendsa.rs`."
+        ),
+    },
+    {
+        "argv": "genpkey -algorithm NOPE",
+        "authority": "Error initializing NOPE context|<ptr>:error:...unsupported...(NOPE : 0)",
+        "candidate": "<not landed>",
+        "reason": (
+            "Key generation is not landed; the unknown-algorithm arm carries the "
+            "pointer-bearing `ERR_print_errors` tail. The no-algorithm refusal "
+            "(`genpkey`) is driven. Recorded here rather than diffed; see "
+            "`src/apps/genpkey.rs`."
+        ),
+    },
+    {
+        "argv": "passwd <password> (no -salt)",
+        "authority": "$1$<random salt>$<hash>",
+        "candidate": "$1$<random salt>$<hash>",
+        "reason": (
+            "With no `-salt` the salt is drawn through `RAND_bytes`, so the hash is "
+            "fresh; the fixed-salt arms are driven. Recorded here rather than "
+            "diffed; see `src/apps/passwd.rs`."
+        ),
+    },
+    {
+        "argv": "engine -pre foo",
+        "authority": "(rdrand) Intel RDRAND engine|[Failure]: foo|<ptr>:error:13000089:engine routines:ENGINE_ctrl_cmd_string:invalid cmd name:...",
+        "candidate": "(rdrand) Intel RDRAND engine|[Failure]: foo|<ptr>:error:...",
+        "reason": (
+            "The failing `-pre` control command prints a pointer-bearing "
+            "`ERR_print_errors` tail on both sides. This arm is recorded with the "
+            "engine listing: the candidate's engine init fails first (see the next "
+            "entry), so the whole `engine` surface is recorded rather than diffed. "
+            "See `src/apps/engine.rs`."
+        ),
+    },
+    {
+        "argv": "engine / engine -c / engine -t / engine -post foo",
+        "authority": "(rdrand) Intel RDRAND engine| [RAND]|...|     [ available ]|(dynamic) ...|     [ unavailable ]|",
+        "candidate": "",
+        "reason": (
+            "The candidate's `ENGINE_load_builtin_engines` calls "
+            "`OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN)`, which the crate's "
+            "`crypto/init.c` arm still refuses (the engine bits `eng_openssl.c`/"
+            "`eng_rdrand.c` are unlanded, as `docs/PHASE-16-CLI-SEAL.md` records), so "
+            "`engine` exits with `OPENSSL_init_crypto:init fail` on stderr and an empty "
+            "listing where the authority prints the two built-in engines. The body is "
+            "landed and its parse/listing/`-c`/`-t`/`-pre`/`-post` arms are transcribed; "
+            "only this init-fail surface is the engine stratum's. Recorded here rather "
+            "than diffed; see `src/apps/engine.rs`."
+        ),
+    },
+    {
+        "argv": "storeutl <missing-file>",
+        "authority": "Couldn't open file or uri ...|<ptr>:error:80000002:system library:file_open:No such file or directory:...",
+        "candidate": "Couldn't open file or uri ...|<ptr>:error:...",
+        "reason": (
+            "A failed open leaves a pointer-bearing `ERR_print_errors` tail; the "
+            "`-noout -keys`/`-noout -certs` status arms over the fixed fixtures are "
+            "driven. Recorded here rather than diffed; see `src/apps/storeutl.rs`."
+        ),
+    },
+    {
+        "argv": "dhparam <numbits>",
+        "authority": "Generating DH parameters, ...|<the generated parameters>",
+        "candidate": "<not landed>",
+        "reason": (
+            "Parameter generation is not landed and the generated safe prime is "
+            "random; the `-in <dhparams.pem>` text/`-noout`/`-check` arms are "
+            "driven. Recorded here rather than diffed; see `src/apps/dhparam.rs`."
+        ),
+    },
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
@@ -502,11 +652,27 @@ def side_env(libdir: Path, modulesdir: Path) -> dict[str, str]:
 
 
 def run_probe(binary: Path, env: dict[str, str]) -> tuple[str, str, int | None]:
-    res = run(["timeout", RUN_TIMEOUT_S, str(binary)], env=env)
-    code = res.returncode
+    """Run one side's probe and decode its transcript **byte-for-byte**.
+
+    The probe's subject is the CLI executable, and several of the 17.1e bodies it drives
+    (`enc`'s ciphertext, `pkeyutl`'s raw sign/decrypt output) emit arbitrary binary bytes, so the
+    transcript is not guaranteed UTF-8. `phase17_courts.py` therefore captures bytes and decodes
+    with Latin-1, which is a 1:1 byte-to-code-point mapping: two byte-identical transcripts decode
+    to identical strings and two different ones stay different, and every decoded code point is
+    JSON-serialisable so a residual can be stored.
+    """
+    proc = subprocess.run(
+        ["timeout", RUN_TIMEOUT_S, str(binary)],
+        env=env,
+        capture_output=True,
+        check=False,
+    )
+    code = proc.returncode
+    out = proc.stdout.decode("latin-1")
+    err = proc.stderr.decode("latin-1")
     if code == 124:
-        return res.stdout, res.stderr, None
-    return res.stdout, res.stderr, code
+        return out, err, None
+    return out, err, code
 
 
 def diff(authority: str, candidate: str) -> list[dict]:
@@ -567,8 +733,10 @@ def render_probe(cases: list[list[str]]) -> str:
 # The divergent inputs (`errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/
 # `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms,
 # `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`,
-# `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus` and the `rsautl`
-# operation arm) are deliberately absent: each renders a surface this stratum does not own
+# `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl`
+# operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam`
+# generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms) are
+# deliberately absent: each renders a surface this stratum does not own
 # (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command module
 # headers).
 set -u
@@ -727,13 +895,24 @@ def main(argv: list[str]) -> int:
             "`-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` "
             "and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the "
             "text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` "
-            "(the private-key-required and unknown-option refusals). Each "
-            "command's `-help` arm is not driven (`opt_help` is unlanded), and the twenty "
+            "(the private-key-required and unknown-option refusals). 17.1e adds ten more bodies "
+            "over fixed fixtures: `gendsa` (the missing-argument refusal), `rand` (the "
+            "zero-length and size-suffix refusals), `rehash` (the unwritable-directory "
+            "refusal), `storeutl` (the `-noout -keys`/`-noout -certs` type and `Total found` "
+            "status), `dhparam` (the `-in` text/`-noout`/`-check` arms), `genpkey` (the "
+            "no-algorithm refusal), `passwd` (the fixed-salt `-1`/`-5`/`-6` and "
+            "`-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` "
+            "over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/"
+            "`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the "
+            "candidate's engine init fails. Each "
+            "command's `-help` arm is not driven (`opt_help` is unlanded), and the twenty-nine "
             "divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ "
             "`-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, "
             "`sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, "
-            "`genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus` and the `rsautl` "
-            "operation arm -- are recorded "
+            "`genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` "
+            "operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` "
+            "generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms -- "
+            "are recorded "
             "in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives "
             "a real TLS 1.3 client/server flight, ClientHello through Finished plus an "
             "application-data exchange, over the record layer, the extension units "

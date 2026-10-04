@@ -15,11 +15,16 @@ pub mod ciphers;
 pub mod configutl;
 pub mod crl;
 pub mod crl2pkcs7;
+pub mod dhparam;
 pub mod dsa;
 pub mod dsaparam;
 pub mod ec;
 pub mod ecparam;
+pub mod enc;
+pub mod engine;
 pub mod errstr;
+pub mod gendsa;
+pub mod genpkey;
 pub mod genrsa;
 pub mod info;
 pub mod kdf;
@@ -36,15 +41,20 @@ pub mod nseq;
 #[allow(clippy::module_inception)]
 pub mod openssl;
 pub mod opt;
+pub mod passwd;
 pub mod pkcs8;
 pub mod pkey;
 pub mod pkeyparam;
+pub mod pkeyutl;
 pub mod prime;
+pub mod rand;
+pub mod rehash;
 pub mod rsa;
 pub mod rsautl;
 pub mod sess_id;
 pub mod skeyutl;
 pub mod spkac;
+pub mod storeutl;
 // `apps/list.c`'s option-list arm (`-options`) and standard-command listing are
 // the surface 16.4's capture measures; `apps/version.c`'s default arm is
 // build-independent. Both are pulled forward; see their module headers.
