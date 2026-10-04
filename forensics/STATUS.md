@@ -246,8 +246,8 @@ ownership atlas assigns Phase 17, or that an earlier stratum
 handed it, that is neither implemented, deferred to a named later
 phase, nor recorded as open in the stratum is an error, not a warning.
 
-* authority exports in the Phase 17 working set: 4
-* implemented: 4
+* authority exports in the Phase 17 working set: 5
+* implemented: 5
 * deferred to a later phase with a stated reason: 0
 * open in this stratum: 0
 

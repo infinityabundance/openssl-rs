@@ -50,6 +50,15 @@ bad() { fail=$((fail+1)); say "  [FAIL] $*"; }
 rm -rf "$T"
 mkdir -p "$T"
 
+# kill_ours: SIGKILL leftover sshd/sshd-session from an aborted run so the new listener can bind
+# PORT and a squatter cannot answer in its place.
+for p in /proc/[0-9]*; do
+    c=$(cat "$p/comm" 2>/dev/null || true)
+    case "$c" in
+        sshd|sshd-session) kill -9 "${p#/proc/}" 2>/dev/null || true ;;
+    esac
+done
+
 AGENT_PID=""
 SSHD_PID=""
 cleanup() {
@@ -127,6 +136,9 @@ LogLevel VERBOSE
 # OpenSSH 10.5's sshd default deliberately omits finite-field DH; re-enable it so
 # the probe actually exercises the candidate's BN modular-exponentiation path.
 KexAlgorithms +diffie-hellman-group14-sha256,diffie-hellman-group16-sha512,diffie-hellman-group18-sha512,diffie-hellman-group-exchange-sha256
+# Keep enough unauthenticated starts for the 16-way concurrency probe (default MaxStartups
+# 10:30:100 would randomly drop simultaneous connections).
+MaxStartups 64:30:100
 EOF
 
 say "-- sshd -t (config test) --"
@@ -237,7 +249,28 @@ fi
 
 # ---------------------------------------------------------------------------
 say ""
-say "=== 7. sshd server log: errors/crashes ==="
+say "=== 7. 16 concurrent ssh logins ==="
+CONC=$T/conc
+rm -rf "$CONC"; mkdir -p "$CONC"
+SSH_PIDS=
+i=1
+while [ "$i" -le 16 ]; do
+    ( timeout 30 "$SSH" -p "$PORT" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        -o BatchMode=yes -o PreferredAuthentications=publickey -o UpdateHostKeys=no \
+        -o LogLevel=ERROR -o ConnectTimeout=10 -i "$T/id_ed25519" root@127.0.0.1 'true' \
+        >/dev/null 2>"$CONC/err.$i"; echo $? >"$CONC/rc.$i" ) &
+    SSH_PIDS="$SSH_PIDS $!"
+    i=$((i + 1))
+done
+# shellcheck disable=SC2086
+wait $SSH_PIDS || true
+CONC_OK=0
+for f in "$CONC"/rc.*; do [ "$(cat "$f")" = "0" ] && CONC_OK=$((CONC_OK + 1)); done
+say "concurrent_logins=$CONC_OK/16"
+
+# ---------------------------------------------------------------------------
+say ""
+say "=== 8. sshd server log: errors/crashes ==="
 if grep -iE "fatal|segmentation|Aborted|core dump|assert|SSL library error" "$T/sshd.log" >/dev/null 2>&1; then
     say "  [WARN] suspicious lines in sshd.log:"
     grep -inE "fatal|segmentation|Aborted|core dump|assert|SSL library error" "$T/sshd.log" | head -10

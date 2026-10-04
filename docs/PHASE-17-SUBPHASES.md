@@ -42,11 +42,12 @@ translation unit with `class: deferred_to_later_stratum` and one shared evidence
 stratum's ledger records a hand-off to Phase 17, so its working set is exactly this projection plus
 the contract units.
 
-**The downstream replacement contract is four units**, each derived from a surface that measures it:
-`command-bodies` (the 52 unit deferrals above), `tls13-interop` (the `RT-TLS13-INTEROP` court,
-`courts/phase17/rt_tls13_interop_probe.*`), `cross-dso-state` (the `RT-CROSS-DSO-STATE` court) and
-`downstream-consumer` (the `RT-DOWNSTREAM-CONSUMER` court). At activation the runner registers all
-four as `pending`, so all four units are open.
+**The downstream replacement contract is five units**, each derived from a surface that measures
+it: `command-bodies` (the 52 unit deferrals above), `tls13-interop` (the `RT-TLS13-INTEROP` court,
+`courts/phase17/rt_tls13_interop_probe.*`), `cross-dso-state` (the `RT-CROSS-DSO-STATE` court),
+`downstream-consumer` (the `RT-DOWNSTREAM-CONSUMER` court) and `downstream-corpus` (the
+`RT-DOWNSTREAM-CORPUS` court). At activation the runner registers all four behavioural courts as
+`pending`, so all four units are open.
 
 **The ledger's unit is not an exported symbol.** `forensics/phase17-obligations.json` publishes
 `unit: "downstream replacement contract"`, its `implemented`/`open` export lists are empty *by
@@ -70,10 +71,11 @@ ledger's `counts` is the live record and this section is the activation measurem
 | 17.2 | **The TLS 1.3 interoperability handshake** | the real client/server flight: a `ClientHello` through `Finished` with application data exchanged, over the record layer, the extension units (`ssl/extensions_clnt.c`/`extensions_srvr.c`), the key schedule (`ssl/t1_enc.c`/`tls13_enc.c`) and the 56 message bodies D529 handed forward. The state 16.5's transitions reach is the substrate; this subphase drives the flight they select. | 17.1 | `RT-TLS13-INTEROP` |
 | 17.3 | **The cross-DSO shared-state court** | the shared-state contract the candidate's link shape breaks: because the crate links `libcrypto`, `libssl` and `ossl-modules/legacy.so` as whole-crate archives, each DSO carries its own copy of the crate's internal globals, where the admitted authority shares one `libcrypto.so.3` via `DT_NEEDED`. The court raises an error through the libssl path and reads it through the libcrypto path, and does the same for `CONF`, requiring one queue. | 17.2 | `RT-CROSS-DSO-STATE` |
 | 17.4 | **The downstream-consumer court** | a real downstream consumer: a program built against the candidate distribution shell the way an out-of-tree package links it, exercising the exported surface and the two entrance criteria above from outside the crate, rather than a probe compiled with the crate. | 17.3 | `RT-DOWNSTREAM-CONSUMER` |
+| 17.4a | **The machine-owned downstream corpus** | the six real downstream programs (`courts/phase17/downstream/`), each with a measured record `result.json` and a harness driver; the corpus `forensics/atlas/downstream-corpus.json` and the `RT-DOWNSTREAM-CORPUS` court that seals Phase 17 on it. The court validates the recorded data and its freshness; the driver `courts/phase17/downstream/run_all.sh` is how the data is produced. | 17.4 | `RT-DOWNSTREAM-CORPUS` |
 | 17.5 | **The seal** | nothing in the crate — evidence: `docs/PHASE-17-DOWNSTREAM-SEAL.md` (at the seal) | 17.0–17.4 | — |
 
 The rows above the seal partition the working set by source: the 52 unit deferrals are 17.1's, and
-the four contract units are 17.1's through 17.4's. The partition is derived from
+the five contract units are 17.1's through 17.4a's. The partition is derived from
 `forensics/phase17-obligations.json` joined to `forensics/prerequisites.json` and
 `artifacts/phase17/COURTS.json`, not typed.
 
@@ -114,6 +116,18 @@ Phase 16.4 already landed, so the dispatcher's `not_landed` boundary shrinks sli
 `openssl` executable the Phase-2 link machinery emits already forwards to the crate; this stratum
 gives its commands bodies.
 
+**3.7 The downstream corpus is data, and the seal depends on it.** 17.4a records each downstream
+program's measurement in `courts/phase17/downstream/<program>/result.json` (`build`, `link`,
+`start`, `functional`, `concurrency`, `known_residuals`, `historical_failures`), aggregated into
+`forensics/atlas/downstream-corpus.json`. The `RT-DOWNSTREAM-CORPUS` court is the seal's
+mechanical dependency: `phase_state.py` blocks a stratum on any non-`pass` court in
+`artifacts/phase17/COURTS.json`, so Phase 17 cannot be `complete` while a program's `functional`
+is false, a required field is missing, or the recorded `candidate` is not the current
+`Cargo.toml` version. The court validates the recorded corpus rather than re-running the
+multi-hour builds; `courts/phase17/downstream/run_all.sh` is the driver that (re)produces it, and
+`courts/phase17/downstream/README.md` and each `EVIDENCE.md` are generated from the records, so
+the prose cannot drift from the measurement.
+
 ## 4. Measured corrections, and the precondition
 
 **4.1 The working set is not an export projection, and the ledger says so by its unit.** The atlas
@@ -126,8 +140,9 @@ ownership atlas ever assigns this stratum an export, because then the non-export
 **4.2 The precondition this plan places on 17.0, and it is not optional.** `run_courts.py` refuses a
 stratum that is not `not-started` and has no runner, so this stratum lands
 `forensics/tools/phase17_courts.py` with **no runnable court**: its obligations are not exports, so no
-differential probe over a symbol set is its evidence, and its four behavioural courts
-(`RT-CLI-BODIES`, `RT-TLS13-INTEROP`, `RT-CROSS-DSO-STATE`, `RT-DOWNSTREAM-CONSUMER`) are named in
+differential probe over a symbol set is its evidence, and its behavioural courts
+(`RT-CLI-BODIES`, `RT-TLS13-INTEROP`, `RT-CROSS-DSO-STATE`, `RT-DOWNSTREAM-CONSUMER`, later joined
+by the data-consuming `RT-DOWNSTREAM-CORPUS`) are named in
 `PENDING_COURTS` and land with the subphases that build the things they drive. **The direction of the
 `phase17_courts.py` <-> `phase17_obligations.py` edge is the reverse of Phase 16's**: the ledger's
 contract-unit states are measured from the courts registry, so the registry is generated first and

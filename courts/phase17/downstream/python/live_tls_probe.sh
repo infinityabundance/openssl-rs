@@ -80,6 +80,24 @@ RC=$?
 set -e
 echo "tls_client_exit=$RC"
 
+# Concurrency: many simultaneous candidate-linked CPython clients against the authority s_server.
+echo "=== 16 concurrent TLS clients ==="
+CONC=$LIVE/conc
+rm -rf "$CONC"; mkdir -p "$CONC"
+i=1
+PY_PIDS=
+while [ "$i" -le 16 ]; do
+    ( "$PY" /work/courts/phase17/downstream/python/tls_client.py "$PORT" ca.crt other-ca.crt \
+        > "$CONC/out.$i" 2>&1; echo $? > "$CONC/rc.$i" ) &
+    PY_PIDS="$PY_PIDS $!"
+    i=$((i + 1))
+done
+# shellcheck disable=SC2086
+wait $PY_PIDS || true
+CONC_OK=0
+for f in "$CONC"/rc.*; do [ "$(cat "$f")" = "0" ] && CONC_OK=$((CONC_OK + 1)); done
+echo "concurrent_ok=$CONC_OK/16"
+
 kill "$SRV" 2>/dev/null || true
 wait "$SRV" 2>/dev/null || true
 trap - EXIT INT TERM

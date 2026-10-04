@@ -1,0 +1,46 @@
+{
+  "authority": "openssl-rt-3.6.4-r2",
+  "build": {
+    "detail": "OpenSSH 10.5p1 (portable), libcrypto-only consumer",
+    "ok": true
+  },
+  "candidate": "0.0.21",
+  "concurrency": {
+    "ok": 16,
+    "total": 16
+  },
+  "functional": {
+    "detail": "live sshd+ssh login, the forced kex/cipher/MAC/host-key matrix including RSA/ECDSA, ssh-keygen RSA/ECDSA/Ed25519 sign+verify, and the regress unit suite",
+    "evidence": [
+      "probe SUMMARY: 31 pass, 0 fail",
+      "regress unit 12 pass, 1 fail",
+      "concurrent_logins=16/16"
+    ],
+    "ok": true
+  },
+  "historical_failures": [
+    {
+      "commit": "45095bfe",
+      "fixed_by": "52b61567 (evp: legacy-origin EVP_PKEY signs/verifies -- OpenSSH RSA/ECDSA fixed)",
+      "summary": "OpenSSH's RSA and ECDSA signing/verification and the parsing of native openssh-key-v1 RSA/ECDSA private keys failed with `error in libcrypto: initialization error`, so RSA/ECDSA host keys and user keys were rejected and the handshake fell back to Ed25519"
+    }
+  ],
+  "known_residuals": [
+    "`regress/unittests/utf8` aborts on both the candidate and the authority: the court image ships only C/C.utf8/POSIX locales and the test setlocale()s en_US.UTF-8"
+  ],
+  "link": {
+    "detail": "libcrypto.so.3 -> /work/artifacts/phase2/install/lib/libcrypto.so.3 (no libssl)",
+    "libs": [
+      "libcrypto.so.3"
+    ],
+    "ok": true
+  },
+  "program": "openssh",
+  "source_sha256": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11",
+  "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.5p1.tar.gz",
+  "start": {
+    "detail": "the candidate-linked sshd starts on a high port",
+    "ok": true
+  },
+  "version": "10.5p1"
+}

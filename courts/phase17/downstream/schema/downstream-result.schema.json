@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openssl-rs/downstream-result.schema.json",
+  "title": "openssl-rs downstream result record",
+  "description": "One machine-readable record per Phase-17 downstream program. Written by the program's harness driver (courts/phase17/downstream/run_all.sh through lib/record.py) from what the probe actually measured; the aggregate is forensics/atlas/downstream-corpus.json and the `RT-DOWNSTREAM-CORPUS` court refuses to let Phase 17 seal unless every record is present, fresh (candidate == Cargo.toml) and functional.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "program",
+    "version",
+    "source_url",
+    "source_sha256",
+    "candidate",
+    "authority",
+    "build",
+    "link",
+    "start",
+    "functional",
+    "concurrency",
+    "known_residuals",
+    "historical_failures"
+  ],
+  "properties": {
+    "program": {"type": "string", "enum": ["curl", "git", "haproxy", "nginx", "openssh", "python"]},
+    "version": {"type": "string", "minLength": 1, "description": "the pinned upstream release, parsed from the program's build.sh"},
+    "source_url": {"type": "string", "minLength": 1, "description": "the pinned tarball URL, parsed from build.sh"},
+    "source_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$", "description": "the pinned tarball sha256, parsed from build.sh"},
+    "candidate": {"type": "string", "minLength": 1, "description": "the candidate identity the record was measured against (Cargo.toml), the court's freshness key"},
+    "authority": {"type": "string", "minLength": 1},
+    "build": {"$ref": "#/$defs/stage"},
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "detail", "libs"],
+      "properties": {
+        "ok": {"type": "boolean"},
+        "detail": {"type": "string"},
+        "libs": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "start": {"$ref": "#/$defs/stage"},
+    "functional": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "detail", "evidence"],
+      "properties": {
+        "ok": {"type": "boolean"},
+        "detail": {"type": "string"},
+        "evidence": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "concurrency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "total"],
+      "properties": {
+        "ok": {"type": "integer", "minimum": 0},
+        "total": {"type": "integer", "minimum": 1}
+      }
+    },
+    "known_residuals": {"type": "array", "items": {"type": "string"}},
+    "historical_failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["commit", "summary", "fixed_by"],
+        "properties": {
+          "commit": {"type": "string", "pattern": "^[0-9a-f]{7,40}$"},
+          "summary": {"type": "string", "minLength": 1},
+          "fixed_by": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok", "detail"],
+      "properties": {
+        "ok": {"type": "boolean"},
+        "detail": {"type": "string"}
+      }
+    }
+  }
+}

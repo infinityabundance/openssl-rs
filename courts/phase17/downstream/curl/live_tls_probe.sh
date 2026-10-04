@@ -103,6 +103,26 @@ set -e
 echo "curl_negative_exit=$NEGRC"
 sed -n '1,3p' curl_neg.err
 
+# Concurrency: the candidate libssl must serve many simultaneous verified fetches. The server
+# is still the authority s_server, so this measures the candidate client's thread/connection
+# safety, not the server.
+echo "=== 16 concurrent verified fetches ==="
+CONC=$LIVE/conc
+rm -rf "$CONC"; mkdir -p "$CONC"
+i=1
+CURL_PIDS=
+while [ "$i" -le 16 ]; do
+    ( "$CURL" -sS --max-time 20 --cacert ca.crt --tlsv1.3 --tls-max 1.3 \
+        -o /dev/null -w '%{http_code}\n' "https://127.0.0.1:$PORT/" > "$CONC/code.$i" 2> "$CONC/err.$i" ) &
+    CURL_PIDS="$CURL_PIDS $!"
+    i=$((i + 1))
+done
+# shellcheck disable=SC2086
+wait $CURL_PIDS || true
+CONC_OK=0
+for f in "$CONC"/code.*; do [ "$(cat "$f")" = "200" ] && CONC_OK=$((CONC_OK + 1)); done
+echo "concurrent_200s=$CONC_OK/16"
+
 kill "$SRV" 2>/dev/null || true
 wait "$SRV" 2>/dev/null || true
 trap - EXIT INT TERM

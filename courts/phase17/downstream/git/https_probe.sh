@@ -180,6 +180,24 @@ echo "https_probe.sh: pull HEAD $PULLED"
 [ "$PULLED" = "$NEW_HEAD" ] || { echo "https_probe.sh: PULL HEAD MISMATCH"; exit 1; }
 echo "https_probe.sh: push+clone+pull over https all succeeded"
 
+# --- 3c. concurrency: many simultaneous HTTPS git clients against candidate nginx ----------
+echo "https_probe.sh: --- 16 concurrent TLS git ls-remote ---"
+CONC=$BASE/conc
+rm -rf "$CONC"; mkdir -p "$CONC"
+i=1
+GIT_PIDS=
+while [ $i -le 16 ]; do
+    ( timeout 30 env GIT_SSL_CAINFO="$BASE/ca.crt" "$GIT" ls-remote "$URL" \
+        >/dev/null 2>"$CONC/err.$i"; echo $? >"$CONC/rc.$i" ) &
+    GIT_PIDS="$GIT_PIDS $!"
+    i=$((i + 1))
+done
+# shellcheck disable=SC2086
+wait $GIT_PIDS || true
+CONC_OK=0
+for f in "$CONC"/rc.*; do [ "$(cat "$f")" = "0" ] && CONC_OK=$((CONC_OK + 1)); done
+echo "https_probe.sh: concurrent_ok=$CONC_OK/16"
+
 # --- 4. negative arm: unrelated CA must be rejected -------------------------
 cd "$BASE"
 if GIT_SSL_CAINFO="$BASE/other.crt" "$GIT" clone -q "$URL" clone_bad \

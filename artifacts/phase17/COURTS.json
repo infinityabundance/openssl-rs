@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), `sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), `spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the `-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` (the private-key-required and unknown-option refusals). 17.1e adds ten more bodies over fixed fixtures: `gendsa` (the missing-argument refusal), `rand` (the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal), `storeutl` (the `-noout -keys`/`-noout -certs` type and `Total found` status), `dhparam` (the `-in` text/`-noout`/`-check` arms), `genpkey` (the no-algorithm refusal), `passwd` (the fixed-salt `-1`/`-5`/`-6` and `-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the candidate's engine init fails. 17.1f adds seven more bodies over fixed fixtures: `dgst` (the digest, `-hex`/`-binary`, `-c`/`-r`, `-hmac`, `-sign` and `-verify` arms), `pkcs7` (the re-encode and `-print_certs` arms), `ocsp` (the no-work refusal and the fixed-CA/leaf `-reqout`/`-req_text` request arms), `ts` (the mode refusals and the `-query -no_nonce -data` DER/text arms), `speed` (the `-bogus` refusal), `fipsinstall` (the `-verify`/no-module refusals) and `srp` (the action-count refusals). 17.1g, the final slice, lands the last ten bodies over fixed fixtures: `x509` (the text/subject/issuer/dates/fingerprint/serial/pubkey/hash and re-encode arms), `req` (the read-back `-text`/`-verify`/`-subject`/re-encode arms over a fixed CSR), `smime` and `cms` (the `-sign -nodetach -outform PEM|DER` over a fixed content/signer/key, the `-verify -noverify` and `-decrypt` over fixed fixtures, and the operation refusals), `pkcs12` (the deterministic `-export -nomac -keypbe NONE -certpbe NONE`), and the option-parser refusals of `ca`, `s_client`, `s_server`, `s_time` and `cmp`. Each command's `-help` arm is not driven (`opt_help` is unlanded), and the many divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms, and the 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder, `ts` nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`, `fipsinstall -module` and `srp` action arms -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: 17.2a registers it over the probe courts/phase17/rt_tls13_interop_probe.c, which connects a client and a server over memory BIOs and drives the flight. 17.2a lands tls_construct_client_hello over a reduced plaintext record write; 17.2b lands the server's first flight -- tls_process_client_hello over a reduced plaintext record read and tls_construct_server_hello plus the extensions_srvr framework and the reduced group/key-share infrastructure -- and fixes the BIO_C_SET_FILENAME constant so the fixture loads. 17.2c lands the rest of the flight: the reduced TLS1.3 key schedule (src/ssl/tls13_enc.rs -- HKDF-Extract/Expand over SHA256/SHA384, the early/handshake/master secrets, the handshake and application traffic secrets, the Finished MAC and per-record AES-GCM/ChaCha20-Poly1305 protection), the client's read path (tls_process_server_hello and the EncryptedExtensions/Certificate/CertificateVerify/Finished handlers) and the server's encrypted flight (tls_construct_encrypted_extensions/certificate/cert_verify/finished). Both sides now reach TLS_ST_OK, report SSL_is_init_finished, and exchange a 15-byte application record in each direction, so the court compares the terminal states, the two carrying rounds and the application-data exchange as well as the first-flight structure. The reduced flight now also sends the three ClientHello extensions it was missing (`signature_algorithms`, `ec_point_formats`, `renegotiation_info`) and the outer `key_share` list length the authority's parser reads, carries record version 0x0303 on protected records, validates the peer's RSA-PSS CertificateVerify and signs its own with `rsa_pss_rsae_sha256`, and skips the middlebox-compatibility ChangeCipherSpec -- so the same-implementation flight and the cross-implementation matrix agree. `RT-TLS13-INTEROP-MATRIX` is 17.2's interoperability court: it compiles courts/phase17/rt_tls13_matrix_peer.c twice (authority and candidate) and runs courts/phase17/rt_tls13_matrix_driver.c, which forks one peer per side over a real AF_UNIX socketpair and drives the four cells `auth-auth`/`cand-auth`/`auth-cand`/`cand-cand`, exchanging a fixed 15-byte application record each way. The verdict is `pass` only when all four cells handshake and exchange application data; the two cross cells are the interoperability receipt. `RT-CROSS-DSO-STATE` is 17.3's: it registers the probe courts/phase17/rt_cross_dso_state_probe.c and measures the shared-state contract the candidate's whole-crate archives break, in both directions -- a libssl-raised error read through libcrypto's ERR queue, and a `CONF` command set `CONF_modules_load_file` stored through libcrypto read through libssl's `SSL_CTX_config` (over the fixed fixtures/cross_dso.cnf). It reports two verdicts: a *measurement verdict*, `pass` when the authority shares one `libcrypto.so.3` via `DT_NEEDED` and drove both reads (so the comparison cannot be vacuous), and a *compatibility verdict*, `PASS` iff the candidate's two DSOs reproduce the authority on every cross-DSO read and `KNOWN_DIVERGENCE` otherwise. 17.3 landed with the whole-crate duplication (`err.ssl.peek=0`, `conf.ctx_config.ret=0`), so the compatibility verdict began as `KNOWN_DIVERGENCE`; the runtime now resolves libcrypto's exported `ERR_get_state`/`conf_ssl_*` owners (`src/runtime/dso_shared.rs`), so one queue and one store serve both DSOs and the verdicts are `pass`/`PASS`. `RT-DOWNSTREAM-CONSUMER` is 17.4's: courts/phase17/rt_downstream_consumer_probe.c is a real downstream consumer linked only against the shipped install prefix (an EVP digest, an X.509 PEM parse, a libcrypto ERR round-trip and a TLS 1.3 handshake over memory BIOs exchanging a fixed 15-byte application record), and the court records the flight's on-the-wire byte counts the candidate's reduced engine moves rather than asserting wire parity (section 3.4). No court remains pending. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
+    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), `sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), `spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the `-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` (the private-key-required and unknown-option refusals). 17.1e adds ten more bodies over fixed fixtures: `gendsa` (the missing-argument refusal), `rand` (the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal), `storeutl` (the `-noout -keys`/`-noout -certs` type and `Total found` status), `dhparam` (the `-in` text/`-noout`/`-check` arms), `genpkey` (the no-algorithm refusal), `passwd` (the fixed-salt `-1`/`-5`/`-6` and `-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the candidate's engine init fails. 17.1f adds seven more bodies over fixed fixtures: `dgst` (the digest, `-hex`/`-binary`, `-c`/`-r`, `-hmac`, `-sign` and `-verify` arms), `pkcs7` (the re-encode and `-print_certs` arms), `ocsp` (the no-work refusal and the fixed-CA/leaf `-reqout`/`-req_text` request arms), `ts` (the mode refusals and the `-query -no_nonce -data` DER/text arms), `speed` (the `-bogus` refusal), `fipsinstall` (the `-verify`/no-module refusals) and `srp` (the action-count refusals). 17.1g, the final slice, lands the last ten bodies over fixed fixtures: `x509` (the text/subject/issuer/dates/fingerprint/serial/pubkey/hash and re-encode arms), `req` (the read-back `-text`/`-verify`/`-subject`/re-encode arms over a fixed CSR), `smime` and `cms` (the `-sign -nodetach -outform PEM|DER` over a fixed content/signer/key, the `-verify -noverify` and `-decrypt` over fixed fixtures, and the operation refusals), `pkcs12` (the deterministic `-export -nomac -keypbe NONE -certpbe NONE`), and the option-parser refusals of `ca`, `s_client`, `s_server`, `s_time` and `cmp`. Each command's `-help` arm is not driven (`opt_help` is unlanded), and the many divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms, and the 17.1f `dgst -bogus`/`-list`/`-mac`, `pkcs7 -print`, `ocsp -bogus`/responder, `ts` nonce/`-reply`/`-verify`, `speed` benchmark/`-evp`/`-hmac`, `fipsinstall -module` and `srp` action arms -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: 17.2a registers it over the probe courts/phase17/rt_tls13_interop_probe.c, which connects a client and a server over memory BIOs and drives the flight. 17.2a lands tls_construct_client_hello over a reduced plaintext record write; 17.2b lands the server's first flight -- tls_process_client_hello over a reduced plaintext record read and tls_construct_server_hello plus the extensions_srvr framework and the reduced group/key-share infrastructure -- and fixes the BIO_C_SET_FILENAME constant so the fixture loads. 17.2c lands the rest of the flight: the reduced TLS1.3 key schedule (src/ssl/tls13_enc.rs -- HKDF-Extract/Expand over SHA256/SHA384, the early/handshake/master secrets, the handshake and application traffic secrets, the Finished MAC and per-record AES-GCM/ChaCha20-Poly1305 protection), the client's read path (tls_process_server_hello and the EncryptedExtensions/Certificate/CertificateVerify/Finished handlers) and the server's encrypted flight (tls_construct_encrypted_extensions/certificate/cert_verify/finished). Both sides now reach TLS_ST_OK, report SSL_is_init_finished, and exchange a 15-byte application record in each direction, so the court compares the terminal states, the two carrying rounds and the application-data exchange as well as the first-flight structure. The reduced flight now also sends the three ClientHello extensions it was missing (`signature_algorithms`, `ec_point_formats`, `renegotiation_info`) and the outer `key_share` list length the authority's parser reads, carries record version 0x0303 on protected records, validates the peer's RSA-PSS CertificateVerify and signs its own with `rsa_pss_rsae_sha256`, and skips the middlebox-compatibility ChangeCipherSpec -- so the same-implementation flight and the cross-implementation matrix agree. `RT-TLS13-INTEROP-MATRIX` is 17.2's interoperability court: it compiles courts/phase17/rt_tls13_matrix_peer.c twice (authority and candidate) and runs courts/phase17/rt_tls13_matrix_driver.c, which forks one peer per side over a real AF_UNIX socketpair and drives the four cells `auth-auth`/`cand-auth`/`auth-cand`/`cand-cand`, exchanging a fixed 15-byte application record each way. The verdict is `pass` only when all four cells handshake and exchange application data; the two cross cells are the interoperability receipt. `RT-CROSS-DSO-STATE` is 17.3's: it registers the probe courts/phase17/rt_cross_dso_state_probe.c and measures the shared-state contract the candidate's whole-crate archives break, in both directions -- a libssl-raised error read through libcrypto's ERR queue, and a `CONF` command set `CONF_modules_load_file` stored through libcrypto read through libssl's `SSL_CTX_config` (over the fixed fixtures/cross_dso.cnf). It reports two verdicts: a *measurement verdict*, `pass` when the authority shares one `libcrypto.so.3` via `DT_NEEDED` and drove both reads (so the comparison cannot be vacuous), and a *compatibility verdict*, `PASS` iff the candidate's two DSOs reproduce the authority on every cross-DSO read and `KNOWN_DIVERGENCE` otherwise. 17.3 landed with the whole-crate duplication (`err.ssl.peek=0`, `conf.ctx_config.ret=0`), so the compatibility verdict began as `KNOWN_DIVERGENCE`; the runtime now resolves libcrypto's exported `ERR_get_state`/`conf_ssl_*` owners (`src/runtime/dso_shared.rs`), so one queue and one store serve both DSOs and the verdicts are `pass`/`PASS`. counts. `RT-DOWNSTREAM-CONSUMER` is 17.4's: courts/phase17/rt_downstream_consumer_probe.c is a real downstream consumer linked only against the shipped install prefix (an EVP digest, an X.509 PEM parse, a libcrypto ERR round-trip and a TLS 1.3 handshake over memory BIOs exchanging a fixed 15-byte application record), and the court records the flight's on-the-wire byte counts the candidate's reduced engine moves rather than asserting wire parity (section 3.4). `RT-DOWNSTREAM-CORPUS` is 17.4a's: it consumes the machine-owned downstream corpus (forensics/atlas/downstream-corpus.json, aggregated from the six courts/phase17/downstream/<program>/result.json records the driver run_all.sh writes) and fails Phase 17 unless every program is present, every required field is present, functional is true, candidate equals the current Cargo.toml version, and each corpus record still equals its per-program result.json. No court remains pending. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
     "courts": [
       {
         "argv_cases": 198,
@@ -716,14 +716,74 @@
           "candidate": "artifacts/phase17/probes/rt_downstream_consumer_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_observations": 6,
+        "candidate": "0.0.21",
+        "candidate_observations": 6,
+        "concurrency": {
+          "curl": {
+            "ok": 16,
+            "total": 16
+          },
+          "git": {
+            "ok": 16,
+            "total": 16
+          },
+          "haproxy": {
+            "ok": 16,
+            "total": 16
+          },
+          "nginx": {
+            "ok": 16,
+            "total": 16
+          },
+          "openssh": {
+            "ok": 16,
+            "total": 16
+          },
+          "python": {
+            "ok": 16,
+            "total": 16
+          }
+        },
+        "court": "RT-DOWNSTREAM-CORPUS",
+        "frf_declarable": false,
+        "frf_exclusion": "corpus court: consumes the recorded downstream records, stages no probe pair and diffs no authority transcript (D13)",
+        "functional": {
+          "curl": true,
+          "git": true,
+          "haproxy": true,
+          "nginx": true,
+          "openssh": true,
+          "python": true
+        },
+        "probe": "forensics/atlas/downstream-corpus.json",
+        "problems": [],
+        "programs": [
+          "curl",
+          "git",
+          "haproxy",
+          "nginx",
+          "openssh",
+          "python"
+        ],
+        "recorded_divergences": [
+          "TLS 1.3 session resumption is unavailable: the candidate does not emit the post-handshake NewSessionTicket flight, so `s_client -sess_out` saves nothing; TLS 1.2 resumption and tickets work (see the CPython test_ssl record)",
+          "`regress/unittests/utf8` aborts on both the candidate and the authority: the court image ships only C/C.utf8/POSIX locales and the test setlocale()s en_US.UTF-8",
+          "t5540-http-push-webdav is skipped: Git is built without expat (the court image ships no libexpat headers); it is a plain-HTTP path with no OpenSSL use"
+        ],
+        "residuals": [],
+        "stage": "corpus",
+        "verdict": "pass"
       }
     ],
     "pending_courts": {},
     "summary": {
       "fail": 0,
-      "pass": 5,
+      "pass": 6,
       "pending": 0,
-      "total": 5
+      "total": 6
     }
   },
   "generator": "forensics/tools/phase17_courts.py",
@@ -731,7 +791,7 @@
     {
       "name": "phase-17-plan",
       "path": "docs/PHASE-17-SUBPHASES.md",
-      "sha256": "9830ed614d0536065d1a6a6ba2b880d094d5deca0162f5b0fae9e70e6409dbe6"
+      "sha256": "b4016f838f5316104588e0ea19c132114bfc21b7900177d636c57d00f1c694c4"
     },
     {
       "name": "prerequisites",
@@ -787,6 +847,46 @@
       "name": "downstream-leaf",
       "path": "courts/phase17/fixtures/leaf.pem",
       "sha256": "919c5179d7ae2465263904600082681099076f2f59eafecdb5445b9ed50431d1"
+    },
+    {
+      "name": "downstream-corpus",
+      "path": "forensics/atlas/downstream-corpus.json",
+      "sha256": "5f168f0be8b56187487bca114ebfdaee3558f80f9eba83a6597570ac4c4dabfa"
+    },
+    {
+      "name": "downstream-readme",
+      "path": "courts/phase17/downstream/README.md",
+      "sha256": "bde06d47fb89a5b0e6850501f3f9e18da1cfc68ee04311fadb7ccd2bc2b5fded"
+    },
+    {
+      "name": "downstream-curl-record",
+      "path": "courts/phase17/downstream/curl/result.json",
+      "sha256": "c4860b2f47bd8bcea7c43809a30aa92b0cededeeefc2399377236b34a20e993e"
+    },
+    {
+      "name": "downstream-git-record",
+      "path": "courts/phase17/downstream/git/result.json",
+      "sha256": "9b75e54a43e3d4fb8c8bc8975e0419356355bb9e0e2fa0f0e82e730974c2a37f"
+    },
+    {
+      "name": "downstream-haproxy-record",
+      "path": "courts/phase17/downstream/haproxy/result.json",
+      "sha256": "ac3834e22021b733918c29e37ea7f48dceec1cd8d75c5135ddd7c3a6a460ce0f"
+    },
+    {
+      "name": "downstream-nginx-record",
+      "path": "courts/phase17/downstream/nginx/result.json",
+      "sha256": "d3f69698e1365f0ad321ac7f3235bd941b7aff9dd987e9698109b03bf4fef8aa"
+    },
+    {
+      "name": "downstream-openssh-record",
+      "path": "courts/phase17/downstream/openssh/result.json",
+      "sha256": "a30179c6b645a90d8ea6b0f88540a4a330fc720f799f0003c7b9b16dcc97d848"
+    },
+    {
+      "name": "downstream-python-record",
+      "path": "courts/phase17/downstream/python/result.json",
+      "sha256": "b0e056e360f07a0627f8040ca7401696c9c0c29ac12c365c01824f78a488a20d"
     }
   ],
   "kind": "phase17-courts",

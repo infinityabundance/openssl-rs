@@ -267,6 +267,10 @@
       "observations": 59,
       "verdict": "pass"
     },
+    "RT-DOWNSTREAM-CORPUS": {
+      "observations": 6,
+      "verdict": "pass"
+    },
     "RT-DRBG": {
       "observations": 361,
       "verdict": "pass"
@@ -780,7 +784,7 @@
     "phase14": 600,
     "phase15": 3,
     "phase16": 42,
-    "phase17": 4,
+    "phase17": 5,
     "phase22": 18,
     "phase3": 294,
     "phase4": 272,
