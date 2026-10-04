@@ -74,6 +74,28 @@ pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, le
         )
     };
 
+    // Phase 17.2c: once the TLS 1.3 write key is installed every record is AEAD-protected
+    // (`tls13_enc`, `ssl/record/methods/tls13_meth.c`).
+    // SAFETY: `s` is live per the caller's contract.
+    if version == TLS1_3_VERSION && unsafe { (*s).enc_active } != 0 {
+        let mut rec = [0u8; 17000];
+        // SAFETY: `s` is live; `rec` is the record buffer; `buf` is `len` readable.
+        let n = unsafe {
+            crate::ssl::tls13_enc::tls13_encrypt_record(s, type_, buf, len, rec.as_mut_ptr())
+        };
+        if n < 0 {
+            return -1;
+        }
+        // SAFETY: `s` is live; `wbio` is the caller's BIO.
+        unsafe {
+            if BIO_write((*s).wbio, rec.as_ptr().cast(), n as c_int) <= 0 {
+                return -1;
+            }
+            BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());
+        }
+        return 1;
+    }
+
     let mut recversion: c_int = if version == TLS1_3_VERSION {
         TLS1_2_VERSION
     } else {
@@ -133,6 +155,48 @@ pub(crate) unsafe fn ssl3_read_bytes(
     buf: *mut u8,
     cap: usize,
 ) -> c_int {
+    // Phase 17.2c: once the TLS 1.3 read key is installed the record is AEAD-protected
+    // (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
+    // SAFETY: `s` is live per the caller's contract.
+    if unsafe { (*s).dec_active } != 0 {
+        let mut hdr = [0u8; SSL3_RT_HEADER_LENGTH];
+        // SAFETY: `s` is live; `hdr` is 5 writable bytes and `rbio` is the caller's.
+        let got = unsafe {
+            BIO_read(
+                (*s).rbio,
+                hdr.as_mut_ptr().cast(),
+                SSL3_RT_HEADER_LENGTH as c_int,
+            )
+        };
+        if got != SSL3_RT_HEADER_LENGTH as c_int {
+            return -1;
+        }
+        let len = ((hdr[3] as usize) << 8) | hdr[4] as usize;
+        let mut ct = [0u8; 17000];
+        if len > ct.len() {
+            return -1;
+        }
+        if len != 0 {
+            // SAFETY: `ct` is `len` writable bytes and `rbio` is the caller's.
+            let n = unsafe { BIO_read((*s).rbio, ct.as_mut_ptr().cast(), len as c_int) };
+            if n != len as c_int {
+                return -1;
+            }
+        }
+        // SAFETY: `s` is live; the buffers are this frame's; `rectype` is writable.
+        return unsafe {
+            crate::ssl::tls13_enc::tls13_decrypt_record(
+                s,
+                &hdr,
+                ct.as_ptr(),
+                len,
+                buf,
+                cap,
+                rectype,
+            ) as c_int
+        };
+    }
+
     let mut hdr = [0u8; SSL3_RT_HEADER_LENGTH];
     // SAFETY: `s` is live; `hdr` is 5 writable bytes and `rbio` is the caller's.
     let got = unsafe {

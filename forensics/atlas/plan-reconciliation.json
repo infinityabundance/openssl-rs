@@ -6,10 +6,10 @@
     ],
     "census": {
       "names_a_file_the_authority_does_not_have": 1,
-      "units_not_reached": 2
+      "units_not_reached": 1
     },
     "census_by_stratum": {
-      "17": 3
+      "17": 2
     },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
     "census_samples": {
@@ -17,8 +17,7 @@
         "docs/PHASE-17-SUBPHASES.md:17:17.2:ssl/extensions_clnt.c"
       ],
       "units_not_reached": [
-        "ssl/t1_enc.c",
-        "ssl/tls13_enc.c"
+        "ssl/t1_enc.c"
       ]
     },
     "checked": {
@@ -44,7 +43,7 @@
       "unit_records": 151,
       "units_named_by_a_record": 160,
       "units_named_by_a_row": 548,
-      "units_reached": 546
+      "units_reached": 547
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -8081,7 +8080,7 @@
       "transcribed_units": 596
     }
   },
-  "body_hash": "f406b068428a4946495f6cb0f44a45b2c243f5003c09e627634349d05bfb1ddb",
+  "body_hash": "cb9832481ac4d2b889c793e829c0bcdff6bbc7a8d511742fc2d40b0a6d69c0c0",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -8097,17 +8096,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3afc1cc2badcea3efe1f1a9e7a4517b7b85be63e31740f0062d053c0adef2181"
+      "sha256": "d8c88b010a8bd5f1e6ccddaee7e52ce9cb29cbe16038e64dfa08a59b753ed33c"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "027c5e7b171f55db63397e8696a57c78b6d1ddf38bb242f3849d3c2a31579e41"
+      "sha256": "7d5d8882125f4e650184c8244d87fdd495a5ac027437e2c353c07d0f73a147f9"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "63156f7c12f9b13d6e68bbb28befef6aebd7859a6f2ad56bfb085946e02fbde4"
+      "sha256": "a5aa63006086b7ff60e2478cd410cf2c08b3abea4ab170d4e5bffac0d390f93a"
     },
     {
       "name": "source-manifest",

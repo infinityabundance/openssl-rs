@@ -12,8 +12,8 @@
       },
       {
         "closure": "the `RT-TLS13-INTEROP` court passes",
-        "observation": "RT-TLS13-INTEROP is pending",
-        "state": "open",
+        "observation": "RT-TLS13-INTEROP is pass",
+        "state": "implemented",
         "surface": "artifacts/phase17/COURTS.json",
         "unit": "tls13-interop",
         "what": "a real TLS 1.3 client/server flight, ClientHello through Finished plus application data"
@@ -40,8 +40,8 @@
       "contract_units": 4,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 0,
-      "open_in_this_stratum": 56,
+      "implemented": 1,
+      "open_in_this_stratum": 55,
       "owned": 56,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -489,7 +489,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "63156f7c12f9b13d6e68bbb28befef6aebd7859a6f2ad56bfb085946e02fbde4"
+      "sha256": "a5aa63006086b7ff60e2478cd410cf2c08b3abea4ab170d4e5bffac0d390f93a"
     },
     {
       "name": "phase-17-plan",
@@ -499,7 +499,7 @@
     {
       "name": "phase-17-courts",
       "path": "artifacts/phase17/COURTS.json",
-      "sha256": "a4b03edacbb0933e2a0c66348bfcf69604887ed48537a75594ea6ba8ba862271"
+      "sha256": "ee1820ff10329708bcd9816e3385afa05bafb535b215cc3993a7808d37cad4a0"
     }
   ],
   "kind": "phase17-obligations",

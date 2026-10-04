@@ -789,6 +789,7 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
 
     // Choose the server version and the key-exchange group from the extensions.
     let mut saw_keyshare_group: u16 = 0;
+    let mut client_share: &[u8] = &[];
     let mut off = 0usize;
     while off + 4 <= exts.len() {
         let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
@@ -812,8 +813,14 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             }
         }
         if etype == TLSEXT_TYPE_KEY_SHARE && eb.len() >= 4 {
-            // The first ClientHello key share's group.
+            // The first ClientHello key share's group. The reduced client writes
+            // `group || key_exchange_len || key` (17.2b's `tls_construct_ctos_key_share`), so the
+            // key bytes follow the 4-byte prefix.
             saw_keyshare_group = ((eb[0] as u16) << 8) | eb[1] as u16;
+            let klen = ((eb[2] as usize) << 8) | eb[3] as usize;
+            if 4 + klen <= eb.len() {
+                client_share = &eb[4..4 + klen];
+            }
         }
         off += elen;
     }
@@ -863,6 +870,35 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     unsafe {
         (*s).pending_cipher = chosen;
         (*s).group_id = saw_keyshare_group;
+    }
+
+    // Phase 17.2c: buffer the ClientHello for the transcript, choose the AEAD/hash from the
+    // negotiated suite (`ssl_cipher_get_evp`), and wrap the client's key share as an `EVP_PKEY`
+    // (`tls_parse_ctos_key_share`) so `ssl_derive` can run once the server share is built.
+    // SAFETY: `s` is live; `hs` is the full ClientHello message.
+    if unsafe { crate::ssl::tls13_enc::transcript_update(s, hs.as_ptr(), hs.len()) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live; `chosen` is the table row selected above.
+    if unsafe { crate::ssl::tls13_enc::tls13_setup_cipher(s, (*chosen).id as u16) } == 0 {
+        return 0;
+    }
+    if saw_keyshare_group == crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519
+        && client_share.len() == 32
+    {
+        // SAFETY: `s` is live; `client_share` is 32 readable bytes.
+        let peer = unsafe {
+            crate::ssl::tls13_enc::tls13_pkey_from_share(
+                s,
+                client_share.as_ptr(),
+                client_share.len(),
+            )
+        };
+        if peer.is_null() {
+            return 0;
+        }
+        // SAFETY: `s` is live.
+        unsafe { (*s).peer_tmp = peer };
     }
 
     // `ssl_fill_hello_random` (`statem_lib.c`): the fresh-connection arm is RAND.
@@ -936,11 +972,375 @@ pub(crate) unsafe fn write_server_hello(s: *mut Ssl) -> c_int {
             crate::packet::WPACKET_cleanup(&mut pkt);
             return 0;
         }
-        crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
+        let r = crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
             s,
             SSL3_RT_HANDSHAKE,
             buf.as_ptr(),
             msglen,
+        );
+        // The transcript's second message (`tls_construct_server_hello`); the transcript was
+        // initialised with the ClientHello by `tls_process_client_hello`.
+        if r > 0 {
+            crate::ssl::tls13_enc::transcript_update(s, buf.as_ptr(), msglen);
+        }
+        r
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Phase 17.2c — the server's encrypted flight: `tls_construct_encrypted_extensions`,
+// `tls_construct_server_certificate`, `tls_construct_cert_verify`, `tls_construct_finished`
+// (`statem_srvr.c:4591/4019`/`statem_lib.c:313/618`), and the flight driver.
+// ---------------------------------------------------------------------------------------------
+
+/// `SSL3_MT_ENCRYPTED_EXTENSIONS` — `ssl3.h` (8).
+const SSL3_MT_EE: u8 = 8;
+/// `SSL3_MT_CERTIFICATE` — `ssl3.h` (11).
+const SSL3_MT_CERT: u8 = 11;
+/// `SSL3_MT_CERTIFICATE_VERIFY` — `ssl3.h` (15).
+const SSL3_MT_CERT_VRFY: u8 = 15;
+/// `SSL3_MT_FINISHED` — `ssl3.h` (20).
+const SSL3_MT_FIN: u8 = 20;
+/// `MSG_FLOW_READING` — `ssl/statem/statem.h`.
+const MSG_FLOW_READING_13: c_int = 2;
+
+/// `CON_FUNC_RETURN tls_construct_encrypted_extensions(...)` — `statem_srvr.c:4591-4601`, reduced to
+/// an empty extension block (no ALPN/SNI/supported_groups is negotiated in the reduced flight).
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls13_construct_encrypted_extensions(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live; a zero-length body.
+    unsafe { crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_EE, core::ptr::null(), 0) }
+}
+
+/// `CON_FUNC_RETURN tls_construct_server_certificate(...)` — `statem_srvr.c:4019-4055` over
+/// `ssl3_output_cert_chain`: the TLS1.3 `context<0> || certificate_list<3>`, with the loaded leaf's
+/// DER (`i2d_X509`). The extra chain is empty in the fixture.
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls13_construct_certificate(s: *mut Ssl) -> c_int {
+    use crate::x509::x_x509::i2d_X509;
+    // SAFETY: `s` is live; `cert` is the connection's active certificate container.
+    let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
+    if cpk.is_null() {
+        return 0;
+    }
+    // SAFETY: `cpk` is a live slot; `x509` is the loaded leaf.
+    if unsafe { (*cpk).x509 }.is_null() {
+        return 0;
+    }
+    let mut der = [0u8; 8192];
+    let mut p = der.as_mut_ptr();
+    // SAFETY: `cpk.x509` is live; `p` points at `der`'s storage.
+    let derlen = unsafe { i2d_X509((*cpk).x509, &mut p) };
+    if derlen <= 0 {
+        return 0;
+    }
+    let derlen = derlen as usize;
+    if derlen > der.len() {
+        return 0;
+    }
+    let clen = 3 + derlen;
+    let body_len = 4 + clen;
+    let mut body = [0u8; 8200];
+    if body_len > body.len() {
+        return 0;
+    }
+    body[0] = 0; // opaque certificate_request_context<0..2^8-1>
+    body[1] = (clen >> 16) as u8;
+    body[2] = (clen >> 8) as u8;
+    body[3] = clen as u8;
+    body[4] = (derlen >> 16) as u8;
+    body[5] = (derlen >> 8) as u8;
+    body[6] = derlen as u8;
+    // SAFETY: `body[7..]` has room for `derlen` bytes.
+    unsafe { core::ptr::copy_nonoverlapping(der.as_ptr(), body.as_mut_ptr().add(7), derlen) };
+    // SAFETY: `s` is live; `body` is `body_len` initialised bytes.
+    unsafe {
+        crate::ssl::tls13_enc::write_handshake_message(s, SSL3_MT_CERT, body.as_ptr(), body_len)
+    }
+}
+
+/// `CON_FUNC_RETURN tls_construct_cert_verify(...)` — `statem_lib.c:313-439`, reduced to a real RSA
+/// signature produced with the crate's `EVP_DigestSign` over the TLS1.3 TBS preamble
+/// (`get_cert_verify_tbs_data`) and the `rsa_pss_rsae_sha256` algorithm id. The reduced client does
+/// not verify it (recorded in `statem_clnt.rs`).
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls13_construct_cert_verify(s: *mut Ssl) -> c_int {
+    use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_free, EVP_MD_CTX_new};
+    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::pkey::EvpPkey;
+    // SAFETY: `s` is live.
+    let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
+    if cpk.is_null() {
+        return 0;
+    }
+    // SAFETY: `cpk` is a live slot; `privatekey` is the loaded key.
+    if unsafe { (*cpk).privatekey }.is_null() {
+        return 0;
+    }
+    let ctx_str = b"TLS 1.3, server CertificateVerify";
+    // SAFETY: `s` is live; `hs_md_len` is the negotiated hash length.
+    let hl = unsafe { (*s).hs_md_len };
+    let mut tbs = [0u8; 64 + 33 + 1 + 64];
+    for b in tbs[..64].iter_mut() {
+        *b = 0x20;
+    }
+    let mut pos = 64;
+    tbs[pos..pos + ctx_str.len()].copy_from_slice(ctx_str);
+    pos += ctx_str.len();
+    tbs[pos] = 0;
+    pos += 1;
+    // SAFETY: `s` is live; `tbs[pos..]` has room for the hash.
+    if unsafe {
+        crate::ssl::tls13_enc::transcript_hash(s, tbs.as_mut_ptr().add(pos), core::ptr::null_mut())
+    } == 0
+    {
+        return 0;
+    }
+    pos += hl;
+    // SAFETY: no preconditions.
+    let mctx = EVP_MD_CTX_new();
+    if mctx.is_null() {
+        return 0;
+    }
+    // SAFETY: `cpk` is a live slot; `privatekey` is the loaded signing key.
+    let pkey = unsafe { (*cpk).privatekey }.cast::<EvpPkey>();
+    let mut ok = false;
+    // SAFETY: `mctx`/`pkey` are live; `tbs` is `pos` initialised bytes.
+    unsafe {
+        let mut siglen = 0usize;
+        if EVP_DigestSignInit(
+            mctx,
+            core::ptr::null_mut(),
+            EVP_sha256(),
+            core::ptr::null_mut(),
+            pkey,
+        ) > 0
+            && EVP_DigestSign(mctx, core::ptr::null_mut(), &mut siglen, tbs.as_ptr(), pos) > 0
+            && siglen <= 1024
+        {
+            let mut sig = [0u8; 1024];
+            if EVP_DigestSign(mctx, sig.as_mut_ptr(), &mut siglen, tbs.as_ptr(), pos) > 0 {
+                let mut body = [0u8; 1030];
+                // rsa_pss_rsae_sha256 — `tls13.h`/`t1_lib.c` sigalg table (0x0804).
+                body[0] = 0x08;
+                body[1] = 0x04;
+                body[2] = (siglen >> 8) as u8;
+                body[3] = siglen as u8;
+                core::ptr::copy_nonoverlapping(sig.as_ptr(), body.as_mut_ptr().add(4), siglen);
+                ok = crate::ssl::tls13_enc::write_handshake_message(
+                    s,
+                    SSL3_MT_CERT_VRFY,
+                    body.as_ptr(),
+                    4 + siglen,
+                ) > 0;
+            }
+        }
+        EVP_MD_CTX_free(mctx);
+    }
+    c_int::from(ok)
+}
+
+/// `tls_construct_finished` (`statem_lib.c:618`) for the server, then the application-secret
+/// derivation and the write-key switch (`statem_srvr.c:1188`).
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls13_server_finish_flight(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc as k;
+    // SAFETY: `s` is live; the server handshake traffic secret is the connection's.
+    if unsafe { k::tls13_construct_finished(s, (*s).server_hs_traffic.as_ptr()) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live; the transcript now includes the server Finished.
+    if unsafe { k::tls13_derive_application_traffic(s) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live; `pending_cipher` was set by `tls_process_client_hello`.
+    let cid = unsafe { (*(*s).pending_cipher).id as u16 };
+    // SAFETY: `s` is live.
+    unsafe {
+        k::tls13_change_cipher_state(
+            s,
+            k::SSL3_CC_APPLICATION | k::SSL3_CHANGE_CIPHER_SERVER_WRITE,
+            cid,
         )
     }
+}
+
+/// The `ssl_derive` + `tls13_change_cipher_state` + server-flight block of the server's
+/// `SW_SRVR_HELLO` post-work (`statem_srvr.c:1120-1134`).
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc as k;
+    let mut pms = [0u8; 64];
+    let mut pmslen = 0usize;
+    // SAFETY: `s` is live; the server ephemeral (`pkey`) and client share (`peer_tmp`) are set.
+    if unsafe {
+        k::tls13_derive_shared(
+            s,
+            (*s).pkey,
+            (*s).peer_tmp,
+            pms.as_mut_ptr(),
+            pms.len(),
+            &mut pmslen,
+        )
+    } == 0
+    {
+        return 0;
+    }
+    // SAFETY: `s` is live; `pms` is `pmslen` initialised bytes.
+    if unsafe { k::tls13_generate_handshake_secret(s, &pms[..pmslen]) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live; the transcript is `ClientHello || ServerHello`.
+    if unsafe { k::tls13_derive_handshake_traffic(s) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live; `pending_cipher` was set by `tls_process_client_hello`.
+    let cid = unsafe { (*(*s).pending_cipher).id as u16 };
+    // SAFETY: `s` is live; the server-write handshake key is installed (`statem_srvr.c:1123`).
+    if unsafe {
+        k::tls13_change_cipher_state(
+            s,
+            k::SSL3_CC_HANDSHAKE | k::SSL3_CHANGE_CIPHER_SERVER_WRITE,
+            cid,
+        )
+    } == 0
+    {
+        return 0;
+    }
+    // SAFETY: `s` is live; the server-read handshake key is installed (`statem_srvr.c:1131`).
+    if unsafe {
+        k::tls13_change_cipher_state(
+            s,
+            k::SSL3_CC_HANDSHAKE | k::SSL3_CHANGE_CIPHER_SERVER_READ,
+            cid,
+        )
+    } == 0
+    {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    if unsafe { tls13_construct_encrypted_extensions(s) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    if unsafe { tls13_construct_certificate(s) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    if unsafe { tls13_construct_cert_verify(s) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    if unsafe { tls13_server_finish_flight(s) } == 0 {
+        return 0;
+    }
+    1
+}
+
+/// The server read/write driver: reads the ClientHello, writes the whole server flight, then reads
+/// the client Finished (`statem.c`'s read/write sub-state machines, reduced). Returns `1` when the
+/// handshake finishes and `-1` while waiting for the peer.
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc as k;
+    // SAFETY: `s` is live.
+    unsafe {
+        loop {
+            match (*s).hand_state {
+                TLS_ST_BEFORE => {
+                    let mut buf = [0u8; 16384];
+                    let mut rt = 0u8;
+                    let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
+                        s,
+                        &mut rt,
+                        buf.as_mut_ptr(),
+                        buf.len(),
+                    );
+                    if n <= 0 || rt != SSL3_RT_HANDSHAKE || buf[0] != SSL3_MT_CLIENT_HELLO_BODY {
+                        return server_wait(s);
+                    }
+                    if tls_process_client_hello(s, &buf[..n as usize]) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_SW_SRVR_HELLO;
+                }
+                TLS_ST_SW_SRVR_HELLO => {
+                    if write_server_hello(s) <= 0 || tls13_server_post_server_hello(s) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_SR_FINISHED;
+                }
+                TLS_ST_SR_FINISHED => {
+                    let mut buf = [0u8; 16384];
+                    let mut rt = 0u8;
+                    let n = crate::ssl::record::rec_layer_s3::ssl3_read_bytes(
+                        s,
+                        &mut rt,
+                        buf.as_mut_ptr(),
+                        buf.len(),
+                    );
+                    if n <= 0 || rt != SSL3_RT_HANDSHAKE || buf[0] != SSL3_MT_FIN {
+                        return server_wait(s);
+                    }
+                    let secret = (*s).client_hs_traffic.as_ptr();
+                    if k::tls13_process_finished(s, &buf[..n as usize], secret) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    let cid = (*(*s).pending_cipher).id as u16;
+                    if k::tls13_change_cipher_state(
+                        s,
+                        k::SSL3_CC_APPLICATION | k::SSL3_CHANGE_CIPHER_SERVER_READ,
+                        cid,
+                    ) == 0
+                    {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_OK;
+                    (*s).in_init = 0;
+                    (*s).rwstate = 1; // SSL_NOTHING
+                    (*s).statem_state = MSG_FLOW_READING_13;
+                    return 1;
+                }
+                TLS_ST_OK => {
+                    (*s).in_init = 0;
+                    (*s).rwstate = 1; // SSL_NOTHING
+                    (*s).statem_state = MSG_FLOW_READING_13;
+                    return 1;
+                }
+                _ => {
+                    ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                    return -1;
+                }
+            }
+        }
+    }
+}
+
+/// Mark the server as waiting for the peer's next record.
+///
+/// # Safety
+/// `s` is live.
+unsafe fn server_wait(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live.
+    unsafe {
+        (*s).statem_state = MSG_FLOW_READING_13;
+        (*s).rwstate = 3; // SSL_READING
+    }
+    -1
 }

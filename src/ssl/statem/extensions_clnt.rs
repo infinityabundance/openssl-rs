@@ -243,10 +243,16 @@ unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
             EXT_RETURN_SENT
         }
     };
-    // SAFETY: `pub_` is the block `get1` allocated; `pkey` is this frame's.
+    // SAFETY: `pub_` is the block `get1` allocated; the reduced client keeps `pkey` as its
+    // ephemeral key share (`s3.tmp.pkey`) so `tls_process_server_hello` can derive the shared
+    // secret from it (`ssl_derive`, `s3_lib.c:5474`).
     unsafe {
         CRYPTO_free(pub_.cast(), core::ptr::null(), 0);
-        EVP_PKEY_free(pkey);
+        if ret == EXT_RETURN_SENT {
+            (*s).pkey = pkey.cast();
+        } else {
+            EVP_PKEY_free(pkey);
+        }
     }
     ret
 }

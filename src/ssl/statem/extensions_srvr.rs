@@ -122,10 +122,16 @@ unsafe fn tls_construct_stoc_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int 
             EXT_RETURN_SENT
         }
     };
-    // SAFETY: `pub_` is the block `get1` allocated; `skey` is this frame's.
+    // SAFETY: `pub_` is the block `get1` allocated; `skey` is the server's ephemeral key share,
+    // kept as `s3.tmp.pkey` so the caller's `ssl_derive` can compute the shared secret
+    // (`ssl_derive`, `s3_lib.c:5474`; `extensions_srvr.c:2031`).
     unsafe {
         CRYPTO_free(pub_.cast(), core::ptr::null(), 0);
-        EVP_PKEY_free(skey);
+        if ret == EXT_RETURN_SENT {
+            (*s).pkey = skey.cast();
+        } else {
+            EVP_PKEY_free(skey);
+        }
     }
     ret
 }

@@ -3,8 +3,8 @@
   "body": {
     "blocking_dependencies": [],
     "census": {
-      "covered_by_a_divergence": 157,
-      "language_surface_not_modelled_by_name": 11762
+      "covered_by_a_divergence": 154,
+      "language_surface_not_modelled_by_name": 11747
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -81,7 +81,6 @@
         "tls_construct_end_of_early_data": 1,
         "tls_construct_new_session_ticket": 1,
         "tls_construct_next_proto": 1,
-        "tls_construct_server_certificate": 1,
         "tls_construct_server_done": 1,
         "tls_construct_server_key_exchange": 1,
         "tls_handle_alpn": 1,
@@ -101,9 +100,7 @@
         "tls_process_key_exchange": 1,
         "tls_process_new_session_ticket": 1,
         "tls_process_next_proto": 1,
-        "tls_process_server_certificate": 1,
         "tls_process_server_done": 1,
-        "tls_process_server_hello": 1,
         "tls_process_server_rpk": 1,
         "type": 1,
         "u16": 1,
@@ -680,7 +677,7 @@
         "ssl/quic/quic_impl.c": 162,
         "ssl/quic/quic_method.c": 1,
         "ssl/quic/quic_tls_api.c": 9,
-        "ssl/record/rec_layer_s3.c": 91,
+        "ssl/record/rec_layer_s3.c": 89,
         "ssl/rio/poll_immediate.c": 11,
         "ssl/s3_lib.c": 723,
         "ssl/ssl_asn1.c": 16,
@@ -699,9 +696,9 @@
         "ssl/ssl_txt.c": 6,
         "ssl/statem/extensions_cust.c": 32,
         "ssl/statem/statem.c": 58,
-        "ssl/statem/statem_clnt.c": 137,
-        "ssl/statem/statem_lib.c": 125,
-        "ssl/statem/statem_srvr.c": 168,
+        "ssl/statem/statem_clnt.c": 133,
+        "ssl/statem/statem_lib.c": 120,
+        "ssl/statem/statem_srvr.c": 164,
         "ssl/t1_lib.c": 223,
         "ssl/t1_trce.c": 101,
         "ssl/tls_depr.c": 17,
@@ -797,10 +794,10 @@
     },
     "checked": {
       "authority_units": 596,
-      "crate_modules": 851,
+      "crate_modules": 852,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
-      "divergence_names_covered": 103,
+      "divergence_names_covered": 100,
       "divergence_rows": 14,
       "names_referenced_and_not_built": 21
     },
@@ -1189,12 +1186,14 @@
           "tls_get_message_header",
           "tls_get_peer_pkey",
           "tls_output_rpk",
-          "tls_process_cert_verify",
           "tls_process_change_cipher_spec",
           "tls_process_finished",
           "tls_process_key_update",
           "tls_process_rpk",
           "tls_setup_handshake"
+        ],
+        "ssl/statem/statem_srvr.c": [
+          "tls_construct_server_certificate"
         ],
         "ssl/t1_lib.c": [
           "TLSv1_1_enc_data",
@@ -1287,7 +1286,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "8d36ad3625b4eedf6664e874efb613855446e792bd1b6d04fae08289fc885118",
+  "body_hash": "72b335d4ff05c798939556bbf71fbe43fdff594a2f903746e8dcbb95410c7578",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1323,17 +1322,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "3afc1cc2badcea3efe1f1a9e7a4517b7b85be63e31740f0062d053c0adef2181"
+      "sha256": "d8c88b010a8bd5f1e6ccddaee7e52ce9cb29cbe16038e64dfa08a59b753ed33c"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "027c5e7b171f55db63397e8696a57c78b6d1ddf38bb242f3849d3c2a31579e41"
+      "sha256": "7d5d8882125f4e650184c8244d87fdd495a5ac027437e2c353c07d0f73a147f9"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "63156f7c12f9b13d6e68bbb28befef6aebd7859a6f2ad56bfb085946e02fbde4"
+      "sha256": "a5aa63006086b7ff60e2478cd410cf2c08b3abea4ab170d4e5bffac0d390f93a"
     },
     {
       "name": "crate-source-tree",
