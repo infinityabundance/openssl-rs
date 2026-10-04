@@ -11,17 +11,15 @@
 //! `main`'s global `-help`/`-version` arm, `prog_init`'s table sort, `do_cmd`'s
 //! table lookup, its `no-` "is this feature unsupported" arm, its
 //! `Invalid command` arm and its deprecated-command warning are transcribed
-//! whole. Four command bodies are landed: `help` (this module), `list`
+//! whole. The command bodies land slice by slice: `help` (this module), `list`
 //! ([`crate::apps::list`]) and `version` ([`crate::apps::version`]) from Phase
-//! 16.4, whose output is build-independent, and `errstr` ([`crate::apps::errstr`])
-//! from Phase 17.1, the first of the 52 command bodies that stratum lands. Phase
-//! 17.1b adds the next six: `info`, `prime`, `skeyutl`, `configutl`, `pkeyparam`
-//! and `nseq` ([`crate::apps::info`], [`crate::apps::prime`],
-//! [`crate::apps::skeyutl`], [`crate::apps::configutl`],
-//! [`crate::apps::pkeyparam`], [`crate::apps::nseq`]). **Every other command name
-//! is present in the table and dispatches, but its body (`apps/<name>.c`) is a
-//! unit this stratum does not own**, so it reaches [`not_landed`] rather than
-//! printing a wrong body.
+//! 16.4; `errstr` ([`crate::apps::errstr`]) from 17.1a; `info`, `prime`,
+//! `skeyutl`, `configutl`, `pkeyparam`, `nseq` from 17.1b; `crl2pkcs7`, `ciphers`,
+//! `sess_id`, `kdf`, `mac`, `spkac`, `genrsa`, `dsaparam` from 17.1c; and
+//! `asn1parse`, `ecparam`, `rsa`, `dsa`, `ec`, `pkey`, `pkcs8`, `verify`, `crl`,
+//! `rsautl` from 17.1d. **Every other command name is present in the table and
+//! dispatches, but its body (`apps/<name>.c`) is a unit this stratum does not
+//! own**, so it reaches [`not_landed`] rather than printing a wrong body.
 //!
 //! ## Recorded divergences (module header)
 //!
@@ -39,10 +37,15 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+use crate::apps::asn1parse;
 use crate::apps::ciphers;
 use crate::apps::configutl;
+use crate::apps::crl;
 use crate::apps::crl2pkcs7;
+use crate::apps::dsa;
 use crate::apps::dsaparam;
+use crate::apps::ec;
+use crate::apps::ecparam;
 use crate::apps::errstr;
 use crate::apps::genrsa;
 use crate::apps::info;
@@ -51,12 +54,17 @@ use crate::apps::list;
 use crate::apps::mac;
 use crate::apps::nseq;
 use crate::apps::opt::{progname, OptMatch, Opts};
+use crate::apps::pkcs8;
+use crate::apps::pkey;
 use crate::apps::pkeyparam;
 use crate::apps::prime;
+use crate::apps::rsa;
+use crate::apps::rsautl;
 use crate::apps::sess_id;
 use crate::apps::skeyutl;
 use crate::apps::spkac;
 use crate::apps::tables::{Func, FuncKind, FUNCTIONS, HELP_OPTIONS};
+use crate::apps::verify;
 use crate::apps::version;
 
 /// A command body this stratum does not own, reached rather than fabricated.
@@ -78,16 +86,16 @@ fn find(name: &str) -> Option<&'static Func> {
 
 /// `static void warn_deprecated(const FUNCTION *fp)` — `apps/openssl.c:48-58`.
 fn warn_deprecated(fp: &Func) {
-    match fp.deprecated_version {
-        Some(v) => eprintln!("The command {} was deprecated in version {}.", fp.name, v),
-        None => eprintln!("The command {} is deprecated.", fp.name),
-    }
+    let mut line = match fp.deprecated_version {
+        Some(v) => format!("The command {} was deprecated in version {}.", fp.name, v),
+        None => format!("The command {} is deprecated.", fp.name),
+    };
     if let Some(alt) = fp.deprecated_alternative {
         if alt != "unknown" {
-            eprintln!(" Use '{alt}' instead.");
+            line.push_str(&format!(" Use '{alt}' instead."));
         }
     }
-    eprintln!();
+    eprintln!("{line}");
 }
 
 /// `int help_main(int argc, char **argv)` — `apps/openssl.c:402-465`.
@@ -173,10 +181,15 @@ fn do_cmd(argv: &[String]) -> i32 {
             warn_deprecated(fp);
         }
         return match fp.name {
+            "asn1parse" => asn1parse::main(argv),
             "ciphers" => ciphers::main(argv),
             "configutl" => configutl::main(argv),
+            "crl" => crl::main(argv),
             "crl2pkcs7" => crl2pkcs7::main(argv),
+            "dsa" => dsa::main(argv),
             "dsaparam" => dsaparam::main(argv),
+            "ec" => ec::main(argv),
+            "ecparam" => ecparam::main(argv),
             "errstr" => errstr::main(argv),
             "genrsa" => genrsa::main(argv),
             "help" => help_main(argv),
@@ -185,11 +198,16 @@ fn do_cmd(argv: &[String]) -> i32 {
             "list" => list::main(argv),
             "mac" => mac::main(argv),
             "nseq" => nseq::main(argv),
+            "pkcs8" => pkcs8::main(argv),
+            "pkey" => pkey::main(argv),
             "pkeyparam" => pkeyparam::main(argv),
             "prime" => prime::main(argv),
+            "rsa" => rsa::main(argv),
+            "rsautl" => rsautl::main(argv),
             "sess_id" => sess_id::main(argv),
             "skeyutl" => skeyutl::main(argv),
             "spkac" => spkac::main(argv),
+            "verify" => verify::main(argv),
             "version" => version::main(argv),
             _ => not_landed(fp.name),
         };

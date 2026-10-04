@@ -10,8 +10,9 @@
 #
 # The divergent inputs (`errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/
 # `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms,
-# `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE` and
-# `genrsa -bogus`) are deliberately absent: each renders a surface this stratum does not own
+# `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`,
+# `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus` and the `rsautl`
+# operation arm) are deliberately absent: each renders a surface this stratum does not own
 # (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command module
 # headers).
 set -u
@@ -96,4 +97,48 @@ genrsa 99999999999999999999
 dsaparam abc
 dsaparam 1 2 3
 dsaparam -text abc
+asn1parse -in /work/courts/phase17/fixtures/certs.pem
+asn1parse -in /work/courts/phase17/fixtures/certs.pem -noout
+asn1parse -in /work/courts/phase17/fixtures/cert.der -inform DER
+asn1parse -in /work/courts/phase17/fixtures/cert.der -inform DER -i
+ecparam -list_curves
+ecparam -name prime256v1 -noout -text
+ecparam -name prime256v1 -noout
+rsa -in /work/courts/phase17/fixtures/rsa-key.pem -noout -text
+rsa -in /work/courts/phase17/fixtures/rsa-key.pem -noout
+rsa -in /work/courts/phase17/fixtures/rsa-key.pem -check -noout
+rsa -in /work/courts/phase17/fixtures/rsa-key.pem -pubin -noout -text
+rsa -check -pubin
+rsa -in /work/courts/phase17/fixtures/rsa-key.pem
+dsa -in /work/courts/phase17/fixtures/dsa-key.pem -noout -text
+dsa -in /work/courts/phase17/fixtures/dsa-key.pem -noout
+dsa -in /work/courts/phase17/fixtures/dsa-pub.pem -pubin -noout -text
+dsa -in /work/courts/phase17/fixtures/dsa-key.pem
+ec -in /work/courts/phase17/fixtures/ec-key.pem -noout -text
+ec -in /work/courts/phase17/fixtures/ec-key.pem -noout
+ec -in /work/courts/phase17/fixtures/ec-key.pem -check -noout
+ec -in /work/courts/phase17/fixtures/ec-pub.pem -pubin -noout -text
+ec -in /work/courts/phase17/fixtures/ec-key.pem
+pkey -in /work/courts/phase17/fixtures/rsa-key.pem -noout -text
+pkey -in /work/courts/phase17/fixtures/rsa-key.pem -check -noout
+pkey -in /work/courts/phase17/fixtures/rsa-key.pem -pubout -noout -text
+pkey -in /work/courts/phase17/fixtures/rsa-pub.pem -pubin -noout -text
+pkey -in /work/courts/phase17/fixtures/rsa-key.pem
+pkcs8 -topk8 -nocrypt -in /work/courts/phase17/fixtures/rsa-key.pem
+pkcs8 -topk8 -nocrypt -in /work/courts/phase17/fixtures/rsa-key-trad.pem
+pkcs8 -in /work/courts/phase17/fixtures/rsa-key.pem -nocrypt
+verify -no-CApath -no-CAstore -CAfile /work/courts/phase17/fixtures/ca.pem /work/courts/phase17/fixtures/leaf.pem
+verify -CAfile /work/courts/phase17/fixtures/ca.pem /work/courts/phase17/fixtures/leaf.pem
+crl -in /work/courts/phase17/fixtures/crl.pem -noout
+crl -in /work/courts/phase17/fixtures/crl.pem -text -noout
+crl -in /work/courts/phase17/fixtures/crl.pem -issuer -noout
+crl -in /work/courts/phase17/fixtures/crl.pem -lastupdate -noout
+crl -in /work/courts/phase17/fixtures/crl.pem -nextupdate -noout
+crl -in /work/courts/phase17/fixtures/crl.pem -crlnumber -noout
+crl -in /work/courts/phase17/fixtures/crl.pem -hash -noout
+crl -in /work/courts/phase17/fixtures/crl.pem -fingerprint -noout
+crl -in /work/courts/phase17/fixtures/crl.pem
+rsautl -sign -pubin
+rsautl -decrypt -certin
+rsautl -bogus
 ARGS

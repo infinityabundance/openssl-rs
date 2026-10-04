@@ -29,22 +29,29 @@ eight more: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers`
 session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, and the refusal arms), `mac`
 (HMAC over a fixed file, hex and binary, and the refusal arms), `spkac` (print/noout/verify/
 pubkey over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and
-refusal arms). Each command's `-help` arm is not driven: `opt_help` is the boundary
+refusal arms). 17.1d adds ten more: `asn1parse` (the PEM and raw-DER readers), `ecparam`
+(`-list_curves` and `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the
+text/re-encode/check arms over fixed keys), `pkey` (`noout`/`check`/`pubout`/`pubin`),
+`pkcs8` (`topk8 -nocrypt` and the read-back arm), `verify` (the fixed CA/leaf pair),
+`crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and
+`rsautl` (the refusal arms). Each command's `-help` arm is not driven: `opt_help` is the boundary
 `src/apps/opt.rs` records, so it reaches `not_landed` rather than the authority's table,
 exactly as `help`/`list`/`version` do.
 
 The fixtures live in `courts/phase17/fixtures/` and are read by absolute `/work` path, so the
 probe is self-contained under the container's mount.
 
-**Sixteen inputs are recorded rather than diffed**, each a surface this stratum does not own:
+**Twenty inputs are recorded rather than diffed**, each a surface this stratum does not own:
 `errstr 0xdeadbeef` (an unknown system errno), `info -seeds`/`-cpusettings`/`-configdir`/
 `-enginesdir`/`-modulesdir` (RAND seed source, CPU dispatch and the configured prefix, which
 are later strata or build-specific), `prime 2 3 4`/`-hex FF` (the `BN_print` rendering),
 `ciphers`/`-v`/`-stdname`/`-tls1_2` (the `EVP`-fetch/legacy-provider surface),
 `sess_id -text -cert` (the `X509_print` basicConstraints rendering), `kdf nonexistent` and
 `mac NOPE` (the pointer-bearing `ERR_print_errors` tail), `spkac -spkac NOPE` (the pointer
-prefix on an otherwise identical config error) and `genrsa -bogus`
-(`opt_set_unknown_name`). They are named in `RECORDED_DIVERGENCES` and every other arm is
+prefix on an otherwise identical config error), `genrsa -bogus`
+(`opt_set_unknown_name`), `ecparam -name <invalid>` (the pointer-bearing `ERR_print_errors`
+tail), `rsa`/`dsa -modulus` (the `BN_print` rendering) and the `rsautl` operation arm
+(random/binary output). They are named in `RECORDED_DIVERGENCES` and every other arm is
 driven, the convention `src/apps/errstr.rs` and Phases 13 through 16 use for a recorded
 divergence.
 
@@ -178,6 +185,52 @@ BODIES_ARGV: list[list[str]] = [
     ["dsaparam", "abc"],
     ["dsaparam", "1", "2", "3"],
     ["dsaparam", "-text", "abc"],
+    # 17.1d: asn1parse / ecparam / rsa / dsa / ec / pkey / pkcs8 / verify / crl / rsautl.
+    ["asn1parse", "-in", f"{_BODIES_FIXTURES}/certs.pem"],
+    ["asn1parse", "-in", f"{_BODIES_FIXTURES}/certs.pem", "-noout"],
+    ["asn1parse", "-in", f"{_BODIES_FIXTURES}/cert.der", "-inform", "DER"],
+    ["asn1parse", "-in", f"{_BODIES_FIXTURES}/cert.der", "-inform", "DER", "-i"],
+    ["ecparam", "-list_curves"],
+    ["ecparam", "-name", "prime256v1", "-noout", "-text"],
+    ["ecparam", "-name", "prime256v1", "-noout"],
+    ["rsa", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem", "-noout", "-text"],
+    ["rsa", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem", "-noout"],
+    ["rsa", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem", "-check", "-noout"],
+    ["rsa", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem", "-pubin", "-noout", "-text"],
+    ["rsa", "-check", "-pubin"],
+    ["rsa", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["dsa", "-in", f"{_BODIES_FIXTURES}/dsa-key.pem", "-noout", "-text"],
+    ["dsa", "-in", f"{_BODIES_FIXTURES}/dsa-key.pem", "-noout"],
+    ["dsa", "-in", f"{_BODIES_FIXTURES}/dsa-pub.pem", "-pubin", "-noout", "-text"],
+    ["dsa", "-in", f"{_BODIES_FIXTURES}/dsa-key.pem"],
+    ["ec", "-in", f"{_BODIES_FIXTURES}/ec-key.pem", "-noout", "-text"],
+    ["ec", "-in", f"{_BODIES_FIXTURES}/ec-key.pem", "-noout"],
+    ["ec", "-in", f"{_BODIES_FIXTURES}/ec-key.pem", "-check", "-noout"],
+    ["ec", "-in", f"{_BODIES_FIXTURES}/ec-pub.pem", "-pubin", "-noout", "-text"],
+    ["ec", "-in", f"{_BODIES_FIXTURES}/ec-key.pem"],
+    ["pkey", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem", "-noout", "-text"],
+    ["pkey", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem", "-check", "-noout"],
+    ["pkey", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem", "-pubout", "-noout", "-text"],
+    ["pkey", "-in", f"{_BODIES_FIXTURES}/rsa-pub.pem", "-pubin", "-noout", "-text"],
+    ["pkey", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["pkcs8", "-topk8", "-nocrypt", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem"],
+    ["pkcs8", "-topk8", "-nocrypt", "-in", f"{_BODIES_FIXTURES}/rsa-key-trad.pem"],
+    ["pkcs8", "-in", f"{_BODIES_FIXTURES}/rsa-key.pem", "-nocrypt"],
+    ["verify", "-no-CApath", "-no-CAstore", "-CAfile", f"{_BODIES_FIXTURES}/ca.pem",
+     f"{_BODIES_FIXTURES}/leaf.pem"],
+    ["verify", "-CAfile", f"{_BODIES_FIXTURES}/ca.pem", f"{_BODIES_FIXTURES}/leaf.pem"],
+    ["crl", "-in", f"{_BODIES_FIXTURES}/crl.pem", "-noout"],
+    ["crl", "-in", f"{_BODIES_FIXTURES}/crl.pem", "-text", "-noout"],
+    ["crl", "-in", f"{_BODIES_FIXTURES}/crl.pem", "-issuer", "-noout"],
+    ["crl", "-in", f"{_BODIES_FIXTURES}/crl.pem", "-lastupdate", "-noout"],
+    ["crl", "-in", f"{_BODIES_FIXTURES}/crl.pem", "-nextupdate", "-noout"],
+    ["crl", "-in", f"{_BODIES_FIXTURES}/crl.pem", "-crlnumber", "-noout"],
+    ["crl", "-in", f"{_BODIES_FIXTURES}/crl.pem", "-hash", "-noout"],
+    ["crl", "-in", f"{_BODIES_FIXTURES}/crl.pem", "-fingerprint", "-noout"],
+    ["crl", "-in", f"{_BODIES_FIXTURES}/crl.pem"],
+    ["rsautl", "-sign", "-pubin"],
+    ["rsautl", "-decrypt", "-certin"],
+    ["rsautl", "-bogus"],
 ]
 
 # Divergences the court records rather than diffs: an output decided by a surface this stratum
@@ -377,6 +430,41 @@ RECORDED_DIVERGENCES: list[dict] = [
             "`src/apps/genrsa.rs`."
         ),
     },
+    {
+        "argv": "ecparam -name <invalid curve>",
+        "authority": "unable to generate key|<ptr>:error:0800008D:elliptic curve routines:group_new_from_name:invalid curve:...ec_lib.c:1495:",
+        "candidate": "unable to generate key",
+        "reason": (
+            "An unknown `-name`: both sides print `unable to generate key` and exit 1, "
+            "but the authority's `EVP_PKEY_CTX_new_from_name`/keygen path leaves a "
+            "`group_new_from_name:invalid curve` error in the queue, and the "
+            "`ERR_print_errors` line begins with a per-run pointer. That tail is the "
+            "`ERR` surface's. Recorded here rather than diffed; see `src/apps/ecparam.rs`."
+        ),
+    },
+    {
+        "argv": "rsa -in <rsa-key.pem> -modulus -noout",
+        "authority": "Modulus=AF1F…E9B",
+        "candidate": "Modulus=af1f…e9b",
+        "reason": (
+            "`BN_print` rendering: as `prime 2 3 4`, the authority strips leading nibbles "
+            "and writes uppercase, the crate pads to whole bytes and writes lowercase "
+            "(`src/bn/bignum.rs`). Recorded here rather than diffed; see "
+            "`src/apps/rsa.rs`. The same divergence applies to `dsa -modulus`."
+        ),
+    },
+    {
+        "argv": "rsautl <operation>",
+        "authority": "<the raw RSA result, or a PKCS#1 v1.5/OAEP ciphertext>",
+        "candidate": "<not driven>",
+        "reason": (
+            "`rsautl`'s operation arm reads the input, runs "
+            "`EVP_PKEY_verify_recover`/`_sign`/`_encrypt`/`_decrypt` and writes raw "
+            "bytes; the PKCS#1 v1.5 and OAEP paddings draw randomness and the raw arms "
+            "are binary. The refusal arms are driven instead. Recorded here rather than "
+            "diffed; see `src/apps/rsautl.rs`."
+        ),
+    },
 ]
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that lands
@@ -478,8 +566,9 @@ def render_probe(cases: list[list[str]]) -> str:
 #
 # The divergent inputs (`errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/
 # `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms,
-# `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE` and
-# `genrsa -bogus`) are deliberately absent: each renders a surface this stratum does not own
+# `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`,
+# `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus` and the `rsautl`
+# operation arm) are deliberately absent: each renders a surface this stratum does not own
 # (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command module
 # headers).
 set -u
@@ -630,12 +719,21 @@ def main(argv: list[str]) -> int:
             "session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal "
             "arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), "
             "`spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), "
-            "`genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). Each "
-            "command's `-help` arm is not driven (`opt_help` is unlanded), and the sixteen "
+            "`genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds "
+            "ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the "
+            "raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the "
+            "`-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public "
+            "text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the "
+            "`-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` "
+            "and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the "
+            "text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` "
+            "(the private-key-required and unknown-option refusals). Each "
+            "command's `-help` arm is not driven (`opt_help` is unlanded), and the twenty "
             "divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ "
             "`-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, "
-            "`sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE` "
-            "and `genrsa -bogus` -- are recorded "
+            "`sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, "
+            "`genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus` and the `rsautl` "
+            "operation arm -- are recorded "
             "in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives "
             "a real TLS 1.3 client/server flight, ClientHello through Finished plus an "
             "application-data exchange, over the record layer, the extension units "
