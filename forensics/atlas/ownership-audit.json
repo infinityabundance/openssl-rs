@@ -1367,7 +1367,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "801d62355b8e94859faa893a301c40ab0eccbf86d7f5ead2e19cd07760a13949"
+      "sha256": "f38d08eb0b3e447a17e245a953e66875e3c73296b29ed0590c7f7fac604220a3"
     },
     {
       "name": "authority-symbols",
@@ -1402,37 +1402,37 @@
     {
       "name": "ledger-7",
       "path": "forensics/phase7-obligations.json",
-      "sha256": "f2ac62cce173824f24ee761b86fbced53bde8a3fffaac181f5ce36ce855dceb1"
+      "sha256": "dfa6efce760e76ea55ade8a3cabad620a6b18bb5fcfbbca5d91d221f5219a5e3"
     },
     {
       "name": "ledger-8",
       "path": "forensics/phase8-obligations.json",
-      "sha256": "fc7a06e3dfd9c08b7ce1ad73fb01fd855c1c2618e4ab7015525aaae17821f4bd"
+      "sha256": "05a6d96b7a9e468c490946c20e532f62b88b5e9ae758e1cfa90bfb8aca2f355d"
     },
     {
       "name": "ledger-9",
       "path": "forensics/phase9-obligations.json",
-      "sha256": "7c45072e1e9bcccba3d8886576c01e199ee18a11bb97f4f83fe120697ca4d8b9"
+      "sha256": "7381df8abb96780e8b19c18a9bde7a120d498bb197289f34f694f43e4cd94c52"
     },
     {
       "name": "ledger-10",
       "path": "forensics/phase10-obligations.json",
-      "sha256": "359dc8b778f5cf057e278dcf90f39e22b752fd0a4db1410ccdce825fe1dfc8d4"
+      "sha256": "99a170c99f3e88cdd2ada68f1934eb48dea735f57d12fbae7e476b7ed4a66542"
     },
     {
       "name": "ledger-11",
       "path": "forensics/phase11-obligations.json",
-      "sha256": "90c85d42c0bef90d2a15889f67afaa9bbf9c75f5f1d3094086e7007e46bb6179"
+      "sha256": "2a1e54f3b3bceb1954c0a6880d25e5df19942d83fa141709ff32f4bc38ee9a31"
     },
     {
       "name": "ledger-12",
       "path": "forensics/phase12-obligations.json",
-      "sha256": "9b8b2f94a4da03c4998ba42ae05ab1f9c314d4f346190290acda08ae4fbdae7a"
+      "sha256": "f6561aa9f38ffd67ebbad0b93c69a2e900af45739ba7350cbc1762a11aaee771"
     },
     {
       "name": "ledger-13",
       "path": "forensics/phase13-obligations.json",
-      "sha256": "b0600291155ea0a49f3586cba8002c7e8e8c605a25c1cf1ee84ec492f91ee39d"
+      "sha256": "fdd9787e069194077a3df67718c7c05974b6da53db2d8c5994ce41133ea8e8e5"
     },
     {
       "name": "ledger-14",

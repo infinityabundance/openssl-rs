@@ -24,13 +24,13 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 175,
+      "rows_judged": 176,
       "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
-      "unit_records": 99,
-      "units_named_by_a_record": 108,
-      "units_named_by_a_row": 493,
-      "units_reached": 493
+      "unit_records": 151,
+      "units_named_by_a_record": 160,
+      "units_named_by_a_row": 545,
+      "units_reached": 545
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
     "counts": {},
@@ -39,11 +39,427 @@
       "complete"
     ],
     "promised_units": {
+      "apps/asn1parse.c": {
+        "defines": [],
+        "recorded_by": "units:apps/asn1parse.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/ca.c": {
+        "defines": [],
+        "recorded_by": "units:apps/ca.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/ciphers.c": {
+        "defines": [],
+        "recorded_by": "units:apps/ciphers.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/cmp.c": {
+        "defines": [],
+        "recorded_by": "units:apps/cmp.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/cms.c": {
+        "defines": [],
+        "recorded_by": "units:apps/cms.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/configutl.c": {
+        "defines": [],
+        "recorded_by": "units:apps/configutl.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/crl.c": {
+        "defines": [],
+        "recorded_by": "units:apps/crl.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/crl2pkcs7.c": {
+        "defines": [],
+        "recorded_by": "units:apps/crl2pkcs7.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/dgst.c": {
+        "defines": [],
+        "recorded_by": "units:apps/dgst.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/dhparam.c": {
+        "defines": [],
+        "recorded_by": "units:apps/dhparam.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/dsa.c": {
+        "defines": [],
+        "recorded_by": "units:apps/dsa.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/dsaparam.c": {
+        "defines": [],
+        "recorded_by": "units:apps/dsaparam.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/ec.c": {
+        "defines": [],
+        "recorded_by": "units:apps/ec.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/ecparam.c": {
+        "defines": [],
+        "recorded_by": "units:apps/ecparam.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/enc.c": {
+        "defines": [],
+        "recorded_by": "units:apps/enc.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/engine.c": {
+        "defines": [],
+        "recorded_by": "units:apps/engine.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/errstr.c": {
+        "defines": [],
+        "recorded_by": "units:apps/errstr.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/fipsinstall.c": {
+        "defines": [],
+        "recorded_by": "units:apps/fipsinstall.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/gendsa.c": {
+        "defines": [],
+        "recorded_by": "units:apps/gendsa.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/genpkey.c": {
+        "defines": [],
+        "recorded_by": "units:apps/genpkey.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/genrsa.c": {
+        "defines": [],
+        "recorded_by": "units:apps/genrsa.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/info.c": {
+        "defines": [],
+        "recorded_by": "units:apps/info.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/kdf.c": {
+        "defines": [],
+        "recorded_by": "units:apps/kdf.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/mac.c": {
+        "defines": [],
+        "recorded_by": "units:apps/mac.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/nseq.c": {
+        "defines": [],
+        "recorded_by": "units:apps/nseq.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/ocsp.c": {
+        "defines": [],
+        "recorded_by": "units:apps/ocsp.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
       "apps/openssl.c": {
         "defines": [],
         "recorded_by": "units:apps/openssl.c",
         "subphases": [
           "16:16.4"
+        ],
+        "transcribed_by": []
+      },
+      "apps/passwd.c": {
+        "defines": [],
+        "recorded_by": "units:apps/passwd.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/pkcs12.c": {
+        "defines": [],
+        "recorded_by": "units:apps/pkcs12.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/pkcs7.c": {
+        "defines": [],
+        "recorded_by": "units:apps/pkcs7.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/pkcs8.c": {
+        "defines": [],
+        "recorded_by": "units:apps/pkcs8.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/pkey.c": {
+        "defines": [],
+        "recorded_by": "units:apps/pkey.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/pkeyparam.c": {
+        "defines": [],
+        "recorded_by": "units:apps/pkeyparam.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/pkeyutl.c": {
+        "defines": [],
+        "recorded_by": "units:apps/pkeyutl.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/prime.c": {
+        "defines": [],
+        "recorded_by": "units:apps/prime.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/rand.c": {
+        "defines": [],
+        "recorded_by": "units:apps/rand.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/rehash.c": {
+        "defines": [],
+        "recorded_by": "units:apps/rehash.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/req.c": {
+        "defines": [],
+        "recorded_by": "units:apps/req.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/rsa.c": {
+        "defines": [],
+        "recorded_by": "units:apps/rsa.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/rsautl.c": {
+        "defines": [],
+        "recorded_by": "units:apps/rsautl.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/s_client.c": {
+        "defines": [],
+        "recorded_by": "units:apps/s_client.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/s_server.c": {
+        "defines": [],
+        "recorded_by": "units:apps/s_server.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/s_time.c": {
+        "defines": [],
+        "recorded_by": "units:apps/s_time.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/sess_id.c": {
+        "defines": [],
+        "recorded_by": "units:apps/sess_id.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/skeyutl.c": {
+        "defines": [],
+        "recorded_by": "units:apps/skeyutl.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/smime.c": {
+        "defines": [],
+        "recorded_by": "units:apps/smime.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/speed.c": {
+        "defines": [],
+        "recorded_by": "units:apps/speed.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/spkac.c": {
+        "defines": [],
+        "recorded_by": "units:apps/spkac.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/srp.c": {
+        "defines": [],
+        "recorded_by": "units:apps/srp.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/storeutl.c": {
+        "defines": [],
+        "recorded_by": "units:apps/storeutl.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/ts.c": {
+        "defines": [],
+        "recorded_by": "units:apps/ts.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/verify.c": {
+        "defines": [],
+        "recorded_by": "units:apps/verify.c",
+        "subphases": [
+          "16:16.4a"
+        ],
+        "transcribed_by": []
+      },
+      "apps/x509.c": {
+        "defines": [],
+        "recorded_by": "units:apps/x509.c",
+        "subphases": [
+          "16:16.4a"
         ],
         "transcribed_by": []
       },
@@ -6819,10 +7235,270 @@
     },
     "rule": "every authority translation unit and every authority-internal function named by a subphase row of a **complete** stratum must be transcribed by a crate module or named by an explicit record field; and an explicit record field naming an authority unit must have a subphase row behind it. An `in-progress` stratum's unreached names are published as a census and are not a failure, because a plan names the work a stratum will do",
     "unit_records": {
+      "apps/asn1parse.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/ca.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/ciphers.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/cmp.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/cms.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/configutl.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/crl.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/crl2pkcs7.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/dgst.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/dhparam.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/dsa.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/dsaparam.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/ec.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/ecparam.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/enc.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/engine.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/errstr.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/fipsinstall.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/gendsa.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/genpkey.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/genrsa.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/info.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/kdf.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/mac.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/nseq.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/ocsp.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
       "apps/openssl.c": {
         "class": "reached_by_a_named_construct",
         "crate_module": "src/apps/openssl.rs",
         "owner_phase": null
+      },
+      "apps/passwd.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/pkcs12.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/pkcs7.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/pkcs8.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/pkey.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/pkeyparam.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/pkeyutl.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/prime.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/rand.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/rehash.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/req.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/rsa.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/rsautl.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/s_client.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/s_server.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/s_time.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/sess_id.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/skeyutl.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/smime.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/speed.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/spkac.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/srp.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/storeutl.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/ts.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/verify.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
+      },
+      "apps/x509.c": {
+        "class": "deferred_to_later_stratum",
+        "crate_module": null,
+        "owner_phase": 17
       },
       "crypto/asn1/d2i_param.c": {
         "class": "reached_by_a_named_construct",
@@ -7321,7 +7997,7 @@
       "transcribed_units": 596
     }
   },
-  "body_hash": "11fb98f2b5422147ef472343829a195eda013474fbd21b727a4b28314a51a349",
+  "body_hash": "8ba98bc87a90131d9b9e6155159b24040202f07363f68943689862158017e04e",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -7337,17 +8013,17 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "801d62355b8e94859faa893a301c40ab0eccbf86d7f5ead2e19cd07760a13949"
+      "sha256": "f38d08eb0b3e447a17e245a953e66875e3c73296b29ed0590c7f7fac604220a3"
     },
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "24367e4e98d9fe86040b3fe3a23fea84f36418187782d343a04af14934017a21"
+      "sha256": "226e54b4fc1bf2aeff920a3a60d91e22624c52971c83823ce1e100b52b50b340"
     },
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "d24483526784c0c8f1497ce45d173bf316f5a072c7eec20cbb22848b63cb047a"
+      "sha256": "f3cc8cfc5ba2672ffe71317bd41ed905d4add945dc508e0a8b832cfe1b312f36"
     },
     {
       "name": "source-manifest",
@@ -7387,7 +8063,7 @@
     {
       "name": "plan-PHASE-16-SUBPHASES",
       "path": "docs/PHASE-16-SUBPHASES.md",
-      "sha256": "1125a27838b7bad0586de184babce67a4c6ac589db4b3ef89a8cc6a4a59221fe"
+      "sha256": "72d80ad3cebbc51caf0b0b1503d762660ffc24cc1c1b85dd60766711495274f8"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",

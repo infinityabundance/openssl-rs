@@ -122,12 +122,12 @@
     {
       "name": "phase-16-plan",
       "path": "docs/PHASE-16-SUBPHASES.md",
-      "sha256": "1125a27838b7bad0586de184babce67a4c6ac589db4b3ef89a8cc6a4a59221fe"
+      "sha256": "72d80ad3cebbc51caf0b0b1503d762660ffc24cc1c1b85dd60766711495274f8"
     },
     {
       "name": "phase16-obligations",
       "path": "forensics/phase16-obligations.json",
-      "sha256": "3fa94472f0917e546e487746ced47e8e7df1227afe63b9cd5e6a1ea8ca8b4209"
+      "sha256": "510352218a0277b144288cc3f6267134f36f87e674b0789eca974cdef5b81cc6"
     },
     {
       "name": "cli-capture",
