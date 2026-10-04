@@ -101,6 +101,10 @@ const MSG_FLOW_FINISHED: c_int = 4;
 const SSL3_VERSION_MAJOR: c_int = 3;
 /// `SSL_AD_NO_ALERT` — `ssl3.h:328`, "we don't want to send an alert".
 const SSL_AD_NO_ALERT: c_int = 0;
+/// `SSL3_AL_FATAL` — `ssl3.h:334`.
+const SSL3_AL_FATAL: c_int = 2;
+/// `SSL3_RT_ALERT` — `ssl3.h:146`.
+const SSL3_RT_ALERT: u8 = 21;
 
 /// `SSL_NOTHING` — `ssl.h:932` (the `rwstate` idle value).
 const SSL_NOTHING: c_int = 1;
@@ -225,16 +229,16 @@ pub unsafe fn ossl_statem_set_renegotiate(s: *mut Ssl) {
     }
 }
 
-/// `void ossl_statem_send_fatal(SSL_CONNECTION *s, int al)` — `ssl/statem/statem.c:147-156`,
-/// reduced to the state transition.
+/// `void ossl_statem_send_fatal(SSL_CONNECTION *s, int al)` — `ssl/statem/statem.c:147-156`.
 ///
-/// The authority calls `ssl3_send_alert(s, SSL3_AL_FATAL, al)` when a record-write method is
-/// installed; this crate models no record method, so the alert is skipped (recorded in the module
-/// header).
+/// Performs the `MSG_FLOW_ERROR` transition and, when the alert is not `SSL_AD_NO_ALERT` and a write
+/// BIO is installed, sends the fatal alert through the record layer (`ssl3_send_alert`,
+/// `s3_msg.c:45-58`). The pre-ServerHello alerts are plaintext; the record layer encrypts once a
+/// TLS1.3 write key is active.
 ///
 /// # Safety
 /// `s` must point to a live connection.
-pub unsafe fn ossl_statem_send_fatal(s: *mut Ssl, _al: c_int) {
+pub unsafe fn ossl_statem_send_fatal(s: *mut Ssl, al: c_int) {
     // SAFETY: `s` is live per the caller's contract.
     unsafe {
         if (*s).in_init != 0 && (*s).statem_state == MSG_FLOW_ERROR {
@@ -242,6 +246,16 @@ pub unsafe fn ossl_statem_send_fatal(s: *mut Ssl, _al: c_int) {
         }
         ossl_statem_set_in_init(s, 1);
         (*s).statem_state = MSG_FLOW_ERROR;
+        if al != SSL_AD_NO_ALERT && !(*s).wbio.is_null() {
+            // `ssl3_send_alert(s, SSL3_AL_FATAL, al)`: `[level, description]` as record type 21.
+            let alert = [SSL3_AL_FATAL as u8, al as u8];
+            let _ = crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
+                s,
+                SSL3_RT_ALERT,
+                alert.as_ptr(),
+                alert.len(),
+            );
+        }
     }
 }
 

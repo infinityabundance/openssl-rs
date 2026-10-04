@@ -32,6 +32,10 @@ use crate::ssl::ssl_lib::{SslMethod, DTLS_ANY_VERSION, TLS_ANY_VERSION};
 
 /// `TLS1_VERSION` — `prov_ssl.h` (`(0x03 << 8) | 0x01`).
 const TLS1_VERSION: c_int = 0x0301;
+/// `TLS1_3_VERSION` — `prov_ssl.h` (`(0x03 << 8) | 0x04`).
+const TLS1_3_VERSION: c_int = 0x0304;
+/// `SSL_OP_NO_TLSv1_3` — `ssl.h:432` (`SSL_OP_BIT(29)`).
+const SSL_OP_NO_TLSV1_3: u64 = 1 << 29;
 /// `TLS1_1_VERSION` — `prov_ssl.h` (`(0x03 << 8) | 0x02`).
 const TLS1_1_VERSION: c_int = 0x0302;
 /// `TLS1_2_VERSION` — `prov_ssl.h` (`(0x03 << 8) | 0x03`).
@@ -129,6 +133,24 @@ static TLS_METHOD_DATA: SslMethod = tls(TLS_ANY_VERSION, 0, 0, true, true);
 static TLS_SERVER_METHOD_DATA: SslMethod = tls(TLS_ANY_VERSION, 0, 0, true, false);
 /// `TLS_client_method`'s table — `s_accept = ssl_undefined_function`.
 static TLS_CLIENT_METHOD_DATA: SslMethod = tls(TLS_ANY_VERSION, 0, 0, false, true);
+
+/// `tlsv1_3_server_method`'s table — `methods.c:54-57`.
+static TLSV1_3_SERVER_METHOD_DATA: SslMethod =
+    tls(TLS1_3_VERSION, 0, SSL_OP_NO_TLSV1_3, true, false);
+/// `tlsv1_3_client_method`'s table — `methods.c:83-86`.
+static TLSV1_3_CLIENT_METHOD_DATA: SslMethod =
+    tls(TLS1_3_VERSION, 0, SSL_OP_NO_TLSV1_3, false, true);
+
+/// The version-specific method a connection switches to once TLS1.3 is negotiated
+/// (`tls_setup_handshake`, `ssl/statem/statem_lib.c:2292` installs `best_method`). `server` selects
+/// the role table, exactly as the authority's `version_info` does.
+pub(crate) fn tls13_method(server: bool) -> *const SslMethod {
+    if server {
+        &TLSV1_3_SERVER_METHOD_DATA
+    } else {
+        &TLSV1_3_CLIENT_METHOD_DATA
+    }
+}
 
 /// `const SSL_METHOD *TLS_method(void)` — `ssl/methods.c:19-22`.
 ///

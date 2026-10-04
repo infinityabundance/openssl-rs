@@ -120,7 +120,7 @@ const SSL3_MT_CHANGE_CIPHER_SPEC: c_int = 0x0101;
 const SSL_AD_INTERNAL_ERROR: c_int = 80;
 const SSL_AD_UNEXPECTED_MESSAGE: c_int = 10;
 const ERR_R_INTERNAL_ERROR: c_int = 259 | (2 << 18) | (1 << 18);
-const SSL_R_UNEXPECTED_MESSAGE: c_int = 245;
+const SSL_R_UNEXPECTED_MESSAGE: c_int = 244;
 
 // --- connection flags --------------------------------------------------------
 const SSL3_VERSION: c_int = 0x0300;
@@ -999,6 +999,8 @@ const SSL3_MT_EE_BODY: u8 = 8;
 const TLSEXT_TYPE_SUPPORTED_VERSIONS: u16 = 43;
 /// `TLSEXT_TYPE_key_share` — `tls1.h:165`.
 const TLSEXT_TYPE_KEY_SHARE: u16 = 51;
+/// `TLSEXT_TYPE_application_layer_protocol_negotiation` — `tls1.h:116`.
+const TLSEXT_TYPE_ALPN: u16 = 16;
 /// `MSG_FLOW_READING` — `ssl/statem/statem.h`.
 const MSG_FLOW_READING_13: c_int = 2;
 /// `MSG_FLOW_ERROR` — `ssl/statem/statem.h`.
@@ -1161,6 +1163,9 @@ pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int 
     unsafe {
         (*s).group_id = group;
         (*s).version = TLS1_3_VERSION;
+        // `tls_setup_handshake` installs the negotiated-version method (`statem_lib.c:2292`),
+        // which `SSL_CONNECTION_IS_TLS13` reads.
+        (*s).method = crate::ssl::methods::tls13_method(false);
     }
     // SAFETY: `s` is live; `chosen` is the table row.
     if unsafe { k::tls13_setup_cipher(s, (*chosen).id as u16) } == 0 {
@@ -1184,14 +1189,58 @@ pub(crate) unsafe fn tls_process_server_hello(s: *mut Ssl, msg: &[u8]) -> c_int 
     unsafe { client_derive_and_install(s) }
 }
 
-/// `MSG_PROCESS_RETURN tls_process_encrypted_extensions(...)` — `statem_clnt.c:4114`, reduced to the
-/// transcript append (no extension is negotiated in the reduced flight).
+/// `MSG_PROCESS_RETURN tls_process_encrypted_extensions(...)` — `statem_clnt.c:4114-4140`: parse the
+/// `Extension extensions<0..2^16-1>` block (the negotiated ALPN, `tls_parse_stoc_alpn`,
+/// `extensions_clnt.c:1665`) and append the message to the transcript.
 ///
 /// # Safety
 /// `s` is live; `msg` is the full handshake message.
 pub(crate) unsafe fn tls_process_encrypted_extensions(s: *mut Ssl, msg: &[u8]) -> c_int {
     if msg.len() < 4 || msg[0] != SSL3_MT_EE_BODY {
         return 0;
+    }
+    let body = &msg[4..];
+    if body.len() >= 2 {
+        let ext_len = ((body[0] as usize) << 8) | body[1] as usize;
+        if 2 + ext_len > body.len() {
+            return 0;
+        }
+        let exts = &body[2..2 + ext_len];
+        let mut off = 0usize;
+        while off + 4 <= exts.len() {
+            let etype = ((exts[off] as u16) << 8) | exts[off + 1] as u16;
+            let elen = ((exts[off + 2] as usize) << 8) | exts[off + 3] as usize;
+            off += 4;
+            if off + elen > exts.len() {
+                return 0;
+            }
+            let eb = &exts[off..off + elen];
+            if etype == TLSEXT_TYPE_ALPN {
+                // `tls_parse_stoc_alpn`: `list_len(2) || proto_len(1) || proto`.
+                if eb.len() < 3 {
+                    return 0;
+                }
+                let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
+                let plen = eb[2] as usize;
+                if list_len == 0 || 2 + list_len > eb.len() || 2 + list_len != 3 + plen {
+                    return 0;
+                }
+                // SAFETY: `s` is live; `eb[3..3+plen]` holds `plen` readable bytes.
+                unsafe {
+                    use crate::runtime::mem::{CRYPTO_free, CRYPTO_memdup};
+                    CRYPTO_free((*s).s3_alpn_selected.cast(), core::ptr::null(), 0);
+                    (*s).s3_alpn_selected =
+                        CRYPTO_memdup(eb.as_ptr().add(3).cast(), plen, core::ptr::null(), 0)
+                            .cast::<u8>();
+                    if (*s).s3_alpn_selected.is_null() {
+                        (*s).s3_alpn_selected_len = 0;
+                        return 0;
+                    }
+                    (*s).s3_alpn_selected_len = plen;
+                }
+            }
+            off += elen;
+        }
     }
     // SAFETY: `s` is live; `msg` is the full message.
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
@@ -1467,6 +1516,9 @@ pub(crate) unsafe fn tls_process_cert_verify(s: *mut Ssl, msg: &[u8]) -> c_int {
     let is_pss = match sigalg {
         0x0804 => true,
         0x0401 => false,
+        // `ecdsa_secp256r1_sha256` (0x0403): an EC key needs no RSA padding; the reduced
+        // client's SHA-256 digest matches the scheme.
+        0x0403 => false,
         _ => return 0,
     };
 

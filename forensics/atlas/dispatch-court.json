@@ -20,7 +20,7 @@
       "signatures_checked": 353,
       "signatures_mismatches": 0,
       "signatures_not_a_dispatch": 265,
-      "signatures_unlinked": 0,
+      "signatures_unlinked": 1,
       "signatures_unmapped": 0
     },
     "identities": {
@@ -5986,7 +5986,12 @@
           "why": "not a provider dispatch: `struct x509_trust_st`'s `check_trust` member and `X509_TRUST_set_default`'s argument (`include/openssl/x509_vfy.h.in:83-88,145`), declared inline as plain function pointers rather than through `OSSL_CORE_MAKE_FUNC`"
         }
       ],
-      "unlinked": [],
+      "unlinked": [
+        {
+          "alias": "InitCryptoFn",
+          "at": "src/runtime/dso_shared.rs"
+        }
+      ],
       "unmapped": []
     },
     "what": "every `OSSL_FUNC_*` dispatch identity the crate declares agrees with the authority's recorded macro value, and every Rust function-type alias the crate declares agrees with the canonical form of the authority function-type typedef it implements",

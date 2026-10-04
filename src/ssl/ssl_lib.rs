@@ -390,6 +390,12 @@ const X509_L_ADD_STORE: c_int = 3;
 const X509_FILETYPE_DEFAULT: c_long = 3;
 /// `SSL_CTRL_SET_TMP_DH_CB` — `ssl.h:1276`; the deprecated temporary-DH callback command.
 pub(crate) const SSL_CTRL_SET_TMP_DH_CB: c_int = 6;
+/// `SSL_CTRL_SET_TMP_DH` — `ssl.h:1274` (`SSL_CTX_set_tmp_dh`).
+const SSL_CTRL_SET_TMP_DH: c_int = 3;
+/// `SSL_CTRL_SET_TMP_ECDH` — `ssl.h:1275` (`SSL_CTX_set_tmp_ecdh`).
+const SSL_CTRL_SET_TMP_ECDH: c_int = 4;
+/// `SSL_CTRL_SET_GROUPS` — `ssl.h:1352` (`SSL_CTX_set1_groups`).
+const SSL_CTRL_SET_GROUPS: c_int = 91;
 /// `SSL_CTRL_CHAIN` — `ssl.h:1349` (`SSL_CTX_set0_chain`/`SSL_CTX_set1_chain`).
 const SSL_CTRL_CHAIN: c_int = 88;
 /// `SSL_CTRL_CHAIN_CERT` — `ssl.h:1350` (`SSL_CTX_add0_chain_cert`/`add1`).
@@ -414,6 +420,14 @@ const SSL_R_INVALID_SRP_USERNAME: c_int = 357;
 pub(crate) const SSL_KSRP: c_ulong = 0x20;
 /// `ERR_R_INTERNAL_ERROR` — `err.h:356` (`259 | ERR_R_FATAL`).
 const ERR_R_INTERNAL_ERROR: c_int = 259 | (3 << 18);
+/// `OPENSSL_INIT_LOAD_SSL_STRINGS` — `ssl.h:2827` (`ssl_lib.c:4005`).
+pub(crate) const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x0020_0000;
+/// `ERR_R_PASSED_NULL_PARAMETER` — `err.h` (`258 | ERR_R_FATAL`).
+const ERR_R_PASSED_NULL_PARAMETER: c_int = 258 | (3 << 18);
+/// `ERR_R_DH_LIB` — `err.h` (`ERR_LIB_DH | ERR_RFLAG_COMMON`).
+const ERR_R_DH_LIB: c_int = 5 | (2 << 18);
+/// `SSL_R_MISSING_PARAMETERS` — `sslerr.h:173`.
+const SSL_R_MISSING_PARAMETERS: c_int = 290;
 
 /// `SSL_NOTHING` — `ssl.h:932`.
 const SSL_NOTHING: c_int = 1;
@@ -1076,6 +1090,10 @@ pub struct SslCtx {
     pub ext_alpn: *mut u8,
     /// `unsigned int ext.alpn_len`.
     pub ext_alpn_len: c_uint,
+    /// `uint16_t *ext.supportedgroups` — the context's supported group list, owned.
+    pub supportedgroups: *mut u16,
+    /// `size_t ext.supportedgroups_len`.
+    pub supportedgroups_len: usize,
     /// `uint8_t ext.max_fragment_len_mode` — the context-wide MFL (`SSL_CTX_set_tlsext_max_fragment_length`).
     pub ext_max_fragment_len_mode: u8,
     /// `int ext.status_type` — the OCSP status request type (`ssl_lib.c:4222`'s `TLSEXT_STATUSTYPE_nothing`).
@@ -1438,6 +1456,14 @@ pub struct Ssl {
     pub s3_alpn_selected: *mut u8,
     /// `size_t s3.alpn_selected_len`.
     pub s3_alpn_selected_len: usize,
+    /// `unsigned char *s3.alpn_proposed` — the client's offered protocol list, owned (server side).
+    pub s3_alpn_proposed: *mut u8,
+    /// `size_t s3.alpn_proposed_len`.
+    pub s3_alpn_proposed_len: usize,
+    /// `uint16_t *ext.supportedgroups` — the connection's supported group list, owned.
+    pub supportedgroups: *mut u16,
+    /// `size_t ext.supportedgroups_len`.
+    pub supportedgroups_len: usize,
     /// `unsigned char *client_cert_type`.
     pub client_cert_type: *mut u8,
     /// `size_t client_cert_type_len`.
@@ -1960,6 +1986,18 @@ pub unsafe extern "C" fn SSL_CTX_new_ex(
             unsafe { raise_ssl(SSL_R_NULL_SSL_METHOD_PASSED, 4001) };
             return ptr::null_mut();
         }
+        // `ssl_lib.c:4005`: `OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL)` loads the SSL
+        // reason strings, which `ERR_reason_error_string` then answers for every lib-20 code. The
+        // string table `ERR_reason_error_string` reads belongs to libcrypto, so the load is routed
+        // through libcrypto's exported `OPENSSL_init_crypto` (`runtime::dso_shared`).
+        // SAFETY: the setting pointer is NULL, which the initialisers accept.
+        if unsafe {
+            crate::ssl::ssl_init::OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, ptr::null())
+        } == 0
+        {
+            return ptr::null_mut();
+        }
+        let _ = crate::runtime::dso_shared::openssl_init_crypto(OPENSSL_INIT_LOAD_SSL_STRINGS);
 
         // SAFETY: a zeroed block of this size is a valid initial `SslCtx` image.
         let ret = CRYPTO_zalloc(core::mem::size_of::<SslCtx>(), FILE, 4014).cast::<SslCtx>();
@@ -2129,6 +2167,7 @@ pub unsafe extern "C" fn SSL_CTX_free(ctx: *mut SslCtx) {
             CRYPTO_free((*ctx).client_cert_type.cast(), FILE, 0);
             CRYPTO_free((*ctx).server_cert_type.cast(), FILE, 0);
             CRYPTO_free((*ctx).ext_alpn.cast(), FILE, 0);
+            CRYPTO_free((*ctx).supportedgroups.cast(), FILE, 0);
             CRYPTO_THREAD_lock_free((*ctx).lock);
             CRYPTO_free((*ctx).propq.cast(), FILE, 4458);
             CRYPTO_free(ctx.cast(), FILE, 4467);
@@ -2329,6 +2368,20 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
                 }
                 (*s).ext_alpn_len = (*ctx).ext_alpn_len;
             }
+            if !(*ctx).supportedgroups.is_null() {
+                (*s).supportedgroups = CRYPTO_memdup(
+                    (*ctx).supportedgroups.cast(),
+                    (*ctx).supportedgroups_len * core::mem::size_of::<u16>(),
+                    FILE,
+                    893,
+                )
+                .cast::<u16>();
+                if (*s).supportedgroups.is_null() {
+                    SSL_free(s);
+                    return ptr::null_mut();
+                }
+                (*s).supportedgroups_len = (*ctx).supportedgroups_len;
+            }
         }
         s
     })
@@ -2446,6 +2499,7 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             OPENSSL_sk_free((*s).cipher_list);
             OPENSSL_sk_free((*s).cipher_list_by_id);
             OPENSSL_sk_free((*s).tls13_ciphersuites);
+            OPENSSL_sk_free((*s).peer_ciphers);
             OPENSSL_sk_free((*s).srtp_profiles);
             OPENSSL_sk_pop_free((*s).ca_names, Some(x509_name_free_void));
             OPENSSL_sk_pop_free((*s).client_ca_names, Some(x509_name_free_void));
@@ -2477,6 +2531,8 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             CRYPTO_free((*s).ext_npn.cast(), FILE, 0);
             CRYPTO_free((*s).ext_hostname.cast(), FILE, 0);
             CRYPTO_free((*s).s3_alpn_selected.cast(), FILE, 0);
+            CRYPTO_free((*s).s3_alpn_proposed.cast(), FILE, 0);
+            CRYPTO_free((*s).supportedgroups.cast(), FILE, 0);
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data);
             SSL_CTX_free((*s).ctx);
             CRYPTO_THREAD_lock_free((*s).lock);
@@ -3695,6 +3751,71 @@ pub(crate) unsafe fn ssl3_ctx_ctrl(
             // function's trailing `return 1`. HAProxy's `ssl_sock_switchctx_err_cbk` is invoked
             // through `final_server_name` with this pointer as its `priv`.
             c.servername_arg = parg;
+            1
+        }
+        SSL_CTRL_SET_GROUPS => {
+            // `s3_lib.c:4552-4560`: install the supported-groups list.
+            // SAFETY: `parg` holds `larg` ints per the command's contract; `c`'s fields are
+            // writable.
+            c_long::from(unsafe {
+                crate::ssl::t1_lib::tls1_set_groups(
+                    &mut c.supportedgroups,
+                    &mut c.supportedgroups_len,
+                    parg.cast::<c_int>(),
+                    larg as usize,
+                )
+            })
+        }
+        SSL_CTRL_SET_TMP_ECDH => {
+            // `s3_lib.c:4449-4462` -> `ssl_set_tmp_ecdh_groups` (`tls_depr.c:167-190`).
+            if parg.is_null() {
+                // SAFETY: a constant site.
+                unsafe { raise_ssl(ERR_R_PASSED_NULL_PARAMETER, 4451) };
+                return 0;
+            }
+            // SAFETY: `parg` is a live `EC_KEY` for this command.
+            let group =
+                unsafe { crate::ec::key::EC_KEY_get0_group(parg.cast::<crate::ec::EcKey>()) };
+            if group.is_null() {
+                // SAFETY: a constant site.
+                unsafe { raise_ssl(SSL_R_MISSING_PARAMETERS, 4457) };
+                return 0;
+            }
+            // SAFETY: `group` is live.
+            let nid = unsafe { crate::ec::lib::EC_GROUP_get_curve_name(group) };
+            if nid == NID_undef {
+                return 0;
+            }
+            // SAFETY: `nid` is this frame's int; `c`'s fields are writable.
+            c_long::from(unsafe {
+                crate::ssl::t1_lib::tls1_set_groups(
+                    &mut c.supportedgroups,
+                    &mut c.supportedgroups_len,
+                    &nid,
+                    1,
+                )
+            })
+        }
+        SSL_CTRL_SET_TMP_DH => {
+            // `s3_lib.c:4423-4439`.
+            if parg.is_null() {
+                // SAFETY: a constant site.
+                unsafe { raise_ssl(ERR_R_PASSED_NULL_PARAMETER, 4425) };
+                return 0;
+            }
+            // SAFETY: `parg` is a live `DH` for this command.
+            let pkdh = unsafe { ssl_dh_to_pkey(parg) };
+            if pkdh.is_null() {
+                // SAFETY: a constant site.
+                unsafe { raise_ssl(ERR_R_DH_LIB, 4433) };
+                return 0;
+            }
+            // SAFETY: `ctx` is live; on failure the caller frees `pkdh` (`s3_lib.c:4435-4438`).
+            if unsafe { SSL_CTX_set0_tmp_dh_pkey(ctx, pkdh.cast()) } == 0 {
+                // SAFETY: `pkdh` is this frame's key.
+                unsafe { crate::evp::pkey::EVP_PKEY_free(pkdh) };
+                return 0;
+            }
             1
         }
         SSL_CTRL_SET_TLS_EXT_SRP_USERNAME => {
@@ -5541,6 +5662,9 @@ pub(crate) unsafe fn ssl_write_internal(
         if crate::ssl::record::rec_layer_s3::ssl3_write_bytes(s, 23, _buf.cast(), _num) <= 0 {
             return -1;
         }
+        // A completed write leaves the authority's record layer at `rwstate = SSL_NOTHING`
+        // (`ossl_tls_handle_rlayer_return`, `rec_layer_s3.c:499`).
+        (*s).rwstate = SSL_NOTHING;
         if !_written.is_null() {
             // SAFETY: `_written` is writable per the contract.
             *_written = _num;
@@ -9796,6 +9920,29 @@ pub unsafe extern "C" fn SSL_set0_tmp_dh_pkey(s: *mut Ssl, dhpkey: *mut c_void) 
         }
         1
     })
+}
+
+/// `EVP_PKEY *ssl_dh_to_pkey(DH *dh)` — `ssl/tls_depr.c:154-170`.
+///
+/// # Safety
+/// `dh` must be a live `DH *` or NULL.
+unsafe fn ssl_dh_to_pkey(dh: *mut c_void) -> *mut EvpPkey {
+    use crate::evp::pkey::{EVP_PKEY_new, EVP_PKEY_set1_DH};
+    if dh.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `EVP_PKEY_new` allocates a fresh key and takes no caller state.
+    let ret = unsafe { EVP_PKEY_new() };
+    if ret.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: `ret` is this frame's fresh key; `dh` is the caller's live DH.
+    if unsafe { EVP_PKEY_set1_DH(ret, dh.cast()) } <= 0 {
+        // SAFETY: `ret` is this frame's.
+        unsafe { EVP_PKEY_free(ret) };
+        return ptr::null_mut();
+    }
+    ret
 }
 
 /// `int SSL_CTX_set0_tmp_dh_pkey(SSL_CTX *ctx, EVP_PKEY *dhpkey)` — `ssl/ssl_lib.c:7605-7615`.
