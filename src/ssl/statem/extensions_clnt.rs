@@ -221,6 +221,18 @@ unsafe fn tls_construct_ctos_supported_versions(s: *mut Ssl, pkt: *mut Wpacket) 
 /// # Safety
 /// `s` must be a live connection and `pkt` a live packet.
 unsafe fn tls_construct_ctos_psk_kex_modes(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
+    // `should_add_extension`: `psk_key_exchange_modes` is a TLS1.3 extension.
+    let mut min_version: c_int = 0;
+    let mut max_version: c_int = 0;
+    // SAFETY: `s` is live; the out-pointers are live locals.
+    if unsafe { ssl_get_min_max_version(s, &mut min_version, &mut max_version, ptr::null_mut()) }
+        != 0
+    {
+        return EXT_RETURN_FAIL;
+    }
+    if max_version < TLS1_3_VERSION {
+        return EXT_RETURN_NOT_SENT;
+    }
     // SAFETY: `s` is live.
     let nodhe = unsafe { (*s).options } & crate::ssl::ssl_ciph_table::SSL_OP_ALLOW_NO_DHE_KEX != 0;
 
@@ -357,6 +369,20 @@ unsafe fn tls_construct_ctos_supported_groups(s: *mut Ssl, pkt: *mut Wpacket) ->
 unsafe fn tls_construct_ctos_key_share(s: *mut Ssl, pkt: *mut Wpacket) -> c_int {
     use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
     use crate::runtime::mem::CRYPTO_free;
+
+    // `should_add_extension` (`extensions.c:1103-1117`): `key_share` belongs to the TLS1.3
+    // ClientHello only, so a client whose maximum version is TLS1.2 does not send it.
+    let mut min_version: c_int = 0;
+    let mut max_version: c_int = 0;
+    // SAFETY: `s` is live; the out-pointers are live locals.
+    if unsafe { ssl_get_min_max_version(s, &mut min_version, &mut max_version, ptr::null_mut()) }
+        != 0
+    {
+        return EXT_RETURN_FAIL;
+    }
+    if max_version < TLS1_3_VERSION {
+        return EXT_RETURN_NOT_SENT;
+    }
 
     let group = OSSL_TLS_GROUP_ID_x25519;
     // SAFETY: `s` is live; `ctx` is the connection's context.

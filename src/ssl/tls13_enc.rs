@@ -1274,6 +1274,22 @@ pub(crate) unsafe fn write_handshake_message(
     if r > 0 {
         // SAFETY: `s` is live; `msg` is `total` initialised bytes.
         unsafe { transcript_update(s, msg.as_ptr(), total) };
+        // `ssl3_do_write`'s `msg_callback` (`statem_lib.c:114-118`): the authority reports every
+        // handshake message written, with `s->version` and `SSL3_RT_HANDSHAKE`.
+        // SAFETY: `s` is live; `msg` is `total` initialised bytes.
+        unsafe {
+            if let Some(cb) = (*s).msg_callback {
+                cb(
+                    1,
+                    (*s).version,
+                    SSL3_RT_HANDSHAKE as c_int,
+                    msg.as_ptr().cast(),
+                    total,
+                    s,
+                    (*s).msg_callback_arg,
+                );
+            }
+        }
     }
     r
 }

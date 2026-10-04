@@ -56,6 +56,7 @@
 #![allow(clippy::collapsible_match)]
 
 use core::ffi::{c_int, c_uint};
+use core::ptr;
 
 use crate::packet::Wpacket;
 use crate::ssl::ssl_ciph_table as t;
@@ -121,6 +122,17 @@ const SSL_RECEIVED_SHUTDOWN: c_int = 2;
 const ERR_R_INTERNAL_ERROR: c_int = 259 | (2 << 18) | (1 << 18);
 const SSL_R_UNEXPECTED_MESSAGE: c_int = 244;
 const SSL_R_PEER_DID_NOT_RETURN_A_CERTIFICATE: c_int = 205;
+/// `SSL_R_UNSUPPORTED_PROTOCOL` — `sslerr.h:258`.
+const SSL_R_UNSUPPORTED_PROTOCOL: c_int = 258;
+/// `SSL_R_NO_SUITABLE_KEY_SHARE` — `sslerr.h`.
+const SSL_R_NO_SUITABLE_KEY_SHARE: c_int = 380;
+/// `SSL_AD_ILLEGAL_PARAMETER` — `ssl3.h` (47).
+#[allow(dead_code)]
+const SSL_AD_ILLEGAL_PARAMETER: c_int = 47;
+/// `SSL3_MT_SERVER_KEY_EXCHANGE` — `ssl3.h` (12).
+const SSL3_MT_SERVER_KEY_EXCHANGE: c_int = 12;
+/// `SSL3_MT_SERVER_HELLO_DONE` — `ssl3.h` (14).
+const SSL3_MT_SERVER_HELLO_DONE: c_int = 14;
 /// `SSL_CLIENT_HELLO_SUCCESS` — `ssl.h:1914`.
 const SSL_CLIENT_HELLO_SUCCESS: c_int = 1;
 /// `SSL_CLIENT_HELLO_RETRY` — `ssl.h:1916`.
@@ -849,6 +861,8 @@ const SSL3_MT_SERVER_HELLO: u8 = 2;
 const SSL3_MT_CLIENT_HELLO_BODY: u8 = 1;
 /// `TLS1_2_VERSION` — `ssl3.h` (the legacy ServerHello version, `statem_srvr.c:2599`).
 const TLS1_2_VERSION: c_int = 0x0303;
+/// `TLSEXT_TYPE_supported_groups` — `tls1.h:143`.
+const TLSEXT_TYPE_SUPPORTED_GROUPS: u16 = 10;
 /// `SSL3_RT_HANDSHAKE` — `ssl3.h` (22).
 const SSL3_RT_HANDSHAKE: u8 = 22;
 /// `TLSEXT_TYPE_supported_versions` — `tls1.h`.
@@ -948,6 +962,12 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     };
 
     // Choose the server version and the key-exchange group from the extensions.
+    let legacy_version = ((body[0] as c_int) << 8) | body[1] as c_int;
+    let mut wants_tls13 = false;
+    let mut sup_versions = [0u16; 8];
+    let mut sup_versions_cnt = 0usize;
+    let mut clnt_groups = [0u16; 32];
+    let mut clnt_group_cnt = 0usize;
     let mut saw_keyshare_group: u16 = 0;
     let mut client_share: &[u8] = &[];
     let mut off = 0usize;
@@ -1009,15 +1029,26 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
             let mut q = 1usize;
             while q + 2 <= 1 + list_len.min(eb.len() - 1) {
                 let v = ((eb[q] as c_int) << 8) | eb[q + 1] as c_int;
-                if v == TLS1_3_VERSION {
-                    // SAFETY: `s` is live.
-                    unsafe {
-                        (*s).version = TLS1_3_VERSION;
-                        // `tls_setup_handshake` installs the negotiated-version method
-                        // (`statem_lib.c:2292`), which `SSL_CONNECTION_IS_TLS13` reads.
-                        (*s).method = crate::ssl::methods::tls13_method(true);
-                    };
+                if sup_versions_cnt < sup_versions.len() {
+                    sup_versions[sup_versions_cnt] = v as u16;
+                    sup_versions_cnt += 1;
                 }
+                if v == TLS1_3_VERSION {
+                    // `tls_parse_ctos_supported_versions` records the request; the version itself
+                    // is resolved after the whole extension walk (`tls_early_post_process_client_hello`).
+                    wants_tls13 = true;
+                }
+                q += 2;
+            }
+        }
+        if etype == TLSEXT_TYPE_SUPPORTED_GROUPS && eb.len() >= 2 {
+            // `tls_parse_ctos_supported_groups` (`extensions_srvr.c`): the `NamedGroupList`.
+            let list_len = ((eb[0] as usize) << 8) | eb[1] as usize;
+            let end = (2 + list_len).min(eb.len());
+            let mut q = 2usize;
+            while q + 2 <= end && clnt_group_cnt < clnt_groups.len() {
+                clnt_groups[clnt_group_cnt] = ((eb[q] as u16) << 8) | eb[q + 1] as u16;
+                clnt_group_cnt += 1;
                 q += 2;
             }
         }
@@ -1104,6 +1135,74 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         off += elen;
     }
 
+    // `tls_parse_ctos_supported_versions`/the legacy-version fallback (`statem_srvr.c`): the
+    // highest version both sides support. Absent a TLS1.3 `supported_versions` offer, the legacy
+    // version governs, clamped to the server's own maximum. Only TLS1.2 and TLS1.3 are implemented.
+    let mut smin: c_int = 0;
+    let mut smax: c_int = 0;
+    // SAFETY: `s` is live; the out-pointers are live locals.
+    if unsafe {
+        crate::ssl::statem::statem_lib::ssl_get_min_max_version(
+            s,
+            &mut smin,
+            &mut smax,
+            core::ptr::null_mut(),
+        )
+    } != 0
+    {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_UNSUPPORTED_PROTOCOL) };
+        return 0;
+    }
+    let mut session_version = legacy_version;
+    if wants_tls13 && smax >= TLS1_3_VERSION {
+        session_version = TLS1_3_VERSION;
+    }
+    if session_version > smax {
+        session_version = smax;
+    }
+    if session_version < smin
+        || (session_version != TLS1_2_VERSION && session_version != TLS1_3_VERSION)
+    {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_UNSUPPORTED_PROTOCOL) };
+        return 0;
+    }
+    // A `supported_versions` offer restricts the server to a version the client listed
+    // (`tls_parse_ctos_supported_versions`, `extensions_srvr.c`).
+    if sup_versions_cnt > 0 && !sup_versions[..sup_versions_cnt].contains(&(session_version as u16))
+    {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_UNSUPPORTED_PROTOCOL) };
+        return 0;
+    }
+    // `tls_setup_handshake` installs the negotiated-version method (`statem_lib.c:2292`), which
+    // `SSL_CONNECTION_IS_TLS13` reads.
+    // SAFETY: `s` is live.
+    unsafe {
+        (*s).version = session_version;
+        (*s).method = if session_version == TLS1_3_VERSION {
+            crate::ssl::methods::tls13_method(true)
+        } else {
+            crate::ssl::methods::tls12_method(true)
+        };
+    }
+
+    // Phase 17 ecdh-curve fix: the TLS1.3 server honors its own configured group list. The
+    // authority (`tls_parse_ctos_key_share`, `extensions_srvr.c:965-997`) fails with
+    // `SSL_R_NO_SUITABLE_KEY_SHARE` when the client's `supported_groups` and the server's list do
+    // not intersect (a group overlap with no matching key share would send a HelloRetryRequest; the
+    // reduced server accepts the client's X25519 share instead, a named boundary).
+    if session_version == TLS1_3_VERSION
+        && clnt_group_cnt > 0
+        // SAFETY: `s` is live; `clnt_groups[..clnt_group_cnt]` is readable.
+        && unsafe { tls12_choose_group(s, &clnt_groups[..clnt_group_cnt]) } == 0
+    {
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_NO_SUITABLE_KEY_SHARE) };
+        return 0;
+    }
+
     // `tls_early_post_process_client_hello`'s ClientHello callback (`statem_srvr.c:1881-1893`):
     // give the application's `SSL_CTX_set_client_hello_cb` a chance to inspect the message and
     // switch the connection's context before the version/cipher choice. The authority publishes
@@ -1183,38 +1282,48 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         return 0;
     }
     let mut chosen: *const t::SslCipher = core::ptr::null();
-    // SAFETY: `ciphers` is a live stack of `const SSL_CIPHER *`.
-    let n = unsafe { crate::runtime::stack::OPENSSL_sk_num(ciphers) };
-    for i in 0..n {
-        // SAFETY: `i` is in range.
-        let c =
-            unsafe { crate::runtime::stack::OPENSSL_sk_value(ciphers, i) as *const t::SslCipher };
-        if c.is_null() {
-            continue;
-        }
-        // SAFETY: `c` is a live table row.
-        let (min_tls, id) = unsafe { ((*c).min_tls, (*c).id) };
-        if min_tls < TLS1_3_VERSION {
-            continue;
-        }
-        let mut q = 0usize;
-        while q + 2 <= clnt_ciphers.len() {
-            // The wire id is big-endian.
-            let w = ((clnt_ciphers[q] as u16) << 8) | clnt_ciphers[q + 1] as u16;
-            if w == id as u16 {
-                chosen = c;
+    if session_version == TLS1_3_VERSION {
+        // `ssl3_choose_cipher` (`ssl3_lib.c`): the first TLSv1.3 cipher in the server's list that
+        // the client also offered.
+        // SAFETY: `ciphers` is a live stack of `const SSL_CIPHER *`.
+        let n = unsafe { crate::runtime::stack::OPENSSL_sk_num(ciphers) };
+        for i in 0..n {
+            // SAFETY: `i` is in range.
+            let c = unsafe {
+                crate::runtime::stack::OPENSSL_sk_value(ciphers, i) as *const t::SslCipher
+            };
+            if c.is_null() {
+                continue;
+            }
+            // SAFETY: `c` is a live table row.
+            let (min_tls, id) = unsafe { ((*c).min_tls, (*c).id) };
+            if min_tls < TLS1_3_VERSION {
+                continue;
+            }
+            let mut q = 0usize;
+            while q + 2 <= clnt_ciphers.len() {
+                // The wire id is big-endian.
+                let w = ((clnt_ciphers[q] as u16) << 8) | clnt_ciphers[q + 1] as u16;
+                if w == id as u16 {
+                    chosen = c;
+                    break;
+                }
+                q += 2;
+            }
+            if !chosen.is_null() {
                 break;
             }
-            q += 2;
         }
-        if !chosen.is_null() {
-            break;
-        }
+    } else {
+        // The TLS1.2 half of `ssl3_choose_cipher` (`ssl3_lib.c`): server preference over the
+        // supported `ECDHE-{RSA,ECDSA}-AES{128,256}-GCM` suites, filtered by the certificate the
+        // server actually holds.
+        // SAFETY: `s`/`ciphers`/`clnt_ciphers` are live.
+        chosen = unsafe { tls12_choose_cipher(s, ciphers, clnt_ciphers) };
     }
     if chosen.is_null() {
         // `ssl3_choose_cipher` returning NULL is `SSL_R_NO_SHARED_CIPHER`
-        // (`tls_early_post_process_client_hello`, `statem_srvr.c:2002`); the reduced server only
-        // walks the TLS1.3 suites, so a TLS1.2-only ClientHello lands here too.
+        // (`tls_early_post_process_client_hello`, `statem_srvr.c:2002`).
         // SAFETY: `s` is live.
         unsafe {
             ossl_statem_fatal(
@@ -1228,7 +1337,14 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
     // SAFETY: `s` is live and `chosen` a table row.
     unsafe {
         (*s).pending_cipher = chosen;
-        (*s).group_id = saw_keyshare_group;
+        (*s).group_id = if session_version == TLS1_3_VERSION {
+            saw_keyshare_group
+        } else {
+            // `tls_parse_ctos_supported_groups`'s selection (`extensions_srvr.c`): the first server
+            // group the client also offered. The reduced TLS1.2 path only completes an X25519
+            // exchange, so a connection with no common X25519 group fails at the ServerKeyExchange.
+            tls12_choose_group(s, &clnt_groups[..clnt_group_cnt])
+        };
     }
 
     // `ssl_cache_cipherlist` (`ssl_lib.c:7088-7124`): build the client's offered cipher list
@@ -1266,8 +1382,16 @@ pub(crate) unsafe fn tls_process_client_hello(s: *mut Ssl, hs: &[u8]) -> c_int {
         return 0;
     }
     // SAFETY: `s` is live; `chosen` is the table row selected above.
-    if unsafe { crate::ssl::tls13_enc::tls13_setup_cipher(s, (*chosen).id as u16) } == 0 {
-        return 0;
+    if session_version == TLS1_3_VERSION {
+        // SAFETY: `s` is live; `chosen` is a table row.
+        if unsafe { crate::ssl::tls13_enc::tls13_setup_cipher(s, (*chosen).id as u16) } == 0 {
+            return 0;
+        }
+    } else {
+        // SAFETY: `s` is live; `chosen` is a table row.
+        if unsafe { crate::ssl::t1_enc::tls12_setup_cipher(s, (*chosen).id as u16) } == 0 {
+            return 0;
+        }
     }
     if saw_keyshare_group == crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519
         && client_share.len() == 32
@@ -1937,6 +2061,901 @@ pub(crate) unsafe fn tls13_server_process_post_handshake(s: *mut Ssl, msg: &[u8]
     }
 }
 
+// ============================================================================================
+// Phase 17 — the reduced TLS1.2 server flight (`ssl/statem/statem_srvr.c`'s TLS1.2 arms).
+// ============================================================================================
+
+/// `SSL_PKEY_RSA` — `ssl_local.h:319`.
+const SSL_PKEY_RSA_SLOT: usize = 0;
+/// `SSL_PKEY_ECC` — `ssl_local.h:322`.
+const SSL_PKEY_ECC_SLOT: usize = 3;
+/// `SSL3_RT_CHANGE_CIPHER_SPEC` — `ssl3.h` (20).
+const SSL3_RT_CHANGE_CIPHER_SPEC: u8 = 20;
+
+/// Whether the server holds a certificate in `slot` (`s->cert->pkeys[slot].x509 != NULL`).
+///
+/// # Safety
+/// `s` is live.
+unsafe fn cert_slot_present(s: *mut Ssl, slot: usize) -> bool {
+    // SAFETY: `s` is live.
+    unsafe {
+        if (*s).cert.is_null() {
+            return false;
+        }
+        !(*(*s).cert).pkeys[slot].x509.is_null()
+    }
+}
+
+/// The TLS1.2 half of `ssl3_choose_cipher` (`ssl3_lib.c`): server preference over the supported
+/// `ECDHE-{RSA,ECDSA}-AES{128,256}-GCM` suites, filtered by the certificate the server holds and
+/// by the client's offer. Selects the matching certificate slot (`ssl_set_cert`).
+///
+/// # Safety
+/// `s`/`ciphers`/`clnt_ciphers` are live.
+unsafe fn tls12_choose_cipher(
+    s: *mut Ssl,
+    ciphers: *mut crate::runtime::stack::OpenSslStack,
+    clnt_ciphers: &[u8],
+) -> *const t::SslCipher {
+    use crate::ssl::ssl_ciph_table as ct;
+    // SAFETY: `ciphers` is a live stack.
+    let n = unsafe { crate::runtime::stack::OPENSSL_sk_num(ciphers) };
+    for i in 0..n {
+        // SAFETY: `i` is in range.
+        let c =
+            unsafe { crate::runtime::stack::OPENSSL_sk_value(ciphers, i) as *const t::SslCipher };
+        if c.is_null() {
+            continue;
+        }
+        // SAFETY: `c` is a live table row.
+        let (min_tls, max_tls, id, mkey, auth, enc) = unsafe {
+            (
+                (*c).min_tls,
+                (*c).max_tls,
+                (*c).id,
+                (*c).algorithm_mkey,
+                (*c).algorithm_auth,
+                (*c).algorithm_enc,
+            )
+        };
+        if min_tls > TLS1_2_VERSION || max_tls < TLS1_2_VERSION {
+            continue;
+        }
+        // The reduced TLS1.2 path completes an ECDHE key exchange only.
+        if (mkey as u64 & ct::SSL_kECDHE) == 0 {
+            continue;
+        }
+        if (enc as u64 & (ct::SSL_AES128GCM | ct::SSL_AES256GCM)) == 0 {
+            continue;
+        }
+        let slot = if (auth as u64 & ct::SSL_aECDSA) != 0 {
+            SSL_PKEY_ECC_SLOT
+        } else if (auth as u64 & ct::SSL_aRSA) != 0 {
+            SSL_PKEY_RSA_SLOT
+        } else {
+            continue;
+        };
+        // SAFETY: `s` is live.
+        if !unsafe { cert_slot_present(s, slot) } {
+            continue;
+        }
+        let mut q = 0usize;
+        while q + 2 <= clnt_ciphers.len() {
+            let w = ((clnt_ciphers[q] as u16) << 8) | clnt_ciphers[q + 1] as u16;
+            if w == id as u16 {
+                // `ssl3_choose_cipher`'s `CERT` selection (`ssl_set_cert`) sets the active slot.
+                // SAFETY: `s` is live and holds a certificate container.
+                unsafe { (*(*s).cert).key_index = slot };
+                return c;
+            }
+            q += 2;
+        }
+    }
+    core::ptr::null()
+}
+
+/// `tls_parse_ctos_supported_groups`'s selection (`extensions_srvr.c`): the first server group the
+/// client also offered, or 0 when the lists do not intersect.
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls12_choose_group(s: *const Ssl, clnt_groups: &[u16]) -> u16 {
+    // SAFETY: `s` is live.
+    let srvr = unsafe { crate::ssl::t1_lib::tls1_get_supported_groups(s) };
+    for g in srvr {
+        if clnt_groups.contains(g) {
+            return *g;
+        }
+    }
+    0
+}
+
+/// Sign `data` with the active certificate's key, TLS1.2 style: an EC key signs with
+/// `ecdsa_secp256r1_sha256` (`0x0403`), an RSA key with `rsa_pkcs1_sha256` (`0x0401`). Returns the
+/// `(sigalg, sig_len)` for a signature written to `sig`, or `None`.
+///
+/// # Safety
+/// `s` is live; `sig` is writable.
+pub(crate) unsafe fn tls12_sign(s: *mut Ssl, data: &[u8], sig: &mut [u8]) -> Option<(u16, usize)> {
+    use crate::evp::digest::{EVP_DigestSign, EVP_DigestSignInit, EVP_MD_CTX_free, EVP_MD_CTX_new};
+    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::pkey::EvpPkey;
+    use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
+    // SAFETY: `s` is live.
+    let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
+    // SAFETY: `cpk` is non-NULL per the left operand.
+    if cpk.is_null() || unsafe { (*cpk).privatekey }.is_null() {
+        return None;
+    }
+    // SAFETY: `cpk.privatekey` is a live signing key.
+    let pkey = unsafe { (*cpk).privatekey }.cast::<EvpPkey>();
+    // SAFETY: `pkey` is live.
+    let is_ec = unsafe { crate::evp::pkey::EVP_PKEY_get_base_id(pkey) }
+        == crate::evp::pkey_ctx::EVP_PKEY_EC;
+    // SAFETY: no preconditions.
+    let mctx = EVP_MD_CTX_new();
+    if mctx.is_null() {
+        return None;
+    }
+    // SAFETY: no preconditions.
+    let md = EVP_sha256();
+    let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
+    let mut siglen = sig.len();
+    let mut ok = false;
+    // SAFETY: `mctx`/`pkey` are live; `data` is readable; `sig` is writable.
+    unsafe {
+        if EVP_DigestSignInit(mctx, &mut pctx, md, core::ptr::null_mut(), pkey) > 0
+            && !pctx.is_null()
+            && EVP_PKEY_CTX_set_signature_md(pctx, md) > 0
+            && EVP_DigestSign(
+                mctx,
+                core::ptr::null_mut(),
+                &mut siglen,
+                data.as_ptr(),
+                data.len(),
+            ) > 0
+            && siglen <= sig.len()
+            && EVP_DigestSign(
+                mctx,
+                sig.as_mut_ptr(),
+                &mut siglen,
+                data.as_ptr(),
+                data.len(),
+            ) > 0
+        {
+            ok = true;
+        }
+        EVP_MD_CTX_free(mctx);
+    }
+    if !ok {
+        return None;
+    }
+    Some((if is_ec { 0x0403 } else { 0x0401 }, siglen))
+}
+
+/// Verify `sig` over `data` with `pkey` for the TLS1.2 `sigalg` (`0x0401` RSA-PKCS1-SHA256,
+/// `0x0403` ECDSA-SHA256).
+///
+/// # Safety
+/// `pkey` is live; `data`/`sig` are readable.
+pub(crate) unsafe fn tls12_verify(
+    pkey: *mut crate::evp::pkey::EvpPkey,
+    data: &[u8],
+    sigalg: u16,
+    sig: &[u8],
+) -> bool {
+    use crate::evp::digest::{
+        EVP_DigestVerify, EVP_DigestVerifyInit, EVP_MD_CTX_free, EVP_MD_CTX_new,
+    };
+    use crate::evp::legacy_sha::EVP_sha256;
+    use crate::evp::pkey_ctx::{EVP_PKEY_CTX_set_signature_md, EvpPkeyCtx};
+    if sigalg != 0x0401 && sigalg != 0x0403 {
+        return false;
+    }
+    // SAFETY: no preconditions.
+    let md = EVP_sha256();
+    // SAFETY: no preconditions.
+    let mctx = EVP_MD_CTX_new();
+    if mctx.is_null() {
+        return false;
+    }
+    let mut pctx: *mut EvpPkeyCtx = core::ptr::null_mut();
+    let mut ok = false;
+    // SAFETY: `mctx`/`pkey` are live.
+    unsafe {
+        if EVP_DigestVerifyInit(mctx, &mut pctx, md, core::ptr::null_mut(), pkey) > 0
+            && !pctx.is_null()
+            && EVP_PKEY_CTX_set_signature_md(pctx, md) > 0
+            && EVP_DigestVerify(mctx, sig.as_ptr(), sig.len(), data.as_ptr(), data.len()) == 1
+        {
+            ok = true;
+        }
+        EVP_MD_CTX_free(mctx);
+    }
+    ok
+}
+
+/// `tls_construct_server_hello` (`statem_srvr.c:2590-2699`) for TLS1.2.
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls12_construct_server_hello(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc::write_handshake_message;
+    // SAFETY: `s` is live.
+    let cipher = unsafe { (*s).pending_cipher };
+    if cipher.is_null() {
+        return 0;
+    }
+    // SAFETY: `cipher` is a live table row.
+    let id = unsafe { (*cipher).id as u16 };
+    let mut sid = [0u8; 32];
+    // SAFETY: `sid` is writable.
+    if unsafe { crate::rand::rand_lib::RAND_bytes(sid.as_mut_ptr(), 32) } <= 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    unsafe {
+        core::ptr::copy_nonoverlapping(sid.as_ptr(), (*s).tmp_session_id.as_mut_ptr(), 32);
+        (*s).tmp_session_id_len = 32;
+    }
+    let mut body = [0u8; 96];
+    let mut p = 0usize;
+    body[p] = 0x03;
+    body[p + 1] = 0x03;
+    p += 2;
+    // SAFETY: `s` is live; `server_random` is a 32-byte array; `body` has room.
+    unsafe {
+        core::ptr::copy_nonoverlapping((*s).server_random.as_ptr(), body.as_mut_ptr().add(p), 32)
+    };
+    p += 32;
+    body[p] = 32;
+    p += 1;
+    body[p..p + 32].copy_from_slice(&sid);
+    p += 32;
+    body[p] = (id >> 8) as u8;
+    body[p + 1] = id as u8;
+    p += 2;
+    body[p] = 0;
+    p += 1;
+    // Extensions: `renegotiation_info` with an empty `renegotiated_connection`, which RFC 5746
+    // requires once a client offers it.
+    body[p] = 0;
+    body[p + 1] = 5;
+    p += 2;
+    body[p] = 0xff;
+    body[p + 1] = 0x01;
+    p += 2;
+    body[p] = 0;
+    body[p + 1] = 1;
+    p += 2;
+    body[p] = 0;
+    p += 1;
+    // SAFETY: `s` is live; `body` is `p` initialised bytes.
+    unsafe { write_handshake_message(s, SSL3_MT_SERVER_HELLO, body.as_ptr(), p) }
+}
+
+/// `tls_construct_server_certificate` (`statem_srvr.c:4019-4055`) for the TLS1.2
+/// `Certificate` shape (`certificate_list<0..2^24-1>` of `cert_data<1..2^24-1>`).
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls12_construct_certificate(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc::write_handshake_message;
+    use crate::x509::x_x509::{i2d_X509, X509};
+    // SAFETY: `s` is live.
+    let cpk = unsafe { crate::ssl::ssl_lib::cert_active_key((*s).cert) };
+    let mut body = [0u8; 8300];
+    let mut p = 3usize;
+    let mut der = [0u8; 8192];
+    let mut derptr = der.as_mut_ptr();
+    // SAFETY: `s` is live; `cpk` is a live certificate container.
+    if !cpk.is_null() && !unsafe { (*cpk).x509 }.is_null() {
+        // SAFETY: `cpk.x509` is live; `derptr` points at `der`'s storage.
+        let dlen = unsafe { i2d_X509((*cpk).x509, &mut derptr) };
+        if dlen <= 0 || dlen as usize > der.len() || p + 3 + dlen as usize > body.len() {
+            return 0;
+        }
+        let dlen = dlen as usize;
+        body[p] = (dlen >> 16) as u8;
+        body[p + 1] = (dlen >> 8) as u8;
+        body[p + 2] = dlen as u8;
+        p += 3;
+        // SAFETY: `body` has room for `dlen` bytes at `p`.
+        unsafe { core::ptr::copy_nonoverlapping(der.as_ptr(), body.as_mut_ptr().add(p), dlen) };
+        p += dlen;
+    }
+    // The extra chain (`ssl3_output_cert_chain` appends `cpk->chain`).
+    // SAFETY: `s`/`cpk` are live.
+    if !cpk.is_null() && !unsafe { (*cpk).chain }.is_null() {
+        // SAFETY: `cpk.chain` is a live stack of certificates.
+        let chain = unsafe { (*cpk).chain };
+        // SAFETY: `chain` is a live stack.
+        let n = unsafe { crate::runtime::stack::OPENSSL_sk_num(chain) };
+        for i in 0..n {
+            // SAFETY: `i` is in range.
+            let x = unsafe { crate::runtime::stack::OPENSSL_sk_value(chain, i) as *mut X509 };
+            if x.is_null() {
+                continue;
+            }
+            let mut d2 = [0u8; 8192];
+            let mut d2p = d2.as_mut_ptr();
+            // SAFETY: `x` is a live certificate.
+            let dlen = unsafe { i2d_X509(x, &mut d2p) };
+            if dlen <= 0 || dlen as usize > d2.len() || p + 3 + dlen as usize > body.len() {
+                return 0;
+            }
+            let dlen = dlen as usize;
+            body[p] = (dlen >> 16) as u8;
+            body[p + 1] = (dlen >> 8) as u8;
+            body[p + 2] = dlen as u8;
+            p += 3;
+            // SAFETY: `body` has room for `dlen` bytes at `p`.
+            unsafe { core::ptr::copy_nonoverlapping(d2.as_ptr(), body.as_mut_ptr().add(p), dlen) };
+            p += dlen;
+        }
+    }
+    let list_len = p - 3;
+    body[0] = (list_len >> 16) as u8;
+    body[1] = (list_len >> 8) as u8;
+    body[2] = list_len as u8;
+    // SAFETY: `s` is live; `body` is `p` initialised bytes.
+    unsafe { write_handshake_message(s, SSL3_MT_CERTIFICATE as u8, body.as_ptr(), p) }
+}
+
+/// `tls_construct_server_key_exchange` (`statem_srvr.c:2699-2860`) for the reduced ECDHE path:
+/// `ServerECDHParams` signed with the server certificate key over
+/// `client_random || server_random || ServerECDHParams` (`tls12_construct_ske`).
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls12_construct_server_key_exchange(s: *mut Ssl) -> c_int {
+    use crate::evp::pkey::{evp_pkey_keygen, EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key};
+    use crate::runtime::mem::CRYPTO_free;
+    use crate::ssl::tls13_enc::write_handshake_message;
+    // SAFETY: `s` is live.
+    let group = unsafe { (*s).group_id };
+    if group != crate::ssl::t1_lib::OSSL_TLS_GROUP_ID_x25519 {
+        // The reduced TLS1.2 path completes an X25519 ECDHE only (named boundary).
+        // SAFETY: `s` is live.
+        unsafe { ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_NO_SUITABLE_KEY_SHARE) };
+        return -1;
+    }
+    // SAFETY: `s` is live.
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    let mut params = [crate::params::END; 1];
+    // SAFETY: `libctx`/`propq` are the context's; the name is NUL-terminated.
+    let pkey = unsafe { evp_pkey_keygen(libctx, c"X25519".as_ptr(), propq, params.as_mut_ptr()) };
+    if pkey.is_null() {
+        return 0;
+    }
+    let mut pub_ = core::ptr::null_mut::<u8>();
+    // SAFETY: `pkey` is live; `pub_` is this frame's writable slot.
+    let publen = unsafe { EVP_PKEY_get1_encoded_public_key(pkey, &mut pub_) };
+    if publen == 0 {
+        // SAFETY: `pkey` is live and this call owns it.
+        unsafe { EVP_PKEY_free(pkey) };
+        return 0;
+    }
+    // Store the server ephemeral (`ssl_generate_pkey`).
+    // SAFETY: `s` is live.
+    unsafe {
+        if !(*s).pkey.is_null() {
+            EVP_PKEY_free((*s).pkey.cast());
+        }
+        (*s).pkey = pkey.cast();
+    }
+    let mut params_buf = [0u8; 128];
+    params_buf[0] = 3; // named_curve
+    params_buf[1] = (group >> 8) as u8;
+    params_buf[2] = group as u8;
+    params_buf[3] = publen as u8;
+    // SAFETY: `pub_` is `publen` readable bytes; `params_buf` has room.
+    unsafe { core::ptr::copy_nonoverlapping(pub_, params_buf.as_mut_ptr().add(4), publen) };
+    let params_len = 4 + publen;
+    let mut tbs = [0u8; 32 + 32 + 128];
+    // SAFETY: `s` is live; both randoms are 32-byte arrays; `tbs` has room.
+    unsafe {
+        core::ptr::copy_nonoverlapping((*s).client_random.as_ptr(), tbs.as_mut_ptr(), 32);
+        core::ptr::copy_nonoverlapping((*s).server_random.as_ptr(), tbs.as_mut_ptr().add(32), 32);
+    }
+    tbs[64..64 + params_len].copy_from_slice(&params_buf[..params_len]);
+    let mut sig = [0u8; 1024];
+    // SAFETY: `s` is live; `tbs`/`sig` are writable locals.
+    let sigalg_len = unsafe { tls12_sign(s, &tbs[..64 + params_len], &mut sig) };
+    // SAFETY: `pub_` is the block `get1` allocated.
+    unsafe { CRYPTO_free(pub_.cast(), core::ptr::null(), 0) };
+    let Some((sigalg, siglen)) = sigalg_len else {
+        return 0;
+    };
+    let mut body = [0u8; 2048];
+    body[..params_len].copy_from_slice(&params_buf[..params_len]);
+    let mut p = params_len;
+    body[p] = (sigalg >> 8) as u8;
+    body[p + 1] = sigalg as u8;
+    p += 2;
+    body[p] = (siglen >> 8) as u8;
+    body[p + 1] = siglen as u8;
+    p += 2;
+    body[p..p + siglen].copy_from_slice(&sig[..siglen]);
+    p += siglen;
+    // SAFETY: `s` is live; `body` is `p` initialised bytes.
+    unsafe { write_handshake_message(s, SSL3_MT_SERVER_KEY_EXCHANGE as u8, body.as_ptr(), p) }
+}
+
+/// `tls_construct_certificate_request` (`statem_srvr.c`) for the TLS1.2 shape:
+/// `certificate_types || supported_signature_algorithms || certificate_authorities`.
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls12_construct_certificate_request(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc::write_handshake_message;
+    const SIGALGS: [u8; 8] = [0x04, 0x01, 0x04, 0x03, 0x05, 0x01, 0x06, 0x01];
+    let mut body = [0u8; 64];
+    let mut p = 0usize;
+    body[p] = 2;
+    p += 1;
+    body[p] = 1; // rsa_sign
+    p += 1;
+    body[p] = 64; // ecdsa_sign
+    p += 1;
+    body[p] = 0;
+    body[p + 1] = SIGALGS.len() as u8;
+    p += 2;
+    body[p..p + SIGALGS.len()].copy_from_slice(&SIGALGS);
+    p += SIGALGS.len();
+    body[p] = 0;
+    body[p + 1] = 0;
+    p += 2;
+    // SAFETY: `s` is live; `body` is `p` initialised bytes.
+    unsafe { write_handshake_message(s, SSL3_MT_CERTIFICATE_REQUEST as u8, body.as_ptr(), p) }
+}
+
+/// `ssl3_do_write`'s `ChangeCipherSpec` arm, plaintext, plus the authority's `msg_callback`
+/// invocation (`statem_lib.c:114-118`).
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls12_write_change_cipher_spec(s: *mut Ssl, is_client: bool) -> c_int {
+    let ccs = [1u8];
+    // SAFETY: `s` is live; `ccs` is readable.
+    let r = unsafe {
+        crate::ssl::record::rec_layer_s3::ssl3_write_bytes(
+            s,
+            SSL3_RT_CHANGE_CIPHER_SPEC,
+            ccs.as_ptr(),
+            1,
+        )
+    };
+    if r > 0 {
+        // SAFETY: `s` is live; the callback is the application's.
+        unsafe {
+            if let Some(cb) = (*s).msg_callback {
+                cb(
+                    1,
+                    (*s).version,
+                    SSL3_RT_CHANGE_CIPHER_SPEC as c_int,
+                    ccs.as_ptr().cast(),
+                    1,
+                    s,
+                    (*s).msg_callback_arg,
+                );
+            }
+        }
+    }
+    let _ = is_client;
+    r
+}
+
+/// Read one TLS1.2 handshake record, invoking the authority's read `msg_callback`
+/// (`statem_lib.c:1767`). Returns `(buf, len)`, or `None` when the peer BIO is empty.
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls12_read_handshake(s: *mut Ssl) -> Option<([u8; 16384], usize)> {
+    let mut buf = [0u8; 16384];
+    let mut rt = 0u8;
+    // SAFETY: `s` is live; `buf` is writable; `rt` is writable.
+    let n = unsafe {
+        crate::ssl::record::rec_layer_s3::ssl3_read_bytes(s, &mut rt, buf.as_mut_ptr(), buf.len())
+    };
+    if n <= 0 || rt != SSL3_RT_HANDSHAKE {
+        return None;
+    }
+    // SAFETY: `s` is live.
+    unsafe {
+        if let Some(cb) = (*s).msg_callback {
+            cb(
+                0,
+                (*s).version,
+                SSL3_RT_HANDSHAKE as c_int,
+                buf.as_ptr().cast(),
+                n as usize,
+                s,
+                (*s).msg_callback_arg,
+            );
+        }
+    }
+    Some((buf, n as usize))
+}
+
+/// Read one `ChangeCipherSpec` record (`tls_process_change_cipher_spec`,
+/// `ssl/statem/statem_lib.c`).
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls12_read_change_cipher_spec(s: *mut Ssl) -> bool {
+    let mut buf = [0u8; 16];
+    let mut rt = 0u8;
+    // SAFETY: `s` is live; `buf` is writable; `rt` is writable.
+    let n = unsafe {
+        crate::ssl::record::rec_layer_s3::ssl3_read_bytes(s, &mut rt, buf.as_mut_ptr(), buf.len())
+    };
+    if n > 0 && rt == SSL3_RT_CHANGE_CIPHER_SPEC {
+        // SAFETY: `s` is live.
+        unsafe {
+            if let Some(cb) = (*s).msg_callback {
+                cb(
+                    0,
+                    (*s).version,
+                    SSL3_RT_CHANGE_CIPHER_SPEC as c_int,
+                    buf.as_ptr().cast(),
+                    n as usize,
+                    s,
+                    (*s).msg_callback_arg,
+                );
+            }
+        }
+        return true;
+    }
+    false
+}
+
+/// `tls_construct_finished` (`statem_lib.c:618-676`) for TLS1.2: `PRF(master_secret,
+/// "{client,server} finished", Hash(handshake))[0..12]`, written as the Finished body.
+///
+/// # Safety
+/// `s` is live.
+pub(crate) unsafe fn tls12_construct_finished(s: *mut Ssl, is_client: bool) -> c_int {
+    use crate::ssl::tls13_enc::write_handshake_message;
+    let label: &[u8] = if is_client {
+        b"client finished"
+    } else {
+        b"server finished"
+    };
+    let mut out = [0u8; 12];
+    // SAFETY: `s` is live; `out` is writable.
+    let n = unsafe { crate::ssl::t1_enc::tls12_finished_mac(s, label, out.as_mut_ptr()) };
+    if n == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live; `out` is `n` initialised bytes.
+    let r = unsafe { write_handshake_message(s, SSL3_MT_FINISHED as u8, out.as_ptr(), n) };
+    if r > 0 {
+        // The `tls-unique` channel binding reads this side's Finished verify_data
+        // (`SSL_get_finished`, `ssl_lib.c:1799-1812`).
+        // SAFETY: `s` is live.
+        unsafe {
+            ptr::copy_nonoverlapping(out.as_ptr(), (*s).finish_md.as_mut_ptr(), n);
+            (*s).finish_md_len = n;
+        }
+    }
+    r
+}
+
+/// `tls_process_client_key_exchange` (`statem_srvr.c:2959-3095`) for the ECDHE arm: parse
+/// `ClientECDHParams`, derive the pre-master secret, then the master secret and key block
+/// (`ssl_derive`, `s3_lib.c:5474-5528`).
+///
+/// # Safety
+/// `s` is live; `msg` is the full ClientKeyExchange message.
+unsafe fn tls12_process_client_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
+    if msg.len() < 4 || msg[0] != SSL3_MT_CLIENT_KEY_EXCHANGE as u8 {
+        return 0;
+    }
+    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
+    if 4 + blen > msg.len() {
+        return 0;
+    }
+    let body = &msg[4..4 + blen];
+    if body.is_empty() {
+        return 0;
+    }
+    let ptlen = body[0] as usize;
+    if 1 + ptlen > body.len() {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    let (libctx, propq) = unsafe { ((*(*s).ctx).libctx, (*(*s).ctx).propq) };
+    // SAFETY: `body[1..1+ptlen]` is `ptlen` readable bytes; the name is NUL-terminated.
+    let peer = unsafe {
+        crate::evp::pkey::EVP_PKEY_new_raw_public_key_ex(
+            libctx,
+            c"X25519".as_ptr(),
+            propq,
+            body.as_ptr().add(1),
+            ptlen,
+        )
+    };
+    if peer.is_null() {
+        return 0;
+    }
+    // SAFETY: `s` is live.
+    unsafe { (*s).peer_tmp = peer.cast() };
+    let mut pms = [0u8; 64];
+    let mut pmslen = 0usize;
+    // SAFETY: `s` is live; the ephemerals are set; `pms` is writable.
+    if unsafe {
+        crate::ssl::tls13_enc::tls13_derive_shared(
+            s,
+            (*s).pkey,
+            (*s).peer_tmp,
+            pms.as_mut_ptr(),
+            pms.len(),
+            &mut pmslen,
+        )
+    } == 0
+    {
+        return 0;
+    }
+    // SAFETY: `s` is live; `pms[..pmslen]` is the shared secret.
+    if unsafe { crate::ssl::t1_enc::tls12_derive_master_secret(s, pms.as_ptr(), pmslen) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live; the master secret and cipher are set.
+    if unsafe { crate::ssl::t1_enc::tls12_derive_key_block(s) } == 0 {
+        return 0;
+    }
+    // SAFETY: `s` is live; `msg` is the full message.
+    unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
+}
+
+/// `tls_process_finished` (`statem_lib.c:843-960`) for TLS1.2: compare the peer's `verify_data`
+/// with `PRF(master_secret, "{client,server} finished", Hash(handshake))`, then append the Finished
+/// to the transcript.
+///
+/// # Safety
+/// `s` is live; `msg` is the full Finished message.
+unsafe fn tls12_process_finished(s: *mut Ssl, msg: &[u8], is_client: bool) -> c_int {
+    if msg.len() < 4 || msg[0] != SSL3_MT_FINISHED as u8 {
+        return 0;
+    }
+    let blen = ((msg[1] as usize) << 16) | ((msg[2] as usize) << 8) | msg[3] as usize;
+    if 4 + blen > msg.len() {
+        return 0;
+    }
+    let body = &msg[4..4 + blen];
+    let label: &[u8] = if is_client {
+        b"client finished"
+    } else {
+        b"server finished"
+    };
+    let mut expected = [0u8; 12];
+    // SAFETY: `s` is live; `expected` is writable.
+    let n = unsafe { crate::ssl::t1_enc::tls12_finished_mac(s, label, expected.as_mut_ptr()) };
+    if n != 12 || body.len() != 12 {
+        return 0;
+    }
+    let mut diff = 0u8;
+    for i in 0..12 {
+        diff |= expected[i] ^ body[i];
+    }
+    if diff != 0 {
+        return 0;
+    }
+    // The `tls-unique` channel binding on the peer reads the client's Finished verify_data
+    // (`SSL_get_peer_finished`, `ssl_lib.c:1815-1828`).
+    // SAFETY: `s` is live.
+    unsafe {
+        ptr::copy_nonoverlapping(expected.as_ptr(), (*s).peer_finish_md.as_mut_ptr(), 12);
+        (*s).peer_finish_md_len = 12;
+    }
+    // SAFETY: `s` is live; `msg` is the full message.
+    unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
+}
+
+/// Mark the connection as waiting for the peer's next TLS1.2 record.
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls12_server_wait(s: *mut Ssl) -> c_int {
+    // SAFETY: `s` is live.
+    unsafe {
+        if ossl_statem_in_error(s) != 0 || (*s).shutdown & SSL_RECEIVED_SHUTDOWN != 0 {
+            return -1;
+        }
+        (*s).statem_state = MSG_FLOW_READING_13;
+        (*s).rwstate = 3; // SSL_READING
+    }
+    -1
+}
+
+/// The TLS1.2 server read/write driver (`statem.c`'s read/write sub-state machines, reduced).
+/// Returns `1` when the handshake finishes and `-1` while waiting for the peer.
+///
+/// # Safety
+/// `s` is live.
+unsafe fn tls12_server_drive(s: *mut Ssl) -> c_int {
+    use crate::ssl::tls13_enc::write_handshake_message;
+    // SAFETY: `s` is live.
+    unsafe {
+        loop {
+            match (*s).hand_state {
+                TLS_ST_SW_SRVR_HELLO => {
+                    if tls12_construct_server_hello(s) <= 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    if ((*s).verify_mode & (t::SSL_VERIFY_PEER as c_int)) != 0 {
+                        (*s).s3_tmp_cert_request = 1;
+                    }
+                    (*s).hand_state = TLS_ST_SW_CERT;
+                }
+                TLS_ST_SW_CERT => {
+                    if tls12_construct_certificate(s) <= 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_SW_KEY_EXCH;
+                }
+                TLS_ST_SW_KEY_EXCH => {
+                    if tls12_construct_server_key_exchange(s) <= 0 {
+                        if ossl_statem_in_error(s) == 0 {
+                            ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        }
+                        return -1;
+                    }
+                    (*s).hand_state = if (*s).s3_tmp_cert_request != 0 {
+                        TLS_ST_SW_CERT_REQ
+                    } else {
+                        TLS_ST_SW_SRVR_DONE
+                    };
+                }
+                TLS_ST_SW_CERT_REQ => {
+                    if tls12_construct_certificate_request(s) <= 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_SW_SRVR_DONE;
+                }
+                TLS_ST_SW_SRVR_DONE => {
+                    if write_handshake_message(s, SSL3_MT_SERVER_HELLO_DONE as u8, ptr::null(), 0)
+                        <= 0
+                    {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    // The client's flight order is Certificate (when requested), then
+                    // ClientKeyExchange, then CertificateVerify (`statem_srvr.c:100-142`).
+                    (*s).hand_state = if (*s).s3_tmp_cert_request != 0 {
+                        TLS_ST_SR_CERT
+                    } else {
+                        TLS_ST_SR_KEY_EXCH
+                    };
+                }
+                TLS_ST_SR_KEY_EXCH => {
+                    let Some((buf, n)) = tls12_read_handshake(s) else {
+                        return tls12_server_wait(s);
+                    };
+                    if buf[0] != SSL3_MT_CLIENT_KEY_EXCHANGE as u8 {
+                        ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
+                        return -1;
+                    }
+                    if tls12_process_client_key_exchange(s, &buf[..n]) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = if (*s).peer_cert.is_null() {
+                        TLS_ST_SR_CHANGE
+                    } else {
+                        TLS_ST_SR_CERT_VRFY
+                    };
+                }
+                TLS_ST_SR_CERT => {
+                    let Some((buf, n)) = tls12_read_handshake(s) else {
+                        return tls12_server_wait(s);
+                    };
+                    if buf[0] != SSL3_MT_CERTIFICATE as u8 {
+                        ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
+                        return -1;
+                    }
+                    if crate::ssl::statem::statem_clnt::tls12_process_peer_certificate(
+                        s,
+                        &buf[..n],
+                        true,
+                    ) == 0
+                    {
+                        if ossl_statem_in_error(s) == 0 {
+                            ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        }
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_SR_KEY_EXCH;
+                }
+                TLS_ST_SR_CERT_VRFY => {
+                    let Some((buf, n)) = tls12_read_handshake(s) else {
+                        return tls12_server_wait(s);
+                    };
+                    if buf[0] != SSL3_MT_CERTIFICATE_VERIFY as u8 {
+                        ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
+                        return -1;
+                    }
+                    if crate::ssl::statem::statem_clnt::tls12_process_cert_verify(
+                        s,
+                        &buf[..n],
+                        true,
+                    ) == 0
+                    {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_SR_CHANGE;
+                }
+                TLS_ST_SR_CHANGE => {
+                    if !tls12_read_change_cipher_spec(s) {
+                        if ossl_statem_in_error(s) != 0 {
+                            return -1;
+                        }
+                        return tls12_server_wait(s);
+                    }
+                    if crate::ssl::t1_enc::tls12_install_read(s, false) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_SR_FINISHED;
+                }
+                TLS_ST_SR_FINISHED => {
+                    let Some((buf, n)) = tls12_read_handshake(s) else {
+                        return tls12_server_wait(s);
+                    };
+                    if buf[0] != SSL3_MT_FINISHED as u8 {
+                        ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_UNEXPECTED_MESSAGE);
+                        return -1;
+                    }
+                    if tls12_process_finished(s, &buf[..n], true) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_SW_CHANGE;
+                }
+                TLS_ST_SW_CHANGE => {
+                    if tls12_write_change_cipher_spec(s, false) <= 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    if crate::ssl::t1_enc::tls12_install_write(s, false) == 0 {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_SW_FINISHED;
+                }
+                TLS_ST_SW_FINISHED => {
+                    let mut out = [0u8; 12];
+                    let n = crate::ssl::t1_enc::tls12_finished_mac(
+                        s,
+                        b"server finished",
+                        out.as_mut_ptr(),
+                    );
+                    if n == 0
+                        || write_handshake_message(s, SSL3_MT_FINISHED as u8, out.as_ptr(), n) <= 0
+                    {
+                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        return -1;
+                    }
+                    (*s).hand_state = TLS_ST_OK;
+                    (*s).in_init = 0;
+                    (*s).rwstate = 1; // SSL_NOTHING
+                    (*s).statem_state = MSG_FLOW_READING_13;
+                    return 1;
+                }
+                _ => {
+                    ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                    return -1;
+                }
+            }
+        }
+    }
+}
+
 /// The server read/write driver: reads the ClientHello, writes the whole server flight, then reads
 /// the client Finished (`statem.c`'s read/write sub-state machines, reduced). Returns `1` when the
 /// handshake finishes and `-1` while waiting for the peer.
@@ -1975,6 +2994,10 @@ pub(crate) unsafe fn tls13_server_drive(s: *mut Ssl) -> c_int {
                         return -1;
                     }
                     (*s).hand_state = TLS_ST_SW_SRVR_HELLO;
+                    // A TLS1.2 ClientHello selects the separate TLS1.2 flight.
+                    if (*s).version == TLS1_2_VERSION {
+                        return tls12_server_drive(s);
+                    }
                 }
                 TLS_ST_SW_SRVR_HELLO => {
                     if write_server_hello(s) <= 0 || tls13_server_post_server_hello(s) == 0 {

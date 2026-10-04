@@ -221,6 +221,28 @@ unsafe fn ssl3_write_one_record(s: *mut Ssl, type_: u8, buf: *const u8, len: usi
         return 1;
     }
 
+    // Phase 17: a TLS1.2 AEAD record (`tls1_enc`, `ssl/t1_enc.c`). The header, explicit nonce and
+    // tag are built by the TLS1.2 record method, so no generic header follows.
+    // SAFETY: `s` is live per the caller's contract.
+    if version == TLS1_2_VERSION && unsafe { (*s).enc_active } != 0 {
+        let mut rec = [0u8; 17000];
+        // SAFETY: `s` is live; `rec` is the record buffer; `buf` is `len` readable.
+        let n = unsafe {
+            crate::ssl::t1_enc::tls12_encrypt_record(s, type_, buf, len, rec.as_mut_ptr())
+        };
+        if n < 0 {
+            return -1;
+        }
+        // SAFETY: `s` is live; `wbio` is the caller's BIO.
+        unsafe {
+            if ssl3_write_all(s, rec.as_ptr(), n as usize) <= 0 {
+                return -1;
+            }
+            BIO_ctrl((*s).wbio, BIO_CTRL_FLUSH, 0, ptr::null_mut());
+        }
+        return 1;
+    }
+
     let mut recversion: c_int = if version == TLS1_3_VERSION {
         TLS1_2_VERSION
     } else {
@@ -534,6 +556,23 @@ unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap:
     // (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
     // SAFETY: `s` is live per the caller's contract.
     if unsafe { (*s).dec_active } != 0 {
+        // Phase 17: a TLS1.2 AEAD record (`tls1_enc`, `ssl/t1_enc.c`) decrypts whenever the read
+        // key is installed; unlike TLS1.3 the outer type is the real content type.
+        // SAFETY: `s` is live; `rec_body` holds `len` bytes; `rectype` is writable.
+        if unsafe { (*s).version } == TLS1_2_VERSION {
+            // SAFETY: `s` is live; `rec_body` holds `len` bytes; `buf`/`rectype` are the caller's.
+            return unsafe {
+                crate::ssl::t1_enc::tls12_decrypt_record(
+                    s,
+                    &hdr,
+                    (*s).rec_body.as_ptr(),
+                    len,
+                    buf,
+                    cap,
+                    rectype,
+                ) as c_int
+            };
+        }
         // `SSL3_RT_APPLICATION_DATA` (23) is the outer type of every TLS 1.3 protected record; a
         // middlebox-compatibility `ChangeCipherSpec` (20) or a plaintext alert is *not* protected
         // and is read straight through (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
