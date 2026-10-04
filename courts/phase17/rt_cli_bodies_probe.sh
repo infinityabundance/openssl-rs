@@ -11,8 +11,10 @@
 # The divergent inputs (`errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/
 # `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms,
 # `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`,
-# `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus` and the `rsautl`
-# operation arm) are deliberately absent: each renders a surface this stratum does not own
+# `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl`
+# operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam`
+# generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms) are
+# deliberately absent: each renders a surface this stratum does not own
 # (see `forensics/tools/phase17_courts.py`'s RECORDED_DIVERGENCES and the per-command module
 # headers).
 set -u
@@ -141,4 +143,33 @@ crl -in /work/courts/phase17/fixtures/crl.pem
 rsautl -sign -pubin
 rsautl -decrypt -certin
 rsautl -bogus
+gendsa
+rand
+rand 0
+rand abc
+rand -hex abc
+rehash /nonexistent-phase17e
+rehash -v /nonexistent-phase17e
+storeutl -noout -keys /work/courts/phase17/fixtures/rsa-key.pem
+storeutl -noout -certs /work/courts/phase17/fixtures/certs.pem
+dhparam -in /work/courts/phase17/fixtures/dhparams.pem -text -noout
+dhparam -in /work/courts/phase17/fixtures/dhparams.pem -noout
+dhparam -in /work/courts/phase17/fixtures/dhparams.pem -check
+genpkey
+passwd -1 -salt abcdefgh secret
+passwd -5 -salt abcdefgh01234567 secret
+passwd -6 -salt abcdefgh01234567 secret
+passwd -1 -salt abcdefgh -in /work/courts/phase17/fixtures/pwfile.txt
+passwd -1 -salt abcdefgh -table secret
+passwd -1 -salt abcdefgh -table -reverse secret
+pkeyutl -sign -inkey /work/courts/phase17/fixtures/rsa-key.pem -in /work/courts/phase17/fixtures/small.bin
+pkeyutl -verify -pubin -inkey /work/courts/phase17/fixtures/rsa-pub.pem -in /work/courts/phase17/fixtures/small.bin -sigfile /work/courts/phase17/fixtures/small.sig
+pkeyutl -encrypt -pubin -inkey /work/courts/phase17/fixtures/rsa-pub.pem -in /work/courts/phase17/fixtures/rsa256.bin -pkeyopt rsa_padding_mode:none
+pkeyutl -decrypt -inkey /work/courts/phase17/fixtures/rsa-key.pem -in /work/courts/phase17/fixtures/rsa256.ct -pkeyopt rsa_padding_mode:none
+enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0b0c0d0e0f -in /work/courts/phase17/fixtures/small.bin
+enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0b0c0d0e0f -in /work/courts/phase17/fixtures/small.enc -d
+enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0b0c0d0e0f -in /work/courts/phase17/fixtures/small.bin -a
+enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0b0c0d0e0f -in /work/courts/phase17/fixtures/small.bin -a -A
+enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0b0c0d0e0f -in /work/courts/phase17/fixtures/small.bin -nopad
+enc -aes-128-cbc -K 000102030405060708090a0b0c0d0e0f -iv 000102030405060708090a0b0c0d0e0f -in /work/courts/phase17/fixtures/small.bin -P -nosalt
 ARGS

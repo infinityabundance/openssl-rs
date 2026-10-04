@@ -3,14 +3,14 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), `sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), `spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the `-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` (the private-key-required and unknown-option refusals). Each command's `-help` arm is not driven (`opt_help` is unlanded), and the twenty divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus` and the `rsautl` operation arm -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, over the record layer, the extension units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. `RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer against the candidate distribution shell. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
+    "claim": "`RT-CLI-BODIES` is 17.1's court: it **runs** the authority's own built `openssl` and the candidate distribution shell's over a fixed argv, comparing the two transcripts line by line. 17.1a drives `errstr` -- the option parser's end-of-options boundary, the `sscanf(\"%lx\")` success and failure arms, the failure-count exit status and `ERR_error_string_n`'s rendering over fixed packed error codes. 17.1b adds five bodies over fixed fixtures: `info` (four build-independent selectors and two refusal arms), `prime` (the numeric check, the `-hex` refusal and the no-number/`-generate` refusals), `skeyutl` (the no-selector and selector-without-`-genkey` refusals), `configutl` (a fixed configuration's linearized re-emit, with and without the header), `pkeyparam` (the default/`-noout`/`-text`/`-check` arms over a fixed `DH PARAMETERS` PEM) and `nseq` (`-toseq` over a fixed certificate and the read/dump arm over the fixed sequence), all through the shell probe courts/phase17/rt_cli_bodies_probe.sh, the per-side staged pair the FRF runtime harness runs. 17.1c adds eight more bodies over fixed fixtures: `crl2pkcs7` (the `-nocrl -certfile` PKCS7 in PEM and DER), `ciphers` (the `-convert` name lookup), `sess_id` (the default/`-text`/`-cert`/`-noout`/`-context` arms over a fixed session), `kdf` (PBKDF2 over fixed `-kdfopt`s in hex and binary, plus the refusal arms), `mac` (HMAC over a fixed file, hex and binary, plus the refusal arms), `spkac` (the print/`-noout`/`-verify`/`-pubkey` arms over a fixed SPKAC config), `genrsa` and `dsaparam` (the pre-randomness bitsize and refusal arms). 17.1d adds ten more bodies over fixed fixtures: `asn1parse` (the generic PEM reader and the raw DER reader, with and without `-i`), `ecparam` (`-list_curves` and the `-name prime256v1` parameter generation), `rsa`/`dsa`/`ec` (the private/public text and re-encode arms, and `rsa -check -pubin`'s refusal), `pkey` (the `-noout`/`-check`/`-pubout`/`-pubin`/default arms), `pkcs8` (the `-topk8 -nocrypt` and read-back arms), `verify` (the fixed CA/leaf pair), `crl` (the text/issuer/update/crlnumber/hash/fingerprint and re-encode arms) and `rsautl` (the private-key-required and unknown-option refusals). 17.1e adds ten more bodies over fixed fixtures: `gendsa` (the missing-argument refusal), `rand` (the zero-length and size-suffix refusals), `rehash` (the unwritable-directory refusal), `storeutl` (the `-noout -keys`/`-noout -certs` type and `Total found` status), `dhparam` (the `-in` text/`-noout`/`-check` arms), `genpkey` (the no-algorithm refusal), `passwd` (the fixed-salt `-1`/`-5`/`-6` and `-table`/`-reverse` hashes), `pkeyutl` (`-sign`/`-verify`/`-encrypt`/`-decrypt` over the fixed key/input) and `enc` (the raw-key AES-CBC `-e`/`-d`/`-a`/`-A`/`-nopad`/`-P` arms); `engine`'s listing arms are recorded because the candidate's engine init fails. Each command's `-help` arm is not driven (`opt_help` is unlanded), and the twenty-nine divergent inputs -- `errstr 0xdeadbeef`, `info -seeds`/`-cpusettings`/`-configdir`/ `-enginesdir`/`-modulesdir`, `prime 2 3 4`/`-hex FF`, the `ciphers` list arms, `sess_id ... -text -cert`, `kdf nonexistent`, `mac NOPE`, `spkac ... -spkac NOPE`, `genrsa -bogus`, `ecparam -name <invalid>`, `rsa`/`dsa -modulus`, the `rsautl` operation arm, the 17.1e `rand` random-stream arms, the `gendsa`/`genpkey`/`dhparam` generation arms, `passwd` without `-salt` and the `engine` listing/`-pre` arms -- are recorded in `recorded_divergences` rather than diffed. `RT-TLS13-INTEROP` is 17.2's: it drives a real TLS 1.3 client/server flight, ClientHello through Finished plus an application-data exchange, over the record layer, the extension units (ssl/extensions_clnt.c/ssl/extensions_srvr.c), the key schedule (ssl/t1_enc.c/ssl/tls13_enc.c) and the 56 message bodies D529 handed forward. `RT-CROSS-DSO-STATE` is 17.3's: it raises an ERR through the libssl path and reads it through the libcrypto path (and the same for CONF), requiring one queue across the candidate's whole-crate archives, where the authority shares one libcrypto.so.3 via DT_NEEDED. `RT-DOWNSTREAM-CONSUMER` is 17.4's: it builds a real downstream consumer against the candidate distribution shell. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence. No court is registered in forensics/tools/gen_frf_courts.py: that registry is the stratum's seal (section 4.2), as Phase 16 registered its six courts only at 16.6. docs/PHASE-17-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts (docs/DECISIONS.md D530).",
     "courts": [
       {
-        "argv_cases": 101,
+        "argv_cases": 130,
         "authority_exit_code": 0,
-        "authority_observations": 404,
+        "authority_observations": 522,
         "candidate_exit_code": 0,
-        "candidate_observations": 404,
+        "candidate_observations": 522,
         "candidate_stderr_tail": [],
         "court": "RT-CLI-BODIES",
         "probe": "courts/phase17/rt_cli_bodies_probe.sh",
@@ -134,6 +134,60 @@
             "authority": "<the raw RSA result, or a PKCS#1 v1.5/OAEP ciphertext>",
             "candidate": "<not driven>",
             "reason": "`rsautl`'s operation arm reads the input, runs `EVP_PKEY_verify_recover`/`_sign`/`_encrypt`/`_decrypt` and writes raw bytes; the PKCS#1 v1.5 and OAEP paddings draw randomness and the raw arms are binary. The refusal arms are driven instead. Recorded here rather than diffed; see `src/apps/rsautl.rs`."
+          },
+          {
+            "argv": "rand 1K",
+            "authority": "<1024 fresh DRBG bytes>",
+            "candidate": "<1024 fresh DRBG bytes>",
+            "reason": "The random stream itself: both sides write a fresh DRBG output, so the bytes are independent and cannot be diffed. The zero-length and suffix-refusal arms (`rand`, `rand 0`, `rand abc`, `rand -hex abc`) are driven. Recorded here rather than diffed; see `src/apps/rand.rs`."
+          },
+          {
+            "argv": "rand -hex 8",
+            "authority": "<16 hex chars from fresh DRBG bytes>",
+            "candidate": "<16 hex chars from fresh DRBG bytes>",
+            "reason": "As `rand 1K`: the `-hex` stream is a fresh DRBG output. Recorded here rather than diffed; see `src/apps/rand.rs`."
+          },
+          {
+            "argv": "gendsa <missing-file>",
+            "authority": "Could not open file or uri for loading key parameters of DSA parameters from ...|<ptr>:error:...",
+            "candidate": "openssl-rs: command 'gendsa' is a Phase 16 boundary: its apps/gendsa.c body is not landed.",
+            "reason": "Key generation is not landed (the generated key is random besides); the parameter-load failure carries the pointer-bearing `ERR_print_errors` tail. The missing-argument refusal (`gendsa`) is driven. Recorded here rather than diffed; see `src/apps/gendsa.rs`."
+          },
+          {
+            "argv": "genpkey -algorithm NOPE",
+            "authority": "Error initializing NOPE context|<ptr>:error:...unsupported...(NOPE : 0)",
+            "candidate": "<not landed>",
+            "reason": "Key generation is not landed; the unknown-algorithm arm carries the pointer-bearing `ERR_print_errors` tail. The no-algorithm refusal (`genpkey`) is driven. Recorded here rather than diffed; see `src/apps/genpkey.rs`."
+          },
+          {
+            "argv": "passwd <password> (no -salt)",
+            "authority": "$1$<random salt>$<hash>",
+            "candidate": "$1$<random salt>$<hash>",
+            "reason": "With no `-salt` the salt is drawn through `RAND_bytes`, so the hash is fresh; the fixed-salt arms are driven. Recorded here rather than diffed; see `src/apps/passwd.rs`."
+          },
+          {
+            "argv": "engine -pre foo",
+            "authority": "(rdrand) Intel RDRAND engine|[Failure]: foo|<ptr>:error:13000089:engine routines:ENGINE_ctrl_cmd_string:invalid cmd name:...",
+            "candidate": "(rdrand) Intel RDRAND engine|[Failure]: foo|<ptr>:error:...",
+            "reason": "The failing `-pre` control command prints a pointer-bearing `ERR_print_errors` tail on both sides. This arm is recorded with the engine listing: the candidate's engine init fails first (see the next entry), so the whole `engine` surface is recorded rather than diffed. See `src/apps/engine.rs`."
+          },
+          {
+            "argv": "engine / engine -c / engine -t / engine -post foo",
+            "authority": "(rdrand) Intel RDRAND engine| [RAND]|...|     [ available ]|(dynamic) ...|     [ unavailable ]|",
+            "candidate": "",
+            "reason": "The candidate's `ENGINE_load_builtin_engines` calls `OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_ALL_BUILTIN)`, which the crate's `crypto/init.c` arm still refuses (the engine bits `eng_openssl.c`/`eng_rdrand.c` are unlanded, as `docs/PHASE-16-CLI-SEAL.md` records), so `engine` exits with `OPENSSL_init_crypto:init fail` on stderr and an empty listing where the authority prints the two built-in engines. The body is landed and its parse/listing/`-c`/`-t`/`-pre`/`-post` arms are transcribed; only this init-fail surface is the engine stratum's. Recorded here rather than diffed; see `src/apps/engine.rs`."
+          },
+          {
+            "argv": "storeutl <missing-file>",
+            "authority": "Couldn't open file or uri ...|<ptr>:error:80000002:system library:file_open:No such file or directory:...",
+            "candidate": "Couldn't open file or uri ...|<ptr>:error:...",
+            "reason": "A failed open leaves a pointer-bearing `ERR_print_errors` tail; the `-noout -keys`/`-noout -certs` status arms over the fixed fixtures are driven. Recorded here rather than diffed; see `src/apps/storeutl.rs`."
+          },
+          {
+            "argv": "dhparam <numbits>",
+            "authority": "Generating DH parameters, ...|<the generated parameters>",
+            "candidate": "<not landed>",
+            "reason": "Parameter generation is not landed and the generated safe prime is random; the `-in <dhparams.pem>` text/`-noout`/`-check` arms are driven. Recorded here rather than diffed; see `src/apps/dhparam.rs`."
           }
         ],
         "residual_count": 0,
@@ -171,7 +225,7 @@
     {
       "name": "probe",
       "path": "courts/phase17/rt_cli_bodies_probe.sh",
-      "sha256": "6168c102e42ae63aaefa0dce29e23d4d7bdcbc807a94b46701d0996052018165"
+      "sha256": "27e115c3a74f0a7ecd4913601e749f7c9a97a9aa8209cb2f1b5134e57cad6979"
     }
   ],
   "kind": "phase17-courts",
