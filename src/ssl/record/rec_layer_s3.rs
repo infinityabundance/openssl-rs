@@ -50,20 +50,59 @@ const SSL_HRR_NONE: c_int = 0;
 /// `SSL3_RT_HEADER_LENGTH` — `ssl3.h` (5).
 const SSL3_RT_HEADER_LENGTH: usize = 5;
 
+/// `SSL3_RT_MAX_PLAIN_LENGTH` — `ssl3.h` (16384): the largest plaintext a single TLS record may
+/// carry, and the fragment size `tls_write_records_default` (`ssl/record/methods/tls_common.c`)
+/// splits a larger `SSL_write` into.
+const SSL3_RT_MAX_PLAIN_LENGTH: usize = 16384;
+
 /// `int ssl3_write_bytes(SSL *ssl, uint8_t type, const void *buf_, size_t len, size_t *written)` —
-/// `ssl/record/rec_layer_s3.c:273-489`, reduced to the plaintext, single-record, no-retry arm.
+/// `ssl/record/rec_layer_s3.c:273-489`, reduced to the plaintext, no-retry arm.
 ///
-/// The record version rule is `rec_layer_s3.c:395-405`: a TLS1.3 connection writes TLS1.2 records,
-/// but an initial `ClientHello` (`TLS_ST_CW_CLNT_HELLO`, not a renegotiation, no HelloRetryRequest)
-/// is versioned TLS1.0 for the middlebox-compatibility reason the authority's comment names. The
-/// record header is the five-byte `type || version || length` of `tls_write_records_default`
-/// (`ssl/record/methods/tls_common.c:1759-1896`); the buffering BIO, the write pipeline and the
-/// encryption path are not modelled (recorded in `src/ssl/mod.rs`).
+/// A request larger than one record is fragmented into `SSL3_RT_MAX_PLAIN_LENGTH`-byte records,
+/// exactly as the authority's `tls_write_records_default` does (`ssl/record/methods/tls_common.c`):
+/// the record version rule is `rec_layer_s3.c:395-405` — a TLS1.3 connection writes TLS1.2
+/// records, but an initial `ClientHello` (`TLS_ST_CW_CLNT_HELLO`, not a renegotiation, no
+/// HelloRetryRequest) is versioned TLS1.0 for the middlebox-compatibility reason the authority's
+/// comment names. Each fragment is one five-byte `type || version || length` header plus its body
+/// (`ssl3_write_one_record`).
 ///
 /// # Safety
 /// `s` must be a live connection whose write BIO is the caller's to write; `buf` must be readable
 /// for `len` bytes.
 pub(crate) unsafe fn ssl3_write_bytes(s: *mut Ssl, type_: u8, buf: *const u8, len: usize) -> c_int {
+    let mut off = 0usize;
+    loop {
+        let remaining = len - off;
+        let chunk = if remaining > SSL3_RT_MAX_PLAIN_LENGTH {
+            SSL3_RT_MAX_PLAIN_LENGTH
+        } else {
+            remaining
+        };
+        // `buf.add(0)` on a NULL `buf` would be UB, so only advance when a fragment has been sent.
+        let p = if off == 0 {
+            buf
+        } else {
+            // SAFETY: `off < len`, so `off` is in bounds of the caller's `len` readable bytes.
+            unsafe { buf.add(off) }
+        };
+        // SAFETY: `s`/`p` are per this function's contract, with `chunk` readable bytes at `p`.
+        if unsafe { ssl3_write_one_record(s, type_, p, chunk) } <= 0 {
+            return -1;
+        }
+        off += chunk;
+        if off >= len {
+            break;
+        }
+    }
+    1
+}
+
+/// Write exactly one record of at most `SSL3_RT_MAX_PLAIN_LENGTH` plaintext bytes.
+///
+/// # Safety
+/// `s` must be a live connection whose write BIO is the caller's to write; `buf` must be readable
+/// for `len` bytes.
+unsafe fn ssl3_write_one_record(s: *mut Ssl, type_: u8, buf: *const u8, len: usize) -> c_int {
     // SAFETY: `s` is live per the caller's contract.
     let (version, hand_state, renegotiate, hrr) = unsafe {
         (

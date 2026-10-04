@@ -58,6 +58,8 @@ use crate::packet::{
     WPACKET_start_sub_packet_len__, Wpacket,
 };
 use crate::rand::rand_lib::RAND_bytes;
+use crate::runtime::err::err_reasons::SSL_R_CERTIFICATE_VERIFY_FAILED;
+use crate::runtime::err::{ERR_clear_last_mark, ERR_pop_to_mark, ERR_set_mark};
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value,
 };
@@ -65,7 +67,7 @@ use crate::ssl::ssl_ciph_table as t;
 use crate::ssl::ssl_ciph_table::SslCipher;
 use crate::ssl::ssl_lib::{SSL_get_ciphers, Ssl};
 use crate::ssl::statem::extensions_clnt::tls_construct_extensions;
-use crate::ssl::statem::statem::ossl_statem_fatal;
+use crate::ssl::statem::statem::{ossl_statem_fatal, ossl_statem_in_error};
 use crate::ssl::t1_lib::{ssl_cipher_disabled, ssl_set_client_disabled};
 
 // --- hand states (`include/openssl/ssl.h`) -----------------------------------
@@ -1193,6 +1195,109 @@ pub(crate) unsafe fn tls_process_encrypted_extensions(s: *mut Ssl, msg: &[u8]) -
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
 }
 
+/// `int ssl_x509err2alert(int x509err)` — `ssl/statem/statem_lib.c:1823-1832`, table at
+/// `:1777-1820`.
+///
+/// Maps an `X509_V_ERR_*` verification result to the TLS alert the client sends when verification
+/// fails. Returns `SSL_AD_CERTIFICATE_UNKNOWN` (46) for any value not in the authority's table.
+fn ssl_x509err2alert(x509err: c_int) -> c_int {
+    // Alerts — `include/openssl/ssl3.h`.
+    const SSL_AD_HANDSHAKE_FAILURE: c_int = 40;
+    const SSL_AD_BAD_CERTIFICATE: c_int = 42;
+    const SSL_AD_UNSUPPORTED_CERTIFICATE: c_int = 43;
+    const SSL_AD_CERTIFICATE_REVOKED: c_int = 44;
+    const SSL_AD_CERTIFICATE_EXPIRED: c_int = 45;
+    const SSL_AD_CERTIFICATE_UNKNOWN: c_int = 46;
+    const SSL_AD_UNKNOWN_CA: c_int = 48;
+    const SSL_AD_DECRYPT_ERROR: c_int = 51;
+    const SSL_AD_INTERNAL_ERROR: c_int = 80;
+    // `X509_V_ERR_*` — `include/openssl/x509_vfy.h.in`.
+    const X509_V_ERR_UNSPECIFIED: c_int = 1;
+    const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT: c_int = 2;
+    const X509_V_ERR_UNABLE_TO_GET_CRL: c_int = 3;
+    const X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE: c_int = 4;
+    const X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE: c_int = 5;
+    const X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY: c_int = 6;
+    const X509_V_ERR_CERT_SIGNATURE_FAILURE: c_int = 7;
+    const X509_V_ERR_CRL_SIGNATURE_FAILURE: c_int = 8;
+    const X509_V_ERR_CERT_NOT_YET_VALID: c_int = 9;
+    const X509_V_ERR_CERT_HAS_EXPIRED: c_int = 10;
+    const X509_V_ERR_CRL_NOT_YET_VALID: c_int = 11;
+    const X509_V_ERR_CRL_HAS_EXPIRED: c_int = 12;
+    const X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD: c_int = 13;
+    const X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD: c_int = 14;
+    const X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD: c_int = 15;
+    const X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD: c_int = 16;
+    const X509_V_ERR_OUT_OF_MEM: c_int = 17;
+    const X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT: c_int = 18;
+    const X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN: c_int = 19;
+    const X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY: c_int = 20;
+    const X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE: c_int = 21;
+    const X509_V_ERR_CERT_CHAIN_TOO_LONG: c_int = 22;
+    const X509_V_ERR_CERT_REVOKED: c_int = 23;
+    const X509_V_ERR_PATH_LENGTH_EXCEEDED: c_int = 25;
+    const X509_V_ERR_INVALID_PURPOSE: c_int = 26;
+    const X509_V_ERR_CERT_UNTRUSTED: c_int = 27;
+    const X509_V_ERR_CERT_REJECTED: c_int = 28;
+    const X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER: c_int = 33;
+    const X509_V_ERR_APPLICATION_VERIFICATION: c_int = 50;
+    const X509_V_ERR_HOSTNAME_MISMATCH: c_int = 62;
+    const X509_V_ERR_EMAIL_MISMATCH: c_int = 63;
+    const X509_V_ERR_IP_ADDRESS_MISMATCH: c_int = 64;
+    const X509_V_ERR_DANE_NO_MATCH: c_int = 65;
+    const X509_V_ERR_EE_KEY_TOO_SMALL: c_int = 66;
+    const X509_V_ERR_CA_KEY_TOO_SMALL: c_int = 67;
+    const X509_V_ERR_CA_MD_TOO_WEAK: c_int = 68;
+    const X509_V_ERR_INVALID_CALL: c_int = 69;
+    const X509_V_ERR_STORE_LOOKUP: c_int = 70;
+    const X509_V_ERR_INVALID_CA: c_int = 79;
+    const X509_V_ERR_EC_KEY_EXPLICIT_PARAMS: c_int = 94;
+
+    match x509err {
+        X509_V_ERR_APPLICATION_VERIFICATION => SSL_AD_HANDSHAKE_FAILURE,
+        X509_V_ERR_CA_KEY_TOO_SMALL => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_EC_KEY_EXPLICIT_PARAMS => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_CA_MD_TOO_WEAK => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_CERT_CHAIN_TOO_LONG => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_CERT_HAS_EXPIRED => SSL_AD_CERTIFICATE_EXPIRED,
+        X509_V_ERR_CERT_NOT_YET_VALID => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_CERT_REJECTED => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_CERT_REVOKED => SSL_AD_CERTIFICATE_REVOKED,
+        X509_V_ERR_CERT_SIGNATURE_FAILURE => SSL_AD_DECRYPT_ERROR,
+        X509_V_ERR_CERT_UNTRUSTED => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_CRL_HAS_EXPIRED => SSL_AD_CERTIFICATE_EXPIRED,
+        X509_V_ERR_CRL_NOT_YET_VALID => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_CRL_SIGNATURE_FAILURE => SSL_AD_DECRYPT_ERROR,
+        X509_V_ERR_DANE_NO_MATCH => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_EE_KEY_TOO_SMALL => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_EMAIL_MISMATCH => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_HOSTNAME_MISMATCH => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_INVALID_CA => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_INVALID_CALL => SSL_AD_INTERNAL_ERROR,
+        X509_V_ERR_INVALID_PURPOSE => SSL_AD_UNSUPPORTED_CERTIFICATE,
+        X509_V_ERR_IP_ADDRESS_MISMATCH => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_OUT_OF_MEM => SSL_AD_INTERNAL_ERROR,
+        X509_V_ERR_PATH_LENGTH_EXCEEDED => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_STORE_LOOKUP => SSL_AD_INTERNAL_ERROR,
+        X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE => SSL_AD_BAD_CERTIFICATE,
+        X509_V_ERR_UNABLE_TO_GET_CRL => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE => SSL_AD_UNKNOWN_CA,
+        X509_V_ERR_UNSPECIFIED => SSL_AD_INTERNAL_ERROR,
+        _ => SSL_AD_CERTIFICATE_UNKNOWN,
+    }
+}
+
 /// `MSG_PROCESS_RETURN tls_process_server_certificate(...)` — `statem_clnt.c:1995`: the reduced
 /// client parses the leaf certificate out of the TLS 1.3 `Certificate` message (the first
 /// `CertificateEntry`'s `cert_data`) into an `X509` for `tls_process_cert_verify` to verify against.
@@ -1297,9 +1402,24 @@ pub(crate) unsafe fn tls_process_server_certificate(s: *mut Ssl, msg: &[u8]) -> 
         crate::x509::x509_set::X509_up_ref(leaf);
         (*s).peer_cert = leaf.cast();
         (*s).peer_chain = chain;
-        // `ssl_verify_cert_chain` installs the validated chain in `s->verified_chain`
-        // (`ssl_lib.c:6344-6352`); the reduced path mirrors the presented chain there.
-        (*s).verified_chain = crate::x509::x509_cmp::X509_chain_up_ref(chain).cast();
+    }
+    // Verify the presented chain (`tls_post_process_server_certificate`, `statem_clnt.c:2092-2131`).
+    // The authority verifies in the post-process step that follows this message; the reduced driver
+    // performs both here, after the whole chain is parsed (there is no separate post-process arm).
+    // `ERR_set_mark`/`ERR_pop_to_mark` keep `s->verify_result` while discarding the verify path's
+    // own error-queue entries when the connection does not ask for verification (`:2121-2129`).
+    // SAFETY: `s` is live; `peer_chain` is the chain just stored.
+    unsafe {
+        ERR_set_mark();
+        let chain = (*s).peer_chain;
+        let i = crate::ssl::ssl_cert::ssl_verify_cert_chain(s, chain);
+        if i <= 0 && (*s).verify_mode != t::SSL_VERIFY_NONE as c_int {
+            ERR_clear_last_mark();
+            let alert = ssl_x509err2alert((*s).verify_result as c_int);
+            ossl_statem_fatal(s, alert, SSL_R_CERTIFICATE_VERIFY_FAILED);
+            return 0;
+        }
+        ERR_pop_to_mark();
     }
     // SAFETY: `s` is live; `msg` is the full message.
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
@@ -1509,7 +1629,12 @@ pub(crate) unsafe fn tls13_client_drive(s: *mut Ssl) -> c_int {
                         return client_wait(s);
                     };
                     if tls_process_server_certificate(s, &buf[..n]) == 0 {
-                        ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        // `tls_process_server_certificate` already raises the verification alert
+                        // and enters `MSG_FLOW_ERROR`; only the parse-failure arm needs the generic
+                        // alert (`ossl_statem_send_fatal` is idempotent, but the reason is not).
+                        if ossl_statem_in_error(s) == 0 {
+                            ossl_statem_fatal(s, SSL_AD_INTERNAL_ERROR, ERR_R_INTERNAL_ERROR);
+                        }
                         return -1;
                     }
                     (*s).hand_state = TLS_ST_CR_CERT_VRFY;

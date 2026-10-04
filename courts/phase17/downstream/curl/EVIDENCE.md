@@ -1,7 +1,8 @@
 # Phase 17 downstream — unmodified curl against the candidate shell
 
-Status: **build/link PROVEN; live TLS fetch FAILS inside the candidate**, with the exact stop
-point isolated. This is a proof slice; nothing is wired into `forensics/tools/phase17_courts.py`.
+Status: **build/link PROVEN; the live TLS 1.3 fetch SUCCEEDS and certificate verification is
+enforced** (an unrelated CA is rejected). This is a proof slice; nothing is wired into
+`forensics/tools/phase17_courts.py`.
 
 ## What was built
 
@@ -46,71 +47,39 @@ RUNPATH: /work/artifacts/phase2/install/lib
 
 `curl -V` reports `OpenSSL/3.6.4`; `ldd` resolves both shared objects from the candidate install.
 
-## Live TLS 1.3 fetch (FAIL)
+## Live TLS 1.3 fetch (PASS)
 
 Against the authority's `s_server` with a CA-signed server cert carrying
-`subjectAltName = IP:127.0.0.1`:
+`subjectAltName = IP:127.0.0.1`, the candidate-linked curl completes the fetch:
 
 ```
-*   Trying 127.0.0.1:8443...
-* closing connection #0
-curl: (35) SSL connect error
-http_code=000
+*   subjectAltName: "127.0.0.1" matches cert's IP address!
+* OpenSSL verify result: 0
+* SSL certificate verified via OpenSSL.
+< HTTP/1.0 200 ok
+http_code=200
+ssl_verify_result=0
+curl_exit=0
 ```
 
-The server logs `SSL routines::unexpected eof while reading`. The candidate-linked curl aborts
-in `Curl_ossl_ctx_init` before the handshake.
+## Negative verification arm (PASS)
 
-## Root cause (isolated, candidate-side)
-
-`LD_PRELOAD` interposition of the candidate's libssl shows curl stops immediately after:
+The same server, fetched with an **unrelated CA** the certificate is not signed by, is rejected:
 
 ```
-SSL_CTX_new -> 0x…
-SSL_CTX_ctrl cmd=16  larg=0   -> 1      # SSL_CTRL_SET_MSG_CALLBACK_ARG
-SSL_CTX_ctrl cmd=123 larg=771 -> 0      # SSL_CTRL_SET_MIN_PROTO_VERSION, TLS1_2_VERSION
+=== live HTTPS fetch, UNRELATED CA (must FAIL verification) ===
+neg_http_code=000
+neg_ssl_verify_result=20
+curl_negative_exit=60
+curl: (60) SSL certificate OpenSSL verify result: unable to get local issuer certificate (20)
 ```
 
-curl's `ossl_set_ssl_version_min_max()` (lib/vtls/openssl.c) is:
+`ssl_verify_result=20` is `X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, so the positive arm's
+`verify result: 0` is genuine verification, not a skipped check. Both arms are driven by
+`live_tls_probe.sh`, which fails if the positive fetch fails *or* the negative fetch succeeds.
 
-```c
-if(!SSL_CTX_set_min_proto_version(ctx, ossl_ssl_version_min) ||
-   !SSL_CTX_set_max_proto_version(ctx, ossl_ssl_version_max))
-    return CURLE_SSL_CONNECT_ERROR;   /* no failf() -> generic "(35) SSL connect error" */
-```
+## History
 
-The candidate's `SSL_CTX_ctrl` returns **0 for `SSL_CTRL_SET_MIN_PROTO_VERSION` (123) and
-`SSL_CTRL_SET_MAX_PROTO_VERSION` (124)** and its `SSL_CTX_get_min_proto_version` stays 0;
-the authority returns 1 and reads back 771 (TLS1_2). No `src/**/*.rs` implements these arms.
-Because curl treats a 0 return as fatal, no unmodified curl can start a TLS connection against
-the candidate — regardless of TLS version or ALPN (`--no-alpn`, `--tlsv1.2` all fail identically).
-
-Control experiments that isolate the defect to the candidate:
-
-1. The **same** `src/curl` binary, run with `LD_LIBRARY_PATH=<authority>/lib`, completes a full
-   TLS 1.3 handshake and returns `http_code=200` from the same server.
-2. A minimal candidate-linked client (`client_probe.c`) that ignores the ctrl return value
-   completes a real TLS 1.3 handshake against the authority server (the server logs the full
-   handshake state sequence), so the crypto/handshake path itself works.
-3. `ctrl_probe.c` prints the return divergence directly (authority 1/771 vs candidate 0/0).
-
-Diagnostics in this directory: `client_probe.c` (socket TLS client), `bio_probe.c`
-(`SSL_set_fd` vs `SSL_set0_rbio/wbio`), `ctrl_probe.c` (ctrl return divergence),
-`trace_preload.c` (`LD_PRELOAD` tracer). They are evidence tooling, not courts.
-
-## curl test suite (not run)
-
-- `make -C tests` fails: `tests/certs/genserv.pl` requires an `openssl` CLI, which the court
-  image deliberately removes.
-- The TLS subset additionally needs `stunnel` (absent), and TLS tests are the only ones that
-  exercise libssl; plain-HTTP tests exercise only libc/network code.
-- Most importantly, every TLS test would fail for the same `SSL_CTX_set_min_proto_version`
-  reason as the live fetch. A full-suite run would duplicate, not extend, the finding.
-
-The live fetch is therefore the demonstration, with its negative result explained above.
-
-## To make the court green (next slice, not done here)
-
-Implement `SSL_CTRL_SET_MIN_PROTO_VERSION` / `SSL_CTRL_SET_MAX_PROTO_VERSION` in the candidate's
-`SSL_CTX_ctrl` (returning 1 and storing/reading the bound, matching OpenSSL 3.6.4). Once that
-lands, `live_tls_probe.sh` should exit 0 and a bounded curl test subset becomes meaningful.
+The earlier slices that this file recorded — `SSL_CTX_set_min/max_proto_version` returning 0,
+and then the missing certificate-verification path — are fixed at git `91eb5398` and the current
+Phase 17 client-verification slice respectively; the live fetch now succeeds end to end.

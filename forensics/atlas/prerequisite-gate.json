@@ -4,7 +4,7 @@
     "blocking_dependencies": [],
     "census": {
       "covered_by_a_divergence": 154,
-      "language_surface_not_modelled_by_name": 11744
+      "language_surface_not_modelled_by_name": 11731
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -681,7 +681,7 @@
         "ssl/rio/poll_immediate.c": 11,
         "ssl/s3_lib.c": 723,
         "ssl/ssl_asn1.c": 16,
-        "ssl/ssl_cert.c": 80,
+        "ssl/ssl_cert.c": 79,
         "ssl/ssl_cert_comp.c": 25,
         "ssl/ssl_ciph.c": 146,
         "ssl/ssl_conf.c": 32,
@@ -696,9 +696,9 @@
         "ssl/ssl_txt.c": 6,
         "ssl/statem/extensions_cust.c": 32,
         "ssl/statem/statem.c": 58,
-        "ssl/statem/statem_clnt.c": 133,
-        "ssl/statem/statem_lib.c": 120,
-        "ssl/statem/statem_srvr.c": 164,
+        "ssl/statem/statem_clnt.c": 130,
+        "ssl/statem/statem_lib.c": 113,
+        "ssl/statem/statem_srvr.c": 162,
         "ssl/t1_lib.c": 223,
         "ssl/t1_trce.c": 101,
         "ssl/tls_depr.c": 17,
@@ -1091,7 +1091,6 @@
           "ssl_cert_set_cert_store",
           "ssl_cert_set_current",
           "ssl_get_security_level_bits",
-          "ssl_verify_cert_chain",
           "ssl_verify_rpk"
         ],
         "ssl/ssl_ciph.c": [
@@ -1174,7 +1173,6 @@
           "ssl_choose_server_version",
           "ssl_set_client_hello_version",
           "ssl_version_supported",
-          "ssl_x509err2alert",
           "tls13_restore_handshake_digest_for_pha",
           "tls13_save_handshake_digest_for_pha",
           "tls_construct_cert_verify",
@@ -1276,7 +1274,7 @@
         ]
       },
       "definition": "authority internal functions a transcribed unit calls, whose own translation unit's stratum has already sealed. Not a failure: each is either modelled differently by the crate or is work carried across the boundary by a later stratum. The count is held to non-increase by the regression guard.",
-      "names": 399
+      "names": 397
     },
     "universes": {
       "crate_references_checked": 32438,
@@ -1286,7 +1284,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "6425a40570102de4c9a1cdd5a386bbc3b78512f2d1c30efa6c9bc80d117da6a4",
+  "body_hash": "cd7a6002ed21dfe6e9da2361723857fc265bb1b6e337778b50864766572d7bc6",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1322,7 +1320,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "2915d8dcda0a5d518095bb264853a623f0f5ad3aede3ea8b47109a572cc7bc2a"
+      "sha256": "4fdc489478f1e8e7f5809833846287e7264a5d8c6b3a58ec59b5a57bcef31135"
     },
     {
       "name": "phase-state",
