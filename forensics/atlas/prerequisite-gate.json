@@ -4,7 +4,7 @@
     "blocking_dependencies": [],
     "census": {
       "covered_by_a_divergence": 154,
-      "language_surface_not_modelled_by_name": 11708
+      "language_surface_not_modelled_by_name": 11703
     },
     "census_by_unit": {
       "covered_by_a_divergence": {
@@ -674,12 +674,12 @@
         "ssl/d1_lib.c": 56,
         "ssl/d1_srtp.c": 24,
         "ssl/methods.c": 6,
-        "ssl/quic/quic_impl.c": 161,
+        "ssl/quic/quic_impl.c": 160,
         "ssl/quic/quic_method.c": 1,
         "ssl/quic/quic_tls_api.c": 9,
         "ssl/record/rec_layer_s3.c": 83,
         "ssl/rio/poll_immediate.c": 11,
-        "ssl/s3_lib.c": 719,
+        "ssl/s3_lib.c": 718,
         "ssl/ssl_asn1.c": 16,
         "ssl/ssl_cert.c": 79,
         "ssl/ssl_cert_comp.c": 25,
@@ -698,7 +698,7 @@
         "ssl/statem/statem.c": 57,
         "ssl/statem/statem_clnt.c": 128,
         "ssl/statem/statem_lib.c": 112,
-        "ssl/statem/statem_srvr.c": 157,
+        "ssl/statem/statem_srvr.c": 154,
         "ssl/t1_lib.c": 222,
         "ssl/t1_trce.c": 101,
         "ssl/tls_depr.c": 17,
@@ -1283,7 +1283,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "8946c28f8bde1dec799e17baea7e2993eeb63a5e133e06e109d272adbe40914f",
+  "body_hash": "a135f834237f3025d845afa25002ca6ed133bdb53cc13e1b1c47cb618dd54dc0",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1319,7 +1319,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "0668f9cd449c018015019205fbd94f3b6659546f3cb47c126830b92aa8726c15"
+      "sha256": "c89ec715b268ec506efe3297ca57f0333c6f8168b8ce6c65ff6aa0cb4a3efab0"
     },
     {
       "name": "phase-state",

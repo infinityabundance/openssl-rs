@@ -119,7 +119,7 @@ const SSL3_MT_CHANGE_CIPHER_SPEC: c_int = 0x0101;
 // --- alerts / reasons --------------------------------------------------------
 const SSL_AD_INTERNAL_ERROR: c_int = 80;
 const SSL_AD_UNEXPECTED_MESSAGE: c_int = 10;
-const ERR_R_INTERNAL_ERROR: c_int = 1 | (2 << 18) | (1 << 18);
+const ERR_R_INTERNAL_ERROR: c_int = 259 | (2 << 18) | (1 << 18);
 const SSL_R_UNEXPECTED_MESSAGE: c_int = 245;
 
 // --- connection flags --------------------------------------------------------

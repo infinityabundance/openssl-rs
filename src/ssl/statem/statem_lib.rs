@@ -52,8 +52,8 @@ const DTLS1_VERSION: c_int = 0xFEFF;
 const DTLS1_2_VERSION: c_int = 0xFEFD;
 /// `DTLS1_BAD_VER` — `ssl3.h:231`.
 const DTLS1_BAD_VER: c_int = 0x0100;
-/// `ERR_R_INTERNAL_ERROR` — `err.h` (`1 | ERR_RFLAG_COMMON | ERR_RFLAG_FATAL`).
-const ERR_R_INTERNAL_ERROR: c_int = 1 | (2 << 18) | (1 << 18);
+/// `ERR_R_INTERNAL_ERROR` — `err.h` (`259 | ERR_RFLAG_COMMON | ERR_RFLAG_FATAL`).
+const ERR_R_INTERNAL_ERROR: c_int = 259 | (2 << 18) | (1 << 18);
 
 /// One row of `tls_version_table`/`dtls_version_table`: the version, the client method's option
 /// mask and its `SSL_METHOD_*` flags, plus whether a client method exists at all (the "compile
