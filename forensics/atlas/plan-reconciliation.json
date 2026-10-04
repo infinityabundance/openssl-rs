@@ -4,10 +4,24 @@
     "censed_states": [
       "in-progress"
     ],
-    "census": {},
-    "census_by_stratum": {},
+    "census": {
+      "names_a_file_the_authority_does_not_have": 1,
+      "units_not_reached": 3
+    },
+    "census_by_stratum": {
+      "17": 4
+    },
     "census_not_a_failure": "a name an `in-progress` stratum's plan promises and nothing yet reaches is counted here and not failed: a plan names the work a stratum will do, and the stratum's own ledger's `open_in_this_stratum` is what holds it to account. The census exists so the distance is visible rather than inferred",
-    "census_samples": {},
+    "census_samples": {
+      "names_a_file_the_authority_does_not_have": [
+        "docs/PHASE-17-SUBPHASES.md:17:17.2:ssl/extensions_clnt.c"
+      ],
+      "units_not_reached": [
+        "ssl/statem/extensions_srvr.c",
+        "ssl/t1_enc.c",
+        "ssl/tls13_enc.c"
+      ]
+    },
     "checked": {
       "plans_read": [
         "docs/PHASE-10-SUBPHASES.md",
@@ -17,6 +31,7 @@
         "docs/PHASE-14-SUBPHASES.md",
         "docs/PHASE-15-SUBPHASES.md",
         "docs/PHASE-16-SUBPHASES.md",
+        "docs/PHASE-17-SUBPHASES.md",
         "docs/PHASE-22-SUBPHASES.md",
         "docs/PHASE-5-SUBPHASES.md",
         "docs/PHASE-6-SUBPHASES.md",
@@ -24,12 +39,12 @@
         "docs/PHASE-8-SUBPHASES.md",
         "docs/PHASE-9-SUBPHASES.md"
       ],
-      "rows_judged": 176,
+      "rows_judged": 182,
       "symbols_named_by_a_row": 115,
       "symbols_reached": 115,
       "unit_records": 151,
       "units_named_by_a_record": 160,
-      "units_named_by_a_row": 545,
+      "units_named_by_a_row": 548,
       "units_reached": 545
     },
     "claim": "A structural reconciliation, not a parity claim. It answers whether the plan and the crate agree about what a stratum promises; it says nothing about whether any of it behaves as the authority's does.",
@@ -7020,6 +7035,35 @@
           "src/ssl/statem/extensions_cust.rs"
         ]
       },
+      "ssl/statem/extensions_srvr.c": {
+        "defines": [
+          "tls_construct_stoc_alpn",
+          "tls_construct_stoc_client_cert_type",
+          "tls_construct_stoc_cookie",
+          "tls_construct_stoc_cryptopro_bug",
+          "tls_construct_stoc_early_data",
+          "tls_construct_stoc_ec_pt_formats",
+          "tls_construct_stoc_ems",
+          "tls_construct_stoc_etm",
+          "tls_construct_stoc_key_share",
+          "tls_construct_stoc_maxfragmentlen",
+          "tls_construct_stoc_next_proto_neg",
+          "tls_construct_stoc_psk",
+          "tls_construct_stoc_renegotiate",
+          "tls_construct_stoc_server_cert_type",
+          "tls_construct_stoc_server_name",
+          "tls_construct_stoc_session_ticket",
+          "tls_construct_stoc_status_request",
+          "tls_construct_stoc_supported_groups",
+          "tls_construct_stoc_supported_versions",
+          "tls_construct_stoc_use_srtp"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "17:17.2"
+        ],
+        "transcribed_by": []
+      },
       "ssl/statem/statem.c": {
         "defines": [
           "ossl_statem_accept",
@@ -7147,6 +7191,21 @@
           "src/ssl/statem/statem_srvr.rs"
         ]
       },
+      "ssl/t1_enc.c": {
+        "defines": [
+          "tls1_alert_code",
+          "tls1_change_cipher_state",
+          "tls1_export_keying_material",
+          "tls1_final_finish_mac",
+          "tls1_generate_master_secret",
+          "tls1_setup_key_block"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "17:17.2"
+        ],
+        "transcribed_by": []
+      },
       "ssl/t1_lib.c": {
         "defines": [
           "TLSv1_1_enc_data",
@@ -7187,6 +7246,32 @@
         "transcribed_by": [
           "src/ssl/t1_trce.rs"
         ]
+      },
+      "ssl/tls13_enc.c": {
+        "defines": [
+          "tls13_alert_code",
+          "tls13_change_cipher_state",
+          "tls13_derive_finishedkey",
+          "tls13_derive_iv",
+          "tls13_derive_key",
+          "tls13_export_keying_material",
+          "tls13_export_keying_material_early",
+          "tls13_final_finish_mac",
+          "tls13_generate_handshake_secret",
+          "tls13_generate_master_secret",
+          "tls13_generate_secret",
+          "tls13_hkdf_expand",
+          "tls13_hkdf_expand_ex",
+          "tls13_setup_key_block",
+          "tls13_store_handshake_traffic_hash",
+          "tls13_store_server_finished_hash",
+          "tls13_update_key"
+        ],
+        "recorded_by": null,
+        "subphases": [
+          "17:17.2"
+        ],
+        "transcribed_by": []
       },
       "ssl/tls_depr.c": {
         "defines": [
@@ -7997,7 +8082,7 @@
       "transcribed_units": 596
     }
   },
-  "body_hash": "8ba98bc87a90131d9b9e6155159b24040202f07363f68943689862158017e04e",
+  "body_hash": "e165547263d8bbdd90eb20c5389da9661a78bd455ee822218fdac796d45f4f16",
   "generator": "forensics/tools/plan_reconciliation.py",
   "inputs": [
     {
@@ -8018,7 +8103,7 @@
     {
       "name": "phase-state",
       "path": "forensics/phase-state.json",
-      "sha256": "226e54b4fc1bf2aeff920a3a60d91e22624c52971c83823ce1e100b52b50b340"
+      "sha256": "1d1907c3411e4386a722d366906b617a62764ba063c5f625c4c43d103aa7a9ae"
     },
     {
       "name": "prerequisites",
@@ -8064,6 +8149,11 @@
       "name": "plan-PHASE-16-SUBPHASES",
       "path": "docs/PHASE-16-SUBPHASES.md",
       "sha256": "72d80ad3cebbc51caf0b0b1503d762660ffc24cc1c1b85dd60766711495274f8"
+    },
+    {
+      "name": "plan-PHASE-17-SUBPHASES",
+      "path": "docs/PHASE-17-SUBPHASES.md",
+      "sha256": "9830ed614d0536065d1a6a6ba2b880d094d5deca0162f5b0fae9e70e6409dbe6"
     },
     {
       "name": "plan-PHASE-22-SUBPHASES",
