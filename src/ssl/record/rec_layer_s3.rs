@@ -34,8 +34,14 @@ use core::ffi::{c_char, c_int};
 use core::ptr;
 
 use crate::runtime::bio::iolib::{BIO_read, BIO_write};
-use crate::runtime::bio::{BIO_ctrl, BIO_CTRL_FLUSH};
+use crate::runtime::bio::{BIO_ctrl, BIO_CTRL_FLUSH, BIO_FLAGS_IN_EOF, BIO_FLAGS_READ};
+use crate::runtime::err::err_reasons::{
+    SSL_R_INVALID_ALERT, SSL_R_NO_RENEGOTIATION, SSL_R_TOO_MANY_WARN_ALERTS,
+    SSL_R_UNEXPECTED_EOF_WHILE_READING, SSL_R_UNKNOWN_ALERT_TYPE,
+};
+use crate::runtime::err::{openssl_rs_err_set_error, ERR_new, ERR_set_debug};
 use crate::ssl::ssl_lib::{Ssl, SslCtx};
+use crate::ssl::statem::statem::ossl_statem_fatal;
 
 /// `TLS1_VERSION` — `ssl3.h`.
 const TLS1_VERSION: c_int = 0x0301;
@@ -54,6 +60,47 @@ const SSL3_RT_HEADER_LENGTH: usize = 5;
 /// carry, and the fragment size `tls_write_records_default` (`ssl/record/methods/tls_common.c`)
 /// splits a larger `SSL_write` into.
 const SSL3_RT_MAX_PLAIN_LENGTH: usize = 16384;
+
+// --- record types (`include/openssl/ssl3.h`) ---------------------------------
+/// `SSL3_RT_ALERT` — `ssl3.h` (21).
+const SSL3_RT_ALERT: u8 = 21;
+
+// --- alert levels and descriptions (`include/openssl/ssl3.h`, `tls1.h`, `ssl_local.h`)
+/// `SSL3_AL_WARNING` — `ssl3.h:252`.
+const SSL3_AL_WARNING: c_int = 1;
+/// `SSL3_AL_FATAL` — `ssl3.h:253`.
+const SSL3_AL_FATAL: c_int = 2;
+/// `SSL_AD_CLOSE_NOTIFY` (`SSL3_AD_CLOSE_NOTIFY`) — `ssl3.h:255`.
+const SSL_AD_CLOSE_NOTIFY: c_int = 0;
+/// `SSL_AD_UNEXPECTED_MESSAGE` (`SSL3_AD_UNEXPECTED_MESSAGE`) — `ssl3.h:256`.
+const SSL_AD_UNEXPECTED_MESSAGE: c_int = 10;
+/// `SSL_AD_HANDSHAKE_FAILURE` (`SSL3_AD_HANDSHAKE_FAILURE`) — `ssl3.h:259`.
+const SSL_AD_HANDSHAKE_FAILURE: c_int = 40;
+/// `SSL_AD_ILLEGAL_PARAMETER` (`SSL3_AD_ILLEGAL_PARAMETER`) — `ssl3.h:266`.
+const SSL_AD_ILLEGAL_PARAMETER: c_int = 47;
+/// `SSL_AD_DECODE_ERROR` (`TLS1_AD_DECODE_ERROR`) — `tls1.h:61`.
+const SSL_AD_DECODE_ERROR: c_int = 50;
+/// `SSL_AD_USER_CANCELLED` (`TLS1_AD_USER_CANCELLED`) — `tls1.h:68`.
+const SSL_AD_USER_CANCELLED: c_int = 90;
+/// `SSL_AD_NO_RENEGOTIATION` (`TLS1_AD_NO_RENEGOTIATION`) — `tls1.h:69`.
+const SSL_AD_NO_RENEGOTIATION: c_int = 100;
+/// `SSL_AD_NO_ALERT` — `ssl_local.h:63` ("we don't want to send an alert").
+const SSL_AD_NO_ALERT: c_int = -1;
+/// `SSL_AD_REASON_OFFSET` — `ssl.h:1159` (the offset that turns an alert description into the
+/// `SSL_R_...` reason code `ERR_vset_error` carries).
+const SSL_AD_REASON_OFFSET: c_int = 1000;
+/// `MAX_WARN_ALERT_COUNT` — `ssl/record/record_local.h:17`.
+const MAX_WARN_ALERT_COUNT: c_int = 5;
+
+// --- connection state reads --------------------------------------------------
+/// `SSL_RECEIVED_SHUTDOWN` — `ssl.h:217`.
+const SSL_RECEIVED_SHUTDOWN: c_int = 2;
+/// `SSL_NOTHING` — `ssl.h:932`.
+const SSL_NOTHING: c_int = 1;
+/// `SSL_READING` — `ssl.h:934`.
+const SSL_READING: c_int = 3;
+/// `ERR_LIB_SSL` — `err.h:121`.
+const ERR_LIB_SSL: c_int = 20;
 
 /// `int ssl3_write_bytes(SSL *ssl, uint8_t type, const void *buf_, size_t len, size_t *written)` —
 /// `ssl/record/rec_layer_s3.c:273-489`, reduced to the plaintext, no-retry arm.
@@ -176,14 +223,18 @@ unsafe fn ssl3_write_one_record(s: *mut Ssl, type_: u8, buf: *const u8, len: usi
 }
 
 /// `int ssl3_read_bytes(SSL *s, int type, int *recvd_type, unsigned char *buf, size_t len,` —
-/// `ssl/record/rec_layer_s3.c:612-...`, reduced to the plaintext, single-record, no-retry arm the
-/// server's first read needs.
+/// `ssl/record/rec_layer_s3.c:612-...`, reduced to the record-read arm the handshake and
+/// application readers need.
 ///
-/// The authority's read pipeline runs the record method's `read_record` and the message layer above
-/// it; this reduced form reads one `type || version || length` header and its body from `rbio` and
-/// reports the body length, which is the ClientHello handshake message. The buffering BIO, the
-/// read-ahead queue, the encryption path and the `SSL3_RT_MAX_PLAIN_LENGTH` fragmentation are not
-/// modelled (recorded in `src/ssl/mod.rs`).
+/// It reads one record with [`ssl3_read_one_record`] and, when that record is an alert, decodes it
+/// exactly as the authority's alert block does (`rec_layer_s3.c:864-944`): a `close_notify` sets
+/// `SSL_RECEIVED_SHUTDOWN` and ends the read, a fatal alert (any non-`user_cancelled` TLS 1.3
+/// alert) records `s3.fatal_alert` and queues `SSL_AD_REASON_OFFSET + alert_descr`, `user_cancelled`
+/// and the TLS1.2 warnings are ignored, and `no_renegotiation` or an unknown type is fatal.
+///
+/// The return follows the authority's `ssl3_read_internal`: a positive body length, `0` for a
+/// terminal record whose connection state and error queue are already set, or `-1` for a retry
+/// (which leaves `rwstate = SSL_READING`, `rec_layer_s3.c:497`).
 ///
 /// # Safety
 /// `s` must be a live connection whose read BIO is the caller's to read; `buf` must be writable for
@@ -194,6 +245,181 @@ pub(crate) unsafe fn ssl3_read_bytes(
     buf: *mut u8,
     cap: usize,
 ) -> c_int {
+    // SAFETY: `s` is live per the caller's contract; every read/write below is to it.
+    unsafe {
+        loop {
+            let mut rec_ty = 0u8;
+            // SAFETY: `s` is live; `buf`/`cap` are the caller's; `rec_ty` is writable.
+            let n = ssl3_read_one_record(s, &mut rec_ty, buf, cap);
+            if n <= 0 {
+                return n;
+            }
+            if rec_ty != SSL3_RT_ALERT {
+                *rectype = rec_ty;
+                return n;
+            }
+            // `rec_layer_s3.c:864-944`.
+            match ssl3_read_bytes_alert(s, buf, n) {
+                AlertOutcome::Terminal => return 0,
+                AlertOutcome::Fatal => return -1,
+                AlertOutcome::Ignored => continue,
+            }
+        }
+    }
+}
+
+/// The authority's received-alert verdict (`ssl3_read_bytes`, `ssl/record/rec_layer_s3.c:864-944`).
+enum AlertOutcome {
+    /// A record that ends the read with 0 (`close_notify`, a fatal alert).
+    Terminal,
+    /// A record that ends the read with -1 after `SSLfatal` (invalid, too many warnings,
+    /// `no_renegotiation`, an unknown type).
+    Fatal,
+    /// `user_cancelled` or a TLS1.2 warning: the authority's `goto start` reads again.
+    Ignored,
+}
+
+/// Decode one received alert (`ssl3_read_bytes`, `ssl/record/rec_layer_s3.c:864-944`).
+///
+/// # Safety
+/// `s` is a live connection; `buf` holds `len` alert bytes.
+unsafe fn ssl3_read_bytes_alert(s: *mut Ssl, buf: *const u8, len: c_int) -> AlertOutcome {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
+        if len < 2 {
+            // `rec_layer_s3.c:869-874`: a short or over-long alert packet is an invalid alert.
+            ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_INVALID_ALERT);
+            return AlertOutcome::Fatal;
+        }
+        let alert_level = c_int::from(*buf);
+        let alert_descr = c_int::from(*buf.add(1));
+        let is_tls13 = (*s).version == TLS1_3_VERSION;
+
+        // `rec_layer_s3.c:891-903`: a TLS1.2 warning (or a TLS1.3 `user_cancelled`) is counted;
+        // `MAX_WARN_ALERT_COUNT` consecutive warnings are fatal.
+        if (!is_tls13 && alert_level == SSL3_AL_WARNING)
+            || (is_tls13 && alert_descr == SSL_AD_USER_CANCELLED)
+        {
+            (*s).warn_alert = alert_descr;
+            (*s).alert_count += 1;
+            if (*s).alert_count == MAX_WARN_ALERT_COUNT {
+                ossl_statem_fatal(s, SSL_AD_UNEXPECTED_MESSAGE, SSL_R_TOO_MANY_WARN_ALERTS);
+                return AlertOutcome::Fatal;
+            }
+        }
+
+        if is_tls13 && alert_descr == SSL_AD_USER_CANCELLED {
+            // `rec_layer_s3.c:909-910`: the one ignorable TLS1.3 warning.
+            return AlertOutcome::Ignored;
+        } else if alert_descr == SSL_AD_CLOSE_NOTIFY && (is_tls13 || alert_level == SSL3_AL_WARNING)
+        {
+            // `rec_layer_s3.c:911-914`.
+            (*s).shutdown |= SSL_RECEIVED_SHUTDOWN;
+            (*s).rwstate = SSL_NOTHING;
+            return AlertOutcome::Terminal;
+        } else if alert_level == SSL3_AL_FATAL || is_tls13 {
+            // `rec_layer_s3.c:915-925`: a fatal alert (any non-`close_notify`/`user_cancelled`
+            // TLS1.3 alert) records the description and queues `SSL_AD_REASON_OFFSET + descr`.
+            (*s).rwstate = SSL_NOTHING;
+            (*s).fatal_alert = alert_descr;
+            raise_alert_received(s, alert_descr);
+            (*s).shutdown |= SSL_RECEIVED_SHUTDOWN;
+            return AlertOutcome::Terminal;
+        } else if alert_descr == SSL_AD_NO_RENEGOTIATION {
+            // `rec_layer_s3.c:926-936`.
+            ossl_statem_fatal(s, SSL_AD_HANDSHAKE_FAILURE, SSL_R_NO_RENEGOTIATION);
+            return AlertOutcome::Fatal;
+        } else if alert_level == SSL3_AL_WARNING {
+            // `rec_layer_s3.c:937-939`: any other TLS1.2 warning is ignored.
+            return AlertOutcome::Ignored;
+        }
+        // `rec_layer_s3.c:942-943`.
+        ossl_statem_fatal(s, SSL_AD_ILLEGAL_PARAMETER, SSL_R_UNKNOWN_ALERT_TYPE);
+        AlertOutcome::Fatal
+    }
+}
+
+/// `SSLfatal_data(s, SSL_AD_NO_ALERT, SSL_AD_REASON_OFFSET + alert_descr, "SSL alert number %d",`
+/// `alert_descr)` — `ssl/record/rec_layer_s3.c:916-925`.
+///
+/// The error is raised at the alert block's own coordinate (`rec_layer_s3.c:918`) with the alert
+/// number as `ERR` data, then the state machine's fatal transition runs with `SSL_AD_NO_ALERT`, so
+/// no alert is echoed to the peer.
+///
+/// # Safety
+/// `s` is a live connection.
+unsafe fn raise_alert_received(s: *mut Ssl, alert_descr: c_int) {
+    let _ = s;
+    ERR_new();
+    // SAFETY: the file/function strings are static; the coordinate is the authority's.
+    unsafe {
+        ERR_set_debug(
+            c"ssl/record/rec_layer_s3.c".as_ptr(),
+            918,
+            c"ssl3_read_bytes".as_ptr(),
+        )
+    };
+    let msg = format!("SSL alert number {alert_descr}\0");
+    // SAFETY: `msg` is NUL-terminated; the callee copies the data.
+    unsafe {
+        openssl_rs_err_set_error(
+            ERR_LIB_SSL,
+            SSL_AD_REASON_OFFSET + alert_descr,
+            msg.as_ptr().cast(),
+        )
+    };
+    // SAFETY: `s` is live; this is `SSLfatal`'s state transition with `SSL_AD_NO_ALERT`.
+    unsafe { crate::ssl::statem::statem::ossl_statem_send_fatal(s, SSL_AD_NO_ALERT) };
+}
+
+/// The `ossl_tls_handle_rlayer_return` verdict for a short or failed record read
+/// (`ssl/record/rec_layer_s3.c:491-553`).
+///
+/// A zero-length read (or a BIO already flagged `BIO_FLAGS_IN_EOF`) is an unexpected EOF without
+/// `SSL_OP_IGNORE_UNEXPECTED_EOF`, so it raises `SSL_R_UNEXPECTED_EOF_WHILE_READING` and makes the
+/// connection fatal. A read the BIO flagged retryable leaves `rwstate = SSL_READING` and answers
+/// -1, the arm `SSL_get_error` turns into `SSL_ERROR_WANT_READ`. Any other failure answers -1 with
+/// no error queued, which `SSL_get_error` reports as `SSL_ERROR_SYSCALL`.
+///
+/// # Safety
+/// `s` is a live connection.
+unsafe fn ssl3_read_bytes_rlayer_return(s: *mut Ssl, got: c_int) -> c_int {
+    // SAFETY: `s` is live per the caller's contract.
+    unsafe {
+        let flags = if (*s).rbio.is_null() {
+            0
+        } else {
+            (*(*s).rbio).flags
+        };
+        if got == 0 || flags & BIO_FLAGS_IN_EOF != 0 {
+            // `rec_layer_s3.c:515-524`.
+            (*s).rwstate = SSL_NOTHING;
+            ossl_statem_fatal(s, SSL_AD_DECODE_ERROR, SSL_R_UNEXPECTED_EOF_WHILE_READING);
+            return 0;
+        }
+        if flags & BIO_FLAGS_READ != 0 {
+            // `rec_layer_s3.c:496-498`.
+            (*s).rwstate = SSL_READING;
+            return -1;
+        }
+        // `rec_layer_s3.c:499-500`: `rwstate = SSL_NOTHING`, no alert; `SSL_ERROR_SYSCALL`.
+        (*s).rwstate = SSL_NOTHING;
+        -1
+    }
+}
+
+/// Read one `type || version || length` record and report its body length, the inner reader of
+/// [`ssl3_read_bytes`].
+///
+/// The authority's read pipeline runs the record method's `read_record` and the message layer above
+/// it; this reduced form reads one header and its body from `rbio`. The buffering BIO, the
+/// read-ahead queue and the `SSL3_RT_MAX_PLAIN_LENGTH` fragmentation are not modelled (recorded in
+/// `src/ssl/mod.rs`).
+///
+/// # Safety
+/// `s` must be a live connection whose read BIO is the caller's to read; `buf` must be writable for
+/// `cap` bytes; `rectype` must be writable.
+unsafe fn ssl3_read_one_record(s: *mut Ssl, rectype: *mut u8, buf: *mut u8, cap: usize) -> c_int {
     // Phase 17.2c: once the TLS 1.3 read key is installed the record is AEAD-protected
     // (`tls13_dec`, `ssl/record/methods/tls13_meth.c`).
     // SAFETY: `s` is live per the caller's contract.
@@ -208,7 +434,8 @@ pub(crate) unsafe fn ssl3_read_bytes(
             )
         };
         if got != SSL3_RT_HEADER_LENGTH as c_int {
-            return -1;
+            // SAFETY: `s` is live.
+            return unsafe { ssl3_read_bytes_rlayer_return(s, got) };
         }
         let len = ((hdr[3] as usize) << 8) | hdr[4] as usize;
         // `SSL3_RT_APPLICATION_DATA` (23) is the outer type of every TLS 1.3 protected record; a
@@ -222,7 +449,8 @@ pub(crate) unsafe fn ssl3_read_bytes(
                 // SAFETY: `buf` is `cap >= len` writable bytes and `rbio` is the caller's.
                 let n = unsafe { BIO_read((*s).rbio, buf.cast(), len as c_int) };
                 if n != len as c_int {
-                    return -1;
+                    // SAFETY: `s` is live.
+                    return unsafe { ssl3_read_bytes_rlayer_return(s, n) };
                 }
             }
             // SAFETY: `rectype` is writable per the contract.
@@ -237,7 +465,8 @@ pub(crate) unsafe fn ssl3_read_bytes(
             // SAFETY: `ct` is `len` writable bytes and `rbio` is the caller's.
             let n = unsafe { BIO_read((*s).rbio, ct.as_mut_ptr().cast(), len as c_int) };
             if n != len as c_int {
-                return -1;
+                // SAFETY: `s` is live.
+                return unsafe { ssl3_read_bytes_rlayer_return(s, n) };
             }
         }
         // SAFETY: `s` is live; the buffers are this frame's; `rectype` is writable.
@@ -264,7 +493,8 @@ pub(crate) unsafe fn ssl3_read_bytes(
         )
     };
     if got != SSL3_RT_HEADER_LENGTH as c_int {
-        return -1;
+        // SAFETY: `s` is live.
+        return unsafe { ssl3_read_bytes_rlayer_return(s, got) };
     }
     let len = ((hdr[3] as usize) << 8) | hdr[4] as usize;
     if len > cap {
@@ -274,7 +504,8 @@ pub(crate) unsafe fn ssl3_read_bytes(
         // SAFETY: `buf` is `cap >= len` writable bytes and `rbio` is the caller's.
         let n = unsafe { BIO_read((*s).rbio, buf.cast(), len as c_int) };
         if n != len as c_int {
-            return -1;
+            // SAFETY: `s` is live.
+            return unsafe { ssl3_read_bytes_rlayer_return(s, n) };
         }
     }
     // SAFETY: `rectype` is writable per the contract.
