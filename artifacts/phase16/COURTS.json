@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-LEGACY-MODULE` is 16.1's behavioural court: it **loads** the `legacy` provider module through `OSSL_PROVIDER_load` with `OPENSSL_MODULES` pointed at each side's own module directory, **reads** the provider name through `OSSL_PROVIDER_get_params`, **queries** the module's `OSSL_PROVIDER_query_operation` for all four operations 16.1 publishes (`OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_KDF`, `OSSL_OP_SKEYMGMT`) and compares each table's row count and first row's alias sequence, **fetches** the four `legacy_digests` rows by name and by OID through the `provider=legacy` property and compares a fixed `\"abc\"` digest for each, **fetches and drives** each of the 32 `legacy_ciphers` rows with a fixed key/IV encrypt-and-decrypt and each of the two `legacy_kdfs` rows with a fixed password/salt/iteration derive, and exercises the refusal arms (an unknown digest/cipher/KDF name, a legacy name asked of the `default` provider, and two `PBKDF1` derives the row must refuse) -- not the error queue. The 39-row table is fully published, so `forensics/atlas/provider-algorithms.json` records `provider_rows_open` 0. `RT-ENGINE-DYN` is 16.2's: it **initialises** the `OPENSSL_INIT_ENGINE_DYNAMIC` bit (whose step runs `engine_load_dynamic_int` and registers the `dynamic` built-in), **reads** the `dynamic` engine id and name back through `ENGINE_by_id`, **drives** the dynamic fallback (`ENGINE_by_id`'s miss path recurses into `ENGINE_by_id(\"dynamic\")` and runs the `ID`/`DIR_LOAD`/`DIR_ADD`/`LIST_ADD`/`LOAD` control chain) with `OPENSSL_ENGINES` pointed at a fixed object-free directory, and exercises the NULL-, absent- and empty-id refusals. `RT-DEFAULTS` is 16.3's: it **reads** `OPENSSL_info(OPENSSL_INFO_CONFIG_DIR)` (which is `ossl_get_openssldir()`) and checks it equals `X509_get_default_cert_area()`, **checks** the four `X509_get_default_*` paths' `/certs`/`/cert.pem`/`/private` relationship to that area, **reads** `OPENSSL_info(OPENSSL_INFO_WINDOWS_CONTEXT)` (which is `ossl_get_wininstallcontext()`, the literal `\"Undefined\"`) and exercises the refusal arm (an unrecognised code is NULL; the seed-source and CPU settings codes are a recorded divergence and are not observed). The raw authority `OPENSSLDIR` is not printed: the candidate answers its own build path and the difference is a value the stratum does not claim. The other three courts the plan names -- `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in `pending_courts` with the subphase that lands each. docs/PHASE-16-SUBPHASES.md sections 3 and 4 record what each court compares.",
+    "claim": "`RT-LEGACY-MODULE` is 16.1's behavioural court: it **loads** the `legacy` provider module through `OSSL_PROVIDER_load` with `OPENSSL_MODULES` pointed at each side's own module directory, **reads** the provider name through `OSSL_PROVIDER_get_params`, **queries** the module's `OSSL_PROVIDER_query_operation` for all four operations 16.1 publishes (`OSSL_OP_DIGEST`, `OSSL_OP_CIPHER`, `OSSL_OP_KDF`, `OSSL_OP_SKEYMGMT`) and compares each table's row count and first row's alias sequence, **fetches** the four `legacy_digests` rows by name and by OID through the `provider=legacy` property and compares a fixed `\"abc\"` digest for each, **fetches and drives** each of the 32 `legacy_ciphers` rows with a fixed key/IV encrypt-and-decrypt and each of the two `legacy_kdfs` rows with a fixed password/salt/iteration derive, and exercises the refusal arms (an unknown digest/cipher/KDF name, a legacy name asked of the `default` provider, and two `PBKDF1` derives the row must refuse) -- not the error queue. The 39-row table is fully published, so `forensics/atlas/provider-algorithms.json` records `provider_rows_open` 0. `RT-ENGINE-DYN` is 16.2's: it **initialises** the `OPENSSL_INIT_ENGINE_DYNAMIC` bit (whose step runs `engine_load_dynamic_int` and registers the `dynamic` built-in), **reads** the `dynamic` engine id and name back through `ENGINE_by_id`, **drives** the dynamic fallback (`ENGINE_by_id`'s miss path recurses into `ENGINE_by_id(\"dynamic\")` and runs the `ID`/`DIR_LOAD`/`DIR_ADD`/`LIST_ADD`/`LOAD` control chain) with `OPENSSL_ENGINES` pointed at a fixed object-free directory, and exercises the NULL-, absent- and empty-id refusals. `RT-DEFAULTS` is 16.3's: it **reads** `OPENSSL_info(OPENSSL_INFO_CONFIG_DIR)` (which is `ossl_get_openssldir()`) and checks it equals `X509_get_default_cert_area()`, **checks** the four `X509_get_default_*` paths' `/certs`/`/cert.pem`/`/private` relationship to that area, **reads** `OPENSSL_info(OPENSSL_INFO_WINDOWS_CONTEXT)` (which is `ossl_get_wininstallcontext()`, the literal `\"Undefined\"`) and exercises the refusal arm (an unrecognised code is NULL; the seed-source and CPU settings codes are a recorded divergence and are not observed). The raw authority `OPENSSLDIR` is not printed: the candidate answers its own build path and the difference is a value the stratum does not claim. `RT-CONFIG` is 16.4's config-loader court: it **loads** a fixed in-memory configuration through `NCONF_load_bio` over a memory BIO, **reads** its sections and `get_string`/`get_number` values, and **drives** the CLI's default configuration file (`CONF_get1_default_config_file`), recording the unset-`OPENSSL_CONF` arm as a divergence. `RT-CLI` is 16.4's CLI court: it **runs** the admitted authority's own built `openssl` and the candidate distribution shell's over a fixed argv -- the global-`help`/`version`, unknown-command and `no-<cmd>` dispatcher arms, the `help`/`list`/`version` bodies, and every command's option table through `list -options <cmd>` -- and **drives** `atlas_runtime.parse_option_list` over each captured `option_listing`, requiring a structured round-trip. Only `RT-STATEM-REMAINDER` remains named in `pending_courts`. docs/PHASE-16-SUBPHASES.md sections 3 and 4 record what each court compares.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -55,17 +55,58 @@
           "candidate": "artifacts/phase16/probes/rt_defaults_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 31,
+        "candidate_exit_code": 0,
+        "candidate_observations": 31,
+        "candidate_stderr_tail": [],
+        "court": "RT-CONFIG",
+        "crashed": false,
+        "probe": "courts/phase16/rt_config_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase16/probes/rt_config_probe.authority",
+          "candidate": "artifacts/phase16/probes/rt_config_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "authority_exit_code": 0,
+        "authority_observations": 20,
+        "candidate_exit_code": 0,
+        "candidate_observations": 20,
+        "candidate_stderr_tail": [],
+        "court": "RT-STATEM-REMAINDER",
+        "crashed": false,
+        "probe": "courts/phase16/rt_statem_remainder_probe.c",
+        "residual_count": 0,
+        "residuals": [],
+        "staged_binaries": {
+          "authority": "artifacts/phase16/probes/rt_statem_remainder_probe.authority",
+          "candidate": "artifacts/phase16/probes/rt_statem_remainder_probe.candidate"
+        },
+        "verdict": "pass"
+      },
+      {
+        "argv_cases": 63,
+        "authority_observations": 252,
+        "candidate_observations": 252,
+        "court": "RT-CLI",
+        "parser_checks": 55,
+        "parser_failures": [],
+        "residual_count": 0,
+        "residuals": [],
+        "verdict": "pass"
       }
     ],
-    "pending_courts": {
-      "RT-CLI": "16.4: the openssl CLI command dispatch and its option grammar",
-      "RT-CONFIG": "16.4: config loading and the regenerated Phase-1 CLI capture",
-      "RT-STATEM-REMAINDER": "16.5: the ssl/statem/statem_clnt.c and statem_srvr.c message layer"
-    },
+    "pending_courts": {},
     "summary": {
       "fail": 0,
-      "pass": 3,
-      "total": 3
+      "pass": 6,
+      "total": 6
     }
   },
   "generator": "forensics/tools/phase16_courts.py",
@@ -73,12 +114,17 @@
     {
       "name": "phase-16-plan",
       "path": "docs/PHASE-16-SUBPHASES.md",
-      "sha256": "261727a3257c9ffaf94dcfb9386768386e5604c6720fc840e78b6f0f41745593"
+      "sha256": "1125a27838b7bad0586de184babce67a4c6ac589db4b3ef89a8cc6a4a59221fe"
     },
     {
       "name": "phase16-obligations",
       "path": "forensics/phase16-obligations.json",
-      "sha256": "78b831c44982966e90ba1557a545569c900335f2c1dfb8b9a6455b1a0d178f89"
+      "sha256": "3fa94472f0917e546e487746ced47e8e7df1227afe63b9cd5e6a1ea8ca8b4209"
+    },
+    {
+      "name": "cli-capture",
+      "path": "forensics/atlas/openssl-3.6.4-production/cli-commands.json",
+      "sha256": "874e4ef400b33871c7d282fac76210394de39e465f5c6b5d276cd88d9b05149d"
     },
     {
       "name": "probe",
@@ -94,6 +140,16 @@
       "name": "probe",
       "path": "courts/phase16/rt_defaults_probe.c",
       "sha256": "12efcd71d7691de480229d31874f7dcd364f2b74250d1b81bb3a9576438bd650"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase16/rt_config_probe.c",
+      "sha256": "2ed1a8704fb54a93e27e905fb9f661e6706ef4dec5af1e313ef49da4189032d7"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase16/rt_statem_remainder_probe.c",
+      "sha256": "592e3e0d8fe3ed0aae891bc5f33cc8d6a345064f104749f782452fb8a6908647"
     }
   ],
   "kind": "phase16-courts",

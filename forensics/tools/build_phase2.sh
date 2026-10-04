@@ -148,8 +148,14 @@ cc -shared -o legacy.so \
   -Wl,--no-as-needed -L"$PWD" -lcrypto -lpthread -ldl -lm -lrt -lutil
 
 # --- executables --------------------------------------------------------------
+# Since 16.4 the CLI is the crate's (`src/apps/`), so the `openssl` executable
+# links the crate rlib rather than a standalone std scaffold. rustc resolves the
+# crate by `--extern`, and `-L dependency` carries any transitive crates (there
+# are none: Cargo.toml has no [dependencies]).
 echo "--- openssl executable ---"
-rustc --edition 2021 -O --crate-name openssl_shell -o openssl shell/openssl.shell.rs
+rustc --edition 2021 -O --crate-name openssl_shell -o openssl shell/openssl.shell.rs \
+  --extern openssl_rs=/work/target/release/libopenssl_rs.rlib \
+  -L dependency=/work/target/release/deps
 cp shell/c_rehash.sh c_rehash && chmod +x c_rehash
 
 # --- install layout -----------------------------------------------------------

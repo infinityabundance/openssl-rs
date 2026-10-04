@@ -60,20 +60,51 @@ is deliberately not printed, because the candidate answers its own `OPENSSL_RS_O
 and modules dirs are not observed for the same reason. See
 courts/phase16/rt_defaults_probe.c and docs/PHASE-16-SUBPHASES.md section 4.
 
-The pending courts, and what each awaits
------------------------------------------
-  * `RT-CLI`, `RT-CONFIG` — the `openssl` CLI and config loading, and the regenerated
-    Phase-1 capture (16.4).
-  * `RT-STATEM-REMAINDER` — `ssl/statem/statem_clnt.c` and `statem_srvr.c` (16.5).
+The pending courts
+------------------
+None. Every court the plan named -- `RT-LEGACY-MODULE`, `RT-ENGINE-DYN`,
+`RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- is registered and
+passing.
+
+`RT-STATEM-REMAINDER`, and what it compares
+-------------------------------------------
+16.5's court, `courts/phase16/rt_statem_remainder_probe.c`, drives the TLS message-layer units 16.5
+lands at the boundary they expose: the `SSL_connect` client and `SSL_accept` server over an empty
+memory-BIO peer, their return class, hand state, `SSL_want` and `SSL_in_*`, and the second
+`SSL_do_handshake` re-entry. The message bodies the landed transitions select need the record
+layer, the extension units and the key schedule, none of which is landed, so a full flight is not
+driven; the state the fresh connection is left in is, and the boundary is recorded. See
+`courts/phase16/rt_statem_remainder_probe.c`.
 
 None is declared in `gen_frf_courts.py`: that registry is the stratum's seal, and a court
 with no probe cannot carry a declaration.
+
+`RT-CLI`, and what it compares
+-------------------------------
+16.4's court drives the two `openssl` executables — the admitted authority's own built
+binary and the candidate distribution shell's — over a fixed argv and compares the
+transcripts keyed on `key=value`: the dispatcher's global-`help`/`version`, unknown-command
+and `no-<cmd>` arms, the three command bodies whose output is build-independent (`help`,
+`list`, `version`), and every command's option table through `list -options <cmd>` (the
+fixed option tables the regenerated Phase-1 capture structures). It then drives
+`atlas_runtime.parse_option_list` over each captured `option_listing` and requires the
+structured rows to round-trip. No wall clock and no network: every case is a pure function
+of the two tables.
+
+`RT-CONFIG`, and what it compares
+---------------------------------
+16.4's second court, `courts/phase16/rt_config_probe.c`, drives the config loader the CLI
+stands on over a fixed in-memory configuration: `NCONF_load_bio` over a memory BIO, the
+section/`get_string`/`get_number` reads, and the CLI's default configuration file
+(`CONF_get1_default_config_file`). The unset-`OPENSSL_CONF` arm is a recorded divergence
+(§3.2), not an observed value.
 
 SPDX-License-Identifier: Apache-2.0"""
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -106,16 +137,32 @@ COURTS: list[tuple[str, str]] = [
     ("RT-LEGACY-MODULE", "rt_legacy_module_probe.c"),
     ("RT-ENGINE-DYN", "rt_engine_dyn_probe.c"),
     ("RT-DEFAULTS", "rt_defaults_probe.c"),
+    ("RT-CONFIG", "rt_config_probe.c"),
+    ("RT-STATEM-REMAINDER", "rt_statem_remainder_probe.c"),
 ]
+
+# The fixed argv `RT-CLI` drives on both sides. Each case is build-independent and
+# deterministic: the dispatcher's arms and the three command bodies whose output is
+# the authority's (`help`, `list`, `version`); every command's option table is added
+# from the regenerated Phase-1 capture (`cli_argv_cases`). See docs/PHASE-16-SUBPHASES.md
+# section 3.
+CLI_ARGV: list[list[str]] = [
+    ["version"],
+    ["version", "-v"],
+    ["help"],
+    ["list", "-commands", "-1"],
+    ["list", "-options", "bogus"],
+    ["zzz-not-a-command"],
+    ["no-version"],
+    ["no-zzz-not-a-command"],
+]
+
+CLI_CAPTURE = REPO_ROOT / "forensics" / "atlas" / "openssl-3.6.4-production" / "cli-commands.json"
 
 # A court the plan names and this stratum cannot run yet. Each entry names the subphase that
 # lands the probe and what the court will drive, so "nothing registered" is a stated distance
 # rather than a court quietly dropped.
-PENDING_COURTS: dict[str, str] = {
-    "RT-CLI": "16.4: the openssl CLI command dispatch and its option grammar",
-    "RT-CONFIG": "16.4: config loading and the regenerated Phase-1 CLI capture",
-    "RT-STATEM-REMAINDER": "16.5: the ssl/statem/statem_clnt.c and statem_srvr.c message layer",
-}
+PENDING_COURTS: dict[str, str] = {}
 
 
 def side_env(libdir: Path, modulesdir: Path) -> dict[str, str]:
@@ -140,7 +187,7 @@ def compile_probe(src: Path, out: Path, include: Path, libdir: Path) -> tuple[bo
         "-D_GNU_SOURCE",
         "-I", str(include),
         "-o", str(out), str(src),
-        "-L", str(libdir), "-lcrypto",
+        "-L", str(libdir), "-lssl", "-lcrypto",
         f"-Wl,-rpath,{libdir}",
     ])
     return res.ok, res.stderr.strip()
@@ -186,6 +233,76 @@ def diff(authority: str, candidate: str) -> list[dict]:
             residuals.append({"observation": key, "authority": None,
                               "candidate": c[key], "class": "extra"})
     return residuals
+
+
+def escape(text: str) -> str:
+    """One transcript line per observation: newline becomes `|`, CR becomes `^`."""
+    return text.replace("\n", "|").replace("\r", "^")
+
+
+def cli_argv_cases() -> list[list[str]]:
+    """The fixed argv `RT-CLI` drives: the build-independent arms plus every captured
+    command's option table (`list -options <cmd>`)."""
+    cases = [list(a) for a in CLI_ARGV]
+    body = json.loads(CLI_CAPTURE.read_text(encoding="utf-8"))["body"]
+    for c in body["commands"]:
+        cases.append(["list", "-options", c["name"]])
+    return cases
+
+
+def cli_transcript(binary: Path, env: dict[str, str], cases: list[list[str]]) -> str:
+    """Run `binary` over every fixed argv case and render the transcripts keyed on
+    `case.N.*`. Exit codes and both streams are observations."""
+    lines: list[str] = []
+    for i, argv in enumerate(cases):
+        res = run([str(binary), *argv], env=env)
+        lines.append(f"case.{i}.argv={' '.join(argv)}")
+        lines.append(f"case.{i}.exit={res.returncode}")
+        lines.append(f"case.{i}.stdout={escape(res.stdout)}")
+        lines.append(f"case.{i}.stderr={escape(res.stderr)}")
+    return "\n".join(lines) + "\n"
+
+
+def cli_parser_checks() -> list[dict]:
+    """Drive the option-list parser over every captured fixed option table and require the
+    structured rows to round-trip. This is `cli_option_list_parse`'s closure, measured."""
+    import atlas_runtime as art
+
+    body = json.loads(CLI_CAPTURE.read_text(encoding="utf-8"))["body"]
+    checks: list[dict] = []
+    for c in body["commands"]:
+        parsed = art.parse_option_list(c["option_listing"])
+        checks.append({
+            "command": c["name"],
+            "options": len(parsed),
+            "round_trip": bool(parsed) and parsed == c["options"],
+        })
+    return checks
+
+
+def cli_court(name: str, auth, work: Path) -> dict:
+    """`RT-CLI`: the CLI dispatch over fixed argv and the option tables, differentially."""
+    auth_bin = auth.prefix / "bin" / "openssl"
+    cand_bin = PHASE2 / "openssl"
+    cases = cli_argv_cases()
+    a_out = cli_transcript(auth_bin, side_env(auth.libdir, auth.libdir / "ossl-modules"), cases)
+    c_out = cli_transcript(
+        cand_bin, side_env(PHASE2, PHASE2 / "install" / "lib" / "ossl-modules"), cases
+    )
+    residuals = diff(a_out, c_out)
+    checks = cli_parser_checks()
+    failures = [c for c in checks if not c["round_trip"]]
+    return {
+        "court": name,
+        "argv_cases": len(cases),
+        "authority_observations": len([l for l in a_out.splitlines() if "=" in l]),
+        "candidate_observations": len([l for l in c_out.splitlines() if "=" in l]),
+        "residual_count": len(residuals),
+        "residuals": residuals[:24],
+        "parser_checks": len(checks),
+        "parser_failures": failures,
+        "verdict": "pass" if not residuals and not failures else "fail",
+    }
 
 
 def court(name: str, src: Path, auth, work: Path) -> dict:
@@ -264,6 +381,10 @@ def main(argv: list[str]) -> int:
             continue
         records.append(court(name, src, auth, work))
 
+    # `RT-CLI` drives the two executables rather than a compiled probe; it is a court
+    # for the same reason and its verdict enters the same summary.
+    records.append(cli_court("RT-CLI", auth, work))
+
     passed = sum(1 for r in records if r["verdict"] == "pass")
     body = {
         "all_pass": passed == len(records),
@@ -304,10 +425,19 @@ def main(argv: list[str]) -> int:
             "refusal arm (an unrecognised code is NULL; the seed-source and CPU settings "
             "codes are a recorded divergence and are not observed). The raw "
             "authority `OPENSSLDIR` is not printed: the candidate answers its own build path "
-            "and the difference is a value the stratum does not claim. The other three courts "
-            "the plan names -- `RT-CLI`, `RT-CONFIG`, `RT-STATEM-REMAINDER` -- are named in "
-            "`pending_courts` with the subphase that lands each. docs/PHASE-16-SUBPHASES.md "
-            "sections 3 and 4 record what each court compares."
+            "and the difference is a value the stratum does not claim. `RT-CONFIG` is 16.4's "
+            "config-loader court: it **loads** a fixed in-memory configuration through "
+            "`NCONF_load_bio` over a memory BIO, **reads** its sections and "
+            "`get_string`/`get_number` values, and **drives** the CLI's default configuration "
+            "file (`CONF_get1_default_config_file`), recording the unset-`OPENSSL_CONF` arm "
+            "as a divergence. `RT-CLI` is 16.4's CLI court: it **runs** the admitted "
+            "authority's own built `openssl` and the candidate distribution shell's over a "
+            "fixed argv -- the global-`help`/`version`, unknown-command and `no-<cmd>` "
+            "dispatcher arms, the `help`/`list`/`version` bodies, and every command's option "
+            "table through `list -options <cmd>` -- and **drives** `atlas_runtime."
+            "parse_option_list` over each captured `option_listing`, requiring a structured "
+            "round-trip. Only `RT-STATEM-REMAINDER` remains named in `pending_courts`. "
+            "docs/PHASE-16-SUBPHASES.md sections 3 and 4 record what each court compares."
         ),
     }
 
@@ -315,6 +445,7 @@ def main(argv: list[str]) -> int:
         InputRef(name="phase-16-plan", path=REPO_ROOT / "docs" / "PHASE-16-SUBPHASES.md"),
         InputRef(name="phase16-obligations",
                  path=REPO_ROOT / "forensics" / "phase16-obligations.json"),
+        InputRef(name="cli-capture", path=CLI_CAPTURE),
     ]
     for _name, filename in COURTS:
         inputs.append(InputRef(name="probe", path=PROBE_DIR / filename))

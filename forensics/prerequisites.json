@@ -7,12 +7,6 @@
         "owner_phase": 13,
         "reason": "providers/legacy/legacyprov.c's entry point, and the name a third-party provider's own entry point is declared with -- which is why subphase rows 6.8d and 6.12 name it, since the `providers` configuration module needs a module path and RT-PROVIDER-3P compiles its own. The authority symbol is the legacy provider's, so it is Phase 13's.",
         "symbol": "OSSL_provider_init"
-      },
-      {
-        "evidence": "forensics/tools/atlas_runtime.py parse_option_list()/_OPTION_ROW and _OPTION_VALTYPES (repaired by 22.9; the row's original citations :240/:243 have moved with the rewrite); forensics/atlas/phase22/cli-surface.json (22.9's structured surface: 120 commands -- 54 standard, 1 deprecated, 18 digest aliases, 47 cipher aliases -- with 4,314 structured options, 0 refused rows and 0 commands with zero options); RT-PHASE22-CLI in artifacts/phase22/COURTS.json (proves the repaired parser reads a real row, refuses a malformed one, and fails when broken in memory); forensics/atlas/openssl-3.6.4-production/cli-commands.json still records command_count 55 and option_count 0 on all 55 commands, because it has not been regenerated",
-        "owner_phase": 16,
-        "reason": "Transferred to 22.9 and repaired there; what remains deferred to Phase 16 is regenerating the Phase-1 capture with the fixed parser. parse_option_list() (forensics/tools/atlas_runtime.py) matched the authority's `openssl list -options <cmd>` rows against a help-text shape (`-in val        Input file`) that the output never produces, and the real rows are `name type` pairs (`help -`, `in <`, `provider s`) with no leading indent, no leading dash and no description column, so every structured option_count was 0 and all 2,008 raw rows stayed unstructured. 22.9 rewrote the parser to the authority's actual grammar and re-enumerated the whole namespace from the authority's own built binary (forensics/authorities/build/openssl-3.6.4-production/apps/openssl): forensics/atlas/phase22/cli-surface.json now carries 120 commands with 4,314 structured options, 0 refused rows and 0 commands_with_zero_options, and RT-PHASE22-CLI proves the repaired parser reads a real row and refuses a malformed one (and turns to fail when the parser is broken in memory). The Phase-16-owned Phase-1 capture forensics/atlas/openssl-3.6.4-production/cli-commands.json still carries option_count 0 on all 55 commands: it is Phase 16 (cli-config) that owns the CLI stratum and would regenerate production and historical in lockstep, since regenerating only the production authority would leave a spurious option-set differential against the historical one. Closure: parse_option_list() reads the authority's actual option shape and the structured surface (22.9's cli-surface.json now, and the Phase-16 capture once regenerated) has a non-zero structured option_count for every command.",
-        "symbol": "cli_option_list_parse"
       }
     ],
     "divergences": [
@@ -131,7 +125,6 @@
         "class": "shadowed_by_a_crate_identifier",
         "covers": [
           "F",
-          "arg",
           "cb_arg",
           "in",
           "inlen",
@@ -177,6 +170,77 @@
         "evidence": "src/provider/digest.rs:137; src/provider/legacyprov.rs; forensics/atlas/transcription-edges.json (`src/provider/legacyprov.rs` is `providers/prov_running.c`'s module)",
         "note": "`providers/prov_running.c` defines `ossl_set_error_state` and `ossl_prov_is_running`. The crate implements the latter as a per-provider local (the base/legacy and default providers are always running in this distribution) and models the former as the no-op the same callers take: a provider that is always running never transitions to an error state, so nothing calls a crate `ossl_set_error_state` and no function by that name is owed. Phase 16.1's module edge `src/provider/legacyprov.rs -> providers/prov_running.c` is what made the name visible to the gate; this record is the Phase-16 prerequisite-plane reconciliation the earlier stale atlas did not carry.",
         "owner_module": "src/provider/legacyprov.rs"
+      },
+      {
+        "authority_units": [
+          "ssl/statem/statem.c",
+          "ssl/statem/statem_clnt.c",
+          "ssl/statem/statem_srvr.c",
+          "ssl/statem/statem_lib.c",
+          "ssl/d1_lib.c"
+        ],
+        "class": "reduced_transcription",
+        "covers": [
+          "GOST_KX_MESSAGE_free",
+          "d2i_GOST_KX_MESSAGE",
+          "dtls_construct_hello_verify_request",
+          "dtls_process_hello_verify",
+          "dtls_raw_hello_verify_request",
+          "ossl_get_ocsp_response",
+          "ossl_gost18_cke_cipher_nid",
+          "ossl_gost_ukm",
+          "ossl_statem_client_construct_message",
+          "ossl_statem_client_post_process_message",
+          "ossl_statem_client_post_work",
+          "ossl_statem_client_pre_work",
+          "ossl_statem_client_process_message",
+          "ossl_statem_server_construct_message",
+          "ossl_statem_server_post_process_message",
+          "ossl_statem_server_post_work",
+          "ossl_statem_server_pre_work",
+          "ossl_statem_server_process_message",
+          "ssl3_check_cert_and_algorithm",
+          "ssl_do_client_cert_cb",
+          "tls_client_key_exchange_post_work",
+          "tls_construct_cert_status",
+          "tls_construct_cert_status_body",
+          "tls_construct_certificate_request",
+          "tls_construct_client_certificate",
+          "tls_construct_client_hello",
+          "tls_construct_client_key_exchange",
+          "tls_construct_end_of_early_data",
+          "tls_construct_new_session_ticket",
+          "tls_construct_next_proto",
+          "tls_construct_server_certificate",
+          "tls_construct_server_done",
+          "tls_construct_server_hello",
+          "tls_construct_server_key_exchange",
+          "tls_handle_alpn",
+          "tls_post_process_client_hello",
+          "tls_post_process_client_key_exchange",
+          "tls_post_process_server_certificate",
+          "tls_prepare_client_certificate",
+          "tls_process_cert_status",
+          "tls_process_cert_status_body",
+          "tls_process_certificate_request",
+          "tls_process_client_certificate",
+          "tls_process_client_hello",
+          "tls_process_client_key_exchange",
+          "tls_process_client_rpk",
+          "tls_process_end_of_early_data",
+          "tls_process_hello_req",
+          "tls_process_initial_server_flight",
+          "tls_process_key_exchange",
+          "tls_process_new_session_ticket",
+          "tls_process_next_proto",
+          "tls_process_server_certificate",
+          "tls_process_server_done",
+          "tls_process_server_hello",
+          "tls_process_server_rpk"
+        ],
+        "evidence": "src/ssl/statem/statem_clnt.rs and src/ssl/statem/statem_srvr.rs module headers (the message-body boundary); docs/PHASE-16-SUBPHASES.md row 16.5 and section 3; forensics/atlas/transcription-edges.json (both modules are statem_clnt.c/statem_srvr.c's)",
+        "note": "Phase 16.5 transcribes the read/write *transition* surface of ssl/statem/statem_clnt.c and statem_srvr.c -- the parser's decision that a message type can follow the current hand state, and the constructor's decision what to build next -- but not the message bodies those transitions select. The bodies (tls_construct_client_hello, tls_process_server_hello and their siblings, the GOST/RPK/DTLS message helpers, and the five ossl_statem_{client,server}_* entry points the state machine calls) build and parse bytes through the record layer (ssl3_write_bytes/ssl3_read_bytes), the extension units (extensions_clnt.c/extensions_srvr.c) and the key schedule (t1_enc.c/tls13_enc.c), none of which is landed, so a full flight cannot be driven without a shared engine. The names are recorded here so the omitted bodies are a stated boundary rather than a silent gap; the landed transitions and the fresh-connection state they leave are compared by RT-STATEM-REMAINDER. This is the 'record the boundary rather than fabricate' disposition docs/PHASE-16-SUBPHASES.md section 4 names.",
+        "owner_module": "src/ssl/statem/statem_clnt.rs, src/ssl/statem/statem_srvr.rs"
       }
     ],
     "rule": [
@@ -185,20 +249,6 @@
       "units: an authority translation unit a subphase plan names, which no transcription edge, no built internal function, no referenced identifier and no symbol record reaches. Each row carries a class from a fixed set, and the class names the fields the row must prove, so the row can be falsified rather than believed. Forensics tools plan_reconciliation.py is the reader, and it also reports a row that covers a unit no plan row names."
     ],
     "units": [
-      {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-14-SUBPHASES.md row 14.5b and section 5; src/ssl/mod.rs (the unlanded-message-layer note); docs/PHASE-14-TLS-SEAL.md section 5; docs/PHASE-15-QUIC-SEAL.md section 5",
-        "owner_phase": 16,
-        "reason": "Phase 14.5b's plan row names this unit to say the client half of the TLS message layer remains unlanded: the state machine's control surface and a fresh-connection driver (`statem.c`) landed, but the client message construction and parsing (`statem_clnt.c`) did not, so no flight is built or parsed on the client side and no court reads one. Phase 14 deferred the unit to Phase 15 (QUIC/ECH), whose plan section 0 names the QUIC object the method table points at; but Phase 15's landed scope is the three `quic.h` constructors and its plan excludes the message layer, so Phase 15 seals without it (docs/PHASE-15-QUIC-SEAL.md) and the deferral is corrected here to Phase 16, the next later stratum in `phase_state.py`'s `REQUIRES` DAG. The owner is named rather than left implicit, the disposition D132 established.",
-        "unit": "ssl/statem/statem_clnt.c"
-      },
-      {
-        "class": "deferred_to_later_stratum",
-        "evidence": "docs/PHASE-14-SUBPHASES.md row 14.5b and section 5; src/ssl/mod.rs (the unlanded-message-layer note); docs/PHASE-14-TLS-SEAL.md section 5; docs/PHASE-15-QUIC-SEAL.md section 5",
-        "owner_phase": 16,
-        "reason": "Phase 14.5b's plan row names this unit to say the server half of the TLS message layer remains unlanded: the state machine's control surface and a fresh-connection driver (`statem.c`) landed, but the server message construction and parsing (`statem_srvr.c`) did not, so no flight is built or parsed on the server side and no court reads one. Phase 14 deferred the unit to Phase 15 (QUIC/ECH), whose plan section 0 names the QUIC object the method table points at; but Phase 15's landed scope is the three `quic.h` constructors and its plan excludes the message layer, so Phase 15 seals without it (docs/PHASE-15-QUIC-SEAL.md) and the deferral is corrected here to Phase 16, the next later stratum in `phase_state.py`'s `REQUIRES` DAG. The owner is named rather than left implicit, the disposition D132 established.",
-        "unit": "ssl/statem/statem_srvr.c"
-      },
       {
         "class": "reached_by_a_named_construct",
         "crate_module": "src/evp/e_aes.rs",

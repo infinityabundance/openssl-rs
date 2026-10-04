@@ -2926,6 +2926,68 @@
         "verdict": "clean"
       },
       {
+        "probe": "courts/phase16/rt_config_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 26,
+              "-O1": 26,
+              "-O2": 26
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 26,
+              "-O1": 26,
+              "-O2": 26
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
         "probe": "courts/phase16/rt_defaults_probe.c",
         "sides": {
           "authority": {
@@ -3104,6 +3166,68 @@
               "-O0": 344,
               "-O1": 344,
               "-O2": 344
+            },
+            "side": "candidate",
+            "verdict": "clean"
+          }
+        },
+        "verdict": "clean"
+      },
+      {
+        "probe": "courts/phase16/rt_statem_remainder_probe.c",
+        "sides": {
+          "authority": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 20,
+              "-O1": 20,
+              "-O2": 20
+            },
+            "side": "authority",
+            "verdict": "clean"
+          },
+          "candidate": {
+            "exit_codes": {
+              "-O0": [
+                0,
+                0
+              ],
+              "-O1": [
+                0,
+                0
+              ],
+              "-O2": [
+                0,
+                0
+              ]
+            },
+            "levels": [
+              "-O0",
+              "-O1",
+              "-O2"
+            ],
+            "observations": {
+              "-O0": 20,
+              "-O1": 20,
+              "-O2": 20
             },
             "side": "candidate",
             "verdict": "clean"
@@ -8508,8 +8632,8 @@
     ],
     "runs_per_level": 2,
     "summary": {
-      "clean": 137,
-      "total": 137,
+      "clean": 139,
+      "total": 139,
       "unstable": 0
     }
   },
@@ -8752,6 +8876,11 @@
     },
     {
       "name": "probe",
+      "path": "courts/phase16/rt_config_probe.c",
+      "sha256": "2ed1a8704fb54a93e27e905fb9f661e6706ef4dec5af1e313ef49da4189032d7"
+    },
+    {
+      "name": "probe",
       "path": "courts/phase16/rt_defaults_probe.c",
       "sha256": "12efcd71d7691de480229d31874f7dcd364f2b74250d1b81bb3a9576438bd650"
     },
@@ -8764,6 +8893,11 @@
       "name": "probe",
       "path": "courts/phase16/rt_legacy_module_probe.c",
       "sha256": "ee9c31c72cae60ce6f117b4f4960314eccb353ed645bfc7be0ade69cb45dcad1"
+    },
+    {
+      "name": "probe",
+      "path": "courts/phase16/rt_statem_remainder_probe.c",
+      "sha256": "592e3e0d8fe3ed0aae891bc5f33cc8d6a345064f104749f782452fb8a6908647"
     },
     {
       "name": "probe",
