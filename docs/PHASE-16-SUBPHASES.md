@@ -49,13 +49,18 @@ All 39 are landed, so `implementation_state: implemented` reads 39/39, the censu
 reads `open[16] = 0` and the ledger's `provider_rows_open` reads 0. The census, not this document,
 is the arbiter the provider-row rule in `phase_state.py` reads.
 
-**It receives four symbol deferrals and two unit deferrals.** Reading
-`forensics/prerequisites.json` for `owner_phase == 16`: the symbol deferrals
+**It received four symbol deferrals and two unit deferrals.** Reading
+`forensics/prerequisites.json` for `owner_phase == 16` at activation: the symbol deferrals
 `ossl_get_openssldir` and `ossl_get_wininstallcontext` (the `OPENSSLDIR`/install-context strings
 of `src/runtime/defaults.rs`), `engine_load_dynamic_int` (`crypto/engine/eng_dyn.c`, the absent
 dynamic ENGINE loader, D528) and `cli_option_list_parse` (the Phase-1 CLI capture, D490); and the
 two `deferred_to_later_stratum` units `ssl/statem/statem_clnt.c` and `ssl/statem/statem_srvr.c`,
 the TLS message layer Phase 14 handed to Phase 15 and Phase 15 sealed without (D525's correction).
+**16.2 and 16.3 have since retired three of the six**: `engine_load_dynamic_int`
+(`src/engine/eng_dyn.rs`, `src/runtime/init.rs`), `ossl_get_openssldir` and
+`ossl_get_wininstallcontext` (`src/runtime/defaults.rs`), leaving the CLI capture defect and the
+two message-layer units. The ledger's `counts` is the live record; this paragraph is the
+activation measurement.
 
 **The CLI / config / filesystem contract is three units**, each derived from an atlas that
 measures the authority surface: `cli` (the Phase-1 capture
@@ -82,8 +87,8 @@ subphases below land. **That split moves as the stratum lands its own units: the
 |---|---|---|---|---|
 | 16.0 | **The plan and the ledger** | `docs/PHASE-16-SUBPHASES.md` and the measurement in §1. The ledger (`forensics/phase16-obligations.json`) and its generator land with it, together with the runner `forensics/tools/phase16_courts.py` and the empty registry it writes. **The runner cannot be deferred**: `run_courts.py` refuses a stratum in `in-progress` with no runner, and this stratum's obligations are not exports, so its first runnable court is a later subphase's. | 15 | — |
 | 16.1 | **The legacy provider module** | `providers/legacyprov.c` (39 registration rows). The `ossl-modules/legacy.so` loadable-module contract, whose dispatch tables the census records; the rows are published only when the module activates, so the table and the module land together. **Slice 1 lands the module and the 5 digest/skeymgmt rows, slice 2 the 32 cipher rows (the `legacy` submodule of `src/provider/cipher.rs`) and slice 3 the 2 KDF rows (`src/provider/kdf.rs`); all 39 are published.** | 16.0 | `RT-LEGACY-MODULE` |
-| 16.2 | **The dynamic ENGINE loader** | `crypto/engine/eng_dyn.c` (`engine_load_dynamic_int`). The dynamic loader `ENGINE_by_id`'s miss path reaches, and the `dynamic`/`rdrand` built-ins it registers; `DSO_load` and `OPENSSL_ENGINES` handling are its dependency. | 16.1 | `RT-ENGINE-DYN` (pending) |
-| 16.3 | **The directory and install-context plane** | `src/runtime/defaults.rs` (`ossl_get_openssldir`, `ossl_get_wininstallcontext`). The `OPENSSLDIR` directory plane and the install context, the distribution facts the x509 default paths and `CONF_get1_default_config_file` stand on. | 16.2 | `RT-DEFAULTS` (pending) |
+| 16.2 | **The dynamic ENGINE loader** | `crypto/engine/eng_dyn.c` (`engine_load_dynamic_int`). The dynamic loader `ENGINE_by_id`'s miss path reaches, and the `dynamic`/`rdrand` built-ins it registers; `DSO_load` and `OPENSSL_ENGINES` handling are its dependency. | 16.1 | `RT-ENGINE-DYN` |
+| 16.3 | **The directory and install-context plane** | `src/runtime/defaults.rs` (`ossl_get_openssldir`, `ossl_get_wininstallcontext`). The `OPENSSLDIR` directory plane and the install context, the distribution facts the x509 default paths and `CONF_get1_default_config_file` stand on. | 16.2 | `RT-DEFAULTS` |
 | 16.4 | **The `openssl` CLI and config loading** | `apps/openssl.c` (the CLI) and the config-loading surface. The command dispatch over `libcrypto`/`libssl`, and the regenerated Phase-1 CLI capture (`cli_option_list_parse`) in lockstep with the historical authority. | 16.3 | `RT-CLI`, `RT-CONFIG` (pending) |
 | 16.5 | **The TLS message layer units** | `ssl/statem/statem_clnt.c` and `ssl/statem/statem_srvr.c`. The client and server message construction and parsing Phase 15 sealed without; the state-machine control surface (`statem.c`) already landed. | 16.4 | `RT-STATEM-REMAINDER` (pending) |
 | 16.6 | **The seal** | nothing in the crate — evidence: `docs/PHASE-16-CLI-SEAL.md` (at the seal) | 16.0–16.5 | — |
@@ -135,6 +140,28 @@ generated entry object, and the module's ABI stays the authority's single export
 `OSSL_provider_init`. The loadable contract (`NEEDED libcrypto.so.3`, one exported symbol) is
 unchanged; the divergence is the object set behind it.
 
+**3.6 The dynamic ENGINE loader is transcribed whole, and one bit is what reaches it.** 16.2
+landed `crypto/engine/eng_dyn.c` as `src/engine/eng_dyn.rs`: `engine_load_dynamic_int`, the
+`dynamic` engine's command table, the `ex_data` context, `dynamic_load`, `int_load` and the
+`DynamicFns` ABI, over 13.1's `ENGINE_by_id` and the DSO surface. `src/runtime/init.rs` now runs
+`ossl_init_engine_dynamic` for the `OPENSSL_INIT_ENGINE_DYNAMIC` bit, which leaves
+`INIT_UNSUPPORTED`; `OPENSSL_INIT_ENGINE_ALL_BUILTIN` still trips the remaining engine bits, because
+`eng_openssl.c` and `eng_rdrand.c` are not landed, so `ENGINE_load_builtin_engines` remains the
+recorded boundary `src/engine/eng_all.rs` names. `RT-ENGINE-DYN` drives the loader down to a
+refusing `LOAD`; a real `.so` load waits on the distribution's engine-module contract, which is
+16.4's `filesystem` unit, and the `rdrand` id is `eng_rdrand.c`'s separate unit rather than this
+one's.
+
+**3.7 The directory plane is this build's, and the install context is the one equal string.** 16.3
+landed `ossl_get_openssldir` and `ossl_get_wininstallcontext` in `src/runtime/defaults.rs` and
+routed `OPENSSL_info`'s `CONFIG_DIR`, `ENGINES_DIR`, `MODULES_DIR` and `WINDOWS_CONTEXT` codes to
+the four `crypto/defaults.c` functions (`crypto/info.c:243-291`). `ossl_get_openssldir` answers the
+build's `OPENSSL_RS_OPENSSLDIR` and, when unset, the empty C string that `src/x509/x509_def.rs`
+already answers -- so `OPENSSL_info(1001)` and `X509_get_default_cert_area()` agree on each side
+without either side claiming the other's prefix, which is what `RT-DEFAULTS` compares. The raw
+path, and the engines/modules dirs (NULL when no prefix was built), are recorded divergences, not
+observed values.
+
 ## 4. Measured corrections, and the precondition
 
 **4.1 The working set is not an export projection, and the ledger says so by its unit.** The
@@ -150,8 +177,9 @@ refuses a stratum that is not `not-started` and has no runner. This stratum land
 so no differential probe over a symbol set is its evidence, and its first behavioural courts
 (`RT-LEGACY-MODULE`, `RT-ENGINE-DYN`, `RT-DEFAULTS`, `RT-CLI`, `RT-CONFIG`,
 `RT-STATEM-REMAINDER`) are named in `PENDING_COURTS` and land with the subphases that build the
-things they drive. **16.1 registers the first of them** (`RT-LEGACY-MODULE`), and
-`PENDING_COURTS` names the remaining five. **No court is registered in `gen_frf_courts.py`**: that
+things they drive. **16.1 registered `RT-LEGACY-MODULE`, 16.2 `RT-ENGINE-DYN` and 16.3
+`RT-DEFAULTS`**, and `PENDING_COURTS` names the remaining three (`RT-CLI`, `RT-CONFIG`,
+`RT-STATEM-REMAINDER`). **No court is registered in `gen_frf_courts.py`**: that
 registry is the stratum's seal. So the activation order is: the ledger, the plan, the runner and
 its empty registry land **together**, or `run_courts.py` fails and the tree carries an activation
 whose runner is refused.

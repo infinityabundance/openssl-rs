@@ -583,7 +583,7 @@
         "stratum": "QUIC / ECH and modern SSL surface"
       },
       {
-        "blocking": "8 open obligation(s) of this stratum recorded in forensics/phase16-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase16-obligations.json` publishes `unit: cli-config contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the 39 legacy provider registration rows it owns, six prerequisite deferrals and three CLI/config/filesystem contract units. The provider-row rule below no longer holds it open: 16.1's three slices published all 39 `providers/legacyprov.c` rows (`provider_rows_open` 0), so the six prerequisite deferrals and the three CLI/config/filesystem contract units are what remains. Its `artifacts/phase16/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; 16.1 registered the first behavioural court (`RT-LEGACY-MODULE`), and the remaining five are `pending` with the subphases that land them. `docs/PHASE-16-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D485, D525, D528)",
+        "blocking": "4 open obligation(s) of this stratum recorded in forensics/phase16-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase16-obligations.json` publishes `unit: cli-config contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the 39 legacy provider registration rows it owns, the prerequisite deferrals and the three CLI/config/filesystem contract units. The provider-row rule below no longer holds it open: 16.1's three slices published all 39 `providers/legacyprov.c` rows (`provider_rows_open` 0), and 16.2/16.3 retired the dynamic-ENGINE loader and the two `OPENSSLDIR`/install-context deferrals, so the CLI capture defect, the two message-layer units and the CLI contract unit are what remains. Its `artifacts/phase16/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; 16.1/16.2/16.3 registered `RT-LEGACY-MODULE`, `RT-ENGINE-DYN` and `RT-DEFAULTS`, and the remaining three are `pending` with the subphases that land them. `docs/PHASE-16-SUBPHASES.md` sections 1 and 4 record the measurement (docs/DECISIONS.md D485, D525, D528)",
         "deferred": [],
         "evidence_absent": [],
         "evidence_present": [
@@ -691,7 +691,7 @@
       "not_started": 5
     }
   },
-  "body_hash": "3c6fbc5a41b8b1f04367afecbea9171391f7c6e43c2362f3a3ef8ce4a5defc28",
+  "body_hash": "6e9f84520687c7d31f3cee86badaa5808c69f2a6914c0d154069f960b43ccba8",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",

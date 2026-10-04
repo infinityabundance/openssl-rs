@@ -1019,13 +1019,14 @@ PHASE15_MODULES = [
 # `cli-config contract` (in `atlas_common.NON_EXPORT_UNITS`, so the export-partitioning tools
 # skip it, as they skip Phase 22's `compatibility plane`), and its working set is instead the 39
 # legacy provider registration rows `forensics/atlas/provider-algorithms.json` assigns it, the
-# six prerequisite deferrals `forensics/prerequisites.json` records with `owner_phase: 16`, and
-# three CLI / config / filesystem contract units. The provider-row rule below independently
-# holds the stratum open: 39 of its rows are `unimplemented`. The stratum registers no
+# prerequisite deferrals `forensics/prerequisites.json` records with `owner_phase: 16`, and the
+# three CLI / config / filesystem contract units. 16.1 published all 39 provider rows, and
+# 16.2/16.3 retired the dynamic-ENGINE loader and the two `OPENSSLDIR`/install-context deferrals.
+# The stratum registers no
 # coverage-reference probe, because it owns no symbol to take an address of, so its runner's
-# registry is empty at activation and every behavioural court is `pending` with the subphase that
-# lands it. `docs/PHASE-16-SUBPHASES.md` section 4 records the activation measurement and the
-# precondition it places on the runner.
+# registry is empty at activation and the remaining behavioural courts are `pending` with the
+# subphase that lands each. `docs/PHASE-16-SUBPHASES.md` section 4 records the activation
+# measurement and the precondition it places on the runner.
 PHASE16_COURTS = "artifacts/phase16/COURTS.json"
 PHASE16_OBLIGATIONS = "forensics/phase16-obligations.json"
 PHASE16_MODULES = [
@@ -1172,16 +1173,19 @@ STRATUM_EVIDENCE: dict[int, StratumEvidence] = {
                             "not a symbol: `forensics/phase16-obligations.json` publishes "
                             "`unit: cli-config contract` and its `implemented`/`open` *export* "
                             "lists are empty by measurement, while `open_in_this_stratum` "
-                            "counts the 39 legacy provider registration rows it owns, six "
-                            "prerequisite deferrals and three CLI/config/filesystem contract "
+                            "counts the 39 legacy provider registration rows it owns, the "
+                            "prerequisite deferrals and the three CLI/config/filesystem contract "
                             "units. The provider-row rule below no longer holds it open: "
                             "16.1's three slices published all 39 `providers/legacyprov.c` rows "
-                            "(`provider_rows_open` 0), so the six prerequisite deferrals and the "
-                            "three CLI/config/filesystem contract units are what remains. Its "
+                            "(`provider_rows_open` 0), and 16.2/16.3 retired the dynamic-ENGINE "
+                            "loader and the two `OPENSSLDIR`/install-context deferrals, so the "
+                            "CLI capture defect, the two message-layer units and the CLI contract "
+                            "unit are what remains. Its "
                             "`artifacts/phase16/COURTS.json` "
                             "registered no court at activation because it owns no symbol for a "
-                            "differential probe to observe; 16.1 registered the first "
-                            "behavioural court (`RT-LEGACY-MODULE`), and the remaining five are "
+                            "differential probe to observe; 16.1/16.2/16.3 registered "
+                            "`RT-LEGACY-MODULE`, `RT-ENGINE-DYN` and `RT-DEFAULTS`, and the "
+                            "remaining three are "
                             "`pending` with the subphases that land them. "
                             "`docs/PHASE-16-SUBPHASES.md` sections 1 and 4 record the "
                             "measurement (docs/DECISIONS.md D485, D525, D528)"

@@ -12,8 +12,8 @@
       },
       {
         "closure": "the default-path deferrals are discharged",
-        "observation": "2 default-path deferral(s) outstanding: ossl_get_openssldir, ossl_get_wininstallcontext",
-        "state": "open",
+        "observation": "0 default-path deferral(s) outstanding",
+        "state": "implemented",
         "surface": "forensics/prerequisites.json",
         "unit": "config",
         "what": "config loading and the default-path / directory plane"
@@ -30,37 +30,16 @@
     "counts": {
       "atlas_owned": 0,
       "contract_units": 3,
-      "deferrals_received": 4,
+      "deferrals_received": 1,
       "deferred_to_later_phase": 0,
-      "implemented": 40,
-      "open_in_this_stratum": 8,
-      "owned": 48,
+      "implemented": 41,
+      "open_in_this_stratum": 4,
+      "owned": 45,
       "provider_rows_open": 0,
       "provider_rows_owned": 39,
       "unit_deferrals_received": 2
     },
     "deferrals": [
-      {
-        "authority_unit": null,
-        "evidence": "src/runtime/defaults.rs module doc",
-        "kind": "symbol",
-        "reason": "The OPENSSL_info strings rather than anything the registry reads; `ossl_get_enginesdir`, its sibling, moved to Phase 13.1 with `ENGINE_by_id`",
-        "symbol": "ossl_get_openssldir"
-      },
-      {
-        "authority_unit": null,
-        "evidence": "src/runtime/defaults.rs module doc",
-        "kind": "symbol",
-        "reason": "A Windows-only string the admitted Linux/x86-64 profile does not build, carried with `ossl_get_openssldir` rather than special-cased",
-        "symbol": "ossl_get_wininstallcontext"
-      },
-      {
-        "authority_unit": "crypto/engine/eng_dyn.c",
-        "evidence": "docs/PHASE-13-LEGACY-SEAL.md section 5 and section 10; src/engine/eng_list.rs:9-19; src/engine/mod.rs:77-79; docs/DECISIONS.md D528",
-        "kind": "symbol",
-        "reason": "`crypto/engine/eng_dyn.c` is the dynamic ENGINE loader: `engine_load_dynamic_int` and the `dynamic`/`rdrand` built-ins it registers are absent, so `ENGINE_by_id`'s dynamic fallback and the authority's built-in engine ids are not reconstructed. No Phase-13 subphase owns the unit -- 13.1 transcribes `ENGINE_by_id`'s miss path whole and takes the authority's own `notfound` arm -- so it is owed to the installed distribution/config/module stratum, whose `DSO_load` and `OPENSSL_ENGINES` handling are the loader's dependency.",
-        "symbol": "engine_load_dynamic_int"
-      },
       {
         "authority_unit": null,
         "evidence": "forensics/tools/atlas_runtime.py parse_option_list()/_OPTION_ROW and _OPTION_VALTYPES (repaired by 22.9; the row's original citations :240/:243 have moved with the rewrite); forensics/atlas/phase22/cli-surface.json (22.9's structured surface: 120 commands -- 54 standard, 1 deprecated, 18 digest aliases, 47 cipher aliases -- with 4,314 structured options, 0 refused rows and 0 commands with zero options); RT-PHASE22-CLI in artifacts/phase22/COURTS.json (proves the repaired parser reads a real row, refuses a malformed one, and fails when broken in memory); forensics/atlas/openssl-3.6.4-production/cli-commands.json still records command_count 55 and option_count 0 on all 55 commands, because it has not been regenerated",
@@ -71,7 +50,7 @@
     ],
     "deferred": [],
     "implemented": [],
-    "note": "`open` is the only list that blocks this stratum, and its count is over provider registration rows, prerequisite deferrals and contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. A provider row is a registration row, not an export: the provider-row rule in `phase_state.py` and the provider-row census remain the arbiter of its state, and `handed on` is the census's `projection`, not a state a row carries (D237, D295). The 39 legacy rows belong to the loadable module the candidate ships as a scaffold `ossl-modules/legacy.so`, which Phase 13's subphases do not activate and which this stratum owns as the installed-module contract (D525). The six prerequisite deferrals are the `OPENSSLDIR` directory plane, the install context, the absent dynamic ENGINE loader (D528) and the CLI capture defect (D490), plus the two TLS message-layer units Phase 15 sealed without. Nothing here is a parity claim: a published provider row or a landed CLI is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-16-SUBPHASES.md section 4 decides when the stratum may be called complete.",
+    "note": "`open` is the only list that blocks this stratum, and its count is over provider registration rows, prerequisite deferrals and contract units rather than exported symbols, so the `implemented` and `open` *export* lists are empty by measurement and `open_in_this_stratum` is the live count. A provider row is a registration row, not an export: the provider-row rule in `phase_state.py` and the provider-row census remain the arbiter of its state, and `handed on` is the census's `projection`, not a state a row carries (D237, D295). The 39 legacy rows belong to the loadable module the candidate ships as a scaffold `ossl-modules/legacy.so`, which Phase 13's subphases do not activate and which this stratum owns as the installed-module contract (D525). Phase 16.2 retired the absent dynamic ENGINE loader (`engine_load_dynamic_int`, D528) and Phase 16.3 retired the `OPENSSLDIR` directory plane and the install context (`ossl_get_openssldir`, `ossl_get_wininstallcontext`); what remains deferred is the CLI capture defect (`cli_option_list_parse`, D490) plus the two TLS message-layer units Phase 15 sealed without. Nothing here is a parity claim: a published provider row or a landed CLI is at most `IMPLEMENTED` in docs/PARITY_MODEL.md terms, and docs/PHASE-16-SUBPHASES.md section 4 decides when the stratum may be called complete.",
     "open": [],
     "provider_rows": [
       {
@@ -467,7 +446,7 @@
     {
       "name": "prerequisites",
       "path": "forensics/prerequisites.json",
-      "sha256": "4dde21f48014bf43bed6b24ab5551f7b93ad27dfb5b7668f5165740d76958282"
+      "sha256": "b7b2c18961bd9b09cea6d7ec330da813256cbb286eb6435bd9cca0660b2906a9"
     },
     {
       "name": "cli-capture",
@@ -477,7 +456,7 @@
     {
       "name": "phase-16-plan",
       "path": "docs/PHASE-16-SUBPHASES.md",
-      "sha256": "2c4f8de6d3c82c2ff77a64031fa0f691fce258f0fa34a84eb5426fb404f1c7a9"
+      "sha256": "261727a3257c9ffaf94dcfb9386768386e5604c6720fc840e78b6f0f41745593"
     }
   ],
   "kind": "phase16-obligations",

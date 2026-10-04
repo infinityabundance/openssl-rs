@@ -74,9 +74,13 @@
 //!   `ENGINE_get_pkey_meth`'s withholding; 13.3 lands `eng_fat.c`'s four control fat helpers
 //!   (`eng_fat.rs`), which `eng_cnf.rs`'s `default_algorithms` arm already called through a
 //!   forward declaration.
-//! * `crypto/engine/eng_dyn.c` — the dynamic engine `ENGINE_by_id`'s miss path would drive.
-//!   No subphase owns it yet, so no dynamic engine is registered and the recursion answers
-//!   NULL; `ENGINE_by_id` transcribes the authority's own `goto notfound` for that arm.
+//! * `crypto/engine/eng_dyn.c` — the dynamic engine `ENGINE_by_id`'s miss path drives.
+//!   Phase 16.2 lands it (`eng_dyn.rs`): `engine_load_dynamic_int` and the `dynamic`
+//!   built-in it registers, so the fallback's recursion into `ENGINE_by_id("dynamic")`
+//!   now finds a registered engine and drives it with the control commands (`ID`,
+//!   `DIR_LOAD`, `DIR_ADD`, `LIST_ADD`, `LOAD`). `src/runtime/init.rs` runs the
+//!   `OPENSSL_INIT_ENGINE_DYNAMIC` step that calls it. The `rdrand` built-in is
+//!   `crypto/engine/eng_rdrand.c`'s, a separate unit still withheld by name below.
 //!
 //! ## Ownership is unchanged
 //!
@@ -90,6 +94,7 @@
 pub mod eng_all;
 pub mod eng_cnf;
 pub mod eng_ctrl;
+pub mod eng_dyn;
 pub mod eng_fat;
 pub mod eng_init;
 pub mod eng_lib;
