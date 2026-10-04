@@ -800,7 +800,7 @@
     },
     "checked": {
       "authority_units": 596,
-      "crate_modules": 803,
+      "crate_modules": 811,
       "deferral_blocker_rows": 0,
       "deferrals_recorded": 1,
       "divergence_names_covered": 106,
@@ -1295,7 +1295,7 @@
       "typedefs": 1573
     }
   },
-  "body_hash": "4311c02d38c65a8754e60c782a9905a070d6e6a86c9a8b66dce81fcc45b6826e",
+  "body_hash": "ed51af544318ad25d7584adc15206469e3ab4ec2eb36253826d2c669f74d785b",
   "generator": "forensics/tools/prerequisite_gate.py",
   "inputs": [
     {
@@ -1331,7 +1331,7 @@
     {
       "name": "implemented-surface",
       "path": "forensics/atlas/implemented-surface.json",
-      "sha256": "236a6a13b7b05c77201ce06c280a78b4e018c70a19b6dffd8f80d06cdba7b97a"
+      "sha256": "9dc69d833e7afede30cdacca8bbf65ea339d40df87cfa1554497844d5f2a59fd"
     },
     {
       "name": "phase-state",
