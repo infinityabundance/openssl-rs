@@ -258,7 +258,7 @@
       "verdict": "pass"
     },
     "RT-CPU-CAPABILITY": {
-      "observations": 72,
+      "observations": 81,
       "verdict": "pass"
     },
     "RT-CRMF": {

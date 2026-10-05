@@ -3,38 +3,38 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-CPU-CAPABILITY` is 19.1's court: it compiles courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, whether `OPENSSL_cpuid_setup` and `OPENSSL_ia32_cpuid` were reachable and callable, and the capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OpenSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE` is clear). The raw vector `OPENSSL_ia32_cpuid` returns is not recorded: it is the runner's own CPUID and would make the record machine-specific. The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade: a synthetic reference set, an AES-NI-cleared set and a fully cleared set, each an explicit literal so the reported vector is never the runner's own CPU. The three capability names are declared weak because `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the surface is reached, and the candidate provides none of the three, so it answers `probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition and every other candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves to the non-AES-NI arm and the candidate's does not. The court is `pass` when the authority's capability surface was actually driven, the faulted facade moved the authority's selection, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the capability surface at the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). `RT-EVP-DISPATCH` is 19.2's court: it compiles courts/phase19/rt_evp_dispatch_probe.c twice and reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-1/256 and the four `EVP_aes_*_cbc_hmac_sha*` constructors), which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name, under the same three fixed capability sets. The authority's default provider filters its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*` (`AESNI_CBC_HMAC_SHA_CAPABLE`), so masking the AES-NI bit makes those fetch/legacy/lookup paths answer NULL and moves the authority's selection; the candidate reads CPUID directly and does not model the mask, so its selection does not move. Every candidate-vs-authority difference is recorded in the court's `divergences` block. The court is `pass` when the authority's selection surface was driven, the faulted facade moved it, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded comparison of *selection* over the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6); the engine path is not driven because no engine is configured and the reduced engine does not export the enumeration it would need. `RT-PERFORMANCE-WORK` is 19.3's court: it compiles courts/phase19/rt_performance_work_probe.c twice and reports the deterministic work a fixed operation set performs -- AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt. The library exposes no total instruction counter, so the instrument is a counting `CRYPTO` allocator the stratum introduces (the number of malloc/realloc operations and total bytes the library requests for a fixed primitive -- a deterministic instruction-path proxy for its memory work; the shims forward to the default allocator and change no behaviour) plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. Every path whose library-side work vector differs from the authority's is a *finding* recorded, not failed -- the reduced engine's allocations differ on the EC and RSA paths while the symmetric/digest paths agree -- and a path the probe cannot drive is `pending`. The court is `pass` when the authority installed the hook and the paths ran, both transcripts are complete, every schema key is present and every divergence was recorded -- NOT when nothing diverged. The counting allocator observes heap operations, not total CPU instructions, and the block counts are input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` is 19.4's court: it is candidate-only -- the deliberately slowed variant is a construction of the harness, never product code -- and compiles courts/phase19/rt_performance_sensitivity_probe.c once against the candidate distribution shell. It drives a reference arm (the real `aes-128-cbc` path, which must equal the authority vector 19.3 recorded) and a slowed arm (`control-extra-pass`, the same path with an injected extra full pass over the primitive) under the same 19.3 work instrument, and the court is `pass` only when the slowed arm is caught on the counting allocator the stratum introduces (a library-side `allocs`/`reallocs`/`bytes` difference), not merely on the driver-side `calls` 19.3 excludes from its findings. Section 3.2's rule is mechanical here: a control that cannot fail is not evidence, so if the instrument cannot tell the slowed path from the reference the verdict is `fail`, never a vacuous `pass`. It is evidence about the instrument's resolution and makes no throughput or benchmark-parity claim. `PERFORMANCE-BOUNDARY-REGISTER` is 19.5's court: it stages no probe and reads the authored register artifacts/phase19/performance-boundary-register.json against the four probe courts' records computed above it, failing the stratum if a measured row's court no longer covers its surface, a not-measured or not-claimed row a passing court now covers, or a stated count/evidence value has moved. It records the stratum's own non-claims -- no benchmark-parity claim and no assembly-versus-Rust equivalence claim, the ENGINE path not measured, the three capability names not reached, and the two divergent-work findings -- and may not claim more than the courts above measured. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is dispatch behaviour and deterministic work over a finished implementation, with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-CPU-CAPABILITY` is 19.1's court: it compiles courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the synthetic words `cap.synthetic.pair`/`.word.4`/`.word.5` the fixed literal's override derives, whether `OPENSSL_cpuid_setup` and `OPENSSL_ia32_cpuid` were reachable and callable, and the capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`, `OpenSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when `AESNI_CAPABLE` is clear). The raw vector `OPENSSL_ia32_cpuid` returns is not recorded: it is the runner's own CPUID and would make the record machine-specific. Three portable observations of the synthetic vector the fixed literal derives (`cap.synthetic.pair`/`.word.4`/`.word.5`) take the place of the host readouts the first version printed, so no coverage is lost. The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade: a synthetic reference set, an AES-NI-cleared set and a fully cleared set, each an explicit literal so the reported vector is never the runner's own CPU. The three capability names are declared weak because `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup`/`OPENSSL_ia32_cpuid` live only in the static archive: the authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the surface is reached, and the candidate provides none of the three, so it answers `probe.reachable.*=0` -- the `symbols_not_reached` census the plan records -- and its CPU-dispatch string is `CPUINFO: N/A` with `OPENSSL_info(1008)` NULL. That disposition and every other candidate-vs-authority difference is *recorded* in the court's `divergences` block, not failed: the reduced engine deliberately does not model `OPENSSL_ia32cap` masking, so under a cleared facade the authority's selection moves to the non-AES-NI arm and the candidate's does not. The court is `pass` when the authority's capability surface was actually driven, the faulted facade moved the authority's selection, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded audit of the capability surface at the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6). `RT-EVP-DISPATCH` is 19.2's court: it compiles courts/phase19/rt_evp_dispatch_probe.c twice and reports, for a fixed operation set (AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-1/256 and the four `EVP_aes_*_cbc_hmac_sha*` constructors), which implementation each path selects -- the legacy constructor, the provider fetch, the legacy name lookup and the cipher/digest context -- as the selected method's name/NID/type/flags/sizes and, for a fetch, its provider name, under the same three fixed capability sets. The authority's default provider filters its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*` (`AESNI_CBC_HMAC_SHA_CAPABLE`), so masking the AES-NI bit makes those fetch/legacy/lookup paths answer NULL and moves the authority's selection; the candidate reads CPUID directly and does not model the mask, so its selection does not move. Every candidate-vs-authority difference is recorded in the court's `divergences` block. The court is `pass` when the authority's selection surface was driven, the faulted facade moved it, both transcripts are complete under every set, and every divergence was recorded -- NOT when nothing diverged. It is a bounded comparison of *selection* over the sets it drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6); the engine path is not driven because no engine is configured and the reduced engine does not export the enumeration it would need. `RT-PERFORMANCE-WORK` is 19.3's court: it compiles courts/phase19/rt_performance_work_probe.c twice and reports the deterministic work a fixed operation set performs -- AES-128/256-CBC/GCM, ChaCha20-Poly1305, SHA-256, a P-256 scalar multiplication and an RSA-1024 private decrypt. The library exposes no total instruction counter, so the instrument is a counting `CRYPTO` allocator the stratum introduces (the number of malloc/realloc operations and total bytes the library requests for a fixed primitive -- a deterministic instruction-path proxy for its memory work; the shims forward to the default allocator and change no behaviour) plus the method-derived input/blocks/output/tag sizes. No address, clock or duration is observed. Every path whose library-side work vector differs from the authority's is a *finding* recorded, not failed -- the reduced engine's allocations differ on the EC and RSA paths while the symmetric/digest paths agree -- and a path the probe cannot drive is `pending`. The court is `pass` when the authority installed the hook and the paths ran, both transcripts are complete, every schema key is present and every divergence was recorded -- NOT when nothing diverged. The counting allocator observes heap operations, not total CPU instructions, and the block counts are input-implied: no benchmark-parity claim and no assembly-versus-Rust equivalence claim (sections 3.1 and 3.6). `RT-PERFORMANCE-SENSITIVITY` is 19.4's court: it is candidate-only -- the deliberately slowed variant is a construction of the harness, never product code -- and compiles courts/phase19/rt_performance_sensitivity_probe.c once against the candidate distribution shell. It drives a reference arm (the real `aes-128-cbc` path, which must equal the authority vector 19.3 recorded) and a slowed arm (`control-extra-pass`, the same path with an injected extra full pass over the primitive) under the same 19.3 work instrument, and the court is `pass` only when the slowed arm is caught on the counting allocator the stratum introduces (a library-side `allocs`/`reallocs`/`bytes` difference), not merely on the driver-side `calls` 19.3 excludes from its findings. Section 3.2's rule is mechanical here: a control that cannot fail is not evidence, so if the instrument cannot tell the slowed path from the reference the verdict is `fail`, never a vacuous `pass`. It is evidence about the instrument's resolution and makes no throughput or benchmark-parity claim. `PERFORMANCE-BOUNDARY-REGISTER` is 19.5's court: it stages no probe and reads the authored register artifacts/phase19/performance-boundary-register.json against the four probe courts' records computed above it, failing the stratum if a measured row's court no longer covers its surface, a not-measured or not-claimed row a passing court now covers, or a stated count/evidence value has moved. It records the stratum's own non-claims -- no benchmark-parity claim and no assembly-versus-Rust equivalence claim, the ENGINE path not measured, the three capability names not reached, and the two divergent-work findings -- and may not claim more than the courts above measured. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is dispatch behaviour and deterministic work over a finished implementation, with no benchmark-parity claim and no assembly-versus-Rust equivalence claim. docs/PHASE-19-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
-        "authority_observations": 72,
-        "candidate_observations": 72,
+        "authority_observations": 81,
+        "candidate_observations": 81,
         "candidate_stderr_tail": [],
         "capability_sets": [
           {
             "OPENSSL_ia32cap": "0x0200000100000000",
             "authority_exit_code": 0,
-            "authority_observations": 24,
+            "authority_observations": 27,
             "candidate_exit_code": 0,
-            "candidate_observations": 24,
-            "divergence_count": 17,
+            "candidate_observations": 27,
+            "divergence_count": 20,
             "set": "reference"
           },
           {
             "OPENSSL_ia32cap": "0x0000000100000000",
             "authority_exit_code": 0,
-            "authority_observations": 24,
+            "authority_observations": 27,
             "candidate_exit_code": 0,
-            "candidate_observations": 24,
-            "divergence_count": 21,
+            "candidate_observations": 27,
+            "divergence_count": 24,
             "set": "aesni-off"
           },
           {
             "OPENSSL_ia32cap": "0x0000000000000000",
             "authority_exit_code": 0,
-            "authority_observations": 24,
+            "authority_observations": 27,
             "candidate_exit_code": 0,
-            "candidate_observations": 24,
-            "divergence_count": 21,
+            "candidate_observations": 27,
+            "divergence_count": 24,
             "set": "cleared"
           }
         ],
@@ -46,7 +46,7 @@
           "facade_reference": "0"
         },
         "court": "RT-CPU-CAPABILITY",
-        "divergence_count": 59,
+        "divergence_count": 68,
         "divergences": [
           {
             "authority": "OPENSSL_ia32cap=0x0200000100000400:0x0000000000000000:0x0000000000000000:0x0000000000000000:0x0000000000000000 env:0x0200000100000000",
@@ -95,6 +95,27 @@
             "candidate": "n/a",
             "class": "value",
             "observation": "reference.cap.after_setup.3",
+            "set": "reference"
+          },
+          {
+            "authority": "0x0200000100000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.synthetic.pair",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.synthetic.word.4",
+            "set": "reference"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "reference.cap.synthetic.word.5",
             "set": "reference"
           },
           {
@@ -214,6 +235,27 @@
             "candidate": "n/a",
             "class": "value",
             "observation": "aesni-off.cap.after_setup.3",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x0000000100000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.synthetic.pair",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.synthetic.word.4",
+            "set": "aesni-off"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "aesni-off.cap.synthetic.word.5",
             "set": "aesni-off"
           },
           {
@@ -364,6 +406,27 @@
             "set": "cleared"
           },
           {
+            "authority": "0x0000000000000400",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.synthetic.pair",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.synthetic.word.4",
+            "set": "cleared"
+          },
+          {
+            "authority": "0x00000000",
+            "candidate": "n/a",
+            "class": "value",
+            "observation": "cleared.cap.synthetic.word.5",
+            "set": "cleared"
+          },
+          {
             "authority": "0x00000400",
             "candidate": "n/a",
             "class": "value",
@@ -462,10 +525,10 @@
             "set": "cleared"
           }
         ],
-        "method": "the probe is compiled twice and its `key=value` transcript compared. It is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade (a synthetic reference set, an AES-NI-cleared set and a fully cleared set), each an explicit literal so the recorded vector is never the runner's own CPUID. The authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the hidden `OPENSSL_ia32cap_P` and the archive-only `OPENSSL_cpuid_setup` / `OPENSSL_ia32_cpuid` are reachable; the candidate probe links its distribution shell, where the weak references resolve to NULL. No address, clock or duration is observed.",
+        "method": "the probe is compiled twice and its `key=value` transcript compared. It is driven under three fixed capability sets via the `OPENSSL_ia32cap` facade (a synthetic reference set, an AES-NI-cleared set and a fully cleared set), each an explicit literal so the recorded vector is never the runner's own CPUID. The raw `OPENSSL_ia32_cpuid` return is not recorded; the three host readouts the first version printed are replaced by portable observations of the synthetic vector the literal derives (`cap.synthetic.pair`/`.word.4`/`.word.5`). The authority probe links its static `libcrypto.a` with `-Wl,-u,` forcing so the hidden `OPENSSL_ia32cap_P` and the archive-only `OPENSSL_cpuid_setup` / `OPENSSL_ia32_cpuid` are reachable; the candidate probe links its distribution shell, where the weak references resolve to NULL. No address, clock or duration is observed.",
         "observations_recorded": {
-          "authority": 72,
-          "candidate": 72
+          "authority": 81,
+          "candidate": 81
         },
         "probe": "courts/phase19/rt_cpu_capability_probe.c",
         "problems": [],
@@ -2270,7 +2333,7 @@
           },
           "path": "artifacts/phase19/performance-boundary-register.json",
           "schema": "openssl-rs/performance-boundary-register/v1",
-          "sha256": "357f2ef865e09df33f3f6868e83ea84e5ef5483c465b9e02eaef2471905d272d",
+          "sha256": "0e9ec543738e1ef738577c037500b22133c54f31d2a37c1f3f586670cc1467a3",
           "total": 14
         },
         "surfaces": [
@@ -2415,7 +2478,7 @@
     {
       "name": "cpu-capability-probe",
       "path": "courts/phase19/rt_cpu_capability_probe.c",
-      "sha256": "163a09501d76a1d1b53965ff0a64ba4c9544d0246bd09541164fa47655e337ab"
+      "sha256": "79fd360f778268d32d0c02210c3118c6098849a6aa515b3ee8aa74f8c69cf886"
     },
     {
       "name": "evp-dispatch-probe",
@@ -2435,7 +2498,7 @@
     {
       "name": "performance-boundary-register",
       "path": "artifacts/phase19/performance-boundary-register.json",
-      "sha256": "357f2ef865e09df33f3f6868e83ea84e5ef5483c465b9e02eaef2471905d272d"
+      "sha256": "0e9ec543738e1ef738577c037500b22133c54f31d2a37c1f3f586670cc1467a3"
     },
     {
       "name": "performance-work-fixture",

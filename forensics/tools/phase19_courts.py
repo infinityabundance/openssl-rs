@@ -16,13 +16,17 @@ slowed path from a fast one — the court is candidate-only and carries a sensit
 --------------------------------------
 19.1's court. Its instrument is `courts/phase19/rt_cpu_capability_probe.c`, compiled twice: once
 against the admitted authority and once against the candidate distribution shell. It reports the
-CPU-capability surface deterministically — `OPENSSL_ia32cap_P[0..3]`, whether `OPENSSL_cpuid_setup`
-and `OPENSSL_ia32_cpuid` were reachable and callable, and the capability-derived selection
-observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`,
+CPU-capability surface deterministically — `OPENSSL_ia32cap_P[0..3]`, the synthetic words
+`cap.synthetic.pair`/`.word.4`/`.word.5` the fixed literal's override derives, whether
+`OPENSSL_cpuid_setup` and `OPENSSL_ia32_cpuid` were reachable and callable, and the
+capability-derived selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`,
 `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors, which
 answer NULL when `AESNI_CAPABLE` is clear) — as `key=value` observations with no address, clock or
 duration. The raw vector `OPENSSL_ia32_cpuid` returns is deliberately not recorded: it is the
-runner's own CPUID and would make the record machine-specific (D213's class).
+runner's own CPUID and would make the record machine-specific (D213's class). The first version
+printed it (`probe.cpuid.ret`, `cap.raw.word.2/3`); those host readouts are replaced one-for-one by
+the three portable observations of the *synthetic* vector the facade derives, so no coverage is lost
+and the transcript stays byte-reproducible on any runner.
 
 The three names are declared `weak`: `OPENSSL_ia32cap_P` is `.hidden` and `OPENSSL_cpuid_setup` /
 `OPENSSL_ia32_cpuid` live only in the static archive, so a side that does not provide them answers
@@ -257,6 +261,9 @@ PROBE_SCHEMA = (
     "cap.after_setup.1",
     "cap.after_setup.2",
     "cap.after_setup.3",
+    "cap.synthetic.pair",
+    "cap.synthetic.word.4",
+    "cap.synthetic.word.5",
     "api.cpuinfo",
     "api.cpu_settings_null",
     "api.cpu_settings",
@@ -656,7 +663,10 @@ def cpu_capability_court(name: str, src: Path, auth, work: Path) -> dict:
             "the probe is compiled twice and its `key=value` transcript compared. It is driven "
             "under three fixed capability sets via the `OPENSSL_ia32cap` facade (a synthetic "
             "reference set, an AES-NI-cleared set and a fully cleared set), each an explicit "
-            "literal so the recorded vector is never the runner's own CPUID. The authority probe "
+            "literal so the recorded vector is never the runner's own CPUID. The raw "
+            "`OPENSSL_ia32_cpuid` return is not recorded; the three host readouts the first "
+            "version printed are replaced by portable observations of the synthetic vector the "
+            "literal derives (`cap.synthetic.pair`/`.word.4`/`.word.5`). The authority probe "
             "links its static `libcrypto.a` with `-Wl,-u,` forcing so the hidden "
             "`OPENSSL_ia32cap_P` and the archive-only `OPENSSL_cpuid_setup` / "
             "`OPENSSL_ia32_cpuid` are reachable; the candidate probe links its distribution "
@@ -1414,13 +1424,18 @@ def main(argv: list[str]) -> int:
         "claim": (
             "`RT-CPU-CAPABILITY` is 19.1's court: it compiles "
             "courts/phase19/rt_cpu_capability_probe.c twice (authority and candidate) and reports "
-            "the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, whether "
+            "the CPU-capability surface deterministically -- `OPENSSL_ia32cap_P[0..3]`, the "
+            "synthetic words `cap.synthetic.pair`/`.word.4`/`.word.5` the fixed literal's "
+            "override derives, whether "
             "`OPENSSL_cpuid_setup` and `OPENSSL_ia32_cpuid` were reachable and callable, and the "
             "capability-derived selection observable through the public API "
             "(`OpenSSL_version(OPENSSL_CPU_INFO)`, `OpenSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and "
             "the four `EVP_aes_*_cbc_hmac_sha*` constructors, which answer NULL when "
             "`AESNI_CAPABLE` is clear). The raw vector `OPENSSL_ia32_cpuid` returns is not "
             "recorded: it is the runner's own CPUID and would make the record machine-specific. "
+            "Three portable observations of the synthetic vector the fixed literal derives "
+            "(`cap.synthetic.pair`/`.word.4`/`.word.5`) take the place of the host readouts the "
+            "first version printed, so no coverage is lost. "
             "The probe is driven under three fixed capability sets via the `OPENSSL_ia32cap` "
             "facade: a synthetic reference set, an AES-NI-cleared set and a fully cleared set, "
             "each an explicit literal so the reported vector is never the runner's own CPU. The "

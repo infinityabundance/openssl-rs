@@ -19,6 +19,15 @@
  * probe still *calls* `OPENSSL_ia32_cpuid`, so `probe.cpuid.called` is an honest observation that
  * the symbol is reachable and executable.
  *
+ * The raw readouts the first version printed (`probe.cpuid.ret`, `cap.raw.word.2/3`) are replaced
+ * one-for-one by three observations of the *synthetic* capability vector the fixed literal
+ * derives: `cap.synthetic.pair` (the 64-bit pair `OPENSSL_cpuid_setup` overrides
+ * `OPENSSL_ia32cap_P[0..1]` with) and `cap.synthetic.word.4`/`.5` (two of the upper words the
+ * plain-literal override zeroizes). Those are functions of the library under test and the fixed
+ * `OPENSSL_ia32cap` literal alone, so they are identical on any runner while still observing the
+ * facade's derive-and-zeroize path -- coverage restored portably rather than the host readouts
+ * removed.
+ *
  * The same source compiles twice, once against the admitted authority and once against the
  * candidate distribution shell. Every `key=value` line is a function of the library under test
  * and the process environment alone: no address, no clock and no measured duration is printed,
@@ -92,6 +101,11 @@ static void kv(const char *key, const char *value)
     printf("%s=%s\n", key, value != NULL ? value : "");
 }
 
+static void khex64(const char *key, unsigned long long value)
+{
+    printf("%s=0x%016llx\n", key, value);
+}
+
 static void khex32(const char *key, unsigned int value)
 {
     printf("%s=0x%08x\n", key, value);
@@ -134,6 +148,9 @@ int main(void)
         word_key(k, sizeof k, "cap.after_setup", i);
         printf("%s=n/a\n", k);
     }
+    printf("cap.synthetic.pair=n/a\n");
+    printf("cap.synthetic.word.4=n/a\n");
+    printf("cap.synthetic.word.5=n/a\n");
 #else
     /*
      * `OPENSSL_ia32cap_P` is `.hidden`, so a dynamic link never resolves it; the court links the
@@ -184,6 +201,21 @@ int main(void)
             khex32(k, have_setup ? p[i] : before[i]);
         else
             printf("%s=n/a\n", k);
+    }
+
+    /* The fixed synthetic capability words the literal derives, in place of the host readouts the
+     * first version printed. `OPENSSL_cpuid_setup` sets `OPENSSL_ia32cap_P[0]`/`[1]` from the
+     * literal's low/high halves and zeroizes `[2..9]`, so these are the same on any runner: the
+     * 64-bit pair the override applies and two of the upper words it clears. */
+    if (have_cap) {
+        khex64("cap.synthetic.pair",
+               ((unsigned long long)p[1] << 32) | (unsigned long long)p[0]);
+        khex32("cap.synthetic.word.4", p[4]);
+        khex32("cap.synthetic.word.5", p[5]);
+    } else {
+        printf("cap.synthetic.pair=n/a\n");
+        printf("cap.synthetic.word.4=n/a\n");
+        printf("cap.synthetic.word.5=n/a\n");
     }
 
     /* Exercise `OPENSSL_ia32_cpuid` so `probe.cpuid.called` is an honest observation that the

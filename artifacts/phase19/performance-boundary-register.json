@@ -23,7 +23,7 @@
         "verdict": "pass",
         "authority_reached": {"probe.reachable.cpuid_setup": "1", "probe.reachable.ia32_cpuid": "1", "probe.reachable.ia32cap_p": "1"},
         "candidate_reached": {"probe.reachable.cpuid_setup": "0", "probe.reachable.ia32_cpuid": "0", "probe.reachable.ia32cap_p": "0"},
-        "divergence_count": 59
+        "divergence_count": 68
       },
       "note": "measured, not claimed: the court records which names each side reaches under the fixed link, not that the candidate implements a CPU-capability surface. It is the `symbols_not_reached` census docs/PHASE-19-SUBPHASES.md section 4.2 records (sections 3.4 and 3.6)."
     },
