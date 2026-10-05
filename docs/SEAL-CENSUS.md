@@ -43,7 +43,7 @@ declared owner; this is that assignment.
 | 15 | QUIC / ECH and modern SSL surface | `complete` | 3 | 3 | 3 | 0 | 0 |
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | 0 | 5 | 2 | 0 | 3 |
+| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | 0 | 5 | 3 | 0 | 2 |
 | 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
@@ -555,21 +555,24 @@ Courts: `all pass`, 6 court(s), **1111** authority observation(s) over 6 transcr
 ## Phase 18 — Hostile fuzz / security / side-channel hardening
 
 * state: `in-progress`
-* blocking: 3 open obligation(s) of this stratum recorded in forensics/phase18-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase18-obligations.json` publishes `unit: hostile hardening contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`hostile-tls`, `hostile-x509`, `constant-time`, `memory-hardening` and `hostile-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it hardens the implementation Phases 3 through 15 completed. Its `artifacts/phase18/COURTS.json` landed `RT-HOSTILE-TLS` in 18.1 -- the fixed malformed-input corpus driven through the record layer and the TLS 1.3 flight with crash/OOM/timeout detection and an authority-linked differential control -- and `RT-HOSTILE-X509` in 18.2 -- the fixed malformed-input corpus driven through the X.509, ASN.1 and PEM readers with the same detection and an authority-linked differential control -- so two of the five contract units are `implemented` and `open_in_this_stratum` has moved from five to three. `CT-PRIMITIVES`, `RT-MEM-HARDENING` and `HOSTILE-BOUNDARY-REGISTER` remain `pending` with the subphases that land them. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-18-SUBPHASES.md` sections 1 and 4 record the measurement
+* blocking: 2 open obligation(s) of this stratum recorded in forensics/phase18-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase18-obligations.json` publishes `unit: hostile hardening contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`hostile-tls`, `hostile-x509`, `constant-time`, `memory-hardening` and `hostile-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it hardens the implementation Phases 3 through 15 completed. Its `artifacts/phase18/COURTS.json` landed `RT-HOSTILE-TLS` in 18.1 -- the fixed malformed-input corpus driven through the record layer and the TLS 1.3 flight with crash/OOM/timeout detection and an authority-linked differential control -- and `RT-HOSTILE-X509` in 18.2 -- the fixed malformed-input corpus driven through the X.509, ASN.1 and PEM readers with the same detection and an authority-linked differential control -- and `CT-PRIMITIVES` in 18.3, the candidate-only secret-independence screen over the primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key schedule) whose section-3.2 sensitivity control a deliberately branch-on-secret tag comparison is caught by; that probe records the reduced engine's BN square-and-multiply core as separating its two secret classes (`bn-modexp`, `bn-inverse`) as **findings** rather than failing, because `src/bn/exp.rs` documents that timing profile, and the court's pass is the instrument's proven sensitivity plus a bounded screen at its stated resolution, not a claim that the paths are constant-time. So three of the five contract units are `implemented` and `open_in_this_stratum` has moved from five to two. `RT-MEM-HARDENING` and `HOSTILE-BOUNDARY-REGISTER` remain `pending` with the subphases that land them. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-18-SUBPHASES.md` sections 1 and 4 record the measurement
 * seal: none written yet (`unnamed`)
 * ledger: `forensics/phase18-obligations.json`
 * atlas-owned: 0
 * owned working set: 5
-* implemented: 2
+* implemented: 3
 * deferred to a later stratum with a stated reason: 0
-* **open in this stratum: 3**
+* **open in this stratum: 2**
 
-Courts: `all pass`, 2 court(s), **2112** authority observation(s) over 2 transcript court(s).
+Courts: `all pass`, 3 court(s), **2112** authority observation(s) over 2 transcript court(s).
+
+The other 1 compare ELF structure rather than a transcript and observe nothing line-wise; they are counted as zero for that reason and not by default.
 
 | court | verdict | observations |
 |---|---|---|
 | RT-HOSTILE-TLS | `pass` | 1046 |
 | RT-HOSTILE-X509 | `pass` | 1066 |
+| CT-PRIMITIVES | `pass` | — (structural) |
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 

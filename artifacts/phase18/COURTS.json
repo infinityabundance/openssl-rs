@@ -3,7 +3,7 @@
   "body": {
     "all_pass": true,
     "authority": "openssl-3.6.4-production",
-    "claim": "`RT-HOSTILE-TLS` is 18.1's court: it compiles courts/phase18/rt_hostile_tls_probe.c twice (authority and candidate) and drives the fixed malformed-input corpus courts/phase18/fixtures/hostile-tls/ -- one file per entry, `<role>__<id>.bin` -- through the real record layer and the TLS 1.3 flight. A `server` entry is fed into SSL_accept (the ClientHello / record reader) and a `client` entry into SSL_connect (the ServerHello / flight reader) over a read-only memory BIO that reports EOF. The corpus enumerates bogus record types, lengths and versions, truncated and oversized handshake headers, malformed ClientHello / ServerHello and key_share / supported_versions / ALPN / SNI / signature_algorithms extension bodies, bad CCS and bad Finished, length-mismatch records, and well-formed controls; it is a fixed enumeration, not a fuzzer, and not a coverage claim. Each entry runs in its own forked child, so a crash (a signal), an OOM (an allocation failure under the process's RLIMIT_DATA) or a timeout is a recorded finding rather than a harness abort (section 3.3), and the fixed-schema transcript keeps the two sides' observation counts equal. The court compares every entry's authority and candidate dispositions and records each difference rather than failing it, because the reduced engine legitimately differs; it is `pass` only when the corpus was driven on both sides, every candidate disposition was recorded, and the authority differential control held -- the authority parsed the well-formed control ClientHello into a real handshake record and itself suffered no hostile finding (section 3.2). It is a bounded differential result over the corpus it drives, not a security proof and not a parity claim (sections 3.1 and 3.6). `RT-HOSTILE-X509` is 18.2's court: it compiles courts/phase18/rt_hostile_x509_probe.c twice (authority and candidate) and drives the fixed malformed-input corpus courts/phase18/fixtures/hostile-x509/ -- one file per entry, `<arm>__<id>.bin` -- through the X.509, ASN.1 and PEM readers the arm names (d2i_X509, d2i_X509_CRL, d2i_X509_REQ, d2i_X509_EXTENSION, d2i_X509_EXTENSIONS, d2i_GENERAL_NAMES, d2i_ASN1_TYPE, d2i_ASN1_GENERALIZEDTIME, d2i_ASN1_UTCTIME, d2i_X509_ALGOR, d2i_X509_PUBKEY and PEM_read_bio_X509/_X509_CRL/_X509_REQ). The corpus enumerates truncated and oversized DER certificates, ASN.1 length bombs, malformed TBSCertificate fields, bad extensions (duplicate / unknown / critical, malformed name constraints and SAN), bad signature AlgorithmIdentifiers, malformed CRL and CSR containers, malformed PEM containers (bad base64, missing / extra delimiters, wrong labels), time and bit-string edge cases, and one well-formed control per arm; it is a fixed enumeration, not a fuzzer, and not a coverage claim. Each entry runs in its own forked child, so a crash, an OOM or a timeout is a recorded finding rather than a harness abort (section 3.3). The court is `pass` only when the corpus was driven on both sides, every candidate disposition was recorded, and the authority differential control held -- the authority parsed the well-formed v3 control certificate into a real certificate (version 2, at least one extension) and itself suffered no hostile finding (section 3.2). It is a bounded differential result over the corpus it drives, not a security proof and not a parity claim (sections 3.1 and 3.6). `CT-PRIMITIVES` is 18.3's: secret-independence checks over the primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key schedule), with a sensitivity control that a deliberate branch-on-secret is caught. `RT-MEM-HARDENING` is 18.4's: memory-safety and resource-exhaustion hardening for the reduced engine's fixed buffers and its allocation-failure paths, with an injected-failure control. `HOSTILE-BOUNDARY-REGISTER` is 18.5's: the register of what is hardened, what is measured and what is explicitly not claimed, which fails the stratum if a recorded boundary drifts from its evidence. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is a hostile input against a finished implementation. docs/PHASE-18-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
+    "claim": "`RT-HOSTILE-TLS` is 18.1's court: it compiles courts/phase18/rt_hostile_tls_probe.c twice (authority and candidate) and drives the fixed malformed-input corpus courts/phase18/fixtures/hostile-tls/ -- one file per entry, `<role>__<id>.bin` -- through the real record layer and the TLS 1.3 flight. A `server` entry is fed into SSL_accept (the ClientHello / record reader) and a `client` entry into SSL_connect (the ServerHello / flight reader) over a read-only memory BIO that reports EOF. The corpus enumerates bogus record types, lengths and versions, truncated and oversized handshake headers, malformed ClientHello / ServerHello and key_share / supported_versions / ALPN / SNI / signature_algorithms extension bodies, bad CCS and bad Finished, length-mismatch records, and well-formed controls; it is a fixed enumeration, not a fuzzer, and not a coverage claim. Each entry runs in its own forked child, so a crash (a signal), an OOM (an allocation failure under the process's RLIMIT_DATA) or a timeout is a recorded finding rather than a harness abort (section 3.3), and the fixed-schema transcript keeps the two sides' observation counts equal. The court compares every entry's authority and candidate dispositions and records each difference rather than failing it, because the reduced engine legitimately differs; it is `pass` only when the corpus was driven on both sides, every candidate disposition was recorded, and the authority differential control held -- the authority parsed the well-formed control ClientHello into a real handshake record and itself suffered no hostile finding (section 3.2). It is a bounded differential result over the corpus it drives, not a security proof and not a parity claim (sections 3.1 and 3.6). `RT-HOSTILE-X509` is 18.2's court: it compiles courts/phase18/rt_hostile_x509_probe.c twice (authority and candidate) and drives the fixed malformed-input corpus courts/phase18/fixtures/hostile-x509/ -- one file per entry, `<arm>__<id>.bin` -- through the X.509, ASN.1 and PEM readers the arm names (d2i_X509, d2i_X509_CRL, d2i_X509_REQ, d2i_X509_EXTENSION, d2i_X509_EXTENSIONS, d2i_GENERAL_NAMES, d2i_ASN1_TYPE, d2i_ASN1_GENERALIZEDTIME, d2i_ASN1_UTCTIME, d2i_X509_ALGOR, d2i_X509_PUBKEY and PEM_read_bio_X509/_X509_CRL/_X509_REQ). The corpus enumerates truncated and oversized DER certificates, ASN.1 length bombs, malformed TBSCertificate fields, bad extensions (duplicate / unknown / critical, malformed name constraints and SAN), bad signature AlgorithmIdentifiers, malformed CRL and CSR containers, malformed PEM containers (bad base64, missing / extra delimiters, wrong labels), time and bit-string edge cases, and one well-formed control per arm; it is a fixed enumeration, not a fuzzer, and not a coverage claim. Each entry runs in its own forked child, so a crash, an OOM or a timeout is a recorded finding rather than a harness abort (section 3.3). The court is `pass` only when the corpus was driven on both sides, every candidate disposition was recorded, and the authority differential control held -- the authority parsed the well-formed v3 control certificate into a real certificate (version 2, at least one extension) and itself suffered no hostile finding (section 3.2). It is a bounded differential result over the corpus it drives, not a security proof and not a parity claim (sections 3.1 and 3.6). `CT-PRIMITIVES` is 18.3's court: it is candidate-only (there is no authority transcript for a secret-independence property) and compiles courts/phase18/ct_primitives_probe.c once against the candidate distribution shell. For each measured primitive path -- BN_mod_exp_mont_consttime and BN_mod_inverse over a 255-bit prime; RSA_private_decrypt over two 1024-bit keys whose CRT exponents differ in Hamming weight; EC_POINT_mul on P-256 through the constant-time ladder; CRYPTO_memcmp over a 4 KiB aligned tag as the primitive AES-GCM's finish and the Poly1305 check are built on; and EVP_KDF HKDF extract+expand as the TLS 1.3 key schedule's core -- it drives the operation under two secret classes, interleaved, and keeps the minimum timed batch per class with a serialising timestamp counter; a path is `separated` when the ratio of the two minima exceeds 10 percent. The court carries the section-3.2 sensitivity control: `control-branchy-tag` is a deliberately branch-on-secret tag comparison (early return on the first mismatch, a dependent multiply per matching byte), and the court is `pass` only when the control is `separated` exactly where the real path it varies (`aead-tag-memcmp`) is `independent`. A measured path that is `separated` is recorded as a finding, not failed: the reduced engine's BN square-and-multiply core carries this implementation's timing profile by its own module documentation (src/bn/exp.rs), so the BN paths are expected to separate and the court's job is to record that with a proven-sensitive instrument. A pass is instrument sensitivity plus a bounded secret-independence screen at the stated resolution -- NOT a proof of constant-time behaviour, NOT a wall-clock claim and NOT an attack claim (sections 3.1, 3.2 and 3.6); a secret dependence below 10 percent is reported `independent` and is outside this screen's resolution. `RT-MEM-HARDENING` is 18.4's: memory-safety and resource-exhaustion hardening for the reduced engine's fixed buffers and its allocation-failure paths, with an injected-failure control. `HOSTILE-BOUNDARY-REGISTER` is 18.5's: the register of what is hardened, what is measured and what is explicitly not claimed, which fails the stratum if a recorded boundary drifts from its evidence. This stratum owns no exported symbol, so no differential probe over a symbol set is its evidence: the subject is a hostile input against a finished implementation. docs/PHASE-18-SUBPHASES.md sections 1, 3 and 4 record the measurement and the courts.",
     "courts": [
       {
         "authority_exit_code": 0,
@@ -510,17 +510,92 @@
           "candidate": "artifacts/phase18/probes/rt_hostile_x509_probe.candidate"
         },
         "verdict": "pass"
+      },
+      {
+        "candidate_exit_code": 0,
+        "control": {
+          "class": "separated",
+          "honest": true,
+          "path": "control-branchy-tag",
+          "reference": "aead-tag-memcmp",
+          "reference_class": "independent",
+          "what": "a deliberately branch-on-secret tag comparison: it returns early on the first mismatching byte and does a dependent multiply per matching byte, so a tag differing at its last byte does far more work than one differing at its first"
+        },
+        "court": "CT-PRIMITIVES",
+        "findings": [
+          "bn-modexp",
+          "bn-inverse"
+        ],
+        "independence_observed": [
+          "rsa-private",
+          "ec-scalar-mul",
+          "aead-tag-memcmp",
+          "tls-key-schedule-hkdf"
+        ],
+        "method": "candidate-only; each path is driven under two secret classes with a serialising timestamp counter, 320 samples per class after 32 warmups, and classified `separated` when the ratio of the two minimum batch times exceeds 110 percent. A ratio of minima is a bounded work-independence screen at that resolution, not a timing-attack claim and not a proof of constant-time behaviour.",
+        "paths": [
+          {
+            "class": "separated",
+            "path": "bn-modexp",
+            "ran": true,
+            "unit": "BN",
+            "what": "BN_mod_exp_mont_consttime over a fixed 255-bit prime, two 255-bit secret exponents of the same public length and different Hamming weight"
+          },
+          {
+            "class": "separated",
+            "path": "bn-inverse",
+            "ran": true,
+            "unit": "BN",
+            "what": "BN_mod_inverse over a fixed 255-bit prime modulus, two fixed coprime secret operands"
+          },
+          {
+            "class": "independent",
+            "path": "rsa-private",
+            "ran": true,
+            "unit": "RSA",
+            "what": "RSA_private_decrypt on a fixed ciphertext, two 1024-bit private keys whose CRT exponents differ in Hamming weight"
+          },
+          {
+            "class": "independent",
+            "path": "ec-scalar-mul",
+            "ran": true,
+            "unit": "EC",
+            "what": "EC_POINT_mul on P-256 against the generator, two 256-bit secret scalars (the constant-time ladder path)"
+          },
+          {
+            "class": "independent",
+            "path": "aead-tag-memcmp",
+            "ran": true,
+            "unit": "AEAD",
+            "what": "CRYPTO_memcmp over an aligned 4 KiB tag, mismatch at the first versus the last byte -- the comparison AES-GCM's finish and the Poly1305 check are built on"
+          },
+          {
+            "class": "independent",
+            "path": "tls-key-schedule-hkdf",
+            "ran": true,
+            "unit": "TLS key schedule",
+            "what": "EVP_KDF HKDF extract+expand, the TLS 1.3 schedule's core, two 32-byte secret IKMs"
+          }
+        ],
+        "probe": "courts/phase18/ct_primitives_probe.c",
+        "problems": [],
+        "samples_per_class": 320,
+        "staged_binaries": {
+          "candidate": "artifacts/phase18/probes/ct_primitives_probe.candidate"
+        },
+        "threshold_percent": 110,
+        "verdict": "pass",
+        "warmup": 32
       }
     ],
     "pending_courts": {
-      "CT-PRIMITIVES": "18.3 lands the check; it measures secret-independence over the primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key schedule) and carries a sensitivity control",
       "HOSTILE-BOUNDARY-REGISTER": "18.5 lands the register; it checks that every recorded hardened/measured/not-claimed boundary still matches the evidence that establishes it",
       "RT-MEM-HARDENING": "18.4 lands the court; it exercises the reduced engine's fixed buffers and its allocation-failure paths, with an injected-failure control"
     },
     "summary": {
       "fail": 0,
-      "pass": 2,
-      "total": 2
+      "pass": 3,
+      "total": 3
     }
   },
   "generator": "forensics/tools/phase18_courts.py",
@@ -589,6 +664,21 @@
       "name": "x509-base-req",
       "path": "courts/phase17/fixtures/req.pem",
       "sha256": "356d1f7a9257bfee4cc30d7f7ce81cf61f4d85c29b17b09a414d199f63843a8d"
+    },
+    {
+      "name": "ct-primitives-probe",
+      "path": "courts/phase18/ct_primitives_probe.c",
+      "sha256": "934d532a9f2e6aa8cb4d06d42f54d1db3cbab76cb32a826baee15ea8c221cfe6"
+    },
+    {
+      "name": "ct-rsa-lo",
+      "path": "courts/phase18/fixtures/rsa-ct-lo.pem",
+      "sha256": "703634a15e004ffbb8e0819369528ea8b6d8dd5b6914fe03b3d7ae68eff9baba"
+    },
+    {
+      "name": "ct-rsa-hi",
+      "path": "courts/phase18/fixtures/rsa-ct-hi.pem",
+      "sha256": "739a4d4e7d8c93cf42f1dd9b091bc9939c6d3659f598cbc13a3a43c2ef8495c0"
     }
   ],
   "kind": "phase18-courts",

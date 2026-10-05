@@ -84,6 +84,10 @@
       "observations": 0,
       "verdict": "pass"
     },
+    "CT-PRIMITIVES": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-AMETH": {
       "observations": 471,
       "verdict": "pass"
@@ -777,7 +781,7 @@
     "phase15": 0,
     "phase16": 0,
     "phase17": 0,
-    "phase18": 3,
+    "phase18": 2,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
