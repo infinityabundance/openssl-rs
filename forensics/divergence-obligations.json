@@ -231,7 +231,7 @@
       "name": "phase-9-seal",
       "note": "says which trigger-bearing entries Phase 9 owns and what closed them",
       "path": "docs/PHASE-9-RAND-DRBG-SEAL.md",
-      "sha256": "5ebf4d9e9f9eedacf77f4da3ed3fabe68b2f56f5ce37792e8636b14235858ec1"
+      "sha256": "af9fc932288c9da59166e2a4214b554875e616ccc05e7c11a4d8c53a8c77dd6f"
     },
     {
       "name": "phase-8-obligations",
