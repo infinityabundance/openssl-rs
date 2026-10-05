@@ -460,6 +460,10 @@
       "observations": 39,
       "verdict": "pass"
     },
+    "RT-MEM-HARDENING": {
+      "observations": 282,
+      "verdict": "pass"
+    },
     "RT-MEM-INSTALL": {
       "observations": 15,
       "verdict": "pass"
@@ -781,7 +785,7 @@
     "phase15": 0,
     "phase16": 0,
     "phase17": 0,
-    "phase18": 2,
+    "phase18": 1,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
