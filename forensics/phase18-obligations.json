@@ -20,8 +20,8 @@
       },
       {
         "closure": "the `CT-PRIMITIVES` court passes",
-        "observation": "CT-PRIMITIVES is pending",
-        "state": "open",
+        "observation": "CT-PRIMITIVES is pass",
+        "state": "implemented",
         "surface": "artifacts/phase18/COURTS.json",
         "unit": "constant-time",
         "what": "secret-independence checks for the primitive-bearing paths (BN, RSA, EC, the AEADs and the TLS key schedule), with a sensitivity control that a deliberate branch-on-secret is caught"
@@ -48,8 +48,8 @@
       "contract_units": 5,
       "deferrals_received": 0,
       "deferred_to_later_phase": 0,
-      "implemented": 2,
-      "open_in_this_stratum": 3,
+      "implemented": 3,
+      "open_in_this_stratum": 2,
       "owned": 5,
       "provider_rows_open": 0,
       "provider_rows_owned": 0,
@@ -90,7 +90,7 @@
     {
       "name": "phase-18-courts",
       "path": "artifacts/phase18/COURTS.json",
-      "sha256": "0feb8bc0f9243f83c95235f196a2f75dd9048675657263d9d11e2513ab55d267"
+      "sha256": "f6f10815dbacae452295dce960ec762602955c1d20ea86711997d09f0bb3d2ff"
     }
   ],
   "kind": "phase18-obligations",
