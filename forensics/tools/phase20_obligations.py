@@ -332,6 +332,20 @@ def main(argv: list[str]) -> int:
 
     contracts = contract_units(courts_body)
 
+    # The two-axis rule is a hard invariant for a property unit while its property is unclaimed:
+    # a passing `custodian-maturity` that stopped carrying the gap to the level the seal names
+    # would let the pass be read as "L9 custodian seal achieved", exactly what this ledger exists
+    # to prevent. The docstring says the ledger fails closed; this is that failure.
+    for unit in contracts:
+        if unit["unit"] in PROPERTY_UNITS and unit["state"] == "implemented" \
+                and not unit["findings_present"]:
+            raise SystemExit(
+                f"phase20-obligations: {unit['unit']} passed as an instrument but carries no "
+                f"property finding, so a passing {unit['observation']} could be read as the "
+                f"property it does not claim; the court must record the gap to the level the "
+                f"seal names"
+            )
+
     owned = len(provider_rows) + len(deferrals) + len(unit_deferrals) + len(contracts)
     implemented_count = len([u for u in contracts if u["state"] == "implemented"])
     open_count = owned - implemented_count
@@ -384,8 +398,10 @@ def main(argv: list[str]) -> int:
             "implementation the strata before it completed. Its five contract units are the "
             "custodian seal contract docs/PHASE-20-SUBPHASES.md section 1 names -- the maturity "
             "derivation, the receipt closure, the residual disposition, the substitution witness "
-            "and the custodian-boundary register -- and at activation all five are open, so this "
-            "stratum's working set is exactly its five contract units. Nothing here is a claim "
+            "and the custodian-boundary register -- and its `counts` block is the live record of "
+            "which of them are implemented: 20.1 landed the maturity derivation, so "
+            "`custodian-maturity` is implemented while the other four are open. Nothing here is a "
+            "claim "
             "stronger than docs/CUSTODIAN_CONTRACT.md section 6's: a passing custodian court is an "
             "instrument and a bounded measurement, not a universal-parity claim, and there is no "
             "FIPS-validation claim, no claim of universal parity from finite evidence, and no "

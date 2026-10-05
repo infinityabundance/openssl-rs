@@ -270,6 +270,10 @@
       "observations": 18,
       "verdict": "pass"
     },
+    "RT-CUSTODIAN-MATURITY": {
+      "observations": 0,
+      "verdict": "pass"
+    },
     "RT-DEFAULTS": {
       "observations": 10,
       "verdict": "pass"
@@ -815,7 +819,7 @@
     "phase17": 0,
     "phase18": 0,
     "phase19": 0,
-    "phase20": 5,
+    "phase20": 4,
     "phase22": 0,
     "phase3": 0,
     "phase4": 0,
