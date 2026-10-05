@@ -3693,9 +3693,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 27,
-              "-O1": 27,
-              "-O2": 27
+              "-O0": 24,
+              "-O1": 24,
+              "-O2": 24
             },
             "side": "authority",
             "verdict": "clean"
@@ -3721,9 +3721,9 @@
               "-O2"
             ],
             "observations": {
-              "-O0": 27,
-              "-O1": 27,
-              "-O2": 27
+              "-O0": 24,
+              "-O1": 24,
+              "-O2": 24
             },
             "side": "candidate",
             "verdict": "clean"
@@ -9619,7 +9619,7 @@
     {
       "name": "probe",
       "path": "courts/phase19/rt_cpu_capability_probe.c",
-      "sha256": "b456168e877543a0586710fbb4d1ae888b3fd74b1ca7d5d09151a94e4d4f3867"
+      "sha256": "163a09501d76a1d1b53965ff0a64ba4c9544d0246bd09541164fa47655e337ab"
     },
     {
       "name": "probe",

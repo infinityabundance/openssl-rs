@@ -23,7 +23,7 @@
         "verdict": "pass",
         "authority_reached": {"probe.reachable.cpuid_setup": "1", "probe.reachable.ia32_cpuid": "1", "probe.reachable.ia32cap_p": "1"},
         "candidate_reached": {"probe.reachable.cpuid_setup": "0", "probe.reachable.ia32_cpuid": "0", "probe.reachable.ia32cap_p": "0"},
-        "divergence_count": 68
+        "divergence_count": 59
       },
       "note": "measured, not claimed: the court records which names each side reaches under the fixed link, not that the candidate implements a CPU-capability surface. It is the `symbols_not_reached` census docs/PHASE-19-SUBPHASES.md section 4.2 records (sections 3.4 and 3.6)."
     },
@@ -37,23 +37,23 @@
       "finding": "the authority's capability-derived selection moves with the facade (sel.aes128cbcsha1.null 0 -> 1 with AES-NI masked); the candidate's does not, because the reduced engine does not model OPENSSL_ia32cap masking",
       "evidence": {
         "verdict": "pass",
-        "facade_host": "0",
+        "facade_reference": "0",
         "facade_aesni_off": "1",
         "facade_moved_selection": true
       },
       "note": "measured, not claimed: this is a bounded audit of the capability surface at the three sets the court drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6)."
     },
     {
-      "id": "evp-host-agreement",
+      "id": "evp-reference-agreement",
       "group": "evp-dispatch",
-      "surface": "the selection each path makes under the host capability set",
+      "surface": "the selection each path makes under the reference capability set",
       "classification": "measured",
       "court": "RT-EVP-DISPATCH",
-      "surface_keys": ["evp.host"],
-      "finding": "0 divergences at the host set: the authority and the candidate select identically across the legacy constructor, provider fetch, name lookup and cipher/digest context paths",
+      "surface_keys": ["evp.reference"],
+      "finding": "0 divergences at the reference set: the authority and the candidate select identically across the legacy constructor, provider fetch, name lookup and cipher/digest context paths",
       "evidence": {
         "verdict": "pass",
-        "host_divergence_count": 0
+        "reference_divergence_count": 0
       },
       "note": "measured, not claimed: a bounded comparison of selection over the sets the court drives, not a parity claim and not an assembly-versus-Rust equivalence claim (sections 3.4 and 3.6)."
     },

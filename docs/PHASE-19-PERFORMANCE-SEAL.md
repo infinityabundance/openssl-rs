@@ -148,13 +148,16 @@ which 19.1 through 19.5 emptied.
 
 **19.1, the CPU-capability dispatch audit.** `RT-CPU-CAPABILITY` compiles
 `courts/phase19/rt_cpu_capability_probe.c` twice (authority and candidate) and reports the
-capability surface deterministically — `OPENSSL_ia32cap_P[0..3]`, the effect of
-`OPENSSL_cpuid_setup`, the raw vector `OPENSSL_ia32_cpuid` returns, and the capability-derived
-selection observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`,
+capability surface deterministically — `OPENSSL_ia32cap_P[0..3]`, whether `OPENSSL_cpuid_setup`
+and `OPENSSL_ia32_cpuid` were reachable and callable, and the capability-derived selection
+observable through the public API (`OpenSSL_version(OPENSSL_CPU_INFO)`,
 `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` and the four `EVP_aes_*_cbc_hmac_sha*` constructors,
-which answer NULL when `AESNI_CAPABLE` is clear). The probe is driven under three fixed capability
-sets through the `OPENSSL_ia32cap` facade — the host set, an AES-NI-cleared set and a fully cleared
-set — 27 observations each, 81 in total, with an authority-linked differential control.
+which answer NULL when `AESNI_CAPABLE` is clear). The raw vector `OPENSSL_ia32_cpuid` returns is
+not recorded: it is the runner's own CPUID, independent of the facade, and would make the record
+machine-specific. The probe is driven under three fixed capability sets through fixed
+`OPENSSL_ia32cap` literals — a synthetic reference set, an AES-NI-cleared set and a fully cleared
+set — so the reported vector is the same fictional CPU on any runner, never the capture host's;
+24 observations each, 72 in total, with an authority-linked differential control.
 
 **19.2, the EVP / cipher dispatch comparison.** `RT-EVP-DISPATCH` compiles
 `courts/phase19/rt_evp_dispatch_probe.c` twice and reports, for a fixed operation set
@@ -209,17 +212,18 @@ registry, so neither observes an authority transcript.
 
 | court | plane | observations | instrument |
 |---|---|---|---|
-| `RT-CPU-CAPABILITY` | differential (CPU-capability, 3 sets) | 81 | `courts/phase19/rt_cpu_capability_probe.c` |
+| `RT-CPU-CAPABILITY` | differential (CPU-capability, 3 sets) | 72 | `courts/phase19/rt_cpu_capability_probe.c` |
 | `RT-EVP-DISPATCH` | differential (EVP/cipher selection, 3 sets) | 777 | `courts/phase19/rt_evp_dispatch_probe.c` |
 | `RT-PERFORMANCE-WORK` | differential (deterministic work, 8 paths) | 84 | `courts/phase19/rt_performance_work_probe.c` |
 | `RT-PERFORMANCE-SENSITIVITY` | candidate-only (instrument control) | 26 (candidate) | `courts/phase19/rt_performance_sensitivity_probe.c` |
 | `PERFORMANCE-BOUNDARY-REGISTER` | data-validation (register + registry) | — (structural) | `artifacts/phase19/performance-boundary-register.json` |
 
 Every differential row carries `verdict: "pass"`, and the summary reads `pass` 5 of `total` 5 with
-`pending_courts` empty. `RT-CPU-CAPABILITY` records 68 divergences (20 under the host set and 24
-under each faulted set), `RT-EVP-DISPATCH` 176 (0 under the host set and 88 under each faulted set)
-and `RT-PERFORMANCE-WORK` 4 (the two divergent-work findings); each is a recorded disposition
-rather than a residual, and the per-court rows in `docs/SEAL-CENSUS.md` are the same computation.
+`pending_courts` empty. `RT-CPU-CAPABILITY` records 59 divergences (17 under the reference set and
+21 under each faulted set), `RT-EVP-DISPATCH` 176 (0 under the reference set and 88 under each
+faulted set) and `RT-PERFORMANCE-WORK` 4 (the two divergent-work findings); each is a recorded
+disposition rather than a residual, and the per-court rows in `docs/SEAL-CENSUS.md` are the same
+computation.
 
 **The differential control is what keeps the expectation honest.** `RT-CPU-CAPABILITY` is `pass`
 only when the authority's capability surface was actually reached and the faulted facade moved the
@@ -258,23 +262,23 @@ on the authority and `0` on the candidate: `OPENSSL_ia32cap_P` is `.hidden` in t
 provides none of the three (its CPU-dispatch string is `CPUINFO: N/A` and
 `OPENSSL_info(OPENSSL_INFO_CPU_SETTINGS)` is NULL). That is the `symbols_not_reached` census the
 plan records, and it is *recorded* in the court's `divergences` block rather than failed. The
-capability-derived selection is invariant in a way the authority's is not: under the host set the
-four `EVP_aes_*_cbc_hmac_sha*` constructors answer non-NULL on both sides, but under the
+capability-derived selection is invariant in a way the authority's is not: under the reference set
+the four `EVP_aes_*_cbc_hmac_sha*` constructors answer non-NULL on both sides, but under the
 AES-NI-cleared facade the authority's `AESNI_CAPABLE` test moves its selection to the non-AES-NI
 arm while the candidate's does not — the reduced engine does not model `OPENSSL_ia32cap` masking.
 The differential control is explicit and honest: `authority_surface_reached` true,
-`facade_moved_selection` true, `facade_key` `sel.aes128cbcsha1.null` moving `0 -> 1`. 68 divergences
+`facade_moved_selection` true, `facade_key` `sel.aes128cbcsha1.null` moving `0 -> 1`. 59 divergences
 are recorded, all class `value`.
 
-**The dispatch court found the host set agrees exactly and the masked sets diverge by design.**
-`RT-EVP-DISPATCH` records **0 divergences under the host capability set** — on the host, every
-operation's selected implementation is identical on both sides — and **88 divergences under each of
-the two faulted sets**. The mechanism is the authority's default provider filtering its
-`AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*`
-(`AESNI_CBC_HMAC_SHA_CAPABLE`): masking the AES-NI bit makes the authority's fetch, legacy and
+**The dispatch court found the reference set agrees exactly and the masked sets diverge by design.**
+`RT-EVP-DISPATCH` records **0 divergences under the reference capability set** — over the fixed
+synthetic vector, every operation's selected implementation is identical on both sides — and **88
+divergences under each of the two faulted sets**. The mechanism is the authority's default provider
+filtering its `AES-*-CBC-HMAC-*` rows through `ossl_cipher_capable_aes_cbc_hmac_sha*`
+(`AESNI_CBC_HMAC_SHA_CAPABLE`): clearing the AES-NI bit makes the authority's fetch, legacy and
 lookup paths for those four algorithms answer NULL (the twelve `aes_cbc_hmac_selection` keys all
-move `host=0` -> `aesni_off=1`), while the candidate reads CPUID directly and does not model the
-mask, so its selection does not move. The control drives three of the twelve keys explicitly and
+move `reference=0` -> `aesni_off=1`), while the candidate reads CPUID directly and does not model
+the mask, so its selection does not move. The control drives three of the twelve keys explicitly and
 `authority_selection_driven` is true. The **engine path is not driven**: no engine is configured
 and the reduced engine does not export the enumeration it would need, so the register records
 `evp-engine-path` `not-measured` rather than assuming it. All 176 divergences are class `value`.
@@ -304,7 +308,7 @@ throughput claim.
 
 **The register binds the non-claims and cannot claim more than the courts measured.** 7 surfaces
 are `measured` by a passing court (`cpu-names-not-reached`, `cpu-dispatch-invariance`,
-`evp-host-agreement`, `evp-masked-divergence`, `work-agreement`, `work-divergence`,
+`evp-reference-agreement`, `evp-masked-divergence`, `work-agreement`, `work-divergence`,
 `sensitivity-control`); 1 is `not-measured` (`evp-engine-path`, the engine path above); and 6 are
 `not-claimed`: `nc-benchmark-parity`, `nc-asm-rust-equivalence`, `nc-wallclock`, `nc-instruction-count`,
 `nc-parity` and `nc-guarantee`. The court re-reads the live courts registry and fails the stratum
@@ -331,7 +335,7 @@ this stratum actually met are recorded in the places below.
    as divergences (`docs/PHASE-19-SUBPHASES.md` §3.4).
 2. **The dispatch selection is invariant under masking, and that is recorded.** The reduced engine
    does not model `OPENSSL_ia32cap` masking, so the 88 divergences under each faulted set are
-   recorded rather than failed; the host set agrees exactly.
+   recorded rather than failed; the reference set agrees exactly.
 3. **The ENGINE path is not driven.** No engine is configured and the reduced engine does not
    export the enumeration it would need; the register records `evp-engine-path` `not-measured`.
 4. **The work instrument is a proxy, and the seal says so.** The counting allocator and the
@@ -415,7 +419,7 @@ empty.
 | 2 | obligation inventory | `forensics/phase19-obligations.json`; 5 contract units, 0 provider rows, 0 export rows |
 | 3 | court manifests | `artifacts/phase19/COURTS.json` |
 | 4 | raw captures | **met.** The three staged `artifacts/phase19/probes/<probe>.{authority,candidate}` pairs are the captures the court venue diffs, and `.frf/captures/` carries the FRF venue's captures for the three declarable courts, produced by §8's chain |
-| 5 | residual set | **met in the court venue.** Every differential court's `verdict` is `pass`, `summary` reads `pass` 5 of 5 and `pending_courts` is empty; the 68 capability, 176 dispatch and 4 work divergences are recorded dispositions, not residuals. In the FRF venue, two premises carry one `open` first-line residual each, narrowed around by the claim and recorded in §4 |
+| 5 | residual set | **met in the court venue.** Every differential court's `verdict` is `pass`, `summary` reads `pass` 5 of 5 and `pending_courts` is empty; the 59 capability, 176 dispatch and 4 work divergences are recorded dispositions, not residuals. In the FRF venue, two premises carry one `open` first-line residual each, narrowed around by the claim and recorded in §4 |
 | 6 | mutation / sensitivity evidence | **met.** `.frf/challenges/` carries six adjudicated Phase-19 records — both declared axes (`stdout-first-line`, `exit-class`) on all three declarable courts, each `saw_defect` and `specificity_clean` — which is what makes the claim `sensitivity-backed` rather than merely green (D13) |
 | 7 | resolution runs | **not applicable, and therefore not met.** `--resolution-run` is required only for a `fixed` disposition, and no Phase-19 FRF residual is disposed `fixed` |
 | 8 | FRF receipts | **met.** `.frf/receipts/` carries three Phase-19 receipts, one per declarable court |
@@ -543,3 +547,18 @@ corrections the evidence forced rather than the ones a reviewer might have prefe
    promising crate symbols; the plan's §4.5 records the correction and the three names remain the
    disposition §4 of this seal and §3 of `docs/PHASE-19-SUBPHASES.md` describe. This is the one
    reconciliation the stratum's own completeness forced.
+6. **The capability court was made runner-independent, and its record moved with it.** The first
+   version drove its first set with `OPENSSL_ia32cap` unset and its faulted sets as `~` masks over
+   the runner's own CPUID, so `cap.word.*`, `api.cpuinfo`/`api.cpu_settings` and the raw
+   `OPENSSL_ia32_cpuid` return embedded the capture host's capability words and could not
+   reproduce on a runner with a different CPU. `CAPABILITY_SETS` now drives all three sets under
+   explicit fixed `OPENSSL_ia32cap` literals (`0x0200000100000000`, `0x0000000100000000`,
+   `0x0`) over a synthetic reference CPU, and `rt_cpu_capability_probe.c` no longer prints the raw
+   `OPENSSL_ia32_cpuid` return (`probe.cpuid.ret`, `cap.raw.word.2`, `cap.raw.word.3`), which is
+   the runner's own CPUID and independent of the facade; reachability and callability are still
+   observed. The masking still moves the authority's selection, so the differential control is
+   unchanged; the record now reproduces byte for byte on any runner. The observation count moved
+   `81 -> 72`, the capability divergences `68 -> 59`, the register's `evp-host-agreement` row is
+   now `evp-reference-agreement` (key `evp.reference`) and the `facade_host` evidence field is now
+   `facade_reference`. See the fix's own gate run for the two-re-derivation and
+   differing-ambient-`OPENSSL_ia32cap` portability proof.
