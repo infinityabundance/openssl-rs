@@ -113,17 +113,35 @@ The instrumented checks over the parser/algorithm cores are **measured and recor
   reservation the cgroup does not count against resident memory. The candidate is instrumented
   **closed** — the Rust staticlib (`-Zsanitizer=address -Zbuild-std`), the first-party C adapters
   (`build.rs` through a `CC` wrapper) and the test probes — and a sensitivity canary (a deliberate
-  heap use-after-free) must be diagnosed before any zero-findings result is trusted. Five layers
-  ran: the allocator/unit tests, targeted ownership tests, the hostile TLS corpus, the hostile
-  X.509 corpus, and the 16,384-case mutation corpus. The downstream consumer probes
-  (CPython/nginx/curl/Git/HAProxy/OpenSSH) are recorded **not-yet**, because they need consumer
-  binaries loaded against ASan candidate DSOs, which this step did not build. The venue, its
+  heap use-after-free) must be diagnosed before any zero-findings result is trusted. Five
+  in-process layers ran: the allocator/unit tests, targeted ownership tests, the hostile TLS
+  corpus, the hostile X.509 corpus, and the 16,384-case mutation corpus. A sixth layer, the six
+  sealed Phase-17 downstream consumers, runs each admitted probe against ASan-instrumented
+  distribution DSOs built into a dedicated prefix (`/asan/install`, by
+  `forensics/tools/build_phase2_asan.sh`, an ASan sibling of `build_phase2.sh` that never touches
+  the normal `artifacts/phase2/install`), loaded by the Phase-17 consumer builds through
+  `LD_LIBRARY_PATH` plus a preloaded clang ASan runtime. Five consumers run clean: CPython's
+  bounded `test_ssl` (172 pass, 0 fail), nginx TLS 1.3 with session resumption, curl
+  200/verify-result-0 plus its unrelated-CA negative arm, Git's SHA-1/SHA-256 tests and Smart-HTTP
+  push/clone/pull, and HAProxy TLS termination. OpenSSH is **envelope-limited**: its seccomp
+  sandbox (`sandbox-seccomp-filter.c:193-203`) denies the `mmap` ASan uses to reserve its shadow
+  in the sshd preauth child (`ReserveShadowMemoryRange failed ... errno: 22`), so only OpenSSH's
+  libcrypto-only operations (key generation, sign/verify, fingerprints, algorithm enumeration)
+  ran under ASan — and were clean — while the sshd handshake path could not. The venue, its
   execution envelope, its instrumentation-closure receipt, the canary and every layer's verbatim
-  result are recorded in `artifacts/phase18/asan.json`, and it found three distinct first-party
-  defects (the unit suite can no longer complete; `RT-HOSTILE-TLS` now crashes on every
-  ClientHello; and the mutation corpus crashes on malformed PEM), so the earlier "could not run"
-  note is **superseded, not softened**. **It is still not a memory-safety proof**: a clean layer
-  is a bounded observation under one instrument, and TSan/UBSan/MSan did not run;
+  result are recorded in `artifacts/phase18/asan.json`, and the per-consumer downstream evidence
+  in `artifacts/phase18/asan-downstream.json`. The venue has found **six** distinct first-party
+  defects, each fixed at the root against the authority: five from the original layers (a test
+  buffer in `src/modes/wrap.rs`, and real candidate bugs in `src/provider/rand.rs`,
+  `src/evp/pem_bridge.rs`, `src/dso/dlfcn.rs` and the `src/evp/legacy_evp.rs` tests), and a sixth
+  found by the CPython layer — `src/ssl/ssl_lib.rs`'s `SSL_new` took **one** initial-context
+  reference but assigned it to both `ssl->ctx` and `session_ctx`, while the authority takes one
+  for each (`ssl/ssl_lib.c:705` and `:828`) and releases both (`ssl_lib.c:1438`, `:1485`); an SNI
+  callback that switches contexts (`SSL_set_SSL_CTX`, `ssl_lib.c:5535`) then freed the context
+  `session_ctx` still aliased, and a TLS 1.3 session ticket read it (heap-use-after-free at
+  `src/ssl/statem/statem_srvr.rs:2892`). `SSL_new` now takes, and `SSL_free` releases, the second
+  reference. **It is still not a memory-safety proof**: a clean layer is a bounded observation
+  under one instrument, and TSan/UBSan/MSan did not run;
 - a bounded, deterministic mutational fuzz
   (`forensics/tools/fuzz_hostile_corpus.py`) over the hostile X.509 corpus: 16,384
   mutants in a 300 s bound, recorded in `artifacts/phase18/fuzz-hostile-corpus.json`;

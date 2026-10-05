@@ -1,10 +1,10 @@
 {
   "build": {
     "archive": "/asan/target/x86_64-unknown-linux-gnu/release/libopenssl_rs.a",
-    "archive_sha256": "0a9914156bb6ab729fb91e5792636b607651256668fea25ae9ce35f6ab7c0abb",
+    "archive_sha256": "478406cd0990388ce31f3f1c9c1644b3a19c92a9069c632d348d20496eeb6cdb",
     "cc": "/asan/bin/asan-cc",
     "command": "cargo +nightly-2026-10-05 build -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu",
-    "elapsed_s": 47.6,
+    "elapsed_s": 0.0,
     "log": "/asan/logs/cargo-build.log",
     "rustflags": "-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=1"
   },
@@ -14,7 +14,7 @@
     "command": "clang -std=c11 -Wall -O0 -D_GNU_SOURCE -fsanitize=address -fno-omit-frame-pointer -g -o /asan/bin/asan_canary /work/forensics/tools/asan_canary.c",
     "detected": true,
     "diagnostic": [
-      "==131345==ERROR: AddressSanitizer: heap-use-after-free on address 0x602000000013 at pc 0x561add0f3032 bp 0x7ffce9c8abb0 sp 0x7ffce9c8aba8",
+      "==201858==ERROR: AddressSanitizer: heap-use-after-free on address 0x602000000013 at pc 0x556ab6736032 bp 0x7ffc313c3410 sp 0x7ffc313c3408",
       "SUMMARY: AddressSanitizer: heap-use-after-free /work/forensics/tools/asan_canary.c:31:27 in main"
     ],
     "exit_code": 1,
@@ -313,7 +313,7 @@
     },
     "rust_staticlib": {
       "archive": "/asan/target/x86_64-unknown-linux-gnu/release/libopenssl_rs.a",
-      "archive_sha256": "0a9914156bb6ab729fb91e5792636b607651256668fea25ae9ce35f6ab7c0abb",
+      "archive_sha256": "478406cd0990388ce31f3f1c9c1644b3a19c92a9069c632d348d20496eeb6cdb",
       "members_in_nm_map": 28,
       "members_referencing_asan": 27,
       "members_total": 28,
@@ -326,7 +326,7 @@
       "asan_reports": 0,
       "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu",
       "diagnostics": [],
-      "elapsed_s": 67.8,
+      "elapsed_s": 12.2,
       "exit_code": 0,
       "filters": [],
       "findings": [],
@@ -361,7 +361,7 @@
           "asan_reports": 0,
           "command": "cargo +nightly-2026-10-05 test -Zbuild-std --release --lib --target x86_64-unknown-linux-gnu -- runtime::mem",
           "diagnostics": [],
-          "elapsed_s": 0.0,
+          "elapsed_s": 61.1,
           "exit_code": 0,
           "filters": [
             "runtime::mem"
@@ -562,44 +562,151 @@
     {
       "consumers": [
         {
-          "id": "cpython-test-ssl",
-          "reason": "CPython built/loaded against the ASan candidate DSOs was not built in this step; the sanitizer candidate here is a statically linked probe set, not an installed DSO tree",
-          "status": "not-yet"
-        },
-        {
-          "id": "nginx",
-          "reason": "nginx is not installed in the ASan venue and was not built against the ASan candidate DSOs",
-          "status": "not-yet"
-        },
-        {
+          "asan_findings": 0,
+          "envelope_limited": null,
           "id": "curl",
-          "reason": "curl is not installed in the ASan venue and was not built against the ASan candidate DSOs",
-          "status": "not-yet"
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "live_tls_probe",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
         },
         {
-          "id": "git",
-          "reason": "git is installed but links the distribution libcurl/libssl; it was not rebuilt against the ASan candidate DSOs",
-          "status": "not-yet"
+          "asan_findings": 0,
+          "envelope_limited": null,
+          "id": "nginx",
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "serve_probe",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
         },
         {
+          "asan_findings": 0,
+          "envelope_limited": null,
           "id": "haproxy",
-          "reason": "HAProxy is not installed in the ASan venue and was not built against the ASan candidate DSOs",
-          "status": "not-yet"
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "proxy_probe",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
         },
         {
+          "asan_findings": 0,
+          "envelope_limited": null,
+          "id": "git",
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "https_probe",
+              "verdict": "clean"
+            },
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "run_tests",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
+        },
+        {
+          "asan_findings": 0,
+          "envelope_limited": {
+            "captured_diagnostic": "==NNN==ERROR: AddressSanitizer failed to allocate 0x38000 (229376) bytes at address ff443091000 (errno: 22)\n==NNN==ReserveShadowMemoryRange failed while trying to map 0x38000 bytes. Perhaps you're using ulimit -v",
+            "reason": "ssh-keygen/sign/verify/fingerprints/algorithm-enumeration (probe.sh sections 1,2,5) and keyformat_probe.sh run under ASan and are clean. The sshd SSH server path (probe.sh sections 3,4,6,7: login, the kex/cipher/mac/hostkey matrix, agent login, and concurrency) CANNOT run under ASan: OpenSSH applies a seccomp filter to the preauth child (sandbox-seccomp-filter.c:193-203, SC_MMAP; sshd logs `ssh_sandbox_child: attaching seccomp filter program [preauth]`), and the filter denies the mmap ASan uses to reserve its shadow. ASan then cannot start in that child -- `ReserveShadowMemoryRange failed ... (errno: 22)` -- and the child dies before any crypto is exercised. This is a consumer-sandbox-versus-sanitizer incompatibility, not a candidate defect, and it is the same class as the court's RLIMIT_DATA (D105) that forced this dedicated venue.",
+            "sections_not_under_asan": [
+              "3. sshd + ssh localhost handshake",
+              "4. algorithm matrix (needs the sshd login path)",
+              "6. ssh-agent login",
+              "7. 16 concurrent ssh logins"
+            ]
+          },
           "id": "openssh",
-          "reason": "OpenSSH is not installed in the ASan venue and was not built against the ASan candidate DSOs",
-          "status": "not-yet"
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "probe",
+              "verdict": "clean"
+            },
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "keyformat_probe",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "envelope-limited"
+        },
+        {
+          "asan_findings": 0,
+          "envelope_limited": null,
+          "id": "python",
+          "runs": [
+            {
+              "asan_findings": 0,
+              "exit_code": 0,
+              "run": "bounded_test_ssl",
+              "verdict": "clean"
+            }
+          ],
+          "verdict": "clean"
         }
       ],
+      "dsos": {
+        "libcrypto.so.3": "267657727dad1eecc746acb36b3d4958e6007f3941c21ab14fb155e2e6ab1d90",
+        "libssl.so.3": "383bc530714be366289990b4a4355f33723a8d4a92519c81ec388c0981bceae0",
+        "ossl-modules/legacy.so": "b18e6bb5129d490405d5ee5a23f9f3fb118a2e8cc4008bd6ecee877a5bdcda7d"
+      },
+      "excluded_non_candidate_helpers": {
+        "dd": {
+          "observed_report": "==NNN==ERROR: AddressSanitizer: invalid alignment requested in aligned_alloc: 4096, alignment must be a power of two and the requested size 0x400 must be a multiple of alignment (thread T0)\n    #0 0x... in aligned_alloc (/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so+0xd45f2)\n    #1 0x... (/usr/bin/dd+0x4a9d)\n==NNN==HINT: if you don't care about these errors you may set allocator_may_return_null=1\nSUMMARY: AddressSanitizer: invalid-aligned-alloc-alignment (/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so+0xd45f2) in aligned_alloc",
+          "path": "/asan/dsr/bin/dd",
+          "reason": "coreutils dd requests aligned_alloc(4096, 1024) for the 1 KiB block size; C11 requires the size to be a multiple of the alignment, glibc tolerates it and ASan's aligned_alloc interceptor reports invalid-alignment. The helper generates test data and never touches the candidate, so it runs outside the ASan envelope."
+        }
+      },
+      "findings": [],
+      "harness_exit_code": 0,
+      "harness_log": "/asan/logs/downstream-consumers.log",
       "layer": "downstream-consumers",
-      "note": "Each downstream probe needs consumer binaries loaded against the ASan candidate DSOs. This step built a statically linked ASan probe set, not an installed ASan DSO tree, so none of these ran; they are recorded as not-yet rather than counted as passing.",
-      "ran": false,
-      "verdict": "not-run"
+      "note": "Six consumers load the ASan-instrumented candidate DSOs (dedicated prefix, source artifacts/phase18/asan-downstream.json). Five run clean; openssh is envelope-limited (its seccomp sandbox rejects ASan's shadow mapping in the sshd preauth child, so only its libcrypto-only operations run). Every consumer that ran reported zero ASan findings.",
+      "prefix": "/asan/install",
+      "ran": true,
+      "runtime": "/usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan-x86_64.so",
+      "source": "artifacts/phase18/asan-downstream.json",
+      "summary": {
+        "clean": [
+          "curl",
+          "nginx",
+          "haproxy",
+          "git",
+          "python"
+        ],
+        "envelope_limited": [
+          "openssh"
+        ],
+        "run_failed": [],
+        "total_findings": 0,
+        "with_findings": []
+      },
+      "verdict": "clean"
     }
   ],
   "not_reached": [
-    "CPython test_ssl / nginx / curl / Git / HAProxy / OpenSSH downstream probes (need consumer binaries built against the ASan candidate DSOs; see the downstream-consumers layer)",
     "TSan, UBSan, MSan (a later step by instruction)",
     "the authority under ASan (the authority is not rebuilt in this venue)"
   ],
@@ -613,18 +720,18 @@
       "ownership-tests",
       "hostile-tls",
       "hostile-x509",
-      "mutation-corpus"
-    ],
-    "instrumentation_closure_ok": true,
-    "layers_not_run": [
+      "mutation-corpus",
       "downstream-consumers"
     ],
+    "instrumentation_closure_ok": true,
+    "layers_not_run": [],
     "layers_run": [
       "allocator-unit-tests",
       "ownership-tests",
       "hostile-tls",
       "hostile-x509",
-      "mutation-corpus"
+      "mutation-corpus",
+      "downstream-consumers"
     ],
     "layers_with_findings": [],
     "trust": "canary-fired"

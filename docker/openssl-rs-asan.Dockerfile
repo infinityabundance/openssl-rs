@@ -89,6 +89,11 @@ RUN apt-get update \
       file \
       bsdmainutils \
       less \
+      # fcgiwrap is the FCGI bridge the Phase-17 Git Smart-HTTP probe
+      # (courts/phase17/downstream/git/https_probe.sh) drives between nginx and
+      # git-http-backend; it carries no TLS. Installed so the downstream layer can
+      # run from a clean venue image rather than needing a run-time apt install.
+      fcgiwrap \
  && rm -rf /var/lib/apt/lists/* \
  # Neutralise the non-authority OpenSSL CLI without purging the package.
  && rm -f /usr/bin/openssl /usr/bin/c_rehash \

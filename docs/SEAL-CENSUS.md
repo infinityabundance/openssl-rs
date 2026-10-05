@@ -576,7 +576,7 @@ Courts: `all pass`, 6 court(s), **1111** authority observation(s) over 6 transcr
 
 * state: `in-progress`
 * blocking: Phase 18's FRF chain entry is incomplete: no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain
-* seal: none written yet (`unnamed`)
+* seal: none written yet (`docs/PHASE-18-HARDENING-SEAL.md`)
 * ledger: `forensics/phase18-obligations.json`
 * atlas-owned: 0
 * owned working set: 5
