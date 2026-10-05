@@ -155,6 +155,14 @@ are under [`docs/`](https://github.com/infinityabundance/openssl-rs/tree/main/do
   OpenSSL oracle proves compatibility over the observed surface; it does not
   prove an implementation is cryptographically sound. Conversely, a perfect
   standards implementation can still be OpenSSL-incompatible.
+- **Memory safety is measured, not established.** The memory-safety benefit of
+  Rust is not asserted here: the crate still carries a large `unsafe` surface,
+  measured per module by `forensics/tools/unsafe_footprint.py` and rendered in
+  `forensics/STATUS.md` (58,767 unsafe sites and 10,860 `extern "C" fn` at the
+  Phase 18 revision, 90.1% of them in the parser/algorithm modules rather than a
+  boundary shim). `docs/UNSAFE.md` cites the generated table and the
+  `UNSAFE-FOOTPRINT` growth ceiling; the count is a footprint, not a proof that
+  the unsafe code is correct.
 - **No universal claims from finite evidence.** Every claim names its authority,
   profile and platform.
 - **Unknown is a research result.** `UNKNOWN` is reported, not traded for

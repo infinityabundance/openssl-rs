@@ -232,6 +232,51 @@ def main() -> int:
         L.append("`forensics/tools/implemented_surface.py` in the court container.")
         L.append("")
 
+    L.append("## Measured `unsafe` / FFI footprint")
+    L.append("")
+    footprint = load(ATLAS / "unsafe-footprint.json")
+    if footprint:
+        fb = footprint["body"]
+        ft = fb["totals"]
+        fcore = ft["by_class"]["core"]
+        fboundary = ft["by_class"]["boundary"]
+        L.append("Counted by `forensics/tools/unsafe_footprint.py`, which scans")
+        L.append("`src/**/*.rs` and classifies each module as **boundary** (the")
+        L.append("FFI/ABI translation layer, where `unsafe` is expected) or **core**")
+        L.append("(parsers and algorithms, where it is not). The definitions, the exact")
+        L.append("scan and the classification list are in the artifact's `definitions` and")
+        L.append("`classification` blocks; `docs/UNSAFE.md` cites this table rather than")
+        L.append("asserting a concentration. **A count is not a proof: it establishes the")
+        L.append("size and location of the unsafe surface, not that any `unsafe` block is")
+        L.append("correct or that the memory-safety benefit is realised.**")
+        L.append("")
+        L.append("| axis | modules | `unsafe` sites | `extern \"C\" fn` |")
+        L.append("|---|---|---|---|")
+        L.append(f"| core (parsers/algorithms) | {fcore['modules']} | {fcore['unsafe_sites']} "
+                 f"| {fcore['extern_c_fns']} |")
+        L.append(f"| boundary (FFI/runtime/OS) | {fboundary['modules']} "
+                 f"| {fboundary['unsafe_sites']} | {fboundary['extern_c_fns']} |")
+        L.append(f"| **total** | **{fcore['modules'] + fboundary['modules']}** "
+                 f"| **{ft['unsafe_sites']}** | **{ft['extern_c_fns']}** |")
+        L.append("")
+        L.append(f"Over {ft['files']} files and {ft['lines']} lines, with "
+                 f"{ft['safety_comments']} `SAFETY:` comment(s). The core share is "
+                 f"{100.0 * fcore['unsafe_sites'] / max(ft['unsafe_sites'], 1):.1f}% of the "
+                 f"unsafe sites.")
+        L.append("")
+        L.append("The ten modules with the largest `unsafe` surface:")
+        L.append("")
+        L.append("| module | class | `unsafe` sites | `extern \"C\" fn` |")
+        L.append("|---|---|---|---|")
+        for row in sorted(fb["modules"], key=lambda m: -m["unsafe_sites"])[:10]:
+            L.append(f"| `{row['module']}` | {row['classification']} | {row['unsafe_sites']} "
+                     f"| {row['extern_c_fns']} |")
+        L.append("")
+    else:
+        L.append("`forensics/atlas/unsafe-footprint.json` is absent; run")
+        L.append("`forensics/tools/unsafe_footprint.py`.")
+        L.append("")
+
     # One section per stratum that publishes a ledger, **discovered**, rendered the
     # same way, so a reader cannot mistake which stratum a figure belongs to. A
     # stratum's ledger names, on both sides, every symbol it coordinates with another

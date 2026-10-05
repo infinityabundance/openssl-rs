@@ -26,7 +26,7 @@ enforced here:
 | 15 | QUIC / ECH and modern SSL surface | `complete` |  |
 | 16 | CLI / config / filesystem contract | `complete` |  |
 | 17 | Downstream replacement court | `complete` |  |
-| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | Phase 18's FRF chain entry is incomplete: 3 court(s) that artifacts/phase18/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 of 3 required court(s) have no FRF declaration staging their artifacts/phase18/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 3 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain |
+| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | Phase 18's FRF chain entry is incomplete: no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain |
 | 19 | Performance / CPU dispatch | `not-started` | not started |
 | 20 | 3.6.4 custodian seal | `not-started` | not started |
 | 21 | Maintenance delta machinery | `not-started` | not started |

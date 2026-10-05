@@ -170,11 +170,17 @@ from atlas_common import (  # noqa: E402
 
 import gen_hostile_tls_corpus  # noqa: E402
 import gen_hostile_x509_corpus  # noqa: E402
+import unsafe_footprint  # noqa: E402
 
 OUT = REPO_ROOT / "artifacts" / "phase18" / "COURTS.json"
 REGISTER = REPO_ROOT / "artifacts" / "phase18" / "hostile-boundary-register.json"
 REGISTER_COURT = "HOSTILE-BOUNDARY-REGISTER"
 REGISTER_SCHEMA = "openssl-rs/hostile-boundary-register/v1"
+# The authored, per-core-module ceiling the growth check compares a fresh scan against. It is
+# separate from the generated `forensics/atlas/unsafe-footprint.json` on purpose: a bound that
+# were recomputed from the measurement could never fail, so the whole court would be vacuous.
+UNSAFE_BOUNDS = REPO_ROOT / "artifacts" / "phase18" / "unsafe-bounds.json"
+UNSAFE_BOUNDS_SCHEMA = "openssl-rs/unsafe-bounds/v1"
 GENERATOR = "forensics/tools/phase18_courts.py"
 PLAN = REPO_ROOT / "docs" / "PHASE-18-SUBPHASES.md"
 PROBE_DIR = REPO_ROOT / "courts" / "phase18"
@@ -1214,6 +1220,36 @@ def verify_register_surface(row: dict, registry: dict[str, dict], coverage: dict
     return problems
 
 
+def unsafe_footprint_growth(bounds_doc: dict, current: dict) -> list[str]:
+    """Every way a core module's `unsafe`/`extern "C"` footprint exceeds its recorded bound.
+
+    `docs/UNSAFE.md` claimed `unsafe` is concentrated in narrow boundary modules, but the
+    measured footprint shows that is not so: the boundary layer (ffi, runtime, dso, engine,
+    async, context) carries a minority and the parser/algorithm modules carry the rest. This
+    check makes that a ratchet rather than a story. Only `core` modules are bounded -- the
+    boundary layer is allowed to grow, because that is the cost of speaking C -- and a module
+    the bounds file does not name resolves to its `default`, so a new core module that arrives
+    carrying `unsafe` is a failure rather than an unrecorded addition. It is a footprint ceiling,
+    not a memory-safety proof.
+    """
+    bounds = bounds_doc.get("bounds") or {}
+    default = bounds_doc.get("default") or {"unsafe_sites": 0, "extern_c_fns": 0}
+    problems: list[str] = []
+    for row in current["modules"]:
+        if row["classification"] != "core":
+            continue
+        ceiling = bounds.get(row["module"], default)
+        for metric in ("unsafe_sites", "extern_c_fns"):
+            limit = ceiling.get(metric, 0)
+            if row.get(metric, 0) > limit:
+                problems.append(
+                    f"core module {row['module']!r} grew {metric}: {limit} -> {row[metric]} "
+                    f"(recorded bound {limit}); the boundary layer may grow, a "
+                    f"parser/algorithm module may not"
+                )
+    return problems
+
+
 def register_court(name: str, records: list[dict]) -> dict:
     """`HOSTILE-BOUNDARY-REGISTER`: bind the authored register to the live courts registry.
 
@@ -1239,6 +1275,23 @@ def register_court(name: str, records: list[dict]) -> dict:
         covered_any |= keys
     for row in surfaces:
         problems += verify_register_surface(row, registry, coverage, covered_any)
+    # The `unsafe`/FFI footprint ratchet, a second subject for the register: what boundary the
+    # stratum records. It lives in this court rather than in a sixth probe court that would have
+    # to be reconciled into the ledger's contract units.
+    if not UNSAFE_BOUNDS.is_file():
+        bounds_doc: dict = {}
+        footprint: dict = {"modules": [], "totals": {}}
+        problems.append(
+            f"the unsafe-footprint bounds {rel(UNSAFE_BOUNDS)} is absent, so the core-module "
+            f"growth check cannot run"
+        )
+    else:
+        bounds_doc = json.loads(UNSAFE_BOUNDS.read_text(encoding="utf-8"))
+        if bounds_doc.get("schema") != UNSAFE_BOUNDS_SCHEMA:
+            problems.append(f"unsafe bounds schema {bounds_doc.get('schema')!r} != "
+                            f"{UNSAFE_BOUNDS_SCHEMA!r}")
+        footprint = unsafe_footprint.scan()
+        problems += unsafe_footprint_growth(bounds_doc, footprint)
     # Completeness: every passing court that covers surfaces must be cited by at least one
     # hardened/measured row, so a new court cannot pass unregistered.
     cited = {r.get("court") for r in surfaces
@@ -1272,8 +1325,13 @@ def register_court(name: str, records: list[dict]) -> dict:
             "surface key, capacity, count or evidence value has drifted from what the courts "
             "show (docs/PHASE-18-SUBPHASES.md section 3.5). A not-claimed row that a passing "
             "court now covers, a hardened/measured row whose court no longer covers it, and a "
-            "stated capacity/count that moved are all failures. It is a record of a boundary, "
-            "not a security proof (sections 3.1 and 3.6)."),
+            "stated capacity/count that moved are all failures. It also runs the "
+            "`UNSAFE-FOOTPRINT` growth check: it scans src/**/*.rs with the definitions in "
+            "forensics/tools/unsafe_footprint.py and fails if any core (parser/algorithm) "
+            "module's `unsafe_sites` or `extern \"C\" fn` count exceeds the ceiling recorded "
+            "in artifacts/phase18/unsafe-bounds.json, while the boundary layer is allowed to "
+            "grow. It is a record of a boundary and a footprint ceiling, not a security proof "
+            "and not a memory-safety proof (sections 3.1 and 3.6)."),
         "frf_declarable": False,
         "frf_exclusion": (
             "the register re-reads the courts registry and stages no artifacts/phase18/probes/ "
@@ -1284,6 +1342,25 @@ def register_court(name: str, records: list[dict]) -> dict:
             "sha256": sha256_file(REGISTER),
             "counts": counts,
             "total": len(surfaces),
+        },
+        "unsafe_footprint": {
+            "bounds": {
+                "path": rel(UNSAFE_BOUNDS),
+                "schema": bounds_doc.get("schema"),
+                "sha256": sha256_file(UNSAFE_BOUNDS) if UNSAFE_BOUNDS.is_file() else None,
+                "core_modules": len(bounds_doc.get("bounds") or {}),
+            },
+            "measured": {
+                "unsafe_sites": footprint["totals"].get("unsafe_sites"),
+                "extern_c_fns": footprint["totals"].get("extern_c_fns"),
+                "core_unsafe_sites":
+                    footprint["totals"].get("by_class", {}).get("core", {}).get("unsafe_sites"),
+                "core_extern_c_fns":
+                    footprint["totals"].get("by_class", {}).get("core", {}).get("extern_c_fns"),
+                "boundary_unsafe_sites":
+                    footprint["totals"].get("by_class", {}).get("boundary", {})
+                    .get("unsafe_sites"),
+            },
         },
         "surfaces": [
             {"id": r.get("id"), "classification": r.get("classification"),
@@ -1481,6 +1558,11 @@ def main(argv: list[str]) -> int:
         # 18.5's authored boundary register: the four probe-court records above are its evidence,
         # and the register court binds every recorded classification back to them.
         InputRef(name="hostile-boundary-register", path=REGISTER),
+        # 18.6's footprint ratchet: the measured unsafe/FFI footprint and the authored per-core
+        # ceiling the register court compares it against.
+        InputRef(name="unsafe-footprint", path=REPO_ROOT / "forensics" / "atlas"
+                 / "unsafe-footprint.json"),
+        InputRef(name="unsafe-bounds", path=UNSAFE_BOUNDS),
     ]
     doc = envelope(kind="phase18-courts", authority=auth.id, inputs=inputs,
                    body=body, generator=GENERATOR)
@@ -1489,9 +1571,12 @@ def main(argv: list[str]) -> int:
     for r in records:
         if r["verdict"] == "pass" and r["court"] == REGISTER_COURT:
             c = r["register"]["counts"]
+            u = r["unsafe_footprint"]["measured"]
             print(f"  {r['court']:<18} pass   ({r['register']['total']} surfaces: "
                   f"{c['hardened']} hardened, {c['measured']} measured, "
-                  f"{c['not-claimed']} not-claimed; no drift)")
+                  f"{c['not-claimed']} not-claimed; no drift; unsafe "
+                  f"core={u['core_unsafe_sites']}/boundary={u['boundary_unsafe_sites']} "
+                  f"of {u['unsafe_sites']})")
         elif r["verdict"] == "pass" and r["court"] == "CT-PRIMITIVES":
             print(f"  {r['court']:<18} pass   ({len(r['paths'])} paths, "
                   f"{len(r['findings'])} separated finding(s), control "

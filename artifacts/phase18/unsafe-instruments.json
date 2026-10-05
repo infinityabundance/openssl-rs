@@ -1,0 +1,37 @@
+{
+  "schema": "openssl-rs/unsafe-instruments/v1",
+  "phase": 18,
+  "subphase": "18.5",
+  "tool": "forensics/tools/fuzz_hostile_corpus.py",
+  "rule": "The instrumented checks over the parser/algorithm cores that the memory-safety benefit depends on. Each entry records honestly whether the instrument ran and what it observed; a tool that could not run records the reason rather than being silently skipped. None of these is a memory-safety proof: ASan/Miri/UBSan observe specific error classes under specific execution, and a fuzz run is a bounded screen, not a campaign or a coverage claim.",
+  "subject": "the crate's unsafe footprint (forensics/atlas/unsafe-footprint.json) and the parser/algorithm cores (asn1, x509, pem, cms, ssl, bn, rsa, ec, evp)",
+  "instruments": {
+    "asan": {
+      "status": "could-not-run",
+      "tool": "-Zsanitizer=address (AddressSanitizer) on rustc 1.101.0-nightly",
+      "method": "CARGO_TARGET_DIR=/court/asan-target RUSTFLAGS=-Zsanitizer=address cargo +nightly build --release --lib, then link courts/phase18/rt_hostile_x509_probe.c against the instrumented archive and drive the hostile corpora",
+      "reason": "the court's OOM protection sets RLIMIT_DATA to the hard 4 GiB in every exec (docker/openssl-rs-court.sh), and ASan reserves ~15.4 TB of virtual address space for its shadow. The flag makes the generated build-script artifact itself an ASan binary, which aborts before compiling the crate: 'AddressSanitizer failed to allocate 0xdfff0001000 (15392894357504) bytes ... ReserveShadowMemoryRange failed while trying to map 0xdfff0001000 bytes. Perhaps you're using ulimit -v or ulimit -d.' The hard limit cannot be raised from inside the container ('ulimit: error setting limit (Operation not permitted)'), so ASan cannot run under this court. This is the constraint probe_hygiene.py already documents as the reason it uses an optimisation-level differential instead of ASan.",
+      "log": "/court/asan-build.log (container scratch, discarded with the container)"
+    },
+    "miri": {
+      "status": "ran-and-stopped-at-the-allocator",
+      "tool": "cargo +nightly miri test --lib (miri 0.1.0, rustc 1.101.0-nightly)",
+      "method": "a bounded subset, the asn1::x_algor tests; rerun with MIRIFLAGS=-Zmiri-permissive-provenance",
+      "observations": 4,
+      "result": "Miri compiled the crate and executed the tests, then reported Undefined Behavior at the first allocation: 'pointer not dereferenceable: pointer must point to some allocation, but got 0x15fec39[noalloc] which is a dangling pointer (it has no provenance)' at src/runtime/mem.rs:379. The backtrace is runtime::mem::alloc <- CRYPTO_zalloc <- asn1::new::item_embed_new <- ASN1_item_new <- X509_ALGOR_new. The cause is the allocator slot: both the default allocator and any installed allocator are stored as a usize in an AtomicUsize and recovered with transmute::<usize, fn>(...) (src/runtime/mem.rs:321-379), so pointer provenance is not exposed, and the default is the libc malloc FFI. -Zmiri-permissive-provenance reproduces the same error, so the crate is not Miri-tractable beyond non-allocating tests: every allocating parser path stops at this trampoline. The reason is FFI/provenance modelling, not a demonstrated defect on the target, and Miri is therefore not a usable whole-crate instrument here.",
+      "log": "/court/miri.log, /court/miri-permissive.log (container scratch, discarded with the container)"
+    },
+    "fuzz": {
+      "status": "ran",
+      "tool": "forensics/tools/fuzz_hostile_corpus.py",
+      "method": "a deterministic mutational loop (seed 24) over the 133-entry RT-HOSTILE-X509 corpus, driven through the same probe the RT-HOSTILE-X509 court uses (artifacts/phase18/probes/rt_hostile_x509_probe.candidate), which forks once per entry and bounds each at 4 s",
+      "cases_driven": 16384,
+      "classes": {"parse": 16384},
+      "finding_count": 0,
+      "result_path": "artifacts/phase18/fuzz-hostile-corpus.json",
+      "bound": "16384 mutants, 300 s wall budget, one seed; NOT coverage-guided, NOT libFuzzer/AFL, NOT a campaign, and not a coverage claim",
+      "note": "the corpus is a fixed enumeration and the mutants are deterministic; the run observed no crash, OOM or timeout class, which is what it establishes and no more"
+    }
+  },
+  "non_claim": "ASan did not run (blocked by the court's RLIMIT_DATA, by design), Miri stopped at the allocator's pointer-provenance trampoline, and the fuzz is a bounded deterministic screen. Together with forensics/atlas/unsafe-footprint.json — which measures the size and location of the unsafe surface, not its correctness — these are measurements, and the memory-safety benefit remains unproven: a footprint and a bounded screen are not a proof that any unsafe block is sound."
+}

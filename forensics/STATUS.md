@@ -38,7 +38,7 @@ renderer does not know any phase status.
 | 15 | QUIC / ECH and modern SSL surface | `complete` |  |
 | 16 | CLI / config / filesystem contract | `complete` |  |
 | 17 | Downstream replacement court | `complete` |  |
-| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | Phase 18's FRF chain entry is incomplete: 3 court(s) that artifacts/phase18/COURTS.json marks FRF-declarable have no row in the gen_frf_courts.py registry: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 of 3 required court(s) have no FRF declaration staging their artifacts/phase18/probes/<probe>.{authority,candidate} pair (forensics/frf/courts/openssl-rs-<court>/manifest.yaml): openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 required court(s) have no receipt in .frf/receipts: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; 3 required court(s) lack two adjudicated challenges (`saw_defect` and `specificity_clean` true) covering both operators ('stdout-first-line', 'exit-class') in .frf/challenges: openssl-rs-rt-hostile-tls, openssl-rs-rt-hostile-x509, openssl-rs-rt-mem-hardening; no `sensitivity-backed` claim with zero blockers in .frf/claims covers a receipt of every one of the 3 required court(s); no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain |
+| 18 | Hostile fuzz / security / side-channel hardening | `in-progress` | Phase 18's FRF chain entry is incomplete: no checkpoint in forensics/GEMEL_TRAJECTORY.md names Phase 18 and the FRF chain |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` |  |
 
 Not started: strata 19-21 (3 total).
@@ -133,6 +133,41 @@ that name is defined, nothing more.
 | libcrypto | 5896 | 5896 | 0 |
 | libssl | 603 | 603 | 0 |
 | **total** | **6499** | **6499** | **0** |
+
+## Measured `unsafe` / FFI footprint
+
+Counted by `forensics/tools/unsafe_footprint.py`, which scans
+`src/**/*.rs` and classifies each module as **boundary** (the
+FFI/ABI translation layer, where `unsafe` is expected) or **core**
+(parsers and algorithms, where it is not). The definitions, the exact
+scan and the classification list are in the artifact's `definitions` and
+`classification` blocks; `docs/UNSAFE.md` cites this table rather than
+asserting a concentration. **A count is not a proof: it establishes the
+size and location of the unsafe surface, not that any `unsafe` block is
+correct or that the memory-safety benefit is realised.**
+
+| axis | modules | `unsafe` sites | `extern "C" fn` |
+|---|---|---|---|
+| core (parsers/algorithms) | 69 | 52943 | 9777 |
+| boundary (FFI/runtime/OS) | 6 | 5824 | 1083 |
+| **total** | **75** | **58767** | **10860** |
+
+Over 854 files and 801094 lines, with 46312 `SAFETY:` comment(s). The core share is 90.1% of the unsafe sites.
+
+The ten modules with the largest `unsafe` surface:
+
+| module | class | `unsafe` sites | `extern "C" fn` |
+|---|---|---|---|
+| `evp` | core | 8029 | 1646 |
+| `x509` | core | 7830 | 1678 |
+| `provider` | core | 6092 | 1600 |
+| `runtime` | boundary | 4334 | 802 |
+| `ssl` | core | 3503 | 698 |
+| `asn1` | core | 3243 | 425 |
+| `cms` | core | 2408 | 247 |
+| `cmp` | core | 2172 | 196 |
+| `ec` | core | 1674 | 545 |
+| `rsa` | core | 1397 | 220 |
 
 ### Phase 10 obligation ledger
 
