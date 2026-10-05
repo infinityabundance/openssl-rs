@@ -152,7 +152,7 @@ correct or that the memory-safety benefit is realised.**
 | boundary (FFI/runtime/OS) | 6 | 5883 | 1089 |
 | **total** | **75** | **58826** | **10866** |
 
-Over 855 files and 801639 lines, with 46370 `SAFETY:` comment(s). The core share is 90.0% of the unsafe sites.
+Over 855 files and 801656 lines, with 46370 `SAFETY:` comment(s). The core share is 90.0% of the unsafe sites.
 
 The ten modules with the largest `unsafe` surface:
 

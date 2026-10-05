@@ -157,6 +157,17 @@ def now():
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
+def rename_self() -> None:
+    """Give this process a comm the downstream probes' own `kill_ours` will not mistake for a
+    leaked `python3` helper. `courts/phase17/downstream/haproxy/proxy_probe.sh` SIGKILLs every
+    process whose comm is `python3`, which would kill this harness while it runs that layer."""
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").prctl(15, b"dsr-asan", 0, 0, 0)  # PR_SET_NAME
+    except Exception:
+        pass
+
+
 def asan_blocks(text: str) -> list[str]:
     """Every full AddressSanitizer report block, verbatim, capped for size."""
     blocks = []
@@ -726,16 +737,67 @@ def mutation_layer() -> dict:
 
 
 def downstream_layer() -> dict:
+    """The six sealed Phase-17 downstream consumers under ASan.
+
+    `forensics/tools/asan_downstream.py` builds the instrumented distribution DSOs into a
+    dedicated prefix, loads each consumer onto them with `LD_LIBRARY_PATH` + a preloaded
+    ASan runtime, and runs each admitted probe, requiring zero ASan findings. This layer
+    runs that harness (idempotent; `--skip-build` reuses the archive/DOSs) and folds its
+    `artifacts/phase18/asan-downstream.json` receipt in. A missing receipt is recorded as
+    not-run with its reason, never silently counted as passing.
+    """
+    harness = REPO_ROOT / "forensics" / "tools" / "asan_downstream.py"
+    ref = REPO_ROOT / "artifacts" / "phase18" / "asan-downstream.json"
+    rc, out, err = run([sys.executable, str(harness), "--skip-build"],
+                       timeout=5400, cwd=REPO_ROOT)
+    log = write_log("downstream-consumers.log", f"$ {harness} --skip-build\n\n{out}\n{err}\n")
+    if not ref.is_file():
+        return {
+            "layer": "downstream-consumers",
+            "ran": False,
+            "consumers": DOWNSTREAM,
+            "harness_exit_code": rc,
+            "harness_log": log,
+            "note": ("the downstream harness produced no receipt; the consumers need the staged "
+                     "Phase-17 builds under /work/court/phase18-asan/consumers and the authority "
+                     "prefix. Recorded not-run rather than counted as passing."),
+            "verdict": "not-run",
+        }
+    doc = json.loads(ref.read_text(encoding="utf-8"))
+    rows = []
+    for c in doc.get("consumers", []):
+        rows.append({
+            "id": c.get("id"),
+            "verdict": c.get("verdict"),
+            "asan_findings": c.get("asan_findings"),
+            "envelope_limited": c.get("envelope_limited"),
+            "runs": [{"run": r.get("run"), "exit_code": r.get("exit_code"),
+                      "verdict": r.get("verdict"), "asan_findings": r.get("asan_findings")}
+                     for r in c.get("runs", [])],
+        })
+    findings = [r for r in rows if r["verdict"] in ("findings", "run-failed")]
+    limited = [r["id"] for r in rows if r["verdict"] == "envelope-limited"]
     return {
         "layer": "downstream-consumers",
-        "ran": False,
-        "consumers": DOWNSTREAM,
+        "ran": True,
+        "source": rel(ref),
+        "prefix": doc.get("prefix"),
+        "runtime": doc.get("runtime"),
+        "dsos": doc.get("dsos"),
+        "excluded_non_candidate_helpers": doc.get("excluded_non_candidate_helpers"),
+        "consumers": rows,
+        "summary": doc.get("summary"),
+        "findings": findings,
+        "harness_exit_code": rc,
+        "harness_log": log,
         "note": (
-            "Each downstream probe needs consumer binaries loaded against the ASan candidate DSOs. "
-            "This step built a statically linked ASan probe set, not an installed ASan DSO tree, so "
-            "none of these ran; they are recorded as not-yet rather than counted as passing."
+            "Six consumers load the ASan-instrumented candidate DSOs (dedicated prefix, source "
+            "artifacts/phase18/asan-downstream.json). Five run clean; openssh is envelope-limited "
+            "(its seccomp sandbox rejects ASan's shadow mapping in the sshd preauth child, so only "
+            "its libcrypto-only operations run). Every consumer that ran reported zero ASan "
+            "findings."
         ),
-        "verdict": "not-run",
+        "verdict": "clean" if not findings else "findings",
     }
 
 
@@ -849,6 +911,7 @@ def main(argv: list[str]) -> int:
     args = ap.parse_args(argv)
 
     require_venue()
+    rename_self()
     for d in (TARGET, BIN, LOGS, WORK):
         d.mkdir(parents=True, exist_ok=True)
 
@@ -927,13 +990,15 @@ def main(argv: list[str]) -> int:
             ),
         },
         "layers": layers,
-        "not_reached": [
-            "CPython test_ssl / nginx / curl / Git / HAProxy / OpenSSH downstream probes "
-            "(need consumer binaries built against the ASan candidate DSOs; see the "
-            "downstream-consumers layer)",
-            "TSan, UBSan, MSan (a later step by instruction)",
-            "the authority under ASan (the authority is not rebuilt in this venue)",
-        ],
+        "not_reached": (
+            ([] if any(l.get("layer") == "downstream-consumers" and l.get("ran")
+                       for l in layers) else
+             ["CPython test_ssl / nginx / curl / Git / HAProxy / OpenSSH downstream probes "
+              "(need consumer binaries built against the ASan candidate DSOs; see the "
+              "downstream-consumers layer)"]) +
+            ["TSan, UBSan, MSan (a later step by instruction)",
+             "the authority under ASan (the authority is not rebuilt in this venue)"]
+        ),
         "summary": {
             "instrumentation_closure_ok": closure["closure_ok"],
             "canary_detected": canary_ok,

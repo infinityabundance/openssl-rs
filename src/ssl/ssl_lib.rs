@@ -2420,6 +2420,17 @@ pub unsafe extern "C" fn SSL_new(ctx: *mut SslCtx) -> *mut Ssl {
             }
 
             // `ssl_lib.c:763-956` copies the remaining connection configuration from the context.
+            // `ossl_ssl_connection_new_int` takes its OWN reference to the context for
+            // `session_ctx` (`ssl_lib.c:828`), separate from the `ssl->ctx` reference
+            // `ossl_ssl_init` took (`ssl_lib.c:705`). `SSL_set_SSL_CTX` later releases the
+            // `ssl->ctx` reference (`ssl_lib.c:5535`) without touching `session_ctx`, so the two
+            // pointers must not share one reference: the application may free its context once an
+            // SNI callback has switched the connection over, and `session_ctx` must keep it alive
+            // until `SSL_free` (`ssl_lib.c:1485`).
+            if SSL_CTX_up_ref(ctx) == 0 {
+                SSL_free(s);
+                return ptr::null_mut();
+            }
             (*s).session_ctx = ctx;
             (*s).pha_enabled = (*ctx).pha_enabled;
             (*s).ct_validation_callback = (*ctx).ct_validation_callback;
@@ -2637,6 +2648,12 @@ pub unsafe extern "C" fn SSL_free(s: *mut Ssl) {
             crate::evp::digest::EVP_MD_CTX_free((*s).pha_dgst.cast());
             CRYPTO_free_ex_data(CRYPTO_EX_INDEX_SSL, s.cast(), &mut (*s).ex_data);
             SSL_CTX_free((*s).ctx);
+            // `ossl_ssl_connection_free` releases the connection's own reference to the initial
+            // context (`ssl_lib.c:1485`), distinct from the `ssl->ctx` reference released just
+            // above (`ssl_lib.c:1438`). When neither `SSL_set_SSL_CTX` nor an SNI callback has
+            // switched contexts, the two pointers alias and these two releases balance the two
+            // `SSL_CTX_up_ref`s `SSL_new` performed (`ssl_lib.c:705`, `ssl_lib.c:828`).
+            SSL_CTX_free((*s).session_ctx);
             CRYPTO_THREAD_lock_free((*s).lock);
             CRYPTO_free(s.cast(), FILE, 1442);
         }
