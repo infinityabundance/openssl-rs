@@ -44,7 +44,7 @@ declared owner; this is that assignment.
 | 16 | CLI / config / filesystem contract | `complete` | 0 | 42 | 42 | 0 | 0 |
 | 17 | Downstream replacement court | `complete` | 0 | 5 | 5 | 0 | 0 |
 | 18 | Hostile fuzz / security / side-channel hardening | `complete` | 0 | 5 | 5 | 0 | 0 |
-| 19 | Performance / CPU dispatch | `not-started` | 0 | — | — | — | — |
+| 19 | Performance / CPU dispatch | `in-progress` | 0 | 5 | 0 | 0 | 5 |
 | 20 | 3.6.4 custodian seal | `not-started` | 0 | — | — | — | — |
 | 21 | Maintenance delta machinery | `not-started` | 0 | — | — | — | — |
 | 22 | Authority exhaustiveness and the whole-program compatibility atlas | `complete` | 0 | 18 | 18 | 0 | 0 |
@@ -605,6 +605,34 @@ The other 2 compare ELF structure rather than a transcript and observe nothing l
 | CT-PRIMITIVES | `pass` | — (structural) |
 | RT-MEM-HARDENING | `pass` | 282 |
 | HOSTILE-BOUNDARY-REGISTER | `pass` | — (structural) |
+
+## Phase 19 — Performance / CPU dispatch
+
+* state: `in-progress`
+* blocking: 5 open obligation(s) of this stratum recorded in forensics/phase19-obligations.json; a stratum cannot be complete while any export it owns is neither implemented nor handed to a later phase. This stratum owns **no exported symbol**, so its ledger's unit is not a symbol: `forensics/phase19-obligations.json` publishes `unit: performance dispatch contract` and its `implemented`/`open` *export* lists are empty by measurement, while `open_in_this_stratum` counts the five contract units (`cpu-capability`, `evp-dispatch`, `performance-work`, `performance-sensitivity` and `performance-boundary-register`). It owns no provider registration row, no symbol deferral and no prerequisite unit: it activates no provider and adds no library surface, because it measures the implementation the strata before it completed. Its `artifacts/phase19/COURTS.json` registered no court at activation because it owns no symbol for a differential probe to observe; the five courts (`RT-CPU-CAPABILITY`, `RT-EVP-DISPATCH`, `RT-PERFORMANCE-WORK`, `RT-PERFORMANCE-SENSITIVITY` and `PERFORMANCE-BOUNDARY-REGISTER`) are `pending` with the subphases that land them. Nothing here is a throughput or parity claim: there is no benchmark-parity claim and no assembly-versus-Rust equivalence claim, and no verdict is ever taken from wall-clock time alone. The ledger records two axes separately -- `measurement_state` says the instrument completed and `property_status`/`findings` say what is claimed -- so a passing `RT-PERFORMANCE-WORK` is an instrument plus bounded deterministic-work comparison and must never be read as 'performance parity achieved'. The ledger's contract-unit states are measured from the courts registry, so the runner does not bind the ledger and the edge runs ledger -> courts, the reverse of Phase 16's. `docs/PHASE-19-SUBPHASES.md` sections 1 and 4 record the measurement
+* seal: none written yet (`unnamed`)
+* ledger: `forensics/phase19-obligations.json`
+* atlas-owned: 0
+* owned working set: 5
+* implemented: 0
+* deferred to a later stratum with a stated reason: 0
+* **open in this stratum: 5**
+
+Contract units (measurement vs property):
+
+| unit | measurement_state | property_status | findings |
+|---|---|---|---|
+| cpu-capability | `not_measured` | `not_claimed` | — |
+| evp-dispatch | `not_measured` | `not_claimed` | — |
+| performance-work | `not_measured` | `not_claimed` | — |
+| performance-sensitivity | `not_measured` | `not_claimed` | — |
+| performance-boundary-register | `not_measured` | `not_claimed` | — |
+
+A `complete` measurement means the unit's court ran and its control was honest. It is **not** a claim that the security property the unit names is achieved: where a property is measured and the court recorded findings, the property reads `NOT_CLAIMED` with `findings_present` and the findings are named above.
+Courts: `all pass`, 0 court(s), **0** authority observation(s) over 0 transcript court(s).
+
+| court | verdict | observations |
+|---|---|---|
 
 ## Phase 22 — Authority exhaustiveness and the whole-program compatibility atlas
 
