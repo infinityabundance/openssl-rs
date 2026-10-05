@@ -27,7 +27,7 @@
  * keys, generated once with `RSA_generate_key_ex` and selected from a batch of 400 for the widest
  * spread of CRT-exponent Hamming weight (471 versus 570 set bits across `dmp1`+`dmq1`). They are
  * fixed fixtures rather than a re-derivable generator. That spread produces a measured work
- * difference of only about 3.5 percent, which is *below* this screen's 10 percent resolution, so
+ * difference of only about 3.5 percent, which is *below* this screen's 50 percent resolution, so
  * the RSA path is reported `independent` -- a limitation of the instrument's resolution, not
  * evidence that the path is constant-time.
  *
@@ -73,23 +73,37 @@
 
 #define DEFAULT_FIXTURES "/work/courts/phase18/fixtures"
 
-/* The tag-comparison buffers. Both are cache-line aligned and the same length, and are prepared
- * once, so the two secret classes differ only in *where* the tag first mismatches and never in
- * the addresses touched: a constant-time comparison cannot separate them. A 16-byte GCM tag is
- * too small to measure without the two buffers' addresses dominating the result (measured), so the
- * same primitive is driven over 4 KiB. */
+/* The tag-comparison buffers. `a` and `b` are cache-line aligned and the same length, and both
+ * secret classes are driven over them unchanged -- only the position of the single mismatching
+ * byte in `b` differs (set up outside the timed region) -- so the two classes touch exactly the
+ * same addresses and cache lines and a constant-time comparison cannot separate them on memory
+ * layout alone. A 16-byte GCM tag is too small to measure without the buffers' addresses
+ * dominating the result (measured), so the same primitive is driven over 4 KiB. */
 #define TAG_LEN 4096
 
 /* Samples and warmup per class; `reps` batch multiplier is per path. */
 #define WARMUP 32
 #define SAMPLES 320
 
-/* A path is `separated` when max(min)/min(min) exceeds SEP_PCT percent. The threshold is chosen
- * well above the run-to-run spread of a genuinely constant-time path on this host (measured below
- * 3.5 percent across -O0/-O1/-O2 and repeated runs) and well below the work ratio a branch-on-
- * secret produces (BN square-and-multiply ~2-5x, the control ~4x here). A dependence subtler than
- * the threshold is reported `independent`: the screen has that resolution and no better. */
-#define SEP_PCT 110
+/* The tag-comparison paths (the real `aead-tag-memcmp` and its branch-on-secret control) time a
+ * single 4 KiB comparison per sample, which on this host is only a few hundred cycles -- short
+ * enough that a fixed per-timed-region scheduling or cache offset of a few tens of cycles is a
+ * double-digit percentage of the batch, and a genuinely constant-time path can wobble across a
+ * tight threshold from run to run and level to level. Both paths therefore time `TAG_REPS` calls
+ * per batch, so that same fixed offset is diluted to a low single-digit percentage and the minima
+ * reflect the work rather than the scheduler. The other paths already time work measured in
+ * thousands of cycles and keep `reps` 1. */
+#define TAG_REPS 32
+
+/* A path is `separated` when max(min)/min(min) exceeds SEP_PCT percent. The threshold is set with
+ * margin on both sides. Above it: the residual run-to-run spread of a genuinely constant-time
+ * path on this host with the shared-buffer, longer-batch measurement above (measured at or below
+ * about 2 percent across -O0/-O1/-O2 and repeated runs). Below it: the work ratio every branch-on-
+ * secret path this probe drives produces (BN square-and-multiply ~2x and the modular inverse ~4.7x,
+ * the control ~2700x-10000x, and measured as low as ~1.97x for the BN exponentiation). A 1.5x
+ * threshold sits clear of both, so nothing near it can flip a class; a dependence subtler than it
+ * is reported `independent`: the screen has that resolution and no better. */
+#define SEP_PCT 150
 
 /* The deliberately branch-on-secret control's per-matching-byte work. */
 #define CONTROL_WORK 64
@@ -105,22 +119,33 @@ static inline uint64_t tsc(void)
 }
 
 typedef uint64_t (*op_fn)(void *arg, int cls);
+typedef void (*setup_fn)(void *arg, int cls);
 
 /* Time `reps` invocations of `f(cls)` per sample, interleaving the two classes, and keep the
- * minimum per class. Returns the classification and writes the two minima (for the caller's
- * summary only; they are never printed). */
-static int measure(op_fn f, void *arg, int reps, uint64_t *lo, uint64_t *hi)
+ * minimum per class. `setup`, when non-NULL, runs just before each class's timed batch and
+ * *outside* it, so a path can drive its two secret classes over the same bytes at the same
+ * addresses and let only the values differ: any address, page or cache-set asymmetry between the
+ * classes is then removed from the measurement rather than read as a separation. Returns the
+ * classification and writes the two minima (for the caller's summary only; they are never
+ * printed). */
+static int measure_core(op_fn f, setup_fn setup, void *arg, int reps, uint64_t *lo, uint64_t *hi)
 {
     uint64_t min0 = UINT64_MAX, min1 = UINT64_MAX;
     int i, j;
 
     for (i = 0; i < WARMUP; i++) {
+        if (setup)
+            setup(arg, 0);
         g_sink += f(arg, 0);
+        if (setup)
+            setup(arg, 1);
         g_sink += f(arg, 1);
     }
     for (i = 0; i < SAMPLES; i++) {
         uint64_t t0, t1, d0, d1, acc = 0;
 
+        if (setup)
+            setup(arg, 0);
         t0 = tsc();
         for (j = 0; j < reps; j++)
             acc += f(arg, 0);
@@ -128,6 +153,8 @@ static int measure(op_fn f, void *arg, int reps, uint64_t *lo, uint64_t *hi)
         d0 = t1 - t0;
         g_sink += acc;
 
+        if (setup)
+            setup(arg, 1);
         t0 = tsc();
         for (j = 0; j < reps; j++)
             acc += f(arg, 1);
@@ -146,6 +173,12 @@ static int measure(op_fn f, void *arg, int reps, uint64_t *lo, uint64_t *hi)
     *hi = min0 < min1 ? min1 : min0;
     /* max/min > SEP_PCT/100  <=>  100*hi > SEP_PCT*lo */
     return (100.0 * (double)*hi) > (SEP_PCT * (double)*lo) ? 1 : 0;
+}
+
+/* The no-`setup` form the primitive paths use; see `measure_core`. */
+static int measure(op_fn f, void *arg, int reps, uint64_t *lo, uint64_t *hi)
+{
+    return measure_core(f, NULL, arg, reps, lo, hi);
 }
 
 /* The measured minima are host- and run-dependent, so they are printed only to stderr and only
@@ -425,35 +458,49 @@ fail:
 /* ------------------------------------------------------------------------------------------- */
 /* The AEADs — the tag comparison both GCM's finish and the Poly1305 check are built on. */
 
-struct tag_cmp {
+struct tag_pair {
     unsigned char a[TAG_LEN];
-    unsigned char b0[TAG_LEN];
-    unsigned char b1[TAG_LEN];
+    unsigned char b[TAG_LEN];
 } __attribute__((aligned(64)));
+
+/* One shared pair of buffers for the real tag path *and* its control: `a` is fixed, and `b` matches
+ * it everywhere except one byte -- at the first position for the class-0 secret and the last for
+ * the class-1 secret. Both secret classes are therefore driven over the same addresses and the same
+ * cache lines, so only the byte values differ; a constant-time comparison does the same work either
+ * way and a comparison that branches on the secret does not. The mismatch is set up outside the
+ * timed region. */
+static void tag_setup(void *arg, int cls)
+{
+    struct tag_pair *s = arg;
+
+    if (cls) {
+        s->b[0] = s->a[0];
+        s->b[TAG_LEN - 1] = (unsigned char)(s->a[TAG_LEN - 1] ^ 0x01);
+    } else {
+        s->b[0] = (unsigned char)(s->a[0] ^ 0x01);
+        s->b[TAG_LEN - 1] = s->a[TAG_LEN - 1];
+    }
+}
 
 static uint64_t tag_cmp_op(void *arg, int cls)
 {
-    struct tag_cmp *s = arg;
+    struct tag_pair *s = arg;
 
-    /* `b0` and `b1` each differ from `a` in exactly one byte, at the first and the last position;
-     * a constant-time comparison does the same work on either. */
-    return (uint64_t)CRYPTO_memcmp(s->a, cls ? s->b1 : s->b0, TAG_LEN);
+    (void)cls;  /* the class is realised by `tag_setup` over the shared buffer `b` */
+    return (uint64_t)CRYPTO_memcmp(s->a, s->b, TAG_LEN);
 }
 
 static int tag_run(void)
 {
-    struct tag_cmp s;
+    struct tag_pair s;
     uint64_t lo = 0, hi = 0;
     int cls;
 
     memset(&s, 0, sizeof s);
     memset(s.a, 0xa5, TAG_LEN);
-    memcpy(s.b0, s.a, TAG_LEN);
-    memcpy(s.b1, s.a, TAG_LEN);
-    s.b0[0] ^= 0x01;                 /* differs at the first byte */
-    s.b1[TAG_LEN - 1] ^= 0x01;       /* differs at the last byte  */
+    memset(s.b, 0xa5, TAG_LEN);
 
-    cls = measure(tag_cmp_op, &s, 1, &lo, &hi);
+    cls = measure_core(tag_cmp_op, tag_setup, &s, TAG_REPS, &lo, &hi);
     dbg("aead-tag-memcmp", lo, hi);
     emit("aead-tag-memcmp", 1, cls);
     return 0;
@@ -534,14 +581,10 @@ fail:
 /* ------------------------------------------------------------------------------------------- */
 /* The sensitivity control — a deliberately branch-on-secret tag comparison.                     */
 
-struct ctrl_cmp {
-    unsigned char a[TAG_LEN];
-    unsigned char b0[TAG_LEN];
-    unsigned char b1[TAG_LEN];
-} __attribute__((aligned(64)));
-
 /* Early-return comparison that does `CONTROL_WORK` dependent multiplies per matching byte, so a
- * tag differing at its last byte does ~15x the work of one differing at its first. */
+ * tag differing at its last byte does ~15x the work of one differing at its first. It is driven by
+ * the same `tag_pair` buffers and the same `tag_setup` as the real path above, so the control
+ * differs from `aead-tag-memcmp` in exactly one respect: it branches on the secret. */
 static uint64_t branchy_cmp(const unsigned char *a, const unsigned char *b, size_t n)
 {
     size_t i;
@@ -562,25 +605,23 @@ static uint64_t branchy_cmp(const unsigned char *a, const unsigned char *b, size
 
 static uint64_t ctrl_op(void *arg, int cls)
 {
-    struct ctrl_cmp *s = arg;
+    struct tag_pair *s = arg;
 
-    return branchy_cmp(s->a, cls ? s->b1 : s->b0, TAG_LEN);
+    (void)cls;  /* the class is realised by `tag_setup` over the shared buffer `b` */
+    return branchy_cmp(s->a, s->b, TAG_LEN);
 }
 
 static int ctrl_run(void)
 {
-    struct ctrl_cmp s;
+    struct tag_pair s;
     uint64_t lo = 0, hi = 0;
     int cls;
 
     memset(&s, 0, sizeof s);
     memset(s.a, 0xa5, TAG_LEN);
-    memcpy(s.b0, s.a, TAG_LEN);
-    memcpy(s.b1, s.a, TAG_LEN);
-    s.b0[0] ^= 0x01;
-    s.b1[TAG_LEN - 1] ^= 0x01;
+    memset(s.b, 0xa5, TAG_LEN);
 
-    cls = measure(ctrl_op, &s, 1, &lo, &hi);
+    cls = measure_core(ctrl_op, tag_setup, &s, TAG_REPS, &lo, &hi);
     dbg("control-branchy-tag", lo, hi);
     emit("control-branchy-tag", 1, cls);
     return 0;

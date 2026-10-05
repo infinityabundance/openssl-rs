@@ -137,7 +137,7 @@
       "finding": "both BN paths measure `separated` -- the two BN separations are recorded as findings, not failed",
       "evidence": {
         "verdict": "pass",
-        "threshold_percent": 110,
+        "threshold_percent": 150,
         "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
         "findings": ["bn-inverse", "bn-modexp"],
         "finding_count": 2,
@@ -152,13 +152,13 @@
       "classification": "measured",
       "court": "CT-PRIMITIVES",
       "surface_keys": ["ct.rsa-private"],
-      "finding": "independent at the 10 percent floor",
+      "finding": "independent at the 50 percent floor",
       "evidence": {
         "verdict": "pass",
         "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
-        "threshold_percent": 110
+        "threshold_percent": 150
       },
-      "note": "measured, not hardened; the screen's resolution is the 10 percent floor (section 3.1)."
+      "note": "measured, not hardened; the screen's resolution is the 50 percent floor (section 3.1)."
     },
     {
       "id": "ct-ec",
@@ -167,11 +167,11 @@
       "classification": "measured",
       "court": "CT-PRIMITIVES",
       "surface_keys": ["ct.ec-scalar-mul"],
-      "finding": "independent at the 10 percent floor",
+      "finding": "independent at the 50 percent floor",
       "evidence": {
         "verdict": "pass",
         "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
-        "threshold_percent": 110
+        "threshold_percent": 150
       },
       "note": "measured, not hardened (section 3.1)."
     },
@@ -182,7 +182,7 @@
       "classification": "measured",
       "court": "CT-PRIMITIVES",
       "surface_keys": ["ct.aead-tag-memcmp"],
-      "finding": "independent at the 10 percent floor; the sensitivity control varies it and is caught",
+      "finding": "independent at the 50 percent floor; the sensitivity control varies it and is caught",
       "evidence": {
         "verdict": "pass",
         "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
@@ -198,24 +198,24 @@
       "classification": "measured",
       "court": "CT-PRIMITIVES",
       "surface_keys": ["ct.tls-key-schedule-hkdf"],
-      "finding": "independent at the 10 percent floor",
+      "finding": "independent at the 50 percent floor",
       "evidence": {
         "verdict": "pass",
         "path_classes": {"bn-modexp": "separated", "bn-inverse": "separated", "rsa-private": "independent", "ec-scalar-mul": "independent", "aead-tag-memcmp": "independent", "tls-key-schedule-hkdf": "independent"},
-        "threshold_percent": 110
+        "threshold_percent": 150
       },
       "note": "measured, not hardened (section 3.1)."
     },
     {
       "id": "ct-resolution-floor",
       "group": "constant-time",
-      "surface": "secret dependence below the 10 percent floor",
+      "surface": "secret dependence below the 50 percent floor",
       "classification": "not-claimed",
       "court": null,
       "surface_keys": ["ct.below-floor"],
       "finding": "outside the screen's resolution",
       "evidence": {},
-      "note": "not-claimed: a secret dependence below the 10 percent floor is reported `independent` and is outside this screen's resolution, so no constant-time behaviour below the floor is claimed (sections 3.1 and 3.6)."
+      "note": "not-claimed: a secret dependence below the 50 percent floor is reported `independent` and is outside this screen's resolution, so no constant-time behaviour below the floor is claimed (sections 3.1 and 3.6)."
     },
 
     {

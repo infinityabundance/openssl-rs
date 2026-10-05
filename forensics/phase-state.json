@@ -642,7 +642,7 @@
         "name": "hostile-hardening",
         "phase": 18,
         "provider_rows": null,
-        "seal_sha256": "88b6864fc1b0bb33dd103f0baa4d6f42afffa55a7200ddc8b33bdf227f96e360",
+        "seal_sha256": "869ffe5932521d9a2f9b0cb25636f1afc6f2c7efc749912e9befe58660c842cd",
         "state": "complete",
         "stratum": "Hostile fuzz / security / side-channel hardening"
       },
@@ -707,7 +707,7 @@
       "not_started": 3
     }
   },
-  "body_hash": "9cdb4192addcfb8b03fbd1c0f08e0bbf754561da470348df0612d62746669606",
+  "body_hash": "4800bef1353b51fb29953728db3965d191874ba128e38dfc765de97e6f876f9d",
   "generator": "forensics/tools/phase_state.py",
   "inputs": [],
   "kind": "phase-state",
