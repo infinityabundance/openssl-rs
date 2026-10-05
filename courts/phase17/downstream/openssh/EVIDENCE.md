@@ -6,7 +6,7 @@ Status: **build/link/start/functional all PROVEN** (PASS). This file is generate
 
 - **openssh 10.5p1**, `https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.5p1.tar.gz`
   sha256 `d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11` (parsed from `build.sh`).
-- Candidate identity: `0.0.22` (the `RT-DOWNSTREAM-CORPUS` freshness key).
+- Candidate identity: `0.0.23` (the `RT-DOWNSTREAM-CORPUS` freshness key).
 - Authority: `openssl-rt-3.6.4-r2`.
 
 ## Measured result
